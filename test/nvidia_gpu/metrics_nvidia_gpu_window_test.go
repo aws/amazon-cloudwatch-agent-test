@@ -7,8 +7,8 @@
 package metrics_nvidia_gpu
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/security"
 	"testing"
 	"time"
 )
@@ -51,7 +51,7 @@ func TestNvidiaGPUWindows(t *testing.T) {
 			test.ValidateMetrics(t, metricName, metricWindowsnamespace, dimensionFilter)
 		}
 
-		err = security.CheckFileRights(agentWindowsLogPath)
+		err = filesystem.CheckFileRights(agentWindowsLogPath)
 		if err != nil {
 			t.Fatalf("CloudWatchAgent's log does not have protection from local system and admin: %v", err)
 		}

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
-	cwPlugin "github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
@@ -24,6 +23,7 @@ const namespace = "MetricNumberDimensionTest"
 const instanceId = "InstanceId"
 const loremIpsum = "Lorem ipsum dolor sit amet consectetur adipiscing elit Vivamus non mauris malesuada mattis ex eget porttitor purus Suspendisse potenti Praesent vel sollicitudin ipsum Quisque luctus pretium lorem non faucibus Ut vel quam dui Nunc fermentum condimentum consectetur Morbi tellus mauris tristique tincidunt elit consectetur hendrerit placerat dui In nulla erat finibus eget erat a hendrerit sodales urna In sapien purus auctor sit amet congue ut congue eget nisi Vivamus sed neque ut ligula lobortis accumsan quis id metus In feugiat velit et leo mattis non fringilla dui elementum Proin a nisi ac sapien vulputate consequat Vestibulum eu tellus mi Integer consectetur efficitur"
 const appendMetric = "append"
+const MaxDimensionCountAllowed = 30
 
 //Let the agent run for 2 minutes. This will give agent enough time to call server
 const agentRuntime = 2 * time.Minute
@@ -78,7 +78,7 @@ func TestNumberMetricDimension(t *testing.T) {
 			if parameter.failToStart && err == nil {
 				t.Fatalf("Agent should not have started for append %v dimension", parameter.numberDimensionsInCW)
 			} else if parameter.failToStart {
-				log.Printf("Agent could not start due to appending more than %v dimension", cwPlugin.MaxDimensions)
+				log.Printf("Agent could not start due to appending more than %v dimension", MaxDimensionCountAllowed)
 				return
 			}
 

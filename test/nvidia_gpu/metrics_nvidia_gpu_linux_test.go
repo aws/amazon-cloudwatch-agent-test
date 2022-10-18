@@ -7,8 +7,8 @@
 package metrics_nvidia_gpu
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/security"
 	"testing"
 	"time"
 )
@@ -39,11 +39,11 @@ func TestNvidiaGPU(t *testing.T) {
 			test.ValidateMetrics(t, metricName, metricLinuxNamespace, dimensionFilter)
 		}
 
-		if err := security.CheckFileRights(agentLinuxLogPath); err != nil {
+		if err := filesystem.CheckFileRights(agentLinuxLogPath); err != nil {
 			t.Fatalf("CloudWatchAgent does not have privellege to write and read CWA's log: %v", err)
 		}
 
-		if err := security.CheckFileOwnerRights(agentLinuxLogPath, agentLinuxPermission); err != nil {
+		if err := filesystem.CheckFileOwnerRights(agentLinuxLogPath, agentLinuxPermission); err != nil {
 			t.Fatalf("CloudWatchAgent does not have right to CWA's log: %v", err)
 		}
 
