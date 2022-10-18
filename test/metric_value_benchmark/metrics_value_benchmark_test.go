@@ -11,7 +11,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/stretchr/testify/suite"
 )
 
