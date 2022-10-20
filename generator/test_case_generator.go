@@ -21,19 +21,19 @@ const (
 // you can't have a const map in golang
 var osToTestDirMap = map[string][]string{
 	"ec2_gpu": {
-		"./integration/test/nvidia_gpu",
+		"./test/nvidia_gpu",
 	},
 	"ec2_linux": {
-		"./integration/test/ca_bundle",
-		"./integration/test/cloudwatchlogs",
-		"./integration/test/metrics_number_dimension",
-		"./integration/test/metric_value_benchmark",
+		"./test/ca_bundle",
+		"./test/cloudwatchlogs",
+		"./test/metrics_number_dimension",
+		"./test/metric_value_benchmark",
 	},
 	"ec2_performance": {
-		"./integration/test/performancetest",
+		"./test/performancetest",
 	},
 	"ecs_fargate": {
-		"./integration/test/ecs/ecs_metadata",
+		"./test/ecs/ecs_metadata",
 	},
 }
 
@@ -45,7 +45,7 @@ func main() {
 }
 
 func genMatrix(targetOS string, testDirList []string) []map[string]string {
-	openTestMatrix, err := os.Open(fmt.Sprintf("integration/generator/resources/%v_test_matrix.json", targetOS))
+	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", targetOS))
 
 	if err != nil {
 		log.Panicf("can't read file %v_test_matrix.json err %v", targetOS, err)
@@ -76,7 +76,7 @@ func writeTestMatrixFile(targetOS string, testMatrix []map[string]string) {
 	if err != nil {
 		log.Panicf("Can't marshal json for target os %v, err %v", targetOS, err)
 	}
-	err = ioutil.WriteFile(fmt.Sprintf("integration/generator/resources/%v_complete_test_matrix.json", targetOS), bytes, os.ModePerm)
+	err = ioutil.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", targetOS), bytes, os.ModePerm)
 	if err != nil {
 		log.Panicf("Can't write json to file for target os %v, err %v", targetOS, err)
 	}
