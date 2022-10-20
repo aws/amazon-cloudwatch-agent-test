@@ -1,8 +1,7 @@
 ## Amazon CloudWatch Agent Test
-
+git
 Be sure to:
 
-* Change the title in this README
 * Edit your repository description on GitHub
 
 ## Security
@@ -13,3 +12,6 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
 
+
+## Dev Manuals
+see /dev_manuals
