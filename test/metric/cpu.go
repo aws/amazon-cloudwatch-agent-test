@@ -17,9 +17,11 @@ type CPUMetricValueFetcher struct {
 	baseMetricValueFetcher
 }
 
-func (f *CPUMetricValueFetcher) Fetch(namespace string, metricName string, stat Statistics) ([]float64, error) {
+var _ MetricValueFetcher = (*CPUMetricValueFetcher)(nil)
+
+func (f *CPUMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) ([]float64, error) {
 	dimensions := f.getMetricSpecificDimensions()
-	values, err := f.fetch(namespace, dimensions, metricName, stat)
+	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
 	}
