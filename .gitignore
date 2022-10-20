@@ -1,0 +1,13 @@
+.idea
+build
+vendor
+release
+CWAGENT_VERSION
+.DS_Store
+.vscode
+*.iml
+.terraform.*
+terraform.*
+**/.terraform/*
+coverage.txt
+integration/generator/resources/*complete*.json
