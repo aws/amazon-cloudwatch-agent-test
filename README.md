@@ -1,6 +1,4 @@
-## My Project
-
-TODO: Fill this README out!
+## Amazon CloudWatch Agent Test
 
 Be sure to:
 

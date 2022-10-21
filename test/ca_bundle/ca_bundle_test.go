@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/integration/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/test"
 )
 
 const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
