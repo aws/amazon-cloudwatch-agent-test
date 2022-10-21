@@ -69,17 +69,22 @@ variable "test_dir" {
   default = ""
 }
 
-variable "github_sha" {
+variable "cwa_github_sha" {
   type    = string
   default = ""
 }
 
-variable "github_repo" {
+variable "cwa_test_github_sha" {
   type    = string
   default = ""
 }
 
-variable "github_sha_date" {
+variable "github_test_repo" {
+  type    = string
+  default = ""
+}
+
+variable "cwa_github_sha_date" {
   type    = string
   default = ""
 }
