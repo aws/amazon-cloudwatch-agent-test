@@ -1,5 +1,5 @@
 ## Amazon CloudWatch Agent Test
-git
+
 Be sure to:
 
 * Edit your repository description on GitHub
