@@ -36,18 +36,18 @@ resource "aws_instance" "integration-test" {
     inline = [
       "cloud-init status --wait",
       "clone the agent and start the localstack",
-      "git clone ${var.github_repo}",
-      "cd amazon-cloudwatch-agent",
-      "git reset --hard ${var.github_sha}",
+      "git clone ${var.github_test_repo}",
+      "cd amazon-cloudwatch-agent-test",
+      "git reset --hard ${var.cwa_test_github_sha}",
       "echo set up ssl pem for localstack, then start localstack",
-      "cd ~/amazon-cloudwatch-agent/integration/localstack/ls_tmp",
+      "cd ~/amazon-cloudwatch-agent-test/localstack/ls_tmp",
       "openssl req -new -x509 -newkey rsa:2048 -sha256 -nodes -out snakeoil.pem -keyout snakeoil.key -config snakeoil.conf",
       "cat snakeoil.key snakeoil.pem > server.test.pem",
       "cat snakeoil.key > server.test.pem.key",
       "cat snakeoil.pem > server.test.pem.crt",
-      "cd ~/amazon-cloudwatch-agent/integration/localstack",
+      "cd ~/amazon-cloudwatch-agent-test/localstack",
       "docker-compose up -d --force-recreate",
-      "aws s3 cp ls_tmp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.github_sha} --recursive"
+      "aws s3 cp ls_tmp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} --recursive"
     ]
     connection {
       type        = "ssh"
