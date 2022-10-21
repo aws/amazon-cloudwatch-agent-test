@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -200,7 +200,7 @@ func IsLogGroupExists(t *testing.T, logGroupName string) bool {
 	if err != nil {
 		t.Errorf("Error getting log group data %v", err)
 	}
-	
+
 	if len(describeLogGroupOutput.LogGroups) > 0 {
 		return true
 	}

@@ -1,11 +1,8 @@
 module github.com/aws/amazon-cloudwatch-agent-test
 
-replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20220502160831-c20ebe67c5ef
-
 go 1.18
 
 require (
-	github.com/aws/aws-sdk-go v1.44.118
 	github.com/aws/aws-sdk-go-v2 v1.16.16
 	github.com/aws/aws-sdk-go-v2/config v1.17.8
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.10.0
