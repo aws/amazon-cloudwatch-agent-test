@@ -46,3 +46,8 @@ This section is written to help new contributors onboard before they have to div
 1. **MakeBinary, GenerateTestMatrix** and **StartLocalStack**
 2. **BuildMSI**. We run both Linux and Windows Tests
 3. **EC2NvidiaGPUIntegrationTest**
+
+### Performance Tests
+
+1. **MakeBinary, GenerateTestMatrix** and **StartLocalStack**
+2. **PerformanceTrackingTest**
