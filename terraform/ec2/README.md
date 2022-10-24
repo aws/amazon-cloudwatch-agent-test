@@ -288,8 +288,8 @@ Navigate to the localstack terraform directory, initialize Terraform and apply t
 cd ./integration/terraform/ec2/localstack
 terraform init
 terraform apply --auto-approve \
-         -var="github_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent.git}" \
-         -var="github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
+         -var="github_test_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent-test.git}" \
+         -var="cwa_github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
          -var='vpc_security_group_ids=["${name of your security group}"]' \
          -var="ssh_key_name=${name of key pair your created}" \
          -var="s3_bucket=${name of your s3 bucket created}" \
@@ -324,8 +324,8 @@ In this example, you should keep track of `ec2-35-87-254-148.us-west-2.compute.a
 cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
 terraform init
 terraform apply --auto-approve \
-         -var="github_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent.git}" \
-         -var="github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
+         -var="github_test_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent-test.git}" \
+         -var="cwa_github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
          -var='vpc_security_group_ids=["${name of your security group}"]' \
          -var="s3_bucket=${name of your s3 bucket created}" \
          -var="iam_instance_profile=${name of your iam role created}" \
@@ -412,7 +412,7 @@ null_resource.integration_test: Creation complete after 2m52s [id=85912838849209
 After running tests, tear down everything with Terraform:
 
 ```shell
-# assuming still in the ./integration/terraform/ec2/linux directory
+# assuming still in the ./terraform/ec2/linux directory
 terraform destroy --auto-approve
 cd ../localstack
 terraform destroy --auto-approve
