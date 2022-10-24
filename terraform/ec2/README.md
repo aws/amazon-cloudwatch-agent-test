@@ -36,8 +36,9 @@ In your account, navigate to us-west-2 and create a ECR repository with the foll
 
 ## 1. Setup Github personal fork
 - Fork amazon-cloudwatch-agent repo
-- `git tag <any number>`. e.g. v0 
+- `git tag <a version following the format requirement>`. e.g. v0.999999.0. If you don't have a specific need, you can just use this same string for your tag.
   - if you use any string, building CWA image will fail during integ test steps with error `'Version' field value 'leechena-1': version number does not start with digit`
+  - Similary, if you put something like v0, parsing fails during integration test workflow's MakeMSIZip step. It assumes you have a major and minor version.
 - `git push origin --tags` 
   - this is used to create CWAGENT_VERSION which is used by integ test workflow when it builds artifacts. Workflow fails without this.
 
