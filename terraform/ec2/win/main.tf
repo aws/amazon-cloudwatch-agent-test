@@ -69,14 +69,14 @@ resource "null_resource" "integration_test" {
       "start /wait timeout 120", //Wait some time to ensure all binaries have been downloaded
       "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
       "set AWS_REGION=${var.region}",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
       "echo clone and install agent",
-      "git clone ${var.github_repo}",
-      "cd amazon-cloudwatch-agent",
-      "git reset --hard ${var.github_sha}",
+      "git clone ${var.test_github_repo}",
+      "cd amazon-cloudwatch-agent-test",
+      "git reset --hard ${var.cwa_test_github_sha}",
       "echo run tests with the tag integration, one at a time, and verbose",
-      "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
+      "echo run sanity test && go test ./test/sanity -p 1 -v --tags=integration",
       "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
     ]
 

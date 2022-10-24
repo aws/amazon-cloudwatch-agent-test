@@ -13,14 +13,19 @@ variable "ami" {
   default = "Windows_Server-2019-English-Deep-Learning*"
 }
 
-variable "github_sha" {
+variable "cwa_github_sha" {
   type    = string
   default = "4cefc9f0e9b411c6765c5122877c136dbb23588d"
 }
 
-variable "github_repo" {
+variable "cwa_test_github_sha" {
   type    = string
-  default = "https://github.com/aws/amazon-cloudwatch-agent.git"
+  default = ""
+}
+
+variable "github_test_repo" {
+  type    = string
+  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
 }
 
 variable "ssh_key_name" {
