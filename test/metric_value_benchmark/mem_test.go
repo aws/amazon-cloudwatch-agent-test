@@ -7,8 +7,8 @@
 package metric_value_benchmark
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"time"
 )
 
