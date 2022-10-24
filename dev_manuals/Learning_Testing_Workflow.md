@@ -16,6 +16,8 @@ This section is written to help new contributors onboard before they have to div
 ### Linux
 
 #### ECS
+1. **MakeBinary, GenerateTestMatrix**
+2. **ECSFargateIntegrationTest**
 
 #### EC2
 
