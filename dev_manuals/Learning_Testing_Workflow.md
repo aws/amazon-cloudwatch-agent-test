@@ -16,6 +16,8 @@ This section is written to help new contributors onboard before they have to div
 ### Linux
 
 #### ECS
+1. **MakeBinary, GenerateTestMatrix**
+2. **ECSFargateIntegrationTest**
 
 #### EC2
 
@@ -39,3 +41,13 @@ This section is written to help new contributors onboard before they have to div
 3. **BuildMSI.** Using the zip created and uploaded by **MakeMSIZip,** build an agent installer for windows (MSI). Code for this is entirely in the agent repo.
 4. **SignMacAndWindowsPackage.**
 
+### Nvidia GPU
+
+1. **MakeBinary, GenerateTestMatrix** and **StartLocalStack**
+2. **BuildMSI**. We run both Linux and Windows Tests
+3. **EC2NvidiaGPUIntegrationTest**
+
+### Performance Tests
+
+1. **MakeBinary, GenerateTestMatrix** and **StartLocalStack**
+2. **PerformanceTrackingTest**
