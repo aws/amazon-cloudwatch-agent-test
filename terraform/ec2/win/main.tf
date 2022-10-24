@@ -72,7 +72,7 @@ resource "null_resource" "integration_test" {
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
       "echo clone and install agent",
-      "git clone ${var.test_github_repo}",
+      "git clone ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "git reset --hard ${var.cwa_test_github_sha}",
       "echo run tests with the tag integration, one at a time, and verbose",
