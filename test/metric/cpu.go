@@ -17,9 +17,11 @@ type CPUMetricValueFetcher struct {
 	baseMetricValueFetcher
 }
 
-func (f *CPUMetricValueFetcher) Fetch(namespace string, metricName string, stat Statistics) ([]float64, error) {
+var _ MetricValueFetcher = (*CPUMetricValueFetcher)(nil)
+
+func (f *CPUMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) ([]float64, error) {
 	dimensions := f.getMetricSpecificDimensions()
-	values, err := f.fetch(namespace, dimensions, metricName, stat)
+	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
 	}
@@ -39,8 +41,8 @@ var cpuSupportedMetricValues = map[string]struct{}{
 	"cpu_time_system":      {},
 	"cpu_time_user":        {},
 	"cpu_usage_active":     {},
-	"cpu_usage_quest":      {},
-	"cpu_usage_quest_nice": {},
+	"cpu_usage_guest":      {},
+	"cpu_usage_guest_nice": {},
 	"cpu_usage_idle":       {},
 	"cpu_usage_iowait":     {},
 	"cpu_usage_irq":        {},

@@ -16,7 +16,6 @@ import (
 )
 
 const namespace = "MetricValueBenchmarkTest"
-const instanceId = "InstanceId"
 
 type MetricBenchmarkTestSuite struct {
 	suite.Suite
@@ -33,8 +32,8 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 }
 
 var testRunners = []*TestRunner{
-	&TestRunner{testRunner: &CPUTestRunner{}},
-	&TestRunner{testRunner: &DummyTestRunner{}},
+	{testRunner: &CPUTestRunner{}},
+	{testRunner: &MemTestRunner{}},
 }
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
@@ -52,17 +51,17 @@ func TestMetricValueBenchmarkSuite(t *testing.T) {
 	suite.Run(t, new(MetricBenchmarkTestSuite))
 }
 
-func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
+func isAllValuesGreaterThanOrEqualToZero(metricName string, values []float64) bool {
 	if len(values) == 0 {
 		log.Printf("No values found %v", metricName)
 		return false
 	}
 	for _, value := range values {
-		if value <= 0 {
-			log.Printf("Values are not all greater than zero for %v", metricName)
+		if value < 0 {
+			log.Printf("Values are not all greater than or equal to zero for %v", metricName)
 			return false
 		}
 	}
-	log.Printf("Values are all greater than zero for %v", metricName)
+	log.Printf("Values are all greater than or equal to zero for %v", metricName)
 	return true
 }
