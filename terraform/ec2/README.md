@@ -234,22 +234,17 @@ Outputs:
         "iam:DeleteInstanceProfile",
         "iam:DeletePolicy",
         "iam:ListInstanceProfilesForRole",
-        "iam:DeleteRole"
+        "iam:DeleteRole",
+        "ecs:RegisterTaskDefinition",
+        "ecs:DescribeTaskDefinition",
+        "ecs:UpdateService",
+        "ecs:DeregisterTaskDefinition",
+        "logs:DeleteLogGroup"
       ],
       "Resource": "*"
     }
   ]
 }
-```  
-Additionally, add these actions for ECS tests to also work
-
-```
-"ecs:RegisterTaskDefinition"
-"ecs:DescribeTaskDefinition"
-"ecs:UpdateService"
-"ecs:DeregisterTaskDefinition"
-"logs:DeleteLogGroup"
-
 ```
 
 11. Once creation is done, go back to the IAM role and attach the policy you just created by searching for the policy name.
