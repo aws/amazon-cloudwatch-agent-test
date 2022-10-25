@@ -134,7 +134,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating metrics/logs"
-      cd ../../../..
+      cd ../../..
       go test ${var.test_dir} -clusterName=${aws_ecs_cluster.cluster.name} --tags=integration
     EOT
   }
