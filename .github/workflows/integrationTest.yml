@@ -414,7 +414,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ec2-nvidia-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+          key: ec2-nvidia-integration-test-${{ github.run_id }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
@@ -513,7 +513,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+          key: ec2-linux-integration-test-${{ github.run_id }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
@@ -586,7 +586,7 @@ jobs:
 #        uses: actions/cache@v2
 #        with:
 #          path: go.mod
-#          key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
+#          key: ec2-win-integration-test-${{ github.run_id }}-${{ matrix.arrays.os }}
 #
 #      - name: Echo OS
 #        run: echo run on ec2 instance os ${{ matrix.arrays.os }}
@@ -684,7 +684,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
+          key: ecs-fargate-integration-test-${{ github.run_id }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
 
       - name: Login ECR
         id: login-ecr

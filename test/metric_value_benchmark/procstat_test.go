@@ -44,8 +44,8 @@ func (m *ProcStatTestRunner) getAgentRunDuration() time.Duration {
 
 func (m *ProcStatTestRunner) getMeasuredMetrics() []string {
 	return []string{
-		"cpu_time_system", "cpu_time_user", "cpu_usage", "memory_data", "memory_locked",
-		"memory_rss", "memory_stack", "memory_swap", "memory_vms", "pid", "pid_count"}
+		"procstat_cpu_time_system", "procstat_cpu_time_user", "procstat_cpu_usage", "procstat_memory_data", "procstat_memory_locked",
+		"procstat_memory_rss", "procstat_memory_stack", "procstat_memory_swap", "procstat_memory_vms", "procstat_pid", "procstat_lookup_pid_count"}
 }
 
 func (m *ProcStatTestRunner) validateMemMetric(metricName string) status.TestResult {

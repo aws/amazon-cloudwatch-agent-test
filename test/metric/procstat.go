@@ -7,22 +7,24 @@
 package metric
 
 import (
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"log"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 var procStatSupportedMetricValues = map[string]struct{}{
-	"cpu_time_system": {},
-	"cpu_time_user":   {},
-	"cpu_usage":       {},
-	"memory_data":     {},
-	"memory_locked":   {},
-	"memory_rss":      {},
-	"memory_stack":    {},
-	"memory_swap":     {},
-	"memory_vms":      {},
-	"pid":             {},
-	"pid_count":       {},
+	"procstat_cpu_time_system":  {},
+	"procstat_cpu_time_user":    {},
+	"procstat_cpu_usage":        {},
+	"procstat_memory_data":      {},
+	"procstat_memory_locked":    {},
+	"procstat_memory_rss":       {},
+	"procstat_memory_stack":     {},
+	"procstat_memory_swap":      {},
+	"procstat_memory_vms":       {},
+	"procstat_pid":              {},
+	"procstat_lookup_pid_count": {},
 }
 
 type ProcStatMetricValueFetcher struct {
@@ -46,5 +48,10 @@ func (f *ProcStatMetricValueFetcher) isApplicable(metricName string) bool {
 }
 
 func (f *ProcStatMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
-	return []types.Dimension{}
+	return []types.Dimension{
+		{
+			Name:  aws.String("exe"),
+			Value: aws.String("cloudwatch-agent"),
+		},
+	}
 }

@@ -74,7 +74,7 @@ resource "null_resource" "integration_test" {
       "echo clone and install agent",
       "git clone ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
-      "git reset --hard ${var.cwa_test_github_sha}",
+      "git switch ${var.github_test_branch}",
       "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./test/sanity -p 1 -v --tags=integration",
       "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
