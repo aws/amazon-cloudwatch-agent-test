@@ -20,6 +20,7 @@ import (
 var metricValueFetchers = []MetricValueFetcher{
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
+	&ProcStatMetricValueFetcher{},
 }
 
 func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
@@ -34,9 +35,14 @@ func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
 }
 
 type MetricValueFetcher interface {
+	// Fetch returns the values associate with the metric within the past 10 minutes
 	Fetch(namespace, metricName string, stat Statistics) ([]float64, error)
+
 	fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) ([]float64, error)
+	// isApplicable returns whether the metric exists within each fetcher plugin
 	isApplicable(metricName string) bool
+
+	// getMetricSpecificDimensions returns the fetcher plugin's dimension
 	getMetricSpecificDimensions() []types.Dimension
 }
 
