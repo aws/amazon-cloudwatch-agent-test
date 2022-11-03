@@ -23,9 +23,7 @@
             "memory_rss",
             "memory_stack",
             "memory_swap",
-            "memory_vms",
-            "pid",
-            "pid_count"
+            "memory_vms"
           ],
           "metrics_collection_interval": 60
         }

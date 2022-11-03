@@ -38,7 +38,7 @@ resource "aws_instance" "integration-test" {
       "clone the agent and start the localstack",
       "git clone ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
-      "git switch ${var.github_test_branch}",
+      "git reset --hard ${var.cwa_test_github_sha}",
       "echo set up ssl pem for localstack, then start localstack",
       "cd ~/amazon-cloudwatch-agent-test/localstack/ls_tmp",
       "openssl req -new -x509 -newkey rsa:2048 -sha256 -nodes -out snakeoil.pem -keyout snakeoil.key -config snakeoil.conf",

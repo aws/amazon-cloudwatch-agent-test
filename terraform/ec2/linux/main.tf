@@ -51,7 +51,7 @@ resource "null_resource" "integration_test" {
       "echo clone and install agent",
       "git clone ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
-      "git switch ${var.github_test_branch}",
+      "git reset --hard ${var.cwa_test_github_sha}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
       "sleep 10",
       "sudo ${var.install_agent}",

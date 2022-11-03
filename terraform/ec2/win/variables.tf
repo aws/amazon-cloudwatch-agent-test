@@ -18,7 +18,7 @@ variable "cwa_github_sha" {
   default = "4cefc9f0e9b411c6765c5122877c136dbb23588d"
 }
 
-variable "github_test_branch" {
+variable "cwa_test_github_sha" {
   type    = string
   default = ""
 }
