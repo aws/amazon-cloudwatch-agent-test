@@ -21,7 +21,7 @@ func (m *ProcStatTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := m.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, name := range metricsToFetch {
-		testResults[i] = m.validateMemMetric(name)
+		testResults[i] = m.validateProcStatMetric(name)
 	}
 
 	return status.TestGroupResult{
@@ -48,7 +48,7 @@ func (m *ProcStatTestRunner) getMeasuredMetrics() []string {
 		"procstat_memory_rss", "procstat_memory_stack", "procstat_memory_swap", "procstat_memory_vms", "procstat_pid", "procstat_lookup_pid_count"}
 }
 
-func (m *ProcStatTestRunner) validateMemMetric(metricName string) status.TestResult {
+func (m *ProcStatTestRunner) validateProcStatMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
