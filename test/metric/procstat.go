@@ -38,7 +38,7 @@ func (f *ProcStatMetricValueFetcher) Fetch(namespace, metricName string, stat St
 	values, err := f.fetch(namespace, metricName, dims, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %s: %v", metricName, err)
-	}
+	}cd
 	return values, err
 }
 
@@ -52,6 +52,10 @@ func (f *ProcStatMetricValueFetcher) getMetricSpecificDimensions() []types.Dimen
 		{
 			Name:  aws.String("exe"),
 			Value: aws.String("cloudwatch-agent"),
+		},
+		{
+			Name:  aws.String("process_name"),
+			Value: aws.String("amazon-cloudwatch-agent"),
 		},
 	}
 }
