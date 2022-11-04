@@ -21,7 +21,7 @@ locals {
   prometheus_config      = fileexists("../../../../../../${var.test_dir}/resources/ecs_prometheus.tpl") ? "../../../../../../${var.test_dir}/resources/ecs_prometheus.tpl" : "../../default_resources/default_ecs_prometheus.tpl"
   extra_apps_ecs_taskdef = fileexists("../../../../../../${var.test_dir}/resources/extra_apps.tpl") ? "../../../../../../${var.test_dir}/resources/extra_apps.tpl" : "../../default_resources/default_extra_apps.tpl"
   cwagent_ecs_volumes    = fileexists("../../../../../../${var.test_dir}/resources/ecs_volumes.tpl") ? "../../../../../../${var.test_dir}/resources/ecs_volumes.tpl" : "../../default_resources/default_ecs_volumes.tpl"
-  cwagent_config_ssm_param_name = "prometheus-integ-test-ssm-config-${random_id.testing_id.hex}"
+  cwagent_config_ssm_param_name = "cwagent-integ-test-ssm-config-${random_id.testing_id.hex}"
 }
 
 data "template_file" "cwagent_config" {
