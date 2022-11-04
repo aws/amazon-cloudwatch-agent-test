@@ -34,6 +34,7 @@ var osToTestDirMap = map[string][]string{
 	},
 	"ecs_fargate": {
 		"./test/ecs/ecs_metadata",
+		"./test/metrics_number_benchmark",
 	},
 }
 

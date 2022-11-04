@@ -22,7 +22,13 @@
       }
     },
     "cpu": 1,
-    "mountPoints": [],
+    "mountPoints": [
+        {
+            "readOnly": true,
+            "containerPath": "/rootfs/proc",
+            "sourceVolume": "proc"
+        },
+    ],
     "memory": 1024,
     "volumesFrom": []
   }
