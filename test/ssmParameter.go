@@ -18,7 +18,7 @@ func PutParameter(name *string, value *string, paramType *string) error {
 
 	svc := ssm.New(sess)
 
-	results, err := svc.PutParameter(&ssm.PutParameterInput{
+	_, err := svc.PutParameter(&ssm.PutParameterInput{
 		Name:  name,
 		Value: value,
 		Type:  paramType,
