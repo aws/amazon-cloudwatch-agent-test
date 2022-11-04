@@ -9,8 +9,10 @@ package fargate
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -54,6 +56,29 @@ func (t *ECSTestRunner) runAgent() (status.TestGroupResult, error) {
 	// 3) use the same validation logic
 
 	log.Printf("ECS runAgent Base Test")
+
+	cwagentConfigSsmParamName := flag.String("cwagentConfigSsmParamName", "", "The name of the parameter")
+	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", cwagentConfigSsmParamName)
+	b, err := os.ReadFile("../../agent_configs/cpu_config.json")
+	if err != nil {
+		fmt.Print(err)
+		testGroupResult := status.TestGroupResult{
+			Name: t.testRunner.getTestName(),
+			TestResults: []status.TestResult{
+				{
+					Name:   "Starting Agent",
+					Status: status.FAILURE,
+				},
+			},
+		}
+		return nil, fmt.Errorf("Default failure while development")
+	}
+
+	str := string(b)
+
+	test.PutParameter(cwagentConfigSsmParamName, str, "String")
+
+	log.Printf("Put parameter happened")
 
 	testGroupResult := status.TestGroupResult{
 		Name: t.testRunner.getTestName(),
