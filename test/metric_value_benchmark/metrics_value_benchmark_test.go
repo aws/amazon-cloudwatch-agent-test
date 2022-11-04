@@ -12,9 +12,9 @@ import (
 	"log"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark/ecs/fargate"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/stretchr/testify/suite"
 )
 
 const namespace = "MetricValueBenchmarkTest"
@@ -40,7 +40,7 @@ var testRunners = []*TestRunner{
 	{testRunner: &DiskIOTestRunner{}},
 }
 
-var ecsTestRunners = []*ECSTestRunner{
+var ecsTestRunners = []*fargate.ECSTestRunner{
 	{testRunner: &CPUTestRunner{}},
 }
 
