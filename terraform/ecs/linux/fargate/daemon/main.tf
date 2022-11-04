@@ -145,7 +145,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating metrics/logs"
-      cd ../../..
+      cd ../../../../..
       go test ${var.test_dir} -cwagentConfigSsmParamName=${local.cwagent_config_ssm_param_name} -clusterName=${aws_ecs_cluster.cluster.name} --tags=integration
     EOT
   }
