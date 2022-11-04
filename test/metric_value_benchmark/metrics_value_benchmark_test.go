@@ -40,7 +40,20 @@ var testRunners = []*TestRunner{
 	{testRunner: &NetTestRunner{}},
 }
 
+var ecsTestRunners = []*ECSTestRunner{
+	{testRunner: &CPUTestRunner{}},
+}
+
+var clusterName = flag.String("clusterName", "", "Please provide the os preference, valid value: windows/linux.")
+
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
+	if (clusterName != nil) {
+		log.Printf("cluster name isn't nil")
+		for _, ecsTestRunner := range ecsTestRunners {
+			ecsTestRunner.Run(suite)
+		}
+	}
+
 	for _, testRunner := range testRunners {
 		testRunner.Run(suite)
 	}
