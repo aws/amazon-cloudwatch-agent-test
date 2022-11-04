@@ -22,7 +22,7 @@ type SetupTypeTestCoverage struct {
 	Ec2        TestCoverageStatus
 }
 
-const HostMetricCommonCoverage = SetupTypeTestCoverage{EcsDaemon: TEST_EXISTS, EcsSidecar: TEST_EXISTS, EcsReplica: UNSUPPORTED_FEATURE, Ec2: TEST_EXISTS}
+var HostMetricCommonCoverage = SetupTypeTestCoverage{EcsDaemon: TEST_EXISTS, EcsSidecar: TEST_EXISTS, EcsReplica: UNSUPPORTED_FEATURE, Ec2: TEST_EXISTS}
 
 var supportedMetricsToTestCoverage = map[string]SetupTypeTestCoverage{
 	"cpu_time_active":      HostMetricCommonCoverage,
@@ -63,7 +63,7 @@ var supportedMetricsToTestCoverage = map[string]SetupTypeTestCoverage{
 func getEcsDaemonMetricsToTest() []string {
 	metricsToTest := []string{}
 	for metricName, setupTypeTestCoverage := range supportedMetricsToTestCoverage {
-		if setupTypeTestCoverage.EcsDaemon == TestCoverageStatus.TEST_EXISTS {
+		if setupTypeTestCoverage.EcsDaemon == TEST_EXISTS {
 			metricsToTest = append(metricsToTest, metricName)
 		}
 	}
