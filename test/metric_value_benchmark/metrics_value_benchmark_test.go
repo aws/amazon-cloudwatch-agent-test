@@ -7,6 +7,7 @@
 package metric_value_benchmark
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"testing"
@@ -45,12 +46,13 @@ var ecsTestRunners = []*ECSTestRunner{
 }
 
 var clusterName = flag.String("clusterName", "", "Please provide the os preference, valid value: windows/linux.")
+var cwagentConfigSsmParamName = flag.String("cwagentConfigSsmParamName", "", "The name of the parameter")
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
-	if (clusterName != nil) {
+	if clusterName != nil {
 		log.Printf("cluster name isn't nil")
 		for _, ecsTestRunner := range ecsTestRunners {
-			ecsTestRunner.Run(suite)
+			ecsTestRunner.Run(suite, cwagentConfigSsmParamName)
 		}
 	}
 

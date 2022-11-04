@@ -34,10 +34,10 @@ type ECSTestRunner struct {
 	testRunner ITestRunner
 }
 
-func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite) {
+func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, cwagentConfigSsmParamName string) {
 	testName := t.testRunner.getTestName()
 	log.Printf("Running %v", testName)
-	testGroupResult, err := t.runAgent()
+	testGroupResult, err := t.runAgent(cwagentConfigSsmParamName)
 	if err == nil {
 		testGroupResult = t.testRunner.validate()
 	}
@@ -47,7 +47,7 @@ func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite) {
 	}
 }
 
-func (t *ECSTestRunner) runAgent() (status.TestGroupResult, error) {
+func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName string) (status.TestGroupResult, error) {
 	// 1) First, make a always-failing test so I can keep rerunning the test in my fork. make ca tests always succeed temporarily to save iterating time
 	// get flag to benchmark test, and benchmark test creates the right base test class with the right runAgent() based on ecs vs ec2 -> make agentRunner injectable. -> test by logging
 	// this runAgent should
@@ -56,8 +56,6 @@ func (t *ECSTestRunner) runAgent() (status.TestGroupResult, error) {
 	// 3) use the same validation logic
 
 	log.Printf("ECS runAgent Base Test")
-
-	cwagentConfigSsmParamName := flag.String("cwagentConfigSsmParamName", "", "The name of the parameter")
 	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", cwagentConfigSsmParamName)
 	b, err := os.ReadFile("../../agent_configs/cpu_config.json")
 	if err != nil {
