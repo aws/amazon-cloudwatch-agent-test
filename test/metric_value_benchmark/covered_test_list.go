@@ -60,10 +60,10 @@ var supportedMetricsToTestCoverage = map[string]SetupTypeTestCoverage{
 	"mem_used_percent":      HostMetricCommonCoverage,
 }
 
-func getEcsDaemonMetricsToTest() string[] {
+func getEcsDaemonMetricsToTest() []string {
 	metricsToTest := []string{}
 	for metricName, setupTypeTestCoverage := range supportedMetricsToTestCoverage {
-		if (setupTypeTestCoverage.EcsDaemon == TestCoverageStatus.TEST_EXISTS) {
+		if setupTypeTestCoverage.EcsDaemon == TestCoverageStatus.TEST_EXISTS {
 			metricsToTest = append(metricsToTest, metricName)
 		}
 	}
