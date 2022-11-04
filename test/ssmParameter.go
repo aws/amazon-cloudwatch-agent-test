@@ -24,5 +24,5 @@ func PutParameter(name *string, value *string, paramType *string) error {
 		Type:  paramType,
 	})
 
-	return _, err
+	return err
 }
