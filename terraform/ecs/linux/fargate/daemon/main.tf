@@ -21,6 +21,7 @@ locals {
   prometheus_config      = fileexists("../../../../../../${var.test_dir}/resources/ecs_prometheus.tpl") ? "../../../../../../${var.test_dir}/resources/ecs_prometheus.tpl" : "../../default_resources/default_ecs_prometheus.tpl"
   extra_apps_ecs_taskdef = fileexists("../../../../../../${var.test_dir}/resources/extra_apps.tpl") ? "../../../../../../${var.test_dir}/resources/extra_apps.tpl" : "../../default_resources/default_extra_apps.tpl"
   cwagent_ecs_volumes    = fileexists("../../../../../../${var.test_dir}/resources/ecs_volumes.tpl") ? "../../../../../../${var.test_dir}/resources/ecs_volumes.tpl" : "../../default_resources/default_ecs_volumes.tpl"
+  cwagent_config_ssm_param_name = "prometheus-integ-test-ssm-config-${random_id.testing_id.hex}"
 }
 
 data "template_file" "cwagent_config" {
@@ -30,7 +31,7 @@ data "template_file" "cwagent_config" {
 }
 
 resource "aws_ssm_parameter" "cwagent_config" {
-  name  = "cwagent-integ-test-ssm-config-${random_id.testing_id.hex}"
+  name  = local.cwagent_config_ssm_param_name
   type  = "String"
   value = data.template_file.cwagent_config.rendered
 }
@@ -143,7 +144,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating metrics/logs"
       cd ../../..
-      go test ${var.test_dir} -clusterName=${aws_ecs_cluster.cluster.name} --tags=integration
+      go test ${var.test_dir} -cwagentConfigSsmParamName=${local.cwagent_config_ssm_param_name} -clusterName=${aws_ecs_cluster.cluster.name} --tags=integration
     EOT
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service]
