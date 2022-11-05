@@ -19,7 +19,7 @@ type CPUMetricValueFetcher struct {
 
 var _ MetricValueFetcher = (*CPUMetricValueFetcher)(nil)
 
-func (f *CPUMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) ([]float64, error) {
+func (f *CPUMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dimensions := f.getMetricSpecificDimensions()
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
@@ -28,43 +28,46 @@ func (f *CPUMetricValueFetcher) Fetch(namespace, metricName string, stat Statist
 	return values, err
 }
 
-var cpuSupportedMetricValues = map[string]struct{}{
-	"cpu_time_active":      {},
-	"cpu_time_guest":       {},
-	"cpu_time_guest_nice":  {},
-	"cpu_time_idle":        {},
-	"cpu_time_iowait":      {},
-	"cpu_time_irq":         {},
-	"cpu_time_nice":        {},
-	"cpu_time_softirq":     {},
-	"cpu_time_steal":       {},
-	"cpu_time_system":      {},
-	"cpu_time_user":        {},
-	"cpu_usage_active":     {},
-	"cpu_usage_guest":      {},
-	"cpu_usage_guest_nice": {},
-	"cpu_usage_idle":       {},
-	"cpu_usage_iowait":     {},
-	"cpu_usage_irq":        {},
-	"cpu_usage_nice":       {},
-	"cpu_usage_softirq":    {},
-	"cpu_usage_steal":      {},
-	"cpu_usage_system":     {},
-	"cpu_usage_user":       {},
-}
-
 func (f *CPUMetricValueFetcher) isApplicable(metricName string) bool {
-	_, exists := cpuSupportedMetricValues[metricName]
+	cpuSupportedMetric := f.getPluginSupportedMetric()
+	_, exists := cpuSupportedMetric[metricName]
 	return exists
 }
 
-var cpuMetricsSpecificDimension = []types.Dimension{
-	{
-		Name:  aws.String("cpu"),
-		Value: aws.String("cpu-total"),
-	},
+func (f *CPUMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
+	// CPU supported metrics
+	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L9-L10
+	return map[string]struct{}{
+		"cpu_time_active":      {},
+		"cpu_time_guest":       {},
+		"cpu_time_guest_nice":  {},
+		"cpu_time_idle":        {},
+		"cpu_time_iowait":      {},
+		"cpu_time_irq":         {},
+		"cpu_time_nice":        {},
+		"cpu_time_softirq":     {},
+		"cpu_time_steal":       {},
+		"cpu_time_system":      {},
+		"cpu_time_user":        {},
+		"cpu_usage_active":     {},
+		"cpu_usage_guest":      {},
+		"cpu_usage_guest_nice": {},
+		"cpu_usage_idle":       {},
+		"cpu_usage_iowait":     {},
+		"cpu_usage_irq":        {},
+		"cpu_usage_nice":       {},
+		"cpu_usage_softirq":    {},
+		"cpu_usage_steal":      {},
+		"cpu_usage_system":     {},
+		"cpu_usage_user":       {},
+	}
 }
 
 func (f *CPUMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
-	return cpuMetricsSpecificDimension
+	return []types.Dimension{
+		{
+			Name:  aws.String("cpu"),
+			Value: aws.String("cpu-total"),
+		},
+	}
 }

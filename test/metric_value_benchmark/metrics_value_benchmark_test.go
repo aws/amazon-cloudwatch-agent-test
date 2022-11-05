@@ -11,8 +11,9 @@ import (
 	"log"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
 const namespace = "MetricValueBenchmarkTest"
@@ -34,6 +35,7 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 var testRunners = []*TestRunner{
 	{testRunner: &CPUTestRunner{}},
 	{testRunner: &MemTestRunner{}},
+	{testRunner: &DiskIOTestRunner{}},
 }
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {

@@ -11,15 +11,17 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test"
 )
 
 var metricValueFetchers = []MetricValueFetcher{
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
+	&DiskIOMetricValueFetcher{},
 }
 
 func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
@@ -34,15 +36,26 @@ func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
 }
 
 type MetricValueFetcher interface {
-	Fetch(namespace, metricName string, stat Statistics) ([]float64, error)
-	fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) ([]float64, error)
+	// Fetch and fetch uses GetMetricData to return the metrics value being submitted
+	//in the last 10 minutes with the given metric name, namespace, and dimensions.
+	Fetch(namespace, metricName string, stat Statistics) (MetricValues, error)
+	fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error)
+
+	// isApplicable checks whether the given metric is supported within the plugin
+	//(e.g cpu_time_active is supported in CPU plugin while mem_active does not)
 	isApplicable(metricName string) bool
+
+	// getMetricSpecificDimensions returns the dimensions that needs to be scraped by each plugin
 	getMetricSpecificDimensions() []types.Dimension
+
+	// getPluginSupportedMetric returns the supported metrics for each plugin
+	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go
+	getPluginSupportedMetric() map[string]struct{}
 }
 
 type baseMetricValueFetcher struct{}
 
-func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) ([]float64, error) {
+func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
 	ec2InstanceId := test.GetInstanceId()
 	instanceIdDimension := types.Dimension{
 		Name:  aws.String("InstanceId"),
