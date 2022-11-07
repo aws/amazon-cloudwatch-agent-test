@@ -17,12 +17,13 @@ func PutParameter(name *string, value *string, paramType *string) error {
 	}))
 
 	svc := ssm.New(sess)
+	isOverwriteAllowed := true
 
 	_, err := svc.PutParameter(&ssm.PutParameterInput{
 		Name:      name,
 		Value:     value,
 		Type:      paramType,
-		Overwrite: true,
+		Overwrite: &isOverwriteAllowed,
 	})
 
 	return err
