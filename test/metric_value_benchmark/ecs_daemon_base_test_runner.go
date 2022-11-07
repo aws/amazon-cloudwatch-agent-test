@@ -50,7 +50,7 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string) (status.Test
 	// 3) use the same validation logic
 
 	log.Printf("ECS runAgent Base Test")
-	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", cwagentConfigSsmParamName)
+	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", *cwagentConfigSsmParamName)
 	b, err := os.ReadFile("../../agent_configs/cpu_config.json")
 	if err != nil {
 		fmt.Print(err)
