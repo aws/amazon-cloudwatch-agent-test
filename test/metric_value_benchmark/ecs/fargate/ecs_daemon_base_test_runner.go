@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -34,7 +35,7 @@ type ECSTestRunner struct {
 	testRunner ITestRunner
 }
 
-func (t *ECSTestRunner) Run(s *test.MetricBenchmarkTestSuite, cwagentConfigSsmParamName string) {
+func (t *ECSTestRunner) Run(s *metric_value_benchmark.MetricBenchmarkTestSuite, cwagentConfigSsmParamName string) {
 	testName := t.testRunner.getTestName()
 	log.Printf("Running %v", testName)
 	testGroupResult, err := t.runAgent(cwagentConfigSsmParamName)
