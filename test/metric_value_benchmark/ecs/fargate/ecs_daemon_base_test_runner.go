@@ -34,7 +34,7 @@ type ECSTestRunner struct {
 	testRunner ITestRunner
 }
 
-func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, cwagentConfigSsmParamName string) {
+func (t *ECSTestRunner) Run(s *test.MetricBenchmarkTestSuite, cwagentConfigSsmParamName string) {
 	testName := t.testRunner.getTestName()
 	log.Printf("Running %v", testName)
 	testGroupResult, err := t.runAgent(cwagentConfigSsmParamName)
@@ -65,16 +65,17 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName string) (status.TestG
 			TestResults: []status.TestResult{
 				{
 					Name:   "Starting Agent",
-					Status: status.FAILURE,
+					Status: status.FAILED,
 				},
 			},
 		}
-		return nil, fmt.Errorf("Default failure while development")
+		return testGroupResult, fmt.Errorf("Failed while reading config file")
 	}
 
-	str := string(b)
+	agentConfig := string(b)
+	ssmParamType := "String"
 
-	test.PutParameter(cwagentConfigSsmParamName, str, "String")
+	test.PutParameter(&cwagentConfigSsmParamName, &agentConfig, &ssmParamType)
 
 	log.Printf("Put parameter happened")
 
@@ -83,12 +84,12 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName string) (status.TestG
 		TestResults: []status.TestResult{
 			{
 				Name:   "Starting Agent",
-				Status: status.FAILURE,
+				Status: status.FAILED,
 			},
 		},
 	}
 
-	return nil, fmt.Errorf("Default failure while development")
+	return testGroupResult, fmt.Errorf("Default failure for development test")
 	/*
 		agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
 		log.Printf("Starting agent using agent config file %s", agentConfigPath)
