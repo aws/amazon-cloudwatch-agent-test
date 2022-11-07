@@ -40,7 +40,7 @@ var testRunners = []*TestRunner{
 	{testRunner: &NetTestRunner{}},
 }
 
-var ecsTestRunners = []ECSTestRunner{
+var ecsTestRunners = []*ECSTestRunner{
 	{testRunner: &CPUTestRunner{}},
 }
 
