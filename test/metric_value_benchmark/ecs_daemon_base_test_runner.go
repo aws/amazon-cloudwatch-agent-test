@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package fargate
+package metric_value_benchmark
 
 import (
 	"fmt"
@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -35,7 +34,7 @@ type ECSTestRunner struct {
 	testRunner ITestRunner
 }
 
-func (t *ECSTestRunner) Run(s *metric_value_benchmark.MetricBenchmarkTestSuite, cwagentConfigSsmParamName string) {
+func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, cwagentConfigSsmParamName string) {
 	testName := t.testRunner.getTestName()
 	log.Printf("Running %v", testName)
 	testGroupResult, err := t.runAgent(cwagentConfigSsmParamName)

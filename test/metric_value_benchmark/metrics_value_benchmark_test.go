@@ -12,7 +12,6 @@ import (
 	"log"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark/ecs/fargate"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/stretchr/testify/suite"
 )
@@ -40,7 +39,7 @@ var testRunners = []*TestRunner{
 	{testRunner: &DiskIOTestRunner{}},
 }
 
-var ecsTestRunners = []*fargate.ECSTestRunner{
+var ecsTestRunners = []ECSTestRunner{
 	{testRunner: &CPUTestRunner{}},
 }
 
