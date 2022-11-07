@@ -12,6 +12,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -70,7 +71,7 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string) (status.Test
 
 	err = test.PutParameter(cwagentConfigSsmParamName, &agentConfig, &ssmParamType)
 	if err != nil {
-		log.Printf(err)
+		fmt.Print(err)
 	}
 	log.Printf("Put parameter happened")
 
