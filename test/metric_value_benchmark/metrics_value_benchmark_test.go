@@ -39,7 +39,7 @@ var testRunners = []*TestRunner{
 	{testRunner: &DiskIOTestRunner{}},
 }
 
-var ecsTestRunners = []ECSTestRunner{
+var ecsTestRunners = []*ECSTestRunner{
 	{testRunner: &CPUTestRunner{}},
 }
 
