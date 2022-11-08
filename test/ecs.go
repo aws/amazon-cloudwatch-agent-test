@@ -25,3 +25,18 @@ func ListTasks(clusterArn *string, serviceName *string) ([]*string, error) {
 
 	return listTasksOutput.TaskArns, err
 }
+
+func StopTask(clusterArn *string, taskArn *string) error {
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
+	svc := ecs.New(sess)
+
+	_, err := svc.StopTask(&ecs.StopTaskInput{
+		Cluster: clusterArn,
+		Task:    taskArn,
+	})
+
+	return err
+}
