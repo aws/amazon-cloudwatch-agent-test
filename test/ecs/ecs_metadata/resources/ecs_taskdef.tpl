@@ -21,7 +21,7 @@
         "awslogs-group": "${log_group}"
       }
     },
-    "cpu": 1,
+    "cpu": 128,
     "mountPoints": [
         {
             "readOnly": true,
@@ -54,7 +54,7 @@
           "sourceVolume": "al1_cgroup"
         }
     ],
-    "memory": 1024,
+    "memory": 64,
     "volumesFrom": []
   }
 ]

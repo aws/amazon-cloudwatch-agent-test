@@ -82,6 +82,9 @@ resource "aws_ecs_task_definition" "cwagent_task_definition" {
   depends_on               = [aws_cloudwatch_log_group.log_group, aws_iam_role.ecs_task_role, aws_iam_role.ecs_task_execution_role]
   volume{
     name = "proc"
+    name = "dev"
+    name = "al1_cgroup"
+    name = "al2_cgroup"
   }
 }
 
