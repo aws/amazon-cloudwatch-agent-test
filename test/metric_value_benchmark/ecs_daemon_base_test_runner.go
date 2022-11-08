@@ -75,22 +75,14 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string, clusterArn *
 	}
 	log.Printf("Put parameter happened")
 
-	taskArns, err := test.ListTasks(clusterArn, serviceName)
+	cwaTaskCount := int64(1)
+	err = test.RestartService(clusterArn, &cwaTaskCount, serviceName)
 	if err != nil {
 		fmt.Print(err)
 	}
-	if len(taskArns) <= 0 {
-		fmt.Errorf("Task arns aren't expected to be 0. It should be 1")
-	}
-	cwagentTaskArn := taskArns[0]
-	log.Printf("CWAgent task arn found: %s", *cwagentTaskArn)
-	log.Printf("ListTasks happened in order to stop and start the task again")
+	log.Printf("CWAgent service is restarted")
 
-	err = test.StopTask(clusterArn, cwagentTaskArn)
-	if err != nil {
-		fmt.Print(err)
-	}
-	log.Printf("CWAgent task is stopped")
+	time.Sleep(10 * time.Minute)
 
 	//TODO for each failure cases, fail early (by returning pre-made failure state)
 
