@@ -28,10 +28,10 @@ type ECSTestRunner struct {
 	testRunner IECSTestRunner
 }
 
-func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, cwagentConfigSsmParamName *string) {
+func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, cwagentConfigSsmParamName *string, clusterArn *string, serviceName *string) {
 	testName := t.testRunner.getTestName()
 	log.Printf("Running %v", testName)
-	testGroupResult, err := t.runAgent(cwagentConfigSsmParamName)
+	testGroupResult, err := t.runAgent(cwagentConfigSsmParamName, clusterArn, serviceName)
 	if err == nil {
 		testGroupResult = t.testRunner.validate()
 	}
@@ -41,7 +41,7 @@ func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, cwagentConfigSsmParamNa
 	}
 }
 
-func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string) (status.TestGroupResult, error) {
+func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string, clusterArn *string, serviceName *string) (status.TestGroupResult, error) {
 	// 1) First, make a always-failing test so I can keep rerunning the test in my fork. make ca tests always succeed temporarily to save iterating time
 	// get flag to benchmark test, and benchmark test creates the right base test class with the right runAgent() based on ecs vs ec2 -> make agentRunner injectable. -> test by logging
 	// this runAgent should
@@ -74,6 +74,16 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string) (status.Test
 		fmt.Print(err)
 	}
 	log.Printf("Put parameter happened")
+
+	taskArns, err = test.ListTasks(clusterArn, agentConfig)
+	if err != nil {
+		fmt.Print(err)
+	}
+	if len(taskArns) <= 0 {
+		fmt.Errorf("Task arns aren't expected to be 0. It should be 1")
+	}
+	log.Printf("CWAgent task arn found: %s", *(taskArns[0]))
+	log.Printf("ListTasks happened in order to stop and start the task again")
 
 	testGroupResult := status.TestGroupResult{
 		Name: t.testRunner.getTestName(),

@@ -43,14 +43,15 @@ var ecsTestRunners = []*ECSTestRunner{
 	{testRunner: &CPUTestRunner{}},
 }
 
-var clusterName = flag.String("clusterName", "", "Please provide the os preference, valid value: windows/linux.")
-var cwagentConfigSsmParamName = flag.String("cwagentConfigSsmParamName", "", "The name of the parameter")
+var clusterArn = flag.String("clusterArn", "", "Used to restart ecs task to apply new agent config")
+var cwagentConfigSsmParamName = flag.String("cwagentConfigSsmParamName", "", "Used to set new cwa config")
+var serviceName = flag.String("cwagentECSServiceName", "", "Used to restart ecs task to apply new agent config")
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
-	if clusterName != nil {
+	if clusterArn != nil {
 		log.Printf("cluster name isn't nil")
 		for _, ecsTestRunner := range ecsTestRunners {
-			ecsTestRunner.Run(suite, cwagentConfigSsmParamName)
+			ecsTestRunner.Run(suite, cwagentConfigSsmParamName, clusterArn, serviceName)
 		}
 	}
 
