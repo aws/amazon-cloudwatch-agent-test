@@ -82,8 +82,17 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string, clusterArn *
 	if len(taskArns) <= 0 {
 		fmt.Errorf("Task arns aren't expected to be 0. It should be 1")
 	}
-	log.Printf("CWAgent task arn found: %s", *(taskArns[0]))
+	cwagentTaskArn := taskArns[0]
+	log.Printf("CWAgent task arn found: %s", *cwagentTaskArn)
 	log.Printf("ListTasks happened in order to stop and start the task again")
+
+	err = test.StopTask(clusterArn, cwagentTaskArn)
+	if err != nil {
+		fmt.Print(err)
+	}
+	log.Printf("CWAgent task is stopped")
+
+	//TODO for each failure cases, fail early (by returning pre-made failure state)
 
 	testGroupResult := status.TestGroupResult{
 		Name: t.testRunner.getTestName(),
