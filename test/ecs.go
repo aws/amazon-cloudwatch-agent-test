@@ -17,7 +17,6 @@ func ListTasks(clusterArn *string, serviceName *string) ([]*string, error) {
 	}))
 
 	svc := ecs.New(sess)
-	isOverwriteAllowed := true
 
 	listTasksOutput, err := svc.ListTasks(&ecs.ListTasksInput{
 		Cluster:     clusterArn,

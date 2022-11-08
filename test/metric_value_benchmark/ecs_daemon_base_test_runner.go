@@ -75,7 +75,7 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string, clusterArn *
 	}
 	log.Printf("Put parameter happened")
 
-	taskArns, err = test.ListTasks(clusterArn, agentConfig)
+	taskArns, err := test.ListTasks(clusterArn, serviceName)
 	if err != nil {
 		fmt.Print(err)
 	}
