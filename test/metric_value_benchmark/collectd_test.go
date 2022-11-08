@@ -13,16 +13,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
-type CPUTestRunner struct {
+type CollectDTestRunner struct {
 }
 
-var _ ITestRunner = (*CPUTestRunner)(nil)
+var _ ITestRunner = (*CollectDTestRunner)(nil)
 
-func (t *CPUTestRunner) validate() status.TestGroupResult {
+func (t *CollectDTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateCpuMetric(metricName)
+		testResults[i] = validateCollectDMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -31,31 +31,30 @@ func (t *CPUTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (t *CPUTestRunner) getTestName() string {
-	return "CPU"
+func (t *CollectDTestRunner) getTestName() string {
+	return "CollectD"
 }
 
-func (t *CPUTestRunner) getAgentConfigFileName() string {
-	return "cpu_config.json"
+func (t *CollectDTestRunner) getAgentConfigFileName() string {
+	return "collectd_config.json"
 }
 
-func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
+func (t *CollectDTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *CPUTestRunner) getExtraCommands() []string {
-	return []string{}
-}
-
-func (t *CPUTestRunner) getMeasuredMetrics() []string {
+func (t *CollectDTestRunner) getExtraCommands() []string {
 	return []string{
-		"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-		"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
+		"sudo cp ./extra_configs/collectd.conf /etc/collectd.conf",
+		"sudo systemctl restart collectd",
+	}
 }
 
-func validateCpuMetric(metricName string) status.TestResult {
+func (t *CollectDTestRunner) getMeasuredMetrics() []string {
+	return []string{"collectd_cpu_value"}
+}
+
+func validateCollectDMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,

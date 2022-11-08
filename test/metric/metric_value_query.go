@@ -15,13 +15,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/util"
 )
 
 var metricValueFetchers = []MetricValueFetcher{
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
-	&DiskIOMetricValueFetcher{},
 }
 
 func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
@@ -56,7 +55,7 @@ type MetricValueFetcher interface {
 type baseMetricValueFetcher struct{}
 
 func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
-	ec2InstanceId := test.GetInstanceId()
+	ec2InstanceId := util.GetInstanceId()
 	instanceIdDimension := types.Dimension{
 		Name:  aws.String("InstanceId"),
 		Value: aws.String(ec2InstanceId),
@@ -90,7 +89,7 @@ func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpeci
 
 	log.Printf("Metric data input is : %s", fmt.Sprint(getMetricDataInput))
 
-	cwmClient, clientContext, err := test.GetCloudWatchMetricsClient()
+	cwmClient, clientContext, err := util.GetCloudWatchMetricsClient()
 	if err != nil {
 		return nil, fmt.Errorf("Error occurred while creating CloudWatch client: %v", err.Error())
 	}

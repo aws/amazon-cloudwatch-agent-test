@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package test
+package util
 
 import (
 	"fmt"
@@ -37,7 +37,7 @@ func DeleteFile(filePathAbsolute string) error {
 	out, err := exec.Command("bash", "-c", "sudo rm "+filePathAbsolute).Output()
 
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Printf(fmt.Sprint(err) + string(out))
 		return err
 	}
 
@@ -107,12 +107,25 @@ func RunShellScript(path string, args ...string) error {
 	return nil
 }
 
-func RunCommand(cmd string) {
+func RunCommand(cmd string) error {
 	out, err := exec.Command("bash", "-c", cmd).Output()
 
 	if err != nil {
-		log.Fatalf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
+		log.Printf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
+		return err
 	}
+	return nil
+}
+
+func RunCommands(commands []string) error {
+	for _, cmd := range commands {
+		err := RunCommand(cmd)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func ReplaceLocalStackHostName(pathIn string) {

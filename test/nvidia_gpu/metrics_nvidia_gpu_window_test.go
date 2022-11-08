@@ -7,10 +7,11 @@
 package metrics_nvidia_gpu
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"testing"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/util"
 )
 
 const (
@@ -26,13 +27,13 @@ var expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use"
 
 func TestNvidiaGPUWindows(t *testing.T) {
 	t.Run("Run CloudWatchAgent with Nvidia-smi on Windows", func(t *testing.T) {
-		err := test.CopyFile(configWindowsJSON, configWindowsOutputPath)
+		err := util.CopyFile(configWindowsJSON, configWindowsOutputPath)
 
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
 
-		err = test.StartAgent(configWindowsOutputPath, true)
+		err = util.StartAgent(configWindowsOutputPath, true)
 
 		if err != nil {
 			t.Fatalf(err.Error())
@@ -40,15 +41,15 @@ func TestNvidiaGPUWindows(t *testing.T) {
 
 		time.Sleep(agentWindowsRuntime)
 		t.Logf("Agent has been running for : %s", agentWindowsRuntime.String())
-		err = test.StopAgent()
+		err = util.StopAgent()
 
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
 
-		dimensionFilter := test.BuildDimensionFilterList(numberofWindowsAppendDimensions)
+		dimensionFilter := util.BuildDimensionFilterList(numberofWindowsAppendDimensions)
 		for _, metricName := range expectedNvidiaGPUWindowsMetrics {
-			test.ValidateMetrics(t, metricName, metricWindowsnamespace, dimensionFilter)
+			util.ValidateMetrics(t, metricName, metricWindowsnamespace, dimensionFilter)
 		}
 
 		err = filesystem.CheckFileRights(agentWindowsLogPath)

@@ -9,14 +9,15 @@ package ecs_metadata
 import (
 	"flag"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"log"
 	"testing"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test/util"
 )
 
 // Purpose: Detect the changes in metadata endpoint for ECS Container Agent https://github.com/aws/amazon-cloudwatch-agent/blob/master/translator/util/ecsutil/ecsutil.go#L67-L75
-// Implementation: Checking if a log group's the format(https://github.com/aws/amazon-cloudwatch-agent/blob/master/translator/translate/logs/metrics_collected/prometheus/ruleLogGroupName.go#L33) 
+// Implementation: Checking if a log group's the format(https://github.com/aws/amazon-cloudwatch-agent/blob/master/translator/translate/logs/metrics_collected/prometheus/ruleLogGroupName.go#L33)
 // exists or not  since the log group's format has the scrapping cluster name from metadata endpoint.
 
 const (
@@ -38,8 +39,8 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
 
-		if test.IsLogGroupExists(t, logGroupName) {
-			test.DeleteLogGroupAndStream(logGroupName, LogStreamName)
+		if util.IsLogGroupExists(t, logGroupName) {
+			util.DeleteLogGroupAndStream(logGroupName, LogStreamName)
 			break
 		}
 

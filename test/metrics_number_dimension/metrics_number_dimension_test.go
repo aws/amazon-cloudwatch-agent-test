@@ -12,21 +12,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test/util"
 )
 
-const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const configJSON = "/config.json"
-const namespace = "MetricNumberDimensionTest"
-const instanceId = "InstanceId"
-const loremIpsum = "Lorem ipsum dolor sit amet consectetur adipiscing elit Vivamus non mauris malesuada mattis ex eget porttitor purus Suspendisse potenti Praesent vel sollicitudin ipsum Quisque luctus pretium lorem non faucibus Ut vel quam dui Nunc fermentum condimentum consectetur Morbi tellus mauris tristique tincidunt elit consectetur hendrerit placerat dui In nulla erat finibus eget erat a hendrerit sodales urna In sapien purus auctor sit amet congue ut congue eget nisi Vivamus sed neque ut ligula lobortis accumsan quis id metus In feugiat velit et leo mattis non fringilla dui elementum Proin a nisi ac sapien vulputate consequat Vestibulum eu tellus mi Integer consectetur efficitur"
-const appendMetric = "append"
-const MaxDimensionCountAllowed = 30
+const (
+	configOutputPath         = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	configJSON               = "/config.json"
+	namespace                = "MetricNumberDimensionTest"
+	instanceId               = "InstanceId"
+	loremIpsum               = "Lorem ipsum dolor sit amet consectetur adipiscing elit Vivamus non mauris malesuada mattis ex eget porttitor purus Suspendisse potenti Praesent vel sollicitudin ipsum Quisque luctus pretium lorem non faucibus Ut vel quam dui Nunc fermentum condimentum consectetur Morbi tellus mauris tristique tincidunt elit consectetur hendrerit placerat dui In nulla erat finibus eget erat a hendrerit sodales urna In sapien purus auctor sit amet congue ut congue eget nisi Vivamus sed neque ut ligula lobortis accumsan quis id metus In feugiat velit et leo mattis non fringilla dui elementum Proin a nisi ac sapien vulputate consequat Vestibulum eu tellus mi Integer consectetur efficitur"
+	appendMetric             = "append"
+	MaxDimensionCountAllowed = 30
 
-//Let the agent run for 2 minutes. This will give agent enough time to call server
-const agentRuntime = 2 * time.Minute
+	agentRuntime = 2 * time.Minute // Let the agent run for 2 minutes. This will give agent enough time to call server
+)
 
 type input struct {
 	resourcePath         string
@@ -40,7 +42,7 @@ type metric struct {
 	value string
 }
 
-//Must run this test with parallel 1 since this will fail if more than one test is running at the same time
+// Must run this test with parallel 1 since this will fail if more than one test is running at the same time
 func TestNumberMetricDimension(t *testing.T) {
 
 	parameters := []input{
@@ -70,8 +72,8 @@ func TestNumberMetricDimension(t *testing.T) {
 			parameter.resourcePath, parameter.failToStart, parameter.numberDimensionsInCW, parameter.metricName)
 
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.resourcePath, parameter.failToStart), func(t *testing.T) {
-			test.CopyFile(parameter.resourcePath+configJSON, configOutputPath)
-			err := test.StartAgent(configOutputPath, false)
+			util.CopyFile(parameter.resourcePath+configJSON, configOutputPath)
+			err := util.StartAgent(configOutputPath, false)
 
 			// for append dimension we auto fail over 30 for custom metrics (statsd we collect remove dimension and continue)
 			// Go output starts at the time of failure so the failure message gets chopped off. Thus have to use if there is an error and just assume reason.
@@ -84,11 +86,11 @@ func TestNumberMetricDimension(t *testing.T) {
 
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
-			test.StopAgent()
+			util.StopAgent()
 
 			// test for cloud watch metrics
 			dimensionFilter := buildDimensionFilterList(parameter.numberDimensionsInCW)
-			test.ValidateMetrics(t, parameter.metricName, namespace, dimensionFilter)
+			util.ValidateMetrics(t, parameter.metricName, namespace, dimensionFilter)
 		})
 	}
 }
@@ -97,7 +99,7 @@ func buildDimensionFilterList(appendDimension int) []types.DimensionFilter {
 	// we append dimension from 0 to max number - 2
 	// then we add dimension instance id
 	// thus for max dimension 10, 0 to 8 + instance id = 10 dimension
-	ec2InstanceId := test.GetInstanceId()
+	ec2InstanceId := util.GetInstanceId()
 	dimensionFilter := make([]types.DimensionFilter, appendDimension)
 	for i := 0; i < appendDimension-1; i++ {
 		dimensionFilter[i] = types.DimensionFilter{
