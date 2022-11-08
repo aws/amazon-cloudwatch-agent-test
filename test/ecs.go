@@ -11,31 +11,20 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
-func ListTasks(clusterArn *string, serviceName *string) ([]*string, error) {
+func RestartService(clusterArn *string, desiredCount *int64, serviceName *string) error {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
 	svc := ecs.New(sess)
 
-	listTasksOutput, err := svc.ListTasks(&ecs.ListTasksInput{
-		Cluster:     clusterArn,
-		ServiceName: serviceName,
-	})
+	forceNewDeployment := true
 
-	return listTasksOutput.TaskArns, err
-}
-
-func StopTask(clusterArn *string, taskArn *string) error {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-
-	svc := ecs.New(sess)
-
-	_, err := svc.StopTask(&ecs.StopTaskInput{
-		Cluster: clusterArn,
-		Task:    taskArn,
+	_, err := svc.UpdateService(&ecs.UpdateServiceInput{
+		Cluster:            clusterArn,
+		Service:            serviceName,
+		DesiredCount:       desiredCount,
+		ForceNewDeployment: &forceNewDeployment,
 	})
 
 	return err
