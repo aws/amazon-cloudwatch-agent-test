@@ -13,6 +13,16 @@ variable "cwagent_image_tag" {
   default = "latest"
 }
 
+variable "ami" {
+  type    = string
+  default = "cloudwatch-agent-integration-test-ubuntu*"
+}
+
+variable "ec2_instance_type" {
+  type    = string
+  default = "t3a.xlarge"
+}
+
 variable "test_dir" {
   type    = string
   default = "./integration/test/ecs/ecs_metadata"
