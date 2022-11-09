@@ -11,16 +11,18 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test"
 )
 
 var metricValueFetchers = []MetricValueFetcher{
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
 	&ProcStatMetricValueFetcher{},
+	&DiskIOMetricValueFetcher{},
 }
 
 func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {

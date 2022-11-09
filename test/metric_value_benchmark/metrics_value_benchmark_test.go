@@ -11,8 +11,9 @@ import (
 	"log"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
 const namespace = "MetricValueBenchmarkTest"
@@ -35,6 +36,7 @@ var testRunners = []*TestRunner{
 	{testRunner: &CPUTestRunner{}},
 	{testRunner: &MemTestRunner{}},
 	{testRunner: &ProcStatTestRunner{}},
+	{testRunner: &DiskIOTestRunner{}},
 }
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
@@ -52,7 +54,7 @@ func TestMetricValueBenchmarkSuite(t *testing.T) {
 	suite.Run(t, new(MetricBenchmarkTestSuite))
 }
 
-func isAllValuesGreaterThanOrEqualToZero(metricName string, values MetricValues) bool {
+func isAllValuesGreaterThanOrEqualToZero(metricName string, values []float64) bool {
 	if len(values) == 0 {
 		log.Printf("No values found %v", metricName)
 		return false
