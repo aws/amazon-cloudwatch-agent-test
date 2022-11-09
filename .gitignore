@@ -2,7 +2,6 @@
 build
 vendor
 release
-CWAGENT_VERSION
 .DS_Store
 .vscode
 *.iml

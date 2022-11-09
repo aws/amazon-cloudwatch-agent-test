@@ -1,23 +1,24 @@
-[
-  {
-    "Id": "m1",
-    "MetricStat": {
-      "Metric": {
-        "Namespace": "MetricValueBenchmarkTest",
-        "MetricName": "cpu_usage_active",
-        "Dimensions": [
-          {
-            "Name": "InstanceId",
-            "Value": "i-095d623fa10a192e3"
-          },
-          {
-            "Name": "cpu",
-            "Value": "cpu-total"
-          }
-        ]
-      },
-      "Period": 60,
-      "Stat": "Average"
+{
+  "MetricDataQueries":[
+    {
+      "Id": "m1",
+      "MetricStat": {
+        "Metric": {
+          "Namespace": "MetricValueBenchmarkTest",
+          "MetricName": "procstat_memory_swap",
+          "Dimensions": [
+            {
+              "Name": "InstanceId",
+              "Value": "i-X"
+            },
+          ]
+        },
+        "Period": 60,
+        "Stat": "Average",
+        "Unit": "Bytes"
+      }
     }
-  }
-]
+  ],
+  "StartTime": "2022-10-03T15:24:0000",
+  "EndTime": "2022-12-5T15:37:0000"
+}

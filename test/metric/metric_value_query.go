@@ -21,6 +21,7 @@ import (
 var metricValueFetchers = []MetricValueFetcher{
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
+	&ProcStatMetricValueFetcher{},
 	&DiskIOMetricValueFetcher{},
 }
 
