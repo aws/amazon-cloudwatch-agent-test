@@ -12,11 +12,12 @@ resource "aws_ecs_cluster" "cluster" {
 ######
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self", "506463145083"]
+  owners = ["amazon"]
+  #owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"
-    values = [var.ami]
+    values = ["amzn2-ami-ecs-hvm-*-x86_64-ebs"]
   }
 }
 
