@@ -28,7 +28,12 @@ resource "aws_launch_configuration" "cluster" {
   security_groups = [aws_security_group.ecs_security_group.id]
   iam_instance_profile = aws_iam_instance_profile.cwagent_instance_profile.name
 
-  user_data = "#!/bin/bash\ncat <<'EOF' >> /etc/ecs/ecs.config\nECS_CLUSTER=${aws_ecs_cluster.cluster.name}\nEOF"
+  user_data = <<EOF
+#!/bin/bash
+sudo amazon-linux-extras disable docker
+sudo amazon-linux-extras install -y ecs; sudo systemctl enable --now ecs
+echo ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config
+EOF
 }
 
 resource "aws_autoscaling_group" "cluster" {

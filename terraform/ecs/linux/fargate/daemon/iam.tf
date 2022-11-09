@@ -115,6 +115,11 @@ resource "aws_iam_role_policy_attachment" "service_discovery_task" {
   policy_arn = aws_iam_policy.service_discovery_policy.arn
 }
 
+resource "aws_iam_role_policy_attachment" "service_discovery_task" {
+  role       = aws_iam_role.cwagent_ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerServiceforEC2Role"
+}
+
 resource "aws_iam_instance_profile" "cwagent_instance_profile" {
   name = "cwagent-instance-profile-${random_id.testing_id.hex}"
   role = aws_iam_role.cwagent_ec2_role.name
