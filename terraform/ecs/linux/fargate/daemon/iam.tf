@@ -115,7 +115,7 @@ resource "aws_iam_role_policy_attachment" "service_discovery_task" {
   policy_arn = aws_iam_policy.service_discovery_policy.arn
 }
 
-resource "aws_iam_role_policy_attachment" "service_discovery_task" {
+resource "aws_iam_role_policy_attachment" "ec2_container_service_for_ec2" {
   role       = aws_iam_role.cwagent_ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerServiceforEC2Role"
 }
