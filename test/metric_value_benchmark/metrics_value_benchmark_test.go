@@ -54,7 +54,7 @@ func TestMetricValueBenchmarkSuite(t *testing.T) {
 	suite.Run(t, new(MetricBenchmarkTestSuite))
 }
 
-func isAllValuesGreaterThanOrEqualToZero(metricName string, values MetricValues) bool {
+func isAllValuesGreaterThanOrEqualToZero(metricName string, values []float64) bool {
 	if len(values) == 0 {
 		log.Printf("No values found %v", metricName)
 		return false
