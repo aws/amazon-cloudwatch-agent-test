@@ -147,7 +147,7 @@ data "template_file" "cwagent_volumes" {
 
 resource "aws_ecs_task_definition" "cwagent_task_definition" {
   family                   = "cwagent-task-family-${random_id.testing_id.hex}"
-  network_mode             = "awsvpc"
+  network_mode             = "bridge"
   task_role_arn            = aws_iam_role.ecs_task_role.arn
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
   cpu                      = 256
@@ -179,12 +179,6 @@ resource "aws_ecs_service" "cwagent_service" {
   task_definition = aws_ecs_task_definition.cwagent_task_definition.arn
   desired_count   = 1
   launch_type     = "EC2"
-
-  network_configuration {
-    security_groups  = [aws_security_group.ecs_security_group.id]
-    subnets          = toset(data.aws_subnets.default.ids)
-    assign_public_ip = true
-  }
 
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
 }
