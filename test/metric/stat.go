@@ -9,5 +9,3 @@ type MetricValues []float64
 const (
 	AVERAGE Statistics = "Average"
 )
-
-type MetricValues []float64
