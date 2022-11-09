@@ -186,7 +186,7 @@ resource "aws_ecs_service" "cwagent_service" {
   cluster         = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.cwagent_task_definition.arn
   desired_count   = 1
-  launch_type     = "FARGATE"
+  launch_type     = "EC2"
 
   network_configuration {
     security_groups  = [aws_security_group.ecs_security_group.id]
