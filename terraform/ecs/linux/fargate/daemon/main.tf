@@ -28,7 +28,7 @@ resource "aws_launch_configuration" "cluster" {
   security_groups = [aws_security_group.ecs_security_group.id]
   iam_instance_profile = aws_iam_instance_profile.cwagent_instance_profile.name
 
-  user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
+  user_data = "#!/bin/bash\ncat <<'EOF' >> /etc/ecs/ecs.config\nECS_CLUSTER=${aws_ecs_cluster.cluster.name}\nECS_CONTAINER_INSTANCE_PROPAGATE_TAGS_FROM=ec2_instance\nEOF"
 }
 
 resource "aws_autoscaling_group" "cluster" {
