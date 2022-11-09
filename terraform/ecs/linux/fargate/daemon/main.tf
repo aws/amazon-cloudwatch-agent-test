@@ -156,20 +156,20 @@ resource "aws_ecs_task_definition" "cwagent_task_definition" {
   container_definitions    = data.template_file.cwagent_container_definitions.rendered
   depends_on               = [aws_cloudwatch_log_group.log_group, aws_iam_role.ecs_task_role, aws_iam_role.ecs_task_execution_role]
   volume{
-    name: "proc"
-    host_path: "/proc"
+    name= "proc"
+    host_path= "/proc"
   }
   volume{
-    name: "dev"
-    host_path: "/dev"
+    name= "dev"
+    host_path= "/dev"
   }
   volume{
-    name: "al1_cgroup"
-    host_path: "/cgroup"
+    name= "al1_cgroup"
+    host_path= "/cgroup"
   }
   volume{
-    name: "al2_cgroup"
-    host_path: "/sys/fs/cgroup"
+    name= "al2_cgroup"
+    host_path= "/sys/fs/cgroup"
   }
 }
 
