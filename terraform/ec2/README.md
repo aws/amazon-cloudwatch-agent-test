@@ -239,7 +239,14 @@ Outputs:
         "ecs:DescribeTaskDefinition",
         "ecs:UpdateService",
         "ecs:DeregisterTaskDefinition",
-        "logs:DeleteLogGroup"
+        "logs:DeleteLogGroup",
+        "ecs:CreateCapacityProvider",
+        "ecs:DeleteCapacityProvider",
+        "ecs:DescribeCapacityProviders",
+        "iam:CreateServiceLinkedRole",
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:CreateAutoScalingGroup",
+        "autoscaling:DeleteAutoScalingGroup"
       ],
       "Resource": "*"
     }
