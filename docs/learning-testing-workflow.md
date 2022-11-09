@@ -5,12 +5,11 @@ This section is written to help new contributors onboard before they have to div
 
 ### Descriptions of Shared Steps
 - **MakeBinary**:
-  - Make binaries for all supported OSs, cache them to not repeat this expensive step (~15 minutes) for when github_sha hasn’t changed, sign them all. Then The packages get uploaded to s3 for dependent steps to download and install agent. Docker image of the agent also gets built and added to the aws account’s ECR for dependent steps to use to run agent. Code for this is entirely in the agent repo.
+  - Make binaries for all supported OSs, cache them to not repeat this expensive step (~15 minutes) for when github_sha hasn’t changed, sign them all (including the final artifacts for Linux - e.g amazon-cloudwatch-agent.rpm, etc). Then The packages get uploaded to s3 for dependent steps to download and install agent. Docker image of the agent also gets built and added to the aws account’s ECR for dependent steps to use to run agent. Code for this is entirely in the agent repo.
 - **GenerateTestMatrix**
   - Github workflow step defined in the agent repo checks out the test repository to use integration test package’s test_case_generator. The test generator creates a map of which test workflow step needs to run which set of test suites where each suite is defined at the go package level. Each suite is therefore expressed as a directory name that contains various tests in the suite. The output of this is stored in the workflow so that later steps can figure out which tests to run.
 - **SignMacAndWindowsPackage**
-  - These don’t have to happen for Mac and Windows at the same time, but this step combined the two. This takes MSI and MacPkg created by previous steps from s3, sign, and re-upload. 
-  - #TODO Why is this part of integration test flow? Seems like this doesn’t serve any purpose for integration test.
+  - **MakeBinary** steps signs all the binaries; however, it does not sign the final artifact (e.g amazon-cloudwatch-agent.msi, etc) and each final artifact needs to be built in their corresponding OS. Therefore, this step signs the final artifacts and uploads the final sign artifacts to S3.
 
 
 ### Linux
@@ -25,8 +24,6 @@ This section is written to help new contributors onboard before they have to div
   1. Unlike ECS, **StartLocalStack** is needed because #TODO
 2. **EC2LinuxIntegrationTest**
 3. **StopLocalStack** because #TODO
-
-*NOTE: no signing package for lInux? #TODO Why?
 
 ### Mac Github Workflow
 

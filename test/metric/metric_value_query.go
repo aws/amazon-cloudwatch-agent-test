@@ -21,6 +21,7 @@ import (
 var metricValueFetchers = []MetricValueFetcher{
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
+	&ProcStatMetricValueFetcher{},
 }
 
 func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
@@ -55,7 +56,11 @@ type MetricValueFetcher interface {
 type baseMetricValueFetcher struct{}
 
 func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
+<<<<<<< HEAD
 	ec2InstanceId := util.GetInstanceId()
+=======
+	ec2InstanceId := test.GetInstanceId()
+>>>>>>> main
 	instanceIdDimension := types.Dimension{
 		Name:  aws.String("InstanceId"),
 		Value: aws.String(ec2InstanceId),
