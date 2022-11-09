@@ -53,7 +53,7 @@ EOF
 }
 
 resource "aws_iam_role" "cwagent_ec2_role" {
-  name = "cwagent-integ-test-task-role-${random_id.testing_id.hex}"
+  name = "cwagent-integ-test-ec2-role-${random_id.testing_id.hex}"
 
   assume_role_policy = <<EOF
 {
