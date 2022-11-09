@@ -7,6 +7,81 @@ resource "aws_ecs_cluster" "cluster" {
   name = "cwagent-integ-test-cluster-${random_id.testing_id.hex}"
 }
 
+######
+# EC2 for ECS EC2 launch type
+######
+data "aws_ami" "latest" {
+  most_recent = true
+  owners      = ["self", "506463145083"]
+
+  filter {
+    name   = "name"
+    values = [var.ami]
+  }
+}
+
+resource "aws_launch_configuration" "cluster" {
+  name = "cluster-${aws_ecs_cluster.cluster.name}"
+  image_id = data.aws_ami.latest.image_id
+  instance_type = var.ec2_instance_type
+
+  security_groups = [aws_security_group.ecs_security_group.id]
+  iam_instance_profile = aws_iam_instance_profile.cwagent_instance_profile.name
+
+  user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
+}
+
+resource "aws_autoscaling_group" "cluster" {
+  name = aws_ecs_cluster.cluster.name
+  launch_configuration = aws_launch_configuration.cluster.name
+  vpc_zone_identifier = toset(data.aws_subnets.default.ids)
+
+  min_size = 1
+  max_size = 1
+  desired_capacity = 1
+
+  tag {
+    key = "ClusterName"
+    value = aws_ecs_cluster.cluster.name
+    propagate_at_launch = true
+  }
+
+  tag {
+    key = "AmazonECSManaged"
+    value = ""
+    propagate_at_launch = true
+  }
+}
+
+resource "aws_ecs_capacity_provider" "cluster" {
+  name = aws_ecs_cluster.cluster.name
+
+  auto_scaling_group_provider {
+    auto_scaling_group_arn = aws_autoscaling_group.cluster.arn
+
+    managed_scaling {
+      status = "ENABLED"
+      maximum_scaling_step_size = 1
+      minimum_scaling_step_size = 1
+      target_capacity = 1
+    }
+  }
+}
+
+resource "aws_ecs_cluster_capacity_providers" "cluster" {
+  cluster_name = aws_ecs_cluster.cluster.name
+
+  capacity_providers = [aws_ecs_capacity_provider.cluster.name]
+
+  default_capacity_provider_strategy {
+    base = 1
+    weight = 100
+    capacity_provider = aws_ecs_capacity_provider.cluster.name
+  }
+}
+
+
+
 resource "aws_cloudwatch_log_group" "log_group" {
   name = "cwagent-integ-test-log-group-${random_id.testing_id.hex}"
 }

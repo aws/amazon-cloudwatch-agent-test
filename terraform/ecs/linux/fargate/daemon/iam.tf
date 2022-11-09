@@ -52,6 +52,26 @@ resource "aws_iam_role" "ecs_task_execution_role" {
 EOF
 }
 
+resource "aws_iam_role" "cwagent_ec2_role" {
+  name = "cwagent-integ-test-task-role-${random_id.testing_id.hex}"
+
+  assume_role_policy = <<EOF
+{
+ "Version": "2012-10-17",
+ "Statement": [
+   {
+     "Action": "sts:AssumeRole",
+     "Principal": {
+       "Service": "ec2.amazonaws.com"
+     },
+     "Effect": "Allow",
+     "Sid": ""
+   }
+ ]
+}
+EOF
+}
+
 data "aws_iam_policy_document" "user-managed-policy-document" {
   statement {
     actions = [
@@ -61,6 +81,8 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
       "ecs:DescribeServices",
       "ecs:ListServices",
       "ec2:DescribeInstances",
+      "ec2:DescribeVolumes",
+      "ec2:DescribeTags",
       "ecs:DescribeTaskDefinition"
     ]
     resources = ["*"]
@@ -91,4 +113,9 @@ resource "aws_iam_role_policy_attachment" "agent_task" {
 resource "aws_iam_role_policy_attachment" "service_discovery_task" {
   role       = aws_iam_role.ecs_task_role.name
   policy_arn = aws_iam_policy.service_discovery_policy.arn
+}
+
+resource "aws_iam_instance_profile" "cwagent_instance_profile" {
+  name = "cwagent-instance-profile-${random_id.testing_id.hex}"
+  role = aws_iam_role.cwagent_role.name
 }
