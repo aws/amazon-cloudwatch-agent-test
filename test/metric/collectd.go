@@ -35,8 +35,8 @@ func (f *CollectDMetricValueFetcher) isApplicable(metricName string) bool {
 }
 
 func (f *CollectDMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
-	// CPU supported metrics
-	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L9-L10
+	// Use CPU plugins with CollectD will only returns collectd_cpu_value; however, the type_instance dimension will specify
+	// the real metric
 	return map[string]struct{}{
 		"collectd_cpu_value": {},
 	}
