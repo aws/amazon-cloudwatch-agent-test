@@ -52,8 +52,8 @@ func (f *NetMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 func (f *NetMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
 	return []types.Dimension{
 		{
-			Name:  aws.String("name"),
-			Value: aws.String("nvme0n1"),
+			Name:  aws.String("interface"),
+			Value: aws.String("eth0"),
 		},
 	}
 }
