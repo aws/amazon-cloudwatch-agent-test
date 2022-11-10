@@ -54,6 +54,6 @@
           "sourceVolume": "al1_cgroup"
         }
     ],
-    "memory": 2048,
+    "memory": 2048
   }
 ]
