@@ -53,7 +53,7 @@ func (f *NetMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension 
 	return []types.Dimension{
 		{
 			Name:  aws.String("interface"),
-			Value: aws.String("eth0"),
+			Value: aws.String("docker0"),
 		},
 	}
 }
