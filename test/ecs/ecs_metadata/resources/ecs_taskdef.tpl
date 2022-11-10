@@ -55,6 +55,5 @@
         }
     ],
     "memory": 64,
-    "volumesFrom": []
   }
 ]

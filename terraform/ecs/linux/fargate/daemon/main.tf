@@ -140,12 +140,6 @@ data "template_file" "cwagent_container_definitions" {
   }
 }
 
-data "template_file" "cwagent_volumes" {
-  template = file(local.cwagent_ecs_volumes)
-  vars = {
-  }
-}
-
 resource "aws_ecs_task_definition" "cwagent_task_definition" {
   family                   = "cwagent-task-family-${random_id.testing_id.hex}"
   network_mode             = "bridge"
