@@ -174,6 +174,7 @@ resource "aws_ecs_service" "cwagent_service" {
   task_definition = aws_ecs_task_definition.cwagent_task_definition.arn
   desired_count   = 1
   launch_type     = "EC2"
+  scheduling_strategy = "DAEMON"
 
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
 }
