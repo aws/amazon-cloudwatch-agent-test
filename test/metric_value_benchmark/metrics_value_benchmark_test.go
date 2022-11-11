@@ -7,9 +7,11 @@
 package metric_value_benchmark
 
 import (
-	"flag"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/compute_type"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -39,19 +41,23 @@ var testRunners = []*TestRunner{
 	{testRunner: &DiskIOTestRunner{}},
 }
 
-//TODO: coveredTestList needs to be cleaned up. See my handwritten notes for ideas.
-// TODO: somewhere here needs to use the coveredTestList
+// TODO: make tests run (pending)
+//TODO: understand if you are ec2/fargate, daemon/replica/sidecar/ by passing flags
+//TODO: pass arguments I want from main.tf (todo) (need test after this)
+//TODO: coveredTestList needs to be cleaned up. See my handwritten notes for ideas. (Todo)
+// Based on the above, make a factory.
+// TODO: Test runner -> has agentRunnerStrategy(). Shared testRunner construct for ec2 & ecs
+// TODO: agentRunnerStrategy(ECS) -> has members like ssmparam, clusterarn etc. still the same interface right?
+// TODO: agentRunnerStrategies accepts files
+// Do this only for ecs for now, and a separate PR for ec2 changes? nah..not possible
 var ecsTestRunners = []*ECSTestRunner{
 	{testRunner: &CPUTestRunner{}},
 }
 
-var clusterArn = flag.String("clusterArn", "", "Used to restart ecs task to apply new agent config")
-var cwagentConfigSsmParamName = flag.String("cwagentConfigSsmParamName", "", "Used to set new cwa config")
-var serviceName = flag.String("cwagentECSServiceName", "", "Used to restart ecs task to apply new agent config")
-
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
-	if clusterArn != nil {
-		log.Printf("cluster name isn't nil")
+	env := environment.GetEnvironmentMetaData(os.Args[0])
+	if env.ComputeType == compute_type.ECS {
+		log.Printf("Environment compute type is ECS")
 		for _, ecsTestRunner := range ecsTestRunners {
 			ecsTestRunner.Run(suite, cwagentConfigSsmParamName, clusterArn, serviceName)
 		}
