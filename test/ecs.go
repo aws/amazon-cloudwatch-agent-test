@@ -30,7 +30,7 @@ func RestartService(clusterArn *string, desiredCount *int64, serviceName *string
 		ForceNewDeployment: &forceNewDeployment,
 	}
 	if desiredCount != nil {
-		updateServiceInput = updateServiceInput.SetDesiredCount(desiredCount)
+		updateServiceInput = updateServiceInput.SetDesiredCount(*desiredCount)
 	}
 
 	_, err := svc.UpdateService(updateServiceInput)
