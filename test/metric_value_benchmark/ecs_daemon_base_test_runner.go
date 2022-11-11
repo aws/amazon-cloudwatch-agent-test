@@ -75,8 +75,7 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string, clusterArn *
 	}
 	log.Printf("Put parameter happened")
 
-	cwaTaskCount := int64(1)
-	err = test.RestartService(clusterArn, &cwaTaskCount, serviceName)
+	err = test.RestartDaemonService(clusterArn, serviceName)
 	if err != nil {
 		fmt.Print(err)
 	}

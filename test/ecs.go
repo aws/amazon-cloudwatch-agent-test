@@ -11,6 +11,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
+func RestartDaemonService(clusterArn *string, serviceName *string) error {
+	return RestartService(clusterArn, nil, serviceName)
+}
+
 func RestartService(clusterArn *string, desiredCount *int64, serviceName *string) error {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
@@ -20,12 +24,16 @@ func RestartService(clusterArn *string, desiredCount *int64, serviceName *string
 
 	forceNewDeployment := true
 
-	_, err := svc.UpdateService(&ecs.UpdateServiceInput{
+	updateServiceInput := &ecs.UpdateServiceInput{
 		Cluster:            clusterArn,
 		Service:            serviceName,
-		DesiredCount:       desiredCount,
 		ForceNewDeployment: &forceNewDeployment,
-	})
+	}
+	if desiredCount != nil {
+		updateServiceInput = updateServiceInput.SetDesiredCount(desiredCount)
+	}
+
+	_, err := svc.UpdateService(updateServiceInput)
 
 	return err
 }
