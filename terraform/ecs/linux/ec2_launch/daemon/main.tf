@@ -171,7 +171,6 @@ resource "aws_ecs_service" "cwagent_service" {
   name            = "cwagent-service-${random_id.testing_id.hex}"
   cluster         = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.cwagent_task_definition.arn
-  desired_count   = 1
   launch_type     = "EC2"
   scheduling_strategy = "DAEMON"
 
