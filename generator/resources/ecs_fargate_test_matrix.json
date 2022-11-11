@@ -1,6 +1,3 @@
 [
-  {
-    "instanceType":"t3a.xlarge",
-    "ami": "cloudwatch-agent-integration-test-al2*"
-  }
+
 ]
