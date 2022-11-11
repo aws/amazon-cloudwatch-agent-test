@@ -39,6 +39,8 @@ var testRunners = []*TestRunner{
 	{testRunner: &DiskIOTestRunner{}},
 }
 
+//TODO: coveredTestList needs to be cleaned up. See my handwritten notes for ideas.
+// TODO: somewhere here needs to use the coveredTestList
 var ecsTestRunners = []*ECSTestRunner{
 	{testRunner: &CPUTestRunner{}},
 }
