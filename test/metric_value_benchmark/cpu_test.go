@@ -7,6 +7,7 @@
 package metric_value_benchmark
 
 import (
+	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -63,6 +64,7 @@ func validateCpuMetric(metricName string) status.TestResult {
 	}
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
 	}

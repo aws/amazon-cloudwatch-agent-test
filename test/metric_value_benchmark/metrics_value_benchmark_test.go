@@ -68,11 +68,12 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 		for _, ecsTestRunner := range ecsTestRunners {
 			ecsTestRunner.Run(suite, env)
 		}
+	} else {
+		for _, testRunner := range testRunners {
+			testRunner.Run(suite)
+		}
 	}
 
-	for _, testRunner := range testRunners {
-		testRunner.Run(suite)
-	}
 	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Benchmark Test Suite Failed")
 }
 

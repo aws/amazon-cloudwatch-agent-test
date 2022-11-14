@@ -33,7 +33,6 @@ type ECSAgentRunStrategy struct {
 }
 
 func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath string) error {
-	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", e.CwagentConfigSsmParamName)
 	b, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return fmt.Errorf("Failed while reading config file")
@@ -71,6 +70,8 @@ func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData
 	if err == nil {
 		testGroupResult = t.testRunner.validate()
 	}
+	testGroupResult.TestResults[0].Status = status.FAILED //This should be convered to SUCCESS after test is done. Default failure to rerun workflow
+
 	s.AddToSuiteResult(testGroupResult)
 	if testGroupResult.GetStatus() != status.SUCCESSFUL {
 		log.Printf("%v test group failed", testName)
@@ -88,7 +89,6 @@ func (t *ECSTestRunner) runAgent(e *environment.MetaData) (status.TestGroupResul
 		},
 	}
 
-	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", e.CwagentConfigSsmParamName)
 	err := t.agentRunStrategy.runAgent(e, "./agent_configs/container_insights.json")
 
 	if err != nil {
@@ -96,5 +96,6 @@ func (t *ECSTestRunner) runAgent(e *environment.MetaData) (status.TestGroupResul
 		return testGroupResult, fmt.Errorf("Failed to run agent with config for the given test")
 	}
 
-	return testGroupResult, fmt.Errorf("Default failure for development test")
+	testGroupResult.TestResults[0].Status = status.SUCCESSFUL
+	return testGroupResult, _
 }
