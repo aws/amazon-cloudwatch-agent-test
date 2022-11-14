@@ -25,14 +25,53 @@ type IECSTestRunner interface {
 	getMeasuredMetrics() []string
 }
 
+type IAgentRunStrategy interface {
+	runAgent(e *environment.MetaData, configFilePath string) error
+}
+
+type ECSAgentRunStrategy struct {
+	// for ecs
+	// this would be called in runAgent
+	// runAgent base gets config file name
+	// run strategy for ecs does it's thing for the config file name
+}
+
+func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath string) error {
+	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", &(e.CwagentConfigSsmParamName))
+	b, err := os.ReadFile(configFilePath)
+	if err != nil {
+		return fmt.Errorf("Failed while reading config file")
+	}
+
+	agentConfig := string(b)
+	ssmParamType := "String"
+
+	err = test.PutParameter(&(e.CwagentConfigSsmParamName), &agentConfig, &ssmParamType)
+	if err != nil {
+		return fmt.Errorf("Failed while reading config file : %s", err.Error())
+	}
+	log.Printf("Put parameter successful")
+
+	err = test.RestartDaemonService(&(e.EcsClusterArn), &(e.EcsServiceName))
+	if err != nil {
+		fmt.Print(err)
+	}
+	log.Printf("CWAgent service is restarted")
+
+	time.Sleep(10 * time.Minute)
+
+	return nil
+}
+
 type ECSTestRunner struct {
-	testRunner IECSTestRunner
+	testRunner       IECSTestRunner
+	agentRunStrategy IAgentRunStrategy
 }
 
 func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData) {
 	testName := t.testRunner.getTestName()
 	log.Printf("Running %v", testName)
-	testGroupResult, err := t.runAgent(e.CwagentConfigSsmParamName, e.EcsClusterArn, e.EcsServiceName)
+	testGroupResult, err := t.runAgent(e)
 	if err == nil {
 		testGroupResult = t.testRunner.validate()
 	}
@@ -43,49 +82,6 @@ func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData
 }
 
 func (t *ECSTestRunner) runAgent(e *environment.MetaData) (status.TestGroupResult, error) {
-	// 1) First, make a always-failing test so I can keep rerunning the test in my fork. make ca tests always succeed temporarily to save iterating time
-	// get flag to benchmark test, and benchmark test creates the right base test class with the right runAgent() based on ecs vs ec2 -> make agentRunner injectable. -> test by logging
-	// this runAgent should
-	// 1) put new config file to ssm through ssm sdk -> test on fork and verify in my account
-	// 2) start agent with the new ssm file: probably means restarting task/container/daemon service. ecs sdk.  -> test if new metrics with cpu gets emitted
-	// 3) use the same validation logic
-
-	log.Printf("ECS runAgent Base Test")
-	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", *cwagentConfigSsmParamName)
-	b, err := os.ReadFile("./agent_configs/container_insights.json")
-	if err != nil {
-		fmt.Print(err)
-		testGroupResult := status.TestGroupResult{
-			Name: t.testRunner.getTestName(),
-			TestResults: []status.TestResult{
-				{
-					Name:   "Starting Agent",
-					Status: status.FAILED,
-				},
-			},
-		}
-		return testGroupResult, fmt.Errorf("Failed while reading config file")
-	}
-
-	agentConfig := string(b)
-	ssmParamType := "String"
-
-	err = test.PutParameter(&(e.CwagentConfigSsmParamName), &agentConfig, &ssmParamType)
-	if err != nil {
-		fmt.Print(err)
-	}
-	log.Printf("Put parameter happened")
-
-	err = test.RestartDaemonService(&(e.EcsClusterArn), &(e.EcsServiceName))
-	if err != nil {
-		fmt.Print(err)
-	}
-	log.Printf("CWAgent service is restarted")
-
-	time.Sleep(10 * time.Minute)
-
-	//TODO for each failure cases, fail early (by returning pre-made failure state)
-
 	testGroupResult := status.TestGroupResult{
 		Name: t.testRunner.getTestName(),
 		TestResults: []status.TestResult{
@@ -96,28 +92,13 @@ func (t *ECSTestRunner) runAgent(e *environment.MetaData) (status.TestGroupResul
 		},
 	}
 
+	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", e.CwagentConfigSsmParamName)
+	err := t.agentRunStrategy.runAgent(e, "./agent_configs/container_insights.json")
+
+	if err != nil {
+		fmt.Print(err)
+		return testGroupResult, fmt.Errorf("Failed to run agent with config for the given test")
+	}
+
 	return testGroupResult, fmt.Errorf("Default failure for development test")
-	/*
-		agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
-		log.Printf("Starting agent using agent config file %s", agentConfigPath)
-		test.CopyFile(agentConfigPath, configOutputPath)
-		err := test.StartAgent(configOutputPath, false)
-
-		if err != nil {
-			testGroupResult.TestResults[0].Status = status.FAILED
-			return testGroupResult, fmt.Errorf("Agent could not start due to: %v", err.Error())
-		}
-
-		runningDuration := t.testRunner.getAgentRunDuration()
-		time.Sleep(runningDuration)
-		log.Printf("Agent has been running for : %s", runningDuration.String())
-		test.StopAgent()
-
-		err = test.DeleteFile(configOutputPath)
-		if err != nil {
-			testGroupResult.TestResults[0].Status = status.FAILED
-			return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %v", err.Error())
-		}
-	*/
-	return testGroupResult, nil
 }
