@@ -1,3 +1,9 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+//go:build integration
+// +build integration
+
 package environment
 
 import (
@@ -5,6 +11,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/compute_type"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_deployment_type"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_launch_type"
+	"github.com/aws/amazon-cloudwatch-agent-test/test"
 )
 
 type MetaData struct {
@@ -12,6 +19,7 @@ type MetaData struct {
 	EcsLaunchType             ecs_launch_type.ECSLaunchType
 	EcsDeploymentStrategy     ecs_deployment_type.ECSDeploymentType
 	EcsClusterArn             string
+	EcsClusterName            string
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
 }
@@ -65,6 +73,8 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 	e.EcsClusterArn = data.EcsClusterArn
 	e.CwagentConfigSsmParamName = data.CwagentConfigSsmParamName
 	e.EcsServiceName = data.EcsServiceName
+	e.EcsClusterName = test.GetClusterName(&(data.EcsClusterArn))
+
 	return e
 }
 

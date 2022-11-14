@@ -8,12 +8,13 @@ package metric_value_benchmark
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"log"
 	"os"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -23,6 +24,10 @@ type IECSTestRunner interface {
 	getAgentConfigFileName() string
 	getAgentRunDuration() time.Duration
 	getMeasuredMetrics() []string
+}
+
+type ECSBaseTestRunner struct {
+	MetricFetcherFactory *metric.MetricFetcherFactory
 }
 
 type IAgentRunStrategy interface {
@@ -53,7 +58,7 @@ func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath s
 	}
 	log.Printf("CWAgent service is restarted")
 
-	time.Sleep(10 * time.Minute)
+	time.Sleep(3 * time.Minute)
 
 	return nil
 }
@@ -89,7 +94,7 @@ func (t *ECSTestRunner) runAgent(e *environment.MetaData) (status.TestGroupResul
 		},
 	}
 
-	err := t.agentRunStrategy.runAgent(e, "./agent_configs/container_insights.json")
+	err := t.agentRunStrategy.runAgent(e, t.testRunner.getAgentConfigFileName())
 
 	if err != nil {
 		fmt.Print(err)
@@ -97,5 +102,5 @@ func (t *ECSTestRunner) runAgent(e *environment.MetaData) (status.TestGroupResul
 	}
 
 	testGroupResult.TestResults[0].Status = status.SUCCESSFUL
-	return testGroupResult, _
+	return testGroupResult, nil
 }
