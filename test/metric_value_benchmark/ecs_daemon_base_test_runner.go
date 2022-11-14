@@ -30,14 +30,10 @@ type IAgentRunStrategy interface {
 }
 
 type ECSAgentRunStrategy struct {
-	// for ecs
-	// this would be called in runAgent
-	// runAgent base gets config file name
-	// run strategy for ecs does it's thing for the config file name
 }
 
 func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath string) error {
-	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", &(e.CwagentConfigSsmParamName))
+	log.Printf("ECS CWAgent Config SSM Parameter Name is %s", e.CwagentConfigSsmParamName)
 	b, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return fmt.Errorf("Failed while reading config file")

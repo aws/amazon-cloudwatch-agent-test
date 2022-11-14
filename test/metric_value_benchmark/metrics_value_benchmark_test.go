@@ -46,9 +46,7 @@ var testRunners = []*TestRunner{
 // [DONE] understand if you are ec2/fargate, daemon/replica/sidecar/ by passing flags
 // [DONE] pass arguments I want from main.tf
 // TODO [TESTING] pass env arguments to ecs runner
-// TODO: Test runner -> has agentRunnerStrategy(). Shared testRunner construct for ec2 & ecs
-// TODO: agentRunnerStrategy(ECS) -> has members like ssmparam, clusterarn etc. still the same interface right?
-// TODO: agentRunnerStrategies accepts files
+// TODO: [TESTING] Test runner -> has agentRunnerStrategy(). Shared testRunner construct for ec2 & ecs
 // TODO: test this runAgentStrategy and then if it works, refactor the ec2 ones with this too.
 // TODO: maybe after this I can make a PR before coveredTestList cleanup. Make it simple & static for test list.
 //TODO: test e2e
