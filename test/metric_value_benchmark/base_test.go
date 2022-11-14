@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -32,6 +33,10 @@ type ITestRunner interface {
 
 type TestRunner struct {
 	testRunner ITestRunner
+}
+
+type BaseTestRunner struct {
+	MetricFetcherFactory *metric.MetricFetcherFactory
 }
 
 func (t *TestRunner) Run(s *MetricBenchmarkTestSuite) {
