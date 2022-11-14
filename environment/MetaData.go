@@ -16,8 +16,6 @@ type MetaData struct {
 	EcsServiceName            string
 }
 
-var environment = MetaData{}
-
 func fillComputeType(flags *flag.FlagSet, e *MetaData) *MetaData {
 	computeType, ok := compute_type.FromString(*(flags.String("computeType", "", "EC2/ECS/EKS")))
 	if !ok {
