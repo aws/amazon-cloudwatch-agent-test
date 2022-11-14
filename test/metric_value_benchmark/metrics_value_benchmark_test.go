@@ -43,17 +43,19 @@ var testRunners = []*TestRunner{
 
 // [DONE] make tests run
 // [DONE] understand if you are ec2/fargate, daemon/replica/sidecar/ by passing flags
-// [DONE pass arguments I want from main.tf
+// [DONE] pass arguments I want from main.tf
+// TODO [TESTING] pass env arguments to ecs runner
 // TODO: Test runner -> has agentRunnerStrategy(). Shared testRunner construct for ec2 & ecs
 // TODO: agentRunnerStrategy(ECS) -> has members like ssmparam, clusterarn etc. still the same interface right?
 // TODO: agentRunnerStrategies accepts files
+// TODO: test this runAgentStrategy and then if it works, refactor the ec2 ones with this too.
 // TODO: maybe after this I can make a PR before coveredTestList cleanup. Make it simple & static for test list.
 //TODO: test e2e
 //TODO: coveredTestList needs to be cleaned up. See my handwritten notes for ideas. (Todo)
 // Based on the above, make a factory.
 // Do this only for ecs for now, and a separate PR for ec2 changes? nah..not possible
 var ecsTestRunners = []*ECSTestRunner{
-	{testRunner: &CPUTestRunner{}},
+	{testRunner: &CPUTestRunner{}, agentRunStrategy: &ECSAgentRunStrategy{}},
 }
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
