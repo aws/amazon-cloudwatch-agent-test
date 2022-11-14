@@ -8,6 +8,7 @@ package metric_value_benchmark
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"log"
 	"os"
 	"time"
@@ -28,10 +29,10 @@ type ECSTestRunner struct {
 	testRunner IECSTestRunner
 }
 
-func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, cwagentConfigSsmParamName *string, clusterArn *string, serviceName *string) {
+func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData) {
 	testName := t.testRunner.getTestName()
 	log.Printf("Running %v", testName)
-	testGroupResult, err := t.runAgent(cwagentConfigSsmParamName, clusterArn, serviceName)
+	testGroupResult, err := t.runAgent(e.CwagentConfigSsmParamName, e.EcsClusterArn, e.EcsServiceName)
 	if err == nil {
 		testGroupResult = t.testRunner.validate()
 	}
@@ -41,7 +42,7 @@ func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, cwagentConfigSsmParamNa
 	}
 }
 
-func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string, clusterArn *string, serviceName *string) (status.TestGroupResult, error) {
+func (t *ECSTestRunner) runAgent(e *environment.MetaData) (status.TestGroupResult, error) {
 	// 1) First, make a always-failing test so I can keep rerunning the test in my fork. make ca tests always succeed temporarily to save iterating time
 	// get flag to benchmark test, and benchmark test creates the right base test class with the right runAgent() based on ecs vs ec2 -> make agentRunner injectable. -> test by logging
 	// this runAgent should
@@ -69,13 +70,13 @@ func (t *ECSTestRunner) runAgent(cwagentConfigSsmParamName *string, clusterArn *
 	agentConfig := string(b)
 	ssmParamType := "String"
 
-	err = test.PutParameter(cwagentConfigSsmParamName, &agentConfig, &ssmParamType)
+	err = test.PutParameter(&(e.CwagentConfigSsmParamName), &agentConfig, &ssmParamType)
 	if err != nil {
 		fmt.Print(err)
 	}
 	log.Printf("Put parameter happened")
 
-	err = test.RestartDaemonService(clusterArn, serviceName)
+	err = test.RestartDaemonService(&(e.EcsClusterArn), &(e.EcsServiceName))
 	if err != nil {
 		fmt.Print(err)
 	}

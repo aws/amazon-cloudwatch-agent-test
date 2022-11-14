@@ -41,14 +41,16 @@ var testRunners = []*TestRunner{
 	{testRunner: &DiskIOTestRunner{}},
 }
 
-// TODO: make tests run (pending)
-//TODO: understand if you are ec2/fargate, daemon/replica/sidecar/ by passing flags
-//TODO: pass arguments I want from main.tf (todo) (need test after this)
-//TODO: coveredTestList needs to be cleaned up. See my handwritten notes for ideas. (Todo)
-// Based on the above, make a factory.
+// [DONE] make tests run
+// [DONE] understand if you are ec2/fargate, daemon/replica/sidecar/ by passing flags
+// [DONE pass arguments I want from main.tf
 // TODO: Test runner -> has agentRunnerStrategy(). Shared testRunner construct for ec2 & ecs
 // TODO: agentRunnerStrategy(ECS) -> has members like ssmparam, clusterarn etc. still the same interface right?
 // TODO: agentRunnerStrategies accepts files
+// TODO: maybe after this I can make a PR before coveredTestList cleanup. Make it simple & static for test list.
+//TODO: test e2e
+//TODO: coveredTestList needs to be cleaned up. See my handwritten notes for ideas. (Todo)
+// Based on the above, make a factory.
 // Do this only for ecs for now, and a separate PR for ec2 changes? nah..not possible
 var ecsTestRunners = []*ECSTestRunner{
 	{testRunner: &CPUTestRunner{}},
@@ -59,7 +61,7 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 	if env.ComputeType == compute_type.ECS {
 		log.Printf("Environment compute type is ECS")
 		for _, ecsTestRunner := range ecsTestRunners {
-			ecsTestRunner.Run(suite, cwagentConfigSsmParamName, clusterArn, serviceName)
+			ecsTestRunner.Run(suite, env)
 		}
 	}
 
