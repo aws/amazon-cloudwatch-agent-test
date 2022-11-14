@@ -5,7 +5,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/compute_type"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_deployment_type"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_launch_type"
-	"log"
 )
 
 type MetaData struct {
@@ -38,7 +37,6 @@ func registerECSData(dataString *MetaDataStrings) {
 }
 
 func fillComputeType(e *MetaData, data *MetaDataStrings) *MetaData {
-	log.Printf("hey")
 	computeType, ok := compute_type.FromString(data.ComputeType)
 	if !ok {
 		panic("Invalid compute type " + data.ComputeType)
@@ -48,9 +46,6 @@ func fillComputeType(e *MetaData, data *MetaDataStrings) *MetaData {
 }
 
 func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
-	log.Printf("heyhey")
-	log.Print(e)
-
 	if e.ComputeType != compute_type.ECS {
 		return e
 	}
@@ -70,8 +65,6 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 	e.EcsClusterArn = data.EcsClusterArn
 	e.CwagentConfigSsmParamName = data.CwagentConfigSsmParamName
 	e.EcsServiceName = data.EcsServiceName
-	log.Printf("heyheyhey")
-
 	return e
 }
 
