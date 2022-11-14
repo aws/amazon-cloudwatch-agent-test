@@ -10,12 +10,10 @@ import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/compute_type"
-	"log"
-	"os"
-	"testing"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/stretchr/testify/suite"
+	"log"
+	"testing"
 )
 
 const namespace = "MetricValueBenchmarkTest"
@@ -56,8 +54,14 @@ var ecsTestRunners = []*ECSTestRunner{
 	{testRunner: &CPUTestRunner{}, agentRunStrategy: &ECSAgentRunStrategy{}},
 }
 
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+}
+
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
-	env := environment.GetEnvironmentMetaData(os.Args[0])
+	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	if env.ComputeType == compute_type.ECS {
 		log.Printf("Environment compute type is ECS")
 		for _, ecsTestRunner := range ecsTestRunners {

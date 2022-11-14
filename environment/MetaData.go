@@ -5,6 +5,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/compute_type"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_deployment_type"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_launch_type"
+	"log"
 )
 
 type MetaData struct {
@@ -16,44 +17,74 @@ type MetaData struct {
 	EcsServiceName            string
 }
 
-func fillComputeType(flags *flag.FlagSet, e *MetaData) *MetaData {
-	computeType, ok := compute_type.FromString(*(flags.String("computeType", "", "EC2/ECS/EKS")))
+type MetaDataStrings struct {
+	ComputeType               string
+	EcsLaunchType             string
+	EcsDeploymentStrategy     string
+	EcsClusterArn             string
+	CwagentConfigSsmParamName string
+	EcsServiceName            string
+}
+
+func registerComputeType(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.ComputeType), "computeType", " default ", "EC2/ECS/EKS")
+}
+func registerECSData(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.EcsLaunchType), "ecsLaunchType", "", "EC2 or Fargate")
+	flag.StringVar(&(dataString.EcsDeploymentStrategy), "ecsDeploymentStrategy", "", "Daemon/Replica/Sidecar")
+	flag.StringVar(&(dataString.EcsClusterArn), "clusterArn", "", "Used to restart ecs task to apply new agent config")
+	flag.StringVar(&(dataString.CwagentConfigSsmParamName), "cwagentConfigSsmParamName", "", "Used to set new cwa config")
+	flag.StringVar(&(dataString.EcsServiceName), "cwagentECSServiceName", "", "Used to restart ecs task to apply new agent config")
+}
+
+func fillComputeType(e *MetaData, data *MetaDataStrings) *MetaData {
+	log.Printf("hey")
+	computeType, ok := compute_type.FromString(data.ComputeType)
 	if !ok {
-		panic("Compute Type not provided")
+		panic("Invalid compute type " + data.ComputeType)
 	}
 	e.ComputeType = computeType
 	return e
 }
 
-func fillECSData(flags *flag.FlagSet, e *MetaData) *MetaData {
+func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
+	log.Printf("heyhey")
+	log.Print(e)
+
 	if e.ComputeType != compute_type.ECS {
 		return e
 	}
 
-	launchType, ok := ecs_launch_type.FromString(*(flags.String("ecsLaunchType", "", "EC2 or Fargate")))
+	ecsLaunchType, ok := ecs_launch_type.FromString(data.EcsLaunchType)
 	if !ok {
-		panic("Launch Type not provided")
+		panic("Invalid compute type " + data.ComputeType)
 	}
-	e.EcsLaunchType = launchType
+	e.EcsLaunchType = ecsLaunchType
 
-	deploymentStrategy, ok := ecs_deployment_type.FromString(*(flags.String("ecsDeploymentStrategy", "", "Daemon/Replica/Sidecar")))
+	ecsDeploymentStrategy, ok := ecs_deployment_type.FromString(data.EcsDeploymentStrategy)
 	if !ok {
-		panic("Deployment Strategy not provided")
+		panic("Invalid compute type " + data.ComputeType)
 	}
-	e.EcsDeploymentStrategy = deploymentStrategy
+	e.EcsDeploymentStrategy = ecsDeploymentStrategy
 
-	e.EcsClusterArn = *(flags.String("clusterArn", "", "Used to restart ecs task to apply new agent config"))
-	e.CwagentConfigSsmParamName = *(flags.String("cwagentConfigSsmParamName", "", "Used to set new cwa config"))
-	e.EcsServiceName = *(flags.String("cwagentECSServiceName", "", "Used to restart ecs task to apply new agent config"))
+	e.EcsClusterArn = data.EcsClusterArn
+	e.CwagentConfigSsmParamName = data.CwagentConfigSsmParamName
+	e.EcsServiceName = data.EcsServiceName
+	log.Printf("heyheyhey")
 
 	return e
 }
 
-func GetEnvironmentMetaData(flagArgs string) *MetaData {
-	flags := flag.NewFlagSet(flagArgs, flag.ContinueOnError)
+func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDataStrings {
+	registerComputeType(metaDataStrings)
+	registerECSData(metaDataStrings)
+	return metaDataStrings
+}
+
+func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData := &(MetaData{})
-	metaData = fillComputeType(flags, metaData)
-	metaData = fillECSData(flags, metaData)
+	metaData = fillComputeType(metaData, data)
+	metaData = fillECSData(metaData, data)
 
 	return metaData
 }
