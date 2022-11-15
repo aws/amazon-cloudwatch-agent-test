@@ -58,7 +58,7 @@ func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath s
 	}
 	log.Printf("CWAgent service is restarted")
 
-	time.Sleep(3 * time.Minute)
+	time.Sleep(5 * time.Minute)
 
 	return nil
 }
