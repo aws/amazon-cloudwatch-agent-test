@@ -73,6 +73,8 @@ func (f *baseMetricValueFetcher) setEnv(env *environment.MetaData) {
 	log.Print(env)
 
 	f.Env = env
+	log.Print("sevEnv is set")
+	log.Print(f.Env)
 }
 
 func (f *baseMetricValueFetcher) getInstanceIdDimension() types.Dimension {
