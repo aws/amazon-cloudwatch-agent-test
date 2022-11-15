@@ -9,6 +9,7 @@ package metric
 import (
 	"log"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
