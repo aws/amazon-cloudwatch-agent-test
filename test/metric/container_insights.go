@@ -44,21 +44,6 @@ func (f *ContainerInsightsValueFetcher) isApplicable(metricName string) bool {
 	return exists
 }
 
-var containerInsightsMetricsSpecificDimension = []types.Dimension{
-	{
-		Name:  aws.String("ClusterName"),
-		Value: aws.String("cpu-total"),
-	},
-	{
-		Name:  aws.String("ContainerInstanceId"),
-		Value: aws.String("cpu-total"),
-	},
-	{
-		Name:  aws.String("InstanceId"),
-		Value: aws.String("cpu-total"),
-	},
-}
-
 func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions() []types.Dimension {
 	//TODO currently assuming there's only one container
 	containerInstances, err := test.GetContainerInstances(&(f.getEnv().EcsClusterArn))
@@ -66,10 +51,6 @@ func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions() []types.Di
 		log.Print(err)
 		return []types.Dimension{}
 	}
-
-	log.Print(f.getEnv().EcsClusterName)
-	log.Print(containerInstances[0].ContainerInstanceId)
-	log.Print(containerInstances[0].EC2InstanceId)
 
 	return []types.Dimension{
 		{
