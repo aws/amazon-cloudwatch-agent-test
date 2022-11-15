@@ -48,7 +48,7 @@ func (t *CollectDTestRunner) getExtraCommands() []string {
 		"sudo mkdir -p /etc/collectd",
 		"sudo chown `whoami` /etc/collectd",
 		"echo 'user: secret' > /etc/collectd/auth_file",
-		fmt."sudo collectd -C ./extra_configs/collectd.conf",
+		"sudo collectd -C ./extra_configs/collectd.conf",
 	}
 }
 

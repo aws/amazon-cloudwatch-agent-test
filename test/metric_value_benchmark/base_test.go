@@ -64,7 +64,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	err := util.RunCommands(extraCommands)
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to run extra commands due to: %v", err.Error())
+		return testGroupResult, fmt.Errorf("Failed to run extra commands due to: %s", err.Error())
 	}
 
 	agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
@@ -74,7 +74,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Agent could not start due to: %v", err.Error())
+		return testGroupResult, fmt.Errorf("Agent could not start due to: %s", err.Error())
 	}
 
 	runningDuration := t.testRunner.getAgentRunDuration()
@@ -85,7 +85,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	err = util.DeleteFile(configOutputPath)
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %v", err.Error())
+		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %s", err.Error())
 	}
 
 	return testGroupResult, nil
