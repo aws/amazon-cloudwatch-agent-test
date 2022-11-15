@@ -16,6 +16,7 @@ import (
 
 type ContainerInsightsValueFetcher struct {
 	baseMetricValueFetcher
+	Env *environment.MetaData
 }
 
 var _ MetricValueFetcher = (*ContainerInsightsValueFetcher)(nil)
