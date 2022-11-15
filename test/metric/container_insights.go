@@ -63,22 +63,20 @@ var containerInsightsMetricsSpecificDimension = []types.Dimension{
 
 func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions() []types.Dimension {
 	//TODO currently assuming there's only one container
-	log.Print("containerInstances will fetch ")
-	log.Print(f.getEnv())
-
 	containerInstances, err := test.GetContainerInstances(&(f.getEnv().EcsClusterArn))
-	log.Print("containerInstances fetch completed - tried")
 	if err != nil {
 		log.Print(err)
 		return []types.Dimension{}
 	}
-	log.Print("containerInstances fetch")
-	log.Print(containerInstances)
+
+	log.Print(f.getEnv().EcsClusterName)
+	log.Print(containerInstances[0].ContainerInstanceId)
+	log.Print(containerInstances[0].EC2InstanceId)
 
 	return []types.Dimension{
 		{
 			Name:  aws.String("ClusterName"),
-			Value: aws.String(f.Env.EcsClusterName),
+			Value: aws.String(f.getEnv().EcsClusterName),
 		},
 		{
 			Name:  aws.String("ContainerInstanceId"),

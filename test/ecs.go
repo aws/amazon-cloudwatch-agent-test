@@ -9,6 +9,7 @@ package test
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"log"
 	"strings"
 )
 
@@ -80,7 +81,10 @@ func GetContainerInstanceArns(clusterArn *string) ([]*string, error) {
 }
 
 func GetContainerInstanceId(containerInstanceArn *string) string {
-	return strings.Split(*containerInstanceArn, ":container-instance/")[1]
+	log.Printf("container instance arn is %s", *containerInstanceArn)
+	id := strings.Split(*containerInstanceArn, "/")[2]
+	log.Printf("container instance id is %s", id)
+	return id
 }
 
 func GetClusterName(clusterArn *string) string {
