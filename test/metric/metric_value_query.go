@@ -68,7 +68,7 @@ type baseMetricValueFetcher struct {
 	Env *environment.MetaData
 }
 
-func (f *baseMetricValueFetcher) getEnv(env *environment.MetaData) *environment.MetaData {
+func (f *baseMetricValueFetcher) getEnv() *environment.MetaData {
 	return f.Env
 }
 
