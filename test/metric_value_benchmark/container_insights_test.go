@@ -18,7 +18,7 @@ type ContainerInsightsTestRunner struct {
 	ECSBaseTestRunner
 }
 
-var _ ITestRunner = (*ContainerInsightsTestRunner)(nil)
+var _ IECSTestRunner = (*ContainerInsightsTestRunner)(nil)
 
 func (t *ContainerInsightsTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
