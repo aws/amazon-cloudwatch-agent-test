@@ -63,8 +63,13 @@ var containerInsightsMetricsSpecificDimension = []types.Dimension{
 
 func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions() []types.Dimension {
 	//TODO currently assuming there's only one container
+	log.Print("containerInstances fetch")
+	log.Print(containerInstances)
+	log.Print(f.Env)
+
 	containerInstances, err := test.GetContainerInstances(&(f.Env.EcsClusterArn))
 	if err != nil {
+		log.Print(err)
 		return []types.Dimension{}
 	}
 	log.Print("containerInstances fetch")
