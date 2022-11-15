@@ -9,7 +9,6 @@ package metric
 import (
 	"log"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
@@ -17,7 +16,6 @@ import (
 
 type ContainerInsightsValueFetcher struct {
 	baseMetricValueFetcher
-	Env *environment.MetaData
 }
 
 var _ MetricValueFetcher = (*ContainerInsightsValueFetcher)(nil)
@@ -66,16 +64,15 @@ var containerInsightsMetricsSpecificDimension = []types.Dimension{
 func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions() []types.Dimension {
 	//TODO currently assuming there's only one container
 	log.Print("containerInstances fetch")
-	log.Print(f.Env)
+	log.Print(f.getEnv())
 
-	containerInstances, err := test.GetContainerInstances(&(f.Env.EcsClusterArn))
+	containerInstances, err := test.GetContainerInstances(&(f.getEnv().EcsClusterArn))
 	if err != nil {
 		log.Print(err)
 		return []types.Dimension{}
 	}
 	log.Print("containerInstances fetch")
 	log.Print(containerInstances)
-	log.Print(f.Env)
 
 	return []types.Dimension{
 		{

@@ -68,6 +68,10 @@ type baseMetricValueFetcher struct {
 	Env *environment.MetaData
 }
 
+func (f *baseMetricValueFetcher) getEnv(env *environment.MetaData) *environment.MetaData {
+	return f.Env
+}
+
 func (f *baseMetricValueFetcher) setEnv(env *environment.MetaData) {
 	log.Print("sevEnv is called")
 	log.Print(env)
