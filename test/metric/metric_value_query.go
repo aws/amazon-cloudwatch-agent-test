@@ -34,6 +34,8 @@ type MetricFetcherFactory struct {
 func (f *MetricFetcherFactory) GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
 	for _, fetcher := range metricValueFetchers {
 		if fetcher.isApplicable(metricName) {
+			log.Print("Factory env is")
+			log.Print(f.Env)
 			fetcher.setEnv(f.Env)
 			return fetcher, nil
 		}
@@ -67,6 +69,9 @@ type baseMetricValueFetcher struct {
 }
 
 func (f *baseMetricValueFetcher) setEnv(env *environment.MetaData) {
+	log.Print("sevEnv is called")
+	log.Print(env)
+
 	f.Env = env
 }
 
