@@ -27,7 +27,7 @@ var (
 )
 
 // ValidateLogs takes a log group and log stream, and fetches the log events via the GetLogEvents
-// API for all of the logs since a given timestamp, and checks if the number of log events matches
+// API for all the logs since a given timestamp, and checks if the number of log events matches
 // the expected value.
 func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int, since time.Time) {
 	log.Printf("Checking %s/%s since %s for %d expected logs", logGroup, logStream, since.UTC().Format(time.RFC3339), numExpectedLogs)
@@ -46,7 +46,6 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 		LogStreamName: aws.String(logStream),
 		StartTime:     aws.Int64(sinceMs),
 	}
-	//paginator := cloudwatchlogs.NewGetLogEventsPaginator(cwlClient, params)
 
 	numLogsFound := 0
 	var output *cloudwatchlogs.GetLogEventsOutput
@@ -59,6 +58,14 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 		output, err = cwlClient.GetLogEvents(*clientContext, params)
 
 		if err != nil {
+			var rnf *types.ResourceNotFoundException
+			if errors.As(err, &rnf) {
+				// The log group/stream hasn't been created yet, so wait and retry
+				time.Sleep(time.Minute)
+				continue
+			}
+
+			// if the error is not a ResourceNotFoundException, we should fail here.
 			t.Fatalf("Error occurred while getting log events: %v", err.Error())
 		}
 
