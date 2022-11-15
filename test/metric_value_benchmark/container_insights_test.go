@@ -7,7 +7,6 @@
 package metric_value_benchmark
 
 import (
-	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -76,6 +75,5 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
 
 	testResult.Status = status.SUCCESSFUL
-	log.Print(testResult.Status)
 	return testResult
 }

@@ -75,7 +75,6 @@ func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData
 	if err == nil {
 		testGroupResult = t.testRunner.validate()
 	}
-	testGroupResult.TestResults[0].Status = status.FAILED //This should be convered to SUCCESS after test is done. Default failure to rerun workflow
 
 	s.AddToSuiteResult(testGroupResult)
 	if testGroupResult.GetStatus() != status.SUCCESSFUL {
