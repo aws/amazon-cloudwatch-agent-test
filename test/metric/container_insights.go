@@ -22,6 +22,8 @@ var _ MetricValueFetcher = (*ContainerInsightsValueFetcher)(nil)
 
 func (f *ContainerInsightsValueFetcher) Fetch(namespace, metricName string, stat Statistics) ([]float64, error) {
 	dimensions := f.getMetricSpecificDimensions()
+	log.Print("Dimensions for container insights fetch")
+	log.Print(dimensions)
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
@@ -65,6 +67,10 @@ func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions() []types.Di
 	if err != nil {
 		return []types.Dimension{}
 	}
+	log.Print("containerInstances fetch")
+	log.Print(containerInstances)
+	log.Print(f.Env)
+
 	return []types.Dimension{
 		{
 			Name:  aws.String("ClusterName"),
