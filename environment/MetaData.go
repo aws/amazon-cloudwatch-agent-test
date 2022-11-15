@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_deployment_type"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_launch_type"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"log"
 )
 
 type MetaData struct {
@@ -34,7 +35,7 @@ type MetaDataStrings struct {
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
-	flag.StringVar(&(dataString.ComputeType), "computeType", " default ", "EC2/ECS/EKS")
+	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS")
 }
 func registerECSData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EcsLaunchType), "ecsLaunchType", "", "EC2 or Fargate")
@@ -47,7 +48,7 @@ func registerECSData(dataString *MetaDataStrings) {
 func fillComputeType(e *MetaData, data *MetaDataStrings) *MetaData {
 	computeType, ok := compute_type.FromString(data.ComputeType)
 	if !ok {
-		panic("Invalid compute type " + data.ComputeType)
+		panic("Invalid compute type. Needs to be EC2/ECS/EKS. Compute Type is a required flag. :" + data.ComputeType)
 	}
 	e.ComputeType = computeType
 	return e
@@ -60,15 +61,17 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 
 	ecsLaunchType, ok := ecs_launch_type.FromString(data.EcsLaunchType)
 	if !ok {
-		panic("Invalid compute type " + data.ComputeType)
+		log.Printf("Invalid launch type %s. This might be because it wasn't provided for non-ECS tests", data.ComputeType)
+	} else {
+		e.EcsLaunchType = ecsLaunchType
 	}
-	e.EcsLaunchType = ecsLaunchType
 
 	ecsDeploymentStrategy, ok := ecs_deployment_type.FromString(data.EcsDeploymentStrategy)
 	if !ok {
-		panic("Invalid compute type " + data.ComputeType)
+		log.Printf("Invalid deployment strategy %s. This might be because it wasn't provided for non-ECS tests", data.ComputeType)
+	} else {
+		e.EcsDeploymentStrategy = ecsDeploymentStrategy
 	}
-	e.EcsDeploymentStrategy = ecsDeploymentStrategy
 
 	e.EcsClusterArn = data.EcsClusterArn
 	e.CwagentConfigSsmParamName = data.CwagentConfigSsmParamName
