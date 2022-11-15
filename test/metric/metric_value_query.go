@@ -33,8 +33,6 @@ type MetricFetcherFactory struct {
 func (f *MetricFetcherFactory) GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
 	for _, fetcher := range metricValueFetchers {
 		if fetcher.isApplicable(metricName) {
-			log.Print("Factory env is")
-			log.Print(f.Env)
 			fetcher.setEnv(f.Env)
 			return fetcher, nil
 		}
@@ -127,7 +125,7 @@ func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpeci
 	}
 
 	result := output.MetricDataResults[0].Values
-	log.Printf("Metric Value is : %s", fmt.Sprint(result))
+	log.Printf("Metric values are : %s", fmt.Sprint(result))
 
 	return result, nil
 }

@@ -7,7 +7,6 @@
 package metric_value_benchmark
 
 import (
-	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -34,7 +33,7 @@ func (t *ContainerInsightsTestRunner) validate() status.TestGroupResult {
 }
 
 func (t *ContainerInsightsTestRunner) getTestName() string {
-	return "CPU"
+	return "ContainerInstance"
 }
 
 func (t *ContainerInsightsTestRunner) getAgentConfigFileName() string {
@@ -64,7 +63,6 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 	}
 
 	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, metric.AVERAGE)
-	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
 	}
@@ -77,5 +75,6 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
 
 	testResult.Status = status.SUCCESSFUL
+	testResult.Print()
 	return testResult
 }
