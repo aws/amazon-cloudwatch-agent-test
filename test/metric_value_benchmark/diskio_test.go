@@ -43,7 +43,7 @@ func (m *DiskIOTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *CPUTestRunner) getExtraCommands() []string {
+func (t *DiskIOTestRunner) getExtraCommands() []string {
 	return []string{}
 }
 
