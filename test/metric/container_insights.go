@@ -20,7 +20,7 @@ type ContainerInsightsValueFetcher struct {
 
 var _ MetricValueFetcher = (*ContainerInsightsValueFetcher)(nil)
 
-func (f *ContainerInsightsValueFetcher) Fetch(namespace, metricName string, stat Statistics) ([]MetricValues, error) {
+func (f *ContainerInsightsValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dimensions := f.getMetricSpecificDimensions()
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
@@ -29,18 +29,20 @@ func (f *ContainerInsightsValueFetcher) Fetch(namespace, metricName string, stat
 	return values, err
 }
 
-var containerInsightsSupportedMetricValues = map[string]struct{}{
-	"instance_memory_utilization":       {},
-	"instance_number_of_running_tasks":  {},
-	"instance_memory_reserved_capacity": {},
-	"instance_filesystem_utilization":   {},
-	"instance_network_total_bytes":      {},
-	"instance_cpu_utilization":          {},
-	"instance_cpu_reserved_capacity":    {},
+func (f *ContainerInsightsValueFetcher) getPluginSupportedMetric() map[string]struct{} {
+	return map[string]struct{}{
+		"instance_memory_utilization":       {},
+		"instance_number_of_running_tasks":  {},
+		"instance_memory_reserved_capacity": {},
+		"instance_filesystem_utilization":   {},
+		"instance_network_total_bytes":      {},
+		"instance_cpu_utilization":          {},
+		"instance_cpu_reserved_capacity":    {},
+	}
 }
 
 func (f *ContainerInsightsValueFetcher) isApplicable(metricName string) bool {
-	_, exists := containerInsightsSupportedMetricValues[metricName]
+	_, exists := f.getPluginSupportedMetric()[metricName]
 	return exists
 }
 
