@@ -11,7 +11,9 @@
         "InstanceId": "${aws:InstanceId}"
       },
       "metrics_collected": {
-        "collectd": {}
+        "collectd": {
+          "collectd_security_level": "none"
+        }
       }
     }
   }

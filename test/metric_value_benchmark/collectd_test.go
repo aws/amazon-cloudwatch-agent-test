@@ -46,8 +46,6 @@ func (t *CollectDTestRunner) getAgentRunDuration() time.Duration {
 func (t *CollectDTestRunner) getExtraCommands() []string {
 	return []string{
 		"sudo mkdir -p /etc/collectd",
-		"sudo chown `whoami` /etc/collectd",
-		"echo 'user: secret' > /etc/collectd/auth_file",
 		"sudo collectd -C ./extra_configs/collectd.conf",
 	}
 }

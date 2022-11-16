@@ -43,6 +43,10 @@ func (m *DiskIOTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
+func (t *CPUTestRunner) getExtraCommands() []string {
+	return []string{}
+}
+
 func (m *DiskIOTestRunner) getMeasuredMetrics() []string {
 	return []string{
 		"diskio_iops_in_progress", "diskio_io_time", "diskio_reads", "diskio_read_bytes", "diskio_read_time",
