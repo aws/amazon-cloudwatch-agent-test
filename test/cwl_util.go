@@ -21,6 +21,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const allowedRetries = 5
+
 var (
 	ctx context.Context
 	cwl *cloudwatchlogs.Client
@@ -48,6 +50,7 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 	}
 
 	numLogsFound := 0
+	attempts := 0
 	var output *cloudwatchlogs.GetLogEventsOutput
 	var nextToken *string
 
@@ -57,9 +60,11 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 		}
 		output, err = cwlClient.GetLogEvents(*clientContext, params)
 
+		attempts += 1
+
 		if err != nil {
 			var rnf *types.ResourceNotFoundException
-			if errors.As(err, &rnf) {
+			if errors.As(err, &rnf) && attempts <= allowedRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(time.Minute)
 				continue
@@ -157,6 +162,7 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 	foundLogs := make([]string, 0)
 	var output *cloudwatchlogs.GetLogEventsOutput
 	var nextToken *string
+	attempts := 0
 
 	for {
 		if nextToken != nil {
@@ -164,7 +170,17 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 		}
 		output, err = cwlClient.GetLogEvents(*clientContext, params)
 
+		attempts += 1
+
 		if err != nil {
+			var rnf *types.ResourceNotFoundException
+			if errors.As(err, &rnf) && attempts <= allowedRetries {
+				// The log group/stream hasn't been created yet, so wait and retry
+				time.Sleep(time.Minute)
+				continue
+			}
+
+			// if the error is not a ResourceNotFoundException, we should fail here.
 			t.Fatalf("Error occurred while getting log events: %v", err.Error())
 		}
 
