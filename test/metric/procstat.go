@@ -21,6 +21,7 @@ var _ MetricValueFetcher = (*ProcStatMetricValueFetcher)(nil)
 
 func (f *ProcStatMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dims := f.getMetricSpecificDimensions()
+	dims = append(dims, f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dims, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %s: %v", metricName, err)
