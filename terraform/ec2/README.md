@@ -246,7 +246,17 @@ Outputs:
         "iam:CreateServiceLinkedRole",
         "autoscaling:DescribeAutoScalingGroups",
         "autoscaling:CreateAutoScalingGroup",
-        "autoscaling:DeleteAutoScalingGroup"
+        "autoscaling:DeleteAutoScalingGroup",
+        "autoscaling:CreateLaunchConfiguration",
+        "autoscaling:DeleteLaunchConfiguration",
+        "autoscaling:DescribeLaunchConfigurations",
+        "autoscaling:DescribeScalingActivities",
+        "autoscaling:CreateOrUpdateTags",
+        "autoscaling:DeleteTags",
+        "autoscaling:DescribeTags",
+        "autoscaling:UpdateAutoScalingGroup",
+        "autoscaling:SetInstanceProtection",
+        "ecs:DescribeContainerInstances"
       ],
       "Resource": "*"
     }
