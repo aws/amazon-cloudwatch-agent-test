@@ -33,14 +33,6 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished MetricBenchmarkTestSuite")
 }
 
-var testRunners = []*TestRunner{
-	{testRunner: &CPUTestRunner{}},
-	{testRunner: &MemTestRunner{}},
-	{testRunner: &ProcStatTestRunner{}},
-	{testRunner: &DiskIOTestRunner{}},
-	{testRunner: &NetTestRunner{}},
-}
-
 // [DONE] make tests run
 // [DONE] understand if you are ec2/fargate, daemon/replica/sidecar/ by passing flags
 // [DONE] pass arguments I want from main.tf
@@ -54,13 +46,15 @@ var testRunners = []*TestRunner{
 // [DONE]: ok... then at query time or so, call these apis.
 // [DONE]: say we have it, then what? I guess test Runners have to have var CommonDimensions -> for cpu, instanceId. var CommonDimensions -> for
 // [DONE]: intanceId getter is different for ec2 vs ecs... so ... DimensionStrategy needed? get env -> if ec2..
-// TODO: [NOW] Test validation.. create container insights test runner
-// TODO: uhhh make these things not happen for ec2 suite.go:77: test panicked: Invalid compute type  default
-// TODO: ec2 & ecs whole test
-// TODO: test this runAgentStrategy and then if it works, refactor the ec2 ones with this too. -> no do this later?
-// TODO: merge conflict resolution
-// TODO: maybe after this I can make a PR before coveredTestList cleanup. Make it simple & static for test list.
+// DONE:  Test validation.. create container insights test runner
+// DONE: uhhh make these things not happen for ec2 suite.go:77: test panicked: Invalid compute type  default
+// DONE: ec2 & ecs whole test
+// DONE: merge conflict resolution
 //TODO: test e2e
+// TODO: make CWA package not use personal test branch
+// TODO: maybe after this I can make a PR before coveredTestList cleanup. Make it simple & static for test list.
+// TODO: test this runAgentStrategy and then if it works, refactor the ec2 ones with this too. -> no do this later?
+// TODO: remove coveredTestList into another branch to separate PR
 //TODO: coveredTestList needs to be cleaned up. See my handwritten notes for ideas. (Todo)
 // Based on the above, make a factory.
 // Do this only for ecs for now, and a separate PR for ec2 changes? nah..not possible
@@ -86,6 +80,9 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 		var testRunners = []*TestRunner{
 			{testRunner: &CPUTestRunner{BaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}}},
 			{testRunner: &MemTestRunner{BaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}}},
+			{testRunner: &ProcStatTestRunner{BaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}}},
+			{testRunner: &DiskIOTestRunner{BaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}}},
+			{testRunner: &NetTestRunner{BaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}}},
 		}
 		for _, testRunner := range testRunners {
 			testRunner.Run(suite)
