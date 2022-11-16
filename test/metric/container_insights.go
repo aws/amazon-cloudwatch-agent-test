@@ -20,7 +20,7 @@ type ContainerInsightsValueFetcher struct {
 
 var _ MetricValueFetcher = (*ContainerInsightsValueFetcher)(nil)
 
-func (f *ContainerInsightsValueFetcher) Fetch(namespace, metricName string, stat Statistics) ([]float64, error) {
+func (f *ContainerInsightsValueFetcher) Fetch(namespace, metricName string, stat Statistics) ([]MetricValues, error) {
 	dimensions := f.getMetricSpecificDimensions()
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
