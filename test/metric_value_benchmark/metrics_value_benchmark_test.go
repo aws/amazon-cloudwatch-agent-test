@@ -29,6 +29,7 @@ func (suite *MetricBenchmarkTestSuite) SetupSuite() {
 }
 
 func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
+	suite.result.Print()
 	fmt.Println(">>>> Finished MetricBenchmarkTestSuite")
 }
 
@@ -87,7 +88,6 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 		}
 	}
 
-	suite.result.Print()
 	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Benchmark Test Suite Failed")
 }
 
