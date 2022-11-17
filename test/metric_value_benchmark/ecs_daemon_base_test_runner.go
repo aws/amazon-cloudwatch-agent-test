@@ -76,6 +76,9 @@ func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData
 		testGroupResult = t.testRunner.validate()
 	}
 
+	// for debugging why logs don't get printed anymore
+	testGroupResult.TestResults[0].Status = status.FAILED
+
 	s.AddToSuiteResult(testGroupResult)
 	if testGroupResult.GetStatus() != status.SUCCESSFUL {
 		log.Printf("%v test group failed", testName)
