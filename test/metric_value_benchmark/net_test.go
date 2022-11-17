@@ -22,7 +22,7 @@ func (m *NetTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := m.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, name := range metricsToFetch {
-		testResults[i] = m.validateDiskMetric(name)
+		testResults[i] = m.validateNetMetric(name)
 	}
 
 	return status.TestGroupResult{
@@ -49,7 +49,7 @@ func (m *NetTestRunner) getMeasuredMetrics() []string {
 		"net_err_out", "net_packets_sent", "net_packets_recv"}
 }
 
-func (m *NetTestRunner) validateDiskMetric(metricName string) status.TestResult {
+func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
