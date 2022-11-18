@@ -14,6 +14,11 @@ import (
 	"time"
 )
 
+const (
+	CatCommand      = "cat "
+	AppOwnerCommand = "ps -u -p "
+)
+
 func CopyFile(pathIn string, pathOut string) {
 	log.Printf("Copy File %s to %s", pathIn, pathOut)
 	pathInAbs, err := filepath.Abs(pathIn)
@@ -107,12 +112,13 @@ func RunShellScript(path string, args ...string) error {
 	return nil
 }
 
-func RunCommand(cmd string) {
+func RunCommand(cmd string) (output string) {
 	out, err := exec.Command("bash", "-c", cmd).Output()
 
 	if err != nil {
 		log.Fatalf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
 	}
+	return string(out)
 }
 
 func ReplaceLocalStackHostName(pathIn string) {
