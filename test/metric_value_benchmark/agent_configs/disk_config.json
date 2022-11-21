@@ -1,0 +1,21 @@
+{
+    "agent": {
+      "metrics_collection_interval": 60,
+      "run_as_user": "root",
+      "debug": true,
+      "logfile": ""
+    },
+    "metrics": {
+      "namespace": "MetricValueBenchmarkTest",
+      "append_dimensions": {
+        "InstanceId": "${aws:InstanceId}"
+      },
+      "metrics_collected": {
+        "disk": {
+            "measurement": [
+                "free", "inodes_free", "inodes_total", "inodes_used", "total", "used", "used_percent"
+            ]
+          }
+      }
+    }
+  }

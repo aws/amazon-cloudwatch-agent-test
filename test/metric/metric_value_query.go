@@ -23,6 +23,7 @@ var metricValueFetchers = []MetricValueFetcher{
 	&MemMetricValueFetcher{},
 	&ProcStatMetricValueFetcher{},
 	&DiskIOMetricValueFetcher{},
+	&DiskMetricValueFetcher{},
 }
 
 func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
