@@ -76,7 +76,7 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 	e.EcsClusterArn = data.EcsClusterArn
 	e.CwagentConfigSsmParamName = data.CwagentConfigSsmParamName
 	e.EcsServiceName = data.EcsServiceName
-	e.EcsClusterName = test.GetClusterName(&(data.EcsClusterArn))
+	e.EcsClusterName = test.GetClusterName(data.EcsClusterArn)
 
 	return e
 }

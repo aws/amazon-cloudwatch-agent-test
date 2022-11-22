@@ -18,19 +18,19 @@ var (
 	ecsClient *ecs.Client
 )
 
-func RestartDaemonService(clusterArn *string, serviceName *string) error {
+func RestartDaemonService(clusterArn, serviceName string) error {
 	return RestartService(clusterArn, nil, serviceName)
 }
 
-func RestartService(clusterArn *string, desiredCount *int32, serviceName *string) error {
+func RestartService(clusterArn string, desiredCount *int32, serviceName string) error {
 	svc, ctx, err := getEcsClient()
 	if err != nil {
 		return err
 	}
 
 	updateServiceInput := &ecs.UpdateServiceInput{
-		Cluster:            clusterArn,
-		Service:            serviceName,
+		Cluster:            &clusterArn,
+		Service:            &serviceName,
 		ForceNewDeployment: true,
 	}
 	if desiredCount != nil {
@@ -48,7 +48,7 @@ type ContainerInstance struct {
 	EC2InstanceId        string
 }
 
-func GetContainerInstances(clusterArn *string) ([]ContainerInstance, error) {
+func GetContainerInstances(clusterArn string) ([]ContainerInstance, error) {
 	containerInstanceArns, err := GetContainerInstanceArns(clusterArn)
 	if err != nil {
 		return []ContainerInstance{}, err
@@ -64,7 +64,7 @@ func GetContainerInstances(clusterArn *string) ([]ContainerInstance, error) {
 		arn := containerInstance.ContainerInstanceArn
 		result := ContainerInstance{
 			ContainerInstanceArn: *arn,
-			ContainerInstanceId:  GetContainerInstanceId(arn),
+			ContainerInstanceId:  GetContainerInstanceId(*arn),
 			EC2InstanceId:        *(containerInstance.Ec2InstanceId),
 		}
 		results = append(results, result)
@@ -73,7 +73,7 @@ func GetContainerInstances(clusterArn *string) ([]ContainerInstance, error) {
 	return results, nil
 }
 
-func GetContainerInstanceArns(clusterArn *string) ([]string, error) {
+func GetContainerInstanceArns(clusterArn string) ([]string, error) {
 	listContainerInstancesOutput, err := listContainerInstances(clusterArn)
 	if err != nil {
 		return []string{}, err
@@ -82,35 +82,35 @@ func GetContainerInstanceArns(clusterArn *string) ([]string, error) {
 	return listContainerInstancesOutput.ContainerInstanceArns, nil
 }
 
-func GetContainerInstanceId(containerInstanceArn *string) string {
-	return strings.Split(*containerInstanceArn, "/")[2]
+func GetContainerInstanceId(containerInstanceArn string) string {
+	return strings.Split(containerInstanceArn, "/")[2]
 }
 
-func GetClusterName(clusterArn *string) string {
-	return strings.Split(*clusterArn, ":cluster/")[1]
+func GetClusterName(clusterArn string) string {
+	return strings.Split(clusterArn, ":cluster/")[1]
 }
 
-func listContainerInstances(clusterArn *string) (*ecs.ListContainerInstancesOutput, error) {
+func listContainerInstances(clusterArn string) (*ecs.ListContainerInstancesOutput, error) {
 	svc, ctx, err := getEcsClient()
 	if err != nil {
 		return nil, err
 	}
 
 	input := &ecs.ListContainerInstancesInput{
-		Cluster: clusterArn,
+		Cluster: &clusterArn,
 	}
 
 	return svc.ListContainerInstances(ctx, input)
 }
 
-func describeContainerInstances(clusterArn *string, containerInstanceArns []string) (*ecs.DescribeContainerInstancesOutput, error) {
+func describeContainerInstances(clusterArn string, containerInstanceArns []string) (*ecs.DescribeContainerInstancesOutput, error) {
 	svc, ctx, err := getEcsClient()
 	if err != nil {
 		return nil, err
 	}
 
 	input := &ecs.DescribeContainerInstancesInput{
-		Cluster:            clusterArn,
+		Cluster:            &clusterArn,
 		ContainerInstances: containerInstanceArns,
 	}
 
