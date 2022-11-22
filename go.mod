@@ -14,7 +14,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.33.0
 	github.com/google/uuid v1.3.0
 	github.com/stretchr/testify v1.8.0
-	golang.org/x/sys v0.1.0
+	golang.org/x/sys v0.2.0
 )
 
 require (
