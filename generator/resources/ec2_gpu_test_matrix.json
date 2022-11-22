@@ -3,7 +3,7 @@
     "os": "al2",
     "username": "ec2-user",
     "instanceType":"g4dn.xlarge",
-    "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-nvidia-gpu-al2*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
