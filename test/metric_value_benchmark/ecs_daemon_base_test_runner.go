@@ -8,7 +8,6 @@ package metric_value_benchmark
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -49,13 +48,13 @@ func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath s
 	if err != nil {
 		return fmt.Errorf("Failed while reading config file : %s", err.Error())
 	}
-	log.Printf("Put parameter successful")
+	fmt.Print("Put parameter successful")
 
 	err = test.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
 	if err != nil {
 		fmt.Print(err)
 	}
-	log.Printf("CWAgent service is restarted")
+	fmt.Print("CWAgent service is restarted")
 
 	time.Sleep(5 * time.Minute)
 
@@ -69,7 +68,7 @@ type ECSTestRunner struct {
 
 func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData) {
 	testName := t.testRunner.getTestName()
-	log.Printf("Running %v", testName)
+	fmt.Printf("Running %s", testName)
 	testGroupResult, err := t.runAgent(e)
 	if err == nil {
 		testGroupResult = t.testRunner.validate()
@@ -77,7 +76,7 @@ func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData
 
 	s.AddToSuiteResult(testGroupResult)
 	if testGroupResult.GetStatus() != status.SUCCESSFUL {
-		log.Printf("%v test group failed", testName)
+		fmt.Printf("%s test group failed", testName)
 	}
 }
 
