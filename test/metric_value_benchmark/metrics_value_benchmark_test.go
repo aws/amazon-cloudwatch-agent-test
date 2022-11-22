@@ -46,7 +46,7 @@ var (
 	ec2TestRunners []*TestRunner
 )
 
-func getEcsTestRunners(env environment.MetaData) {
+func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 	if ecsTestRunners == nil {
 		factory := &metric.MetricFetcherFactory{Env: env}
 
@@ -58,7 +58,7 @@ func getEcsTestRunners(env environment.MetaData) {
 	return ecsTestRunners
 }
 
-func getEc2TestRunners(env environment.MetaData) {
+func getEc2TestRunners(env *environment.MetaData) []*TestRunner {
 	if ec2TestRunners == nil {
 		factory := &metric.MetricFetcherFactory{Env: env}
 		ec2TestRunners = []*TestRunner{
@@ -75,11 +75,11 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	if env.ComputeType == computetype.ECS {
 		log.Print("Environment compute type is ECS")
-		for _, ecsTestRunner := range getEcsTestRunners() {
+		for _, ecsTestRunner := range getEcsTestRunners(env) {
 			ecsTestRunner.Run(suite, env)
 		}
 	} else {
-		for _, testRunner := range getEcsTestRunners() {
+		for _, testRunner := range getEc2TestRunners(env) {
 			testRunner.Run(suite)
 		}
 	}
