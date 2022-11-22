@@ -3,16 +3,13 @@ module github.com/aws/amazon-cloudwatch-agent-test
 go 1.18
 
 require (
-<<<<<<< HEAD
-	github.com/aws/aws-sdk-go-v2 v1.17.1
-	github.com/aws/aws-sdk-go-v2/config v1.18.2
-	github.com/aws/aws-sdk-go v1.44.131
 	github.com/aws/aws-sdk-go-v2 v1.17.1
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.10.0
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.19
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.21.6
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.20
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.17.1
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.19.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.33.0
 	github.com/google/uuid v1.3.0
 	github.com/stretchr/testify v1.8.1
@@ -20,14 +17,12 @@ require (
 )
 
 require (
-<<<<<<< HEAD
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.2 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.25 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.26 // indirect
 	github.com/aws/aws-sdk-go v1.44.131 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.13.20 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ecs v1.19.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.17 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.19 // indirect
