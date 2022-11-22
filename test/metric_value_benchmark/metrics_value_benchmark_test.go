@@ -33,31 +33,7 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished MetricBenchmarkTestSuite")
 }
 
-// [DONE] make tests run
-// [DONE] understand if you are ec2/fargate, daemon/replica/sidecar/ by passing flags
-// [DONE] pass arguments I want from main.tf
-// [DONE] pass env arguments to ecs runner
-// [DONE] Test runner -> has agentRunnerStrategy(). Shared testRunner construct for ec2 & ecs
-// [DONE] try query-json with incomplete dimensions -> nope
-// [DONE] if not work, then figure out a way to get containerInstanceId and instanceId from ecs.. because I don't think I have it
-// ListContainerInstances -> container instance arn -> DescribeContainerInstances -> Ec2InstanceId.. containerInstanceId might be a substring of arn. we'll see.
-// yep it is:         "arn:aws:ecs:us-east-1:aws_account_id:container-instance/container_instance_ID"
-// [DONE] Create these api calls
-// [DONE]: ok... then at query time or so, call these apis.
-// [DONE]: say we have it, then what? I guess test Runners have to have var CommonDimensions -> for cpu, instanceId. var CommonDimensions -> for
-// [DONE]: intanceId getter is different for ec2 vs ecs... so ... DimensionStrategy needed? get env -> if ec2..
-// DONE:  Test validation.. create container insights test runner
-// DONE: uhhh make these things not happen for ec2 suite.go:77: test panicked: Invalid compute type  default
-// DONE: ec2 & ecs whole test
-// DONE: merge conflict resolution
-//TODO: test e2e
-// TODO: make CWA package not use personal test branch
-// TODO: maybe after this I can make a PR before coveredTestList cleanup. Make it simple & static for test list.
 // TODO: test this runAgentStrategy and then if it works, refactor the ec2 ones with this too. -> no do this later?
-// TODO: remove coveredTestList into another branch to separate PR
-//TODO: coveredTestList needs to be cleaned up. See my handwritten notes for ideas. (Todo)
-// Based on the above, make a factory.
-// Do this only for ecs for now, and a separate PR for ec2 changes? nah..not possible
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
 
@@ -65,25 +41,45 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
+var (
+	ecsTestRunners []*ECSTestRunner
+	ec2TestRunners []*TestRunner
+)
+
+func getEcsTestRunners(env environment.MetaData) {
+	if ecsTestRunners == nil {
+		factory := &metric.MetricFetcherFactory{Env: env}
+
+		ecsTestRunners = []*ECSTestRunner{
+			{testRunner: &ContainerInsightsTestRunner{ECSBaseTestRunner{MetricFetcherFactory: factory}},
+				agentRunStrategy: &ECSAgentRunStrategy{}},
+		}
+	}
+	return ecsTestRunners
+}
+
+func getEc2TestRunners(env environment.MetaData) {
+	if ec2TestRunners == nil {
+		factory := &metric.MetricFetcherFactory{Env: env}
+		ec2TestRunners = []*TestRunner{
+			{testRunner: &CPUTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &MemTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &ProcStatTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &DiskIOTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+		}
+	}
+	return ec2TestRunners
+}
+
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	if env.ComputeType == computetype.ECS {
-		log.Printf("Environment compute type is ECS")
-		var ecsTestRunners = []*ECSTestRunner{
-			{testRunner: &ContainerInsightsTestRunner{ECSBaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}},
-				agentRunStrategy: &ECSAgentRunStrategy{}},
-		}
-		for _, ecsTestRunner := range ecsTestRunners {
+		log.Print("Environment compute type is ECS")
+		for _, ecsTestRunner := range getEcsTestRunners() {
 			ecsTestRunner.Run(suite, env)
 		}
 	} else {
-		var testRunners = []*TestRunner{
-			{testRunner: &CPUTestRunner{BaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}}},
-			{testRunner: &MemTestRunner{BaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}}},
-			{testRunner: &ProcStatTestRunner{BaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}}},
-			{testRunner: &DiskIOTestRunner{BaseTestRunner{MetricFetcherFactory: &metric.MetricFetcherFactory{Env: env}}}},
-		}
-		for _, testRunner := range testRunners {
+		for _, testRunner := range getEcsTestRunners() {
 			testRunner.Run(suite)
 		}
 	}
