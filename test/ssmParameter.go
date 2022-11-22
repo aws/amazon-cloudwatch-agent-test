@@ -7,19 +7,29 @@
 package test
 
 import (
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
 
-func PutParameter(name *string, value *string, paramType *string) error {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+var (
+	ssmCtx    context.Context
+	ssmClient *ssm.Client
+)
 
-	svc := ssm.New(sess)
+func PutStringParameter(name *string, value *string) error {
+	return putParameter(name, value, types.ParameterTypeString)
+}
+
+func putParameter(name *string, value *string, paramType types.ParameterType) error {
+	svc, ctx, err := getSsmClient()
+	if err != nil {
+		return err
+	}
 	isOverwriteAllowed := true
 
-	_, err := svc.PutParameter(&ssm.PutParameterInput{
+	_, err = svc.PutParameter(ctx, &ssm.PutParameterInput{
 		Name:      name,
 		Value:     value,
 		Type:      paramType,
@@ -27,4 +37,17 @@ func PutParameter(name *string, value *string, paramType *string) error {
 	})
 
 	return err
+}
+
+func getSsmClient() (*ssm.Client, context.Context, error) {
+	if ssmClient == nil {
+		ssmCtx = context.Background()
+		cfg, err := config.LoadDefaultConfig(ssmCtx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		ssmClient = ssm.NewFromConfig(cfg)
+	}
+	return ssmClient, ssmCtx, nil
 }

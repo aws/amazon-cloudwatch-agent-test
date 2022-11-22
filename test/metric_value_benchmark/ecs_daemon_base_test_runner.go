@@ -44,9 +44,8 @@ func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath s
 	}
 
 	agentConfig := string(b)
-	ssmParamType := "String"
 
-	err = test.PutParameter(&(e.CwagentConfigSsmParamName), &agentConfig, &ssmParamType)
+	err = test.PutStringParameter(&(e.CwagentConfigSsmParamName), &agentConfig)
 	if err != nil {
 		return fmt.Errorf("Failed while reading config file : %s", err.Error())
 	}
