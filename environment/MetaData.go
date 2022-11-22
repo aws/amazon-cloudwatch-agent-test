@@ -8,17 +8,17 @@ package environment
 
 import (
 	"flag"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/compute_type"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_deployment_type"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecs_launch_type"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecsdeploymenttype"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecslaunchtype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"log"
 )
 
 type MetaData struct {
-	ComputeType               compute_type.ComputeType
-	EcsLaunchType             ecs_launch_type.ECSLaunchType
-	EcsDeploymentStrategy     ecs_deployment_type.ECSDeploymentType
+	ComputeType               computetype.ComputeType
+	EcsLaunchType             ecslaunchtype.ECSLaunchType
+	EcsDeploymentStrategy     ecsdeploymenttype.ECSDeploymentType
 	EcsClusterArn             string
 	EcsClusterName            string
 	CwagentConfigSsmParamName string
@@ -46,27 +46,27 @@ func registerECSData(dataString *MetaDataStrings) {
 }
 
 func fillComputeType(e *MetaData, data *MetaDataStrings) *MetaData {
-	computeType, ok := compute_type.FromString(data.ComputeType)
+	computeType, ok := computetype.FromString(data.ComputeType)
 	if !ok {
-		panic("Invalid compute type. Needs to be EC2/ECS/EKS. Compute Type is a required flag. :" + data.ComputeType)
+		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS. Compute Type is a required flag. :" + data.ComputeType)
 	}
 	e.ComputeType = computeType
 	return e
 }
 
 func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
-	if e.ComputeType != compute_type.ECS {
+	if e.ComputeType != computetype.ECS {
 		return e
 	}
 
-	ecsLaunchType, ok := ecs_launch_type.FromString(data.EcsLaunchType)
+	ecsLaunchType, ok := ecslaunchtype.FromString(data.EcsLaunchType)
 	if !ok {
 		log.Printf("Invalid launch type %s. This might be because it wasn't provided for non-ECS tests", data.ComputeType)
 	} else {
 		e.EcsLaunchType = ecsLaunchType
 	}
 
-	ecsDeploymentStrategy, ok := ecs_deployment_type.FromString(data.EcsDeploymentStrategy)
+	ecsDeploymentStrategy, ok := ecsdeploymenttype.FromString(data.EcsDeploymentStrategy)
 	if !ok {
 		log.Printf("Invalid deployment strategy %s. This might be because it wasn't provided for non-ECS tests", data.ComputeType)
 	} else {
