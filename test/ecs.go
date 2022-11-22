@@ -7,34 +7,37 @@
 package test
 
 import (
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"strings"
+)
+
+var (
+	ecsCtx    context.Context
+	ecsClient *ecs.Client
 )
 
 func RestartDaemonService(clusterArn *string, serviceName *string) error {
 	return RestartService(clusterArn, nil, serviceName)
 }
 
-func RestartService(clusterArn *string, desiredCount *int64, serviceName *string) error {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-
-	svc := ecs.New(sess)
-
-	forceNewDeployment := true
+func RestartService(clusterArn *string, desiredCount *int32, serviceName *string) error {
+	svc, ctx, err := getEcsClient()
+	if err != nil {
+		return err
+	}
 
 	updateServiceInput := &ecs.UpdateServiceInput{
 		Cluster:            clusterArn,
 		Service:            serviceName,
-		ForceNewDeployment: &forceNewDeployment,
+		ForceNewDeployment: true,
 	}
 	if desiredCount != nil {
-		updateServiceInput = updateServiceInput.SetDesiredCount(*desiredCount)
+		updateServiceInput.DesiredCount = desiredCount
 	}
 
-	_, err := svc.UpdateService(updateServiceInput)
+	_, err = svc.UpdateService(ctx, updateServiceInput)
 
 	return err
 }
@@ -70,10 +73,10 @@ func GetContainerInstances(clusterArn *string) ([]ContainerInstance, error) {
 	return results, nil
 }
 
-func GetContainerInstanceArns(clusterArn *string) ([]*string, error) {
+func GetContainerInstanceArns(clusterArn *string) ([]string, error) {
 	listContainerInstancesOutput, err := listContainerInstances(clusterArn)
 	if err != nil {
-		return []*string{}, err
+		return []string{}, err
 	}
 
 	return listContainerInstancesOutput.ContainerInstanceArns, nil
@@ -88,30 +91,41 @@ func GetClusterName(clusterArn *string) string {
 }
 
 func listContainerInstances(clusterArn *string) (*ecs.ListContainerInstancesOutput, error) {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-
-	svc := ecs.New(sess)
+	svc, ctx, err := getEcsClient()
+	if err != nil {
+		return nil, err
+	}
 
 	input := &ecs.ListContainerInstancesInput{
 		Cluster: clusterArn,
 	}
 
-	return svc.ListContainerInstances(input)
+	return svc.ListContainerInstances(ctx, input)
 }
 
-func describeContainerInstances(clusterArn *string, containerInstanceArns []*string) (*ecs.DescribeContainerInstancesOutput, error) {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-
-	svc := ecs.New(sess)
+func describeContainerInstances(clusterArn *string, containerInstanceArns []string) (*ecs.DescribeContainerInstancesOutput, error) {
+	svc, ctx, err := getEcsClient()
+	if err != nil {
+		return nil, err
+	}
 
 	input := &ecs.DescribeContainerInstancesInput{
 		Cluster:            clusterArn,
 		ContainerInstances: containerInstanceArns,
 	}
 
-	return svc.DescribeContainerInstances(input)
+	return svc.DescribeContainerInstances(ctx, input)
+}
+
+func getEcsClient() (*ecs.Client, context.Context, error) {
+	if ecsClient == nil {
+		ecsCtx = context.Background()
+		cfg, err := config.LoadDefaultConfig(ecsCtx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		ecsClient = ecs.NewFromConfig(cfg)
+	}
+	return ecsClient, ecsCtx, nil
 }
