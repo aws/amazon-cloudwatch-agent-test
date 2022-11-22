@@ -23,7 +23,7 @@ var metricValueFetchers = []MetricValueFetcher{
 	&MemMetricValueFetcher{},
 	&ProcStatMetricValueFetcher{},
 	&DiskIOMetricValueFetcher{},
-  &NetMetricValueFetcher{},
+	&NetMetricValueFetcher{},
 	&ContainerInsightsValueFetcher{},
 }
 
@@ -60,6 +60,22 @@ type MetricValueFetcher interface {
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go
 	getPluginSupportedMetric() map[string]struct{}
 	setEnv(env *environment.MetaData)
+}
+
+type NewMetricValueFetcher struct {
+	Env                *environment.MetaData
+	ExpectedDimensions []types.Dimension
+	baseMetricValueFetcher
+}
+
+func (n *NewMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
+	dimensions := GetMetricDefaultDimensions(metricName)
+	dimensions = append(dimensions, n.ExpectedDimensions)
+	values, err := n.fetch(namespace, metricName, dimensions, stat)
+	if err != nil {
+		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
+	}
+	return values, err
 }
 
 type baseMetricValueFetcher struct {
