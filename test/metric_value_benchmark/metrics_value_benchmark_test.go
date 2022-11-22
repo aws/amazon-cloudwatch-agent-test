@@ -66,6 +66,7 @@ func getEc2TestRunners(env *environment.MetaData) []*TestRunner {
 			{testRunner: &MemTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 			{testRunner: &ProcStatTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 			{testRunner: &DiskIOTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &NetTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 		}
 	}
 	return ec2TestRunners

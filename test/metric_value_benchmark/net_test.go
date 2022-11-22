@@ -14,6 +14,7 @@ import (
 )
 
 type NetTestRunner struct {
+	BaseTestRunner
 }
 
 var _ ITestRunner = (*NetTestRunner)(nil)
@@ -55,7 +56,7 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
+	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}
