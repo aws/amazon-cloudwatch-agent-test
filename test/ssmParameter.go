@@ -18,11 +18,11 @@ var (
 	ssmClient *ssm.Client
 )
 
-func PutStringParameter(name *string, value *string) error {
+func PutStringParameter(name, value string) error {
 	return putParameter(name, value, types.ParameterTypeString)
 }
 
-func putParameter(name *string, value *string, paramType types.ParameterType) error {
+func putParameter(name string, value string, paramType types.ParameterType) error {
 	svc, ctx, err := getSsmClient()
 	if err != nil {
 		return err
@@ -30,8 +30,8 @@ func putParameter(name *string, value *string, paramType types.ParameterType) er
 	isOverwriteAllowed := true
 
 	_, err = svc.PutParameter(ctx, &ssm.PutParameterInput{
-		Name:      name,
-		Value:     value,
+		Name:      &name,
+		Value:     &value,
 		Type:      paramType,
 		Overwrite: &isOverwriteAllowed,
 	})

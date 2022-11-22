@@ -48,7 +48,7 @@ func (f *ContainerInsightsValueFetcher) isApplicable(metricName string) bool {
 
 func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions() []types.Dimension {
 	//TODO currently assuming there's only one container
-	containerInstances, err := test.GetContainerInstances(&(f.getEnv().EcsClusterArn))
+	containerInstances, err := test.GetContainerInstances(f.getEnv().EcsClusterArn)
 	if err != nil {
 		log.Print(err)
 		return []types.Dimension{}

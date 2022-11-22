@@ -45,13 +45,13 @@ func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath s
 
 	agentConfig := string(b)
 
-	err = test.PutStringParameter(&(e.CwagentConfigSsmParamName), &agentConfig)
+	err = test.PutStringParameter(e.CwagentConfigSsmParamName, agentConfig)
 	if err != nil {
 		return fmt.Errorf("Failed while reading config file : %s", err.Error())
 	}
 	log.Printf("Put parameter successful")
 
-	err = test.RestartDaemonService(&(e.EcsClusterArn), &(e.EcsServiceName))
+	err = test.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
 	if err != nil {
 		fmt.Print(err)
 	}
