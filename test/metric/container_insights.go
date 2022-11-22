@@ -24,7 +24,7 @@ func (f *ContainerInsightsValueFetcher) Fetch(namespace, metricName string, stat
 	dimensions := f.getMetricSpecificDimensions()
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
-		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
+		log.Printf("Error while fetching metric value for %s: %s", metricName, err.Error())
 	}
 	return values, err
 }

@@ -30,10 +30,10 @@ type MetricFetcherFactory struct {
 	Env *environment.MetaData
 }
 
-func (f *MetricFetcherFactory) GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
+func (factory *MetricFetcherFactory) GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
 	for _, fetcher := range metricValueFetchers {
 		if fetcher.isApplicable(metricName) {
-			fetcher.setEnv(f.Env)
+			fetcher.setEnv(factory.Env)
 			return fetcher, nil
 		}
 	}

@@ -36,7 +36,7 @@ type TestRunner struct {
 }
 
 type BaseTestRunner struct {
-	MetricFetcherFactory *metric.MetricFetcherFactory
+	*metric.MetricFetcherFactory
 }
 
 func (t *TestRunner) Run(s *MetricBenchmarkTestSuite) {

@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
@@ -30,8 +31,8 @@ func putParameter(name string, value string, paramType types.ParameterType) erro
 	isOverwriteAllowed := true
 
 	_, err = svc.PutParameter(ctx, &ssm.PutParameterInput{
-		Name:      &name,
-		Value:     &value,
+		Name:      aws.String(name),
+		Value:     aws.String(value),
 		Type:      paramType,
 		Overwrite: &isOverwriteAllowed,
 	})

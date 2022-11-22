@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"strings"
@@ -29,8 +30,8 @@ func RestartService(clusterArn string, desiredCount *int32, serviceName string) 
 	}
 
 	updateServiceInput := &ecs.UpdateServiceInput{
-		Cluster:            &clusterArn,
-		Service:            &serviceName,
+		Cluster:            aws.String(clusterArn),
+		Service:            aws.String(serviceName),
 		ForceNewDeployment: true,
 	}
 	if desiredCount != nil {
@@ -97,7 +98,7 @@ func listContainerInstances(clusterArn string) (*ecs.ListContainerInstancesOutpu
 	}
 
 	input := &ecs.ListContainerInstancesInput{
-		Cluster: &clusterArn,
+		Cluster: aws.String(clusterArn),
 	}
 
 	return svc.ListContainerInstances(ctx, input)
@@ -110,7 +111,7 @@ func describeContainerInstances(clusterArn string, containerInstanceArns []strin
 	}
 
 	input := &ecs.DescribeContainerInstancesInput{
-		Cluster:            &clusterArn,
+		Cluster:            aws.String(clusterArn),
 		ContainerInstances: containerInstanceArns,
 	}
 
