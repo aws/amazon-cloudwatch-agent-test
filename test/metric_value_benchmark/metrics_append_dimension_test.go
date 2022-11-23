@@ -17,10 +17,6 @@ import (
 
 const namespace = "MetricAppendDimensionTest"
 
-func TestMetricsAppendDimensionTestSuite(t *testing.T) {
-	suite.Run(t, new(MetricsAppendDimensionTestSuite))
-}
-
 type MetricsAppendDimensionTestSuite struct {
 	suite.Suite
 	result status.TestSuiteResult
@@ -65,6 +61,10 @@ func (suite *MetricsAppendDimensionTestSuite) TestAllInSuite() {
 
 func (suite *MetricsAppendDimensionTestSuite) AddToSuiteResult(r status.TestGroupResult) {
 	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
+}
+
+func TestMetricsAppendDimensionTestSuite(t *testing.T) {
+	suite.Run(t, new(MetricsAppendDimensionTestSuite))
 }
 
 func isValuesExist(metricName string, values []float64) bool {

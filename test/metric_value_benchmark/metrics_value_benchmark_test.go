@@ -9,7 +9,6 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/stretchr/testify/suite"
 	"log"
@@ -35,10 +34,11 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
 
+/*
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
-
+*/
 var (
 	ecsTestRunners []*ECSTestRunner
 	ec2TestRunners []*TestRunner
