@@ -70,7 +70,7 @@ type NewMetricValueFetcher struct {
 
 func (n *NewMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dimensions := GetMetricDefaultDimensions(metricName)
-	dimensions = append(dimensions, n.ExpectedDimensions)
+	dimensions = append(dimensions, n.ExpectedDimensions...)
 	values, err := n.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())

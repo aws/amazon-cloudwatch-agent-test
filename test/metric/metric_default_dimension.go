@@ -7,10 +7,11 @@
 package metric
 
 import (
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-func GetMetricDefaultDimensions(metricName string) map[string]struct{} {
+func GetMetricDefaultDimensions(metricName string) []types.Dimension {
 	dimensions, ok := metric_to_default_dimension_map[metricName]
 	if !ok {
 		return []types.Dimension{}
@@ -18,7 +19,7 @@ func GetMetricDefaultDimensions(metricName string) map[string]struct{} {
 	return dimensions
 }
 
-const metric_to_default_dimension_map = map[string][]types.Dimension{
+var metric_to_default_dimension_map = map[string][]types.Dimension{
 	// CPU supported metrics
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L9-L10
 	"cpu_time_active":      cpu_default_dimension,
@@ -43,7 +44,7 @@ const metric_to_default_dimension_map = map[string][]types.Dimension{
 	"cpu_usage_user":       cpu_default_dimension,
 }
 
-const cpu_default_dimension = []types.Dimension{
+var cpu_default_dimension = []types.Dimension{
 	{
 		Name:  aws.String("cpu"),
 		Value: aws.String("cpu-total"),
