@@ -20,11 +20,16 @@ type DiskTestRunner struct{}
 
 var _ ITestRunner = (*DiskTestRunner)(nil)
 
-func (t *DiskTestRunner) struct() status.TestGroupResult {
+func (t *DiskTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = validateDiskMetric
+	}
+
+	return status.TestGroupResult{
+		Name: t.getTestName(),
+		TestResults: testResults,
 	}
 }
 

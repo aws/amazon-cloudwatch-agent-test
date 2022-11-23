@@ -4,8 +4,6 @@
 //go:build linux && integration
 // +build linux,integration
 
-// TODO: delete personal notes
-
 package metric
 
 import (
@@ -16,16 +14,8 @@ import (
 )
 
 type DiskMetricValueFetcher struct {
-	// extension interface pattern
-	// doc: https://medium.com/swlh/what-is-the-extension-interface-pattern-in-golang-ce852dcecaec
-	// struct embedding
-	// https://gobyexample.com/struct-embedding
 	baseMetricValueFetcher
 }
-
-// static (compile time) interface check that DiskMetricValueFetcher matches MetricValueFetcher
-// https://stackoverflow.com/questions/13194272/what-does-an-underscore-and-interface-name-after-keyword-var-mean
-// https://go.dev/doc/effective_go#blank_implements
 
 var _ MetricValueFetcher = (*DiskMetricValueFetcher)(nil) // ?
 
