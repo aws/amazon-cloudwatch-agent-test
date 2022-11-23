@@ -12,15 +12,15 @@ import (
 )
 
 func GetInstancePrivateIpDns(instanceId string) (*string, error) {
-	instanceData, err := DescribeInstances([]string(&instanceId))
+	instanceData, err := DescribeInstances([]*string{&instanceId})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return instanceData.Reservations.Instances[0].PrivateDnsName
+	return instanceData.Reservations[0].Instances[0].PrivateDnsName, nil
 }
 
-func DescribeInstances(intanceIds []*string) (*ec2.DescribeInstancesOutput, error) {
+func DescribeInstances(instanceIds []*string) (*ec2.DescribeInstancesOutput, error) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
