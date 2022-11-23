@@ -43,8 +43,8 @@ func (m *ProcStatTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *ProcStatTestRunner) getExtraCommands() []string {
-	return []string{}
+func (t *ProcStatTestRunner) setupBeforeAgentRun() error {
+	return nil
 }
 
 func (m *ProcStatTestRunner) getMeasuredMetrics() []string {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/util"
 )
 
 type CollectDTestRunner struct {
@@ -43,11 +44,13 @@ func (t *CollectDTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *CollectDTestRunner) getExtraCommands() []string {
-	return []string{
+func (t *CollectDTestRunner) setupBeforeAgentRun() error {
+	startCollectdCommands := []string{
 		"sudo mkdir -p /etc/collectd",
 		"sudo collectd -C ./extra_configs/collectd.conf",
 	}
+
+	return util.RunCommands(extraCommands)
 }
 
 func (t *CollectDTestRunner) getMeasuredMetrics() []string {

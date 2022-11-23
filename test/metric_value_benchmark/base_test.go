@@ -29,7 +29,7 @@ type ITestRunner interface {
 	getAgentConfigFileName() string
 	getAgentRunDuration() time.Duration
 	getMeasuredMetrics() []string
-	getExtraCommands() []string
+	setupBeforeAgentRun() error
 }
 
 type TestRunner struct {
@@ -60,8 +60,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		},
 	}
 
-	extraCommands := t.testRunner.getExtraCommands()
-	err := util.RunCommands(extraCommands)
+	err := t.testRunner.setupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to run extra commands due to: %s", err.Error())

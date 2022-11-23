@@ -43,8 +43,8 @@ func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *CPUTestRunner) getExtraCommands() []string {
-	return []string{}
+func (t *CPUTestRunner) setupBeforeAgentRun() error {
+	return nil
 }
 
 func (t *CPUTestRunner) getMeasuredMetrics() []string {

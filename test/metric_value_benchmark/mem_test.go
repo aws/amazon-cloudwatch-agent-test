@@ -43,8 +43,8 @@ func (m *MemTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *MemTestRunner) getExtraCommands() []string {
-	return []string{}
+func (t *MemTestRunner) setupBeforeAgentRun() error {
+	return nil
 }
 
 func (m *MemTestRunner) getMeasuredMetrics() []string {

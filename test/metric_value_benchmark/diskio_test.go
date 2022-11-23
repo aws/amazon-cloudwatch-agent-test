@@ -43,8 +43,8 @@ func (m *DiskIOTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *DiskIOTestRunner) getExtraCommands() []string {
-	return []string{}
+func (t *DiskIOTestRunner) setupBeforeAgentRun() error {
+	return nil
 }
 
 func (m *DiskIOTestRunner) getMeasuredMetrics() []string {
