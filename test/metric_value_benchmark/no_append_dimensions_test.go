@@ -34,11 +34,11 @@ func (t *NoAppendDimensionTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (t *CPUTestRunner) getTestName() string {
+func (t *NoAppendDimensionTestRunner) getTestName() string {
 	return "NoAppendDimension"
 }
 
-func (t *CPUTestRunner) getAgentConfigFileName() string {
+func (t *NoAppendDimensionTestRunner) getAgentConfigFileName() string {
 	return "no_append_dimension.json"
 }
 
