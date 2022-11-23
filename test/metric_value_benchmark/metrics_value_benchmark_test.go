@@ -32,7 +32,7 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 
 // TODO: test this runAgentStrategy and then if it works, refactor the ec2 ones with this too. -> no do this later?
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
+//var envMetaDataStrings = &(environment.MetaDataStrings{})
 
 /*
 func init() {
