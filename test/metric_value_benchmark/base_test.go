@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/testrunner"
 )
 
 const (
@@ -39,7 +40,7 @@ type BaseTestRunner struct {
 	*metric.MetricFetcherFactory
 }
 
-func (t *TestRunner) Run(s *MetricBenchmarkTestSuite) {
+func (t *TestRunner) Run(s testrunner.ITestSuite) {
 	testName := t.testRunner.getTestName()
 	log.Printf("Running %v", testName)
 	testGroupResult, err := t.runAgent()
