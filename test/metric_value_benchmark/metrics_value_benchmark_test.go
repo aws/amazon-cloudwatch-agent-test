@@ -92,10 +92,11 @@ func (suite *MetricBenchmarkTestSuite) AddToSuiteResult(r status.TestGroupResult
 	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
 }
 
+/*
 func TestMetricValueBenchmarkSuite(t *testing.T) {
 	suite.Run(t, new(MetricBenchmarkTestSuite))
 }
-
+*/
 func isAllValuesGreaterThanOrEqualToZero(metricName string, values []float64) bool {
 	if len(values) == 0 {
 		log.Printf("No values found %v", metricName)
