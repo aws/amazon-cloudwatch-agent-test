@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package metric_append_dimension
+package metric_value_benchmark
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"

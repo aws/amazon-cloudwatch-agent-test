@@ -9,12 +9,10 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/stretchr/testify/suite"
 	"log"
-	"testing"
 )
 
 const namespace = "MetricValueBenchmarkTest"
@@ -72,6 +70,7 @@ func getEc2TestRunners(env *environment.MetaData) []*TestRunner {
 	return ec2TestRunners
 }
 
+/*
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	if env.ComputeType == computetype.ECS {
@@ -90,7 +89,7 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 
 func (suite *MetricBenchmarkTestSuite) AddToSuiteResult(r status.TestGroupResult) {
 	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
-}
+}*/
 
 /*
 func TestMetricValueBenchmarkSuite(t *testing.T) {
