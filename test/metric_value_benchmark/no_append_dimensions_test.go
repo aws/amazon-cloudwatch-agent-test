@@ -8,7 +8,6 @@ package metric_value_benchmark
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
@@ -17,10 +16,10 @@ import (
 )
 
 type NoAppendDimensionTestRunner struct {
-	metric_value_benchmark.BaseTestRunner
+	BaseTestRunner
 }
 
-var _ metric_value_benchmark.ITestRunner = (*NoAppendDimensionTestRunner)(nil)
+var _ ITestRunner = (*NoAppendDimensionTestRunner)(nil)
 
 func (t *NoAppendDimensionTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
