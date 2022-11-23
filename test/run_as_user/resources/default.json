@@ -1,0 +1,17 @@
+{
+  "agent": {
+    "logfile": ""
+  },
+  "metrics": {
+    "metrics_collected": {
+      "disk": {
+        "measurement": [
+          "used_percent"
+        ],
+        "resources": [
+          "*"
+        ]
+      }
+    }
+  }
+}

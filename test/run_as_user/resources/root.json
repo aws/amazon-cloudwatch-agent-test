@@ -1,0 +1,18 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "logfile": ""
+  },
+  "metrics": {
+    "metrics_collected": {
+      "disk": {
+        "measurement": [
+          "used_percent"
+        ],
+        "resources": [
+          "*"
+        ]
+      }
+    }
+  }
+}
