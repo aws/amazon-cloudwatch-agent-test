@@ -8,11 +8,11 @@ package metric_value_benchmark
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/suite"
-	"log"
-
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/stretchr/testify/suite"
+	"log"
 )
 
 const namespace = "MetricAppendDimensionTest"
