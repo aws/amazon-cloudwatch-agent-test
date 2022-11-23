@@ -4,7 +4,7 @@
 //go:build integration
 // +build integration
 
-package util
+package aws
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO: Refactor Structure and Interface for more easier follow that shares the same session
 var (
 	ctx context.Context
 	cwl *cloudwatchlogs.Client

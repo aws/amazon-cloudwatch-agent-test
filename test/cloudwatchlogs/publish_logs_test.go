@@ -14,7 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test/util"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/agent"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/aws"
 )
 
 const (
@@ -54,28 +55,28 @@ var testParameters = []input{
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
-	instanceId := util.GetInstanceId()
+	instanceId := aws.GetInstanceId()
 	log.Printf("Found instance id %s", instanceId)
 
-	defer util.DeleteLogGroupAndStream(instanceId, instanceId)
+	defer aws.DeleteLogGroupAndStream(instanceId, instanceId)
 
 	for _, param := range testParameters {
 		t.Run(param.testName, func(t *testing.T) {
 			start := time.Now()
 
-			util.CopyFile(param.configPath, configOutputPath)
+			agent.CopyFile(param.configPath, configOutputPath)
 
-			util.StartAgent(configOutputPath, true)
+			agent.StartAgent(configOutputPath, true)
 
 			// ensure that there is enough time from the "start" time and the first log line,
 			// so we don't miss it in the GetLogEvents call
 			time.Sleep(agentRuntime)
 			writeLogs(t, logFilePath, param.iterations)
 			time.Sleep(agentRuntime)
-			util.StopAgent()
+			agent.StopAgent()
 
 			// check CWL to ensure we got the expected number of logs in the log stream
-			util.ValidateLogs(t, instanceId, instanceId, param.numExpectedLogs, start)
+			aws.ValidateLogs(t, instanceId, instanceId, param.numExpectedLogs, start)
 		})
 	}
 }
@@ -89,26 +90,26 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	cfgFilePath := "resources/config_log_rotated.json"
 
-	instanceId := util.GetInstanceId()
+	instanceId := aws.GetInstanceId()
 	log.Printf("Found instance id %s", instanceId)
 	logGroup := instanceId
 	logStream := instanceId + "Rotated"
 
-	defer util.DeleteLogGroupAndStream(logGroup, logStream)
+	defer aws.DeleteLogGroupAndStream(logGroup, logStream)
 
 	start := time.Now()
-	util.CopyFile(cfgFilePath, configOutputPath)
+	agent.CopyFile(cfgFilePath, configOutputPath)
 
-	util.StartAgent(configOutputPath, true)
+	agent.StartAgent(configOutputPath, true)
 
 	// ensure that there is enough time from the "start" time and the first log line,
 	// so we don't miss it in the GetLogEvents call
 	time.Sleep(agentRuntime)
 	t.Log("Writing logs and rotating")
 	// execute the script used in the repro case
-	util.RunCommand("/usr/bin/python3 resources/write_and_rotate_logs.py")
+	agent.RunCommand("/usr/bin/python3 resources/write_and_rotate_logs.py")
 	time.Sleep(agentRuntime)
-	util.StopAgent()
+	agent.StopAgent()
 
 	// These expected log lines are created using resources/write_and_rotate_logs.py,
 	// which are taken directly from the repro case in https://github.com/aws/amazon-cloudwatch-agent/issues/447
@@ -120,7 +121,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("09876", 10)),
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("1234567890", 10)),
 	}
-	util.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
+	aws.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
 }
 
 func writeLogs(t *testing.T, filePath string, iterations int) {

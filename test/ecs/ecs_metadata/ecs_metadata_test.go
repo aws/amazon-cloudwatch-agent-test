@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test/util"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/aws"
 )
 
 // Purpose: Detect the changes in metadata endpoint for ECS Container Agent https://github.com/aws/amazon-cloudwatch-agent/blob/master/translator/util/ecsutil/ecsutil.go#L67-L75
@@ -39,8 +39,8 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
 
-		if util.IsLogGroupExists(t, logGroupName) {
-			util.DeleteLogGroupAndStream(logGroupName, LogStreamName)
+		if aws.IsLogGroupExists(t, logGroupName) {
+			aws.DeleteLogGroupAndStream(logGroupName, LogStreamName)
 			break
 		}
 

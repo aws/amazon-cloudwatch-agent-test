@@ -4,7 +4,7 @@
 //go:build windows && integration
 // +build windows,integration
 
-package util
+package agent
 
 import (
 	"fmt"
