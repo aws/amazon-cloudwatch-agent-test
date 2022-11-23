@@ -9,10 +9,10 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/stretchr/testify/suite"
 	"log"
+	"testing"
 )
 
 const namespace = "MetricAppendDimensionTest"
@@ -44,7 +44,7 @@ var (
 func getEc2TestRunners(env *environment.MetaData) []*TestRunner {
 	if ec2TestRunners == nil {
 		factory := &metric.MetricFetcherFactory{Env: env}
-		ec2TestRunners = []*metric_value_benchmark.TestRunner{
+		ec2TestRunners = []*TestRunner{
 			{testRunner: &NoAppendDimensionTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 		}
 	}
