@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
-
 package test
 
 import (
@@ -14,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"testing"
+	"time"
 )
 
 var (
@@ -64,6 +62,46 @@ func ValidateMetrics(t *testing.T, metricName, namespace string, dimensionsFilte
 			metrics, metricName, namespace)
 	}
 
+}
+
+func ValidateSampleCount(t *testing.T, metricName, namespace string, dimensions []types.Dimension,
+	startTime time.Time, endTime time.Time,
+	lowerBoundInclusive int, upperBoundInclusive int, periodInSeconds int32) bool {
+	cwmClient, clientContext, err := GetCloudWatchMetricsClient()
+	if err != nil {
+		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
+	}
+
+	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
+		MetricName: aws.String(metricName),
+		Namespace:  aws.String(namespace),
+		StartTime:  aws.Time(startTime),
+		EndTime:    aws.Time(endTime),
+		Period:     aws.Int32(periodInSeconds),
+		Dimensions: dimensions,
+		Statistics: []types.Statistic{types.StatisticSampleCount},
+	}
+	data, err := cwmClient.GetMetricStatistics(*clientContext, &metricStatsInput)
+	if err != nil {
+		t.Errorf("Error getting metric data %v", err)
+		return false
+	}
+
+	dataPoints := 0
+
+	for _, datapoint := range data.Datapoints {
+		dataPoints = dataPoints + int(*datapoint.SampleCount)
+	}
+
+	t.Logf("Number of datapoints for start time %v with endtime %v and period %d "+
+		"is %d expected is inclusive between %d and %d",
+		startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
+
+	if !(lowerBoundInclusive <= dataPoints) || !(upperBoundInclusive >= dataPoints) {
+		return false
+	}
+
+	return true
 }
 
 // getCloudWatchMetricsClient returns a singleton SDK client for interfacing with CloudWatch Metrics
