@@ -29,7 +29,7 @@ variable "user" {
 }
 
 variable "install_agent" {
-  description = "command of package to install ex dpkg -i -E ./amazon-cloudwatch-agent.deb"
+  description = "go run ./install/install_agent.go deb or go run ./install/install_agent.go rpm"
   type        = string
   default     = ""
 }

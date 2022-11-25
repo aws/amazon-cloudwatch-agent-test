@@ -2,7 +2,7 @@
     {
         "os": "al2",
         "username": "ec2-user",
-        "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+        "installAgentCommand": "go run ./install/install_agent.go rpm",
         "ami": "cloudwatch-agent-integration-test-al2*",
         "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
         "arc": "amd64",
@@ -12,7 +12,7 @@
       {
         "os": "al2",
         "username": "ec2-user",
-        "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+        "installAgentCommand": "go run ./install/install_agent.go rpm",
         "ami": "cloudwatch-agent-integration-test-al2*",
         "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
         "arc": "amd64",
@@ -22,7 +22,7 @@
       {
         "os": "al2",
         "username": "ec2-user",
-        "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+        "installAgentCommand": "go run ./install/install_agent.go rpm",
         "ami": "cloudwatch-agent-integration-test-al2*",
         "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
         "arc": "amd64",
