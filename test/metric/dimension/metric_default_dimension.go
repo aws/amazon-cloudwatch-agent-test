@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package metric
+package dimension
 
 import (
 	"github.com/aws/aws-sdk-go-v2/aws"

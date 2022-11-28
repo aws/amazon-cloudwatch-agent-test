@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/stretchr/testify/suite"
 	"log"
 	"testing"
@@ -43,7 +44,7 @@ func init() {
 
 var (
 	ecsTestRunners []*ECSTestRunner
-	ec2TestRunners []*TestRunner
+	ec2TestRunners []*test_runner.TestRunner
 )
 
 func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
@@ -58,15 +59,14 @@ func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 	return ecsTestRunners
 }
 
-func getEc2TestRunners(env *environment.MetaData) []*TestRunner {
+func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
-		factory := &metric.MetricFetcherFactory{Env: env}
-		ec2TestRunners = []*TestRunner{
-			{testRunner: &CPUTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &MemTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &ProcStatTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &DiskIOTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &NetTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+		ec2TestRunners = []*test_runner.TestRunner{
+			{TestRunner: &CPUTestRunner{}},
+			{TestRunner: &MemTestRunner{}},
+			{TestRunner: &ProcStatTestRunner{}},
+			{TestRunner: &DiskIOTestRunner{}},
+			{TestRunner: &NetTestRunner{}},
 		}
 	}
 	return ec2TestRunners

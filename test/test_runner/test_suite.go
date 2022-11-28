@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package testrunner
+package test_runner
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"

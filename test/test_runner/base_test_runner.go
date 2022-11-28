@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package metric_value_benchmark
+package test_runner
 
 import (
 	"fmt"
@@ -13,39 +13,36 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/testrunner"
 )
 
 const (
 	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentConfigDirectory = "agent_configs"
-	minimumAgentRuntime  = 3 * time.Minute
+	MinimumAgentRuntime  = 3 * time.Minute
 )
 
 type ITestRunner interface {
-	validate() status.TestGroupResult
-	getTestName() string
-	getAgentConfigFileName() string
-	getAgentRunDuration() time.Duration
-	getMeasuredMetrics() []string
+	Validate() status.TestGroupResult
+	GetTestName() string
+	GetAgentConfigFileName() string
+	GetAgentRunDuration() time.Duration
+	GetMeasuredMetrics() []string
 }
 
 type TestRunner struct {
-	testRunner ITestRunner
+	TestRunner ITestRunner
 }
 
 type BaseTestRunner struct {
-	*metric.MetricFetcherFactory
 }
 
-func (t *TestRunner) Run(s testrunner.ITestSuite) {
-	testName := t.testRunner.getTestName()
+func (t *TestRunner) Run(s ITestSuite) {
+	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)
 	testGroupResult, err := t.runAgent()
 	if err == nil {
-		testGroupResult = t.testRunner.validate()
+		testGroupResult = t.TestRunner.Validate()
 	}
 	s.AddToSuiteResult(testGroupResult)
 	if testGroupResult.GetStatus() != status.SUCCESSFUL {
@@ -55,7 +52,7 @@ func (t *TestRunner) Run(s testrunner.ITestSuite) {
 
 func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	testGroupResult := status.TestGroupResult{
-		Name: t.testRunner.getTestName(),
+		Name: t.TestRunner.GetTestName(),
 		TestResults: []status.TestResult{
 			{
 				Name:   "Starting Agent",
@@ -64,7 +61,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		},
 	}
 
-	agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
+	agentConfigPath := filepath.Join(agentConfigDirectory, t.TestRunner.GetAgentConfigFileName())
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
 	test.CopyFile(agentConfigPath, configOutputPath)
 	err := test.StartAgent(configOutputPath, false)
@@ -74,7 +71,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %v", err.Error())
 	}
 
-	runningDuration := t.testRunner.getAgentRunDuration()
+	runningDuration := t.TestRunner.GetAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
 	test.StopAgent()

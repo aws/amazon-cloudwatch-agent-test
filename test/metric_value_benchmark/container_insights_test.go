@@ -7,10 +7,10 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"time"
 )
 
 type ContainerInsightsTestRunner struct {
@@ -41,7 +41,7 @@ func (t *ContainerInsightsTestRunner) getAgentConfigFileName() string {
 }
 
 func (t *ContainerInsightsTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
+	return test_runner.MinimumAgentRuntime
 }
 
 func (t *ContainerInsightsTestRunner) getMeasuredMetrics() []string {

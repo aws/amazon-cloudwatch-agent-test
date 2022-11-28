@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
@@ -63,14 +64,15 @@ type MetricValueFetcher interface {
 }
 
 type NewMetricValueFetcher struct {
-	Env                *environment.MetaData
-	ExpectedDimensions []types.Dimension
+	Env                    *environment.MetaData
+	ExpectedDimensionNames []string
 	baseMetricValueFetcher
 }
 
 func (n *NewMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := GetMetricDefaultDimensions(metricName)
-	dimensions = append(dimensions, n.ExpectedDimensions...)
+	dimensions := dimension.GetMetricDefaultDimensions(metricName)
+	expectedDimensions := dimension.GetExpectedDimensions(n.Env, n.ExpectedDimensionNames)
+	dimensions = append(dimensions, expectedDimensions...)
 	values, err := n.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())

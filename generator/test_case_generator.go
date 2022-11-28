@@ -28,6 +28,7 @@ var osToTestDirMap = map[string][]string{
 		"./test/cloudwatchlogs",
 		"./test/metrics_number_dimension",
 		"./test/metric_value_benchmark",
+		"./test/metric_append_dimension",
 	},
 	"ec2_performance": {
 		"./test/performancetest",
