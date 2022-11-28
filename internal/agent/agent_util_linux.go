@@ -14,6 +14,14 @@ import (
 	"time"
 )
 
+const (
+	CatCommand       = "cat "
+	AppOwnerCommand  = "ps -u -p "
+	ConfigOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	Namespace        = "CWAgent"
+	Host             = "host"
+)
+
 func CopyFile(pathIn string, pathOut string) {
 	log.Printf("Copy File %s to %s", pathIn, pathOut)
 	pathInAbs, err := filepath.Abs(pathIn)
@@ -107,19 +115,19 @@ func RunShellScript(path string, args ...string) error {
 	return nil
 }
 
-func RunCommand(cmd string) error {
+func RunCommand(cmd string) (string, error) {
 	out, err := exec.Command("bash", "-c", cmd).Output()
 
 	if err != nil {
 		log.Printf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
-		return err
+		return "", err
 	}
-	return nil
+	return string(out), nil
 }
 
 func RunCommands(commands []string) error {
 	for _, cmd := range commands {
-		err := RunCommand(cmd)
+		_, err := RunCommand(cmd)
 		if err != nil {
 			return err
 		}
