@@ -50,10 +50,6 @@ func (f *DiskMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} 
 func (f *DiskMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
 	return []types.Dimension{
 		{
-			Name: aws.String("device"),
-			Value: aws.String("nvme0n1p1"),
-		},
-		{
 			Name: aws.String("fstype"),
 			Value: aws.String("xfs"),
 		},
