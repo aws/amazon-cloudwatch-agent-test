@@ -44,7 +44,13 @@ func (t *DiskTestRunner) getAgentRunDuration() time.Duration {
 
 func (t *DiskTestRunner) getMeasuredMetrics() []string {
 	return []string {
-		"disk_free", "disk_inodes_free", "disk_inodes_total", "disk_inodes_used", "disk_total", "disk_used", "disk_used_percent",
+		"disk_free": {}, 
+		"disk_inodes_free": {}, 
+		"disk_inodes_total": {}, 
+		"disk_inodes_used": {}, 
+		"disk_total": {}, 
+		"disk_ used": {}, 
+		"disk_used_percent": {},
 	}
 }
 
@@ -55,7 +61,7 @@ func validateDiskMetric(metricName string) status.TestResult {
 	}
 
 	fetcher, err := metric.GetMetricFetcher(metricName)
-	if (err != nil) { return testResult }
+	if err != nil { return testResult }
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 	if err != nil { return testResult }
