@@ -21,7 +21,7 @@ func (t *DiskTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateDiskMetric
+		testResults[i] = validateDiskMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -65,6 +65,8 @@ func validateDiskMetric(metricName string) status.TestResult {
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 	if err != nil { return testResult }
+
+	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) { return testResult }
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
