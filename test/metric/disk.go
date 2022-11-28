@@ -9,6 +9,7 @@ package metric
 import (
 	"log"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
@@ -47,5 +48,18 @@ func (f *DiskMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} 
 }
 
 func (f *DiskMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
-	return []types.Dimension{}
+	return []types.Dimension{
+		{
+			Name: aws.String("device"),
+			Value: aws.String("nvme0n1p1"),
+		},
+		{
+			Name: aws.String("fstype"),
+			Value: aws.String("xfs"),
+		},
+		{
+			Name: aws.String("path"),
+			Value: aws.String("/"),
+		},
+	}
 }
