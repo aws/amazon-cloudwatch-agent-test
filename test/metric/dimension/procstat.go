@@ -4,38 +4,26 @@
 //go:build linux && integration
 // +build linux,integration
 
-package metric
+package dimension
 
 import (
-	"log"
-
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-type ProcStatMetricValueFetcher struct {
-	baseMetricValueFetcher
+type ProcStatMetricDimension struct {
 }
 
-var _ MetricValueFetcher = (*ProcStatMetricValueFetcher)(nil)
+var _ MetricDefaultDimensionFactory = (*ProcStatMetricDimension)(nil)
 
-func (f *ProcStatMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dims := f.getMetricSpecificDimensions()
-	dims = append(dims, f.getInstanceIdDimension())
-	values, err := f.fetch(namespace, metricName, dims, stat)
-	if err != nil {
-		log.Printf("Error while fetching metric value for %s: %v", metricName, err)
-	}
-	return values, err
-}
-
-func (f *ProcStatMetricValueFetcher) isApplicable(metricName string) bool {
+func (f *ProcStatMetricDimension) isApplicable(metricName string) bool {
 	procStatSupportedMetric := f.getPluginSupportedMetric()
 	_, exists := procStatSupportedMetric[metricName]
 	return exists
 }
 
-func (f *ProcStatMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
+func (f *ProcStatMetricDimension) getPluginSupportedMetric() map[string]struct{} {
 	// Procstat Supported Metrics
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L19-L23
 	return map[string]struct{}{
@@ -51,7 +39,7 @@ func (f *ProcStatMetricValueFetcher) getPluginSupportedMetric() map[string]struc
 	}
 }
 
-func (f *ProcStatMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+func (f *ProcStatMetricDimension) getMetricSpecificDimensions(env environment.MetaData) []types.Dimension {
 	return []types.Dimension{
 		{
 			Name:  aws.String("exe"),

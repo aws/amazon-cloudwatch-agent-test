@@ -4,38 +4,26 @@
 //go:build linux && integration
 // +build linux,integration
 
-package metric
+package dimension
 
 import (
-	"log"
-
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-type CPUMetricValueFetcher struct {
-	baseMetricValueFetcher
+type CPUMetricDimension struct {
 }
 
-var _ MetricValueFetcher = (*CPUMetricValueFetcher)(nil)
+var _ MetricDefaultDimensionFactory = (*CPUMetricDimension)(nil)
 
-func (f *CPUMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := f.getMetricSpecificDimensions()
-	dimensions = append(dimensions, f.getInstanceIdDimension())
-	values, err := f.fetch(namespace, metricName, dimensions, stat)
-	if err != nil {
-		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
-	}
-	return values, err
-}
-
-func (f *CPUMetricValueFetcher) isApplicable(metricName string) bool {
+func (f *CPUMetricDimension) isApplicable(metricName string) bool {
 	cpuSupportedMetric := f.getPluginSupportedMetric()
 	_, exists := cpuSupportedMetric[metricName]
 	return exists
 }
 
-func (f *CPUMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
+func (f *CPUMetricDimension) getPluginSupportedMetric() map[string]struct{} {
 	// CPU supported metrics
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L9-L10
 	return map[string]struct{}{
@@ -64,7 +52,7 @@ func (f *CPUMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	}
 }
 
-func (f *CPUMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+func (f *CPUMetricDimension) getMetricSpecificDimensions(env environment.MetaData) []types.Dimension {
 	return []types.Dimension{
 		{
 			Name:  aws.String("cpu"),

@@ -4,37 +4,25 @@
 //go:build linux && integration
 // +build linux,integration
 
-package metric
+package dimension
 
 import (
-	"log"
-
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-type MemMetricValueFetcher struct {
-	baseMetricValueFetcher
+type MemMetricDimension struct {
 }
 
-var _ MetricValueFetcher = (*MemMetricValueFetcher)(nil)
+var _ MetricDefaultDimensionFactory = (*MemMetricDimension)(nil)
 
-func (f *MemMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dims := f.getMetricSpecificDimensions()
-	dims = append(dims, f.getInstanceIdDimension())
-	values, err := f.fetch(namespace, metricName, dims, stat)
-	if err != nil {
-		log.Printf("Error while fetching metric value for %s: %v", metricName, err)
-	}
-	return values, err
-}
-
-func (f *MemMetricValueFetcher) isApplicable(metricName string) bool {
+func (f *MemMetricDimension) isApplicable(metricName string) bool {
 	memSupportedMetric := f.getPluginSupportedMetric()
 	_, exists := memSupportedMetric[metricName]
 	return exists
 }
 
-func (f *MemMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
+func (f *MemMetricDimension) getPluginSupportedMetric() map[string]struct{} {
 	// Memory Supported Metrics
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L14
 	return map[string]struct{}{
@@ -51,6 +39,6 @@ func (f *MemMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	}
 }
 
-func (f *MemMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+func (f *MemMetricDimension) getMetricSpecificDimensions(env environment.MetaData) []types.Dimension {
 	return []types.Dimension{}
 }

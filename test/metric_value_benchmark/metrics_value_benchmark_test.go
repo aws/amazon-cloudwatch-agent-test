@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/stretchr/testify/suite"
@@ -49,11 +48,12 @@ var (
 
 func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 	if ecsTestRunners == nil {
-		factory := &metric.MetricFetcherFactory{Env: env}
-
 		ecsTestRunners = []*ECSTestRunner{
-			{testRunner: &ContainerInsightsTestRunner{ECSBaseTestRunner{MetricFetcherFactory: factory}},
-				agentRunStrategy: &ECSAgentRunStrategy{}},
+			{
+				testRunner:       &ContainerInsightsTestRunner{},
+				agentRunStrategy: &ECSAgentRunStrategy{},
+				env:              *env,
+			},
 		}
 	}
 	return ecsTestRunners
