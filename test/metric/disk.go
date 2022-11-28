@@ -17,7 +17,7 @@ type DiskMetricValueFetcher struct {
 	baseMetricValueFetcher
 }
 
-var _ MetricValueFetcher = (*DiskMetricValueFetcher)(nil) // ?
+var _ MetricValueFetcher = (*DiskMetricValueFetcher)(nil)
 
 func (f *DiskMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dimensions := f.getMetricSpecificDimensions()
@@ -51,7 +51,7 @@ func (f *DiskMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension
 	return []types.Dimension{
 		{
 			Name: aws.String("fstype"),
-			Value: aws.String("xfs"),
+			Value: aws.String("ext4"),
 		},
 		{
 			Name: aws.String("path"),
