@@ -38,6 +38,7 @@ var testRunners = []*TestRunner{
 	{testRunner: &ProcStatTestRunner{}},
 	{testRunner: &DiskIOTestRunner{}},
 	{testRunner: &DiskTestRunner{}}
+	{testRunner: &NetTestRunner{}},
 }
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
