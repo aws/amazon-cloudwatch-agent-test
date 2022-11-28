@@ -69,12 +69,9 @@ func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName
 		return testResult
 	}
 
-	//TODO: Validate using "hostname" dimensions. Otherwise queries fail. See ec2.go file
-	/*
-		if !isValuesExist(metricName, values) {
-			return testResult
-		}
-	*/
+	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+		return testResult
+	}
 
 	// TODO: Range test with >0 and <100
 	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)

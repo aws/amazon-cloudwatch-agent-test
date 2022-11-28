@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
@@ -20,6 +21,8 @@ func GetExpectedDimensions(env *environment.MetaData, names []string) []types.Di
 	for _, name := range names {
 		if name == "InstanceId" {
 			dimensions = append(dimensions, getInstanceIdDimension())
+		} else if name == "host" {
+			dimensions = append(dimensions, getHostDimension())
 		}
 	}
 
@@ -34,5 +37,16 @@ func getInstanceIdDimension() types.Dimension {
 	return types.Dimension{
 		Name:  aws.String("InstanceId"),
 		Value: aws.String(ec2InstanceId),
+	}
+}
+
+func getHostDimension() types.Dimension {
+	name, err := os.Hostname()
+	if err != nil {
+		return types.Dimension{}
+	}
+	return types.Dimension{
+		Name:  aws.String("host"),
+		Value: aws.String(name),
 	}
 }
