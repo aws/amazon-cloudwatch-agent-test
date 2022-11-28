@@ -45,8 +45,16 @@ func TestRunAsUser(t *testing.T) {
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
 			// Must read the pid file while agent is running
-			pidOutput := agent.RunCommand(agent.CatCommand + pidFile)
-			agentOwnerOutput := agent.RunCommand(agent.AppOwnerCommand + pidOutput)
+			pidOutput, err := agent.RunCommand(agent.CatCommand + pidFile)
+			if err != nil {
+				t.Fatalf("Error: %v", err)
+			}
+
+			agentOwnerOutput, err := agent.RunCommand(agent.AppOwnerCommand + pidOutput)
+			if err != nil {
+				t.Fatalf("Error: %v", err)
+			}
+
 			processOwner := outputContainsTarget(agentOwnerOutput, parameter.user)
 			agent.StopAgent()
 			if processOwner != true {
