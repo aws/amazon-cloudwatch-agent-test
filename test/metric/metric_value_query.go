@@ -19,11 +19,11 @@ import (
 )
 
 var metricValueFetchers = []MetricValueFetcher{
+	&DiskMetricValueFetcher{},
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
 	&ProcStatMetricValueFetcher{},
 	&DiskIOMetricValueFetcher{},
-	&DiskMetricValueFetcher{},
 	&NetMetricValueFetcher{},
 }
 

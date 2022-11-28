@@ -41,7 +41,7 @@ func (f *DiskMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} 
 		"disk_inodes_total": {}, 
 		"disk_inodes_used": {}, 
 		"disk_total": {}, 
-		"disk_ used": {}, 
+		"disk_used": {}, 
 		"disk_used_percent": {},
 	}
 }
