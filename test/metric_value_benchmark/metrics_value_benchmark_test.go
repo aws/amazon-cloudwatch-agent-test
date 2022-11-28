@@ -37,7 +37,7 @@ var testRunners = []*TestRunner{
 	{testRunner: &MemTestRunner{}},
 	{testRunner: &ProcStatTestRunner{}},
 	{testRunner: &DiskIOTestRunner{}},
-	{testRunner: &DiskTestRunner{}}
+	{testRunner: &DiskTestRunner{}},
 	{testRunner: &NetTestRunner{}},
 }
 
