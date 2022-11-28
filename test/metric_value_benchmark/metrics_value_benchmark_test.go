@@ -33,11 +33,11 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 }
 
 var testRunners = []*TestRunner{
+	{testRunner: &DiskTestRunner{}},
 	{testRunner: &CPUTestRunner{}},
 	{testRunner: &MemTestRunner{}},
 	{testRunner: &ProcStatTestRunner{}},
 	{testRunner: &DiskIOTestRunner{}},
-	{testRunner: &DiskTestRunner{}},
 	{testRunner: &NetTestRunner{}},
 }
 
