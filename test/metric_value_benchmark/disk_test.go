@@ -44,23 +44,13 @@ func (t *DiskTestRunner) getAgentRunDuration() time.Duration {
 
 func (t *DiskTestRunner) getMeasuredMetrics() []string {
 	return []string {
-<<<<<<< HEAD
 		"disk_free", 
 		"disk_inodes_free", 
 		"disk_inodes_total", 
 		"disk_inodes_used", 
 		"disk_total", 
-		"disk_ used", 
+		"disk_used", 
 		"disk_used_percent",
-=======
-		"disk_free": {}, 
-		"disk_inodes_free": {}, 
-		"disk_inodes_total": {}, 
-		"disk_inodes_used": {}, 
-		"disk_total": {}, 
-		"disk_ used": {}, 
-		"disk_used_percent": {},
->>>>>>> cc2fc8f6bd5b42c2570f02f4dd5a2f7b41815603
 	}
 }
 
