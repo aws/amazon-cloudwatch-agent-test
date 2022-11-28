@@ -9,7 +9,6 @@ package metric
 import (
 	"log"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
@@ -20,7 +19,7 @@ type DiskMetricValueFetcher struct {
 var _ MetricValueFetcher = (*DiskMetricValueFetcher)(nil) // ?
 
 func (f *DiskMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimonsions := f.getMetricSpecificDimensions()
+	dimensions := f.getMetricSpecificDimensions()
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for $s: $v", metricName, err)

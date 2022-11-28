@@ -7,12 +7,9 @@
 package metric_value_benchmark
 
 import (
-	"fmt"
-	"log"
-	"path/filepath"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -21,7 +18,7 @@ type DiskTestRunner struct{}
 var _ ITestRunner = (*DiskTestRunner)(nil)
 
 func (t *DiskTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := t.getMeasuredMetrics
+	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = validateDiskMetric
@@ -47,7 +44,7 @@ func (t *DiskTestRunner) getAgentRunDuration() time.Duration {
 
 func (t *DiskTestRunner) getMeasuredMetrics() []string {
 	return []string {
-		"disk_free", "disk_inodes_free", "disk_inodes_total", "disk_inodes_used", "disk_total", "disk_used", "disk_used_percent"
+		"disk_free", "disk_inodes_free", "disk_inodes_total", "disk_inodes_used", "disk_total", "disk_used", "disk_used_percent",
 	}
 }
 
@@ -60,7 +57,7 @@ func validateDiskMetric(metricName string) status.TestResult {
 	fetcher, err := metric.GetMetricFetcher(metricName)
 	if (err != nil) { return testResult }
 
-	values := err = fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 	if err != nil { return testResult }
 
 	testResult.Status = status.SUCCESSFUL
