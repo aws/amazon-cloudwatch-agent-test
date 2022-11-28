@@ -57,7 +57,7 @@ func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName
 		Status: status.FAILED,
 	}
 
-	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{'host'}}
+	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{"host"}}
 
 	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, metric.AVERAGE)
 	log.Printf("metric values are %v", values)
