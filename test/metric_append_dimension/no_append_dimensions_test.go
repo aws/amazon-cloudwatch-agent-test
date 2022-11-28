@@ -44,7 +44,7 @@ func (t *NoAppendDimensionTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *NoAppendDimensionTestRunner) GetAgentRunDuration() time.Duration {
-	return 60 * time.Minute
+	return 3 * time.Minute
 }
 
 func (t *NoAppendDimensionTestRunner) GetMeasuredMetrics() []string {
