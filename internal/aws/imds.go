@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-<<<<<<< HEAD:internal/aws/imds.go
 //go:build integration
 // +build integration
 
@@ -11,15 +10,8 @@ import (
 	"context"
 	"log"
 
-=======
-package test
-
-import (
-	"context"
->>>>>>> main:test/util.go
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-	"log"
 )
 
 // TODO: Refactor Structure and Interface for more easier follow that shares the same session

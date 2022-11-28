@@ -1,29 +1,21 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-<<<<<<< HEAD:internal/aws/cloudwatchmetrics.go
 //go:build integration
 // +build integration
 
 package aws
-=======
-package test
->>>>>>> main:test/cwm_util.go
 
 import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-<<<<<<< HEAD:internal/aws/cloudwatchmetrics.go
-=======
-	"testing"
-	"time"
->>>>>>> main:test/cwm_util.go
 )
 
 var (
