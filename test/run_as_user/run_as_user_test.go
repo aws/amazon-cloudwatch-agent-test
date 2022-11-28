@@ -30,7 +30,7 @@ type input struct {
 	dataInput string
 }
 
-func TestBundle(t *testing.T) {
+func TestRunAsUser(t *testing.T) {
 
 	parameters := []input{
 		{dataInput: "resources/default.json", user: root},
