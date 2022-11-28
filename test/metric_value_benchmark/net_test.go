@@ -43,6 +43,10 @@ func (m *NetTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
+func (m *NetTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
 func (m *NetTestRunner) getMeasuredMetrics() []string {
 	return []string{
 		"net_bytes_sent", "net_bytes_recv", "net_drop_in", "net_drop_out", "net_err_in",
