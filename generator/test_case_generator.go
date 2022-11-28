@@ -26,15 +26,10 @@ var osToTestDirMap = map[string][]string{
 		"./test/metric_value_benchmark",
 		"./test/run_as_user",
 		"./test/collection_interval",
+		"./integration/test/ca_bundle",
 	},
 	"ec2_linux_basic": {
-		"./integration/test/ca_bundle",
 		"./integration/test/simple_metrics_logs",
-	},
-	"ec2_linux": {
-		"./test/ca_bundle",
-		"./test/cloudwatchlogs",
-		"./test/metrics_number_dimension",
 	},
 	"ec2_performance": {
 		"./test/performancetest",
