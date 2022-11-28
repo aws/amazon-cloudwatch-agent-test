@@ -37,6 +37,8 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, stat Statistics
 
 func (n *MetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
 	dimensions := metricSpecificDimensions
+	log.Printf("Metric query input dimensions : %s", fmt.Sprint(dimensions))
+
 	metricToFetch := types.Metric{
 		Namespace:  aws.String(namespace),
 		MetricName: aws.String(metricName),

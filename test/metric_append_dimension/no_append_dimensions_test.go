@@ -48,11 +48,7 @@ func (t *NoAppendDimensionTestRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *NoAppendDimensionTestRunner) GetMeasuredMetrics() []string {
-	return []string{
-		"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-		"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
+	return []string{"cpu_time_active"}
 }
 
 func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName string) status.TestResult {
@@ -61,7 +57,7 @@ func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName
 		Status: status.FAILED,
 	}
 
-	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{}}
+	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{'host'}}
 
 	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, metric.AVERAGE)
 	log.Printf("metric values are %v", values)
