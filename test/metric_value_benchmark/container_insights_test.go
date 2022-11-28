@@ -57,7 +57,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 		Status: status.FAILED,
 	}
 
-	fetcher := metric.NewMetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{}}
+	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{}}
 
 	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, metric.AVERAGE)
 	if err != nil {

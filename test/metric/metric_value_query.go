@@ -19,12 +19,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-type NewMetricValueFetcher struct {
+type MetricValueFetcher struct {
 	Env                    *environment.MetaData
 	ExpectedDimensionNames []string
 }
 
-func (n *NewMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
+func (n *MetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dimensions := dimension.GetMetricDefaultDimensions(*n.Env, metricName)
 	expectedDimensions := dimension.GetExpectedDimensions(n.Env, n.ExpectedDimensionNames)
 	dimensions = append(dimensions, expectedDimensions...)
@@ -35,7 +35,7 @@ func (n *NewMetricValueFetcher) Fetch(namespace, metricName string, stat Statist
 	return values, err
 }
 
-func (n *NewMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
+func (n *MetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
 	dimensions := metricSpecificDimensions
 	metricToFetch := types.Metric{
 		Namespace:  aws.String(namespace),

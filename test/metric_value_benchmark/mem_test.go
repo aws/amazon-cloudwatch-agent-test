@@ -57,7 +57,7 @@ func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher := metric.NewMetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{"InstanceId"}}
+	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{"InstanceId"}}
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 	if err != nil {
