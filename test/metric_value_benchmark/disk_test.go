@@ -21,7 +21,7 @@ func (t *DiskTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateDiskMetric
+		testResults[i] = validateDiskMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -44,23 +44,13 @@ func (t *DiskTestRunner) getAgentRunDuration() time.Duration {
 
 func (t *DiskTestRunner) getMeasuredMetrics() []string {
 	return []string {
-<<<<<<< HEAD
 		"disk_free", 
 		"disk_inodes_free", 
 		"disk_inodes_total", 
 		"disk_inodes_used", 
 		"disk_total", 
-		"disk_ used", 
+		"disk_used", 
 		"disk_used_percent",
-=======
-		"disk_free": {}, 
-		"disk_inodes_free": {}, 
-		"disk_inodes_total": {}, 
-		"disk_inodes_used": {}, 
-		"disk_total": {}, 
-		"disk_ used": {}, 
-		"disk_used_percent": {},
->>>>>>> cc2fc8f6bd5b42c2570f02f4dd5a2f7b41815603
 	}
 }
 
@@ -75,6 +65,8 @@ func validateDiskMetric(metricName string) status.TestResult {
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 	if err != nil { return testResult }
+
+	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) { return testResult }
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
