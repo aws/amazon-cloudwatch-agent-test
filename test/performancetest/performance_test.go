@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 const (
@@ -76,9 +77,9 @@ func TestPerformance(t *testing.T) {
 	//run tests
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
-			agent.CopyFile(configFilePath, configOutputPath)
+			common.CopyFile(configFilePath, configOutputPath)
 
-			agent.StartAgent(configOutputPath, true)
+			common.StartAgent(configOutputPath, true)
 
 			agentRunDuration := agentRuntimeMinutes * time.Minute
 
@@ -88,7 +89,7 @@ func TestPerformance(t *testing.T) {
 			}
 
 			log.Printf("Agent has been running for : %s\n", (agentRunDuration).String())
-			agent.StopAgent()
+			common.StopAgent()
 
 			//collect data
 			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, logNum, tps, agentContext, configFilePath)

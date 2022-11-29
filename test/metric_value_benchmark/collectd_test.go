@@ -46,7 +46,6 @@ func (t *CollectDTestRunner) getAgentRunDuration() time.Duration {
 
 func (t *CollectDTestRunner) setupBeforeAgentRun() error {
 	startCollectdCommands := []string{
-		"sudo mkdir -p /etc/collectd",
 		"sudo collectd -C ./extra_configs/collectd.conf",
 	}
 
