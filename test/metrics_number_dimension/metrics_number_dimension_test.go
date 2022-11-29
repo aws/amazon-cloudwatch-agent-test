@@ -15,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/agent"
-	awsservice "github.com/aws/amazon-cloudwatch-agent-test/internal/aws"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 const (
@@ -74,8 +74,8 @@ func TestNumberMetricDimension(t *testing.T) {
 			parameter.resourcePath, parameter.failToStart, parameter.numberDimensionsInCW, parameter.metricName)
 
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.resourcePath, parameter.failToStart), func(t *testing.T) {
-			agent.CopyFile(parameter.resourcePath+configJSON, configOutputPath)
-			err := agent.StartAgent(configOutputPath, false)
+			common.CopyFile(parameter.resourcePath+configJSON, configOutputPath)
+			err := common.StartAgent(configOutputPath, false)
 
 			// for append dimension we auto fail over 30 for custom metrics (statsd we collect remove dimension and continue)
 			// Go output starts at the time of failure so the failure message gets chopped off. Thus have to use if there is an error and just assume reason.
@@ -88,7 +88,7 @@ func TestNumberMetricDimension(t *testing.T) {
 
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
-			agent.StopAgent()
+			common.StopAgent()
 
 			// test for cloud watch metrics
 			dimensionFilter := buildDimensionFilterList(parameter.numberDimensionsInCW)

@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package agent
+package common
 
 import (
 	"fmt"

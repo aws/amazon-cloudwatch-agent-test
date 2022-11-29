@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/agent"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -68,8 +68,8 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 
 	agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
-	agent.CopyFile(agentConfigPath, configOutputPath)
-	err = agent.StartAgent(configOutputPath, false)
+	common.CopyFile(agentConfigPath, configOutputPath)
+	err = common.StartAgent(configOutputPath, false)
 
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
@@ -79,9 +79,9 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	runningDuration := t.testRunner.getAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
-	agent.StopAgent()
+	common.StopAgent()
 
-	err = agent.DeleteFile(configOutputPath)
+	err = common.DeleteFile(configOutputPath)
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %s", err.Error())

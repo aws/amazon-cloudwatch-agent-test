@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/agent"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/aws"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 const (
@@ -29,16 +29,16 @@ var expectedNvidiaGPULinuxMetrics = []string{"mem_used_percent", "nvidia_smi_uti
 
 func TestNvidiaGPU(t *testing.T) {
 	t.Run("Basic configuration testing for both metrics and logs", func(t *testing.T) {
-		agent.CopyFile(configLinuxJSON, configLinuxOutputPath)
-		agent.StartAgent(configLinuxOutputPath, true)
+		common.CopyFile(configLinuxJSON, configLinuxOutputPath)
+		common.StartAgent(configLinuxOutputPath, true)
 
 		time.Sleep(agentLinuxRuntime)
 		t.Logf("Agent has been running for : %s", agentLinuxRuntime.String())
-		agent.StopAgent()
+		common.StopAgent()
 
-		dimensionFilter := aws.BuildDimensionFilterList(numberofLinuxAppendDimensions)
+		dimensionFilter := awsservice.BuildDimensionFilterList(numberofLinuxAppendDimensions)
 		for _, metricName := range expectedNvidiaGPULinuxMetrics {
-			aws.ValidateMetrics(t, metricName, metricLinuxNamespace, dimensionFilter)
+			awsservice.ValidateMetrics(t, metricName, metricLinuxNamespace, dimensionFilter)
 		}
 
 		if err := filesystem.CheckFileRights(agentLinuxLogPath); err != nil {

@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/agent"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 const (
@@ -40,23 +40,23 @@ func TestRunAsUser(t *testing.T) {
 
 	for _, parameter := range parameters {
 		t.Run(fmt.Sprintf("resource file location %s user %s", parameter.dataInput, parameter.user), func(t *testing.T) {
-			agent.CopyFile(parameter.dataInput, configOutputPath)
-			agent.StartAgent(configOutputPath, true)
+			common.CopyFile(parameter.dataInput, configOutputPath)
+			common.StartAgent(configOutputPath, true)
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
 			// Must read the pid file while agent is running
-			pidOutput, err := agent.RunCommand(agent.CatCommand + pidFile)
+			pidOutput, err := common.RunCommand(common.CatCommand + pidFile)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}
 
-			agentOwnerOutput, err := agent.RunCommand(agent.AppOwnerCommand + pidOutput)
+			agentOwnerOutput, err := common.RunCommand(common.AppOwnerCommand + pidOutput)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}
 
 			processOwner := outputContainsTarget(agentOwnerOutput, parameter.user)
-			agent.StopAgent()
+			common.StopAgent()
 			if processOwner != true {
 				t.Errorf("App owner is not %s", parameter.user)
 			}

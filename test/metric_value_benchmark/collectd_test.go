@@ -9,7 +9,7 @@ package metric_value_benchmark
 import (
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/agent"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
@@ -50,7 +50,7 @@ func (t *CollectDTestRunner) setupBeforeAgentRun() error {
 		"sudo collectd -C ./extra_configs/collectd.conf",
 	}
 
-	return agent.RunCommands(startCollectdCommands)
+	return common.RunCommands(startCollectdCommands)
 }
 
 func (t *CollectDTestRunner) getMeasuredMetrics() []string {

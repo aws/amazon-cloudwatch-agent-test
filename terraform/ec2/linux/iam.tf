@@ -27,6 +27,7 @@ EOF
 data "aws_iam_policy_document" "user-managed-policy-document" {
   statement {
     actions = [
+      "cloudwatch:GetMetricStatistics",
       "cloudwatch:GetMetricData",
       "cloudwatch:PutMetricData",
       "cloudwatch:ListMetrics",

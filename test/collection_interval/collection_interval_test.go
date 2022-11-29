@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/agent"
-	awsservice "github.com/aws/amazon-cloudwatch-agent-test/internal/aws"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 const (
@@ -67,14 +67,14 @@ func TestCollectionInterval(t *testing.T) {
 	for _, parameter := range parameters {
 		t.Run(fmt.Sprintf("test description %s resource file location %s number of metrics lower bound %d and upper bound %d",
 			parameter.testDescription, parameter.dataInput, parameter.lowerBoundInclusive, parameter.upperBoundInclusive), func(t *testing.T) {
-			agent.CopyFile(parameter.dataInput, agent.ConfigOutputPath)
+			common.CopyFile(parameter.dataInput, common.ConfigOutputPath)
 			hostName, err := os.Hostname()
 			if err != nil {
 				t.Fatalf("Can't get hostname")
 			}
 			dimensions := []types.Dimension{
 				{
-					Name:  aws.String(agent.Host),
+					Name:  aws.String(common.Host),
 					Value: aws.String(hostName),
 				},
 			}
@@ -85,11 +85,11 @@ func TestCollectionInterval(t *testing.T) {
 				startTime := currentTime.Truncate(time.Minute).Add(time.Minute)
 				duration := startTime.Sub(currentTime)
 				time.Sleep(duration)
-				agent.StartAgent(agent.ConfigOutputPath, true)
+				common.StartAgent(common.ConfigOutputPath, true)
 				time.Sleep(agentRuntime)
-				agent.StopAgent()
+				common.StopAgent()
 				endTime := time.Now()
-				if awsservice.ValidateSampleCount(t, metricName, agent.Namespace, dimensions,
+				if awsservice.ValidateSampleCount(t, metricName, common.Namespace, dimensions,
 					startTime, endTime,
 					parameter.lowerBoundInclusive, parameter.upperBoundInclusive, periodInSeconds) {
 					pass = true

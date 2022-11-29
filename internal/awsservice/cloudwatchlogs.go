@@ -4,7 +4,7 @@
 //go:build integration
 // +build integration
 
-package aws
+package awsservice
 
 import (
 	"context"
