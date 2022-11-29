@@ -23,7 +23,7 @@ func PutStringParameter(name, value string) error {
 	return putParameter(name, value, types.ParameterTypeString)
 }
 
-func putParameter(name string, value string, paramType types.ParameterType) error {
+func putParameter(name, value string, paramType types.ParameterType) error {
 	svc, ctx, err := getSsmClient()
 	if err != nil {
 		return err
