@@ -31,6 +31,7 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
       "cloudwatch:GetMetricData",
       "cloudwatch:PutMetricData",
       "cloudwatch:ListMetrics",
+      "cloudwatch:GetMetricStatistics",
       "ec2:DescribeVolumes",
       "ec2:DescribeTags",
       "logs:PutLogEvents",
