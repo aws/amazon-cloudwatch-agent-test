@@ -20,7 +20,7 @@ var osToTestDirMap = map[string][]string{
 	"ec2_gpu": {
 		"./test/nvidia_gpu",
 	},
-	"ec2_linux_advance": {
+	"ec2_feature_linux": {
 		"./integration/test/cloudwatchlogs",
 		"./integration/test/metrics_number_dimension",
 		"./test/metric_value_benchmark",
@@ -28,7 +28,7 @@ var osToTestDirMap = map[string][]string{
 		"./test/collection_interval",
 		"./integration/test/ca_bundle",
 	},
-	"ec2_linux_basic": {
+	"ec2_os_linux": {
 		"./integration/test/simple_metrics_logs",
 	},
 	"ec2_performance": {
