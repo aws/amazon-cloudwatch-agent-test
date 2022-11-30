@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
-
 package test
 
 import (
@@ -15,8 +12,11 @@ import (
 )
 
 const (
-	CatCommand      = "cat "
-	AppOwnerCommand = "ps -u -p "
+	CatCommand       = "cat "
+	AppOwnerCommand  = "ps -u -p "
+	ConfigOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	Namespace        = "CWAgent"
+	Host             = "host"
 )
 
 func CopyFile(pathIn string, pathOut string) {
