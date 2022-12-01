@@ -50,10 +50,10 @@
     "binaryName": "amazon-cloudwatch-agent.rpm"
   },
   {
-    "os": "ol8-6",
+    "os": "ol9",
     "username": "ec2-user",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
-    "ami": "cloudwatch-agent-integration-test-ol8-6*",
+    "ami": "cloudwatch-agent-integration-test-ol9*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm"

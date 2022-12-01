@@ -1,0 +1,24 @@
+{
+  "agent": {
+    "logfile": ""
+  },
+  "metrics": {
+    "metrics_collected": {
+      "disk": {
+        "measurement": [
+          "used_percent"
+        ],
+        "resources": [
+          "/"
+        ],
+        "metrics_collection_interval": 10
+      }
+    },
+    "aggregation_dimensions": [
+      [
+        "host"
+      ]
+    ],
+    "force_flush_interval": 5
+  }
+}
