@@ -46,7 +46,7 @@ func (m *ProcessesTestRunner) getAgentRunDuration() time.Duration {
 func (m *ProcessesTestRunner) getMeasuredMetrics() []string {
 	return []string{
 		"processes_blocked", "processes_dead", "processes_idle", "processes_paging", "processes_running", "processes_sleeping", "processes_stopped",
-		"processes_total", "processes_total_threads", "processes_wait", "processes_zombies"}
+		"processes_total", "processes_total_threads", "processes_zombies"}
 }
 
 func (m *ProcessesTestRunner) validateProcessesMetric(metricName string) status.TestResult {
