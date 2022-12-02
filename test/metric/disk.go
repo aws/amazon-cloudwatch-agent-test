@@ -37,16 +37,25 @@ func (f *DiskMetricValueFetcher) isApplicable(metricName string) bool {
 // https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L11
 func (f *DiskMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	return map[string]struct{}{
-		"disk_free": {}, 
-		"disk_inodes_free": {}, 
-		"disk_inodes_total": {}, 
-		"disk_inodes_used": {}, 
-		"disk_total": {}, 
-		"disk_used": {}, 
+		"disk_free":         {},
+		"disk_inodes_free":  {},
+		"disk_inodes_total": {},
+		"disk_inodes_used":  {},
+		"disk_total":        {},
+		"disk_used":         {},
 		"disk_used_percent": {},
 	}
 }
 
 func (f *DiskMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
-	return []types.Dimension{}
+	return []types.Dimension{
+		{
+			Name:  aws.String("path"),
+			Value: aws.String("/"),
+		},
+		{
+			Name.aws.String("fstype"),
+			Value: aws.String("xfs"),
+		},
+	}
 }
