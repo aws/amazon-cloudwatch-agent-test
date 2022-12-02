@@ -46,7 +46,7 @@ func (t *CollectDTestRunner) getAgentRunDuration() time.Duration {
 
 func (t *CollectDTestRunner) setupBeforeAgentRun() error {
 	startCollectdCommands := []string{
-		"sudo collectd -C ./extra_configs/collectd.conf",
+		"sudo systemctl restart collectd",
 	}
 
 	return common.RunCommands(startCollectdCommands)
