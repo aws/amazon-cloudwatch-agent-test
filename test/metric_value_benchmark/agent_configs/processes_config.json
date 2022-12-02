@@ -13,7 +13,7 @@
       "metrics_collected": {
         "processes": {
             "measurement": [
-              "blocked","running","sleeping","stopped","total","dead","idle","paging","total_threads"
+              "blocked","running","sleeping","stopped","total","dead","idle","paging","total_threads","wait","zombies"
             ],
             "metrics_collection_interval": 60
           }
