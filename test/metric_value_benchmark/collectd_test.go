@@ -45,6 +45,19 @@ func (t *CollectDTestRunner) getAgentRunDuration() time.Duration {
 }
 
 func (t *CollectDTestRunner) setupBeforeAgentRun() error {
+	// EC2 Image Builder creates the collectd's default configuration and collectd will pick it up.
+	// For Linux the static is at /etc/collectd.conf, fox Ubuntu it is at /etc/collectd/collectd.conf
+	// Collectd's static configuration
+	//		LoadPlugin network
+	//		LoadPlugin cpu
+	// 		<Plugin cpu>
+	//			ReportByState = true
+	//			ReportByCpu = true
+	//			ValuesPercentage = true
+	//		</Plugin>
+	//		<Plugin network>
+	//			Server "127.0.0.1" "25826"
+	//		</Plugin>
 	startCollectdCommands := []string{
 		"sudo systemctl restart collectd",
 	}
