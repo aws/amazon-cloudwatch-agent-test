@@ -9,20 +9,21 @@ package metric_value_benchmark
 import (
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
-type CPUTestRunner struct {
+type StatsdTestRunner struct {
 }
 
-var _ ITestRunner = (*CPUTestRunner)(nil)
+var _ ITestRunner = (*StatsdTestRunner)(nil)
 
-func (t *CPUTestRunner) validate() status.TestGroupResult {
+func (t *StatsdTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateCpuMetric(metricName)
+		testResults[i] = validateStatsdMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -31,31 +32,38 @@ func (t *CPUTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (t *CPUTestRunner) getTestName() string {
-	return "CPU"
+func (t *StatsdTestRunner) getTestName() string {
+	return "Statsd"
 }
 
-func (t *CPUTestRunner) getAgentConfigFileName() string {
-	return "cpu_config.json"
+func (t *StatsdTestRunner) getAgentConfigFileName() string {
+	return "statsd_config.json"
 }
 
-func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
+func (t *StatsdTestRunner) getAgentRunDuration() time.Duration {
+	return time.Minute
 }
 
-func (t *CPUTestRunner) setupAfterAgentRun() error {
-	return nil
+func (t *StatsdTestRunner) setupAfterAgentRun() error {
+	// EC2 Image Builder creates a bash script that sends statsd format to cwagent at port 8125
+	// The bash script is at /etc/statsd.sh
+	//    for times in  {1..3}
+	//    do
+	//      echo "statsd.counter:1|c" | nc -w 1 -u 127.0.0.1 8125
+	//      sleep 60
+	//    done
+	startStatsdCommand := []string{
+		"sudo bash /etc/statsd.sh",
+	}
+
+	return common.RunCommands(startStatsdCommand)
 }
 
-func (t *CPUTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-		"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
+func (t *StatsdTestRunner) getMeasuredMetrics() []string {
+	return []string{"statsd_counter"}
 }
 
-func validateCpuMetric(metricName string) status.TestResult {
+func validateStatsdMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,

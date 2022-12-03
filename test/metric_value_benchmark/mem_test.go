@@ -43,7 +43,7 @@ func (m *MemTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *MemTestRunner) setupBeforeAgentRun() error {
+func (t *MemTestRunner) setupAfterAgentRun() error {
 	return nil
 }
 
