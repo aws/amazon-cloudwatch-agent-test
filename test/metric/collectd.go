@@ -29,8 +29,8 @@ func (f *CollectDMetricValueFetcher) Fetch(namespace, metricName string, stat St
 }
 
 func (f *CollectDMetricValueFetcher) isApplicable(metricName string) bool {
-	cpuSupportedMetric := f.getPluginSupportedMetric()
-	_, exists := cpuSupportedMetric[metricName]
+	collectdSupportedMetric := f.getPluginSupportedMetric()
+	_, exists := collectdSupportedMetric[metricName]
 	return exists
 }
 
