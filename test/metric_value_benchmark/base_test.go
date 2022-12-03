@@ -63,14 +63,14 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
 	common.CopyFile(agentConfigPath, configOutputPath)
-	err = common.StartAgent(configOutputPath, false)
+	err := common.StartAgent(configOutputPath, false)
 
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %s", err.Error())
 	}
 
-	err := t.testRunner.setupAfterAgentRun()
+	err = t.testRunner.setupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to run extra commands due to: %s", err.Error())
