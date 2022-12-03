@@ -25,6 +25,7 @@ var metricValueFetchers = []MetricValueFetcher{
 	&CollectDMetricValueFetcher{},
 	&DiskIOMetricValueFetcher{},
 	&NetMetricValueFetcher{},
+	&StatsdMetricValueFetcher{},
 }
 
 func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
