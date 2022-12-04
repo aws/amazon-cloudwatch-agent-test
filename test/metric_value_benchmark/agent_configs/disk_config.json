@@ -12,9 +12,6 @@
     },
     "metrics_collected": {
       "disk": {
-        "resources": [
-          "/"
-        ],
         "measurement": [
           "free",
           "inodes_free",
@@ -23,11 +20,7 @@
           "total",
           "used",
           "used_percent"
-        ],
-        "drop_device": true,
-        "append_dimensions": {
-          "test": "disk-sanity"
-        }
+        ]
       }
     }
   }
