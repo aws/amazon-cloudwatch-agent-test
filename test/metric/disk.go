@@ -54,8 +54,8 @@ func (f *DiskMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension
 			Value: aws.String("/"),
 		},
 		{
-			Name:  aws.String("identifier"),
-			Value: aws.String("disk_sanity"),
+			Name:  aws.String("fstype"),
+			Value: aws.String("xfs"),
 		},
 	}
 }
