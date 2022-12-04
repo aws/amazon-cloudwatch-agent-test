@@ -50,6 +50,10 @@ func (f *DiskMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} 
 func (f *DiskMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
 	return []types.Dimension{
 		{
+			Name:  aws.String("path"),
+			Value: aws.String("/"),
+		},
+		{
 			Name:  aws.String("identifier"),
 			Value: aws.String("disk_sanity"),
 		},
