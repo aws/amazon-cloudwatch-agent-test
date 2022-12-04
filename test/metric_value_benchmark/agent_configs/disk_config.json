@@ -24,7 +24,10 @@
           "used",
           "used_percent"
         ],
-        "drop_device": true
+        "drop_device": true,
+        "append_dimensions": {
+          "test": "disk-sanity"
+        }
       }
     }
   }
