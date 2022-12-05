@@ -7,13 +7,16 @@
 package metric_value_benchmark
 
 import (
+	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
-type SwapTestRunner struct{}
+type SwapTestRunner struct {
+	BaseTestRunner
+}
 
 var _ ITestRunner = (*SwapTestRunner)(nil)
 
@@ -21,15 +24,14 @@ func (t *SwapTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateSwapmetric(metricName)
+		testResults[i] = t.validateSwapMetric(metricName)
 	}
 
 	return status.TestGroupResult{
-		Name: t.getTestName(),
+		Name:        t.getTestName(),
 		TestResults: testResults,
 	}
 }
-
 
 func (t *SwapTestRunner) getTestName() string {
 	return "Swap"
@@ -43,26 +45,33 @@ func (t *SwapTestRunner) getAgentRunDuration() time.Duration {
 }
 
 func (t *SwapTestRunner) getMeasuredMetrics() []string {
-	return []string {
+	return []string{
 		"swap_free",
 		"swap_used",
 		"swap_used_percent",
 	}
 }
 
-func validateSwapmetric(metricName string) status.TestResult {
+func (t *SwapTestRunner) validateSwapMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
-		Name: metricName,
+		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
-	if err != nil { return testResult }
+	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
+	if err != nil {
+		return testResult
+	}
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
-	if err != nil { return testResult }
+	log.Printf("metric values are %v", values)
+	if err != nil {
+		return testResult
+	}
 
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) { return testResult }
+	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+		return testResult
+	}
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult

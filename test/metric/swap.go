@@ -1,9 +1,5 @@
-
-// Viewed
-// @@ -0,0 +1,61 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-
 //go:build linux && integration
 // +build linux,integration
 
@@ -23,6 +19,7 @@ var _ MetricValueFetcher = (*SwapMetricValueFetcher)(nil)
 
 func (f *SwapMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dimensions := f.getMetricSpecificDimensions()
+	dimensions = append(dimensions, f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for $s: $v", metricName, err)
@@ -40,7 +37,7 @@ func (f *SwapMetricValueFetcher) isApplicable(metricName string) bool {
 func (f *SwapMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	return map[string]struct{}{
 		"swap_free":         {},
-		"swap_used":  {},
+		"swap_used":         {},
 		"swap_used_percent": {},
 	}
 }
