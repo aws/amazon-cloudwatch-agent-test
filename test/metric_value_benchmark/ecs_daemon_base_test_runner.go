@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
@@ -44,13 +44,13 @@ func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath s
 
 	agentConfig := string(b)
 
-	err = test.PutStringParameter(e.CwagentConfigSsmParamName, agentConfig)
+	err = awsservice.PutStringParameter(e.CwagentConfigSsmParamName, agentConfig)
 	if err != nil {
 		return fmt.Errorf("Failed while reading config file : %s", err.Error())
 	}
 	fmt.Print("Put parameter successful")
 
-	err = test.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
+	err = awsservice.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
 	if err != nil {
 		fmt.Print(err)
 	}
