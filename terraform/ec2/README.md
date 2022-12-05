@@ -239,7 +239,25 @@ Outputs:
         "ecs:DescribeTaskDefinition",
         "ecs:UpdateService",
         "ecs:DeregisterTaskDefinition",
-        "logs:DeleteLogGroup"
+        "logs:DeleteLogGroup",
+        "ecs:CreateCapacityProvider",
+        "ecs:DeleteCapacityProvider",
+        "ecs:DescribeCapacityProviders",
+        "iam:CreateServiceLinkedRole",
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:CreateAutoScalingGroup",
+        "autoscaling:DeleteAutoScalingGroup",
+        "autoscaling:CreateLaunchConfiguration",
+        "autoscaling:DeleteLaunchConfiguration",
+        "autoscaling:DescribeLaunchConfigurations",
+        "autoscaling:DescribeScalingActivities",
+        "autoscaling:CreateOrUpdateTags",
+        "autoscaling:DeleteTags",
+        "autoscaling:DescribeTags",
+        "autoscaling:UpdateAutoScalingGroup",
+        "autoscaling:SetInstanceProtection",
+        "ecs:DescribeContainerInstances",
+        "cloudwatch:GetMetricData"
       ],
       "Resource": "*"
     }
@@ -248,7 +266,7 @@ Outputs:
 ```
 
 11. Once creation is done, go back to the IAM role and attach the policy you just created by searching for the policy name.
-12. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add TERRAFORM_AWS_ASSUME_ROLE as GitHub repository secret. Name is `TERRAFORM_AWS_ASSUME_ROLE` and Secret is the IAM role name. 
+12. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add TERRAFORM_AWS_ASSUME_ROLE as GitHub repository secret. Name is `TERRAFORM_AWS_ASSUME_ROLE` and Secret is the IAM role's ARN. 
 
 
 

@@ -34,6 +34,9 @@ var osToTestDirMap = map[string][]string{
 	"ecs_fargate": {
 		"./test/ecs/ecs_metadata",
 	},
+	"ecs_ec2_daemon": {
+		"./test/metric_value_benchmark",
+	},
 }
 
 func main() {
