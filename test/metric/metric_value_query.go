@@ -15,7 +15,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/test"
 )
 
 var metricValueFetchers = []MetricValueFetcher{
@@ -26,11 +28,17 @@ var metricValueFetchers = []MetricValueFetcher{
 	&DiskIOMetricValueFetcher{},
 	&NetMetricValueFetcher{},
 	&StatsdMetricValueFetcher{},
+	&ContainerInsightsValueFetcher{},
 }
 
-func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
+type MetricFetcherFactory struct {
+	Env *environment.MetaData
+}
+
+func (factory *MetricFetcherFactory) GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
 	for _, fetcher := range metricValueFetchers {
 		if fetcher.isApplicable(metricName) {
+			fetcher.setEnv(factory.Env)
 			return fetcher, nil
 		}
 	}
@@ -55,17 +63,34 @@ type MetricValueFetcher interface {
 	// getPluginSupportedMetric returns the supported metrics for each plugin
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go
 	getPluginSupportedMetric() map[string]struct{}
+	setEnv(env *environment.MetaData)
 }
 
-type baseMetricValueFetcher struct{}
+type baseMetricValueFetcher struct {
+	Env *environment.MetaData
+}
 
-func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
+func (f *baseMetricValueFetcher) getEnv() *environment.MetaData {
+	return f.Env
+}
+
+func (f *baseMetricValueFetcher) setEnv(env *environment.MetaData) {
+	f.Env = env
+}
+
+func (f *baseMetricValueFetcher) getInstanceIdDimension() types.Dimension {
 	ec2InstanceId := awsservice.GetInstanceId()
-	instanceIdDimension := types.Dimension{
+
+	//TODO For now they can stay. Later host metrics fetchers might need to be flexible on how to get instance Id
+	//because that will be different when testing for ecs ec2 launch type vs plain ec2
+	return types.Dimension{
 		Name:  aws.String("InstanceId"),
 		Value: aws.String(ec2InstanceId),
 	}
-	dimensions := append(metricSpecificDimensions, instanceIdDimension)
+}
+
+func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
+	dimensions := metricSpecificDimensions
 	metricToFetch := types.Metric{
 		Namespace:  aws.String(namespace),
 		MetricName: aws.String(metricName),
@@ -105,7 +130,7 @@ func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpeci
 	}
 
 	result := output.MetricDataResults[0].Values
-	log.Printf("Metric Value is : %s", fmt.Sprint(result))
+	log.Printf("Metric values are : %s", fmt.Sprint(result))
 
 	return result, nil
 }
