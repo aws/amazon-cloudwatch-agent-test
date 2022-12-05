@@ -14,6 +14,7 @@ import (
 )
 
 type DiskIOTestRunner struct {
+	BaseTestRunner
 }
 
 var _ ITestRunner = (*DiskIOTestRunner)(nil)
@@ -59,7 +60,7 @@ func (m *DiskIOTestRunner) validateDiskMetric(metricName string) status.TestResu
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
+	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}
