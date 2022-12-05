@@ -23,7 +23,7 @@ func (t *SwapTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateSwapmetric(metricName)
+		testResults[i] = t.validateSwapMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -51,7 +51,7 @@ func (t *SwapTestRunner) getMeasuredMetrics() []string {
 	}
 }
 
-func (t *DiskTestRunner)validateSwapmetric(metricName string) status.TestResult {
+func (t *SwapTestRunner) validateSwapMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
