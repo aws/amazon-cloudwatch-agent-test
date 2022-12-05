@@ -25,11 +25,10 @@ func (t *SwapTestRunner) validate() status.TestGroupResult {
 	}
 
 	return status.TestGroupResult{
-		Name: t.getTestName(),
+		Name:        t.getTestName(),
 		TestResults: testResults,
 	}
 }
-
 
 func (t *SwapTestRunner) getTestName() string {
 	return "Swap"
@@ -43,7 +42,7 @@ func (t *SwapTestRunner) getAgentRunDuration() time.Duration {
 }
 
 func (t *SwapTestRunner) getMeasuredMetrics() []string {
-	return []string {
+	return []string{
 		"swap_free",
 		"swap_used",
 		"swap_used_percent",
@@ -52,17 +51,23 @@ func (t *SwapTestRunner) getMeasuredMetrics() []string {
 
 func validateSwapmetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
-		Name: metricName,
+		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
-	if err != nil { return testResult }
+	fetcher, err := metric.MetricFetcherFactory.GetMetricFetcher(metricName)
+	if err != nil {
+		return testResult
+	}
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
-	if err != nil { return testResult }
+	if err != nil {
+		return testResult
+	}
 
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) { return testResult }
+	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+		return testResult
+	}
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
