@@ -24,7 +24,7 @@ func (t *StatsdTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateStatsdMetric(metricName)
+		testResults[i] = t.validateStatsdMetric(metricName)
 	}
 
 	return status.TestGroupResult{

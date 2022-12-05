@@ -24,7 +24,7 @@ func (t *CollectDTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateCollectDMetric(metricName)
+		testResults[i] = t.validateCollectDMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -76,7 +76,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.metric.GetMetricFetcher(metricName)
+	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}
