@@ -47,12 +47,12 @@ func (t *EMFTestRunner) getAgentRunDuration() time.Duration {
 func (t *EMFTestRunner) setupAfterAgentRun() error {
 	// EC2 Image Builder creates a bash script that sends emf format to cwagent at port 8125
 	// The bash script is at /etc/emf.sh
-	//   TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
-	//   INSTANCEID=`curl -H "X-aws-ec2-metadata-token: \$TOKEN" -v http://169.254.169.254/latest/meta-data/instance-id`
+	// TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+	// INSTANCEID=$(curl -H "X-aws-ec2-metadata-token: \${TOKEN}" -v http://169.254.169.254/latest/meta-data/instance-id)
 	// for times in  {1..3}
 	//  do
 	//   CURRENT_TIME=$(date +%s%N | cut -b1-13)
-	//   echo '{"_aws":{"Timestamp":'"\${CURRENT_TIME}"',"LogGroupName":"MetricValueBenchmarkTest","CloudWatchMetrics":[{"Namespace":"MetricValueBenchmarkTest","Dimensions":[["Type","InstanceId"]],"Metrics":[{"Name":"EMFCounter","Unit":"Count","InstanceId":"'"\${INSTANCEID}"'"}]}]},"Type":"Counter","EMFCounter":5}' \ > /dev/udp/0.0.0.0/25888
+	//   echo '{"_aws":{"Timestamp":'"${CURRENT_TIME}"',"LogGroupName":"MetricValueBenchmarkTest","CloudWatchMetrics":[{"Namespace":"MetricValueBenchmarkTest","Dimensions":[["Type","InstanceId"]],"Metrics":[{"Name":"EMFCounter","Unit":"Count","InstanceId":"'"${INSTANCEID}"'"}]}]},"Type":"Counter","EMFCounter":5}' \ > /dev/udp/0.0.0.0/25888
 	//   sleep 60
 	// done
 	startEMFCommands := []string{
