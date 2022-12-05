@@ -21,6 +21,7 @@ var _ MetricValueFetcher = (*CPUMetricValueFetcher)(nil)
 
 func (f *CPUMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dimensions := f.getMetricSpecificDimensions()
+	dimensions = append(dimensions, f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())

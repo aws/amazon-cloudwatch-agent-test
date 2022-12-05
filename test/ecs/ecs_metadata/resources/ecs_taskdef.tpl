@@ -21,9 +21,8 @@
         "awslogs-group": "${log_group}"
       }
     },
-    "cpu": 1,
+    "cpu": 128,
     "mountPoints": [],
-    "memory": 1024,
-    "volumesFrom": []
+    "memory": 64
   }
 ]
