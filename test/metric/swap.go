@@ -1,9 +1,6 @@
 
-// Viewed
-// @@ -0,0 +1,61 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-
 //go:build linux && integration
 // +build linux,integration
 
@@ -12,7 +9,6 @@ package metric
 import (
 	"log"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
