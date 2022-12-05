@@ -15,6 +15,7 @@ import (
 )
 
 type StatsdTestRunner struct {
+	BaseTestRunner
 }
 
 var _ ITestRunner = (*StatsdTestRunner)(nil)
@@ -63,13 +64,13 @@ func (t *StatsdTestRunner) getMeasuredMetrics() []string {
 	return []string{"statsd_counter"}
 }
 
-func validateStatsdMetric(metricName string) status.TestResult {
+func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
+	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}
