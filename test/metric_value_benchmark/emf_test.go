@@ -15,6 +15,7 @@ import (
 )
 
 type EMFTestRunner struct {
+	BaseTestRunner
 }
 
 var _ ITestRunner = (*EMFTestRunner)(nil)
@@ -23,7 +24,7 @@ func (t *EMFTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateEMFMetric(metricName)
+		testResults[i] = t.validateEMFMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -66,13 +67,13 @@ func (t *EMFTestRunner) getMeasuredMetrics() []string {
 	return []string{"EMFCounter"}
 }
 
-func validateEMFMetric(metricName string) status.TestResult {
+func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
+	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}
