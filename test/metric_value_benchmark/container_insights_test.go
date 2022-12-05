@@ -7,24 +7,23 @@
 package metric_value_benchmark
 
 import (
-	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
-type CPUTestRunner struct {
-	BaseTestRunner
+type ContainerInsightsTestRunner struct {
+	ECSBaseTestRunner
 }
 
-var _ ITestRunner = (*CPUTestRunner)(nil)
+var _ IECSTestRunner = (*ContainerInsightsTestRunner)(nil)
 
-func (t *CPUTestRunner) validate() status.TestGroupResult {
+func (t *ContainerInsightsTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateCpuMetric(metricName)
+		testResults[i] = t.validateContainerInsightsMetrics(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -33,27 +32,26 @@ func (t *CPUTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (t *CPUTestRunner) getTestName() string {
-	return "CPU"
+func (t *ContainerInsightsTestRunner) getTestName() string {
+	return "ContainerInstance"
 }
 
-func (t *CPUTestRunner) getAgentConfigFileName() string {
-	return "cpu_config.json"
+func (t *ContainerInsightsTestRunner) getAgentConfigFileName() string {
+	return "./agent_configs/container_insights.json"
 }
 
-func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
+func (t *ContainerInsightsTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *CPUTestRunner) getMeasuredMetrics() []string {
+func (t *ContainerInsightsTestRunner) getMeasuredMetrics() []string {
 	return []string{
-		"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-		"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
+		"instance_memory_utilization", "instance_number_of_running_tasks", "instance_memory_reserved_capacity",
+		"instance_filesystem_utilization", "instance_network_total_bytes", "instance_cpu_utilization",
+		"instance_cpu_reserved_capacity"}
 }
 
-func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
+func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -64,8 +62,7 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
-	log.Printf("metric values are %v", values)
+	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

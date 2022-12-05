@@ -8,12 +8,13 @@ package metric_value_benchmark
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/stretchr/testify/suite"
 	"log"
 	"testing"
-
-	"github.com/stretchr/testify/suite"
-
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
 const namespace = "MetricValueBenchmarkTest"
@@ -32,18 +33,58 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished MetricBenchmarkTestSuite")
 }
 
-var testRunners = []*TestRunner{
-	{testRunner: &CPUTestRunner{}},
-	{testRunner: &MemTestRunner{}},
-	{testRunner: &ProcStatTestRunner{}},
-	{testRunner: &DiskIOTestRunner{}},
-	{testRunner: &NetTestRunner{}},
+// TODO: test this runAgentStrategy and then if it works, refactor the ec2 ones with this too. -> no do this later?
+
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+}
+
+var (
+	ecsTestRunners []*ECSTestRunner
+	ec2TestRunners []*TestRunner
+)
+
+func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
+	if ecsTestRunners == nil {
+		factory := &metric.MetricFetcherFactory{Env: env}
+
+		ecsTestRunners = []*ECSTestRunner{
+			{testRunner: &ContainerInsightsTestRunner{ECSBaseTestRunner{MetricFetcherFactory: factory}},
+				agentRunStrategy: &ECSAgentRunStrategy{}},
+		}
+	}
+	return ecsTestRunners
+}
+
+func getEc2TestRunners(env *environment.MetaData) []*TestRunner {
+	if ec2TestRunners == nil {
+		factory := &metric.MetricFetcherFactory{Env: env}
+		ec2TestRunners = []*TestRunner{
+			{testRunner: &CPUTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &MemTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &ProcStatTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &DiskIOTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &NetTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+		}
+	}
+	return ec2TestRunners
 }
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
-	for _, testRunner := range testRunners {
-		testRunner.Run(suite)
+	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	if env.ComputeType == computetype.ECS {
+		log.Print("Environment compute type is ECS")
+		for _, ecsTestRunner := range getEcsTestRunners(env) {
+			ecsTestRunner.Run(suite, env)
+		}
+	} else {
+		for _, testRunner := range getEc2TestRunners(env) {
+			testRunner.Run(suite)
+		}
 	}
+
 	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Benchmark Test Suite Failed")
 }
 
