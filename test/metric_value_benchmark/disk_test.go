@@ -13,7 +13,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
-type DiskTestRunner struct{}
+type DiskTestRunner struct{
+	BaseTestRunner
+}
 
 var _ ITestRunner = (*DiskTestRunner)(nil)
 
@@ -21,7 +23,7 @@ func (t *DiskTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateDiskMetric(metricName)
+		testResults[i] = t.validateDiskMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -53,18 +55,19 @@ func (t *DiskTestRunner) getMeasuredMetrics() []string {
 	}
 }
 
-func validateDiskMetric(metricName string) status.TestResult {
+func (t *DiskTestRunner) validateDiskMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.MetricFetcherFactory.GetMetricFetcher(metricName)
+	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}
-
+	
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
 	}
