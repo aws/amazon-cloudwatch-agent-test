@@ -1,4 +1,3 @@
-
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 //go:build linux && integration
@@ -38,7 +37,7 @@ func (f *SwapMetricValueFetcher) isApplicable(metricName string) bool {
 func (f *SwapMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	return map[string]struct{}{
 		"swap_free":         {},
-		"swap_used":  {},
+		"swap_used":         {},
 		"swap_used_percent": {},
 	}
 }

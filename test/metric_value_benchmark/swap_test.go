@@ -14,7 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
-type SwapTestRunner struct{
+type SwapTestRunner struct {
 	BaseTestRunner
 }
 

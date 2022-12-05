@@ -14,7 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
-type DiskTestRunner struct{
+type DiskTestRunner struct {
 	BaseTestRunner
 }
 
@@ -66,7 +66,7 @@ func (t *DiskTestRunner) validateDiskMetric(metricName string) status.TestResult
 	if err != nil {
 		return testResult
 	}
-	
+
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 	log.Printf("metric values are %v", values)
 	if err != nil {
