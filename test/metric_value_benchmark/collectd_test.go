@@ -15,6 +15,7 @@ import (
 )
 
 type CollectDTestRunner struct {
+	BaseTestRunner
 }
 
 var _ ITestRunner = (*CollectDTestRunner)(nil)
@@ -69,13 +70,13 @@ func (t *CollectDTestRunner) getMeasuredMetrics() []string {
 	return []string{"collectd_cpu_value"}
 }
 
-func validateCollectDMetric(metricName string) status.TestResult {
+func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
+	fetcher, err := t.metric.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}
