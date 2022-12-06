@@ -20,10 +20,11 @@ type EMFMetricValueFetcher struct {
 var _ MetricValueFetcher = (*EMFMetricValueFetcher)(nil)
 
 func (f *EMFMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := f.getMetricSpecificDimensions()
-	values, err := f.fetch(namespace, metricName, dimensions, stat)
+	dims := f.getMetricSpecificDimensions()
+	dims = append(dims, f.getInstanceIdDimension())
+	values, err := f.fetch(namespace, metricName, dims, stat)
 	if err != nil {
-		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
+		log.Printf("Error while fetching metric value for %s: %v", metricName, err)
 	}
 	return values, err
 }
