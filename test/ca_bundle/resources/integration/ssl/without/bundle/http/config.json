@@ -1,6 +1,6 @@
 {
   "agent": {
-    "metrics_collection_interval": 60,
+    "metrics_collection_interval": 10,
     "run_as_user": "root",
     "debug": true,
     "logfile": ""
@@ -12,7 +12,6 @@
         "measurement": [
           "used_percent"
         ],
-        "metrics_collection_interval": 60,
         "resources": [
           "*"
         ]
@@ -20,9 +19,9 @@
       "mem": {
         "measurement": [
           "mem_used_percent"
-        ],
-        "metrics_collection_interval": 60
+        ]
       }
-    }
+    },
+    "force_flush_interval": 10
   }
 }

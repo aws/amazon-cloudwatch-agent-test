@@ -21,6 +21,7 @@ var _ MetricValueFetcher = (*DiskMetricValueFetcher)(nil)
 
 func (f *DiskMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dimensions := f.getMetricSpecificDimensions()
+	dimensions = append(dimensions, f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for $s: $v", metricName, err)
@@ -54,8 +55,8 @@ func (f *DiskMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension
 			Value: aws.String("/"),
 		},
 		{
-			Name.aws.String("fstype"),
-			Value: aws.String("xfs"),
+			Name:  aws.String("fstype"),
+			Value: aws.String("ext4"),
 		},
 	}
 }

@@ -7,13 +7,16 @@
 package metric_value_benchmark
 
 import (
+	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
-type DiskTestRunner struct{}
+type DiskTestRunner struct {
+	BaseTestRunner
+}
 
 var _ ITestRunner = (*DiskTestRunner)(nil)
 
@@ -21,15 +24,14 @@ func (t *DiskTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateDiskMetric(metricName)
+		testResults[i] = t.validateDiskMetric(metricName)
 	}
 
 	return status.TestGroupResult{
-		Name: t.getTestName(),
+		Name:        t.getTestName(),
 		TestResults: testResults,
 	}
 }
-
 
 func (t *DiskTestRunner) getTestName() string {
 	return "Disk"
@@ -43,30 +45,37 @@ func (t *DiskTestRunner) getAgentRunDuration() time.Duration {
 }
 
 func (t *DiskTestRunner) getMeasuredMetrics() []string {
-	return []string {
-		"disk_free", 
-		"disk_inodes_free", 
-		"disk_inodes_total", 
-		"disk_inodes_used", 
-		"disk_total", 
-		"disk_used", 
+	return []string{
+		"disk_free",
+		"disk_inodes_free",
+		"disk_inodes_total",
+		"disk_inodes_used",
+		"disk_total",
+		"disk_used",
 		"disk_used_percent",
 	}
 }
 
-func validateDiskMetric(metricName string) status.TestResult {
+func (t *DiskTestRunner) validateDiskMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
-		Name: metricName,
+		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
-	if err != nil { return testResult }
+	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
+	if err != nil {
+		return testResult
+	}
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
-	if err != nil { return testResult }
+	log.Printf("metric values are %v", values)
+	if err != nil {
+		return testResult
+	}
 
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) { return testResult }
+	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+		return testResult
+	}
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
