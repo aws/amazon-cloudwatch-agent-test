@@ -7,20 +7,21 @@
 package metric_value_benchmark
 
 import (
-	"log"
-	"time"
-
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"log"
+	"time"
 )
 
 type CPUTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*CPUTestRunner)(nil)
+var _ test_runner.ITestRunner = (*CPUTestRunner)(nil)
 
-func (t *CPUTestRunner) validate() status.TestGroupResult {
+func (t *CPUTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -28,24 +29,28 @@ func (t *CPUTestRunner) validate() status.TestGroupResult {
 	}
 
 	return status.TestGroupResult{
-		Name:        t.getTestName(),
+		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (t *CPUTestRunner) getTestName() string {
+func (t *CPUTestRunner) GetTestName() string {
 	return "CPU"
 }
 
-func (t *CPUTestRunner) getAgentConfigFileName() string {
+func (t *CPUTestRunner) GetAgentConfigFileName() string {
 	return "cpu_config.json"
 }
 
-func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
+func (t *CPUTestRunner) GetAgentRunDuration() time.Duration {
+	return test_runner.MinimumAgentRuntime
 }
 
-func (t *CPUTestRunner) getMeasuredMetrics() []string {
+func (t *CPUTestRunner) SetupAfterAgentRun() error {
+	return nil
+}
+
+func (t *CPUTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
 		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
@@ -59,10 +64,7 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
-		return testResult
-	}
+	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{"InstanceId"}}
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 	log.Printf("metric values are %v", values)

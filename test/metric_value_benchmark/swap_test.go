@@ -20,7 +20,7 @@ type SwapTestRunner struct {
 
 var _ ITestRunner = (*SwapTestRunner)(nil)
 
-func (t *SwapTestRunner) validate() status.TestGroupResult {
+func (t *SwapTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -33,18 +33,18 @@ func (t *SwapTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (t *SwapTestRunner) getTestName() string {
+func (t *SwapTestRunner) GetTestName() string {
 	return "Swap"
 }
 
-func (t *SwapTestRunner) getAgentConfigFileName() string {
+func (t *SwapTestRunner) GetAgentConfigFileName() string {
 	return "swap_config.json"
 }
-func (t *SwapTestRunner) getAgentRunDuration() time.Duration {
+func (t *SwapTestRunner) GetAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *SwapTestRunner) getMeasuredMetrics() []string {
+func (t *SwapTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"swap_free",
 		"swap_used",

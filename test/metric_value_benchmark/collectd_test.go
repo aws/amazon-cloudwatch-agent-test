@@ -20,7 +20,7 @@ type CollectDTestRunner struct {
 
 var _ ITestRunner = (*CollectDTestRunner)(nil)
 
-func (t *CollectDTestRunner) validate() status.TestGroupResult {
+func (t *CollectDTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -33,19 +33,19 @@ func (t *CollectDTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (t *CollectDTestRunner) getTestName() string {
+func (t *CollectDTestRunner) GetTestName() string {
 	return "CollectD"
 }
 
-func (t *CollectDTestRunner) getAgentConfigFileName() string {
+func (t *CollectDTestRunner) GetAgentConfigFileName() string {
 	return "collectd_config.json"
 }
 
-func (t *CollectDTestRunner) getAgentRunDuration() time.Duration {
+func (t *CollectDTestRunner) GetAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *CollectDTestRunner) setupAfterAgentRun() error {
+func (t *CollectDTestRunner) SetupAfterAgentRun() error {
 	// EC2 Image Builder creates the collectd's default configuration and collectd will pick it up.
 	// For Linux the static is at /etc/collectd.conf, fox Ubuntu it is at /etc/collectd/collectd.conf
 	// Collectd's static configuration
@@ -66,7 +66,7 @@ func (t *CollectDTestRunner) setupAfterAgentRun() error {
 	return common.RunCommands(startCollectdCommands)
 }
 
-func (t *CollectDTestRunner) getMeasuredMetrics() []string {
+func (t *CollectDTestRunner) BetMeasuredMetrics() []string {
 	return []string{"collectd_cpu_value"}
 }
 

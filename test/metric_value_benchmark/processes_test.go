@@ -19,7 +19,7 @@ type ProcessesTestRunner struct {
 
 var _ ITestRunner = (*ProcessesTestRunner)(nil)
 
-func (m *ProcessesTestRunner) validate() status.TestGroupResult {
+func (m *ProcessesTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := m.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, name := range metricsToFetch {
@@ -32,19 +32,19 @@ func (m *ProcessesTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (m *ProcessesTestRunner) getTestName() string {
+func (m *ProcessesTestRunner) GetTestName() string {
 	return "Processes"
 }
 
-func (m *ProcessesTestRunner) getAgentConfigFileName() string {
+func (m *ProcessesTestRunner) GetAgentConfigFileName() string {
 	return "processes_config.json"
 }
 
-func (m *ProcessesTestRunner) getAgentRunDuration() time.Duration {
+func (m *ProcessesTestRunner) GetAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (m *ProcessesTestRunner) getMeasuredMetrics() []string {
+func (m *ProcessesTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"processes_blocked", "processes_dead", "processes_idle", "processes_paging", "processes_running", "processes_sleeping", "processes_stopped",
 		"processes_total", "processes_total_threads", "processes_zombies"}

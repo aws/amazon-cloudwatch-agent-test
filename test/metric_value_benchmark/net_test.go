@@ -7,44 +7,50 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
 type NetTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*NetTestRunner)(nil)
+var _ test_runner.ITestRunner = (*NetTestRunner)(nil)
 
-func (m *NetTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := m.getMeasuredMetrics()
+func (m *NetTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := m.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, name := range metricsToFetch {
 		testResults[i] = m.validateNetMetric(name)
 	}
 
 	return status.TestGroupResult{
-		Name:        m.getTestName(),
+		Name:        m.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (m *NetTestRunner) getTestName() string {
+func (m *NetTestRunner) GetTestName() string {
 	return "Net"
 }
 
-func (m *NetTestRunner) getAgentConfigFileName() string {
+func (m *NetTestRunner) GetAgentConfigFileName() string {
 	return "net_config.json"
 }
 
-func (m *NetTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
+func (m *NetTestRunner) GetAgentRunDuration() time.Duration {
+	return test_runner.MinimumAgentRuntime
 }
 
-func (m *NetTestRunner) getMeasuredMetrics() []string {
+func (m *NetTestRunner) SetupAfterAgentRun() error {
+	return nil
+}
+
+func (m *NetTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"net_bytes_sent", "net_bytes_recv", "net_drop_in", "net_drop_out", "net_err_in",
 		"net_err_out", "net_packets_sent", "net_packets_recv"}
@@ -56,10 +62,7 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
-		return testResult
-	}
+	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{"InstanceId"}}
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 	if err != nil {

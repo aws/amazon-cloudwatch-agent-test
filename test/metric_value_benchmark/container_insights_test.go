@@ -7,14 +7,14 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"time"
 )
 
 type ContainerInsightsTestRunner struct {
-	ECSBaseTestRunner
 }
 
 var _ IECSTestRunner = (*ContainerInsightsTestRunner)(nil)
@@ -41,7 +41,7 @@ func (t *ContainerInsightsTestRunner) getAgentConfigFileName() string {
 }
 
 func (t *ContainerInsightsTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
+	return test_runner.MinimumAgentRuntime
 }
 
 func (t *ContainerInsightsTestRunner) getMeasuredMetrics() []string {
@@ -57,10 +57,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
-		return testResult
-	}
+	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{}}
 
 	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, metric.AVERAGE)
 	if err != nil {

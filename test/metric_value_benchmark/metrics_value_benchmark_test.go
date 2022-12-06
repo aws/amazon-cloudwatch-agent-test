@@ -15,8 +15,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
 const namespace = "MetricValueBenchmarkTest"
@@ -45,22 +45,23 @@ func init() {
 
 var (
 	ecsTestRunners []*ECSTestRunner
-	ec2TestRunners []*TestRunner
+	ec2TestRunners []*test_runner.TestRunner
 )
 
 func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 	if ecsTestRunners == nil {
-		factory := &metric.MetricFetcherFactory{Env: env}
-
 		ecsTestRunners = []*ECSTestRunner{
-			{testRunner: &ContainerInsightsTestRunner{ECSBaseTestRunner{MetricFetcherFactory: factory}},
-				agentRunStrategy: &ECSAgentRunStrategy{}},
+			{
+				testRunner:       &ContainerInsightsTestRunner{},
+				agentRunStrategy: &ECSAgentRunStrategy{},
+				env:              *env,
+			},
 		}
 	}
 	return ecsTestRunners
 }
 
-func getEc2TestRunners(env *environment.MetaData) []*TestRunner {
+func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		factory := &metric.MetricFetcherFactory{Env: env}
 		ec2TestRunners = []*TestRunner{

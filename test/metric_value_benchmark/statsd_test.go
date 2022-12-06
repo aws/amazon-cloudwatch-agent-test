@@ -20,7 +20,7 @@ type StatsdTestRunner struct {
 
 var _ ITestRunner = (*StatsdTestRunner)(nil)
 
-func (t *StatsdTestRunner) validate() status.TestGroupResult {
+func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -33,19 +33,19 @@ func (t *StatsdTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (t *StatsdTestRunner) getTestName() string {
+func (t *StatsdTestRunner) GetTestName() string {
 	return "Statsd"
 }
 
-func (t *StatsdTestRunner) getAgentConfigFileName() string {
+func (t *StatsdTestRunner) GetAgentConfigFileName() string {
 	return "statsd_config.json"
 }
 
-func (t *StatsdTestRunner) getAgentRunDuration() time.Duration {
+func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 	return time.Minute
 }
 
-func (t *StatsdTestRunner) setupAfterAgentRun() error {
+func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 	// EC2 Image Builder creates a bash script that sends statsd format to cwagent at port 8125
 	// The bash script is at /etc/statsd.sh
 	//    for times in  {1..3}
@@ -60,11 +60,11 @@ func (t *StatsdTestRunner) setupAfterAgentRun() error {
 	return common.RunCommands(startStatsdCommand)
 }
 
-func (t *StatsdTestRunner) getMeasuredMetrics() []string {
+func (t *StatsdTestRunner) GetMeasuredMetrics() []string {
 	return []string{"statsd_counter"}
 }
 
-func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestResult {
+func (t *StatsdTestRunner) ValidateStatsdMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,

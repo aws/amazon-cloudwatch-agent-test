@@ -20,7 +20,7 @@ type EMFTestRunner struct {
 
 var _ ITestRunner = (*EMFTestRunner)(nil)
 
-func (t *EMFTestRunner) validate() status.TestGroupResult {
+func (t *EMFTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -33,19 +33,19 @@ func (t *EMFTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (t *EMFTestRunner) getTestName() string {
+func (t *EMFTestRunner) GetTestName() string {
 	return "EMF"
 }
 
-func (t *EMFTestRunner) getAgentConfigFileName() string {
+func (t *EMFTestRunner) GetAgentConfigFileName() string {
 	return "emf_config.json"
 }
 
-func (t *EMFTestRunner) getAgentRunDuration() time.Duration {
+func (t *EMFTestRunner) GetAgentRunDuration() time.Duration {
 	return time.Minute
 }
 
-func (t *EMFTestRunner) setupAfterAgentRun() error {
+func (t *EMFTestRunner) SetupAfterAgentRun() error {
 	// EC2 Image Builder creates a bash script that sends emf format to cwagent at port 8125
 	// The bash script is at /etc/emf.sh
 	// TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
@@ -63,7 +63,7 @@ func (t *EMFTestRunner) setupAfterAgentRun() error {
 	return common.RunCommands(startEMFCommands)
 }
 
-func (t *EMFTestRunner) getMeasuredMetrics() []string {
+func (t *EMFTestRunner) GetMeasuredMetrics() []string {
 	return []string{"EMFCounter"}
 }
 
