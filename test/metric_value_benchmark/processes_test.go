@@ -55,7 +55,7 @@ func (m *ProcessesTestRunner) validateProcessesMetric(metricName string) status.
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
+	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}
