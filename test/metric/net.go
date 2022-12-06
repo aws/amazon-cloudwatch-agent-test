@@ -20,10 +20,11 @@ type NetMetricValueFetcher struct {
 var _ MetricValueFetcher = (*NetMetricValueFetcher)(nil)
 
 func (f *NetMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dims := f.getMetricSpecificDimensions()
-	values, err := f.fetch(namespace, metricName, dims, stat)
+	dimensions := f.getMetricSpecificDimensions()
+	dimensions = append(dimensions, f.getInstanceIdDimension())
+	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
-		log.Printf("Error while fetching metric value for %s: %v", metricName, err)
+		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
 	}
 	return values, err
 }
