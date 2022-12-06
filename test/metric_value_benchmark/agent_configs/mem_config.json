@@ -15,7 +15,8 @@
         "measurement": [
           "active", "available", "available_percent", "buffered", "cached", "free", "inactive", "total",
           "used", "used_percent"
-        ]
+        ],
+        "metrics_collection_interval": 60
       }
     }
   }

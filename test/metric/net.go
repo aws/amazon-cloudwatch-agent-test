@@ -21,6 +21,7 @@ var _ MetricValueFetcher = (*NetMetricValueFetcher)(nil)
 
 func (f *NetMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
 	dims := f.getMetricSpecificDimensions()
+	dims = append(dims, f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dims, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %s: %v", metricName, err)

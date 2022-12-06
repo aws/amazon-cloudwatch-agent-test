@@ -8,13 +8,15 @@ package metric_value_benchmark
 
 import (
 	"fmt"
+	"log"
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-	"github.com/stretchr/testify/suite"
-	"log"
-	"testing"
 )
 
 const namespace = "MetricValueBenchmarkTest"
@@ -68,6 +70,7 @@ func getEc2TestRunners(env *environment.MetaData) []*TestRunner {
 			{testRunner: &ProcStatTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 			{testRunner: &DiskIOTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 			{testRunner: &NetTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &ProcessesTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 		}
 	}
 	return ec2TestRunners
