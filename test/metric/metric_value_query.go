@@ -19,7 +19,6 @@ import (
 )
 
 var metricValueFetchers = []MetricValueFetcher{
-	&SwapMetricValueFetcher{},
 	&DiskMetricValueFetcher{},
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
