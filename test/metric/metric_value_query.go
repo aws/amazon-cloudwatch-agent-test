@@ -20,6 +20,7 @@ import (
 )
 
 var metricValueFetchers = []MetricValueFetcher{
+	&SwapMetricValueFetcher{},
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
 	&ProcStatMetricValueFetcher{},
