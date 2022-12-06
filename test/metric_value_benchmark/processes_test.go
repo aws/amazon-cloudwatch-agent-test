@@ -14,6 +14,7 @@ import (
 )
 
 type ProcessesTestRunner struct {
+	BaseTestRunner
 }
 
 var _ ITestRunner = (*ProcessesTestRunner)(nil)
