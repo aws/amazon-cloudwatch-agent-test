@@ -17,9 +17,11 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/test"
 )
 
 var metricValueFetchers = []MetricValueFetcher{
+	&SwapMetricValueFetcher{},
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
 	&ProcStatMetricValueFetcher{},
@@ -27,6 +29,7 @@ var metricValueFetchers = []MetricValueFetcher{
 	&DiskIOMetricValueFetcher{},
 	&NetMetricValueFetcher{},
 	&StatsdMetricValueFetcher{},
+	&ProcessesMetricValueFetcher{},
 	&ContainerInsightsValueFetcher{},
 }
 
