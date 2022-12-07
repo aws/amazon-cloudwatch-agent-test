@@ -20,8 +20,7 @@ type CPUMetricValueFetcher struct {
 var _ MetricValueFetcher = (*CPUMetricValueFetcher)(nil)
 
 func (f *CPUMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := f.getMetricSpecificDimensions()
-	dimensions = append(dimensions, f.getInstanceIdDimension())
+	dimensions := append(f.getMetricSpecificDimensions(), f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %s: %s", metricName, err.Error())
