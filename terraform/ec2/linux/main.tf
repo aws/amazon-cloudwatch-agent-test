@@ -28,6 +28,8 @@ locals {
 
 # @todo: create efs resource
 
+resource "aws_efs_file_system" "predictable_fs" {}
+
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################

@@ -153,6 +153,7 @@ Outputs:
         "ec2:DescribeVpcs",
         "ec2:GetPasswordData",
         "ec2:ModifyInstanceAttribute",
+        // @todo: add policy to create efs 
         "dynamodb:*",
         "ec2:RunInstances",
         "ec2:TerminateInstances",
