@@ -45,6 +45,10 @@ func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
+func (t *CPUTestRunner) setupAfterAgentRun() error {
+	return nil
+}
+
 func (t *CPUTestRunner) getMeasuredMetrics() []string {
 	return []string{
 		"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",

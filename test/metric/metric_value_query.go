@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test"
 )
 
@@ -24,6 +25,7 @@ var metricValueFetchers = []MetricValueFetcher{
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
 	&ProcStatMetricValueFetcher{},
+	&CollectDMetricValueFetcher{},
 	&DiskIOMetricValueFetcher{},
 	&NetMetricValueFetcher{},
 	&ProcessesMetricValueFetcher{},
@@ -78,7 +80,7 @@ func (f *baseMetricValueFetcher) setEnv(env *environment.MetaData) {
 }
 
 func (f *baseMetricValueFetcher) getInstanceIdDimension() types.Dimension {
-	ec2InstanceId := test.GetInstanceId()
+	ec2InstanceId := awsservice.GetInstanceId()
 
 	//TODO For now they can stay. Later host metrics fetchers might need to be flexible on how to get instance Id
 	//because that will be different when testing for ecs ec2 launch type vs plain ec2
@@ -118,7 +120,7 @@ func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpeci
 
 	log.Printf("Metric data input is : %s", fmt.Sprint(getMetricDataInput))
 
-	cwmClient, clientContext, err := test.GetCloudWatchMetricsClient()
+	cwmClient, clientContext, err := awsservice.GetCloudWatchMetricsClient()
 	if err != nil {
 		return nil, fmt.Errorf("Error occurred while creating CloudWatch client: %v", err.Error())
 	}

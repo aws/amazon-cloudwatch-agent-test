@@ -1,7 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package test
+//go:build linux && integration
+// +build linux,integration
+
+package common
 
 import (
 	"fmt"
@@ -42,7 +45,7 @@ func DeleteFile(filePathAbsolute string) error {
 	out, err := exec.Command("bash", "-c", "sudo rm "+filePathAbsolute).Output()
 
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Printf(fmt.Sprint(err) + string(out))
 		return err
 	}
 
@@ -112,13 +115,25 @@ func RunShellScript(path string, args ...string) error {
 	return nil
 }
 
-func RunCommand(cmd string) (output string) {
+func RunCommand(cmd string) (string, error) {
 	out, err := exec.Command("bash", "-c", cmd).Output()
 
 	if err != nil {
-		log.Fatalf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
+		log.Printf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
+		return "", err
 	}
-	return string(out)
+	return string(out), nil
+}
+
+func RunCommands(commands []string) error {
+	for _, cmd := range commands {
+		_, err := RunCommand(cmd)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func ReplaceLocalStackHostName(pathIn string) {
