@@ -52,11 +52,11 @@ func (f *DiskMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension
 	return []types.Dimension{
 		{
 			Name:  aws.String("path"),
-			Value: aws.String("/"),
+			Value: aws.String("/mnt/efs/fs1"),
 		},
 		{
 			Name:  aws.String("fstype"),
-			Value: aws.String("ext4"),
+			Value: aws.String("/nfs4"),
 		},
 	}
 }

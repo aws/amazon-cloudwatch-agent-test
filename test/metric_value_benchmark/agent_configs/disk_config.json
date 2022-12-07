@@ -13,7 +13,7 @@
     "metrics_collected": {
       "disk": {
         "resources": [
-          "/"
+          "/mnt/efs/fs1"
         ],
         "measurement": [
           "free",
