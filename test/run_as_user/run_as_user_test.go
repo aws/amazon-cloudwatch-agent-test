@@ -58,7 +58,7 @@ func TestRunAsUser(t *testing.T) {
 			processOwner := outputContainsTarget(agentOwnerOutput, parameter.user)
 			common.StopAgent()
 			if processOwner != true {
-				t.Errorf("App owner is not %s", parameter.user)
+				t.Fatalf("App owner is not %s", parameter.user)
 			}
 		})
 	}
