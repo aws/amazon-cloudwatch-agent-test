@@ -26,6 +26,10 @@ locals {
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
 }
 
+# @todo: create efs resource
+
+resource "aws_efs_file_system" "predictable_fs" {}
+
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
@@ -36,6 +40,7 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
+  # @todo: reference efs here
 
   tags = {
     Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
