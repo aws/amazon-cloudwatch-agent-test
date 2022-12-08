@@ -9,6 +9,7 @@ package metric
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -28,6 +29,7 @@ var metricValueFetchers = []MetricValueFetcher{
 	&CollectDMetricValueFetcher{},
 	&DiskIOMetricValueFetcher{},
 	&NetMetricValueFetcher{},
+	&EMFMetricValueFetcher{},
 	&ProcessesMetricValueFetcher{},
 	&ContainerInsightsValueFetcher{},
 }
@@ -106,7 +108,7 @@ func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpeci
 				Period: &metricQueryPeriod,
 				Stat:   aws.String(string(stat)),
 			},
-			Id: aws.String(metricName),
+			Id: aws.String(strings.ToLower(metricName)),
 		},
 	}
 
