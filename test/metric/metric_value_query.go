@@ -29,6 +29,7 @@ var metricValueFetchers = []MetricValueFetcher{
 	&CollectDMetricValueFetcher{},
 	&DiskIOMetricValueFetcher{},
 	&NetMetricValueFetcher{},
+	&StatsdMetricValueFetcher{},
 	&EMFMetricValueFetcher{},
 	&ProcessesMetricValueFetcher{},
 	&ContainerInsightsValueFetcher{},
