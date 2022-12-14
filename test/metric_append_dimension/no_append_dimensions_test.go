@@ -62,6 +62,10 @@ func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName
 			Key:  "host",
 			Value: dimension.UnknownDimensionValue(),
 		},
+		{
+			Key:  "cpu",
+			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
+		},
 	})
 
 	if (len(failed) > 0) {
