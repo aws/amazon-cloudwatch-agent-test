@@ -7,16 +7,17 @@
 package metric_value_benchmark
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
 	"time"
 )
 
 type CPUTestRunner struct {
-	test_runner.BaseTestRunner
+	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*CPUTestRunner)(nil)
@@ -64,9 +65,23 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{"InstanceId"}}
+	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key: "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key: "cpu",
+			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
+		},
+	})
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	if (len(failed) > 0) {
+		return testResult
+	}
+
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult

@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package dimension
+package _default
 
 import (
 	"log"

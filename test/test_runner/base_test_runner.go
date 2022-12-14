@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -37,6 +38,7 @@ type TestRunner struct {
 }
 
 type BaseTestRunner struct {
+	DimensionFactory dimension.Factory
 }
 
 func (t *BaseTestRunner) setupBeforeAgentRun() error {

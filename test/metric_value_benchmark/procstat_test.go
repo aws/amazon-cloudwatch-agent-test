@@ -7,16 +7,18 @@
 package metric_value_benchmark
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"time"
 )
 
 type ProcStatTestRunner struct {
-	test_runner.BaseTestRunner
+	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*ProcStatTestRunner)(nil)
@@ -62,9 +64,28 @@ func (m *ProcStatTestRunner) validateProcStatMetric(metricName string) status.Te
 		Status: status.FAILED,
 	}
 
-	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{"InstanceId"}}
+	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:  "exe",
+			Value: dimension.ExpectedDimensionValue{aws.String("cloudwatch-agent")},
+		},
+		{
+			Key:  "process_name",
+			Value: dimension.ExpectedDimensionValue{aws.String("amazon-cloudwatch-agent")},
+		},
+		{
+			Key: "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+
+	if (len(failed) > 0) {
+		return testResult
+	}
+
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
@@ -35,8 +36,6 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished MetricBenchmarkTestSuite")
 }
 
-// TODO: test this runAgentStrategy and then if it works, refactor the ec2 ones with this too. -> no do this later?
-
 var envMetaDataStrings = &(environment.MetaDataStrings{})
 
 func init() {
@@ -50,9 +49,11 @@ var (
 
 func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 	if ecsTestRunners == nil {
+		factory := dimension.GetDimensionFactory(*env)
+
 		ecsTestRunners = []*ECSTestRunner{
 			{
-				testRunner:       &ContainerInsightsTestRunner{},
+				testRunner:       &ContainerInsightsTestRunner{Base: BaseTestRunner{DimensionFactory: factory}},
 				agentRunStrategy: &ECSAgentRunStrategy{},
 				env:              *env,
 			},
@@ -62,21 +63,21 @@ func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 }
 
 func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
+	factory := dimension.GetDimensionFactory(*env)
 	if ec2TestRunners == nil {
-		factory := &metric.MetricFetcherFactory{Env: env}
-		ec2TestRunners = []*TestRunner{
-			{testRunner: &NetStatTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &PrometheusTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &StatsdTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &EMFTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &CollectDTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &SwapTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &CPUTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &MemTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &ProcStatTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &DiskIOTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &NetTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
-			{testRunner: &ProcessesTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+		ec2TestRunners = []*test_runner.TestRunner{
+			{TestRunner: &NetStatTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &PrometheusTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CPUTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &MemTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &ProcStatTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &DiskIOTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &NetTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &StatsdTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &EMFTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CollectDTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &SwapTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &ProcessesTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return ec2TestRunners

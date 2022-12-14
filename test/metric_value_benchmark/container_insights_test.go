@@ -7,14 +7,15 @@
 package metric_value_benchmark
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"time"
 )
 
 type ContainerInsightsTestRunner struct {
+	Base BaseTestRunner
 }
 
 var _ IECSTestRunner = (*ContainerInsightsTestRunner)(nil)
@@ -57,9 +58,27 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 		Status: status.FAILED,
 	}
 
-	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{}}
+	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key: "ClusterName",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key: "ContainerInstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key: "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
 
-	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, metric.AVERAGE)
+	if (len(failed) > 0) {
+		return testResult
+	}
+
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

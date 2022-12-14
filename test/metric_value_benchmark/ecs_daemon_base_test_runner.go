@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -62,6 +63,10 @@ type ECSTestRunner struct {
 	testRunner       IECSTestRunner
 	agentRunStrategy IAgentRunStrategy
 	env              environment.MetaData
+}
+
+type BaseTestRunner struct {
+	DimensionFactory dimension.Factory
 }
 
 func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData) {

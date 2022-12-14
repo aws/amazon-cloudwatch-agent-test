@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/stretchr/testify/suite"
 	"log"
@@ -42,8 +44,9 @@ var (
 
 func getTestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if testRunners == nil {
+		factory := dimension.GetDimensionFactory(*env)
 		testRunners = []*test_runner.TestRunner{
-			{TestRunner: &NoAppendDimensionTestRunner{}},
+			{TestRunner: &NoAppendDimensionTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return testRunners

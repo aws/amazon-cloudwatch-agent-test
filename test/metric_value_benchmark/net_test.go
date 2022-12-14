@@ -7,16 +7,19 @@
 package metric_value_benchmark
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
+
 )
 
 type NetTestRunner struct {
-	test_runner.BaseTestRunner
+	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*NetTestRunner)(nil)
@@ -62,9 +65,25 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{"InstanceId"}}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:  "interface",
+			Value: dimension.ExpectedDimensionValue{aws.String("docker0")},
+		},
+		{
+			Key:  "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
+
+	if (len(failed) > 0) {
+		return testResult
+	}
+
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
+
 	if err != nil {
 		return testResult
 	}

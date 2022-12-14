@@ -7,8 +7,8 @@
 package metric_append_dimension
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 
@@ -17,7 +17,7 @@ import (
 )
 
 type NoAppendDimensionTestRunner struct {
-	test_runner.BaseTestRunner
+	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*NoAppendDimensionTestRunner)(nil)
@@ -57,9 +57,19 @@ func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName
 		Status: status.FAILED,
 	}
 
-	fetcher := metric.MetricValueFetcher{Env: &environment.MetaData{}, ExpectedDimensionNames: []string{"host"}}
+	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:  "host",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
 
-	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, metric.AVERAGE)
+	if (len(failed) > 0) {
+		return testResult
+	}
+
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, dims, metric.AVERAGE)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
