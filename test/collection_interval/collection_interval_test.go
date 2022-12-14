@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 const (
@@ -29,6 +30,12 @@ type input struct {
 	upperBoundInclusive int
 	dataInput           string
 	testDescription     string
+}
+
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
 // Sets the collection interval and makes sure we get the numbers of expected metrics

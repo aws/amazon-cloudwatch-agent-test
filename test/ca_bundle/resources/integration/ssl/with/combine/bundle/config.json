@@ -6,7 +6,7 @@
     "logfile": ""
   },
   "metrics": {
-    "endpoint_override": "https://localhost.localstack.cloud:4566",
+    "endpoint_override": "https://:4566",
     "metrics_collected": {
       "disk": {
         "measurement": [
