@@ -15,8 +15,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/aws-sdk-go-v2/aws"
-
 	"time"
 )
 
@@ -68,10 +66,6 @@ func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
 	}
 
 	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:  "name",
-			Value: dimension.ExpectedDimensionValue{aws.String("nvme0n1")},
-		},
 		{
 			Key:  "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
