@@ -7,8 +7,9 @@
 package dimension
 
 import (
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"log"
 )
 
 type CustomDimensionProvider struct {
@@ -22,9 +23,12 @@ func (p *CustomDimensionProvider) IsApplicable() bool {
 }
 
 func (p *CustomDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
+	log.Printf("CustomDimProvider")
 	if !instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}
+	log.Printf("Known value")
+
 	return types.Dimension{
 		Name:  aws.String(instruction.Key),
 		Value: aws.String(*instruction.Value.Value),
