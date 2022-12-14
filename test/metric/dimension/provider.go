@@ -10,6 +10,7 @@ package dimension
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"log"
 )
 
 type ExpectedDimensionValue struct {
@@ -63,6 +64,7 @@ func (f *Factory) GetDimensions(instructions []Instruction) ([]types.Dimension, 
 		dim := f.executeInstruction(instruction)
 		if (dim != types.Dimension{}) {
 			resultDimensions = append(resultDimensions, dim)
+			log.Printf("Result dim is : %s, %s", *dim.Name, *dim.Value)
 		} else {
 			unfulfilledInstructions = append(unfulfilledInstructions, instruction)
 		}
