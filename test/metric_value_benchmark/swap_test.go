@@ -52,6 +52,10 @@ func (t *SwapTestRunner) getMeasuredMetrics() []string {
 	}
 }
 
+func (t *SwapTestRunner) setupAfterAgentRun() error {
+	return nil
+}
+
 func (t *SwapTestRunner) validateSwapMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
