@@ -45,6 +45,10 @@ func (t *StatsdTestRunner) getAgentRunDuration() time.Duration {
 	return time.Minute
 }
 
+func (t *StatsdTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
 func (t *StatsdTestRunner) setupAfterAgentRun() error {
 	// EC2 Image Builder creates a bash script that sends statsd format to cwagent at port 8125
 	// The bash script is at /etc/statsd.sh

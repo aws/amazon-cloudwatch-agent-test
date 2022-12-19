@@ -44,6 +44,10 @@ func (m *NetTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
+func (m *NetTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
 func (m *NetTestRunner) setupAfterAgentRun() error {
 	return nil
 }

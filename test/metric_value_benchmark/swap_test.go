@@ -52,6 +52,10 @@ func (t *SwapTestRunner) getMeasuredMetrics() []string {
 	}
 }
 
+func (t *SwapTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
 func (t *SwapTestRunner) setupAfterAgentRun() error {
 	return nil
 }

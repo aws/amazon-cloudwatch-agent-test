@@ -45,6 +45,10 @@ func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
+func (t *CPUTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
 func (t *CPUTestRunner) setupAfterAgentRun() error {
 	return nil
 }

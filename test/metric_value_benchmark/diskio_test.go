@@ -44,7 +44,11 @@ func (m *DiskIOTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *DiskIOTestRunner) setupAfterAgentRun() error {
+func (m *DiskIOTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
+func (m *DiskIOTestRunner) setupAfterAgentRun() error {
 	return nil
 }
 

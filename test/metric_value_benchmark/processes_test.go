@@ -50,10 +50,13 @@ func (m *ProcessesTestRunner) getMeasuredMetrics() []string {
 		"processes_total", "processes_total_threads", "processes_zombies"}
 }
 
-func (m *ProcessesTestRunner) setupAfterAgentRun() error {
+func (m *ProcessesTestRunner) setupBeforeAgentRun() error {
 	return nil
 }
 
+func (m *ProcessesTestRunner) setupAfterAgentRun() error {
+	return nil
+}
 
 func (m *ProcessesTestRunner) validateProcessesMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{

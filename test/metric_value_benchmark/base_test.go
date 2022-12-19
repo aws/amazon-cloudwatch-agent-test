@@ -30,6 +30,7 @@ type ITestRunner interface {
 	getAgentConfigFileName() string
 	getAgentRunDuration() time.Duration
 	getMeasuredMetrics() []string
+	setupBeforeAgentRun() error
 	setupAfterAgentRun() error
 }
 
@@ -65,10 +66,16 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		},
 	}
 
+	err := t.testRunner.setupBeforeAgentRun()
+	if err != nil {
+		testGroupResult.TestResults[0].Status = status.FAILED
+		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %s", err.Error())
+	}
+
 	agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
 	common.CopyFile(agentConfigPath, configOutputPath)
-	err := common.StartAgent(configOutputPath, false)
+	err = common.StartAgent(configOutputPath, false)
 
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
@@ -78,7 +85,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	err = t.testRunner.setupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to run extra commands due to: %s", err.Error())
+		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %s", err.Error())
 	}
 
 	runningDuration := t.testRunner.getAgentRunDuration()

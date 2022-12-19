@@ -20,7 +20,7 @@ type EMFMetricValueFetcher struct {
 var _ MetricValueFetcher = (*EMFMetricValueFetcher)(nil)
 
 func (f *EMFMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := append(f.getMetricSpecificDimensions(), f.getInstanceIdDimension())
+	dimensions := append(f.getMetricSpecificDimensions(metricName), f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %s: %s", metricName, err.Error())
@@ -39,7 +39,7 @@ func (f *EMFMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 		"EMFCounter": {},
 	}
 }
-func (f *EMFMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+func (f *EMFMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
 	return []types.Dimension{
 		{
 			Name:  aws.String("Type"),

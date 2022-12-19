@@ -45,6 +45,10 @@ func (t *EMFTestRunner) getAgentRunDuration() time.Duration {
 	return time.Minute
 }
 
+func (t *EMFTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
 func (t *EMFTestRunner) setupAfterAgentRun() error {
 	// EC2 Image Builder creates a bash script that sends emf format to cwagent at port 8125
 	// The bash script is at /etc/emf.sh

@@ -44,7 +44,11 @@ func (m *ProcStatTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *ProcStatTestRunner) setupAfterAgentRun() error {
+func (m *ProcStatTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
+func (m *ProcStatTestRunner) setupAfterAgentRun() error {
 	return nil
 }
 
