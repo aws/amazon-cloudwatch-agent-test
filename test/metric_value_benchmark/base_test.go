@@ -42,6 +42,14 @@ type BaseTestRunner struct {
 	*metric.MetricFetcherFactory
 }
 
+func (t *BaseTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
+func (t *BaseTestRunner) setupAfterAgentRun() error {
+	return nil
+}
+
 func (t *TestRunner) Run(s *MetricBenchmarkTestSuite) {
 	testName := t.testRunner.getTestName()
 	log.Printf("Running %v", testName)
@@ -69,7 +77,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	err := t.testRunner.setupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %s", err.Error())
+		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
 
 	agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
@@ -79,13 +87,13 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Agent could not start due to: %s", err.Error())
+		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
 	err = t.testRunner.setupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %s", err.Error())
+		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
 	}
 
 	runningDuration := t.testRunner.getAgentRunDuration()
@@ -96,7 +104,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	err = common.DeleteFile(configOutputPath)
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %s", err.Error())
+		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %w", err)
 	}
 
 	return testGroupResult, nil

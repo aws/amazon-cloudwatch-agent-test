@@ -71,7 +71,7 @@ func (t *PrometheusTestRunner) getAgentConfigFileName() string {
 }
 
 func (t *PrometheusTestRunner) getAgentRunDuration() time.Duration {
-	return time.Minute
+	return minimumAgentRuntime
 }
 
 func (t *PrometheusTestRunner) setupBeforeAgentRun() error {
@@ -82,10 +82,6 @@ func (t *PrometheusTestRunner) setupBeforeAgentRun() error {
 	}
 
 	return common.RunCommands(startPrometheusCommands)
-}
-
-func (t *PrometheusTestRunner) setupAfterAgentRun() error {
-	return nil
 }
 
 func (t *PrometheusTestRunner) getMeasuredMetrics() []string {

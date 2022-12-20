@@ -45,10 +45,6 @@ func (t *CollectDTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *CollectDTestRunner) setupBeforeAgentRun() error {
-	return nil
-}
-
 func (t *CollectDTestRunner) setupAfterAgentRun() error {
 	// EC2 Image Builder creates the collectd's default configuration and collectd will pick it up.
 	// For Linux the static is at /etc/collectd.conf, fox Ubuntu it is at /etc/collectd/collectd.conf
