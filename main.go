@@ -1,12 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package sanity
+package main
 
-import (
-	"testing"
-)
+func main() {
 
-func TestAgentStatus(t *testing.T) {
-	SanityCheck(t)
 }

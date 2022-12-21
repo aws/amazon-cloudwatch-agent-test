@@ -1,0 +1,59 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: PR Build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+    paths-ignore:
+      - '**/*.md'
+      - '.github/**'
+      - '!.github/workflows/build-*'
+
+concurrency:
+  group: pr-build-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    needs: changes
+    steps:
+    # Set up building environment, patch the dev repo code on dispatch events.  
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v3
+      with:
+        go-version: '~1.18.8'
+
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Cache go
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
+    - name: Cache binaries
+      id: cached_binaries
+      uses: actions/cache@v3
+      with:
+        key: "cached_binaries_${{ github.run_id }}"
+        path: build
+
+    - name: Upload Coverage report to CodeCov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.txt
+
+    # Build and archive binaries into cache.
+    - name: Build Binaries
+      if: ${{ needs.changes.outputs.changed == 'true' && steps.cached_binaries.outputs.cache-hit != 'true' }}
+      run: make build
+
+  
