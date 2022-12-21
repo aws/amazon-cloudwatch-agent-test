@@ -35,6 +35,7 @@ func (f *PrometheusMetricValueFetcher) isApplicable(metricName string) bool {
 }
 
 func (f *PrometheusMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
+	// CWA currently only supports counters, gauges & summaries. We drop any untyped & histogram metrics and hence are "unsuppported" here.
 	return map[string]struct{}{
 		"prometheus_test_counter":       {},
 		"prometheus_test_gauge":         {},
