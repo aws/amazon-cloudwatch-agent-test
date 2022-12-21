@@ -22,7 +22,7 @@ type ContainerInsightsValueFetcher struct {
 var _ MetricValueFetcher = (*ContainerInsightsValueFetcher)(nil)
 
 func (f *ContainerInsightsValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := f.getMetricSpecificDimensions()
+	dimensions := f.getMetricSpecificDimensions(metricName)
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %s: %s", metricName, err.Error())
@@ -47,7 +47,7 @@ func (f *ContainerInsightsValueFetcher) isApplicable(metricName string) bool {
 	return exists
 }
 
-func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
 	//TODO currently assuming there's only one container
 	containerInstances, err := awsservice.GetContainerInstances(f.getEnv().EcsClusterArn)
 	if err != nil {

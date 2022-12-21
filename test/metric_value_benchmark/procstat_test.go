@@ -44,10 +44,6 @@ func (m *ProcStatTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *ProcStatTestRunner) setupAfterAgentRun() error {
-	return nil
-}
-
 func (m *ProcStatTestRunner) getMeasuredMetrics() []string {
 	return []string{
 		"procstat_cpu_time_system", "procstat_cpu_time_user", "procstat_cpu_usage", "procstat_memory_data", "procstat_memory_locked",

@@ -8,8 +8,6 @@ package metric
 
 import (
 	"log"
-
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 type MemMetricValueFetcher struct {
@@ -19,7 +17,7 @@ type MemMetricValueFetcher struct {
 var _ MetricValueFetcher = (*MemMetricValueFetcher)(nil)
 
 func (f *MemMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := append(f.getMetricSpecificDimensions(), f.getInstanceIdDimension())
+	dimensions := append(f.getMetricSpecificDimensions(metricName), f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %s: %s", metricName, err.Error())
@@ -48,8 +46,4 @@ func (f *MemMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 		"mem_used":              {},
 		"mem_used_percent":      {},
 	}
-}
-
-func (f *MemMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
-	return []types.Dimension{}
 }
