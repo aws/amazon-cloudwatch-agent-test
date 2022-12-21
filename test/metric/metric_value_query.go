@@ -93,6 +93,10 @@ func (f *baseMetricValueFetcher) getInstanceIdDimension() types.Dimension {
 	}
 }
 
+func (f *baseMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
+	return []types.Dimension{}
+}
+
 func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
 	dimensions := metricSpecificDimensions
 	metricToFetch := types.Metric{

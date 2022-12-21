@@ -7,8 +7,6 @@ package metric
 
 import (
 	"log"
-
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 type SwapMetricValueFetcher struct {
@@ -39,8 +37,4 @@ func (f *SwapMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} 
 		"swap_used":         {},
 		"swap_used_percent": {},
 	}
-}
-
-func (f *SwapMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
-	return []types.Dimension{}
 }

@@ -9,7 +9,6 @@ package metric_value_benchmark
 import (
 	_ "embed"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -102,13 +101,11 @@ func (t *PrometheusTestRunner) validatePrometheusMetric(metricName string) statu
 
 	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
-		log.Printf("%v", err)
 		return testResult
 	}
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 	if err != nil {
-		log.Printf("%v", err)
 		return testResult
 	}
 

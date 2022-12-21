@@ -8,8 +8,6 @@ package metric
 
 import (
 	"log"
-
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 type ProcessesMetricValueFetcher struct {
@@ -49,8 +47,4 @@ func (f *ProcessesMetricValueFetcher) getPluginSupportedMetric() map[string]stru
 		"processes_wait":          {},
 		"processes_zombies":       {},
 	}
-}
-
-func (f *ProcessesMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
-	return []types.Dimension{}
 }
