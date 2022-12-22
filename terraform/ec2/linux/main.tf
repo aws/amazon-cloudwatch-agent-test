@@ -1,8 +1,8 @@
-#####################################################################
-# Ensure there is unique testing_id for each test
-#####################################################################
-resource "random_id" "testing_id" {
-  byte_length = 8
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+module "common" {
+  source = "../../common"
 }
 
 #####################################################################

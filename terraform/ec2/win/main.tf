@@ -1,27 +1,22 @@
-#Create a unique testing_id for each test
-resource "random_id" "testing_id" {
-  byte_length = 8
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+module "common" {
+  source = "../../common"
 }
 
 #####################################################################
 # Generate EC2 Key Pair for log in access to EC2
 #####################################################################
 
-resource "tls_private_key" "ssh_key" {
-  count     = var.ssh_key_name == "" ? 1 : 0
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "aws_ssh_key" {
-  count      = var.ssh_key_name == "" ? 1 : 0
-  key_name   = "ec2-key-pair-${random_id.testing_id.hex}"
-  public_key = tls_private_key.ssh_key[0].public_key_openssh
+data "aws_key_pair" "aws_ssh_key" {
+  key_name           = module.common.ec2_key_pair
+  include_public_key = true
 }
 
 locals {
-  ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
-  private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key.key_name
+  private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : aws_key_pair.aws_ssh_key.key_name
 }
 
 #####################################################################
@@ -57,7 +52,7 @@ msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
 EOF
 
   tags = {
-    Name = "cwagent-integ-test-ec2-windows-${element(split("/", var.test_dir),3)}-${random_id.testing_id.hex}"
+    Name = "cwagent-integ-test-ec2-windows-${element(split("/", var.test_dir), 3)}-${random_id.testing_id.hex}"
   }
 }
 
@@ -66,7 +61,7 @@ resource "null_resource" "integration_test" {
   # Install software
   provisioner "remote-exec" {
     inline = [
-      "start /wait timeout 120", //Wait some time to ensure all binaries have been downloaded
+      "start /wait timeout 120",                             //Wait some time to ensure all binaries have been downloaded
       "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
       "set AWS_REGION=${var.region}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",

@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 variable "ec2_instance_type" {
   type    = string
   default = "t3a.xlarge"

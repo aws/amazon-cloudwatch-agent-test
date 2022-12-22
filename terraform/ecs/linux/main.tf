@@ -1,14 +1,16 @@
-#Create a unique testing_id for each test
-resource "random_id" "testing_id" {
-  byte_length = 8
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+module "common" {
+  source = "../../common"
 }
 
 resource "aws_ecs_cluster" "cluster" {
-  name = "cwagent-integ-test-cluster-${random_id.testing_id.hex}"
+  name = "cwagent-integ-test-cluster-${module.common.testing_id}"
 }
 
 resource "aws_cloudwatch_log_group" "log_group" {
-  name = "cwagent-integ-test-log-group-${random_id.testing_id.hex}"
+  name = "cwagent-integ-test-log-group-${module.common.testing_id}"
 }
 
 ##########################################
@@ -29,7 +31,7 @@ data "template_file" "cwagent_config" {
 }
 
 resource "aws_ssm_parameter" "cwagent_config" {
-  name  = "cwagent-integ-test-ssm-config-${random_id.testing_id.hex}"
+  name  = "cwagent-integ-test-ssm-config-${module.common.testing_id}"
   type  = "String"
   value = data.template_file.cwagent_config.rendered
 }
@@ -41,7 +43,7 @@ data "template_file" "prometheus_config" {
 }
 
 resource "aws_ssm_parameter" "prometheus_config" {
-  name  = "prometheus-integ-test-ssm-config-${random_id.testing_id.hex}"
+  name  = "prometheus-integ-test-ssm-config-${module.common.testing_id}"
   type  = "String"
   value = data.template_file.prometheus_config.rendered
 }
@@ -56,26 +58,26 @@ data "template_file" "cwagent_container_definitions" {
     region                       = var.region
     cwagent_ssm_parameter_arn    = aws_ssm_parameter.cwagent_config.name
     prometheus_ssm_parameter_arn = aws_ssm_parameter.prometheus_config.name
-    cwagent_image                = "${var.cwagent_image_repo}:${var.cwagent_image_tag}"
+    cwagent_image                = "${module.common.cwagent_image_repo}:${module.common.cwagent_image_tag}"
     log_group                    = aws_cloudwatch_log_group.log_group.name
-    testing_id                   = random_id.testing_id.hex
+    testing_id                   = module.common.testing_id
   }
 }
 
 resource "aws_ecs_task_definition" "cwagent_task_definition" {
-  family                   = "cwagent-task-family-${random_id.testing_id.hex}"
+  family                   = "cwagent-task-family-${module.common.testing_id}"
   network_mode             = "awsvpc"
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = data.aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = data.aws_iam_role.ecs_task_execution_role.arn
   cpu                      = 256
   memory                   = 2048
   requires_compatibilities = ["FARGATE"]
   container_definitions    = data.template_file.cwagent_container_definitions.rendered
-  depends_on               = [aws_cloudwatch_log_group.log_group, aws_iam_role.ecs_task_role, aws_iam_role.ecs_task_execution_role]
+  depends_on               = [aws_cloudwatch_log_group.log_group, data.aws_iam_role.ecs_task_role, data.aws_iam_role.ecs_task_execution_role]
 }
 
 resource "aws_ecs_service" "cwagent_service" {
-  name            = "cwagent-service-${random_id.testing_id.hex}"
+  name            = "cwagent-service-${module.common.testing_id}"
   cluster         = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.cwagent_task_definition.arn
   desired_count   = 1
@@ -87,7 +89,7 @@ resource "aws_ecs_service" "cwagent_service" {
     assign_public_ip = true
   }
 
-  depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
+  depends_on = [aws_ecs_task_definition.cwagent_task_definition]
 }
 
 #####################################################################
@@ -103,19 +105,19 @@ data "template_file" "extra_apps" {
 }
 
 resource "aws_ecs_task_definition" "extra_apps_task_definition" {
-  family                   = "extra-apps-family-${random_id.testing_id.hex}"
+  family                   = "extra-apps-family-${module.common.testing_id}"
   network_mode             = "awsvpc"
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = data.aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = data.aws_iam_role.ecs_task_execution_role.arn
   cpu                      = 256
   memory                   = 1024
   requires_compatibilities = ["FARGATE"]
   container_definitions    = data.template_file.extra_apps.rendered
-  depends_on               = [aws_cloudwatch_log_group.log_group, aws_iam_role.ecs_task_role, aws_iam_role.ecs_task_execution_role]
+  depends_on               = [aws_cloudwatch_log_group.log_group, data.aws_iam_role.ecs_task_role, data.aws_iam_role.ecs_task_execution_role]
 }
 
 resource "aws_ecs_service" "extra_apps_service" {
-  name            = "extra-apps-service-${random_id.testing_id.hex}"
+  name            = "extra-apps-service-${module.common.testing_id}"
   cluster         = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.extra_apps_task_definition.arn
   desired_count   = 1
@@ -127,7 +129,7 @@ resource "aws_ecs_service" "extra_apps_service" {
     assign_public_ip = true
   }
 
-  depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
+  depends_on = [aws_ecs_task_definition.extra_apps_task_definition]
 }
 
 resource "null_resource" "validator" {
