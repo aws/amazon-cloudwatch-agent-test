@@ -21,6 +21,7 @@ import (
 )
 
 var metricValueFetchers = []MetricValueFetcher{
+	&NetStatMetricValueFetcher{},
 	&PrometheusMetricValueFetcher{},
 	&SwapMetricValueFetcher{},
 	&CPUMetricValueFetcher{},
