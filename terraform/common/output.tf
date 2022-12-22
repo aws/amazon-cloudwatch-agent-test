@@ -30,5 +30,5 @@ output "cwagent_image_tag" {
 }
 
 output "vpc_security_group" {
-    value = var.vpc_security_group
+  value = var.vpc_security_group
 }

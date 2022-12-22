@@ -84,7 +84,7 @@ resource "aws_ecs_service" "cwagent_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    security_groups  = [aws_security_group.ecs_security_group.id]
+    security_groups  = [data.aws_security_group.ecs_security_group.id]
     subnets          = toset(data.aws_subnets.default.ids)
     assign_public_ip = true
   }
@@ -124,7 +124,7 @@ resource "aws_ecs_service" "extra_apps_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    security_groups  = [aws_security_group.ecs_security_group.id]
+    security_groups  = [data.aws_security_group.ecs_security_group.id]
     subnets          = toset(data.aws_subnets.default.ids)
     assign_public_ip = true
   }

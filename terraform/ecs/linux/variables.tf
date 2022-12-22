@@ -9,5 +9,5 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "./integration/test/ecs/ecs_metadata"
+  default = "./test/ecs/ecs_metadata"
 }

@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: MIT
 
 variable "cwa_iam_role" {
-    type    = string
+  type    = string
   default = "cwa-e2e-iam-role"
 }
 
 variable "cwa_iam_policy" {
-    type    = string
+  type    = string
   default = "cwa-e2e-iam-policy"
 }
 
 variable "cwa_iam_instance_profile" {
-    type    = string
+  type    = string
   default = "cwa-e2e-iam-instance-profile"
 }
 
 variable "ec2_key_pair" {
-    type    = string
+  type    = string
   default = "ec2-key-pair"
 }
 
@@ -33,6 +33,6 @@ variable "cwagent_image_tag" {
 }
 
 variable "vpc_security_group" {
-type    = string
+  type    = string
   default = "vpc_security_group"
 }
