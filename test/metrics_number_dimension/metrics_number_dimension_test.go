@@ -12,9 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 const (
@@ -72,8 +74,8 @@ func TestNumberMetricDimension(t *testing.T) {
 			parameter.resourcePath, parameter.failToStart, parameter.numberDimensionsInCW, parameter.metricName)
 
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.resourcePath, parameter.failToStart), func(t *testing.T) {
-			test.CopyFile(parameter.resourcePath+configJSON, configOutputPath)
-			err := test.StartAgent(configOutputPath, false)
+			common.CopyFile(parameter.resourcePath+configJSON, configOutputPath)
+			err := common.StartAgent(configOutputPath, false)
 
 			// for append dimension we auto fail over 30 for custom metrics (statsd we collect remove dimension and continue)
 			// Go output starts at the time of failure so the failure message gets chopped off. Thus have to use if there is an error and just assume reason.
@@ -86,11 +88,11 @@ func TestNumberMetricDimension(t *testing.T) {
 
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
-			test.StopAgent()
+			common.StopAgent()
 
 			// test for cloud watch metrics
 			dimensionFilter := buildDimensionFilterList(parameter.numberDimensionsInCW)
-			test.ValidateMetrics(t, parameter.metricName, namespace, dimensionFilter)
+			awsservice.ValidateMetrics(t, parameter.metricName, namespace, dimensionFilter)
 		})
 	}
 }
@@ -99,7 +101,7 @@ func buildDimensionFilterList(appendDimension int) []types.DimensionFilter {
 	// we append dimension from 0 to max number - 2
 	// then we add dimension instance id
 	// thus for max dimension 10, 0 to 8 + instance id = 10 dimension
-	ec2InstanceId := test.GetInstanceId()
+	ec2InstanceId := awsservice.GetInstanceId()
 	dimensionFilter := make([]types.DimensionFilter, appendDimension)
 	for i := 0; i < appendDimension-1; i++ {
 		dimensionFilter[i] = types.DimensionFilter{

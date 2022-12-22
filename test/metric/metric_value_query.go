@@ -9,22 +9,30 @@ package metric
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 )
 
 var metricValueFetchers = []MetricValueFetcher{
+	&NetStatMetricValueFetcher{},
+	&PrometheusMetricValueFetcher{},
 	&SwapMetricValueFetcher{},
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
 	&ProcStatMetricValueFetcher{},
+	&CollectDMetricValueFetcher{},
 	&DiskIOMetricValueFetcher{},
 	&NetMetricValueFetcher{},
+	&StatsdMetricValueFetcher{},
+	&EMFMetricValueFetcher{},
+	&ProcessesMetricValueFetcher{},
 	&ContainerInsightsValueFetcher{},
 }
 
@@ -55,7 +63,7 @@ type MetricValueFetcher interface {
 	isApplicable(metricName string) bool
 
 	// getMetricSpecificDimensions returns the dimensions that needs to be scraped by each plugin
-	getMetricSpecificDimensions() []types.Dimension
+	getMetricSpecificDimensions(metricName string) []types.Dimension
 
 	// getPluginSupportedMetric returns the supported metrics for each plugin
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go
@@ -76,7 +84,7 @@ func (f *baseMetricValueFetcher) setEnv(env *environment.MetaData) {
 }
 
 func (f *baseMetricValueFetcher) getInstanceIdDimension() types.Dimension {
-	ec2InstanceId := test.GetInstanceId()
+	ec2InstanceId := awsservice.GetInstanceId()
 
 	//TODO For now they can stay. Later host metrics fetchers might need to be flexible on how to get instance Id
 	//because that will be different when testing for ecs ec2 launch type vs plain ec2
@@ -84,6 +92,10 @@ func (f *baseMetricValueFetcher) getInstanceIdDimension() types.Dimension {
 		Name:  aws.String("InstanceId"),
 		Value: aws.String(ec2InstanceId),
 	}
+}
+
+func (f *baseMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
+	return []types.Dimension{}
 }
 
 func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
@@ -102,7 +114,7 @@ func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpeci
 				Period: &metricQueryPeriod,
 				Stat:   aws.String(string(stat)),
 			},
-			Id: aws.String(metricName),
+			Id: aws.String(strings.ToLower(metricName)),
 		},
 	}
 
@@ -116,7 +128,7 @@ func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpeci
 
 	log.Printf("Metric data input is : %s", fmt.Sprint(getMetricDataInput))
 
-	cwmClient, clientContext, err := test.GetCloudWatchMetricsClient()
+	cwmClient, clientContext, err := awsservice.GetCloudWatchMetricsClient()
 	if err != nil {
 		return nil, fmt.Errorf("Error occurred while creating CloudWatch client: %v", err.Error())
 	}

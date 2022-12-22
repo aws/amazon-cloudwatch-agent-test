@@ -13,17 +13,17 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
-type MemTestRunner struct {
+type ProcessesTestRunner struct {
 	BaseTestRunner
 }
 
-var _ ITestRunner = (*MemTestRunner)(nil)
+var _ ITestRunner = (*ProcessesTestRunner)(nil)
 
-func (m *MemTestRunner) validate() status.TestGroupResult {
+func (m *ProcessesTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := m.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, name := range metricsToFetch {
-		testResults[i] = m.validateMemMetric(name)
+		testResults[i] = m.validateProcessesMetric(name)
 	}
 
 	return status.TestGroupResult{
@@ -32,25 +32,25 @@ func (m *MemTestRunner) validate() status.TestGroupResult {
 	}
 }
 
-func (m *MemTestRunner) getTestName() string {
-	return "Mem"
+func (m *ProcessesTestRunner) getTestName() string {
+	return "Processes"
 }
 
-func (m *MemTestRunner) getAgentConfigFileName() string {
-	return "mem_config.json"
+func (m *ProcessesTestRunner) getAgentConfigFileName() string {
+	return "processes_config.json"
 }
 
-func (m *MemTestRunner) getAgentRunDuration() time.Duration {
+func (m *ProcessesTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (m *MemTestRunner) getMeasuredMetrics() []string {
+func (m *ProcessesTestRunner) getMeasuredMetrics() []string {
 	return []string{
-		"mem_active", "mem_available", "mem_available_percent", "mem_buffered", "mem_cached",
-		"mem_free", "mem_inactive", "mem_total", "mem_used", "mem_used_percent"}
+		"processes_blocked", "processes_dead", "processes_idle", "processes_paging", "processes_running", "processes_sleeping", "processes_stopped",
+		"processes_total", "processes_total_threads", "processes_zombies"}
 }
 
-func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
+func (m *ProcessesTestRunner) validateProcessesMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,

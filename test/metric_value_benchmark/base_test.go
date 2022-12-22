@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
@@ -20,6 +20,7 @@ import (
 const (
 	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentConfigDirectory = "agent_configs"
+	extraConfigDirectory = "extra_configs"
 	minimumAgentRuntime  = 3 * time.Minute
 )
 
@@ -29,6 +30,8 @@ type ITestRunner interface {
 	getAgentConfigFileName() string
 	getAgentRunDuration() time.Duration
 	getMeasuredMetrics() []string
+	setupBeforeAgentRun() error
+	setupAfterAgentRun() error
 }
 
 type TestRunner struct {
@@ -37,6 +40,14 @@ type TestRunner struct {
 
 type BaseTestRunner struct {
 	*metric.MetricFetcherFactory
+}
+
+func (t *BaseTestRunner) setupBeforeAgentRun() error {
+	return nil
+}
+
+func (t *BaseTestRunner) setupAfterAgentRun() error {
+	return nil
 }
 
 func (t *TestRunner) Run(s *MetricBenchmarkTestSuite) {
@@ -63,25 +74,37 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		},
 	}
 
+	err := t.testRunner.setupBeforeAgentRun()
+	if err != nil {
+		testGroupResult.TestResults[0].Status = status.FAILED
+		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
+	}
+
 	agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
-	test.CopyFile(agentConfigPath, configOutputPath)
-	err := test.StartAgent(configOutputPath, false)
+	common.CopyFile(agentConfigPath, configOutputPath)
+	err = common.StartAgent(configOutputPath, false)
 
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Agent could not start due to: %v", err.Error())
+		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
+	}
+
+	err = t.testRunner.setupAfterAgentRun()
+	if err != nil {
+		testGroupResult.TestResults[0].Status = status.FAILED
+		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
 	}
 
 	runningDuration := t.testRunner.getAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
-	test.StopAgent()
+	common.StopAgent()
 
-	err = test.DeleteFile(configOutputPath)
+	err = common.DeleteFile(configOutputPath)
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %v", err.Error())
+		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %w", err)
 	}
 
 	return testGroupResult, nil

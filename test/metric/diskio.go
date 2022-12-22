@@ -20,11 +20,10 @@ type DiskIOMetricValueFetcher struct {
 var _ MetricValueFetcher = (*DiskIOMetricValueFetcher)(nil)
 
 func (f *DiskIOMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dims := f.getMetricSpecificDimensions()
-	dims = append(dims, f.getInstanceIdDimension())
-	values, err := f.fetch(namespace, metricName, dims, stat)
+	dimensions := append(f.getMetricSpecificDimensions(metricName), f.getInstanceIdDimension())
+	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
-		log.Printf("Error while fetching metric value for %s: %v", metricName, err)
+		log.Printf("Error while fetching metric value for %s: %s", metricName, err.Error())
 	}
 	return values, err
 }
@@ -50,7 +49,7 @@ func (f *DiskIOMetricValueFetcher) getPluginSupportedMetric() map[string]struct{
 	}
 }
 
-func (f *DiskIOMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+func (f *DiskIOMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
 	return []types.Dimension{
 		{
 			Name:  aws.String("name"),
