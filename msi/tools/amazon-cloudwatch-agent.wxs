@@ -31,6 +31,11 @@
                       Key="SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell"
                       Name="Path" />
     </Property>
+
+     <!-- Disable modify/repair operations because otherwise non-admin can run them. -->
+     <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
+     <Property Id="ARPNOMODIFY" Value="yes" Secure="yes" />
+
     <Feature Id='ProductFeature' Title="Amazon CloudWatch Agent" Level='1'>
       <ComponentRef Id='StarterEXE' />
       <ComponentRef Id='AgentEXE' />
@@ -152,17 +157,17 @@
         </Component>
     </DirectoryRef>
      <!-- Find and use powershell to run the command, because just running "powershell.exe" did not resolve (not in ENV path) when using "WixQuietExec".-->
-    <SetProperty Id="QtExecUpdateConfigPermission" 
+    <SetProperty Id="QtExecUpdateConfigPermission"
         Sequence="execute"
         Before ="QtExecUpdateConfigPermission"
-        Value='&quot;[POWERSHELLEXE]&quot;  -ExecutionPolicy Bypass -File "[INSTALLDIR]permission.ps1" ' 
+        Value='&quot;[POWERSHELLEXE]&quot;  -ExecutionPolicy Bypass -File "[INSTALLDIR]permission.ps1" '
     />
     <!-- Setup a silent execution contrainer around the command -->
-    <CustomAction Id="QtExecUpdateConfigPermission" 
-    BinaryKey="WixCA" 
-    DllEntry="WixQuietExec" 
-    Execute="deferred" 
-    Return="check" 
+    <CustomAction Id="QtExecUpdateConfigPermission"
+    BinaryKey="WixCA"
+    DllEntry="WixQuietExec"
+    Execute="deferred"
+    Return="check"
     Impersonate="no" />
 
     <InstallExecuteSequence>
