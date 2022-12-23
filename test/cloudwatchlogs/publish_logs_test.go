@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux
-// +build linux
+//go:build !windows
+// +build !windows
 
 package cloudwatchlogs
 

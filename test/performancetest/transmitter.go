@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
 
 package performancetest
 
@@ -146,8 +148,11 @@ AddItem()
 Desc: Takes in a packet and
 will convert to dynamodb format  and upload to dynamodb table.
 Param:
+
 	packet * map[string]interface{}:  is a map with data collection data
+
 Side effects:
+
 	Adds an item to dynamodb table
 */
 func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) (string, error) {
@@ -238,8 +243,11 @@ func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}, tps i
 /*
 PacketMerger()
 Desc:
+
 	This function updates the currentPacket with the unique parts of newPacket and returns in dynamo format
+
 Params:
+
 	newPacket: this is the agentData collected in this test
 	currentPacket: this is the agentData stored in dynamo currently
 */
@@ -282,8 +290,11 @@ func (transmitter *TransmitterAPI) PacketMerger(newPacket map[string]interface{}
 /*
 UpdateItem()
 Desc:
+
 	This function updates the item in dynamo if the atomic condition is true else it will return ConditionalCheckFailedException
+
 Params:
+
 	hash: this is the commitHash
 	targetAttributes: this is the targetAttribute to be added to the dynamo item
 	testHash: this is the hash of the last item, used like a version check

@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux
-// +build linux
+//go:build !windows
+// +build !windows
 
 package metric
 
@@ -18,7 +18,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
 )
 
 var metricValueFetchers = []MetricValueFetcher{

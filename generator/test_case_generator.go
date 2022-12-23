@@ -6,7 +6,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 )
@@ -47,19 +46,16 @@ func main() {
 }
 
 func genMatrix(targetOS string, testDirList []string) []map[string]string {
-	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", targetOS))
 
+	byteValueTestMatrix, err := os.ReadFile(fmt.Sprintf("generator/resources/%v_test_matrix.json", targetOS))
 	if err != nil {
-		log.Panicf("can't read file %v_test_matrix.json err %v", targetOS, err)
+		log.Panicf("Cannot open  file %v_test_matrix.json err %v", targetOS, err)
 	}
-
-	byteValueTestMatrix, _ := ioutil.ReadAll(openTestMatrix)
-	_ = openTestMatrix.Close()
 
 	var testMatrix []map[string]string
 	err = json.Unmarshal(byteValueTestMatrix, &testMatrix)
 	if err != nil {
-		log.Panicf("can't unmarshall file %v_test_matrix.json err %v", targetOS, err)
+		log.Panicf("Cannot unmarshall file %v_test_matrix.json err %v", targetOS, err)
 	}
 
 	var testMatrixComplete []map[string]string
@@ -78,7 +74,7 @@ func writeTestMatrixFile(targetOS string, testMatrix []map[string]string) {
 	if err != nil {
 		log.Panicf("Can't marshal json for target os %v, err %v", targetOS, err)
 	}
-	err = ioutil.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", targetOS), bytes, os.ModePerm)
+	err = os.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", targetOS), bytes, os.ModePerm)
 	if err != nil {
 		log.Panicf("Can't write json to file for target os %v, err %v", targetOS, err)
 	}

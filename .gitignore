@@ -10,3 +10,4 @@ terraform.*
 **/.terraform/*
 coverage.txt
 generator/resources/*complete*.json
+*.test
