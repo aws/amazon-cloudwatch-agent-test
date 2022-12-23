@@ -20,7 +20,7 @@ type NetMetricValueFetcher struct {
 var _ MetricValueFetcher = (*NetMetricValueFetcher)(nil)
 
 func (f *NetMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := append(f.getMetricSpecificDimensions(), f.getInstanceIdDimension())
+	dimensions := append(f.getMetricSpecificDimensions(metricName), f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
 		log.Printf("Error while fetching metric value for %s: %s", metricName, err.Error())
@@ -49,7 +49,7 @@ func (f *NetMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	}
 }
 
-func (f *NetMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+func (f *NetMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
 	return []types.Dimension{
 		{
 			Name:  aws.String("interface"),

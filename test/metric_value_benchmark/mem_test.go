@@ -44,10 +44,6 @@ func (m *MemTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *MemTestRunner) setupAfterAgentRun() error {
-	return nil
-}
-
 func (m *MemTestRunner) getMeasuredMetrics() []string {
 	return []string{
 		"mem_active", "mem_available", "mem_available_percent", "mem_buffered", "mem_cached",

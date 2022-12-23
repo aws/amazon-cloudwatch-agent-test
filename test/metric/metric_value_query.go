@@ -21,6 +21,7 @@ import (
 )
 
 var metricValueFetchers = []MetricValueFetcher{
+	&PrometheusMetricValueFetcher{},
 	&SwapMetricValueFetcher{},
 	&CPUMetricValueFetcher{},
 	&MemMetricValueFetcher{},
@@ -61,7 +62,7 @@ type MetricValueFetcher interface {
 	isApplicable(metricName string) bool
 
 	// getMetricSpecificDimensions returns the dimensions that needs to be scraped by each plugin
-	getMetricSpecificDimensions() []types.Dimension
+	getMetricSpecificDimensions(metricName string) []types.Dimension
 
 	// getPluginSupportedMetric returns the supported metrics for each plugin
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go
@@ -90,6 +91,10 @@ func (f *baseMetricValueFetcher) getInstanceIdDimension() types.Dimension {
 		Name:  aws.String("InstanceId"),
 		Value: aws.String(ec2InstanceId),
 	}
+}
+
+func (f *baseMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
+	return []types.Dimension{}
 }
 
 func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {

@@ -20,7 +20,7 @@ type StatsdMetricValueFetcher struct {
 var _ MetricValueFetcher = (*StatsdMetricValueFetcher)(nil)
 
 func (f *StatsdMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := f.getMetricSpecificDimensions()
+	dimensions := f.getMetricSpecificDimensions(metricName)
 	dimensions = append(dimensions, f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
@@ -47,7 +47,7 @@ func (f *StatsdMetricValueFetcher) getPluginSupportedMetric() map[string]struct{
 		"statsd_counter": {},
 	}
 }
-func (f *StatsdMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+func (f *StatsdMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
 	return []types.Dimension{
 		{
 			Name:  aws.String("metric_type"),
