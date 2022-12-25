@@ -27,6 +27,45 @@ locals {
 }
 
 #####################################################################
+# Create EFS
+#####################################################################
+resource "aws_efs_file_system" "efs" {
+  creation_token = "predictable-${random_id.testing_id.hex}"
+  tags           = {
+    Name = "predictable-${random_id.testing_id.hex}"
+  }
+}
+
+resource "aws_efs_mount_target" "mount" {
+  file_system_id = aws_efs_file_system.efs.id
+  subnet_id = aws_instance.cwagent.subnet_id
+  security_groups = [aws_security_group.ec2_security_group.id]
+}
+
+resource "null_resource" "configure_efs" {
+  depends_on = [
+    aws_efs_mount_target.mount,
+    aws_instance.cwagent
+  ]
+
+  connection {
+    type = "ssh"
+    user = "ec2-user"
+    private_key = local.private_key_content
+    host = aws_instance.cwagent.public_ip
+  }
+
+  provisioner "remote-exec" {
+    # https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.html
+    inline = [
+      "sudo yum install -y amazon-efs-utils",
+      "sudo mkdir ${var.efs_mount_point}",
+      "sudo mount -t efs -o tls ${aws_efs_file_system.efs.dns_name} ${var.efs_mount_point}/",
+    ]
+  }
+}
+
+#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
@@ -49,7 +88,7 @@ resource "null_resource" "integration_test" {
       "echo sha ${var.cwa_github_sha}",
       "cloud-init status --wait",
       "echo clone and install agent",
-      "git clone ${var.github_test_repo}",
+      "git clone ${var.github_test_repo} --branch hacked_ec2",
       "cd amazon-cloudwatch-agent-test",
       "git reset --hard ${var.cwa_test_github_sha}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
@@ -86,7 +125,7 @@ resource "null_resource" "integration_test" {
       "export SHA=${var.cwa_github_sha}",
       "export SHA_DATE=${var.cwa_github_sha_date}",
       "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
-      "go test ${var.test_dir} -p 1 -timeout 45m -computeType=EC2 -v --tags=integration "
+      "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
     ]
     connection {
       type        = "ssh"
@@ -96,7 +135,10 @@ resource "null_resource" "integration_test" {
     }
   }
 
-  depends_on = [aws_instance.cwagent]
+  depends_on = [
+    aws_instance.cwagent,
+    null_resource.configure_efs
+  ]
 }
 
 data "aws_ami" "latest" {
