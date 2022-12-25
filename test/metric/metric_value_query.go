@@ -21,6 +21,7 @@ import (
 )
 
 var metricValueFetchers = []MetricValueFetcher{
+	&DiskMetricValueFetcher{},
 	&PrometheusMetricValueFetcher{},
 	&SwapMetricValueFetcher{},
 	&CPUMetricValueFetcher{},
