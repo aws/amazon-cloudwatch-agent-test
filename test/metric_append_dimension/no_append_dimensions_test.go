@@ -48,6 +48,10 @@ func (t *NoAppendDimensionTestRunner) GetAgentRunDuration() time.Duration {
 	return 3 * time.Minute
 }
 
+func (t *NoAppendDimensionTestRunner) SetupAfterAgentRun() error {
+	return nil
+}
+
 func (t *NoAppendDimensionTestRunner) GetMeasuredMetrics() []string {
 	return []string{"cpu_time_active"}
 }

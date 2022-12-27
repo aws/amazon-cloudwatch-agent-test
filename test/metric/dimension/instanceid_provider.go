@@ -8,7 +8,7 @@ package dimension
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
@@ -33,7 +33,7 @@ func (p *ECSInstanceIdDimensionProvider) GetDimension(instruction Instruction) t
 	}
 
 	//TODO currently assuming there's only one container
-	containerInstances, err := test.GetContainerInstances(p.env.EcsClusterArn)
+	containerInstances, err := awsservice.GetContainerInstances(p.env.EcsClusterArn)
 	if err != nil {
 		log.Print(err)
 		return types.Dimension{}
@@ -62,7 +62,7 @@ func (p *InstanceIdDimensionProvider) GetDimension(instruction Instruction) type
 	if instruction.Key != "InstanceId" || instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}
-	ec2InstanceId := test.GetInstanceId()
+	ec2InstanceId := awsservice.GetInstanceId()
 	return types.Dimension{
 		Name:  aws.String("InstanceId"),
 		Value: aws.String(ec2InstanceId),

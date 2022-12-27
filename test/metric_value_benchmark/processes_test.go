@@ -10,24 +10,26 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
 type ProcessesTestRunner struct {
-	BaseTestRunner
+	Base test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*ProcessesTestRunner)(nil)
+var _ test_runner.ITestRunner = (*ProcessesTestRunner)(nil)
 
 func (m *ProcessesTestRunner) Validate() status.TestGroupResult {
-	metricsToFetch := m.getMeasuredMetrics()
+	metricsToFetch := m.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, name := range metricsToFetch {
 		testResults[i] = m.validateProcessesMetric(name)
 	}
 
 	return status.TestGroupResult{
-		Name:        m.getTestName(),
+		Name:        m.GetTestName(),
 		TestResults: testResults,
 	}
 }
@@ -41,7 +43,11 @@ func (m *ProcessesTestRunner) GetAgentConfigFileName() string {
 }
 
 func (m *ProcessesTestRunner) GetAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
+	return test_runner.MinimumAgentRuntime
+}
+
+func (m *ProcessesTestRunner) SetupAfterAgentRun() error {
+	return nil
 }
 
 func (m *ProcessesTestRunner) GetMeasuredMetrics() []string {
@@ -56,12 +62,14 @@ func (m *ProcessesTestRunner) validateProcessesMetric(metricName string) status.
 		Status: status.FAILED,
 	}
 
-	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

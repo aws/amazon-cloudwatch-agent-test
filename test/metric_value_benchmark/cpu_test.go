@@ -23,7 +23,7 @@ type CPUTestRunner struct {
 var _ test_runner.ITestRunner = (*CPUTestRunner)(nil)
 
 func (t *CPUTestRunner) Validate() status.TestGroupResult {
-	metricsToFetch := t.getMeasuredMetrics()
+	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateCpuMetric(metricName)
@@ -67,16 +67,16 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 
 	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
-			Key: "InstanceId",
+			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
 		{
-			Key: "cpu",
+			Key:   "cpu",
 			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
 		},
 	})
 
-	if (len(failed) > 0) {
+	if len(failed) > 0 {
 		return testResult
 	}
 

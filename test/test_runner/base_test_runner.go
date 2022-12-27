@@ -21,7 +21,7 @@ const (
 	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentConfigDirectory = "agent_configs"
 	extraConfigDirectory = "extra_configs"
-	minimumAgentRuntime  = 3 * time.Minute
+	MinimumAgentRuntime  = 3 * time.Minute
 )
 
 type ITestRunner interface {
@@ -30,7 +30,7 @@ type ITestRunner interface {
 	GetAgentConfigFileName() string
 	GetAgentRunDuration() time.Duration
 	GetMeasuredMetrics() []string
-	SetupAfterAgentRun() []string
+	SetupAfterAgentRun() error
 }
 
 type TestRunner struct {
@@ -89,7 +89,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
-	err = t.testRunner.setupAfterAgentRun()
+	err = t.TestRunner.SetupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)

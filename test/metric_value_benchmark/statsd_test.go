@@ -11,24 +11,27 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type StatsdTestRunner struct {
-	BaseTestRunner
+	Base test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*StatsdTestRunner)(nil)
+var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
 
 func (t *StatsdTestRunner) Validate() status.TestGroupResult {
-	metricsToFetch := t.getMeasuredMetrics()
+	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateStatsdMetric(metricName)
 	}
 
 	return status.TestGroupResult{
-		Name:        t.getTestName(),
+		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
 }
@@ -64,18 +67,25 @@ func (t *StatsdTestRunner) GetMeasuredMetrics() []string {
 	return []string{"statsd_counter"}
 }
 
-func (t *StatsdTestRunner) ValidateStatsdMetric(metricName string) status.TestResult {
+func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "metric_type",
+			Value: dimension.ExpectedDimensionValue{aws.String("counter")},
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}
