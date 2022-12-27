@@ -12,8 +12,6 @@ GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 
 GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
 
-GO_TEST_COMPILING := $(addprefix -c ,$(ALL_SRC))
-
 install-tools:
 	# Using 04bfe4e to get SPDX template changes that are not present in the most recent tag v1.0.0
 	# This is required to be able to easily omit the year in our license header.
@@ -59,4 +57,7 @@ checklicense: install-tools
 .PHONY: test
 test: 
 	@echo Running Test Compilation
-	go test $(GO_TEST_COMPILING) -o empty_file
+	
+	for gofile in $(ALL_SRC) ; do \
+    	go test -c $$gofile -o empty_file; \
+	done
