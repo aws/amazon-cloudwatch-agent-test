@@ -30,9 +30,9 @@ locals {
 # Create EFS
 #####################################################################
 resource "aws_efs_file_system" "efs" {
-  creation_token = "predictable-${random_id.testing_id.hex}"
+  creation_token = "efs-${random_id.testing_id.hex}"
   tags           = {
-    Name = "predictable-${random_id.testing_id.hex}"
+    Name = "efs-${random_id.testing_id.hex}"
   }
 }
 
