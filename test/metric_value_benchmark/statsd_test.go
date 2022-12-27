@@ -76,6 +76,10 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 
 	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
 			Key:   "metric_type",
 			Value: dimension.ExpectedDimensionValue{aws.String("counter")},
 		},

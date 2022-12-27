@@ -79,6 +79,10 @@ func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 
 	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
 			Key:   "Type",
 			Value: dimension.ExpectedDimensionValue{aws.String("Counter")},
 		},

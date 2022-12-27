@@ -82,6 +82,10 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 
 	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
 			Key:   "type_instance",
 			Value: dimension.ExpectedDimensionValue{aws.String("user")},
 		},
