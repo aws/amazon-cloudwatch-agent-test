@@ -15,10 +15,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
-
 )
 
 type NetTestRunner struct {
+	test_runner.BaseTestRunner
 	Base test_runner.BaseTestRunner
 }
 
@@ -65,19 +65,18 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-
 	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
-			Key:  "interface",
+			Key:   "interface",
 			Value: dimension.ExpectedDimensionValue{aws.String("docker0")},
 		},
 		{
-			Key:  "InstanceId",
+			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
 	})
 
-	if (len(failed) > 0) {
+	if len(failed) > 0 {
 		return testResult
 	}
 

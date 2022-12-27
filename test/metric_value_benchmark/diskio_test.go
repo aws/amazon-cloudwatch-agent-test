@@ -14,10 +14,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
-
 )
 
 type DiskIOTestRunner struct {
+	test_runner.BaseTestRunner
 	Base test_runner.BaseTestRunner
 }
 
@@ -66,16 +66,16 @@ func (m *DiskIOTestRunner) validateDiskMetric(metricName string) status.TestResu
 
 	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
-			Key:  "name",
+			Key:   "name",
 			Value: dimension.ExpectedDimensionValue{aws.String("nvme0n1")},
 		},
 		{
-			Key:  "InstanceId",
+			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
 	})
 
-	if (len(failed) > 0) {
+	if len(failed) > 0 {
 		return testResult
 	}
 

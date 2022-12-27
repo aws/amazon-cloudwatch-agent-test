@@ -18,6 +18,7 @@ import (
 )
 
 type ProcStatTestRunner struct {
+	test_runner.BaseTestRunner
 	Base test_runner.BaseTestRunner
 }
 
@@ -66,21 +67,20 @@ func (m *ProcStatTestRunner) validateProcStatMetric(metricName string) status.Te
 
 	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
-			Key:  "exe",
+			Key:   "exe",
 			Value: dimension.ExpectedDimensionValue{aws.String("cloudwatch-agent")},
 		},
 		{
-			Key:  "process_name",
+			Key:   "process_name",
 			Value: dimension.ExpectedDimensionValue{aws.String("amazon-cloudwatch-agent")},
 		},
 		{
-			Key: "InstanceId",
+			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
 	})
 
-
-	if (len(failed) > 0) {
+	if len(failed) > 0 {
 		return testResult
 	}
 

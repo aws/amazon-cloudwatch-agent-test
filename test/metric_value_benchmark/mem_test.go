@@ -17,6 +17,7 @@ import (
 )
 
 type MemTestRunner struct {
+	test_runner.BaseTestRunner
 	Base test_runner.BaseTestRunner
 }
 
@@ -65,12 +66,12 @@ func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
 
 	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
-			Key:  "InstanceId",
+			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
 	})
 
-	if (len(failed) > 0) {
+	if len(failed) > 0 {
 		return testResult
 	}
 

@@ -18,6 +18,7 @@ import (
 )
 
 type CollectDTestRunner struct {
+	test_runner.BaseTestRunner
 	Base test_runner.BaseTestRunner
 }
 

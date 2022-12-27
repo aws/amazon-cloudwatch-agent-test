@@ -18,6 +18,7 @@ import (
 )
 
 type NoAppendDimensionTestRunner struct {
+	test_runner.BaseTestRunner
 	Base test_runner.BaseTestRunner
 }
 
@@ -64,16 +65,16 @@ func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName
 
 	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
-			Key:  "host",
+			Key:   "host",
 			Value: dimension.UnknownDimensionValue(),
 		},
 		{
-			Key:  "cpu",
+			Key:   "cpu",
 			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
 		},
 	})
 
-	if (len(failed) > 0) {
+	if len(failed) > 0 {
 		return testResult
 	}
 

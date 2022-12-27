@@ -30,6 +30,7 @@ type ITestRunner interface {
 	GetAgentConfigFileName() string
 	GetAgentRunDuration() time.Duration
 	GetMeasuredMetrics() []string
+	SetupBeforeAgentRun() error
 	SetupAfterAgentRun() error
 }
 
@@ -41,11 +42,11 @@ type BaseTestRunner struct {
 	DimensionFactory dimension.Factory
 }
 
-func (t *BaseTestRunner) setupBeforeAgentRun() error {
+func (t *BaseTestRunner) SetupBeforeAgentRun() error {
 	return nil
 }
 
-func (t *BaseTestRunner) setupAfterAgentRun() error {
+func (t *BaseTestRunner) SetupAfterAgentRun() error {
 	return nil
 }
 

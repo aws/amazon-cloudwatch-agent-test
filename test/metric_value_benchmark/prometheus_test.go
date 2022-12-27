@@ -13,14 +13,18 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type PrometheusTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
+	Base test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*PrometheusTestRunner)(nil)
+var _ test_runner.ITestRunner = (*PrometheusTestRunner)(nil)
 
 //go:embed agent_configs/prometheus.yaml
 var prometheusConfig string
@@ -48,32 +52,32 @@ prometheus_test_histogram_bucket{include="yes",le="5"} 4
 prometheus_test_histogram_bucket{include="yes",le="+Inf"} 5
 `
 
-func (t *PrometheusTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := t.getMeasuredMetrics()
+func (t *PrometheusTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validatePrometheusMetric(metricName)
 	}
 
 	return status.TestGroupResult{
-		Name:        t.getTestName(),
+		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (t *PrometheusTestRunner) getTestName() string {
+func (t *PrometheusTestRunner) GetTestName() string {
 	return "Prometheus"
 }
 
-func (t *PrometheusTestRunner) getAgentConfigFileName() string {
+func (t *PrometheusTestRunner) GetAgentConfigFileName() string {
 	return "prometheus_config.json"
 }
 
-func (t *PrometheusTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
+func (t *PrometheusTestRunner) GetAgentRunDuration() time.Duration {
+	return test_runner.MinimumAgentRuntime
 }
 
-func (t *PrometheusTestRunner) setupBeforeAgentRun() error {
+func (t *PrometheusTestRunner) SetupBeforeAgentRun() error {
 	startPrometheusCommands := []string{
 		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus_config.yaml\n%s\nEOF", prometheusConfig),
 		fmt.Sprintf("cat <<EOF | sudo tee /tmp/metrics\n%s\nEOF", prometheusMetrics),
@@ -83,7 +87,7 @@ func (t *PrometheusTestRunner) setupBeforeAgentRun() error {
 	return common.RunCommands(startPrometheusCommands)
 }
 
-func (t *PrometheusTestRunner) getMeasuredMetrics() []string {
+func (t *PrometheusTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"prometheus_test_counter",
 		"prometheus_test_gauge",
@@ -99,12 +103,58 @@ func (t *PrometheusTestRunner) validatePrometheusMetric(metricName string) statu
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{})
+
+	switch metricName {
+	case "prometheus_test_counter":
+		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+			{
+				Key:   "prom_metric_type",
+				Value: dimension.ExpectedDimensionValue{aws.String("counter")},
+			},
+		})
+	case "prometheus_test_gauge":
+		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+			{
+				Key:   "prom_metric_type",
+				Value: dimension.ExpectedDimensionValue{aws.String("gauge")},
+			},
+		})
+	case "prometheus_test_summary_count":
+		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+			{
+				Key:   "prom_metric_type",
+				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
+			},
+		})
+	case "prometheus_test_summary_sum":
+		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+			{
+				Key:   "prom_metric_type",
+				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
+			},
+		})
+	case "prometheus_test_summary":
+		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+			{
+				Key:   "prom_metric_type",
+				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
+			},
+			{
+				Key:   "quantile",
+				Value: dimension.ExpectedDimensionValue{aws.String("0.5")},
+			},
+		})
+	default:
+		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{})
+	}
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}
@@ -112,9 +162,6 @@ func (t *PrometheusTestRunner) validatePrometheusMetric(metricName string) statu
 	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 		return testResult
 	}
-
-	// TODO: Range test with >0 and <100
-	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
