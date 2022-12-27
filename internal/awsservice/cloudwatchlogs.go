@@ -4,7 +4,7 @@
 //go:build integration
 // +build integration
 
-package test
+package awsservice
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 
 const allowedRetries = 5
 
+// TODO: Refactor Structure and Interface for more easier follow that shares the same session
 var (
 	ctx context.Context
 	cwl *cloudwatchlogs.Client

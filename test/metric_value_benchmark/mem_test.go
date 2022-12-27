@@ -7,12 +7,14 @@
 package metric_value_benchmark
 
 import (
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-	"time"
 )
 
 type MemTestRunner struct {
+	BaseTestRunner
 }
 
 var _ ITestRunner = (*MemTestRunner)(nil)
@@ -54,7 +56,7 @@ func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
+	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}

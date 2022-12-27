@@ -9,19 +9,20 @@ package ecs_metadata
 import (
 	"flag"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
 	"log"
 	"testing"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 )
 
-// Purpose: Detect the changes in metadata endpoint for ECS Container Agent https://github.com/aws/amazon-cloudwatch-agent/blob/master/translator/util/ecsutil/ecsutil.go#L67-L75
-// Implementation: Checking if a log group's the format(https://github.com/aws/amazon-cloudwatch-agent/blob/master/translator/translate/logs/metrics_collected/prometheus/ruleLogGroupName.go#L33) 
+// Purpose: Detect the changes in metadata endpoint for ECS Container Agent https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/util/ecsutil/ecsutil.go#L67-L75
+// Implementation: Checking if a log group's the format(https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/translate/logs/metrics_collected/prometheus/ruleLogGroupName.go#L33)
 // exists or not  since the log group's format has the scrapping cluster name from metadata endpoint.
 
 const (
 	RetryTime = 15
-	// Log group format: https://github.com/aws/amazon-cloudwatch-agent/blob/master/translator/translate/logs/metrics_collected/prometheus/ruleLogGroupName.go#L33
+	// Log group format: https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/translate/logs/metrics_collected/prometheus/ruleLogGroupName.go#L33
 	ECSLogGroupNameFormat = "/aws/ecs/containerinsights/%s"
 	// Log stream based on job name: https://github.com/khanhntd/amazon-cloudwatch-agent/blob/ecs_metadata/integration/test/ecs/ecs_metadata/resources/extra_apps.tpl#L41
 	LogStreamName = "prometheus-redis"
@@ -38,8 +39,8 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
 
-		if test.IsLogGroupExists(t, logGroupName) {
-			test.DeleteLogGroupAndStream(logGroupName, LogStreamName)
+		if awsservice.IsLogGroupExists(t, logGroupName) {
+			awsservice.DeleteLogGroupAndStream(logGroupName, LogStreamName)
 			break
 		}
 

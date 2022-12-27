@@ -7,12 +7,14 @@
 package metric_value_benchmark
 
 import (
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-	"time"
 )
 
 type ProcStatTestRunner struct {
+	BaseTestRunner
 }
 
 var _ ITestRunner = (*ProcStatTestRunner)(nil)
@@ -54,7 +56,7 @@ func (m *ProcStatTestRunner) validateProcStatMetric(metricName string) status.Te
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
+	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}

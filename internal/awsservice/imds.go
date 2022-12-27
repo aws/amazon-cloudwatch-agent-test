@@ -4,15 +4,17 @@
 //go:build integration
 // +build integration
 
-package test
+package awsservice
 
 import (
 	"context"
 	"log"
+
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 )
 
+// TODO: Refactor Structure and Interface for more easier follow that shares the same session
 func GetInstanceId() string {
 	ctx := context.Background()
 	c, err := config.LoadDefaultConfig(ctx)

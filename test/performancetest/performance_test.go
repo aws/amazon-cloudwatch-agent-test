@@ -14,7 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 const (
@@ -24,7 +25,7 @@ const (
 	testLogNum          = "PERFORMANCE_NUMBER_OF_LOGS"
 )
 
-//this struct is derived from plugins/inputs/logfile FileConfig struct
+// this struct is derived from plugins/inputs/logfile FileConfig struct
 type LogInfo struct {
 	FilePath      string `json:"file_path"`
 	LogGroupName  string `json:"log_group_name"`
@@ -41,7 +42,7 @@ func TestPerformance(t *testing.T) {
 	}
 
 	agentContext := context.TODO()
-	instanceId := test.GetInstanceId()
+	instanceId := awsservice.GetInstanceId()
 	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
 
 	configFilePath, logStreams, err := GenerateConfig(logNum)
@@ -52,10 +53,10 @@ func TestPerformance(t *testing.T) {
 	//defer deleting log group and streams
 	//defer deleting log group first because golang handles defers in LIFO order
 	//and we want to delete the log group after deleting the log streams
-	defer test.DeleteLogGroup(instanceId)
+	defer awsservice.DeleteLogGroup(instanceId)
 
 	for _, logStream := range logStreams {
-		defer test.DeleteLogStream(instanceId, logStream)
+		defer awsservice.DeleteLogStream(instanceId, logStream)
 	}
 
 	log.Printf("config generated at %s\n", configFilePath)
@@ -76,9 +77,9 @@ func TestPerformance(t *testing.T) {
 	//run tests
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
-			test.CopyFile(configFilePath, configOutputPath)
+			common.CopyFile(configFilePath, configOutputPath)
 
-			test.StartAgent(configOutputPath, true)
+			common.StartAgent(configOutputPath, true)
 
 			agentRunDuration := agentRuntimeMinutes * time.Minute
 
@@ -88,7 +89,7 @@ func TestPerformance(t *testing.T) {
 			}
 
 			log.Printf("Agent has been running for : %s\n", (agentRunDuration).String())
-			test.StopAgent()
+			common.StopAgent()
 
 			//collect data
 			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, logNum, tps, agentContext, configFilePath)
@@ -171,8 +172,8 @@ func GenerateConfig(logNum int) (string, []string, error) {
 	return configFilePath, logStreams, nil
 }
 
-//StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
-//the config provided
+// StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
+// the config provided
 func StartLogWrite(agentRunDuration time.Duration, configFilePath string, tps int) error {
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
 	var logWaitGroup sync.WaitGroup
@@ -196,8 +197,8 @@ func StartLogWrite(agentRunDuration time.Duration, configFilePath string, tps in
 	return err
 }
 
-//WriteToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
-//for the specified duration
+// WriteToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
+// for the specified duration
 func WriteToLogs(filePath string, durationMinutes time.Duration, tps int) error {
 	f, err := os.Create(filePath)
 	if err != nil {
@@ -227,8 +228,8 @@ func WriteToLogs(filePath string, durationMinutes time.Duration, tps int) error 
 	}
 }
 
-//GetLogFilePaths parses the cloudwatch agent config at the specified path and returns a list of the log files that the
-//agent will monitor when using that config file
+// GetLogFilePaths parses the cloudwatch agent config at the specified path and returns a list of the log files that the
+// agent will monitor when using that config file
 func GetLogFilePaths(configPath string) ([]string, error) {
 	file, err := os.ReadFile(configPath)
 	if err != nil {

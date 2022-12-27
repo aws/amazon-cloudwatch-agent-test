@@ -7,6 +7,7 @@
 package metric_value_benchmark
 
 import (
+	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -14,6 +15,7 @@ import (
 )
 
 type CPUTestRunner struct {
+	BaseTestRunner
 }
 
 var _ ITestRunner = (*CPUTestRunner)(nil)
@@ -22,7 +24,7 @@ func (t *CPUTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = validateCpuMetric(metricName)
+		testResults[i] = t.validateCpuMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -51,18 +53,19 @@ func (t *CPUTestRunner) getMeasuredMetrics() []string {
 		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
 }
 
-func validateCpuMetric(metricName string) status.TestResult {
+func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	fetcher, err := metric.GetMetricFetcher(metricName)
+	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
 	if err != nil {
 		return testResult
 	}
 
 	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
 	}

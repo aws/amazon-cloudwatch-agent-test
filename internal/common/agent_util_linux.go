@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package test
+package common
 
 import (
 	"fmt"
@@ -12,6 +12,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"time"
+)
+
+const (
+	CatCommand       = "cat "
+	AppOwnerCommand  = "ps -u -p "
+	ConfigOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	Namespace        = "CWAgent"
+	Host             = "host"
 )
 
 func CopyFile(pathIn string, pathOut string) {
@@ -37,7 +45,7 @@ func DeleteFile(filePathAbsolute string) error {
 	out, err := exec.Command("bash", "-c", "sudo rm "+filePathAbsolute).Output()
 
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Printf(fmt.Sprint(err) + string(out))
 		return err
 	}
 
@@ -107,12 +115,25 @@ func RunShellScript(path string, args ...string) error {
 	return nil
 }
 
-func RunCommand(cmd string) {
+func RunCommand(cmd string) (string, error) {
 	out, err := exec.Command("bash", "-c", cmd).Output()
 
 	if err != nil {
-		log.Fatalf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
+		log.Printf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
+		return "", err
 	}
+	return string(out), nil
+}
+
+func RunCommands(commands []string) error {
+	for _, cmd := range commands {
+		_, err := RunCommand(cmd)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func ReplaceLocalStackHostName(pathIn string) {

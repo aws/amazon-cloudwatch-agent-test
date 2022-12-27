@@ -54,7 +54,8 @@ resource "null_resource" "integration_test" {
       "git reset --hard ${var.cwa_test_github_sha}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
       "sleep 10",
-      "sudo ${var.install_agent}",
+      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
+      var.install_agent,
       "echo get ssl pem for localstack and export local stack host name",
       "cd ~/amazon-cloudwatch-agent-test/localstack/ls_tmp",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} . --recursive",
@@ -85,7 +86,7 @@ resource "null_resource" "integration_test" {
       "export SHA=${var.cwa_github_sha}",
       "export SHA_DATE=${var.cwa_github_sha_date}",
       "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
-      "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
+      "go test ${var.test_dir} -p 1 -timeout 45m -computeType=EC2 -v --tags=integration "
     ]
     connection {
       type        = "ssh"

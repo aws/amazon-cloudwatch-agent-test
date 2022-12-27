@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
-
 package ca_bundle
 
 import (
@@ -13,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
@@ -22,16 +19,16 @@ const configJSON = "/config.json"
 const commonConfigTOML = "/common-config.toml"
 const targetString = "x509: certificate signed by unknown authority"
 
-//Let the agent run for 1 minutes. This will give agent enough time to call server
-const agentRuntime = 1 * time.Minute
+// Let the agent run for 30 seconds. This will give agent enough time to call server
+const agentRuntime = 30 * time.Second
 
 type input struct {
 	findTarget bool
 	dataInput  string
 }
 
-//Must run this test with parallel 1 since this will fail if more than one test is running at the same time
-//This test uses a pem file created for the local stack endpoint to be able to connect via ssl
+// Must run this test with parallel 1 since this will fail if more than one test is running at the same time
+// This test uses a pem file created for the local stack endpoint to be able to connect via ssl
 func TestBundle(t *testing.T) {
 
 	parameters := []input{
@@ -49,14 +46,14 @@ func TestBundle(t *testing.T) {
 		//before test run
 		log.Printf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget)
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget), func(t *testing.T) {
-			test.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
-			test.CopyFile(parameter.dataInput+configJSON, configOutputPath)
-			test.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
-			test.StartAgent(configOutputPath, true)
+			common.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
+			common.CopyFile(parameter.dataInput+configJSON, configOutputPath)
+			common.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
+			common.StartAgent(configOutputPath, true)
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
-			test.StopAgent()
-			output := test.ReadAgentOutput(agentRuntime)
+			common.StopAgent()
+			output := common.ReadAgentOutput(agentRuntime)
 			containsTarget := outputLogContainsTarget(output)
 			if (parameter.findTarget && !containsTarget) || (!parameter.findTarget && containsTarget) {
 				t.Errorf("Find target is %t contains target is %t", parameter.findTarget, containsTarget)

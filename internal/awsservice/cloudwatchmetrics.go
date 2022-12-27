@@ -4,16 +4,18 @@
 //go:build integration
 // +build integration
 
-package test
+package awsservice
 
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"testing"
 )
 
 var (
@@ -27,6 +29,7 @@ const (
 	loremIpsum   = "Lorem ipsum dolor sit amet consectetur adipiscing elit Vivamus non mauris malesuada mattis ex eget porttitor purus Suspendisse potenti Praesent vel sollicitudin ipsum Quisque luctus pretium lorem non faucibus Ut vel quam dui Nunc fermentum condimentum consectetur Morbi tellus mauris tristique tincidunt elit consectetur hendrerit placerat dui In nulla erat finibus eget erat a hendrerit sodales urna In sapien purus auctor sit amet congue ut congue eget nisi Vivamus sed neque ut ligula lobortis accumsan quis id metus In feugiat velit et leo mattis non fringilla dui elementum Proin a nisi ac sapien vulputate consequat Vestibulum eu tellus mi Integer consectetur efficitur"
 )
 
+// TODO: Refactor Structure and Interface for more easier follow that shares the same session
 type metric struct {
 	name  string
 	value string
@@ -64,6 +67,46 @@ func ValidateMetrics(t *testing.T, metricName, namespace string, dimensionsFilte
 			metrics, metricName, namespace)
 	}
 
+}
+
+func ValidateSampleCount(t *testing.T, metricName, namespace string, dimensions []types.Dimension,
+	startTime time.Time, endTime time.Time,
+	lowerBoundInclusive int, upperBoundInclusive int, periodInSeconds int32) bool {
+	cwmClient, clientContext, err := GetCloudWatchMetricsClient()
+	if err != nil {
+		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
+	}
+
+	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
+		MetricName: aws.String(metricName),
+		Namespace:  aws.String(namespace),
+		StartTime:  aws.Time(startTime),
+		EndTime:    aws.Time(endTime),
+		Period:     aws.Int32(periodInSeconds),
+		Dimensions: dimensions,
+		Statistics: []types.Statistic{types.StatisticSampleCount},
+	}
+	data, err := cwmClient.GetMetricStatistics(*clientContext, &metricStatsInput)
+	if err != nil {
+		t.Errorf("Error getting metric data %v", err)
+		return false
+	}
+
+	dataPoints := 0
+
+	for _, datapoint := range data.Datapoints {
+		dataPoints = dataPoints + int(*datapoint.SampleCount)
+	}
+
+	t.Logf("Number of datapoints for start time %v with endtime %v and period %d "+
+		"is %d expected is inclusive between %d and %d",
+		startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
+
+	if !(lowerBoundInclusive <= dataPoints) || !(upperBoundInclusive >= dataPoints) {
+		return false
+	}
+
+	return true
 }
 
 // getCloudWatchMetricsClient returns a singleton SDK client for interfacing with CloudWatch Metrics

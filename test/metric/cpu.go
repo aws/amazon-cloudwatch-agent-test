@@ -20,10 +20,10 @@ type CPUMetricValueFetcher struct {
 var _ MetricValueFetcher = (*CPUMetricValueFetcher)(nil)
 
 func (f *CPUMetricValueFetcher) Fetch(namespace, metricName string, stat Statistics) (MetricValues, error) {
-	dimensions := f.getMetricSpecificDimensions()
+	dimensions := append(f.getMetricSpecificDimensions(metricName), f.getInstanceIdDimension())
 	values, err := f.fetch(namespace, metricName, dimensions, stat)
 	if err != nil {
-		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
+		log.Printf("Error while fetching metric value for %s: %s", metricName, err.Error())
 	}
 	return values, err
 }
@@ -63,7 +63,7 @@ func (f *CPUMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	}
 }
 
-func (f *CPUMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+func (f *CPUMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
 	return []types.Dimension{
 		{
 			Name:  aws.String("cpu"),

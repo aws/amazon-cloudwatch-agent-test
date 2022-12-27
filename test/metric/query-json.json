@@ -10,7 +10,7 @@
             {
               "Name": "InstanceId",
               "Value": "i-X"
-            },
+            }
           ]
         },
         "Period": 60,

@@ -12,9 +12,6 @@ import (
 )
 
 const (
-	linux   = "linux"
-	windows = "windows"
-	mac     = "mac"
 	testDir = "test_dir"
 )
 
@@ -28,12 +25,17 @@ var osToTestDirMap = map[string][]string{
 		"./test/cloudwatchlogs",
 		"./test/metrics_number_dimension",
 		"./test/metric_value_benchmark",
+		"./test/run_as_user",
+		"./test/collection_interval",
 	},
 	"ec2_performance": {
 		"./test/performancetest",
 	},
 	"ecs_fargate": {
 		"./test/ecs/ecs_metadata",
+	},
+	"ecs_ec2_daemon": {
+		"./test/metric_value_benchmark",
 	},
 }
 
