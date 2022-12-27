@@ -1,0 +1,34 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "MetricValueBenchmarkTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "netstat": {
+        "measurement": [
+          "tcp_close",
+          "tcp_close_wait",
+          "tcp_closing",
+          "tcp_established",
+          "tcp_fin_wait1",
+          "tcp_fin_wait2",
+          "tcp_last_ack",
+          "tcp_listen",
+          "tcp_none",
+          "tcp_syn_sent",
+          "tcp_syn_recv",
+          "tcp_time_wait",
+          "udp_socket"
+        ],
+        "metrics_collection_interval": 60
+      }
+    }
+  }
+}
