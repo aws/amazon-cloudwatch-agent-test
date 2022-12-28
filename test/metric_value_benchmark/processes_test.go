@@ -63,7 +63,12 @@ func (m *ProcessesTestRunner) validateProcessesMetric(metricName string) status.
 		Status: status.FAILED,
 	}
 
-	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{})
+	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
 
 	if len(failed) > 0 {
 		return testResult

@@ -65,7 +65,12 @@ func (t *SwapTestRunner) validateSwapMetric(metricName string) status.TestResult
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{})
+	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
 
 	if len(failed) > 0 {
 		return testResult
