@@ -65,6 +65,7 @@ func getEc2TestRunners(env *environment.MetaData) []*TestRunner {
 		factory := &metric.MetricFetcherFactory{Env: env}
 		ec2TestRunners = []*TestRunner{
 			{testRunner: &DiskTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
+			{testRunner: &NetStatTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 			{testRunner: &PrometheusTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 			{testRunner: &StatsdTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
 			{testRunner: &EMFTestRunner{BaseTestRunner{MetricFetcherFactory: factory}}},
