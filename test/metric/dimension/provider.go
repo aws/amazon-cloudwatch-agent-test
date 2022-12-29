@@ -4,7 +4,6 @@
 //go:build linux && integration
 // +build linux,integration
 
-
 package dimension
 
 import (
@@ -18,10 +17,7 @@ type ExpectedDimensionValue struct {
 }
 
 func (d *ExpectedDimensionValue) IsKnown() bool {
-	if d.Value == nil {
-		return false
-	}
-	return true
+	return d.Value == nil
 }
 
 func UnknownDimensionValue() ExpectedDimensionValue {
@@ -40,7 +36,7 @@ func GetDimensionFactory(env environment.MetaData) Factory {
 	applicableDimensionProviders := []IProvider{}
 
 	for _, provider := range allDimensionProviders {
-		if (provider.IsApplicable()) {
+		if provider.IsApplicable() {
 			applicableDimensionProviders = append(applicableDimensionProviders, provider)
 		}
 	}
