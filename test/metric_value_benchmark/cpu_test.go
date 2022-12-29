@@ -13,7 +13,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
-	"time"
 )
 
 type CPUTestRunner struct {
@@ -42,14 +41,6 @@ func (t *CPUTestRunner) GetTestName() string {
 
 func (t *CPUTestRunner) GetAgentConfigFileName() string {
 	return "cpu_config.json"
-}
-
-func (t *CPUTestRunner) GetAgentRunDuration() time.Duration {
-	return test_runner.MinimumAgentRuntime
-}
-
-func (t *CPUTestRunner) SetupAfterAgentRun() error {
-	return nil
 }
 
 func (t *CPUTestRunner) GetMeasuredMetrics() []string {

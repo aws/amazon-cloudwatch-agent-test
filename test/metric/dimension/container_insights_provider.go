@@ -8,9 +8,9 @@ package dimension
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"log"
 )
 
@@ -21,21 +21,18 @@ type ContainerInsightsDimensionProvider struct {
 var _ IProvider = (*ContainerInsightsDimensionProvider)(nil)
 
 func (p *ContainerInsightsDimensionProvider) IsApplicable() bool {
-	if (p.Provider.env.ComputeType == computetype.ECS) {
-		return true
-	}
-	return false
+	return p.Provider.env.ComputeType == computetype.ECS
 }
 
 func (p *ContainerInsightsDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
-	if (instruction.Key == "ClusterName") {
+	if instruction.Key == "ClusterName" {
 		return types.Dimension{
 			Name:  aws.String("ClusterName"),
 			Value: aws.String(p.Provider.env.EcsClusterName),
 		}
 	}
 
-	if (instruction.Key == "ContainerInstanceId") {
+	if instruction.Key == "ContainerInstanceId" {
 		//TODO currently assuming there's only one container
 		containerInstances, err := awsservice.GetContainerInstances(p.Provider.env.EcsClusterArn)
 		if err != nil {

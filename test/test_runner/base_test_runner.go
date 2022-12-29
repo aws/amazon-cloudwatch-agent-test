@@ -50,6 +50,10 @@ func (t *BaseTestRunner) SetupAfterAgentRun() error {
 	return nil
 }
 
+func (t *BaseTestRunner) GetAgentRunDuration() time.Duration {
+	return MinimumAgentRuntime
+}
+
 func (t *TestRunner) Run(s ITestSuite) {
 	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)

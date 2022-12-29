@@ -7,8 +7,6 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
@@ -43,10 +41,6 @@ func (t *EMFTestRunner) GetTestName() string {
 
 func (t *EMFTestRunner) GetAgentConfigFileName() string {
 	return "emf_config.json"
-}
-
-func (t *EMFTestRunner) GetAgentRunDuration() time.Duration {
-	return time.Minute
 }
 
 func (t *EMFTestRunner) SetupAfterAgentRun() error {

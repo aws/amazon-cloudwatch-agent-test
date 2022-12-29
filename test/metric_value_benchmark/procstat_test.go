@@ -13,8 +13,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
-
-	"time"
 )
 
 type ProcStatTestRunner struct {
@@ -43,10 +41,6 @@ func (m *ProcStatTestRunner) GetTestName() string {
 
 func (m *ProcStatTestRunner) GetAgentConfigFileName() string {
 	return "procstat_config.json"
-}
-
-func (m *ProcStatTestRunner) GetAgentRunDuration() time.Duration {
-	return test_runner.MinimumAgentRuntime
 }
 
 func (t *ProcStatTestRunner) SetupAfterAgentRun() error {

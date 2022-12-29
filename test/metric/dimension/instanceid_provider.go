@@ -45,17 +45,17 @@ func (p *ECSInstanceIdDimensionProvider) GetDimension(instruction Instruction) t
 	}
 }
 
-type InstanceIdDimensionProvider struct {
+type LocalInstanceIdDimensionProvider struct {
 	Provider
 }
 
-var _ IProvider = (*ECSInstanceIdDimensionProvider)(nil)
+var _ IProvider = (*LocalInstanceIdDimensionProvider)(nil)
 
-func (p *InstanceIdDimensionProvider) IsApplicable() bool {
+func (p *LocalInstanceIdDimensionProvider) IsApplicable() bool {
 	return p.env.ComputeType == computetype.EC2
 }
 
-func (p *InstanceIdDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
+func (p *LocalInstanceIdDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
 	if instruction.Key != "InstanceId" || instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}

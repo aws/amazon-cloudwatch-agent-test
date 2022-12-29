@@ -28,7 +28,7 @@ func GetDimensionFactory(env environment.MetaData) Factory {
 	allDimensionProviders := []IProvider{
 		&ContainerInsightsDimensionProvider{Provider: Provider{env: env}},
 		&HostDimensionProvider{Provider: Provider{env: env}},
-		&InstanceIdDimensionProvider{Provider: Provider{env: env}},
+		&LocalInstanceIdDimensionProvider{Provider: Provider{env: env}},
 		&ECSInstanceIdDimensionProvider{Provider: Provider{env: env}},
 		&CustomDimensionProvider{Provider: Provider{env: env}},
 	}

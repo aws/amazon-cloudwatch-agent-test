@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"log"
-	"time"
 )
 
 type NoAppendDimensionTestRunner struct {
@@ -43,14 +42,6 @@ func (t *NoAppendDimensionTestRunner) GetTestName() string {
 
 func (t *NoAppendDimensionTestRunner) GetAgentConfigFileName() string {
 	return "no_append_dimension.json"
-}
-
-func (t *NoAppendDimensionTestRunner) GetAgentRunDuration() time.Duration {
-	return 3 * time.Minute
-}
-
-func (t *NoAppendDimensionTestRunner) SetupAfterAgentRun() error {
-	return nil
 }
 
 func (t *NoAppendDimensionTestRunner) GetMeasuredMetrics() []string {
@@ -88,9 +79,6 @@ func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName
 	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 		return testResult
 	}
-
-	// TODO: Range test with >0 and <100
-	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult

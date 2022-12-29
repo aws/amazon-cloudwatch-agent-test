@@ -7,13 +7,11 @@
 package metric_value_benchmark
 
 import (
-	"log"
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"log"
 )
 
 type SwapTestRunner struct {
@@ -42,13 +40,6 @@ func (t *SwapTestRunner) GetTestName() string {
 
 func (t *SwapTestRunner) GetAgentConfigFileName() string {
 	return "swap_config.json"
-}
-func (t *SwapTestRunner) GetAgentRunDuration() time.Duration {
-	return test_runner.MinimumAgentRuntime
-}
-
-func (t *SwapTestRunner) SetupAfterAgentRun() error {
-	return nil
 }
 
 func (t *SwapTestRunner) GetMeasuredMetrics() []string {

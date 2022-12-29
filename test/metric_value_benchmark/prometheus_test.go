@@ -9,8 +9,6 @@ package metric_value_benchmark
 import (
 	_ "embed"
 	"fmt"
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
@@ -71,10 +69,6 @@ func (t *PrometheusTestRunner) GetTestName() string {
 
 func (t *PrometheusTestRunner) GetAgentConfigFileName() string {
 	return "prometheus_config.json"
-}
-
-func (t *PrometheusTestRunner) GetAgentRunDuration() time.Duration {
-	return test_runner.MinimumAgentRuntime
 }
 
 func (t *PrometheusTestRunner) SetupBeforeAgentRun() error {

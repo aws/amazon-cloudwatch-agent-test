@@ -63,8 +63,8 @@ func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 }
 
 func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
-	factory := dimension.GetDimensionFactory(*env)
 	if ec2TestRunners == nil {
+		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
 			{TestRunner: &NetStatTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &PrometheusTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},

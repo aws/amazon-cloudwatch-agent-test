@@ -7,8 +7,6 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -41,14 +39,6 @@ func (m *ProcessesTestRunner) GetTestName() string {
 
 func (m *ProcessesTestRunner) GetAgentConfigFileName() string {
 	return "processes_config.json"
-}
-
-func (m *ProcessesTestRunner) GetAgentRunDuration() time.Duration {
-	return test_runner.MinimumAgentRuntime
-}
-
-func (m *ProcessesTestRunner) SetupAfterAgentRun() error {
-	return nil
 }
 
 func (m *ProcessesTestRunner) GetMeasuredMetrics() []string {
