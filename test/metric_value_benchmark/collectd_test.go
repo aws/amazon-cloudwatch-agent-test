@@ -17,7 +17,6 @@ import (
 
 type CollectDTestRunner struct {
 	test_runner.BaseTestRunner
-	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*CollectDTestRunner)(nil)
@@ -74,7 +73,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),

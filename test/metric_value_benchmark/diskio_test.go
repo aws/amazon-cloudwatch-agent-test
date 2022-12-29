@@ -16,7 +16,6 @@ import (
 
 type DiskIOTestRunner struct {
 	test_runner.BaseTestRunner
-	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*DiskIOTestRunner)(nil)
@@ -54,7 +53,7 @@ func (m *DiskIOTestRunner) validateDiskMetric(metricName string) status.TestResu
 		Status: status.FAILED,
 	}
 
-	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "name",
 			Value: dimension.ExpectedDimensionValue{aws.String("nvme0n1")},

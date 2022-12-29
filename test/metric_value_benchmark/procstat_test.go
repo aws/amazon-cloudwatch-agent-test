@@ -17,7 +17,6 @@ import (
 
 type ProcStatTestRunner struct {
 	test_runner.BaseTestRunner
-	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*ProcStatTestRunner)(nil)
@@ -59,7 +58,7 @@ func (m *ProcStatTestRunner) validateProcStatMetric(metricName string) status.Te
 		Status: status.FAILED,
 	}
 
-	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "exe",
 			Value: dimension.ExpectedDimensionValue{aws.String("cloudwatch-agent")},

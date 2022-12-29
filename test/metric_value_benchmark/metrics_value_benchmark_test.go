@@ -53,7 +53,7 @@ func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 
 		ecsTestRunners = []*ECSTestRunner{
 			{
-				testRunner:       &ContainerInsightsTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}},
+				testRunner:       &ContainerInsightsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}},
 				agentRunStrategy: &ECSAgentRunStrategy{},
 				env:              *env,
 			},
@@ -66,18 +66,18 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
-			{TestRunner: &NetStatTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &PrometheusTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &CPUTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &MemTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &ProcStatTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &DiskIOTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &NetTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &StatsdTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &EMFTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &CollectDTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &SwapTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &ProcessesTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &NetStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CPUTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &MemTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &ProcStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &DiskIOTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &NetTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &SwapTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return ec2TestRunners

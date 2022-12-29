@@ -18,7 +18,6 @@ import (
 
 type NoAppendDimensionTestRunner struct {
 	test_runner.BaseTestRunner
-	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*NoAppendDimensionTestRunner)(nil)
@@ -54,7 +53,7 @@ func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "host",
 			Value: dimension.UnknownDimensionValue(),

@@ -15,11 +15,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 type PrometheusTestRunner struct {
 	test_runner.BaseTestRunner
-	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*PrometheusTestRunner)(nil)
@@ -97,39 +97,40 @@ func (t *PrometheusTestRunner) validatePrometheusMetric(metricName string) statu
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{})
+	var dims []types.Dimension
+	var failed []dimension.Instruction
 
 	switch metricName {
 	case "prometheus_test_counter":
-		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_metric_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("counter")},
 			},
 		})
 	case "prometheus_test_gauge":
-		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_metric_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("gauge")},
 			},
 		})
 	case "prometheus_test_summary_count":
-		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_metric_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
 			},
 		})
 	case "prometheus_test_summary_sum":
-		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_metric_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
 			},
 		})
 	case "prometheus_test_summary":
-		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_metric_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
@@ -140,7 +141,7 @@ func (t *PrometheusTestRunner) validatePrometheusMetric(metricName string) statu
 			},
 		})
 	default:
-		dims, failed = t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{})
+		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{})
 	}
 
 	if len(failed) > 0 {

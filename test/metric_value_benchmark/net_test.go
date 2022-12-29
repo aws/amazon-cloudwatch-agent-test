@@ -17,7 +17,6 @@ import (
 
 type NetTestRunner struct {
 	test_runner.BaseTestRunner
-	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*NetTestRunner)(nil)
@@ -55,7 +54,7 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	dims, failed := m.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "interface",
 			Value: dimension.ExpectedDimensionValue{aws.String("docker0")},

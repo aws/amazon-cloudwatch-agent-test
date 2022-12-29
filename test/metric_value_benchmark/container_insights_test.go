@@ -15,7 +15,7 @@ import (
 )
 
 type ContainerInsightsTestRunner struct {
-	Base test_runner.BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
 var _ IECSTestRunner = (*ContainerInsightsTestRunner)(nil)
@@ -58,7 +58,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "ClusterName",
 			Value: dimension.UnknownDimensionValue(),

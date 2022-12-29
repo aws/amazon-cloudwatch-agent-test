@@ -16,7 +16,6 @@ import (
 
 type NetStatTestRunner struct {
 	test_runner.BaseTestRunner
-	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*NetStatTestRunner)(nil)
@@ -66,7 +65,7 @@ func (t *NetStatTestRunner) validateNetStatMetric(metricName string) status.Test
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),

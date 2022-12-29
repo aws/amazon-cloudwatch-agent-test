@@ -17,7 +17,6 @@ import (
 
 type CPUTestRunner struct {
 	test_runner.BaseTestRunner
-	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*CPUTestRunner)(nil)
@@ -57,7 +56,7 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),

@@ -16,7 +16,6 @@ import (
 
 type SwapTestRunner struct {
 	test_runner.BaseTestRunner
-	Base test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*SwapTestRunner)(nil)
@@ -56,7 +55,7 @@ func (t *SwapTestRunner) validateSwapMetric(metricName string) status.TestResult
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.Base.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
