@@ -122,6 +122,8 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string, bounds *metric.Boun
 		return testResult
 	}
 
+	testResult.Values = values
+
 	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 		return testResult
 	}
