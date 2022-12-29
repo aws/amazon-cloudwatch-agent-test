@@ -8,8 +8,8 @@ package dimension
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"os"
 )
 
@@ -20,10 +20,7 @@ type HostDimensionProvider struct {
 var _ IProvider = (*HostDimensionProvider)(nil)
 
 func (p *HostDimensionProvider) IsApplicable() bool {
-	if (p.env.ComputeType == computetype.EC2) {
-		return true
-	}
-	return false
+	return p.env.ComputeType == computetype.EC2
 }
 
 func (p *HostDimensionProvider) GetDimension(instruction Instruction) types.Dimension {

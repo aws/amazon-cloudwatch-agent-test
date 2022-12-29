@@ -21,10 +21,7 @@ type ECSInstanceIdDimensionProvider struct {
 var _ IProvider = (*ECSInstanceIdDimensionProvider)(nil)
 
 func (p *ECSInstanceIdDimensionProvider) IsApplicable() bool {
-	if p.env.ComputeType == computetype.ECS {
-		return true
-	}
-	return false
+	return p.env.ComputeType == computetype.ECS
 }
 
 func (p *ECSInstanceIdDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
