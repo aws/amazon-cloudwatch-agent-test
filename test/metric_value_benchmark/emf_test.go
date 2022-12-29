@@ -22,9 +22,9 @@ var _ ITestRunner = (*EMFTestRunner)(nil)
 
 func (t *EMFTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateEMFMetric(metricName)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for metricName := range metricsToFetch {
+		testResults = append(testResults, t.validateEMFMetric(metricName))
 	}
 
 	return status.TestGroupResult{
@@ -63,8 +63,10 @@ func (t *EMFTestRunner) setupAfterAgentRun() error {
 	return common.RunCommands(startEMFCommands)
 }
 
-func (t *EMFTestRunner) getMeasuredMetrics() []string {
-	return []string{"EMFCounter"}
+func (t *EMFTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"EMFCounter": nil,
+	}
 }
 
 func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {

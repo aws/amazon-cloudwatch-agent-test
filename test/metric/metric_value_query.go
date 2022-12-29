@@ -98,6 +98,15 @@ func (f *baseMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dim
 	return []types.Dimension{}
 }
 
+func (f *baseMetricValueFetcher) isApplicable(metricName string) bool {
+	_, exists := f.getPluginSupportedMetric()[metricName]
+	return exists
+}
+
+func (f *baseMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
+	return map[string]struct{}{}
+}
+
 func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
 	dimensions := metricSpecificDimensions
 	metricToFetch := types.Metric{

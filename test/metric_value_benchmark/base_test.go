@@ -29,7 +29,8 @@ type ITestRunner interface {
 	getTestName() string
 	getAgentConfigFileName() string
 	getAgentRunDuration() time.Duration
-	getMeasuredMetrics() []string
+	// getMeasuredMetrics maps the metric name to the allowed upper and lower bounds for the measured value
+	getMeasuredMetrics() map[string]*metric.Bounds
 	setupBeforeAgentRun() error
 	setupAfterAgentRun() error
 }

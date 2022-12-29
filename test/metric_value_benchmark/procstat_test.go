@@ -21,9 +21,9 @@ var _ ITestRunner = (*ProcStatTestRunner)(nil)
 
 func (m *ProcStatTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := m.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, name := range metricsToFetch {
-		testResults[i] = m.validateProcStatMetric(name)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for name := range metricsToFetch {
+		testResults = append(testResults, m.validateProcStatMetric(name))
 	}
 
 	return status.TestGroupResult{
@@ -44,10 +44,18 @@ func (m *ProcStatTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (m *ProcStatTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"procstat_cpu_time_system", "procstat_cpu_time_user", "procstat_cpu_usage", "procstat_memory_data", "procstat_memory_locked",
-		"procstat_memory_rss", "procstat_memory_stack", "procstat_memory_swap", "procstat_memory_vms"}
+func (m *ProcStatTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"procstat_cpu_time_system": nil,
+		"procstat_cpu_time_user":   nil,
+		"procstat_cpu_usage":       nil,
+		"procstat_memory_data":     nil,
+		"procstat_memory_locked":   nil,
+		"procstat_memory_rss":      nil,
+		"procstat_memory_stack":    nil,
+		"procstat_memory_swap":     nil,
+		"procstat_memory_vms":      nil,
+	}
 }
 
 func (m *ProcStatTestRunner) validateProcStatMetric(metricName string) status.TestResult {

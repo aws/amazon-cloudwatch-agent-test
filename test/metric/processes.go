@@ -25,12 +25,6 @@ func (f *ProcessesMetricValueFetcher) Fetch(namespace, metricName string, stat S
 	return values, err
 }
 
-func (f *ProcessesMetricValueFetcher) isApplicable(metricName string) bool {
-	processesSupportedMetric := f.getPluginSupportedMetric()
-	_, exists := processesSupportedMetric[metricName]
-	return exists
-}
-
 func (f *ProcessesMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	// Processes Supported Metrics
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L17

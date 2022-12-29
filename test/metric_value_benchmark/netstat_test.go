@@ -22,9 +22,9 @@ var _ ITestRunner = (*NetStatTestRunner)(nil)
 
 func (t *NetStatTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateNetStatMetric(metricName)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for metricName := range metricsToFetch {
+		testResults = append(testResults, t.validateNetStatMetric(metricName))
 	}
 
 	return status.TestGroupResult{
@@ -44,21 +44,21 @@ func (t *NetStatTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *NetStatTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"netstat_tcp_close",
-		"netstat_tcp_close_wait",
-		"netstat_tcp_closing",
-		"netstat_tcp_established",
-		"netstat_tcp_fin_wait1",
-		"netstat_tcp_fin_wait2",
-		"netstat_tcp_last_ack",
-		"netstat_tcp_listen",
-		"netstat_tcp_none",
-		"netstat_tcp_syn_sent",
-		"netstat_tcp_syn_recv",
-		"netstat_tcp_time_wait",
-		"netstat_udp_socket",
+func (t *NetStatTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"netstat_tcp_close":       nil,
+		"netstat_tcp_close_wait":  nil,
+		"netstat_tcp_closing":     nil,
+		"netstat_tcp_established": nil,
+		"netstat_tcp_fin_wait1":   nil,
+		"netstat_tcp_fin_wait2":   nil,
+		"netstat_tcp_last_ack":    nil,
+		"netstat_tcp_listen":      nil,
+		"netstat_tcp_none":        nil,
+		"netstat_tcp_syn_sent":    nil,
+		"netstat_tcp_syn_recv":    nil,
+		"netstat_tcp_time_wait":   nil,
+		"netstat_udp_socket":      nil,
 	}
 }
 

@@ -22,9 +22,9 @@ var _ ITestRunner = (*SwapTestRunner)(nil)
 
 func (t *SwapTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateSwapMetric(metricName)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for metricName := range metricsToFetch {
+		testResults = append(testResults, t.validateSwapMetric(metricName))
 	}
 
 	return status.TestGroupResult{
@@ -44,11 +44,11 @@ func (t *SwapTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *SwapTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"swap_free",
-		"swap_used",
-		"swap_used_percent",
+func (t *SwapTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"swap_free":         nil,
+		"swap_used":         nil,
+		"swap_used_percent": nil,
 	}
 }
 

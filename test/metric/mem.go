@@ -25,12 +25,6 @@ func (f *MemMetricValueFetcher) Fetch(namespace, metricName string, stat Statist
 	return values, err
 }
 
-func (f *MemMetricValueFetcher) isApplicable(metricName string) bool {
-	memSupportedMetric := f.getPluginSupportedMetric()
-	_, exists := memSupportedMetric[metricName]
-	return exists
-}
-
 func (f *MemMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	// Memory Supported Metrics
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L14

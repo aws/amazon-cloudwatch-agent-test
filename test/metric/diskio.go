@@ -28,12 +28,6 @@ func (f *DiskIOMetricValueFetcher) Fetch(namespace, metricName string, stat Stat
 	return values, err
 }
 
-func (f *DiskIOMetricValueFetcher) isApplicable(metricName string) bool {
-	diskIOSupportedMetric := f.getPluginSupportedMetric()
-	_, exists := diskIOSupportedMetric[metricName]
-	return exists
-}
-
 func (f *DiskIOMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	// DiskIO Supported Metrics
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L12

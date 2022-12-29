@@ -21,9 +21,9 @@ var _ ITestRunner = (*DiskIOTestRunner)(nil)
 
 func (m *DiskIOTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := m.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, name := range metricsToFetch {
-		testResults[i] = m.validateDiskMetric(name)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for name := range metricsToFetch {
+		testResults = append(testResults, m.validateDiskMetric(name))
 	}
 
 	return status.TestGroupResult{
@@ -44,10 +44,17 @@ func (m *DiskIOTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (m *DiskIOTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"diskio_iops_in_progress", "diskio_io_time", "diskio_reads", "diskio_read_bytes", "diskio_read_time",
-		"diskio_writes", "diskio_write_bytes", "diskio_write_time"}
+func (m *DiskIOTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"diskio_iops_in_progress": nil,
+		"diskio_io_time":          nil,
+		"diskio_reads":            nil,
+		"diskio_read_bytes":       nil,
+		"diskio_read_time":        nil,
+		"diskio_writes":           nil,
+		"diskio_write_bytes":      nil,
+		"diskio_write_time":       nil,
+	}
 }
 
 func (m *DiskIOTestRunner) validateDiskMetric(metricName string) status.TestResult {

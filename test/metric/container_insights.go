@@ -42,11 +42,6 @@ func (f *ContainerInsightsValueFetcher) getPluginSupportedMetric() map[string]st
 	}
 }
 
-func (f *ContainerInsightsValueFetcher) isApplicable(metricName string) bool {
-	_, exists := f.getPluginSupportedMetric()[metricName]
-	return exists
-}
-
 func (f *ContainerInsightsValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
 	//TODO currently assuming there's only one container
 	containerInstances, err := awsservice.GetContainerInstances(f.getEnv().EcsClusterArn)

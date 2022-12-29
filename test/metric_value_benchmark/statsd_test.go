@@ -22,9 +22,9 @@ var _ ITestRunner = (*StatsdTestRunner)(nil)
 
 func (t *StatsdTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateStatsdMetric(metricName)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for metricName := range metricsToFetch {
+		testResults = append(testResults, t.validateStatsdMetric(metricName))
 	}
 
 	return status.TestGroupResult{
@@ -60,8 +60,8 @@ func (t *StatsdTestRunner) setupAfterAgentRun() error {
 	return common.RunCommands(startStatsdCommand)
 }
 
-func (t *StatsdTestRunner) getMeasuredMetrics() []string {
-	return []string{"statsd_counter"}
+func (t *StatsdTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{"statsd_counter": nil}
 }
 
 func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestResult {

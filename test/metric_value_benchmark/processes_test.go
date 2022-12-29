@@ -21,9 +21,9 @@ var _ ITestRunner = (*ProcessesTestRunner)(nil)
 
 func (m *ProcessesTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := m.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, name := range metricsToFetch {
-		testResults[i] = m.validateProcessesMetric(name)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for name := range metricsToFetch {
+		testResults = append(testResults, m.validateProcessesMetric(name))
 	}
 
 	return status.TestGroupResult{
@@ -44,10 +44,19 @@ func (m *ProcessesTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (m *ProcessesTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"processes_blocked", "processes_dead", "processes_idle", "processes_paging", "processes_running", "processes_sleeping", "processes_stopped",
-		"processes_total", "processes_total_threads", "processes_zombies"}
+func (m *ProcessesTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"processes_blocked":       nil,
+		"processes_dead":          nil,
+		"processes_idle":          nil,
+		"processes_paging":        nil,
+		"processes_running":       nil,
+		"processes_sleeping":      nil,
+		"processes_stopped":       nil,
+		"processes_total":         nil,
+		"processes_total_threads": nil,
+		"processes_zombies":       nil,
+	}
 }
 
 func (m *ProcessesTestRunner) validateProcessesMetric(metricName string) status.TestResult {

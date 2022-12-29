@@ -28,12 +28,6 @@ func (f *NetMetricValueFetcher) Fetch(namespace, metricName string, stat Statist
 	return values, err
 }
 
-func (f *NetMetricValueFetcher) isApplicable(metricName string) bool {
-	diskIOSupportedMetric := f.getPluginSupportedMetric()
-	_, exists := diskIOSupportedMetric[metricName]
-	return exists
-}
-
 func (f *NetMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	// Net Supported Metrics
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L15

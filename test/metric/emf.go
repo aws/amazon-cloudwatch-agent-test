@@ -28,12 +28,6 @@ func (f *EMFMetricValueFetcher) Fetch(namespace, metricName string, stat Statist
 	return values, err
 }
 
-func (f *EMFMetricValueFetcher) isApplicable(metricName string) bool {
-	emfSupportedMetric := f.getPluginSupportedMetric()
-	_, exists := emfSupportedMetric[metricName]
-	return exists
-}
-
 func (f *EMFMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	return map[string]struct{}{
 		"EMFCounter": {},

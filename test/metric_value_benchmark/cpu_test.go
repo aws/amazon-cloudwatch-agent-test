@@ -22,9 +22,9 @@ var _ ITestRunner = (*CPUTestRunner)(nil)
 
 func (t *CPUTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateCpuMetric(metricName)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for metricName, bounds := range metricsToFetch {
+		testResults = append(testResults, t.validateCpuMetric(metricName, bounds))
 	}
 
 	return status.TestGroupResult{
@@ -45,15 +45,67 @@ func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (t *CPUTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-		"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
+func (t *CPUTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"cpu_time_active":     nil,
+		"cpu_time_guest":      nil,
+		"cpu_time_guest_nice": nil,
+		"cpu_time_idle":       nil,
+		"cpu_time_iowait":     nil,
+		"cpu_time_irq":        nil,
+		"cpu_time_nice":       nil,
+		"cpu_time_softirq":    nil,
+		"cpu_time_steal":      nil,
+		"cpu_time_system":     nil,
+		"cpu_time_user":       nil,
+		"cpu_usage_active": {
+			Lower: 0.12,
+			Upper: 0.18,
+		},
+		"cpu_usage_guest": {
+			Lower: 0,
+			Upper: 0,
+		},
+		"cpu_usage_guest_nice": {
+			Lower: 0,
+			Upper: 0,
+		},
+		"cpu_usage_idle": {
+			Lower: 99,
+			Upper: 100,
+		},
+		"cpu_usage_iowait": {
+			Lower: 0.005,
+			Upper: 0.015,
+		},
+		"cpu_usage_irq": {
+			Lower: 0,
+			Upper: 0,
+		},
+		"cpu_usage_nice": {
+			Lower: 0,
+			Upper: 0,
+		},
+		"cpu_usage_softirq": {
+			Lower: 0,
+			Upper: 0.005,
+		},
+		"cpu_usage_steal": {
+			Lower: 0.05,
+			Upper: 0.1,
+		},
+		"cpu_usage_system": {
+			Lower: 0.11,
+			Upper: 0.16,
+		},
+		"cpu_usage_user": {
+			Lower: 0.02,
+			Upper: 0.04,
+		},
+	}
 }
 
-func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
+func (t *CPUTestRunner) validateCpuMetric(metricName string, bounds *metric.Bounds) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -74,8 +126,9 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	// TODO: Range test with >0 and <100
-	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
+	if bounds != nil && !IsMetricWithinBounds(values, *bounds) {
+		return testResult
+	}
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult

@@ -28,12 +28,6 @@ func (f *CollectDMetricValueFetcher) Fetch(namespace, metricName string, stat St
 	return values, err
 }
 
-func (f *CollectDMetricValueFetcher) isApplicable(metricName string) bool {
-	collectdSupportedMetric := f.getPluginSupportedMetric()
-	_, exists := collectdSupportedMetric[metricName]
-	return exists
-}
-
 func (f *CollectDMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	// Use CPU plugins with CollectD will only returns collectd_cpu_value; however, the type_instance dimension will specify
 	// the real metric

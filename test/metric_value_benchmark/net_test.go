@@ -21,9 +21,9 @@ var _ ITestRunner = (*NetTestRunner)(nil)
 
 func (m *NetTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := m.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, name := range metricsToFetch {
-		testResults[i] = m.validateNetMetric(name)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for name := range metricsToFetch {
+		testResults = append(testResults, m.validateNetMetric(name))
 	}
 
 	return status.TestGroupResult{
@@ -44,10 +44,17 @@ func (m *NetTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (m *NetTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"net_bytes_sent", "net_bytes_recv", "net_drop_in", "net_drop_out", "net_err_in",
-		"net_err_out", "net_packets_sent", "net_packets_recv"}
+func (m *NetTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"net_bytes_sent":   nil,
+		"net_bytes_recv":   nil,
+		"net_drop_in":      nil,
+		"net_drop_out":     nil,
+		"net_err_in":       nil,
+		"net_err_out":      nil,
+		"net_packets_sent": nil,
+		"net_packets_recv": nil,
+	}
 }
 
 func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {

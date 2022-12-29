@@ -21,9 +21,9 @@ var _ ITestRunner = (*MemTestRunner)(nil)
 
 func (m *MemTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := m.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, name := range metricsToFetch {
-		testResults[i] = m.validateMemMetric(name)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for name := range metricsToFetch {
+		testResults = append(testResults, m.validateMemMetric(name))
 	}
 
 	return status.TestGroupResult{
@@ -44,10 +44,19 @@ func (m *MemTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
 }
 
-func (m *MemTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"mem_active", "mem_available", "mem_available_percent", "mem_buffered", "mem_cached",
-		"mem_free", "mem_inactive", "mem_total", "mem_used", "mem_used_percent"}
+func (m *MemTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"mem_active":            nil,
+		"mem_available":         nil,
+		"mem_available_percent": nil,
+		"mem_buffered":          nil,
+		"mem_cached":            nil,
+		"mem_free":              nil,
+		"mem_inactive":          nil,
+		"mem_total":             nil,
+		"mem_used":              nil,
+		"mem_used_percent":      nil,
+	}
 }
 
 func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {

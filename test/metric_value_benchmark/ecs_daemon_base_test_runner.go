@@ -95,7 +95,7 @@ func (t *ECSTestRunner) runAgent(e *environment.MetaData) (status.TestGroupResul
 
 	if err != nil {
 		fmt.Print(err)
-		return testGroupResult, fmt.Errorf("Failed to run agent with config for the given test")
+		return testGroupResult, fmt.Errorf("failed to run agent with config for the given test")
 	}
 
 	testGroupResult.TestResults[0].Status = status.SUCCESSFUL

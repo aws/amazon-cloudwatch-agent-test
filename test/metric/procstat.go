@@ -28,12 +28,6 @@ func (f *ProcStatMetricValueFetcher) Fetch(namespace, metricName string, stat St
 	return values, err
 }
 
-func (f *ProcStatMetricValueFetcher) isApplicable(metricName string) bool {
-	procStatSupportedMetric := f.getPluginSupportedMetric()
-	_, exists := procStatSupportedMetric[metricName]
-	return exists
-}
-
 func (f *ProcStatMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	// Procstat Supported Metrics
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go#L19-L23

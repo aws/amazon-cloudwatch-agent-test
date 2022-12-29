@@ -22,9 +22,9 @@ var _ ITestRunner = (*CollectDTestRunner)(nil)
 
 func (t *CollectDTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateCollectDMetric(metricName)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for metricName := range metricsToFetch {
+		testResults = append(testResults, t.validateCollectDMetric(metricName))
 	}
 
 	return status.TestGroupResult{
@@ -66,8 +66,10 @@ func (t *CollectDTestRunner) setupAfterAgentRun() error {
 	return common.RunCommands(startCollectdCommands)
 }
 
-func (t *CollectDTestRunner) getMeasuredMetrics() []string {
-	return []string{"collectd_cpu_value"}
+func (t *CollectDTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"collectd_cpu_value": nil,
+	}
 }
 
 func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.TestResult {

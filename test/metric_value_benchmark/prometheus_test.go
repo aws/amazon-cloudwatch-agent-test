@@ -51,8 +51,8 @@ prometheus_test_histogram_bucket{include="yes",le="+Inf"} 5
 func (t *PrometheusTestRunner) validate() status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validatePrometheusMetric(metricName)
+	for metricName := range metricsToFetch {
+		testResults = append(testResults, t.validatePrometheusMetric(metricName))
 	}
 
 	return status.TestGroupResult{
@@ -83,13 +83,13 @@ func (t *PrometheusTestRunner) setupBeforeAgentRun() error {
 	return common.RunCommands(startPrometheusCommands)
 }
 
-func (t *PrometheusTestRunner) getMeasuredMetrics() []string {
-	return []string{
-		"prometheus_test_counter",
-		"prometheus_test_gauge",
-		"prometheus_test_summary_count",
-		"prometheus_test_summary_sum",
-		"prometheus_test_summary",
+func (t *PrometheusTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{
+		"prometheus_test_counter":       nil,
+		"prometheus_test_gauge":         nil,
+		"prometheus_test_summary_count": nil,
+		"prometheus_test_summary_sum":   nil,
+		"prometheus_test_summary":       nil,
 	}
 }
 

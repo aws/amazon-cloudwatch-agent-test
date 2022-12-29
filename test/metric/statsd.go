@@ -29,12 +29,6 @@ func (f *StatsdMetricValueFetcher) Fetch(namespace, metricName string, stat Stat
 	return values, err
 }
 
-func (f *StatsdMetricValueFetcher) isApplicable(metricName string) bool {
-	statsdSupportedMetric := f.getPluginSupportedMetric()
-	_, exists := statsdSupportedMetric[metricName]
-	return exists
-}
-
 func (f *StatsdMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
 	// EC2 Image Builder creates a bash script that sends statsd format to cwagent at port 8125
 	// The bash script is at /etc/statsd.sh
