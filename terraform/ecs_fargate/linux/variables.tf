@@ -6,8 +6,17 @@ variable "region" {
   default = "us-west-2"
 }
 
-
 variable "test_dir" {
   type    = string
   default = "./test/ecs/ecs_metadata"
+}
+
+variable "cwagent_image_repo" {
+  type    = string
+  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
+}
+
+variable "cwagent_image_tag" {
+  type    = string
+  default = "latest"
 }

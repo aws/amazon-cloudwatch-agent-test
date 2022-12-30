@@ -1,10 +1,11 @@
-#Create a unique testing_id for each test
-resource "random_id" "testing_id" {
-  byte_length = 8
+module "common" {
+  source = "../../common"
+  cwagent_image_repo = var.cwagent_image_repo
+  cwagent_image_tag  = var.cwagent_image_tag
 }
 
 resource "aws_ecs_cluster" "cluster" {
-  name = "cwagent-integ-test-cluster-${random_id.testing_id.hex}"
+  name = "cwagent-integ-test-cluster-${module.common.testing_id}"
 }
 
 ######
@@ -25,8 +26,8 @@ resource "aws_launch_configuration" "cluster" {
   image_id      = data.aws_ami.latest.image_id
   instance_type = var.ec2_instance_type
 
-  security_groups      = [aws_security_group.ecs_security_group.id]
-  iam_instance_profile = aws_iam_instance_profile.cwagent_instance_profile.name
+  security_groups      = [data.aws_security_group.ecs_security_group.id]
+  iam_instance_profile = data.aws_iam_instance_profile.cwagent_instance_profile.name
 
   user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
 }
@@ -83,7 +84,7 @@ resource "aws_ecs_cluster_capacity_providers" "cluster" {
 
 
 resource "aws_cloudwatch_log_group" "log_group" {
-  name = "cwagent-integ-test-log-group-${random_id.testing_id.hex}"
+  name = "cwagent-integ-test-log-group-${module.common.testing_id}"
 }
 
 ##########################################
@@ -91,11 +92,11 @@ resource "aws_cloudwatch_log_group" "log_group" {
 ##########################################
 
 locals {
-  cwagent_config                = fileexists("../../../../../${var.test_dir}/resources/config.json") ? "../../../../../${var.test_dir}/resources/config.json" : "../../default_resources/default_amazon_cloudwatch_agent.json"
-  cwagent_ecs_taskdef           = fileexists("../../../../../${var.test_dir}/ecs_resources/ec2_launch/daemon/ecs_taskdef.tpl") ? "../../../../../${var.test_dir}/ecs_resources/ec2_launch/daemon/ecs_taskdef.tpl" : "../../default_resources/default_ecs_taskdef.tpl"
-  prometheus_config             = fileexists("../../../../../${var.test_dir}/ecs_resources/ec2_launch/daemon/ecs_prometheus.tpl") ? "../../../../../${var.test_dir}/ecs_resources/ec2_launch/daemon/ecs_prometheus.tpl" : "../../default_resources/default_ecs_prometheus.tpl"
-  extra_apps_ecs_taskdef        = fileexists("../../../../../${var.test_dir}/ecs_resources/ec2_launch/daemon/extra_apps.tpl") ? "../../../../../${var.test_dir}/ecs_resources/ec2_launch/daemon/extra_apps.tpl" : "../../default_resources/default_extra_apps.tpl"
-  cwagent_config_ssm_param_name = "cwagent-integ-test-ssm-config-${random_id.testing_id.hex}"
+  cwagent_config                = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
+  cwagent_ecs_taskdef           = fileexists("../../../${var.test_dir}/resources/ecs_taskdef.tpl") ? "../../../${var.test_dir}/resources/ecs_taskdef.tpl" : "./default_resources/default_ecs_taskdef.tpl"
+  prometheus_config             = fileexists("../../../${var.test_dir}/resources/ecs_prometheus.tpl") ? "../../../${var.test_dir}/resources/ecs_prometheus.tpl" : "./default_resources/default_ecs_prometheus.tpl"
+  extra_apps_ecs_taskdef        = fileexists("../../../${var.test_dir}/resources/extra_apps.tpl") ? "../../../${var.test_dir}/resources/extra_apps.tpl" : "./default_resources/default_extra_apps.tpl"
+  cwagent_config_ssm_param_name = "cwagent-integ-test-ssm-config-${module.common.testing_id}"
 }
 
 data "template_file" "cwagent_config" {
@@ -117,7 +118,7 @@ data "template_file" "prometheus_config" {
 }
 
 resource "aws_ssm_parameter" "prometheus_config" {
-  name  = "prometheus-integ-test-ssm-config-${random_id.testing_id.hex}"
+  name  = "prometheus-integ-test-ssm-config-${module.common.testing_id}"
   type  = "String"
   value = data.template_file.prometheus_config.rendered
 }
@@ -132,14 +133,14 @@ data "template_file" "cwagent_container_definitions" {
     region                       = var.region
     cwagent_ssm_parameter_arn    = aws_ssm_parameter.cwagent_config.name
     prometheus_ssm_parameter_arn = aws_ssm_parameter.prometheus_config.name
-    cwagent_image                = "${var.cwagent_image_repo}:${var.cwagent_image_tag}"
+    cwagent_image                = "${module.common.cwagent_image_repo}:${module.common.cwagent_image_tag}"
     log_group                    = aws_cloudwatch_log_group.log_group.name
-    testing_id                   = random_id.testing_id.hex
+    testing_id                   = module.common.testing_id
   }
 }
 
 resource "aws_ecs_task_definition" "cwagent_task_definition" {
-  family                   = "cwagent-task-family-${random_id.testing_id.hex}"
+  family                   = "cwagent-task-family-${module.common.testing_id}"
   network_mode             = "bridge"
   task_role_arn            = aws_iam_role.ecs_task_role.arn
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
@@ -167,7 +168,7 @@ resource "aws_ecs_task_definition" "cwagent_task_definition" {
 }
 
 resource "aws_ecs_service" "cwagent_service" {
-  name                = "cwagent-service-${random_id.testing_id.hex}"
+  name                = "cwagent-service-${module.common.testing_id}"
   cluster             = aws_ecs_cluster.cluster.id
   task_definition     = aws_ecs_task_definition.cwagent_task_definition.arn
   launch_type         = "EC2"
@@ -189,7 +190,7 @@ data "template_file" "extra_apps" {
 }
 
 resource "aws_ecs_task_definition" "extra_apps_task_definition" {
-  family                   = "extra-apps-family-${random_id.testing_id.hex}"
+  family                   = "extra-apps-family-${module.common.testing_id}"
   network_mode             = "awsvpc"
   task_role_arn            = aws_iam_role.ecs_task_role.arn
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
@@ -201,7 +202,7 @@ resource "aws_ecs_task_definition" "extra_apps_task_definition" {
 }
 
 resource "aws_ecs_service" "extra_apps_service" {
-  name            = "extra-apps-service-${random_id.testing_id.hex}"
+  name            = "extra-apps-service-${module.common.testing_id}"
   cluster         = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.extra_apps_task_definition.arn
   desired_count   = 1

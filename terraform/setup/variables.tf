@@ -1,9 +1,7 @@
-variable "ssh_key_name" {
-  type    = string
-  default = ""
-}
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
 
-variable "ssh_key_value" {
+variable "region" {
   type    = string
-  default = ""
+  default = "us-west-2"
 }

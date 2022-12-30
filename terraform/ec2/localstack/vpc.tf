@@ -12,21 +12,6 @@ data "aws_subnets" "default" {
   }
 }
 
-resource "aws_security_group" "ec2_security_group" {
-  name   = "cwagent-sg-${random_id.testing_id.hex}"
-  vpc_id = data.aws_vpc.default.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+data "aws_security_group" "ec2_security_group" {
+  name = module.common.vpc_security_group
 }

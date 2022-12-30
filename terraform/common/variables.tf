@@ -21,7 +21,6 @@ variable "ec2_key_pair" {
   default = "ec2-key-pair"
 }
 
-
 variable "cwagent_image_repo" {
   type    = string
   default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"

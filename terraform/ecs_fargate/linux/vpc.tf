@@ -12,6 +12,6 @@ data "aws_subnets" "default" {
   }
 }
 
-data "aws_security_group" "ec2_security_group" {
+data "aws_security_group" "ecs_security_group" {
   name = module.common.vpc_security_group
 }
