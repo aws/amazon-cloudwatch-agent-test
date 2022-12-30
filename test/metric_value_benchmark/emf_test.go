@@ -7,45 +7,42 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type EMFTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*EMFTestRunner)(nil)
+var _ test_runner.ITestRunner = (*EMFTestRunner)(nil)
 
-func (t *EMFTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := t.getMeasuredMetrics()
+func (t *EMFTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, 0, len(metricsToFetch))
 	for metricName := range metricsToFetch {
 		testResults = append(testResults, t.validateEMFMetric(metricName))
 	}
 
 	return status.TestGroupResult{
-		Name:        t.getTestName(),
+		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (t *EMFTestRunner) getTestName() string {
+func (t *EMFTestRunner) GetTestName() string {
 	return "EMF"
 }
 
-func (t *EMFTestRunner) getAgentConfigFileName() string {
+func (t *EMFTestRunner) GetAgentConfigFileName() string {
 	return "emf_config.json"
 }
 
-func (t *EMFTestRunner) getAgentRunDuration() time.Duration {
-	return time.Minute
-}
-
-func (t *EMFTestRunner) setupAfterAgentRun() error {
+func (t *EMFTestRunner) SetupAfterAgentRun() error {
 	// EC2 Image Builder creates a bash script that sends emf format to cwagent at port 8125
 	// The bash script is at /etc/emf.sh
 	// TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
@@ -63,10 +60,8 @@ func (t *EMFTestRunner) setupAfterAgentRun() error {
 	return common.RunCommands(startEMFCommands)
 }
 
-func (t *EMFTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
-	return map[string]*metric.Bounds{
-		"EMFCounter": nil,
-	}
+func (t *EMFTestRunner) GetMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{"EMFCounter": nil}
 }
 
 func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
@@ -75,12 +70,23 @@ func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "Type",
+			Value: dimension.ExpectedDimensionValue{aws.String("Counter")},
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}
@@ -88,9 +94,6 @@ func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 		return testResult
 	}
-
-	// TODO: Range test with >0 and <100
-	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult

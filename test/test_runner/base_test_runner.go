@@ -4,7 +4,7 @@
 //go:build linux && integration
 // +build linux,integration
 
-package metric_value_benchmark
+package test_runner
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -21,42 +22,45 @@ const (
 	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentConfigDirectory = "agent_configs"
 	extraConfigDirectory = "extra_configs"
-	minimumAgentRuntime  = 3 * time.Minute
+	MinimumAgentRuntime  = 3 * time.Minute
 )
 
 type ITestRunner interface {
-	validate() status.TestGroupResult
-	getTestName() string
-	getAgentConfigFileName() string
-	getAgentRunDuration() time.Duration
-	// getMeasuredMetrics maps the metric name to the allowed upper and lower bounds for the measured value
-	getMeasuredMetrics() map[string]*metric.Bounds
-	setupBeforeAgentRun() error
-	setupAfterAgentRun() error
+	Validate() status.TestGroupResult
+	GetTestName() string
+	GetAgentConfigFileName() string
+	GetAgentRunDuration() time.Duration
+	GetMeasuredMetrics() map[string]*metric.Bounds
+	SetupBeforeAgentRun() error
+	SetupAfterAgentRun() error
 }
 
 type TestRunner struct {
-	testRunner ITestRunner
+	TestRunner ITestRunner
 }
 
 type BaseTestRunner struct {
-	*metric.MetricFetcherFactory
+	DimensionFactory dimension.Factory
 }
 
-func (t *BaseTestRunner) setupBeforeAgentRun() error {
+func (t *BaseTestRunner) SetupBeforeAgentRun() error {
 	return nil
 }
 
-func (t *BaseTestRunner) setupAfterAgentRun() error {
+func (t *BaseTestRunner) SetupAfterAgentRun() error {
 	return nil
 }
 
-func (t *TestRunner) Run(s *MetricBenchmarkTestSuite) {
-	testName := t.testRunner.getTestName()
+func (t *BaseTestRunner) GetAgentRunDuration() time.Duration {
+	return MinimumAgentRuntime
+}
+
+func (t *TestRunner) Run(s ITestSuite) {
+	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)
 	testGroupResult, err := t.runAgent()
 	if err == nil {
-		testGroupResult = t.testRunner.validate()
+		testGroupResult = t.TestRunner.Validate()
 	}
 	s.AddToSuiteResult(testGroupResult)
 	if testGroupResult.GetStatus() != status.SUCCESSFUL {
@@ -66,7 +70,7 @@ func (t *TestRunner) Run(s *MetricBenchmarkTestSuite) {
 
 func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	testGroupResult := status.TestGroupResult{
-		Name: t.testRunner.getTestName(),
+		Name: t.TestRunner.GetTestName(),
 		TestResults: []status.TestResult{
 			{
 				Name:   "Starting Agent",
@@ -75,13 +79,13 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		},
 	}
 
-	err := t.testRunner.setupBeforeAgentRun()
+	err := t.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
 
-	agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
+	agentConfigPath := filepath.Join(agentConfigDirectory, t.TestRunner.GetAgentConfigFileName())
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
 	common.CopyFile(agentConfigPath, configOutputPath)
 	err = common.StartAgent(configOutputPath, false)
@@ -91,13 +95,13 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
-	err = t.testRunner.setupAfterAgentRun()
+	err = t.TestRunner.SetupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
 	}
 
-	runningDuration := t.testRunner.getAgentRunDuration()
+	runningDuration := t.TestRunner.GetAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
 	common.StopAgent()

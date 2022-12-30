@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
@@ -25,6 +26,12 @@ const agentRuntime = 30 * time.Second
 type input struct {
 	findTarget bool
 	dataInput  string
+}
+
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
 // Must run this test with parallel 1 since this will fail if more than one test is running at the same time

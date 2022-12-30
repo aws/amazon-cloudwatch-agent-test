@@ -7,44 +7,41 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
 type MemTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*MemTestRunner)(nil)
+var _ test_runner.ITestRunner = (*MemTestRunner)(nil)
 
-func (m *MemTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := m.getMeasuredMetrics()
+func (m *MemTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := m.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, 0, len(metricsToFetch))
 	for name := range metricsToFetch {
 		testResults = append(testResults, m.validateMemMetric(name))
 	}
 
 	return status.TestGroupResult{
-		Name:        m.getTestName(),
+		Name:        m.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (m *MemTestRunner) getTestName() string {
+func (m *MemTestRunner) GetTestName() string {
 	return "Mem"
 }
 
-func (m *MemTestRunner) getAgentConfigFileName() string {
+func (m *MemTestRunner) GetAgentConfigFileName() string {
 	return "mem_config.json"
 }
 
-func (m *MemTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
-}
-
-func (m *MemTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+func (m *MemTestRunner) GetMeasuredMetrics() map[string]*metric.Bounds {
 	return map[string]*metric.Bounds{
 		"mem_active":            nil,
 		"mem_available":         nil,
@@ -65,12 +62,19 @@ func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

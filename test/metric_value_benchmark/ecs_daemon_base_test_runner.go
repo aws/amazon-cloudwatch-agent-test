@@ -13,7 +13,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
@@ -23,10 +23,6 @@ type IECSTestRunner interface {
 	getAgentConfigFileName() string
 	getAgentRunDuration() time.Duration
 	getMeasuredMetrics() []string
-}
-
-type ECSBaseTestRunner struct {
-	MetricFetcherFactory *metric.MetricFetcherFactory
 }
 
 type IAgentRunStrategy interface {
@@ -64,6 +60,11 @@ func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath s
 type ECSTestRunner struct {
 	testRunner       IECSTestRunner
 	agentRunStrategy IAgentRunStrategy
+	env              environment.MetaData
+}
+
+type BaseTestRunner struct {
+	DimensionFactory dimension.Factory
 }
 
 func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData) {

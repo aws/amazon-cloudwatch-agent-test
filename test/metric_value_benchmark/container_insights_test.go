@@ -7,14 +7,15 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"time"
 )
 
 type ContainerInsightsTestRunner struct {
-	ECSBaseTestRunner
+	test_runner.BaseTestRunner
 }
 
 var _ IECSTestRunner = (*ContainerInsightsTestRunner)(nil)
@@ -41,14 +42,19 @@ func (t *ContainerInsightsTestRunner) getAgentConfigFileName() string {
 }
 
 func (t *ContainerInsightsTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
+	return test_runner.MinimumAgentRuntime
 }
 
 func (t *ContainerInsightsTestRunner) getMeasuredMetrics() []string {
 	return []string{
-		"instance_memory_utilization", "instance_number_of_running_tasks", "instance_memory_reserved_capacity",
-		"instance_filesystem_utilization", "instance_network_total_bytes", "instance_cpu_utilization",
-		"instance_cpu_reserved_capacity"}
+		"instance_memory_utilization",
+		"instance_number_of_running_tasks",
+		"instance_memory_reserved_capacity",
+		"instance_filesystem_utilization",
+		"instance_network_total_bytes",
+		"instance_cpu_utilization",
+		"instance_cpu_reserved_capacity",
+	}
 }
 
 func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricName string) status.TestResult {
@@ -57,12 +63,27 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "ClusterName",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "ContainerInstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

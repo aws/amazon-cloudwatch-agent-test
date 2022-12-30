@@ -7,44 +7,46 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type ProcStatTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*ProcStatTestRunner)(nil)
+var _ test_runner.ITestRunner = (*ProcStatTestRunner)(nil)
 
-func (m *ProcStatTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := m.getMeasuredMetrics()
+func (m *ProcStatTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := m.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, 0, len(metricsToFetch))
 	for name := range metricsToFetch {
 		testResults = append(testResults, m.validateProcStatMetric(name))
 	}
 
 	return status.TestGroupResult{
-		Name:        m.getTestName(),
+		Name:        m.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (m *ProcStatTestRunner) getTestName() string {
+func (m *ProcStatTestRunner) GetTestName() string {
 	return "ProcStat"
 }
 
-func (m *ProcStatTestRunner) getAgentConfigFileName() string {
+func (m *ProcStatTestRunner) GetAgentConfigFileName() string {
 	return "procstat_config.json"
 }
 
-func (m *ProcStatTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
+func (t *ProcStatTestRunner) SetupAfterAgentRun() error {
+	return nil
 }
 
-func (m *ProcStatTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+func (m *ProcStatTestRunner) GetMeasuredMetrics() map[string]*metric.Bounds {
 	return map[string]*metric.Bounds{
 		"procstat_cpu_time_system": nil,
 		"procstat_cpu_time_user":   nil,
@@ -64,12 +66,27 @@ func (m *ProcStatTestRunner) validateProcStatMetric(metricName string) status.Te
 		Status: status.FAILED,
 	}
 
-	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "exe",
+			Value: dimension.ExpectedDimensionValue{aws.String("cloudwatch-agent")},
+		},
+		{
+			Key:   "process_name",
+			Value: dimension.ExpectedDimensionValue{aws.String("amazon-cloudwatch-agent")},
+		},
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

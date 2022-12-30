@@ -1,25 +1,32 @@
 {
-    "agent": {
-      "metrics_collection_interval": 60,
-      "run_as_user": "root",
-      "debug": true,
-      "logfile": ""
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "MetricValueBenchmarkTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
     },
-    "metrics": {
-      "namespace": "MetricValueBenchmarkTest",
-      "append_dimensions": {
-        "InstanceId": "${aws:InstanceId}"
-      },
-      "metrics_collected": {
-        "net": {
-            "measurement": [
-             "bytes_sent", "bytes_recv", "drop_in", "drop_out", "err_in", "err_out", "packets_sent", "packets_recv"
-            ],
-            "resources": [
-              "*"
-            ],
-            "metrics_collection_interval": 60
-          }
+    "metrics_collected": {
+      "net": {
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv",
+          "drop_in",
+          "drop_out",
+          "err_in",
+          "err_out",
+          "packets_sent",
+          "packets_recv"
+        ],
+        "resources": [
+          "*"
+        ],
+        "metrics_collection_interval": 60
       }
     }
   }
+}

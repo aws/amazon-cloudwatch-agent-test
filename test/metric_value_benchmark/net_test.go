@@ -7,44 +7,42 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type NetTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*NetTestRunner)(nil)
+var _ test_runner.ITestRunner = (*NetTestRunner)(nil)
 
-func (m *NetTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := m.getMeasuredMetrics()
+func (m *NetTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := m.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, 0, len(metricsToFetch))
 	for name := range metricsToFetch {
 		testResults = append(testResults, m.validateNetMetric(name))
 	}
 
 	return status.TestGroupResult{
-		Name:        m.getTestName(),
+		Name:        m.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (m *NetTestRunner) getTestName() string {
+func (m *NetTestRunner) GetTestName() string {
 	return "Net"
 }
 
-func (m *NetTestRunner) getAgentConfigFileName() string {
+func (m *NetTestRunner) GetAgentConfigFileName() string {
 	return "net_config.json"
 }
 
-func (m *NetTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
-}
-
-func (m *NetTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+func (m *NetTestRunner) GetMeasuredMetrics() map[string]*metric.Bounds {
 	return map[string]*metric.Bounds{
 		"net_bytes_sent":   nil,
 		"net_bytes_recv":   nil,
@@ -63,12 +61,24 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "interface",
+			Value: dimension.ExpectedDimensionValue{aws.String("docker0")},
+		},
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
+
 	if err != nil {
 		return testResult
 	}

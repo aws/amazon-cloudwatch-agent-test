@@ -7,44 +7,41 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type DiskIOTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*DiskIOTestRunner)(nil)
+var _ test_runner.ITestRunner = (*DiskIOTestRunner)(nil)
 
-func (m *DiskIOTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := m.getMeasuredMetrics()
+func (m *DiskIOTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := m.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, 0, len(metricsToFetch))
 	for name := range metricsToFetch {
 		testResults = append(testResults, m.validateDiskMetric(name))
 	}
 
 	return status.TestGroupResult{
-		Name:        m.getTestName(),
+		Name:        m.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (m *DiskIOTestRunner) getTestName() string {
+func (m *DiskIOTestRunner) GetTestName() string {
 	return "DiskIO"
 }
 
-func (m *DiskIOTestRunner) getAgentConfigFileName() string {
+func (m *DiskIOTestRunner) GetAgentConfigFileName() string {
 	return "diskio_config.json"
 }
 
-func (m *DiskIOTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
-}
-
-func (m *DiskIOTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+func (m *DiskIOTestRunner) GetMeasuredMetrics() map[string]*metric.Bounds {
 	return map[string]*metric.Bounds{
 		"diskio_iops_in_progress": nil,
 		"diskio_io_time":          nil,
@@ -63,12 +60,23 @@ func (m *DiskIOTestRunner) validateDiskMetric(metricName string) status.TestResu
 		Status: status.FAILED,
 	}
 
-	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "name",
+			Value: dimension.ExpectedDimensionValue{aws.String("nvme0n1")},
+		},
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

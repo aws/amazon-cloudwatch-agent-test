@@ -1,13 +1,13 @@
 {
-    "agent": {
-      "metrics_collection_interval": 60,
-      "run_as_user": "root",
-      "debug": true,
-      "logfile": ""
-    },
-    "logs": {
-        "metrics_collected": {
-            "emf": { }
-        }
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "logs": {
+    "metrics_collected": {
+      "emf": {}
     }
   }
+}

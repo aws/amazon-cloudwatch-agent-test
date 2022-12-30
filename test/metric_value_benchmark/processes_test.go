@@ -7,44 +7,40 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
 type ProcessesTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*ProcessesTestRunner)(nil)
+var _ test_runner.ITestRunner = (*ProcessesTestRunner)(nil)
 
-func (m *ProcessesTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := m.getMeasuredMetrics()
+func (m *ProcessesTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := m.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, 0, len(metricsToFetch))
 	for name := range metricsToFetch {
 		testResults = append(testResults, m.validateProcessesMetric(name))
 	}
 
 	return status.TestGroupResult{
-		Name:        m.getTestName(),
+		Name:        m.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (m *ProcessesTestRunner) getTestName() string {
+func (m *ProcessesTestRunner) GetTestName() string {
 	return "Processes"
 }
 
-func (m *ProcessesTestRunner) getAgentConfigFileName() string {
+func (m *ProcessesTestRunner) GetAgentConfigFileName() string {
 	return "processes_config.json"
 }
 
-func (m *ProcessesTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
-}
-
-func (m *ProcessesTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
+func (m *ProcessesTestRunner) GetMeasuredMetrics() map[string]*metric.Bounds {
 	return map[string]*metric.Bounds{
 		"processes_blocked":       nil,
 		"processes_dead":          nil,
@@ -65,12 +61,19 @@ func (m *ProcessesTestRunner) validateProcessesMetric(metricName string) status.
 		Status: status.FAILED,
 	}
 
-	fetcher, err := m.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}
