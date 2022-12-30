@@ -74,10 +74,3 @@ func subtractMinutes(fromTime time.Time, minutes int) time.Time {
 	tenMinutes := time.Duration(-1*minutes) * time.Minute
 	return fromTime.Add(tenMinutes)
 }
-
-// IsApplicable checks whether the given metric is supported within the plugin
-// (e.g cpu_time_active is supported in CPU plugin while mem_active does not)
-func IsApplicable(f MetricValueFetcher, metric string) bool {
-	_, exists := f.getPluginSupportedMetric()[metric]
-	return exists
-}
