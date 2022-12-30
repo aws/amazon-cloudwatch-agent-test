@@ -24,9 +24,9 @@ var _ test_runner.ITestRunner = (*NoAppendDimensionTestRunner)(nil)
 
 func (t *NoAppendDimensionTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateNoAppendDimensionMetric(metricName)
+	testResults := make([]status.TestResult, 0, len(metricsToFetch))
+	for metricName := range metricsToFetch {
+		testResults = append(testResults, t.validateNoAppendDimensionMetric(metricName))
 	}
 
 	return status.TestGroupResult{
@@ -43,8 +43,8 @@ func (t *NoAppendDimensionTestRunner) GetAgentConfigFileName() string {
 	return "no_append_dimension.json"
 }
 
-func (t *NoAppendDimensionTestRunner) GetMeasuredMetrics() []string {
-	return []string{"cpu_time_active"}
+func (t *NoAppendDimensionTestRunner) GetMeasuredMetrics() map[string]*metric.Bounds {
+	return map[string]*metric.Bounds{"cpu_time_active": nil}
 }
 
 func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName string) status.TestResult {
