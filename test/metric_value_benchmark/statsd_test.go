@@ -11,41 +11,44 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type StatsdTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*StatsdTestRunner)(nil)
+var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
 
-func (t *StatsdTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := t.getMeasuredMetrics()
+func (t *StatsdTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateStatsdMetric(metricName)
 	}
 
 	return status.TestGroupResult{
-		Name:        t.getTestName(),
+		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (t *StatsdTestRunner) getTestName() string {
+func (t *StatsdTestRunner) GetTestName() string {
 	return "Statsd"
 }
 
-func (t *StatsdTestRunner) getAgentConfigFileName() string {
+func (t *StatsdTestRunner) GetAgentConfigFileName() string {
 	return "statsd_config.json"
 }
 
-func (t *StatsdTestRunner) getAgentRunDuration() time.Duration {
+func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 	return time.Minute
 }
 
-func (t *StatsdTestRunner) setupAfterAgentRun() error {
+func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 	// EC2 Image Builder creates a bash script that sends statsd format to cwagent at port 8125
 	// The bash script is at /etc/statsd.sh
 	//    for times in  {1..3}
@@ -60,7 +63,7 @@ func (t *StatsdTestRunner) setupAfterAgentRun() error {
 	return common.RunCommands(startStatsdCommand)
 }
 
-func (t *StatsdTestRunner) getMeasuredMetrics() []string {
+func (t *StatsdTestRunner) GetMeasuredMetrics() []string {
 	return []string{"statsd_counter"}
 }
 
@@ -70,12 +73,23 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "metric_type",
+			Value: dimension.ExpectedDimensionValue{aws.String("counter")},
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

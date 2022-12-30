@@ -7,45 +7,42 @@
 package metric_value_benchmark
 
 import (
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type CollectDTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-var _ ITestRunner = (*CollectDTestRunner)(nil)
+var _ test_runner.ITestRunner = (*CollectDTestRunner)(nil)
 
-func (t *CollectDTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := t.getMeasuredMetrics()
+func (t *CollectDTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateCollectDMetric(metricName)
 	}
 
 	return status.TestGroupResult{
-		Name:        t.getTestName(),
+		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (t *CollectDTestRunner) getTestName() string {
+func (t *CollectDTestRunner) GetTestName() string {
 	return "CollectD"
 }
 
-func (t *CollectDTestRunner) getAgentConfigFileName() string {
+func (t *CollectDTestRunner) GetAgentConfigFileName() string {
 	return "collectd_config.json"
 }
 
-func (t *CollectDTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
-}
-
-func (t *CollectDTestRunner) setupAfterAgentRun() error {
+func (t *CollectDTestRunner) SetupAfterAgentRun() error {
 	// EC2 Image Builder creates the collectd's default configuration and collectd will pick it up.
 	// For Linux the static is at /etc/collectd.conf, fox Ubuntu it is at /etc/collectd/collectd.conf
 	// Collectd's static configuration
@@ -66,7 +63,7 @@ func (t *CollectDTestRunner) setupAfterAgentRun() error {
 	return common.RunCommands(startCollectdCommands)
 }
 
-func (t *CollectDTestRunner) getMeasuredMetrics() []string {
+func (t *CollectDTestRunner) GetMeasuredMetrics() []string {
 	return []string{"collectd_cpu_value"}
 }
 
@@ -76,12 +73,31 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "type_instance",
+			Value: dimension.ExpectedDimensionValue{aws.String("user")},
+		},
+		{
+			Key:   "instance",
+			Value: dimension.ExpectedDimensionValue{aws.String("0")},
+		},
+		{
+			Key:   "type",
+			Value: dimension.ExpectedDimensionValue{aws.String("percent")},
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
 	if err != nil {
 		return testResult
 	}

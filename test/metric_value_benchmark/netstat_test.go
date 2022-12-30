@@ -14,17 +14,17 @@ import (
 	"log"
 )
 
-type SwapTestRunner struct {
+type NetStatTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-var _ test_runner.ITestRunner = (*SwapTestRunner)(nil)
+var _ test_runner.ITestRunner = (*NetStatTestRunner)(nil)
 
-func (t *SwapTestRunner) Validate() status.TestGroupResult {
+func (t *NetStatTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateSwapMetric(metricName)
+		testResults[i] = t.validateNetStatMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -33,23 +33,33 @@ func (t *SwapTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *SwapTestRunner) GetTestName() string {
-	return "Swap"
+func (t *NetStatTestRunner) GetTestName() string {
+	return "NetStat"
 }
 
-func (t *SwapTestRunner) GetAgentConfigFileName() string {
-	return "swap_config.json"
+func (t *NetStatTestRunner) GetAgentConfigFileName() string {
+	return "netstat_config.json"
 }
 
-func (t *SwapTestRunner) GetMeasuredMetrics() []string {
+func (t *NetStatTestRunner) GetMeasuredMetrics() []string {
 	return []string{
-		"swap_free",
-		"swap_used",
-		"swap_used_percent",
+		"netstat_tcp_close",
+		"netstat_tcp_close_wait",
+		"netstat_tcp_closing",
+		"netstat_tcp_established",
+		"netstat_tcp_fin_wait1",
+		"netstat_tcp_fin_wait2",
+		"netstat_tcp_last_ack",
+		"netstat_tcp_listen",
+		"netstat_tcp_none",
+		"netstat_tcp_syn_sent",
+		"netstat_tcp_syn_recv",
+		"netstat_tcp_time_wait",
+		"netstat_udp_socket",
 	}
 }
 
-func (t *SwapTestRunner) validateSwapMetric(metricName string) status.TestResult {
+func (t *NetStatTestRunner) validateNetStatMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -68,6 +78,7 @@ func (t *SwapTestRunner) validateSwapMetric(metricName string) status.TestResult
 
 	fetcher := metric.MetricValueFetcher{}
 	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
+
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
