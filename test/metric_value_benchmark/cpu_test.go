@@ -59,8 +59,8 @@ func (t *CPUTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
 		"cpu_time_system":     nil,
 		"cpu_time_user":       nil,
 		"cpu_usage_active": {
-			Lower: 0.12,
-			Upper: 0.18,
+			Lower: 0.2,
+			Upper: 0.4,
 		},
 		"cpu_usage_guest": {
 			Lower: 0,
@@ -75,8 +75,8 @@ func (t *CPUTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
 			Upper: 100,
 		},
 		"cpu_usage_iowait": {
-			Lower: 0.005,
-			Upper: 0.015,
+			Lower: 0.01,
+			Upper: 0.05,
 		},
 		"cpu_usage_irq": {
 			Lower: 0,
@@ -95,12 +95,12 @@ func (t *CPUTestRunner) getMeasuredMetrics() map[string]*metric.Bounds {
 			Upper: 0.1,
 		},
 		"cpu_usage_system": {
-			Lower: 0.11,
-			Upper: 0.16,
+			Lower: 0.05,
+			Upper: 0.2,
 		},
 		"cpu_usage_user": {
 			Lower: 0.02,
-			Upper: 0.04,
+			Upper: 0.07,
 		},
 	}
 }
