@@ -42,7 +42,7 @@ type MetricFetcherFactory struct {
 
 func (factory *MetricFetcherFactory) GetMetricFetcher(metricName string) (MetricValueFetcher, error) {
 	for _, fetcher := range metricValueFetchers {
-		if fetcher.isApplicable(metricName) {
+		if IsApplicable(fetcher, metricName) {
 			fetcher.setEnv(factory.Env)
 			return fetcher, nil
 		}
@@ -57,10 +57,6 @@ type MetricValueFetcher interface {
 	//in the last 10 minutes with the given metric name, namespace, and dimensions.
 	Fetch(namespace, metricName string, stat Statistics) (MetricValues, error)
 	fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error)
-
-	// isApplicable checks whether the given metric is supported within the plugin
-	//(e.g cpu_time_active is supported in CPU plugin while mem_active does not)
-	isApplicable(metricName string) bool
 
 	// getMetricSpecificDimensions returns the dimensions that needs to be scraped by each plugin
 	getMetricSpecificDimensions(metricName string) []types.Dimension
@@ -96,11 +92,6 @@ func (f *baseMetricValueFetcher) getInstanceIdDimension() types.Dimension {
 
 func (f *baseMetricValueFetcher) getMetricSpecificDimensions(string) []types.Dimension {
 	return []types.Dimension{}
-}
-
-func (f *baseMetricValueFetcher) isApplicable(metricName string) bool {
-	_, exists := f.getPluginSupportedMetric()[metricName]
-	return exists
 }
 
 func (f *baseMetricValueFetcher) getPluginSupportedMetric() map[string]struct{} {
@@ -156,4 +147,11 @@ func (f *baseMetricValueFetcher) fetch(namespace, metricName string, metricSpeci
 func subtractMinutes(fromTime time.Time, minutes int) time.Time {
 	tenMinutes := time.Duration(-1*minutes) * time.Minute
 	return fromTime.Add(tenMinutes)
+}
+
+// IsApplicable checks whether the given metric is supported within the plugin
+// (e.g cpu_time_active is supported in CPU plugin while mem_active does not)
+func IsApplicable(f MetricValueFetcher, metric string) bool {
+	_, exists := f.getPluginSupportedMetric()[metric]
+	return exists
 }
