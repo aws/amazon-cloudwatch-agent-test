@@ -1,4 +1,4 @@
-# install amazon EFS client on linux, agnostic to yum or apt
+# install amazon EFS client on linux, agnostic to yum, apt, or zypper + rpm
 # https://docs.aws.amazon.com/efs/latest/ug/installing-amazon-efs-utils.html
 
 if command -v apt-get >/dev/null; then
