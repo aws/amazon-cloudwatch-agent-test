@@ -11,6 +11,8 @@ import (
 	"log"
 	"os"
 	"strings"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+
 	"testing"
 	"time"
 
@@ -48,6 +50,12 @@ var testParameters = []input{
 		numExpectedLogs: 100,
 		configPath:      "resources/config_log_filter.json",
 	},
+}
+
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
 // TestWriteLogsToCloudWatch writes N number of logs, and then validates that N logs

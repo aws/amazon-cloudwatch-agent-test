@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 const (
@@ -28,6 +29,12 @@ const (
 type input struct {
 	user      string
 	dataInput string
+}
+
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
 func TestRunAsUser(t *testing.T) {
