@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build windows
-// +build windows
+//go:build !windows
+// +build !windows
 
 package sanity
 
@@ -12,8 +12,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
-func SanityCheck(t *testing.T) {
-	err := common.RunShellScript("resources/verifyWindowsCtlScript.ps1")
+func TestAgentStatus(t *testing.T) {
+	err := common.RunShellScript("resources/verifyLinuxCtlScript.sh")
 	if err != nil {
 		t.Fatalf("Running sanity check failed")
 	}
