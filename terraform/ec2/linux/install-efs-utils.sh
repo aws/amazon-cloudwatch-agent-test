@@ -19,7 +19,7 @@ elif command -v zypper >/dev/null; then
   # File './suse/noarch/bash-completion-2.11-2.1.noarch.rpm' not found on medium 'http://download.opensuse.org/tumbleweed/repo/oss/'
   sudo zypper ar -f -n OSS http://download.opensuse.org/tumbleweed/repo/oss/ OSS
   sudo zypper ar -f -n NON-OSS http://download.opensuse.org/tumbleweed/repo/non-oss/ NON-OSS
-  sudo zypper refresh
+  sudo zypper --gpg-auto-import-keys refresh
 
   sudo zypper install -y git rpm-build make
   git clone https://github.com/aws/efs-utils
