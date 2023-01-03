@@ -8,7 +8,8 @@ provider "aws" {
 # In this module, we are uploading setup's terraform state to s3 bucket for two reasons:
 #-Share the setup configuration with others dev
 #-Avoid creating duplicate resources when sharing the same account
-# However, uncomment the terraform backend s3 if this is the first time doing the setup.
+# However, uncomment the terraform backend s3  if this is the second time doing the setup.
+
 /*
 terraform {
  backend "s3" {
@@ -20,6 +21,8 @@ terraform {
   }
 }
 */
+
+
 
 #Create S3 bucket to record terraform state for this setup in order to share the state for configuration setup when using integration test account
 #Document: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket
