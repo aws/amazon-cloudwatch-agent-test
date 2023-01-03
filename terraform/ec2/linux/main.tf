@@ -42,7 +42,7 @@ resource "aws_efs_mount_target" "mount" {
   security_groups = [aws_security_group.ec2_security_group.id]
 }
 
-resource "null_resource" "configure_efs" {
+resource "null_resource" "mount_efs" {
   depends_on = [
     aws_efs_mount_target.mount,
     aws_instance.cwagent
@@ -142,7 +142,7 @@ resource "null_resource" "integration_test" {
 
   depends_on = [
     aws_instance.cwagent,
-    null_resource.configure_efs
+    null_resource.mount_efs
   ]
 }
 
