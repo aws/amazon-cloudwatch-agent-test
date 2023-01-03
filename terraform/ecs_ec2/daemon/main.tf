@@ -1,5 +1,5 @@
 module "common" {
-  source = "../../common"
+  source             = "../../common"
   cwagent_image_repo = var.cwagent_image_repo
   cwagent_image_tag  = var.cwagent_image_tag
 }
