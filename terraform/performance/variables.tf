@@ -49,11 +49,6 @@ variable "binary_name" {
   default = ""
 }
 
-variable "local_stack_host_name" {
-  type    = string
-  default = "localhost.localstack.cloud"
-}
-
 variable "s3_bucket" {
   type    = string
   default = ""
