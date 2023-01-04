@@ -6,19 +6,15 @@ output "testing_id" {
 }
 
 output "cwa_iam_role" {
-  value = var.cwa_iam_role
+  value = "cwa-e2e-iam-role"
 }
 
 output "cwa_iam_policy" {
-  value = var.cwa_iam_policy
+  value = "cwa-e2e-iam-policy"
 }
 
 output "cwa_iam_instance_profile" {
-  value = var.cwa_iam_instance_profile
-}
-
-output "ec2_key_pair" {
-  value = var.ec2_key_pair
+  value = "cwa-e2e-iam-instance-profile"
 }
 
 output "cwagent_image_repo" {
@@ -34,5 +30,5 @@ output "vpc_security_group" {
 }
 
 output "performance-dynamodb-table" {
-  value = ""
+  value = "CWAPerformanceMetrics"
 }
