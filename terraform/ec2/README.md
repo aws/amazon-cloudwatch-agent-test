@@ -11,7 +11,7 @@ actions to run.
 Newer accounts have lowered default vCPU limits which constrains workflow (eg. running CWAgent GitHub actions on personal forks).  
 If you haven't for the choice of your AWS account, do
 1. log into your AWS account on a browser
-2. go to [here](https://support.console.aws.amazon.com/support/home?#/case/create?issueType=service-limit-increase&limitType=service-code-ec2-instances&serviceLimitIncreaseType=ec2-instances&type=service_limit_increase) 
+2. go to [here](https://support.console.aws.amazon.com/support/home?#/case/create?issueType=service-limit-increase&limitType=service-code-ec2-instances&serviceLimitIncreaseType=ec2-instances&type=service_limit_increase)
 3. Select Oregon for both request1 & 2
 4. For request 1, select All Standard (A, C, D, H, I, M, R, T, Z) instances - new limit 512
 5. For request 2, select All G and VT instances - new limit value 64
@@ -23,7 +23,7 @@ If you haven't for the choice of your AWS account, do
 - If you got approved for 300 instead of 512, that is ok.
 - 16 instead of 64 for G and VT instances are ok too. Windows test depend on it.
 
-## 1. Create ECR Repository 
+## 1. Create ECR Repository
 In your account, navigate to us-west-2 and create a ECR repository with the following settings.
 
 |Field              |Value                   |
@@ -37,10 +37,10 @@ In your account, navigate to us-west-2 and create a ECR repository with the foll
 ## 1. Setup Github personal fork
 - Fork amazon-cloudwatch-agent repo
 - `git tag <a version following the format requirement>`. e.g. v0.999999.0. If you don't have a specific need, you can just use this same string for your tag.
-  - if you use any string, building CWA image will fail during integ test steps with error `'Version' field value 'leechena-1': version number does not start with digit`
-  - Similary, if you put something like v0, parsing fails during integration test workflow's MakeMSIZip step. It assumes you have a major and minor version.
-- `git push origin --tags` 
-  - this is used to create CWAGENT_VERSION which is used by integ test workflow when it builds artifacts. Workflow fails without this.
+    - if you use any string, building CWA image will fail during integ test steps with error `'Version' field value 'leechena-1': version number does not start with digit`
+    - Similary, if you put something like v0, parsing fails during integration test workflow's MakeMSIZip step. It assumes you have a major and minor version.
+- `git push origin --tags`
+    - this is used to create CWAGENT_VERSION which is used by integ test workflow when it builds artifacts. Workflow fails without this.
 
 
 ## 2. Add GPG_KEY_NAME
@@ -61,8 +61,8 @@ required for testing locally but is required for testing on your personal fork.
 ## 4. Add GPG_PRIVATE_KEY
 1. `gpg --list-secret-keys --keyid-format=long`
 2. An output line should look like `sec <some string>/<key id>`
-3. `gpg --export-secret-keys -a <key id> > private.key`  
-4. `cat private.key`  
+3. `gpg --export-secret-keys -a <key id> > private.key`
+4. `cat private.key`
 5. copy the entire output including the `----` lines
 6. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add GPG_PRIVATE_KEY as GitHub repository secret. Name is `GPG_PRIVATE_KEY` and Secret is the private key you just copied to clipboard.
 
@@ -153,6 +153,15 @@ Outputs:
         "ec2:DescribeVpcs",
         "ec2:GetPasswordData",
         "ec2:ModifyInstanceAttribute",
+        "elasticfilesystem:CreateFileSystem",
+        "elasticfilesystem:CreateMountTarget",
+        "elasticfilesystem:DeleteFileSystem",
+        "elasticfilesystem:DeleteMountTarget",
+        "elasticfilesystem:DescribeFileSystems",
+        "elasticfilesystem:DescribeLifecycleConfiguration",
+        "ec2:CreateNetworkInterface",
+        "ec2:DeleteNetworkInterface",
+        "ec2:DescribeNetworkInterfaces",
         "dynamodb:*",
         "ec2:RunInstances",
         "ec2:TerminateInstances",
@@ -267,7 +276,7 @@ Outputs:
 ```
 
 11. Once creation is done, go back to the IAM role and attach the policy you just created by searching for the policy name.
-12. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add TERRAFORM_AWS_ASSUME_ROLE as GitHub repository secret. Name is `TERRAFORM_AWS_ASSUME_ROLE` and Secret is the IAM role's ARN. 
+12. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add TERRAFORM_AWS_ASSUME_ROLE as GitHub repository secret. Name is `TERRAFORM_AWS_ASSUME_ROLE` and Secret is the IAM role's ARN.
 
 
 
@@ -288,7 +297,7 @@ Outputs:
 Note that based on the GitHub action workflow YAML configuration, merges to the main branch
 also trigger the integration tests. If for any reason you do not want integration tests to run
 on merge for your fork, you should go to `Actions`, select the `Run Integration Tests` action,
-click the `...` and then select `Disable workflow`. 
+click the `...` and then select `Disable workflow`.
 See [GitHub docs](https://docs.github.com/en/actions/managing-workflow-runs/disabling-and-enabling-a-workflow)
 regarding how to turn workflows on and off.
 
@@ -394,7 +403,7 @@ aws_instance.integration-test: Creation complete after 5m35s [id=i-0f7f77a62c93d
 Apply complete! Resources: 1 added, 0 changed, 0 destroyed.   
 ```
 
-### Start the Windows integration tests (example): 
+### Start the Windows integration tests (example):
 ```shell
 cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
 terraform init
