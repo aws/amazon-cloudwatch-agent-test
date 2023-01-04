@@ -52,16 +52,8 @@ resource "null_resource" "integration_test" {
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
-      "sleep 10",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
-      "echo get ssl pem for localstack and export local stack host name",
-      "cd ~/amazon-cloudwatch-agent-test/localstack/ls_tmp",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} . --recursive",
-      "cat ${var.ca_cert_path} > original.pem",
-      "cat original.pem snakeoil.pem > combine.pem",
-      "sudo cp original.pem /opt/aws/amazon-cloudwatch-agent/original.pem",
-      "sudo cp combine.pem /opt/aws/amazon-cloudwatch-agent/combine.pem",
     ]
 
     connection {
@@ -76,7 +68,6 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
-      "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",

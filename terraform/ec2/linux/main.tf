@@ -52,7 +52,6 @@ resource "null_resource" "integration_test" {
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
-      "sleep 10",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
       "echo get ssl pem for localstack and export local stack host name",
@@ -82,9 +81,6 @@ resource "null_resource" "integration_test" {
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v --tags=integration",
-      "export SHA=${var.cwa_github_sha}",
-      "export SHA_DATE=${var.cwa_github_sha_date}",
-      "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
       "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v --tags=integration "
     ]
     connection {
