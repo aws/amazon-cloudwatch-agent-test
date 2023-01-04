@@ -26,12 +26,13 @@ terraform {
 
 #Create S3 bucket to record terraform state for this setup in order to share the state for configuration setup when using integration test account
 #Document: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket
-resource "aws_s3_bucket" "setup-remote-state-s3-bucket" {
-  bucket = "remote-terraform-state-s3-bucket"
+resource "aws_s3_bucket" "remote-state-s3-bucket" {
+  bucket        = "remote-terraform-state-s3-bucket"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "encrypt-setup-remote-state" {
-  bucket = aws_s3_bucket.setup-remote-state-s3-bucket.bucket
+  bucket = aws_s3_bucket.remote-state-s3-bucket.bucket
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -40,12 +41,12 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "encrypt-setup-rem
 }
 
 resource "aws_s3_bucket_acl" "acl-setup-remote-state" {
-  bucket = aws_s3_bucket.setup-remote-state-s3-bucket.bucket
+  bucket = aws_s3_bucket.remote-state-s3-bucket.bucket
   acl    = "private"
 }
 
 resource "aws_s3_bucket_versioning" "versioning-setup-remote-state" {
-  bucket = aws_s3_bucket.setup-remote-state-s3-bucket.bucket
+  bucket = aws_s3_bucket.remote-state-s3-bucket.bucket
   versioning_configuration {
     status = "Enabled"
   }
@@ -53,7 +54,7 @@ resource "aws_s3_bucket_versioning" "versioning-setup-remote-state" {
 
 #Avoid multiple developers change the state at the same time since it would cause race condition
 #Document: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table
-resource "aws_dynamodb_table" "setup-remote-state-dynamodb-table" {
+resource "aws_dynamodb_table" "remote-state-dynamodb-table" {
   name         = "remote-terraform-state-dynamodb-table"
   hash_key     = "LockID"
   billing_mode = "PAY_PER_REQUEST"
@@ -63,5 +64,5 @@ resource "aws_dynamodb_table" "setup-remote-state-dynamodb-table" {
     type = "S"
   }
 
-  depends_on = [aws_s3_bucket.setup-remote-state-s3-bucket]
+  depends_on = [aws_s3_bucket.remote-state-s3-bucket]
 }

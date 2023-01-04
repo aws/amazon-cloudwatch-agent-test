@@ -35,3 +35,8 @@ variable "vpc_security_group" {
   type    = string
   default = "vpc_security_group"
 }
+
+variable "vpc_security_group" {
+  type    = string
+  default = "vpc_security_group"
+}
