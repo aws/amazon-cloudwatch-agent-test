@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 variable "region" {
   type    = string
   default = "us-west-2"
@@ -10,7 +13,7 @@ variable "ec2_instance_type" {
 
 variable "ssh_key_name" {
   type    = string
-  default = "cwagent-integ-test-key"
+  default = ""
 }
 
 variable "ami" {

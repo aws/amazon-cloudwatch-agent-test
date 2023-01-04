@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -25,7 +26,14 @@ const (
 	numberofLinuxAppendDimensions = 1
 )
 
-var expectedNvidiaGPULinuxMetrics = []string{"mem_used_percent", "nvidia_smi_utilization_gpu", "nvidia_smi_utilization_memory", "nvidia_smi_power_draw", "nvidia_smi_temperature_gpu"}
+var (
+	envMetaDataStrings            = &(environment.MetaDataStrings{})
+	expectedNvidiaGPULinuxMetrics = []string{"mem_used_percent", "nvidia_smi_utilization_gpu", "nvidia_smi_utilization_memory", "nvidia_smi_power_draw", "nvidia_smi_temperature_gpu"}
+)
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+}
 
 func TestNvidiaGPU(t *testing.T) {
 	t.Run("Basic configuration testing for both metrics and logs", func(t *testing.T) {
