@@ -50,7 +50,7 @@ resource "null_resource" "mount_efs" {
 
   connection {
     type = "ssh"
-    user = "ec2-user"
+    user = var.user
     private_key = local.private_key_content
     host = aws_instance.cwagent.public_ip
   }
