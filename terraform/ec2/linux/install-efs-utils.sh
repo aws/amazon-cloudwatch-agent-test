@@ -9,8 +9,11 @@ if command -v apt-get >/dev/null; then
   ./build-deb.sh
   sudo apt-get -y install ./build/amazon-efs-utils*deb
 elif command -v yum >/dev/null; then
-  sudo yum update -y
-  sudo yum install sudo yum install -y amazon-efs-utils
+  sudo yum -y install git rpm-build make
+  git clone https://github.com/aws/efs-utils
+  cd efs-utils
+  make rpm
+  sudo yum -y install build/amazon-efs-utils*rpm
 elif command -v zypper >/dev/null; then
   sudo zypper refresh
   sudo zypper install -y git rpm-build make
