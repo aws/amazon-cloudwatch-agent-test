@@ -8,41 +8,43 @@ package metric_value_benchmark
 
 import (
 	"log"
-	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type DiskTestRunner struct {
-	BaseTestRunner
+	test_runner.BaseTestRunner
 }
 
-func (t *DiskTestRunner) validate() status.TestGroupResult {
-	metricsToFetch := t.getMeasuredMetrics()
+var _ test_runner.ITestRunner = (*DiskTestRunner)(nil)
+
+func (t *DiskTestRunner) Validate() status.TestGroupResult {
+	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateDiskMetric(metricName)
 	}
 
 	return status.TestGroupResult{
-		Name:        t.getTestName(),
+		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (t *DiskTestRunner) getTestName() string {
+func (t *DiskTestRunner) GetTestName() string {
 	return "Disk"
 }
 
-func (t *DiskTestRunner) getAgentConfigFileName() string {
+func (t *DiskTestRunner) GetAgentConfigFileName() string {
 	return "disk_config.json"
 }
-func (t *DiskTestRunner) getAgentRunDuration() time.Duration {
-	return minimumAgentRuntime
-}
 
-func (t *DiskTestRunner) getMeasuredMetrics() []string {
+
+func (t *DiskTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"disk_free",
 		"disk_inodes_free",
@@ -60,12 +62,28 @@ func (t *DiskTestRunner) validateDiskMetric(metricName string) status.TestResult
 		Status: status.FAILED,
 	}
 
-	fetcher, err := t.MetricFetcherFactory.GetMetricFetcher(metricName)
-	if err != nil {
+	dims, failed := t.DimensionFactory.GetDimensions([] dimension.Instruction{
+		{
+			Key: "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key: "path",
+			Value: dimension.ExpectedDimensionValue{aws.String("/home/ec2-user/efs-mount-point")},
+		},
+		{
+			Key: "fstype",
+			Value: dimension.ExpectedDimensionValue{aws.String("nfs4")},
+		},
+	})
+
+	if len(failed) > 0 {
 		return testResult
 	}
 
-	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
+
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
