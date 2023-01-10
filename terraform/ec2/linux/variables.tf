@@ -31,7 +31,7 @@ variable "user" {
 variable "install_agent" {
   description = "go run ./install/install_agent.go deb or go run ./install/install_agent.go rpm"
   type        = string
-  default     = ""
+  default     = "go run ./install/install_agent.go rpm"
 }
 
 variable "ca_cert_path" {
