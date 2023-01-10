@@ -49,6 +49,7 @@ resource "null_resource" "integration_test" {
       "echo sha ${var.cwa_github_sha}",
       "cloud-init status --wait",
       "echo clone and install agent",
+      "rm -rf amazon-cloudwatch-agent-test",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
