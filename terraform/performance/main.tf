@@ -27,51 +27,6 @@ locals {
 }
 
 #####################################################################
-# Create EFS
-#####################################################################
-resource "aws_efs_file_system" "efs" {
-  creation_token = "efs-${random_id.testing_id.hex}"
-  tags           = {
-    Name = "efs-${random_id.testing_id.hex}"
-  }
-}
-
-resource "aws_efs_mount_target" "mount" {
-  file_system_id = aws_efs_file_system.efs.id
-  subnet_id = aws_instance.cwagent.subnet_id
-  security_groups = [aws_security_group.ec2_security_group.id]
-}
-
-resource "null_resource" "mount_efs" {
-  depends_on = [
-    aws_efs_mount_target.mount,
-    aws_instance.cwagent
-  ]
-
-  connection {
-    type = "ssh"
-    user = var.user
-    private_key = local.private_key_content
-    host = aws_instance.cwagent.public_ip
-  }
-
-  provisioner "file" {
-    source = "install-efs-utils.sh"
-    destination = "/tmp/install-efs-utils.sh"
-  }
-
-  provisioner "remote-exec" {
-    # https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.html
-    inline = [
-      "chmod +x /tmp/install-efs-utils.sh",
-      "/tmp/install-efs-utils.sh",
-      "sudo mkdir ${var.efs_mount_point}",
-      "sudo mount -t efs -o tls ${aws_efs_file_system.efs.dns_name} ${var.efs_mount_point}/",
-    ]
-  }
-}
-
-#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
@@ -99,13 +54,6 @@ resource "null_resource" "integration_test" {
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
-      "echo get ssl pem for localstack and export local stack host name",
-      "cd ~/amazon-cloudwatch-agent-test/localstack/ls_tmp",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} . --recursive",
-      "cat ${var.ca_cert_path} > original.pem",
-      "cat original.pem snakeoil.pem > combine.pem",
-      "sudo cp original.pem /opt/aws/amazon-cloudwatch-agent/original.pem",
-      "sudo cp combine.pem /opt/aws/amazon-cloudwatch-agent/combine.pem",
     ]
 
     connection {
@@ -120,13 +68,14 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
-      "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
-      "echo run sanity test && go test ./test/sanity -p 1 -v --tags=integration",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v --tags=integration "
+      "export SHA=${var.cwa_github_sha}",
+      "export SHA_DATE=${var.cwa_github_sha_date}",
+      "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
+      "go test ${var.test_dir} -p 1 -timeout 1h -v --tags=integration "
     ]
     connection {
       type        = "ssh"
@@ -136,10 +85,7 @@ resource "null_resource" "integration_test" {
     }
   }
 
-  depends_on = [
-    aws_instance.cwagent,
-    null_resource.mount_efs
-  ]
+  depends_on = [aws_instance.cwagent]
 }
 
 data "aws_ami" "latest" {

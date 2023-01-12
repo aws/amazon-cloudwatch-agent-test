@@ -49,11 +49,6 @@ variable "binary_name" {
   default = ""
 }
 
-variable "local_stack_host_name" {
-  type    = string
-  default = "localhost.localstack.cloud"
-}
-
 variable "s3_bucket" {
   type    = string
   default = ""
@@ -96,9 +91,4 @@ variable "cwa_github_sha_date" {
 variable "performance_number_of_logs" {
   type    = string
   default = ""
-}
-
-variable "efs_mount_point" {
-  type = string
-  default = "~/efs-mount-point"
 }
