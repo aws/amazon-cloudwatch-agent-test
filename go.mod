@@ -14,6 +14,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.19.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.33.0
 	github.com/google/uuid v1.3.0
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/sys v0.2.0
 )
