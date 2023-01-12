@@ -10,9 +10,9 @@ import (
 	"log"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
@@ -43,7 +43,6 @@ func (t *DiskTestRunner) GetAgentConfigFileName() string {
 	return "disk_config.json"
 }
 
-
 func (t *DiskTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"disk_free",
@@ -62,17 +61,17 @@ func (t *DiskTestRunner) validateDiskMetric(metricName string) status.TestResult
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([] dimension.Instruction{
-		{
-			Key: "InstanceId",
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+		Instruction{
+			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
-		{
-			Key: "path",
+		Instruction{
+			Key:   "path",
 			Value: dimension.ExpectedDimensionValue{aws.String("/home/ec2-user/efs-mount-point")},
 		},
-		{
-			Key: "fstype",
+		Instruction{
+			Key:   "fstype",
 			Value: dimension.ExpectedDimensionValue{aws.String("nfs4")},
 		},
 	})
