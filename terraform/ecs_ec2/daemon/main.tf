@@ -27,7 +27,7 @@ resource "aws_launch_configuration" "cluster" {
   instance_type = var.ec2_instance_type
 
   security_groups      = [data.aws_security_group.ecs_security_group.id]
-  iam_instance_profile = data.aws_iam_instance_profile.cwagent_instance_profile.name
+  iam_instance_profile = data.aws_iam_role.ecs_task_role.name
 
   user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
 }
@@ -142,13 +142,13 @@ data "template_file" "cwagent_container_definitions" {
 resource "aws_ecs_task_definition" "cwagent_task_definition" {
   family                   = "cwagent-task-family-${module.common.testing_id}"
   network_mode             = "bridge"
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = data.aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = data.aws_iam_role.ecs_task_execution_role.arn
   cpu                      = 256
   memory                   = 2048
   requires_compatibilities = ["EC2"]
   container_definitions    = data.template_file.cwagent_container_definitions.rendered
-  depends_on               = [aws_cloudwatch_log_group.log_group, aws_iam_role.ecs_task_role, aws_iam_role.ecs_task_execution_role]
+  depends_on               = [aws_cloudwatch_log_group.log_group, data.aws_iam_role.ecs_task_role, data.aws_iam_role.ecs_task_execution_role]
   volume {
     name      = "proc"
     host_path = "/proc"
@@ -174,7 +174,7 @@ resource "aws_ecs_service" "cwagent_service" {
   launch_type         = "EC2"
   scheduling_strategy = "DAEMON"
 
-  depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
+  depends_on = [ aws_ecs_task_definition.cwagent_task_definition ]
 }
 
 #####################################################################
@@ -192,13 +192,13 @@ data "template_file" "extra_apps" {
 resource "aws_ecs_task_definition" "extra_apps_task_definition" {
   family                   = "extra-apps-family-${module.common.testing_id}"
   network_mode             = "awsvpc"
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = data.aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = data.aws_iam_role.ecs_task_execution_role.arn
   cpu                      = 256
   memory                   = 1024
   requires_compatibilities = ["FARGATE"]
   container_definitions    = data.template_file.extra_apps.rendered
-  depends_on               = [aws_cloudwatch_log_group.log_group, aws_iam_role.ecs_task_role, aws_iam_role.ecs_task_execution_role]
+  depends_on               = [aws_cloudwatch_log_group.log_group, data.aws_iam_role.ecs_task_role, data.aws_iam_role.ecs_task_execution_role]
 }
 
 resource "aws_ecs_service" "extra_apps_service" {
@@ -209,12 +209,12 @@ resource "aws_ecs_service" "extra_apps_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    security_groups  = [aws_security_group.ecs_security_group.id]
+    security_groups  = [data.aws_security_group.ecs_security_group.id]
     subnets          = toset(data.aws_subnets.default.ids)
     assign_public_ip = true
   }
 
-  depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
+  depends_on = [aws_ecs_task_definition.extra_apps_task_definition]
 }
 
 resource "null_resource" "validator" {

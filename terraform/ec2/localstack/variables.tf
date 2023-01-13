@@ -33,7 +33,7 @@ variable "cwa_test_github_sha" {
 
 variable "github_test_repo" {
   type    = string
-  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git  "
+  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
 }
 
 variable "s3_bucket" {
