@@ -8,10 +8,10 @@ package cloudwatchlogs
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"log"
 	"os"
 	"strings"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 
 	"testing"
 	"time"

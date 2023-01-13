@@ -8,26 +8,34 @@ package awsservice
 
 import (
 	"context"
-	"log"
 
-	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 )
 
-// TODO: Refactor Structure and Interface for more easier follow that shares the same session
-func GetInstanceId() string {
-	ctx := context.Background()
-	c, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		// fail fast so we don't continue the test
-		log.Fatalf("Error occurred while creating SDK config: %v", err)
-	}
+type imdsAPI interface {
+	// GetInstanceId returns the Instance ID of the current instance
+	GetInstanceId() (string, error)
+}
 
-	// TODO: this only works for EC2 based testing
-	client := imds.NewFromConfig(c)
-	metadata, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
-	if err != nil {
-		log.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
+type imdsConfig struct {
+	cxt        context.Context
+	imdsClient *imds.Client
+}
+
+func NewIMDSConfig(cfg aws.Config, cxt context.Context) imdsAPI {
+	imdsClient := imds.NewFromConfig(cfg)
+	return &imdsConfig{
+		cxt:        cxt,
+		imdsClient: imdsClient,
 	}
-	return metadata.InstanceID
+}
+
+// GetInstanceId returns the Instance ID of the current instance
+func (i *imdsConfig) GetInstanceId() (string, error) {
+	metadata, err := i.imdsClient.GetInstanceIdentityDocument(i.cxt, &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
+		return "", err
+	}
+	return metadata.InstanceID, nil
 }

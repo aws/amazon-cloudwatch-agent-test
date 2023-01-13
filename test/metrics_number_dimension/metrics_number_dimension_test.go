@@ -103,22 +103,3 @@ func TestNumberMetricDimension(t *testing.T) {
 		})
 	}
 }
-
-func buildDimensionFilterList(appendDimension int) []types.DimensionFilter {
-	// we append dimension from 0 to max number - 2
-	// then we add dimension instance id
-	// thus for max dimension 10, 0 to 8 + instance id = 10 dimension
-	ec2InstanceId := awsservice.GetInstanceId()
-	dimensionFilter := make([]types.DimensionFilter, appendDimension)
-	for i := 0; i < appendDimension-1; i++ {
-		dimensionFilter[i] = types.DimensionFilter{
-			Name:  aws.String(fmt.Sprintf("%s%d", appendMetric, i)),
-			Value: aws.String(fmt.Sprintf("%s%d", loremIpsum+appendMetric, i)),
-		}
-	}
-	dimensionFilter[appendDimension-1] = types.DimensionFilter{
-		Name:  aws.String(instanceId),
-		Value: aws.String(ec2InstanceId),
-	}
-	return dimensionFilter
-}

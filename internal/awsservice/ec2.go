@@ -9,44 +9,37 @@ package awsservice
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 )
 
-var (
-	ec2ctx    context.Context
+type ec2API interface {
+	// GetInstancePrivateIpDns returns Instance Private IP Address
+	GetInstancePrivateIpDns(instanceId string) (string, error)
+}
+
+type ec2Config struct {
+	cxt       context.Context
 	ec2Client *ec2.Client
-)
-
-func GetInstancePrivateIpDns(instanceId string) (*string, error) {
-	instanceData, err := DescribeInstances([]string{instanceId})
-	if err != nil {
-		return nil, err
-	}
-
-	return instanceData.Reservations[0].Instances[0].PrivateDnsName, nil
 }
 
-func DescribeInstances(instanceIds []string) (*ec2.DescribeInstancesOutput, error) {
-	svc, ctx, err := getEc2Client()
-	if err != nil {
-		return nil, err
+func NewEc2Config(cfg aws.Config, cxt context.Context) ec2API {
+	ec2Client := ec2.NewFromConfig(cfg)
+	return &ec2Config{
+		cxt:       cxt,
+		ec2Client: ec2Client,
 	}
+}
 
-	return svc.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
-		InstanceIds: instanceIds,
+// GetInstancePrivateIpDns returns Instance Private IP Address
+func (e *ec2Config) GetInstancePrivateIpDns(instanceId string) (string, error) {
+	instanceData, err := e.ec2Client.DescribeInstances(e.cxt, &ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceId},
 	})
-}
 
-func getEc2Client() (*ec2.Client, context.Context, error) {
-	if ec2Client == nil {
-		ec2ctx = context.Background()
-		cfg, err := config.LoadDefaultConfig(ec2ctx)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		ec2Client = ec2.NewFromConfig(cfg)
+	if err != nil {
+		return "", err
 	}
-	return ec2Client, ec2ctx, nil
+
+	return *instanceData.Reservations[0].Instances[0].PrivateDnsName, nil
 }
