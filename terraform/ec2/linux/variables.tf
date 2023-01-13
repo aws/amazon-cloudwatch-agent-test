@@ -34,7 +34,7 @@ variable "user" {
 variable "install_agent" {
   description = "go run ./install/install_agent.go deb or go run ./install/install_agent.go rpm"
   type        = string
-  default     = ""
+  default     = "go run ./install/install_agent.go rpm"
 }
 
 variable "ca_cert_path" {
@@ -99,4 +99,9 @@ variable "cwa_github_sha_date" {
 variable "performance_number_of_logs" {
   type    = string
   default = ""
+}
+
+variable "efs_mount_point" {
+  type = string
+  default = "~/efs-mount-point"
 }
