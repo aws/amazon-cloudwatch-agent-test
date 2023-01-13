@@ -1,6 +1,3 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
 variable "region" {
   type    = string
   default = "us-west-2"
@@ -13,7 +10,7 @@ variable "ec2_instance_type" {
 
 variable "ssh_key_name" {
   type    = string
-  default = ""
+  default = "cwagent-integ-test-key"
 }
 
 variable "ami" {
@@ -52,11 +49,6 @@ variable "binary_name" {
   default = ""
 }
 
-variable "local_stack_host_name" {
-  type    = string
-  default = "localhost.localstack.cloud"
-}
-
 variable "s3_bucket" {
   type    = string
   default = ""
@@ -84,7 +76,7 @@ variable "cwa_test_github_sha" {
 
 variable "github_test_repo" {
   type    = string
-  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  default = ""
 }
 
 variable "github_test_repo_branch" {
@@ -99,9 +91,4 @@ variable "cwa_github_sha_date" {
 variable "performance_number_of_logs" {
   type    = string
   default = ""
-}
-
-variable "efs_mount_point" {
-  type = string
-  default = "~/efs-mount-point"
 }
