@@ -11,7 +11,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-	"log"
 	"testing"
 	"time"
 )

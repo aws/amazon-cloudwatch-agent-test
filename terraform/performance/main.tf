@@ -33,8 +33,8 @@ resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
+  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
 
   tags = {
