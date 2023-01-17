@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.20
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.17.1
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.77.0
-	github.com/aws/aws-sdk-go-v2/service/ecs v1.19.1
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.23.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.33.0
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
