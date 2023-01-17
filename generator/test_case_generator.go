@@ -6,17 +6,27 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mitchellh/mapstructure"
 	"io/ioutil"
 	"log"
 	"os"
 )
 
-const (
-	testDir = "test_dir"
-)
+type matrixRow struct {
+	TestDir             string `json:"testDir"`
+	Os                  string `json:"os"`
+	TestType            string `json:"testType"`
+	Arc                 string `json:"arc"`
+	InstanceType        string `json:"instanceType"`
+	Ami                 string `json:"ami"`
+	BinaryName          string `json:"binaryName"`
+	Username            string `json:"username"`
+	InstallAgentCommand string `json:"installAgentCommand"`
+	CaCertPath          string `json:"caCertPath"`
+}
 
 // you can't have a const map in golang
-var osToTestDirMap = map[string][]string{
+var testTypeToTestDirMap = map[string][]string{
 	"ec2_gpu": {
 		"./test/nvidia_gpu",
 	},
@@ -41,17 +51,17 @@ var osToTestDirMap = map[string][]string{
 }
 
 func main() {
-	for osType, testDir := range osToTestDirMap {
-		testMatrix := genMatrix(osType, testDir)
-		writeTestMatrixFile(osType, testMatrix)
+	for testType, testDir := range testTypeToTestDirMap {
+		testMatrix := genMatrix(testType, testDir)
+		writeTestMatrixFile(testType, testMatrix)
 	}
 }
 
-func genMatrix(targetOS string, testDirList []string) []map[string]string {
-	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", targetOS))
+func genMatrix(testType string, testDirList []string) []matrixRow {
+	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
 
 	if err != nil {
-		log.Panicf("can't read file %v_test_matrix.json err %v", targetOS, err)
+		log.Panicf("can't read file %v_test_matrix.json err %v", testType, err)
 	}
 
 	byteValueTestMatrix, _ := ioutil.ReadAll(openTestMatrix)
@@ -60,35 +70,29 @@ func genMatrix(targetOS string, testDirList []string) []map[string]string {
 	var testMatrix []map[string]string
 	err = json.Unmarshal(byteValueTestMatrix, &testMatrix)
 	if err != nil {
-		log.Panicf("can't unmarshall file %v_test_matrix.json err %v", targetOS, err)
+		log.Panicf("can't unmarshall file %v_test_matrix.json err %v", testType, err)
 	}
 
-	var testMatrixComplete []map[string]string
+	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testDirectory := range testDirList {
-			testLine := copyMap(test)
-			testLine[testDir] = testDirectory
-			testMatrixComplete = append(testMatrixComplete, testLine)
+			row := matrixRow{TestDir: testDirectory, TestType: testType}
+			err = mapstructure.Decode(test, &row)
+			if err != nil {
+				log.Panicf("can't decode map test %v to metric line struct with error %v", testDirectory, err)
+			}
+			testMatrixComplete = append(testMatrixComplete, row)
 		}
 	}
 	return testMatrixComplete
 }
-
-func writeTestMatrixFile(targetOS string, testMatrix []map[string]string) {
+func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
 	bytes, err := json.MarshalIndent(testMatrix, "", " ")
 	if err != nil {
-		log.Panicf("Can't marshal json for target os %v, err %v", targetOS, err)
+		log.Panicf("Can't marshal json for target os %v, err %v", testType, err)
 	}
-	err = ioutil.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", targetOS), bytes, os.ModePerm)
+	err = ioutil.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", testType), bytes, os.ModePerm)
 	if err != nil {
-		log.Panicf("Can't write json to file for target os %v, err %v", targetOS, err)
+		log.Panicf("Can't write json to file for target os %v, err %v", testType, err)
 	}
-}
-
-func copyMap(mapToCopy map[string]string) map[string]string {
-	testLine := make(map[string]string)
-	for key, value := range mapToCopy {
-		testLine[key] = value
-	}
-	return testLine
 }
