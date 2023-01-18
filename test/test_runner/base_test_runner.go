@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build unix
-// +build unix
+//go:build !windows
+// +build !windows
 
 package test_runner
 
@@ -24,9 +24,12 @@ const (
 	MinimumAgentRuntime  = 3 * time.Minute
 )
 
+type NamedTest interface {
+	GetTestName() string
+}
+
 type ITestRunner interface {
 	Validate() status.TestGroupResult
-	GetTestName() string
 	GetAgentConfigFileName() string
 	GetAgentRunDuration() time.Duration
 	GetMeasuredMetrics() []string
@@ -36,6 +39,7 @@ type ITestRunner interface {
 
 type TestRunner struct {
 	TestRunner ITestRunner
+	NamedTest
 }
 
 type BaseTestRunner struct {
@@ -55,7 +59,7 @@ func (t *BaseTestRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *TestRunner) Run(s ITestSuite) {
-	testName := t.TestRunner.GetTestName()
+	testName := t.GetTestName()
 	log.Printf("Running %v", testName)
 	testGroupResult, err := t.runAgent()
 	if err == nil {
@@ -69,7 +73,7 @@ func (t *TestRunner) Run(s ITestSuite) {
 
 func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	testGroupResult := status.TestGroupResult{
-		Name: t.TestRunner.GetTestName(),
+		Name: t.GetTestName(),
 		TestResults: []status.TestResult{
 			{
 				Name:   "Starting Agent",

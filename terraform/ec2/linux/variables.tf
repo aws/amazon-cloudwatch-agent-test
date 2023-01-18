@@ -102,3 +102,8 @@ variable "efs_mount_point" {
   type = string
   default = "~/efs-mount-point"
 }
+
+variable "plugin_tests" {
+  type = string
+  default = ""
+}

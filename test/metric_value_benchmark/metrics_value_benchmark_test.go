@@ -1,14 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build unix
-// +build unix
+//go:build !windows
+// +build !windows
 
 package metric_value_benchmark
 
 import (
 	"fmt"
 	"log"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -93,7 +94,9 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 		}
 	} else {
 		for _, testRunner := range getEc2TestRunners(env) {
-			testRunner.Run(suite)
+			if shouldRunEC2Test(env, testRunner) {
+				testRunner.Run(suite)
+			}
 		}
 	}
 
@@ -106,6 +109,14 @@ func (suite *MetricBenchmarkTestSuite) AddToSuiteResult(r status.TestGroupResult
 
 func TestMetricValueBenchmarkSuite(t *testing.T) {
 	suite.Run(t, new(MetricBenchmarkTestSuite))
+}
+
+func shouldRunEC2Test(env *environment.MetaData, t *test_runner.TestRunner) bool {
+	if env.EC2PluginTests == nil {
+		return true // default behavior is to run all tests
+	}
+	_, ok := env.EC2PluginTests[strings.ToLower(t.GetTestName())]
+	return ok
 }
 
 func isAllValuesGreaterThanOrEqualToZero(metricName string, values []float64) bool {

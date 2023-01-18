@@ -126,7 +126,7 @@ resource "null_resource" "integration_test" {
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -plugins='${var.plugin_tests}' -v"
     ]
     connection {
       type        = "ssh"
