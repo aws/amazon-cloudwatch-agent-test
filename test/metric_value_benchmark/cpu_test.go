@@ -63,7 +63,7 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 		},
 		{
 			Key:   "cpu",
-			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")},
 		},
 	})
 

@@ -17,7 +17,7 @@ type ExpectedDimensionValue struct {
 }
 
 func (d *ExpectedDimensionValue) IsKnown() bool {
-	return d.Value == nil
+	return d.Value != nil
 }
 
 func UnknownDimensionValue() ExpectedDimensionValue {
