@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build unix
-// +build unix
+//go:build !windows
 
 package dimension
 
@@ -28,6 +27,6 @@ func (p *CustomDimensionProvider) GetDimension(instruction Instruction) types.Di
 
 	return types.Dimension{
 		Name:  aws.String(instruction.Key),
-		Value: aws.String(*instruction.Value.Value),
+		Value: instruction.Value.Value,
 	}
 }
