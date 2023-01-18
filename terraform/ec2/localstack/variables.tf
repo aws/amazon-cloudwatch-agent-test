@@ -1,6 +1,6 @@
 variable "ec2_instance_type" {
   type    = string
-  default = "t3a.xlarge"
+  default = "t3a.medium"
 }
 
 variable "ssh_key_name" {
