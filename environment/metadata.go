@@ -88,10 +88,12 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 
 func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) *MetaData {
 	if len(data.EC2PluginTests) == 0 {
+		log.Println("Testing all EC2 plugins")
 		return e
 	}
 
 	plugins := strings.Split(strings.ReplaceAll(data.EC2PluginTests, " ", ""), ",")
+	log.Printf("Executing subset of plugin tests: %v", plugins)
 	m := make(map[string]struct{}, len(plugins))
 	for _, p := range plugins {
 		m[strings.ToLower(p)] = struct{}{}
