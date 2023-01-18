@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build unix
-// +build unix
+//go:build !windows
 
 package metric_append_dimension
 
