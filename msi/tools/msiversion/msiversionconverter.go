@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build unix
+// +build unix
 
 package main
 
@@ -15,9 +15,11 @@ import (
 	"strings"
 )
 
-/* We can't use the standard cw agent version for the windows msi due to limitations in the wix tools builder for msi
-   msi version is different from the agent original version because of the msi limit Product version must have a major version less than 256,
-   a minor version less than 256, and a build version less than 65536
+/*
+We can't use the standard cw agent version for the windows msi due to limitations in the wix tools builder for msi
+
+	msi version is different from the agent original version because of the msi limit Product version must have a major version less than 256,
+	a minor version less than 256, and a build version less than 65536
 */
 func main() {
 	log.Printf("Input %v", os.Args)

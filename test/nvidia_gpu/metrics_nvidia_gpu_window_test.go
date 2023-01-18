@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build windows && integration
-// +build windows,integration
+//go:build windows
+// +build windows
 
 package metrics_nvidia_gpu
 
