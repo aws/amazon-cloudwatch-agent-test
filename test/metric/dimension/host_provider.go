@@ -35,3 +35,7 @@ func (p *HostDimensionProvider) GetDimension(instruction Instruction) types.Dime
 		Value: aws.String(name),
 	}
 }
+
+func (p *HostDimensionProvider) Name() string {
+	return "HostDimensionProvider"
+}
