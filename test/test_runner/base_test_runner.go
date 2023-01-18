@@ -24,13 +24,10 @@ const (
 	MinimumAgentRuntime  = 3 * time.Minute
 )
 
-type NamedTest interface {
-	GetTestName() string
-}
-
 type ITestRunner interface {
 	Validate() status.TestGroupResult
 	GetAgentConfigFileName() string
+	GetTestName() string
 	GetAgentRunDuration() time.Duration
 	GetMeasuredMetrics() []string
 	SetupBeforeAgentRun() error
@@ -39,7 +36,6 @@ type ITestRunner interface {
 
 type TestRunner struct {
 	TestRunner ITestRunner
-	NamedTest
 }
 
 type BaseTestRunner struct {
@@ -59,7 +55,7 @@ func (t *BaseTestRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *TestRunner) Run(s ITestSuite) {
-	testName := t.GetTestName()
+	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)
 	testGroupResult, err := t.runAgent()
 	if err == nil {
@@ -73,7 +69,7 @@ func (t *TestRunner) Run(s ITestSuite) {
 
 func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	testGroupResult := status.TestGroupResult{
-		Name: t.GetTestName(),
+		Name: t.TestRunner.GetTestName(),
 		TestResults: []status.TestResult{
 			{
 				Name:   "Starting Agent",

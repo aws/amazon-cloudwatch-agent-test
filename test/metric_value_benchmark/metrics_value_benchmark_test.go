@@ -115,7 +115,7 @@ func shouldRunEC2Test(env *environment.MetaData, t *test_runner.TestRunner) bool
 	if env.EC2PluginTests == nil {
 		return true // default behavior is to run all tests
 	}
-	_, ok := env.EC2PluginTests[strings.ToLower(t.GetTestName())]
+	_, ok := env.EC2PluginTests[strings.ToLower(t.TestRunner.GetTestName())]
 	return ok
 }
 
