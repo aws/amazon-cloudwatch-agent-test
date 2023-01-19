@@ -114,7 +114,9 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData := &(MetaData{})
 	metaData = fillComputeType(metaData, data)
 	metaData = fillECSData(metaData, data)
-	metaData = fillEC2PluginTests(metaData, data)
+	if metaData.ComputeType == computetype.EC2 {
+		metaData = fillEC2PluginTests(metaData, data)
+	}
 
 	return metaData
 }
