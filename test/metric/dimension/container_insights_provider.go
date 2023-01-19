@@ -47,3 +47,7 @@ func (p *ContainerInsightsDimensionProvider) GetDimension(instruction Instructio
 
 	return types.Dimension{}
 }
+
+func (p *ContainerInsightsDimensionProvider) Name() string {
+	return "ContainerInsightsDimensionProvider"
+}

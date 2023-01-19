@@ -6,13 +6,11 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"log"
-	"time"
-
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
 type DiskTestRunner struct {
@@ -40,9 +38,6 @@ func (t *DiskTestRunner) GetTestName() string {
 
 func (t *DiskTestRunner) GetAgentConfigFileName() string {
 	return "disk_config.json"
-}
-func (t *DiskTestRunner) GetAgentRunDuration() time.Duration {
-	return test_runner.MinimumAgentRuntime
 }
 
 func (t *DiskTestRunner) GetMeasuredMetrics() []string {

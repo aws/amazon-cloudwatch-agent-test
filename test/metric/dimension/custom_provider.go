@@ -30,3 +30,7 @@ func (p *CustomDimensionProvider) GetDimension(instruction Instruction) types.Di
 		Value: instruction.Value.Value,
 	}
 }
+
+func (p *CustomDimensionProvider) Name() string {
+	return "CustomDimensionProvider"
+}
