@@ -13,7 +13,7 @@ import (
 )
 
 type matrixRow struct {
-	TestDir             string `json:"testDir"`
+	TestDir             string `json:"test_dir"`
 	Os                  string `json:"os"`
 	TestType            string `json:"testType"`
 	Arc                 string `json:"arc"`
