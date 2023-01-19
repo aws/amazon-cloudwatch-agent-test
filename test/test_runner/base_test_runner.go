@@ -26,8 +26,8 @@ const (
 
 type ITestRunner interface {
 	Validate() status.TestGroupResult
-	GetAgentConfigFileName() string
 	GetTestName() string
+	GetAgentConfigFileName() string
 	GetAgentRunDuration() time.Duration
 	GetMeasuredMetrics() []string
 	SetupBeforeAgentRun() error
