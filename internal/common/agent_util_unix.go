@@ -19,7 +19,7 @@ const (
 	ConfigOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	Namespace        = "CWAgent"
 	Host             = "host"
-	AgentLogFile     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	AgentLogFile     = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 )
 
 func CopyFile(pathIn string, pathOut string) {
