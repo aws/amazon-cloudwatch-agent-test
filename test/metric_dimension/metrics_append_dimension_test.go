@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package metric_append_dimension
+package metric_dimension
 
 import (
 	"fmt"
@@ -45,7 +45,8 @@ func getTestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if testRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 		testRunners = []*test_runner.TestRunner{
-			{TestRunner: &NoAppendDimensionTestRunner{BaseTestRunner: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &NoAppendDimensionTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &OneAggregateDimensionTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return testRunners
@@ -56,7 +57,10 @@ func (suite *MetricsAppendDimensionTestSuite) TestAllInSuite() {
 	for _, testRunner := range getTestRunners(env) {
 		testRunner.Run(suite)
 	}
-	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Append Dimension Test Suite Failed")
+
+	suite.Assert().Equal(status.SUCCESSFUL, status.Failed, "Metric Append Dimension Test Suite Failed")
+
+	//suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Append Dimension Test Suite Failed")
 }
 
 func (suite *MetricsAppendDimensionTestSuite) AddToSuiteResult(r status.TestGroupResult) {
