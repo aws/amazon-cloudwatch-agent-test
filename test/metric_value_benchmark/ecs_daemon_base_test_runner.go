@@ -7,6 +7,7 @@ package metric_value_benchmark
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"os"
 	"time"
 
@@ -66,7 +67,7 @@ type BaseTestRunner struct {
 	DimensionFactory dimension.Factory
 }
 
-func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData) {
+func (t *ECSTestRunner) Run(s test_runner.ITestSuite, e *environment.MetaData) {
 	testName := t.testRunner.getTestName()
 	fmt.Printf("Running %s", testName)
 	testGroupResult, err := t.runAgent(e)
