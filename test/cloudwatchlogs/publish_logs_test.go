@@ -76,6 +76,8 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 	for _, param := range testParameters {
 		t.Run(param.testName, func(t *testing.T) {
+			common.DeleteFile(common.AgentLogFile)
+			common.TouchFile(common.AgentLogFile)
 			start := time.Now()
 
 			common.CopyFile(param.configPath, configOutputPath)
@@ -88,6 +90,12 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			writeLogs(t, f, param.iterations)
 			time.Sleep(agentRuntime)
 			common.StopAgent()
+
+			agentLog, err := common.RunCommand(common.CatCommand + common.AgentLogFile)
+			if err != nil {
+				return
+			}
+			t.Logf("Agent logs %s", agentLog)
 
 			// check CWL to ensure we got the expected number of logs in the log stream
 			awsservice.ValidateLogs(t, instanceId, instanceId, param.numExpectedLogs, start)

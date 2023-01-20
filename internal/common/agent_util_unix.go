@@ -19,6 +19,7 @@ const (
 	ConfigOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	Namespace        = "CWAgent"
 	Host             = "host"
+	AgentLogFile     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 )
 
 func CopyFile(pathIn string, pathOut string) {
@@ -49,6 +50,19 @@ func DeleteFile(filePathAbsolute string) error {
 	}
 
 	log.Printf("Removed file: %s", filePathAbsolute)
+	return nil
+}
+
+func TouchFile(filePathAbsolute string) error {
+	log.Printf("Touch file %s", filePathAbsolute)
+	out, err := exec.Command("bash", "-c", "sudo touch "+filePathAbsolute).Output()
+
+	if err != nil {
+		log.Printf(fmt.Sprint(err) + string(out))
+		return err
+	}
+
+	log.Printf("Touched file: %s", filePathAbsolute)
 	return nil
 }
 
