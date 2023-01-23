@@ -11,7 +11,7 @@
       "InstanceId": "${aws:InstanceId}",
       "InstanceType": "${aws:InstanceType}",
     },
-    "aggregate_dimensions": [["InstanceType"], []],
+    "aggregation_dimensions": [["InstanceType"], []],
     "metrics_collected": {
       "cpu": {
         "measurement": [
