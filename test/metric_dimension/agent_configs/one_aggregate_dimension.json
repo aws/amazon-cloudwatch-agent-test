@@ -9,7 +9,7 @@
     "namespace": "MetricAggregateDimensionTest",
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}",
-      "InstanceType": "${aws:InstanceType}",
+      "InstanceType": "${aws:InstanceType}"
     },
     "aggregation_dimensions": [["InstanceType"], []],
     "metrics_collected": {
