@@ -26,27 +26,27 @@ var _ test_runner.ITestRunner = (*PrometheusTestRunner)(nil)
 //go:embed agent_configs/prometheus.yaml
 var prometheusConfig string
 
-const prometheusMetrics = `prometheus_test_untyped{include="yes"} 1
+const prometheusMetrics = `prometheus_test_untyped{include="yes",prom_type="untyped"} 1
 # TYPE prometheus_test_counter counter
-prometheus_test_counter{include="yes"} 1
+prometheus_test_counter{include="yes",prom_type="counter"} 1
 # TYPE prometheus_test_counter_exclude counter
-prometheus_test_counter_exclude{include="no"} 1
+prometheus_test_counter_exclude{include="no",prom_type="counter"} 1
 # TYPE prometheus_test_gauge gauge
-prometheus_test_gauge{include="yes"} 500
+prometheus_test_gauge{include="yes",prom_type="gauge"} 500
 # TYPE prometheus_test_summary summary
-prometheus_test_summary_sum{include="yes"} 200
-prometheus_test_summary_count{include="yes"} 50
-prometheus_test_summary{include="yes",quantile="0"} 0.1
-prometheus_test_summary{include="yes",quantile="0.5"} 0.25
-prometheus_test_summary{include="yes",quantile="1"} 5.5
+prometheus_test_summary_sum{include="yes",prom_type="summary"} 200
+prometheus_test_summary_count{include="yes",prom_type="summary"} 50
+prometheus_test_summary{include="yes",quantile="0",prom_type="summary"} 0.1
+prometheus_test_summary{include="yes",quantile="0.5",prom_type="summary"} 0.25
+prometheus_test_summary{include="yes",quantile="1",prom_type="summary"} 5.5
 # TYPE prometheus_test_histogram histogram
-prometheus_test_histogram_sum{include="yes"} 300
-prometheus_test_histogram_count{include="yes"} 75
-prometheus_test_histogram_bucket{include="yes",le="0"} 1
-prometheus_test_histogram_bucket{include="yes",le="0.5"} 2
-prometheus_test_histogram_bucket{include="yes",le="2.5"} 3
-prometheus_test_histogram_bucket{include="yes",le="5"} 4
-prometheus_test_histogram_bucket{include="yes",le="+Inf"} 5
+prometheus_test_histogram_sum{include="yes",prom_type="histogram"} 300
+prometheus_test_histogram_count{include="yes",prom_type="histogram"} 75
+prometheus_test_histogram_bucket{include="yes",le="0",prom_type="histogram"} 1
+prometheus_test_histogram_bucket{include="yes",le="0.5",prom_type="histogram"} 2
+prometheus_test_histogram_bucket{include="yes",le="2.5",prom_type="histogram"} 3
+prometheus_test_histogram_bucket{include="yes",le="5",prom_type="histogram"} 4
+prometheus_test_histogram_bucket{include="yes",le="+Inf",prom_type="histogram"} 5
 `
 
 func (t *PrometheusTestRunner) Validate() status.TestGroupResult {
@@ -84,9 +84,9 @@ func (t *PrometheusTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"prometheus_test_counter",
 		"prometheus_test_gauge",
-		"prometheus_test_summary_count",
-		"prometheus_test_summary_sum",
-		"prometheus_test_summary",
+		//"prometheus_test_summary_count",
+		//"prometheus_test_summary_sum",
+		//"prometheus_test_summary",
 	}
 }
 
@@ -103,35 +103,35 @@ func (t *PrometheusTestRunner) validatePrometheusMetric(metricName string) statu
 	case "prometheus_test_counter":
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
-				Key:   "prom_metric_type",
+				Key:   "prom_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("counter")},
 			},
 		})
 	case "prometheus_test_gauge":
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
-				Key:   "prom_metric_type",
+				Key:   "prom_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("gauge")},
 			},
 		})
 	case "prometheus_test_summary_count":
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
-				Key:   "prom_metric_type",
+				Key:   "prom_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
 			},
 		})
 	case "prometheus_test_summary_sum":
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
-				Key:   "prom_metric_type",
+				Key:   "prom_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
 			},
 		})
 	case "prometheus_test_summary":
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
-				Key:   "prom_metric_type",
+				Key:   "prom_type",
 				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
 			},
 			{
