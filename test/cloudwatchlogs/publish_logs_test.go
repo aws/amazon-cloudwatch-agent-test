@@ -1,17 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package cloudwatchlogs
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"log"
 	"os"
 	"strings"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 
 	"testing"
 	"time"

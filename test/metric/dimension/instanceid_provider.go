@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package dimension
 
@@ -42,6 +41,10 @@ func (p *ECSInstanceIdDimensionProvider) GetDimension(instruction Instruction) t
 	}
 }
 
+func (p *ECSInstanceIdDimensionProvider) Name() string {
+	return "ECSInstanceIdDimensionProvider"
+}
+
 type LocalInstanceIdDimensionProvider struct {
 	Provider
 }
@@ -61,4 +64,8 @@ func (p *LocalInstanceIdDimensionProvider) GetDimension(instruction Instruction)
 		Name:  aws.String("InstanceId"),
 		Value: aws.String(ec2InstanceId),
 	}
+}
+
+func (p *LocalInstanceIdDimensionProvider) Name() string {
+	return "LocalInstanceIdDimensionProvider"
 }

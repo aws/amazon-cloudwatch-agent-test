@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package dimension
 
@@ -35,4 +34,8 @@ func (p *HostDimensionProvider) GetDimension(instruction Instruction) types.Dime
 		Name:  aws.String("host"),
 		Value: aws.String(name),
 	}
+}
+
+func (p *HostDimensionProvider) Name() string {
+	return "HostDimensionProvider"
 }

@@ -1,5 +1,4 @@
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package performancetest
 

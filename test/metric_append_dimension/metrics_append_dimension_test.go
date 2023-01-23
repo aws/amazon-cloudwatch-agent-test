@@ -1,16 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package metric_append_dimension
 
 import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/stretchr/testify/suite"
@@ -46,7 +45,7 @@ func getTestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if testRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 		testRunners = []*test_runner.TestRunner{
-			{TestRunner: &NoAppendDimensionTestRunner{Base: test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &NoAppendDimensionTestRunner{BaseTestRunner: test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return testRunners
