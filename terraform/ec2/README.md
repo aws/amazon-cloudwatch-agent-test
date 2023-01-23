@@ -157,8 +157,10 @@ Outputs:
         "elasticfilesystem:CreateMountTarget",
         "elasticfilesystem:DeleteFileSystem",
         "elasticfilesystem:DeleteMountTarget",
+        "elasticfilesystem:DescribeMountTargets",
         "elasticfilesystem:DescribeFileSystems",
         "elasticfilesystem:DescribeLifecycleConfiguration",
+        "elasticfilesystem:DescribeMountTargetSecurityGroups",
         "ec2:CreateNetworkInterface",
         "ec2:DeleteNetworkInterface",
         "ec2:DescribeNetworkInterfaces",
@@ -267,7 +269,7 @@ Outputs:
         "autoscaling:SetInstanceProtection",
         "ecs:DescribeContainerInstances",
         "cloudwatch:GetMetricData",
-        "logs:ListTagsForResource",
+        "logs:ListTagsForResource"
       ],
       "Resource": "*"
     }
