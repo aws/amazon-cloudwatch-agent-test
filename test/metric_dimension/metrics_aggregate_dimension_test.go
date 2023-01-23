@@ -11,8 +11,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/aws-sdk-go-v2/aws"
-
 	"log"
 )
 
@@ -53,16 +51,7 @@ func (t *OneAggregateDimensionTestRunner) validateNoAppendDimensionMetric(metric
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "host",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "cpu",
-			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
-		},
-	})
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{})
 
 	if len(failed) > 0 {
 		return testResult
