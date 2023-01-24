@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 //go:build !windows
-// +build !windows
 
 package dimension
 
@@ -35,4 +34,8 @@ func (p *HostDimensionProvider) GetDimension(instruction Instruction) types.Dime
 		Name:  aws.String("host"),
 		Value: aws.String(name),
 	}
+}
+
+func (p *HostDimensionProvider) Name() string {
+	return "HostDimensionProvider"
 }

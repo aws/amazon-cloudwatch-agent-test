@@ -2,17 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 //go:build !windows
-// +build !windows
 
 package metric_value_benchmark
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"log"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
 type DiskTestRunner struct {
@@ -25,7 +24,7 @@ func (t *DiskTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateDiskMetric(metricName)
+		testResults[i] = t.ValidateDiskMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -54,7 +53,7 @@ func (t *DiskTestRunner) GetMeasuredMetrics() []string {
 	}
 }
 
-func (t *DiskTestRunner) validateDiskMetric(metricName string) status.TestResult {
+func (t *DiskTestRunner) ValidateDiskMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -72,8 +71,8 @@ func (t *DiskTestRunner) validateDiskMetric(metricName string) status.TestResult
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-
 	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
+
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult

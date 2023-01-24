@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 //go:build !windows
-// +build !windows
 
 package dimension
 
@@ -47,4 +46,8 @@ func (p *ContainerInsightsDimensionProvider) GetDimension(instruction Instructio
 	}
 
 	return types.Dimension{}
+}
+
+func (p *ContainerInsightsDimensionProvider) Name() string {
+	return "ContainerInsightsDimensionProvider"
 }
