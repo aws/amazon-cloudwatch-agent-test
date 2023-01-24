@@ -171,6 +171,7 @@ Outputs:
         "s3:GetObject",
         "s3:GetObjectAcl",
         "s3:PutObject",
+        "s3:DeleteObject",
         "sts:GetCallerIdentity",
         "ssm:PutParameter",
         "ssm:DeleteParameter",
