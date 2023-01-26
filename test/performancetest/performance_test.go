@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 
@@ -89,7 +88,7 @@ func TestPerformance(t *testing.T) {
 
 			agentRunDuration := agentRuntimeMinutes * time.Minute
 
-			err := StartLogWrite(agentRunDuration, configFilePath, tps)
+			err := common.StartLogWrite(configFilePath, agentRunDuration, tps)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}
@@ -176,62 +175,6 @@ func GenerateConfig(logNum int) (string, []string, error) {
 	f.Write(finalConfig)
 
 	return configFilePath, logStreams, nil
-}
-
-// StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
-// the config provided
-func StartLogWrite(agentRunDuration time.Duration, configFilePath string, tps int) error {
-	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
-	var logWaitGroup sync.WaitGroup
-
-	logPaths, err := GetLogFilePaths(configFilePath)
-	if err != nil {
-		return err
-	}
-
-	for _, logPath := range logPaths {
-		filePath := logPath //necessary weird golang thing
-		logWaitGroup.Add(1)
-		go func() {
-			defer logWaitGroup.Done()
-			err = WriteToLogs(filePath, agentRunDuration, tps)
-		}()
-	}
-
-	//wait until writing to logs finishes
-	logWaitGroup.Wait()
-	return err
-}
-
-// WriteToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
-// for the specified duration
-func WriteToLogs(filePath string, durationMinutes time.Duration, tps int) error {
-	f, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	defer os.Remove(filePath)
-
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-	endTimeout := time.After(durationMinutes)
-
-	//loop until the test duration is reached
-	for {
-		select {
-		case <-ticker.C:
-			for i := 0; i < tps; i++ {
-				_, err = f.WriteString(fmt.Sprintln(ticker, " - #", i, " This is a log line."))
-				if err != nil {
-					return err
-				}
-			}
-
-		case <-endTimeout:
-			return nil
-		}
-	}
 }
 
 // GetLogFilePaths parses the cloudwatch agent config at the specified path and returns a list of the log files that the
