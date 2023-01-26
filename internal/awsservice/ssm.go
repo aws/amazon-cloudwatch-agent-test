@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
-
 package awsservice
 
 import (
@@ -24,7 +21,7 @@ type ssmConfig struct {
 	ssmClient *ssm.Client
 }
 
-func NewEc2Config(cfg aws.Config, cxt context.Context) ssmAPI {
+func NewSSMConfig(cfg aws.Config, cxt context.Context) ssmAPI {
 	ssmClient := ssm.NewFromConfig(cfg)
 	return &ssmConfig{
 		cxt:       cxt,

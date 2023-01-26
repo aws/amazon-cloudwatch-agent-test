@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 const (
@@ -96,9 +96,7 @@ func TestCollectionInterval(t *testing.T) {
 				time.Sleep(agentRuntime)
 				common.StopAgent()
 				endTime := time.Now()
-				if awsservice.ValidateSampleCount(t, metricName, common.Namespace, dimensions,
-					startTime, endTime,
-					parameter.lowerBoundInclusive, parameter.upperBoundInclusive, periodInSeconds) {
+				if err := awsservice.AWS.CwmAPI.ValidateSampleCount(metricName, common.Namespace, dimensions, startTime, endTime, parameter.lowerBoundInclusive, parameter.upperBoundInclusive, periodInSeconds); err != nil {
 					pass = true
 					break
 				}

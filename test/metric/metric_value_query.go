@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package metric
 
@@ -13,7 +12,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
@@ -46,25 +44,13 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 
 	endTime := time.Now()
 	startTime := subtractMinutes(endTime, 10)
-	getMetricDataInput := cloudwatch.GetMetricDataInput{
-		StartTime:         &startTime,
-		EndTime:           &endTime,
-		MetricDataQueries: metricDataQueries,
-	}
 
-	log.Printf("Metric data input is : %s", fmt.Sprint(getMetricDataInput))
-
-	cwmClient, clientContext, err := awsservice.GetCloudWatchMetricsClient()
-	if err != nil {
-		return nil, fmt.Errorf("Error occurred while creating CloudWatch client: %v", err.Error())
-	}
-
-	output, err := cwmClient.GetMetricData(*clientContext, &getMetricDataInput)
+	data, err := awsservice.AWS.CwmAPI.GetMetricData(metricDataQueries, startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting metric data %v", err)
 	}
 
-	result := output.MetricDataResults[0].Values
+	result := data.MetricDataResults[0].Values
 	log.Printf("Metric values are : %s", fmt.Sprint(result))
 
 	return result, nil

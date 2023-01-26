@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package metrics_nvidia_gpu
 
@@ -36,9 +35,14 @@ func TestNvidiaGPU(t *testing.T) {
 		t.Logf("Agent has been running for : %s", agentLinuxRuntime.String())
 		common.StopAgent()
 
-		dimensionFilter := awsservice.BuildDimensionFilterList(numberofLinuxAppendDimensions)
+		dimensionFilter, err := awsservice.BuildDimensionFilterList(numberofLinuxAppendDimensions)
+
+		if err != nil {
+			t.Fatalf("Failed to build dimension filter list: %v", err)
+		}
+
 		for _, metricName := range expectedNvidiaGPULinuxMetrics {
-			awsservice.ValidateMetrics(t, metricName, metricLinuxNamespace, dimensionFilter)
+			awsservice.AWS.CwmAPI.ValidateMetrics(metricName, metricLinuxNamespace, dimensionFilter)
 		}
 
 		if err := filesystem.CheckFileRights(agentLinuxLogPath); err != nil {

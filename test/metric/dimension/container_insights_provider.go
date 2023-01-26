@@ -1,17 +1,17 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package dimension
 
 import (
+	"log"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"log"
 )
 
 type ContainerInsightsDimensionProvider struct {
@@ -34,7 +34,7 @@ func (p *ContainerInsightsDimensionProvider) GetDimension(instruction Instructio
 
 	if instruction.Key == "ContainerInstanceId" {
 		//TODO currently assuming there's only one container
-		containerInstances, err := awsservice.GetContainerInstances(p.Provider.env.EcsClusterArn)
+		containerInstances, err := awsservice.AWS.EcsAPI.GetContainerInstances(p.Provider.env.EcsClusterArn)
 		if err != nil {
 			log.Print(err)
 			return types.Dimension{}
@@ -47,4 +47,8 @@ func (p *ContainerInsightsDimensionProvider) GetDimension(instruction Instructio
 	}
 
 	return types.Dimension{}
+}
+
+func (p *ContainerInsightsDimensionProvider) Name() string {
+	return "ContainerInsightsDimensionProvider"
 }

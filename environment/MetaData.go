@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
-
 package environment
 
 import (
@@ -77,7 +74,7 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 	e.EcsClusterArn = data.EcsClusterArn
 	e.CwagentConfigSsmParamName = data.CwagentConfigSsmParamName
 	e.EcsServiceName = data.EcsServiceName
-	e.EcsClusterName = awsservice.GetClusterName(data.EcsClusterArn)
+	e.EcsClusterName = awsservice.AWS.EcsAPI.GetClusterName(data.EcsClusterArn)
 
 	return e
 }

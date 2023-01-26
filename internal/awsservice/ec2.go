@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
-
 package awsservice
 
 import (
@@ -23,7 +20,7 @@ type ec2Config struct {
 	ec2Client *ec2.Client
 }
 
-func NewEc2Config(cfg aws.Config, cxt context.Context) ec2API {
+func NewEC2Config(cfg aws.Config, cxt context.Context) ec2API {
 	ec2Client := ec2.NewFromConfig(cfg)
 	return &ec2Config{
 		cxt:       cxt,

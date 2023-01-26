@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
-
 package awsservice
 
 import (
@@ -14,7 +11,7 @@ import (
 )
 
 type imdsAPI interface {
-	// GetInstanceId returns the Instance ID of the current instance
+	// GetInstanceId returns the Instance ID of the local instance
 	GetInstanceId() (string, error)
 }
 

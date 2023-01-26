@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
-
 package awsservice
 
 import (
@@ -16,11 +13,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-type cloudwatchAPI interface {
-	// isMetricExist returns Instance Private IP Address
+type cwmAPI interface {
+	// ValidateMetric takes the metric name, metric dimension and metric namespace to know whether a metric is exist based on the previous parameters
 	ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error
 
+	// ValidateSampleCount checking if certain metric's sample count is within the predefined bound interval
 	ValidateSampleCount(metricName, namespace string, dimensions []types.Dimension, startTime, endTime time.Time, lowerBoundInclusive, upperBoundInclusive int, periodInSeconds int32) error
+
+	// GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
+	GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error)
 }
 
 type cloudwatchConfig struct {
@@ -28,7 +29,7 @@ type cloudwatchConfig struct {
 	cwClient *cloudwatch.Client
 }
 
-func NewCloudWatchConfig(cfg aws.Config, cxt context.Context) cloudwatchAPI {
+func NewCloudWatchConfig(cfg aws.Config, cxt context.Context) cwmAPI {
 	cwClient := cloudwatch.NewFromConfig(cfg)
 	return &cloudwatchConfig{
 		cxt:      cxt,
@@ -36,7 +37,7 @@ func NewCloudWatchConfig(cfg aws.Config, cxt context.Context) cloudwatchAPI {
 	}
 }
 
-// ValidateMetrics takes the metric name, metric dimension and corresponding namespace that contains the metric
+// ValidateMetric takes the metric name, metric dimension and metric namespace to know whether a metric is exist based on the previous parametersfunc (c *cloudwatchConfig) ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error {
 func (c *cloudwatchConfig) ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error {
 	listMetricsInput := cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
@@ -83,9 +84,25 @@ func (c *cloudwatchConfig) ValidateSampleCount(
 	}
 
 	if !(lowerBoundInclusive <= dataPoints) || !(upperBoundInclusive >= dataPoints) {
-		return fmt.Errorf("Number of datapoints for start time %v with endtime %v and period %d is %d which is expected to be between %d and %d",
+		return fmt.Errorf("number of datapoints for start time %v with endtime %v and period %d is %d which is expected to be between %d and %d",
 			startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
 	}
 
 	return nil
+}
+
+// GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
+func (c *cloudwatchConfig) GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
+	getMetricDataInput := cloudwatch.GetMetricDataInput{
+		StartTime:         &startTime,
+		EndTime:           &endTime,
+		MetricDataQueries: metricDataQueries,
+	}
+
+	data, err := c.cwClient.GetMetricData(c.cxt, &getMetricDataInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }

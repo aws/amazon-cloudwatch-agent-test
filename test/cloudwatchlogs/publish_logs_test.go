@@ -1,17 +1,17 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package cloudwatchlogs
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 
 	"testing"
 	"time"
@@ -63,13 +63,27 @@ func init() {
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
-	instanceId := awsservice.GetInstanceId()
+	instanceId, err := awsservice.AWS.ImdsAPI.GetInstanceId()
 	log.Printf("Found instance id %s", instanceId)
 
-	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+	if err != nil {
+		t.Fatalf("Failed to get instance ID: %v", err)
+	}
+
+	defer awsservice.AWS.CwlAPI.DeleteLogGroupAndLogStream(instanceId, instanceId)
+
+	f, err := os.Create(logFilePath)
+	if err != nil {
+		t.Fatalf("Error occurred creating log file for writing: %v", err)
+	}
+
+	defer f.Close()
+	defer os.Remove(logFilePath)
 
 	for _, param := range testParameters {
 		t.Run(param.testName, func(t *testing.T) {
+			common.DeleteFile(common.AgentLogFile)
+			common.TouchFile(common.AgentLogFile)
 			start := time.Now()
 
 			common.CopyFile(param.configPath, configOutputPath)
@@ -79,12 +93,22 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			// ensure that there is enough time from the "start" time and the first log line,
 			// so we don't miss it in the GetLogEvents call
 			time.Sleep(agentRuntime)
-			writeLogs(t, logFilePath, param.iterations)
+			writeLogs(t, f, param.iterations)
 			time.Sleep(agentRuntime)
 			common.StopAgent()
 
+			agentLog, err := common.RunCommand(common.CatCommand + common.AgentLogFile)
+			if err != nil {
+				return
+			}
+			t.Logf("Agent logs %s", agentLog)
+
 			// check CWL to ensure we got the expected number of logs in the log stream
-			awsservice.ValidateLogs(t, instanceId, instanceId, param.numExpectedLogs, start)
+			err = awsservice.AWS.CwlAPI.ValidateLogs(instanceId, instanceId, param.numExpectedLogs, start)
+
+			if err != nil {
+				t.Fatalf("Validate logs failed: %v", err)
+			}
 		})
 	}
 }
@@ -98,12 +122,16 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	cfgFilePath := "resources/config_log_rotated.json"
 
-	instanceId := awsservice.GetInstanceId()
+	instanceId, err := awsservice.AWS.ImdsAPI.GetInstanceId()
+	if err != nil {
+		t.Fatalf("Failed to get instance ID: %v", err)
+	}
+
 	log.Printf("Found instance id %s", instanceId)
+
 	logGroup := instanceId
 	logStream := instanceId + "Rotated"
-
-	defer awsservice.DeleteLogGroupAndStream(logGroup, logStream)
+	defer awsservice.AWS.CwlAPI.DeleteLogGroupAndLogStream(logGroup, logStream)
 
 	start := time.Now()
 	common.CopyFile(cfgFilePath, configOutputPath)
@@ -129,23 +157,19 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("09876", 10)),
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("1234567890", 10)),
 	}
-	awsservice.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
+	err = awsservice.AWS.CwlAPI.ValidateLogsInOrder(logGroup, logStream, lines, start)
+	if err != nil {
+		t.Fatalf("Validate logs in ordered failed: %v", err)
+	}
 }
 
-func writeLogs(t *testing.T, filePath string, iterations int) {
-	f, err := os.Create(filePath)
-	if err != nil {
-		t.Fatalf("Error occurred creating log file for writing: %v", err)
-	}
-	defer f.Close()
-	defer os.Remove(filePath)
-
-	log.Printf("Writing %d lines to %s", iterations*len(logLineIds), filePath)
+func writeLogs(t *testing.T, f *os.File, iterations int) {
+	log.Printf("Writing %d lines to %s", iterations*len(logLineIds), f.Name())
 
 	for i := 0; i < iterations; i++ {
 		ts := time.Now()
 		for _, id := range logLineIds {
-			_, err = f.WriteString(fmt.Sprintf("%s - [%s] #%d This is a log line.\n", ts.Format(time.StampMilli), id, i))
+			_, err := f.WriteString(fmt.Sprintf("%s - [%s] #%d This is a log line.\n", ts.Format(time.StampMilli), id, i))
 			if err != nil {
 				// don't need to fatal error here. if a log line doesn't get written, the count
 				// when validating the log stream should be incorrect and fail there.

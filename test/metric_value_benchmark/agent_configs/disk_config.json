@@ -10,6 +10,11 @@
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
     "metrics_collected": {
       "disk": {
         "resources": [

@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build windows && integration
-// +build windows,integration
+//go:build windows
+// +build windows
 
 package metrics_nvidia_gpu
 
@@ -48,9 +48,14 @@ func TestNvidiaGPUWindows(t *testing.T) {
 			t.Fatalf(err.Error())
 		}
 
-		dimensionFilter := awsservice.BuildDimensionFilterList(numberofWindowsAppendDimensions)
+		dimensionFilter, err := awsservice.BuildDimensionFilterList(numberofWindowsAppendDimensions)
+
+		if err != nil {
+			t.Fatalf("Failed to build dimension filter list: %v", err)
+		}
+
 		for _, metricName := range expectedNvidiaGPUWindowsMetrics {
-			awsservice.ValidateMetrics(t, metricName, metricWindowsnamespace, dimensionFilter)
+			awsservice.AWS.CwmAPI.ValidateMetrics(metricName, metricWindowsnamespace, dimensionFilter)
 		}
 
 		err = filesystem.CheckFileRights(agentWindowsLogPath)

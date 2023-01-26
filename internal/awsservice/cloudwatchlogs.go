@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
-
 package awsservice
 
 import (
@@ -19,13 +16,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 )
 
-const allowedRetries = 5
-
 // catch ResourceNotFoundException when deleting the log group and log stream, as these
 // are not useful exceptions to log errors on during cleanup
 var rnf *types.ResourceNotFoundException
 
-type cloudwatchLogAPI interface {
+type cwlAPI interface {
 	// ValidateLogs takes a log group and log stream, and fetches the log events via the GetLogEvents
 	// API for all the logs since a given timestamp, and checks if the number of log events matches
 	// the expected value.
@@ -41,8 +36,16 @@ type cloudwatchLogAPI interface {
 	// ResourceNotFoundException errors from calling the APIs
 	DeleteLogGroupAndLogStream(logGroup, logStream string)
 
+	// DeleteLogStream cleans up a log  stream by name. This gracefully handles
+	// ResourceNotFoundException errors from calling the APIs
+	DeleteLogStream(logGroup, logStream string)
+
+	// DeleteLogGroup cleans up a log group  by name. This gracefully handles
+	// ResourceNotFoundException errors from calling the APIs
+	DeleteLogGroup(logGroup string)
+
 	// IsLogGroupExist confirms whether the logGroupName exists or not
-	IsLogGroupExist(logGroup string) error
+	IsLogGroupExist(logGroup string) bool
 }
 
 type cloudwatchLogConfig struct {
@@ -50,7 +53,7 @@ type cloudwatchLogConfig struct {
 	cwlClient *cloudwatchlogs.Client
 }
 
-func NewCloudWatchLogsConfig(cfg aws.Config, cxt context.Context) cloudwatchLogAPI {
+func NewCloudWatchLogsConfig(cfg aws.Config, cxt context.Context) cwlAPI {
 	cwlClient := cloudwatchlogs.NewFromConfig(cfg)
 	return &cloudwatchLogConfig{
 		cxt:       cxt,
@@ -86,8 +89,7 @@ func (c *cloudwatchLogConfig) ValidateLogs(logGroup, logStream string, numExpect
 		attempts += 1
 
 		if err != nil {
-			var rnf *types.ResourceNotFoundException
-			if errors.As(err, &rnf) && attempts <= allowedRetries {
+			if errors.As(err, &rnf) && attempts <= StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(time.Minute)
 				continue
@@ -145,7 +147,7 @@ func (c *cloudwatchLogConfig) ValidateLogsInOrder(logGroup, logStream string, lo
 		attempts += 1
 
 		if err != nil {
-			if errors.As(err, &rnf) && attempts <= allowedRetries {
+			if errors.As(err, &rnf) && attempts <= StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(time.Minute)
 				continue
@@ -160,7 +162,7 @@ func (c *cloudwatchLogConfig) ValidateLogsInOrder(logGroup, logStream string, lo
 
 		if nextToken != nil && output.NextForwardToken != nil && *output.NextForwardToken == *nextToken {
 			// From the docs: If you have reached the end of the stream, it returns the same token you passed in.
-			log.Printf("Done paginating log events for %s/%s and found %d logs", logGroup, logStream, len(foundLogs))
+			log.Printf("done paginating log events for %s/%s and found %d logs", logGroup, logStream, len(foundLogs))
 			break
 		}
 
@@ -169,13 +171,13 @@ func (c *cloudwatchLogConfig) ValidateLogsInOrder(logGroup, logStream string, lo
 
 	// Validate that each of the logs are found, in order and in full.
 	if len(foundLogs) != len(logLines) {
-		return fmt.Errorf("Number of logs lines does not match with each other, expected number of logs lines/actual  number of logs lines %d/%d", len(logLines), len(foundLogs))
+		return fmt.Errorf("number of logs lines does not match with each other, expected number of logs lines/actual  number of logs lines %d/%d", len(logLines), len(foundLogs))
 	}
 	for i := 0; i < len(logLines); i++ {
 		expectedLogs := strings.ReplaceAll(logLines[i], "'", "\"")
 		actualLogs := strings.ReplaceAll(foundLogs[i], "'", "\"")
 		if expectedLogs != actualLogs {
-			return fmt.Errorf("Logs lines does not match with each other, \n expected logs %d \n actual logs %d \n", len(logLines), len(foundLogs))
+			return fmt.Errorf("logs lines does not match with each other, \n expected logs %d \n actual logs %d \n", len(logLines), len(foundLogs))
 
 		}
 	}
@@ -184,26 +186,31 @@ func (c *cloudwatchLogConfig) ValidateLogsInOrder(logGroup, logStream string, lo
 }
 
 // IsLogGroupExist confirms whether the logGroupName exists or not
-func (c *cloudwatchLogConfig) IsLogGroupExist(logGroup string) error {
+func (c *cloudwatchLogConfig) IsLogGroupExist(logGroup string) bool {
 
 	describeLogGroupOutput, err := c.cwlClient.DescribeLogGroups(c.cxt, &cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(logGroup),
 	})
 
 	if err != nil {
-		return err
+		return false
 	}
 
 	if len(describeLogGroupOutput.LogGroups) == 0 {
-		return fmt.Errorf("Log group %s does not exist", logGroup)
+		return false
 	}
 
-	return nil
+	return true
 }
 
 // DeleteLogGroupAndLogStream cleans up a log group and stream by name. This gracefully handles
 // ResourceNotFoundException errors from calling the APIs
 func (c *cloudwatchLogConfig) DeleteLogGroupAndLogStream(logGroup, logStream string) {
+	c.DeleteLogStream(logGroup, logStream)
+	c.DeleteLogGroup(logGroup)
+}
+
+func (c *cloudwatchLogConfig) DeleteLogStream(logGroup, logStream string) {
 	_, err := c.cwlClient.DeleteLogStream(c.cxt, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroup),
 		LogStreamName: aws.String(logStream),
@@ -211,11 +218,12 @@ func (c *cloudwatchLogConfig) DeleteLogGroupAndLogStream(logGroup, logStream str
 	if err != nil && !errors.As(err, &rnf) {
 		log.Printf("Error occurred while deleting log stream %s: %v", logStream, err)
 	}
+}
 
-	_, err = c.cwlClient.DeleteLogGroup(c.cxt, &cloudwatchlogs.DeleteLogGroupInput{
-		LogGroupName: aws.String(logGroup),
+func (c *cloudwatchLogConfig) DeleteLogGroup(logGroupName string) {
+	_, err := c.cwlClient.DeleteLogGroup(c.cxt, &cloudwatchlogs.DeleteLogGroupInput{
+		LogGroupName: aws.String(logGroupName),
 	})
-
 	if err != nil && !errors.As(err, &rnf) {
 		log.Printf("Error occurred while deleting log group %s: %v", logGroupName, err)
 	}

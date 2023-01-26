@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package dimension
 
@@ -17,11 +16,11 @@ type ExpectedDimensionValue struct {
 }
 
 func (d *ExpectedDimensionValue) IsKnown() bool {
-	return d.Value == nil
+	return d.Value != nil
 }
 
 func UnknownDimensionValue() ExpectedDimensionValue {
-	return ExpectedDimensionValue{}
+	return ExpectedDimensionValue{Value: nil}
 }
 
 func GetDimensionFactory(env environment.MetaData) Factory {
@@ -73,6 +72,7 @@ func (f *Factory) GetDimensions(instructions []Instruction) ([]types.Dimension, 
 func (f *Factory) executeInstruction(instruction Instruction) types.Dimension {
 	for _, provider := range f.providers {
 		dim := provider.GetDimension(instruction)
+		log.Printf("instruction %v provider %s returned dimension %v", instruction, provider.Name(), dim)
 		if (dim != types.Dimension{}) {
 			return dim
 		}
@@ -83,6 +83,7 @@ func (f *Factory) executeInstruction(instruction Instruction) types.Dimension {
 type IProvider interface {
 	IsApplicable() bool
 	GetDimension(Instruction) types.Dimension
+	Name() string
 }
 
 type Provider struct {

@@ -34,11 +34,6 @@ variable "install_agent" {
   default     = "go run ./install/install_agent.go rpm"
 }
 
-variable "ca_cert_path" {
-  type    = string
-  default = ""
-}
-
 variable "arc" {
   type    = string
   default = ""
@@ -90,5 +85,5 @@ variable "cwa_github_sha_date" {
 }
 variable "performance_number_of_logs" {
   type    = string
-  default = ""
+  default = "100"
 }

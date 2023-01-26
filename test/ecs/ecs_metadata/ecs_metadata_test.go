@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
-
 package ecs_metadata
 
 import (
@@ -39,8 +36,8 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
 
-		if awsservice.IsLogGroupExists(t, logGroupName) {
-			awsservice.DeleteLogGroupAndStream(logGroupName, LogStreamName)
+		if awsservice.AWS.CwlAPI.IsLogGroupExist(logGroupName) {
+			awsservice.AWS.CwlAPI.DeleteLogGroupAndLogStream(logGroupName, LogStreamName)
 			break
 		}
 

@@ -10,15 +10,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
-const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const commonConfigOutputPath = "/opt/aws/amazon-cloudwatch-agent/etc/common-config.toml"
-const configJSON = "/config.json"
-const commonConfigTOML = "/common-config.toml"
-const targetString = "x509: certificate signed by unknown authority"
+const (
+	configOutputPath       = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	commonConfigOutputPath = "/opt/aws/amazon-cloudwatch-agent/etc/common-config.toml"
+	configJSON             = "/config.json"
+	commonConfigTOML       = "/common-config.toml"
+	targetString           = "x509: certificate signed by unknown authority"
+)
 
 // Let the agent run for 30 seconds. This will give agent enough time to call server
 const agentRuntime = 30 * time.Second

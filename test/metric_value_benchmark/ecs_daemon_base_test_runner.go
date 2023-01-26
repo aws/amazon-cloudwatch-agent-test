@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package metric_value_benchmark
 
@@ -10,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
@@ -35,18 +36,18 @@ type ECSAgentRunStrategy struct {
 func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath string) error {
 	b, err := os.ReadFile(configFilePath)
 	if err != nil {
-		return fmt.Errorf("Failed while reading config file")
+		return fmt.Errorf("failed while reading config file")
 	}
 
 	agentConfig := string(b)
 
-	err = awsservice.PutStringParameter(e.CwagentConfigSsmParamName, agentConfig)
+	err = awsservice.AWS.SsmAPI.PutStringParameter(e.CwagentConfigSsmParamName, agentConfig)
 	if err != nil {
-		return fmt.Errorf("Failed while reading config file : %s", err.Error())
+		return fmt.Errorf("failed while reading config file : %s", err.Error())
 	}
 	fmt.Print("Put parameter successful")
 
-	err = awsservice.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
+	err = awsservice.AWS.EcsAPI.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -67,7 +68,7 @@ type BaseTestRunner struct {
 	DimensionFactory dimension.Factory
 }
 
-func (t *ECSTestRunner) Run(s *MetricBenchmarkTestSuite, e *environment.MetaData) {
+func (t *ECSTestRunner) Run(s test_runner.ITestSuite, e *environment.MetaData) {
 	testName := t.testRunner.getTestName()
 	fmt.Printf("Running %s", testName)
 	testGroupResult, err := t.runAgent(e)

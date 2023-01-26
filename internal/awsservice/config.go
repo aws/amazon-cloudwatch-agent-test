@@ -1,9 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-
-//go:build integration
-// +build integration
-
 package awsservice
 
 import (
@@ -14,16 +10,19 @@ import (
 )
 
 var (
-	awsService = NewAWSServiceAPI()
+	AWS = NewAWSServiceAPI()
 )
 
 type awsServiceAPI struct {
-	ec2API  ec2API
-	ecsAPI  ecsAPI
-	cwAPI   cwAPI
-	cwlAPI  cwlAPI
-	ssmAPI  ssmAPI
-	imdsAPI imdsAPI
+	cxt context.Context
+
+	Ec2API   ec2API
+	EcsAPI   ecsAPI
+	CwmAPI   cwmAPI
+	CwlAPI   cwlAPI
+	SsmAPI   ssmAPI
+	ImdsAPI  imdsAPI
+	DnmdbAPI dnmdbAPI
 }
 
 func NewAWSServiceAPI() *awsServiceAPI {
@@ -34,13 +33,14 @@ func NewAWSServiceAPI() *awsServiceAPI {
 		log.Fatalf("")
 	}
 
-	return &awsConfig{
-		cxt:     cxt,
-		ec2API:  NewEc2Config(awsCfg, cxt),
-		ecsAPI:  NewECSConfig(awsCfg, cxt),
-		cwAPI:   NewCloudWatchConfig(awsCfg, cxt),
-		cwlAPI:  NewCloudWatchLOgsConfig(awsCfg, cxt),
-		ssmAPI:  NewSSMConfig(awsCfg, cxt),
-		imdsAPI: NewIMDSConfig(awsCfg, cxt),
+	return &awsServiceAPI{
+		cxt:      cxt,
+		Ec2API:   NewEC2Config(awsCfg, cxt),
+		EcsAPI:   NewECSConfig(awsCfg, cxt),
+		CwmAPI:   NewCloudWatchConfig(awsCfg, cxt),
+		CwlAPI:   NewCloudWatchLogsConfig(awsCfg, cxt),
+		SsmAPI:   NewSSMConfig(awsCfg, cxt),
+		ImdsAPI:  NewIMDSConfig(awsCfg, cxt),
+		DnmdbAPI: NewDynamoDBConfig(awsCfg, cxt),
 	}
 }

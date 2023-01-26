@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package metrics_number_dimension
 
@@ -13,8 +12,6 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -89,7 +86,7 @@ func TestNumberMetricDimension(t *testing.T) {
 			if parameter.failToStart && err == nil {
 				t.Fatalf("Agent should not have started for append %v dimension", parameter.numberDimensionsInCW)
 			} else if parameter.failToStart {
-				log.Printf("Agent could not start due to appending more than %v dimension", MaxDimensionCountAllowed)
+				t.Logf("Agent could not start due to appending more than %v dimension", MaxDimensionCountAllowed)
 				return
 			}
 
@@ -98,8 +95,15 @@ func TestNumberMetricDimension(t *testing.T) {
 			common.StopAgent()
 
 			// test for cloud watch metrics
-			dimensionFilter := buildDimensionFilterList(parameter.numberDimensionsInCW)
-			awsservice.ValidateMetrics(t, parameter.metricName, namespace, dimensionFilter)
+			dimensionFilter, err := awsservice.BuildDimensionFilterList(parameter.numberDimensionsInCW)
+			if err != nil {
+				t.Fatalf("Failed to build dimension filter list: %v", err)
+			}
+
+			err = awsservice.AWS.CwmAPI.ValidateMetric(parameter.metricName, namespace, dimensionFilter)
+			if err != nil {
+				t.Fatalf("Validate metrics failed: %v", err)
+			}
 		})
 	}
 }

@@ -1,5 +1,7 @@
-//go:build linux && integration
-// +build linux,integration
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+//go:build !windows
 
 package performancetest
 
@@ -42,7 +44,12 @@ func TestPerformance(t *testing.T) {
 	}
 
 	agentContext := context.TODO()
-	instanceId := awsservice.GetInstanceId()
+	instanceId, err := awsservice.AWS.ImdsAPI.GetInstanceId()
+
+	if err != nil {
+		t.Fatalf("Failed to get instance ID: %v", err)
+	}
+
 	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
 
 	configFilePath, logStreams, err := GenerateConfig(logNum)
@@ -52,11 +59,11 @@ func TestPerformance(t *testing.T) {
 
 	//defer deleting log group and streams
 	//defer deleting log group first because golang handles defers in LIFO order
-	//and we want to delete the log group after deleting the log streams
-	defer awsservice.DeleteLogGroup(instanceId)
+	//and we want to delete the log group after deleting the log streamss
+	defer awsservice.AWS.CwlAPI.DeleteLogGroup(instanceId)
 
 	for _, logStream := range logStreams {
-		defer awsservice.DeleteLogStream(instanceId, logStream)
+		defer awsservice.AWS.CwlAPI.DeleteLogStream(instanceId, logStream)
 	}
 
 	log.Printf("config generated at %s\n", configFilePath)
@@ -105,7 +112,7 @@ func TestPerformance(t *testing.T) {
 			// this print shows the sendItem packet,it can be used to debug attribute issues
 			fmt.Printf("%v \n", data)
 
-			_, err = dynamoDB.SendItem(data, tps)
+			err = dynamoDB.UpdateItem(data[HASH].(string), data, tps)
 			if err != nil {
 				t.Fatalf("Error: couldn't upload metric data to table, %v", err)
 			}
