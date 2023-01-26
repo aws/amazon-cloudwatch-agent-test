@@ -125,8 +125,8 @@ resource "null_resource" "integration_test" {
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
-      "echo run sanity test && go test ./test/sanity -p 1 -v --tags=integration",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v --tags=integration "
+      "echo run sanity test && go test ./test/sanity -p 1 -v",
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v"
     ]
     connection {
       type        = "ssh"

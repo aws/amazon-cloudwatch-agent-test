@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package dimension
 
@@ -47,4 +46,8 @@ func (p *ContainerInsightsDimensionProvider) GetDimension(instruction Instructio
 	}
 
 	return types.Dimension{}
+}
+
+func (p *ContainerInsightsDimensionProvider) Name() string {
+	return "ContainerInsightsDimensionProvider"
 }

@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build !windows
 
 package metric
 
