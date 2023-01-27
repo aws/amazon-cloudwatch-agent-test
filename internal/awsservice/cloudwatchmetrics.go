@@ -120,6 +120,28 @@ func GetCloudWatchMetricsClient() (*cloudwatch.Client, *context.Context, error) 
 	return cwm, &metricsCtx, nil
 }
 
+// GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
+
+func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
+	cwmClient, clientContext, err := GetCloudWatchMetricsClient()
+	if err != nil {
+		return nil, err
+	}
+
+	getMetricDataInput := cloudwatch.GetMetricDataInput{
+		StartTime:         &startTime,
+		EndTime:           &endTime,
+		MetricDataQueries: metricDataQueries,
+	}
+
+	data, err := cwmClient.GetMetricData(*clientContext, &getMetricDataInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
 func BuildDimensionFilterList(appendDimension int) []types.DimensionFilter {
 	// we append dimension from 0 to max number - 2
 	// then we add dimension instance id
