@@ -1,0 +1,23 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "MetricAppendDimensionTest",
+    "append_dimensions":
+    {
+        "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+        "ImageId": "${aws:ImageId}",
+        "InstanceId": "${aws:InstanceId}",
+        "InstanceType": "${aws:InstanceType}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "measurement": ["time_active"]
+      }
+    }
+  }
+}
