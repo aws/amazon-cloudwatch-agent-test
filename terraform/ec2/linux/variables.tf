@@ -5,7 +5,7 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "t3a.xlarge"
+  default = "t3a.medium"
 }
 
 variable "ssh_key_name" {
@@ -101,4 +101,9 @@ variable "performance_number_of_logs" {
 variable "efs_mount_point" {
   type = string
   default = "~/efs-mount-point"
+}
+
+variable "is_canary" {
+  type = bool
+  default = false
 }
