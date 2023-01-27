@@ -174,7 +174,7 @@ resource "aws_ecs_service" "cwagent_service" {
   launch_type         = "EC2"
   scheduling_strategy = "DAEMON"
 
-  depends_on = [ aws_ecs_task_definition.cwagent_task_definition ]
+  depends_on = [aws_ecs_task_definition.cwagent_task_definition]
 }
 
 #####################################################################
