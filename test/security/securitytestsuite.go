@@ -48,11 +48,13 @@ func getEc2TestRunners() []*test_runner.TestRunner {
 }
 
 func (suite *SecurityTestSuite) TestAllInSuite() {
-	for _, testRunner := range getEc2TestRunners() {
-		testRunner.Run(suite)
-	}
+	/*
+		for _, testRunner := range getEc2TestRunners() {
+			testRunner.Run(suite)
+		}*/
 
-	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Security Test Suite Failed")
+	suite.Assert().Equal(status.SUCCESSFUL, status.FAILED, "Security Test Suite Failed")
+	//suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Security Test Suite Failed")
 }
 
 func (suite *SecurityTestSuite) AddToSuiteResult(r status.TestGroupResult) {
