@@ -68,7 +68,9 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
       "ssm:Describe*",
       "ssm:Get*",
       "ssm:List*",
-      "s3:*",
+      "s3:GetObjectAcl",
+      "s3:GetObject",
+      "s3:ListBucket",
     ]
     resources = ["*"]
   }
