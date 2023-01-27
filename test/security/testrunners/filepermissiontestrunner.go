@@ -19,15 +19,19 @@ var _ test_runner.ITestRunner = (*FilePermissionTestRunner)(nil)
 const agentConfigPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 const agentConfigOnlyRootRead = "-rw-r--r-- 1 root root"
 
-var onlyRootReadExactMatchRule = rule.Rule{
-	Conditions: []rule.ICondition{
-		&rule.ExactMatch{ExpectedValue: agentConfigOnlyRootRead},
-	},
-}
+var (
+	onlyRootReadExactMatchRule = rule.Rule{
+		Conditions: []rule.ICondition{
+			&rule.ExactMatch{ExpectedValue: agentConfigOnlyRootRead},
+		},
+	}
+)
 
 var testCases = map[string]rule.Rule{
 	agentConfigPath: onlyRootReadExactMatchRule,
 }
+
+var actualPermissions = make(map[string]string)
 
 func (m *FilePermissionTestRunner) Validate() status.TestGroupResult {
 	testResults := make([]status.TestResult, len(testCases))
@@ -60,6 +64,20 @@ func (m *FilePermissionTestRunner) GetAgentRunDuration() time.Duration {
 	return 1 * time.Minute
 }
 
+func (m *FilePermissionTestRunner) SetupAfterAgentRun() error {
+	for k, _ := range testCases {
+		p, err := getFilePermission(k)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("file perission is %s", p)
+		actualPermissions[k] = p
+	}
+
+	return nil
+}
+
 func (m *FilePermissionTestRunner) validatePermissions(fileTestedPath string, rule rule.Rule) status.TestResult {
 	log.Printf("Validating Permission for  %v", fileTestedPath)
 
@@ -68,15 +86,7 @@ func (m *FilePermissionTestRunner) validatePermissions(fileTestedPath string, ru
 		Status: status.FAILED,
 	}
 
-	// TODO Get permission from Command
-	p, err := getFilePermission(fileTestedPath)
-	if err != nil {
-		return testResult
-	}
-
-	log.Printf("file perission is %s", p)
-
-	if !rule.Evaluate(p) {
+	if !rule.Evaluate(actualPermissions[fileTestedPath]) {
 		return testResult
 	}
 
