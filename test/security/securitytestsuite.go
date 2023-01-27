@@ -38,6 +38,7 @@ var (
 	ec2TestRunners []*test_runner.TestRunner
 )
 
+/*
 func getEc2TestRunners() []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		ec2TestRunners = []*test_runner.TestRunner{
@@ -45,7 +46,7 @@ func getEc2TestRunners() []*test_runner.TestRunner {
 		}
 	}
 	return ec2TestRunners
-}
+}*/
 
 func (suite *SecurityTestSuite) TestAllInSuite() {
 	/*
