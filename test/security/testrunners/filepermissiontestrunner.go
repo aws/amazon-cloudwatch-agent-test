@@ -1,10 +1,12 @@
 package testrunners
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/rule"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -15,17 +17,16 @@ type FilePermissionTestRunner struct {
 var _ test_runner.ITestRunner = (*FilePermissionTestRunner)(nil)
 
 const agentConfigPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-
-var testCases = map[string]rule.Rule{
-	agentConfigPath: onlyRootReadExactMatchRule,
-}
-
-const agentConfigOnlyRootRead = "-rw-rw-r--"
+const agentConfigOnlyRootRead = "-rw-r--r-- 1 root root"
 
 var onlyRootReadExactMatchRule = rule.Rule{
 	Conditions: []rule.ICondition{
 		&rule.ExactMatch{ExpectedValue: agentConfigOnlyRootRead},
 	},
+}
+
+var testCases = map[string]rule.Rule{
+	agentConfigPath: onlyRootReadExactMatchRule,
 }
 
 func (m *FilePermissionTestRunner) Validate() status.TestGroupResult {
@@ -68,7 +69,12 @@ func (m *FilePermissionTestRunner) validatePermissions(fileTestedPath string, ru
 	}
 
 	// TODO Get permission from Command
-	p := getFilePermission(fileTestedPath)
+	p, err := getFilePermission(fileTestedPath)
+	if err != nil {
+		return testResult
+	}
+
+	log.Printf("file perission is %s", p)
 
 	if !rule.Evaluate(p) {
 		return testResult
@@ -78,7 +84,12 @@ func (m *FilePermissionTestRunner) validatePermissions(fileTestedPath string, ru
 	return testResult
 }
 
-func getFilePermission(filePath string) string {
+func getFilePermission(filePath string) (string, error) {
 	log.Printf("Retrieving file permission for %v", filePath)
-	return "DummyPermission"
+	p, err := common.RunCommand("ls -l " + agentConfigPath)
+	if err != nil {
+		return "", err
+	}
+
+	return (strings.SplitAfterN(p, " ", 4))[0], nil
 }

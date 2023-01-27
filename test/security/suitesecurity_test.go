@@ -53,7 +53,8 @@ func (suite *SecurityTestSuite) TestAllInSuite() {
 		testRunner.Run(suite)
 	}
 
-	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Security Test Suite Failed")
+	suite.Assert().Equal(true, false)
+	//suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Security Test Suite Failed")
 }
 
 func (suite *SecurityTestSuite) AddToSuiteResult(r status.TestGroupResult) {
