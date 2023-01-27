@@ -1,7 +1,7 @@
 package rule
 
 type Rule struct {
-	Conditions []*ICondition
+	Conditions []ICondition
 }
 
 func (r *Rule) Evaluate(permission string) bool {

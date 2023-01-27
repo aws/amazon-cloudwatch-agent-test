@@ -5,6 +5,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"log"
+	"time"
 )
 
 type FilePermissionTestRunner struct {
@@ -22,7 +23,7 @@ var testCases = map[string]rule.Rule{
 const agentConfigOnlyRootRead = "-rw-rw-r--"
 
 var onlyRootReadExactMatchRule = rule.Rule{
-	Conditions: []*rule.ICondition{
+	Conditions: []rule.ICondition{
 		&rule.ExactMatch{ExpectedValue: agentConfigOnlyRootRead},
 	},
 }
@@ -52,6 +53,10 @@ func (m *FilePermissionTestRunner) GetAgentConfigFileName() string {
 
 func (m *FilePermissionTestRunner) GetMeasuredMetrics() []string {
 	return []string{}
+}
+
+func (m *FilePermissionTestRunner) GetAgentRunDuration() time.Duration {
+	return 1 * time.Minute
 }
 
 func (m *FilePermissionTestRunner) validatePermissions(fileTestedPath string, rule rule.Rule) status.TestResult {
