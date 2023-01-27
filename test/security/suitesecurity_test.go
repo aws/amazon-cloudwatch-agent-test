@@ -8,6 +8,7 @@ package security
 import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/security/testrunners"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/stretchr/testify/suite"
@@ -38,24 +39,21 @@ var (
 	ec2TestRunners []*test_runner.TestRunner
 )
 
-/*
 func getEc2TestRunners() []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		ec2TestRunners = []*test_runner.TestRunner{
-			{TestRunner: &FilePermissionTestRunner{}},
+			{TestRunner: &testrunners.FilePermissionTestRunner{}},
 		}
 	}
 	return ec2TestRunners
-}*/
+}
 
 func (suite *SecurityTestSuite) TestAllInSuite() {
-	/*
-		for _, testRunner := range getEc2TestRunners() {
-			testRunner.Run(suite)
-		}*/
+	for _, testRunner := range getEc2TestRunners() {
+		testRunner.Run(suite)
+	}
 
-	suite.Assert().Equal(status.SUCCESSFUL, status.FAILED, "Security Test Suite Failed")
-	//suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Security Test Suite Failed")
+	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Security Test Suite Failed")
 }
 
 func (suite *SecurityTestSuite) AddToSuiteResult(r status.TestGroupResult) {

@@ -1,0 +1,134 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+//go:build !windows
+
+package basesuite
+
+import (
+	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"log"
+	"path/filepath"
+	"time"
+)
+
+const (
+	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	agentConfigDirectory = "agent_configs"
+	extraConfigDirectory = "extra_configs"
+	MinimumAgentRuntime  = 3 * time.Minute
+)
+
+type ITestRunner interface {
+	Validate() status.TestGroupResult
+	GetTestName() string
+	GetAgentConfigFileName() string
+	GetAgentRunDuration() time.Duration
+	GetMeasuredMetrics() []string
+	SetupBeforeAgentRun() error
+	SetupAfterAgentRun() error
+}
+
+func (suite *SecurityTestSuite) SetupSuite() {
+	fmt.Println(">>>> Starting SecurityTestSuite")
+}
+
+func (suite *SecurityTestSuite) TearDownSuite() {
+	suite.result.Print()
+	fmt.Println(">>>> Finished SecurityTestSuite")
+}
+
+func (suite *SecurityTestSuite) TestAllInSuite() {
+	for _, testRunner := range getEc2TestRunners() {
+		testRunner.Run(suite)
+	}
+
+	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Security Test Suite Failed")
+}
+
+func (suite *SecurityTestSuite) AddToSuiteResult(r status.TestGroupResult) {
+	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
+}
+
+type TestRunner struct {
+	TestRunner ITestRunner
+}
+
+type BaseTestRunner struct {
+	DimensionFactory dimension.Factory
+}
+
+func (t *BaseTestRunner) SetupBeforeAgentRun() error {
+	return nil
+}
+
+func (t *BaseTestRunner) SetupAfterAgentRun() error {
+	return nil
+}
+
+func (t *BaseTestRunner) GetAgentRunDuration() time.Duration {
+	return MinimumAgentRuntime
+}
+
+func (t *TestRunner) Run(s ITestSuite) {
+	testName := t.TestRunner.GetTestName()
+	log.Printf("Running %v", testName)
+	testGroupResult, err := t.runAgent()
+	if err == nil {
+		testGroupResult = t.TestRunner.Validate()
+	}
+	s.AddToSuiteResult(testGroupResult)
+	if testGroupResult.GetStatus() != status.SUCCESSFUL {
+		log.Printf("%v test group failed", testName)
+	}
+}
+
+func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
+	testGroupResult := status.TestGroupResult{
+		Name: t.TestRunner.GetTestName(),
+		TestResults: []status.TestResult{
+			{
+				Name:   "Starting Agent",
+				Status: status.SUCCESSFUL,
+			},
+		},
+	}
+
+	err := t.TestRunner.SetupBeforeAgentRun()
+	if err != nil {
+		testGroupResult.TestResults[0].Status = status.FAILED
+		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
+	}
+
+	agentConfigPath := filepath.Join(agentConfigDirectory, t.TestRunner.MetricValueFetcher())
+	log.Printf("Starting agent using agent config file %s", agentConfigPath)
+	common.CopyFile(agentConfigPath, configOutputPath)
+	err = common.StartAgent(configOutputPath, false)
+
+	if err != nil {
+		testGroupResult.TestResults[0].Status = status.FAILED
+		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
+	}
+
+	err = t.TestRunner.SetupAfterAgentRun()
+	if err != nil {
+		testGroupResult.TestResults[0].Status = status.FAILED
+		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
+	}
+
+	runningDuration := t.TestRunner.GetAgentRunDuration()
+	time.Sleep(runningDuration)
+	log.Printf("Agent has been running for : %s", runningDuration.String())
+	common.StopAgent()
+
+	err = common.DeleteFile(configOutputPath)
+	if err != nil {
+		testGroupResult.TestResults[0].Status = status.FAILED
+		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %w", err)
+	}
+
+	return testGroupResult, nil
+}
