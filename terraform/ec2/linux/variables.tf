@@ -102,6 +102,6 @@ variable "performance_number_of_logs" {
 }
 
 variable "efs_mount_point" {
-  type = string
+  type    = string
   default = "~/efs-mount-point"
 }

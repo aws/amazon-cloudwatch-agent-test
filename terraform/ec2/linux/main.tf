@@ -31,14 +31,14 @@ locals {
 #####################################################################
 resource "aws_efs_file_system" "efs" {
   creation_token = "efs-${module.common.testing_id}"
-  tags           = {
+  tags = {
     Name = "efs-${module.common.testing_id}"
   }
 }
 
 resource "aws_efs_mount_target" "mount" {
-  file_system_id = aws_efs_file_system.efs.id
-  subnet_id = aws_instance.cwagent.subnet_id
+  file_system_id  = aws_efs_file_system.efs.id
+  subnet_id       = aws_instance.cwagent.subnet_id
   security_groups = [data.aws_security_group.ec2_security_group.id]
 }
 
@@ -49,14 +49,14 @@ resource "null_resource" "mount_efs" {
   ]
 
   connection {
-    type = "ssh"
-    user = var.user
+    type        = "ssh"
+    user        = var.user
     private_key = local.private_key_content
-    host = aws_instance.cwagent.public_ip
+    host        = aws_instance.cwagent.public_ip
   }
 
   provisioner "file" {
-    source = "./resources/install-efs-utils.sh"
+    source      = "./resources/install-efs-utils.sh"
     destination = "/tmp/install-efs-utils.sh"
   }
 
