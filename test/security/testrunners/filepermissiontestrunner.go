@@ -44,11 +44,11 @@ func (m *FilePermissionTestRunner) Validate() status.TestGroupResult {
 }
 
 func (m *FilePermissionTestRunner) GetTestName() string {
-	return "Processes"
+	return "FilePermission"
 }
 
 func (m *FilePermissionTestRunner) GetAgentConfigFileName() string {
-	return "processes_config.json"
+	return "minimum_config.json"
 }
 
 func (m *FilePermissionTestRunner) GetMeasuredMetrics() []string {
