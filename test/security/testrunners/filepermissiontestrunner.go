@@ -17,7 +17,7 @@ type FilePermissionTestRunner struct {
 var _ test_runner.ITestRunner = (*FilePermissionTestRunner)(nil)
 
 const agentConfigPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const agentConfigOnlyRootRead = "-rw-r--r-- 1 root root"
+const agentConfigOnlyRootRead = "-rw-r--r-- 1 root root "
 
 var (
 	onlyRootReadExactMatchRule = rule.Rule{
@@ -101,5 +101,8 @@ func getFilePermission(filePath string) (string, error) {
 		return "", err
 	}
 
-	return (strings.SplitAfterN(p, " ", 4))[0], nil
+	slice := strings.SplitAfterN(p, " ", 5)
+	onlyFirst4WordsInPermission := strings.Join(slice[:4], "")
+
+	return onlyFirst4WordsInPermission, nil
 }
