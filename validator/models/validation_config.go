@@ -21,17 +21,17 @@ type ValidateConfig interface {
 	GetDataPointPeriod() time.Duration
 }
 type validatorConfig struct {
-	receivers  []string
-	processors []string
-	exporters  []string
+	receivers  []string `yaml:"receivers"`
+	processors []string `yaml:"processors"`
+	exporters  []string `yaml:"exporters"`
 
-	testCase     string
-	validateType string
-	dataType     string
-	dataRate     int
+	testCase        string `yaml:"test_case"`
+	validateType    string `yaml:"validate_type"`
+	dataType        string `yaml:"data_type"`
+	dataRate        int    `yaml:"data_rate"`
+	datapointPeriod int    `yaml:"datapoint_period"`
 
-	cwaConfigPath   string
-	datapointPeriod int
+	cwaConfigPath string `yaml:"cloudwatch_agent_config"`
 }
 
 func NewValidateConfig(configPath string) (*validatorConfig, error) {

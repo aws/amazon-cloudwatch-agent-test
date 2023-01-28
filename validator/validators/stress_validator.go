@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"go.uber.org/multierr"
 )
 
@@ -55,10 +54,10 @@ func (s *stressValidator) startValidation() error {
 		multiErr = multierr.Append(multiErr, err)
 	}
 
-	return nil
+	return multiErr
 }
 
-func (s *stressValidator) getStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension) (*cloudwatch.GetMetricDataOutput, error) {
+func (s *stressValidator) getStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension) (float64, error) {
 	var (
 		datapointPeriod = s.vConfig.GetDataPointPeriod()
 		endTime         = time.Now()
@@ -67,7 +66,13 @@ func (s *stressValidator) getStressMetric(metricName, metricNamespace string, me
 
 	stressMetricQueries := s.buildStressMetricQueries(metricName, metricNamespace, metricDimensions)
 
-	return awsservice.AWS.CwmAPI.GetMetricData(startTime, endTime, stressMetricQueries)
+	queryMetrics, err := awsservice.GetMetricData(stressMetricQueries, startTime, endTime)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return queryMetrics.MetricDataResults[0].Values[0], nil
 }
 
 func (s *stressValidator) buildStressMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) []types.MetricDataQuery {
