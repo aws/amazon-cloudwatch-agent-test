@@ -88,6 +88,13 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
+
   # Prepare Integration Test
   provisioner "remote-exec" {
     inline = [
@@ -107,13 +114,6 @@ resource "null_resource" "integration_test" {
       "sudo cp original.pem /opt/aws/amazon-cloudwatch-agent/original.pem",
       "sudo cp combine.pem /opt/aws/amazon-cloudwatch-agent/combine.pem",
     ]
-
-    connection {
-      type        = "ssh"
-      user        = var.user
-      private_key = local.private_key_content
-      host        = aws_instance.cwagent.public_ip
-    }
   }
 
   #Run sanity check and integration test
@@ -128,12 +128,6 @@ resource "null_resource" "integration_test" {
       "echo run sanity test && go test ./test/sanity -p 1 -v",
       "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v"
     ]
-    connection {
-      type        = "ssh"
-      user        = var.user
-      private_key = local.private_key_content
-      host        = aws_instance.cwagent.public_ip
-    }
   }
 
   depends_on = [

@@ -5,7 +5,9 @@ package models // import "github.com/aws/amazon-cloudwatch-agent-test/validator/
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -21,17 +23,17 @@ type ValidateConfig interface {
 	GetDataPointPeriod() time.Duration
 }
 type validatorConfig struct {
-	receivers  []string `yaml:"receivers"`
-	processors []string `yaml:"processors"`
-	exporters  []string `yaml:"exporters"`
+	Receivers  []string `yaml:"receivers"`
+	Processors []string `yaml:"processors"`
+	Exporters  []string `yaml:"exporters"`
 
-	testCase        string `yaml:"test_case"`
-	validateType    string `yaml:"validate_type"`
-	dataType        string `yaml:"data_type"`
-	dataRate        int    `yaml:"data_rate"`
-	datapointPeriod int    `yaml:"datapoint_period"`
+	TestCase        string `yaml:"test_case"`
+	ValidateType    string `yaml:"validate_type"`
+	DataType        string `yaml:"data_type"`
+	DataRate        string `yaml:"data_rate"`
+	DatapointPeriod int    `yaml:"datapoint_period"`
 
-	cwaConfigPath string `yaml:"cloudwatch_agent_config"`
+	ConfigPath string `yaml:"cloudwatch_agent_config"`
 }
 
 func NewValidateConfig(configPath string) (*validatorConfig, error) {
@@ -45,34 +47,38 @@ func NewValidateConfig(configPath string) (*validatorConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	log.Printf("Parameters validation for %v", vConfig)
 	return &vConfig, nil
 }
 
 func (v *validatorConfig) GetTestCase() string {
-	return v.testCase
+	return v.TestCase
 }
 
 func (v *validatorConfig) GetValidateType() string {
-	return v.validateType
+	return v.ValidateType
 }
 
 func (v *validatorConfig) GetOtelConfig() ([]string, []string, []string) {
-	return v.receivers, v.processors, v.exporters
+	return v.Receivers, v.Processors, v.Exporters
 }
 
 func (v *validatorConfig) GetDataType() string {
-	return v.dataType
+	return v.DataType
 }
 
 func (v *validatorConfig) GetDataRate() int {
-	return v.dataRate
+	if dataRate, err := strconv.ParseInt(v.DataRate, 10, 64); err == nil {
+		return int(dataRate)
+	}
+
+	return 0
 }
 
 func (v *validatorConfig) GetCloudWatchAgentConfigPath() string {
-	return v.cwaConfigPath
+	return v.ConfigPath
 }
 
 func (v *validatorConfig) GetDataPointPeriod() time.Duration {
-	return time.Duration(v.datapointPeriod) * time.Minute
+	return time.Duration(v.DatapointPeriod) * time.Minute
 }

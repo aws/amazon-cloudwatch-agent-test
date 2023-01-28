@@ -12,7 +12,6 @@ import (
 )
 
 type performanceValidator struct {
-	validatorFactory
 	vConfig models.ValidateConfig
 }
 

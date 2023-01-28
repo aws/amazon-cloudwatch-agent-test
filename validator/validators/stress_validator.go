@@ -4,6 +4,7 @@
 package validators
 
 import (
+	"log"
 	"strings"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 )
 
 type stressValidator struct {
-	validatorFactory
 	vConfig models.ValidateConfig
 }
 
@@ -30,7 +30,7 @@ func (s *stressValidator) initValidation() (err error) {
 		dataRate            = s.vConfig.GetDataRate()
 		receivers, _, _     = s.vConfig.GetOtelConfig()
 	)
-
+	log.Printf("dsa")
 	switch dataType {
 	case "logs":
 		err = common.StartLogWrite(agentConfigFilePath, datapointPeriod, dataRate)
@@ -44,12 +44,13 @@ func (s *stressValidator) initValidation() (err error) {
 func (s *stressValidator) startValidation() error {
 	var multiErr error
 
-	cwaMemoryUsage, err := s.getStressMetric("memory_rss", "", []types.Dimension{})
+	cwaMemoryUsage, err := s.getStressMetric("procstat_memory_rss", "", []types.Dimension{})
 
 	if err != nil {
 		return err
 	}
 
+	log.Printf("Hello %v", cwaMemoryUsage)
 	if cwaMemoryUsage > 0 {
 		multiErr = multierr.Append(multiErr, err)
 	}

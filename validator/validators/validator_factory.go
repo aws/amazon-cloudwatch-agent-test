@@ -5,6 +5,7 @@ package validators
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 )
@@ -12,9 +13,9 @@ import (
 func NewValidator(vConfig models.ValidateConfig) (validator ValidatorFactory, err error) {
 	switch vConfig.GetValidateType() {
 	case "performance":
-		validator = &stressValidator{}
+		validator = &stressValidator{vConfig: vConfig}
 	case "stress":
-		validator = &performanceValidator{}
+		validator = &performanceValidator{vConfig: vConfig}
 	default:
 		return nil, fmt.Errorf("unknown validation type %s provided by test case %s", vConfig.GetValidateType(), vConfig.GetTestCase())
 	}
@@ -23,22 +24,19 @@ func NewValidator(vConfig models.ValidateConfig) (validator ValidatorFactory, er
 }
 
 func LaunchValidator(vConfig models.ValidateConfig) error {
-	var validator ValidatorFactory
-	switch vConfig.GetValidateType() {
-	case "performance":
-		validator = &stressValidator{vConfig: vConfig}
-	case "stress":
-		validator = &performanceValidator{vConfig: vConfig}
-	default:
-		return fmt.Errorf("unknown validation type %s provided by test case %s", vConfig.GetValidateType(), vConfig.GetTestCase())
+	validator, err := NewValidator(vConfig)
+	if err != nil {
+		return fmt.Errorf("initialize validation with validation type %s and test case %s failed : %v", vConfig.GetValidateType(), vConfig.GetTestCase(), err)
 	}
 
-	err := validator.initValidation()
+	log.Printf("dsadasdas")
+	err = validator.initValidation()
 	if err != nil {
 		return fmt.Errorf("initialize validation with validation type %s and test case %s failed : %v", vConfig.GetValidateType(), vConfig.GetTestCase(), err)
 
 	}
 
+	log.Printf("start validation")
 	err = validator.startValidation()
 	if err != nil {
 		return fmt.Errorf("start validation with validation type %s and test case %s failed : %v", vConfig.GetValidateType(), vConfig.GetTestCase(), err)
@@ -51,14 +49,4 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 type ValidatorFactory interface {
 	initValidation() error
 	startValidation() error
-}
-
-type validatorFactory struct{}
-
-func (t *validatorFactory) initValidation() error {
-	return nil
-}
-
-func (t *validatorFactory) startValidation() error {
-	return nil
 }

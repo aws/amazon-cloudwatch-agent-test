@@ -5,7 +5,7 @@ exporters: []
 test_case: "statsd_stress"
 validate_type: "stress"
 data_type: "metrics"
-data_rate: "${data_rate}"
+data_rate: "<data_rate>"
 datapoint_period: 3
 
-cloudwatch_agent_config: "${cloudwatch_agent_config}"
+cloudwatch_agent_config: "<cloudwatch_agent_config>"

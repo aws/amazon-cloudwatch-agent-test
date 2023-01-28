@@ -10,7 +10,7 @@ variable "ec2_instance_type" {
 
 variable "ssh_key_name" {
   type    = string
-  default = "cwagent-integ-test-key"
+  default = ""
 }
 
 variable "ami" {
@@ -83,7 +83,7 @@ variable "cwa_github_sha_date" {
   type    = string
   default = ""
 }
-variable "performance_number_of_logs" {
-  type    = string
-  default = ""
+variable "data_rate" {
+  type    = number
+  default = 10
 }
