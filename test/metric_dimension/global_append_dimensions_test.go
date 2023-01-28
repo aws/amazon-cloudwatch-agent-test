@@ -51,7 +51,7 @@ func (t *GlobalAppendDimensionsTestRunner) validateNoAppendDimensionMetric(metri
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+	expDims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "ImageId",
 			Value: dimension.UnknownDimensionValue(),
@@ -71,13 +71,29 @@ func (t *GlobalAppendDimensionsTestRunner) validateNoAppendDimensionMetric(metri
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, dims, metric.AVERAGE)
+	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, expDims, metric.AVERAGE)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
 	}
 
 	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+		return testResult
+	}
+
+	dropDims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "host",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
+
+	if len(failed) > 0 {
+		return testResult
+	}
+
+	values, err = fetcher.Fetch("MetricAppendDimensionTest", metricName, dropDims, metric.AVERAGE)
+	if err != nil || len(values) != 0 {
 		return testResult
 	}
 
