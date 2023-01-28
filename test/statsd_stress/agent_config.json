@@ -1,0 +1,48 @@
+{
+    "agent": {
+      "debug": true
+    },
+    "metrics": {
+      "metrics_collected": {
+        "statsd": {
+          "service_address": ":8125",
+          "metrics_collection_interval": 60
+        },
+        
+        "net": {
+          "resources": [
+            "eth0"
+          ],
+          "measurement": [
+            "bytes_sent",
+            "bytes_recv",
+            "drop_in",
+            "drop_out"
+          ]
+        },
+        "netstat": {
+          "measurement": [
+            "packets_sent"
+          ],
+          "metrics_collection_interval": 60
+        },
+        "procstat": [
+          {
+            "exe": "cloudwatch-agent",
+            "measurement": [
+              "cpu_usage",
+              "memory_rss",
+              "memory_swap",
+              "memory_vms",
+              "num_fds",
+              "write_bytes"
+            ]
+          }
+        ]
+      },
+      "append_dimensions": {
+        "InstanceId": "${aws:InstanceId}"
+      },
+      "force_flush_interval": 60
+    }
+  }

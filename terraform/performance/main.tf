@@ -2,7 +2,7 @@
 # Ensure there is unique testing_id for each test
 #####################################################################
 resource "random_id" "testing_id" {
-  byte_length = 8
+  byte_length = 6
 }
 
 #####################################################################
@@ -26,6 +26,7 @@ locals {
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
 }
 
+
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
@@ -33,16 +34,13 @@ resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = aws_iam_instance_profile.cwagent_instance_profile.name
+  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
 
   tags = {
     Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
   }
-  depends_on = [
-    aws_iam_instance_profile.cwagent_instance_profile
-  ]
 }
 
 resource "null_resource" "integration_test" {
@@ -75,10 +73,8 @@ resource "null_resource" "integration_test" {
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
-      "export SHA=${var.cwa_github_sha}",
-      "export SHA_DATE=${var.cwa_github_sha_date}",
-      "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
-      "go test ${var.test_dir} -p 1 -timeout 1h -v"
+      "echo run sanity test && go test ./test/sanity -p 1 -v",
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v"
     ]
     connection {
       type        = "ssh"
@@ -88,7 +84,9 @@ resource "null_resource" "integration_test" {
     }
   }
 
-  depends_on = [aws_instance.cwagent]
+  depends_on = [
+    aws_instance.cwagent
+  ]
 }
 
 data "aws_ami" "latest" {
