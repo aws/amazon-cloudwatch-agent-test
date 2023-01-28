@@ -5,7 +5,6 @@ package awsservice
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -17,8 +16,8 @@ type cwmAPI interface {
 	// ValidateMetric takes the metric name, metric dimension and metric namespace to know whether a metric is exist based on the previous parameters
 	ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error
 
-	// ValidateSampleCount checking if certain metric's sample count is within the predefined bound interval
-	ValidateSampleCount(metricName, namespace string, dimensions []types.Dimension, startTime, endTime time.Time, lowerBoundInclusive, upperBoundInclusive int, periodInSeconds int32) error
+	// IsMetricSampleCountWithinBoundInclusive checking if certain metric's sample count is within the predefined bound interval
+	IsMetricSampleCountWithinBoundInclusive(metricName, namespace string, dimensions []types.Dimension, startTime, endTime time.Time, lowerBoundInclusive, upperBoundInclusive int, periodInSeconds int32) bool
 
 	// GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
 	GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error)
@@ -54,14 +53,14 @@ func (c *cloudwatchConfig) ValidateMetric(metricName, namespace string, dimensio
 	return nil
 }
 
-func (c *cloudwatchConfig) ValidateSampleCount(
+// isMetricSampleCountWithinBoundInclusive checking if certain metric's sample count is within the predefined bound interval
+func (c *cloudwatchConfig) IsMetricSampleCountWithinBoundInclusive(
 	metricName, namespace string,
 	dimensions []types.Dimension,
 	startTime, endTime time.Time,
 	lowerBoundInclusive, upperBoundInclusive int,
 	periodInSeconds int32,
-) error {
-
+) bool {
 	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
 		MetricName: aws.String(metricName),
 		Namespace:  aws.String(namespace),
@@ -74,7 +73,7 @@ func (c *cloudwatchConfig) ValidateSampleCount(
 	data, err := c.cwClient.GetMetricStatistics(c.cxt, &metricStatsInput)
 
 	if err != nil {
-		return err
+		return false
 	}
 
 	dataPoints := 0
@@ -84,11 +83,10 @@ func (c *cloudwatchConfig) ValidateSampleCount(
 	}
 
 	if !(lowerBoundInclusive <= dataPoints) || !(upperBoundInclusive >= dataPoints) {
-		return fmt.Errorf("number of datapoints for start time %v with endtime %v and period %d is %d which is expected to be between %d and %d",
-			startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
+		return false
 	}
 
-	return nil
+	return true
 }
 
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics

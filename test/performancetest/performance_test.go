@@ -6,7 +6,6 @@
 package performancetest
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -43,7 +42,6 @@ func TestPerformance(t *testing.T) {
 		t.Fatalf("Error: cannot convert test log number to integer, %v", err)
 	}
 
-	agentContext := context.TODO()
 	instanceId, err := awsservice.AWS.ImdsAPI.GetInstanceId()
 
 	if err != nil {
@@ -85,12 +83,11 @@ func TestPerformance(t *testing.T) {
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
 			common.CopyFile(configFilePath, configOutputPath)
-
 			common.StartAgent(configOutputPath, true)
 
 			agentRunDuration := agentRuntimeMinutes * time.Minute
 
-			err := StartLogWrite(agentRunDuration, configFilePath, tps)
+			err = StartLogWrite(agentRunDuration, configFilePath, tps)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}
@@ -99,7 +96,7 @@ func TestPerformance(t *testing.T) {
 			common.StopAgent()
 
 			//collect data
-			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, logNum, tps, agentContext, configFilePath)
+			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, logNum, tps, configFilePath)
 
 			//@TODO check if metrics are zero remove them and make sure there are non-zero metrics existing
 			if err != nil {
@@ -112,7 +109,7 @@ func TestPerformance(t *testing.T) {
 			// this print shows the sendItem packet,it can be used to debug attribute issues
 			fmt.Printf("%v \n", data)
 
-			err = dynamoDB.UpdateItem(data[HASH].(string), data, tps)
+			err = dynamoDB.SendItem(data, tps)
 			if err != nil {
 				t.Fatalf("Error: couldn't upload metric data to table, %v", err)
 			}

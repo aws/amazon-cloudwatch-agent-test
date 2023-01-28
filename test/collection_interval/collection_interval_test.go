@@ -96,7 +96,7 @@ func TestCollectionInterval(t *testing.T) {
 				time.Sleep(agentRuntime)
 				common.StopAgent()
 				endTime := time.Now()
-				if err := awsservice.AWS.CwmAPI.ValidateSampleCount(metricName, common.Namespace, dimensions, startTime, endTime, parameter.lowerBoundInclusive, parameter.upperBoundInclusive, periodInSeconds); err != nil {
+				if awsservice.AWS.CwmAPI.IsMetricSampleCountWithinBoundInclusive(metricName, common.Namespace, dimensions, startTime, endTime, parameter.lowerBoundInclusive, parameter.upperBoundInclusive, periodInSeconds) {
 					pass = true
 					break
 				}

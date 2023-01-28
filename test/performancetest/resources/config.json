@@ -4,28 +4,20 @@
 		"run_as_user": "root"
 	},
 	"metrics": {
-		"aggregation_dimensions": [
-			[
-				"InstanceId"
-			]
-		],
 		"append_dimensions": {
-			"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
-			"ImageId": "${aws:ImageId}",
-			"InstanceId": "${aws:InstanceId}",
-			"InstanceType": "${aws:InstanceType}"
+			"InstanceId": "${aws:InstanceId}"
 		},
 		"metrics_collected": {
 			"procstat": [
-                		{
-                    			"exe": "cloudwatch-agent",
-                    			"measurement": [
-                        			"cpu_usage",
+                {
+                    "exe": "cloudwatch-agent",
+                    "measurement": [
+                        "cpu_usage",
 						"memory_rss"
-                    			],
+                    ],
 					"metrics_collection_interval": 10
-                		}
-            		]
+                }
+            ]
 		}
 	},
 	"logs": {

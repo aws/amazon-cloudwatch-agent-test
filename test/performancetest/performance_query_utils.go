@@ -1,7 +1,6 @@
 package performancetest
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -151,7 +150,7 @@ func ConstructMetricDataQuery(id, namespace, dimensionName, dimensionValue, metr
 	return query
 }
 
-func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, agentContext context.Context, configPath string) (map[string]interface{}, error) {
+func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, configPath string) (map[string]interface{}, error) {
 
 	//fetch names of metrics to request and generate corresponding ids
 	metricNames, ids, err := GetConfigMetrics(configPath)

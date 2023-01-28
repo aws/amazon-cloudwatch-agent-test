@@ -2,7 +2,7 @@
 # Ensure there is unique testing_id for each test
 #####################################################################
 resource "random_id" "testing_id" {
-  byte_length = 6
+  byte_length = 8
 }
 
 #####################################################################
@@ -25,7 +25,6 @@ locals {
   ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
 }
-
 
 #####################################################################
 # Generate EC2 Instance and execute test commands
@@ -50,11 +49,12 @@ resource "null_resource" "integration_test" {
       "echo sha ${var.cwa_github_sha}",
       "cloud-init status --wait",
       "echo clone and install agent",
+      "rm -rf amazon-cloudwatch-agent-test",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      var.install_agent,
+      "ls /opt/aws/amazon-cloudwatch-agent/bin",
     ]
 
     connection {
@@ -68,13 +68,13 @@ resource "null_resource" "integration_test" {
   #Run sanity check and integration test
   provisioner "remote-exec" {
     inline = [
-      "echo prepare environment",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
-      "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v"
+      "export SHA=${var.cwa_github_sha}",
+      "export SHA_DATE=${var.cwa_github_sha_date}",
+      "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
+      "go test ${var.test_dir} -p 1 -timeout 1h  -v"
     ]
     connection {
       type        = "ssh"
@@ -87,6 +87,7 @@ resource "null_resource" "integration_test" {
   depends_on = [
     aws_instance.cwagent
   ]
+
 }
 
 data "aws_ami" "latest" {

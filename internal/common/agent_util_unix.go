@@ -34,6 +34,7 @@ func CopyFile(pathIn string, pathOut string) {
 	out, err := exec.Command("bash", "-c", "sudo cp "+pathInAbs+" "+pathOut).Output()
 
 	if err != nil {
+
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
 
