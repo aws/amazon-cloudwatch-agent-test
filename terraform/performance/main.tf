@@ -40,6 +40,9 @@ resource "aws_instance" "cwagent" {
   tags = {
     Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
   }
+  depends_on = [
+    aws_iam_instance_profile.cwagent_instance_profile
+  ]
 }
 
 resource "null_resource" "integration_test" {
