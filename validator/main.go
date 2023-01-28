@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	configPath = flag.String("config-path", "test", "Testing Config Path")
+	configPath = flag.String("validator-config", "test", "Test's Validator Config Path")
 )
 
 func main() {

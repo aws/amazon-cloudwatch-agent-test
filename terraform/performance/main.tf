@@ -5,6 +5,14 @@ module "common" {
   source = "../../common"
 }
 
+locals {
+  validator_config        = "../../../test/${var.test_name}/parameters.yml"
+  cloudwatch_agent_config = "../../../test/${var.test_name}/agent_config.json"
+  ssh_key_name            = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
+  private_key_content     = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+
+}
+
 #####################################################################
 # Generate EC2 Key Pair for log in access to EC2
 #####################################################################
@@ -21,9 +29,15 @@ resource "aws_key_pair" "aws_ssh_key" {
   public_key = tls_private_key.ssh_key[0].public_key_openssh
 }
 
-locals {
-  ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
-  private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+#####################################################################
+# Generate Test Parameters
+#####################################################################
+data "template_file" "validator_config" {
+  template = file(local.validator_config)
+  vars = {
+    data_rate               = var.performance_number_of_logs
+    cloudwatch_agent_config = local.cloudwatch_agent_config
+  }
 }
 
 #####################################################################
@@ -75,7 +89,7 @@ resource "null_resource" "integration_test" {
       "export SHA=${var.cwa_github_sha}",
       "export SHA_DATE=${var.cwa_github_sha_date}",
       "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
-      "go test ${var.test_dir} -p 1 -timeout 1h -v"
+      "go run ./validator/main.go -config-path=${data.template_file.validator_config.rendered}"
     ]
     connection {
       type        = "ssh"
@@ -98,6 +112,6 @@ data "aws_ami" "latest" {
   }
 }
 
-data "aws_dynamodb_table"  "performance-dynamodb-table" {
+data "aws_dynamodb_table" "performance-dynamodb-table" {
   name = module.common.performance-dynamodb-table
 }
