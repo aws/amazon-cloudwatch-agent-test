@@ -28,7 +28,7 @@ func BuildDimensionFilterList(appendDimension int) ([]types.DimensionFilter, err
 	dimensionFilter := make([]types.DimensionFilter, appendDimension)
 	for i := 0; i < appendDimension-1; i++ {
 		dimensionFilter[i] = types.DimensionFilter{
-			Name:  aws.String(string(i)),
+			Name:  aws.String(fmt.Sprint(i)),
 			Value: aws.String(fmt.Sprintf("%s%d", loremIpsum, i)),
 		}
 	}
