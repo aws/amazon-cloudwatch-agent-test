@@ -5,7 +5,7 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "t3a.xlarge"
+  default = "t3a.medium"
 }
 
 variable "ssh_key_name" {
@@ -87,4 +87,9 @@ variable "github_test_repo_branch" {
 variable "cwa_github_sha_date" {
   type    = string
   default = ""
+}
+
+variable "is_canary" {
+  type = bool
+  default = false
 }

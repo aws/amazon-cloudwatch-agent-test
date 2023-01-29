@@ -10,7 +10,7 @@ variable "ec2_instance_type" {
 
 variable "ssh_key_name" {
   type    = string
-  default = "cwagent-integ-test-key"
+  default = ""
 }
 
 variable "ami" {
@@ -32,11 +32,6 @@ variable "install_agent" {
   description = "go run ./install/install_agent.go deb or go run ./install/install_agent.go rpm"
   type        = string
   default     = "go run ./install/install_agent.go rpm"
-}
-
-variable "ca_cert_path" {
-  type    = string
-  default = ""
 }
 
 variable "arc" {
@@ -65,11 +60,6 @@ variable "test_dir" {
 }
 
 variable "cwa_github_sha" {
-  type    = string
-  default = ""
-}
-
-variable "cwa_test_github_sha" {
   type    = string
   default = ""
 }

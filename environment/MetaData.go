@@ -21,6 +21,7 @@ type MetaData struct {
 	EcsClusterName            string
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
+	Bucket                    string
 }
 
 type MetaDataStrings struct {
@@ -30,10 +31,14 @@ type MetaDataStrings struct {
 	EcsClusterArn             string
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
+	Bucket                    string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS")
+}
+func registerBucket(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.Bucket), "bucket", "", "cloudwatch-agent-integration-bucket")
 }
 func registerECSData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EcsLaunchType), "ecsLaunchType", "", "EC2 or Fargate")
@@ -82,6 +87,7 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDataStrings {
 	registerComputeType(metaDataStrings)
 	registerECSData(metaDataStrings)
+	registerBucket(metaDataStrings)
 	return metaDataStrings
 }
 
@@ -89,6 +95,7 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData := &(MetaData{})
 	metaData = fillComputeType(metaData, data)
 	metaData = fillECSData(metaData, data)
+	metaData.Bucket = data.Bucket
 
 	return metaData
 }

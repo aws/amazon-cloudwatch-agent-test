@@ -37,7 +37,7 @@ var testTypeToTestDirMap = map[string][]string{
 		"./test/metric_value_benchmark",
 		"./test/run_as_user",
 		"./test/collection_interval",
-		"./test/metric_append_dimension",
+		"./test/metric_dimension",
 	},
 	"ec2_performance": {
 		"./test/performancetest",
