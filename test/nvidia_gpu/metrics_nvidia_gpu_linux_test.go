@@ -42,7 +42,9 @@ func TestNvidiaGPU(t *testing.T) {
 		}
 
 		for _, metricName := range expectedNvidiaGPULinuxMetrics {
-			awsservice.AWS.CwmAPI.ValidateMetrics(metricName, metricLinuxNamespace, dimensionFilter)
+			if err := awsservice.AWS.CwmAPI.ValidateMetrics(metricName, metricLinuxNamespace, dimensionFilter); err != nil {
+				t.Fatalf("Failed to get the corresponding metrics %s: %v", metricName, err)
+			}
 		}
 
 		if err := filesystem.CheckFileRights(agentLinuxLogPath); err != nil {
