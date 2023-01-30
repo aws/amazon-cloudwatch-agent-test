@@ -23,6 +23,7 @@ type MetaData struct {
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
 	EC2PluginTests            map[string]struct{} // set of EC2 plugin names
+	Bucket                    string
 }
 
 type MetaDataStrings struct {
@@ -33,10 +34,14 @@ type MetaDataStrings struct {
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
 	EC2PluginTests            string // input comma delimited list of plugin names
+	Bucket                    string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS")
+}
+func registerBucket(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.Bucket), "bucket", "", "cloudwatch-agent-integration-bucket")
 }
 func registerECSData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EcsLaunchType), "ecsLaunchType", "", "EC2 or Fargate")
@@ -87,6 +92,10 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 }
 
 func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) *MetaData {
+	if e.ComputeType != computetype.EC2 {
+		return e
+	}
+
 	if len(data.EC2PluginTests) == 0 {
 		log.Println("Testing all EC2 plugins")
 		return e
@@ -106,6 +115,7 @@ func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) *MetaData {
 func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDataStrings {
 	registerComputeType(metaDataStrings)
 	registerECSData(metaDataStrings)
+	registerBucket(metaDataStrings)
 	registerPluginTestsToExecute(metaDataStrings)
 	return metaDataStrings
 }
@@ -114,9 +124,8 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData := &(MetaData{})
 	metaData = fillComputeType(metaData, data)
 	metaData = fillECSData(metaData, data)
-	if metaData.ComputeType == computetype.EC2 {
-		metaData = fillEC2PluginTests(metaData, data)
-	}
+	metaData = fillEC2PluginTests(metaData, data)
+	metaData.Bucket = data.Bucket
 
 	return metaData
 }

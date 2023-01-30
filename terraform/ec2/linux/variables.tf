@@ -5,12 +5,12 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "t3a.xlarge"
+  default = "t3a.medium"
 }
 
 variable "ssh_key_name" {
   type    = string
-  default = "cwagent-integ-test-key"
+  default = ""
 }
 
 variable "ami" {
@@ -74,11 +74,6 @@ variable "cwa_github_sha" {
   default = ""
 }
 
-variable "cwa_test_github_sha" {
-  type    = string
-  default = ""
-}
-
 variable "github_test_repo" {
   type    = string
   default = ""
@@ -93,14 +88,10 @@ variable "cwa_github_sha_date" {
   type    = string
   default = ""
 }
-variable "performance_number_of_logs" {
-  type    = string
-  default = ""
-}
 
-variable "efs_mount_point" {
-  type = string
-  default = "~/efs-mount-point"
+variable "is_canary" {
+  type = bool
+  default = false
 }
 
 variable "plugin_tests" {
