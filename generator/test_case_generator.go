@@ -51,7 +51,7 @@ var testTypeToTestDirMap = map[string][]string{
 	"ecs_ec2_daemon": {
 		"./test/metric_value_benchmark",
 	},
-	"ec2_security": {
+	"ec2_acceptance": {
 		"./test/acceptance",
 	},
 }
