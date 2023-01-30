@@ -35,12 +35,12 @@ func NewAWSServiceAPI() *awsServiceAPI {
 
 	return &awsServiceAPI{
 		cxt:      cxt,
-		Ec2API:   NewEC2Config(awsCfg, cxt),
-		EcsAPI:   NewECSConfig(awsCfg, cxt),
-		CwmAPI:   NewCloudWatchConfig(awsCfg, cxt),
-		CwlAPI:   NewCloudWatchLogsConfig(awsCfg, cxt),
-		SsmAPI:   NewSSMConfig(awsCfg, cxt),
-		ImdsAPI:  NewIMDSConfig(awsCfg, cxt),
-		DnmdbAPI: NewDynamoDBConfig(awsCfg, cxt),
+		Ec2API:   NewEC2SDKClient(awsCfg, cxt),
+		EcsAPI:   NewECSSDKClient(awsCfg, cxt),
+		CwmAPI:   NewCloudWatchSDKClient(awsCfg, cxt),
+		CwlAPI:   NewCloudWatchLogsSDKClient(awsCfg, cxt),
+		SsmAPI:   NewSSMSDKClient(awsCfg, cxt),
+		ImdsAPI:  NewIMDSSDKClient(awsCfg, cxt),
+		DnmdbAPI: NewDynamoDBSDKClient(awsCfg, cxt),
 	}
 }

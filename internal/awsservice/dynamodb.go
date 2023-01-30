@@ -18,20 +18,20 @@ type dnmdbAPI interface {
 	UpdatePacketInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error
 }
 
-type dynamodbConfig struct {
+type dynamodbSDK struct {
 	cxt            context.Context
 	dynamodbClient *dynamodb.Client
 }
 
-func NewDynamoDBConfig(cfg aws.Config, cxt context.Context) dnmdbAPI {
+func NewDynamoDBSDKClient(cfg aws.Config, cxt context.Context) dnmdbAPI {
 	dynamodbClient := dynamodb.NewFromConfig(cfg)
-	return &dynamodbConfig{
+	return &dynamodbSDK{
 		cxt:            cxt,
 		dynamodbClient: dynamodbClient,
 	}
 }
 
-func (d *dynamodbConfig) AddPacketIntoDatabase(databaseName, conditionExpression string, packet interface{}, expressAttributesNames map[string]string) error {
+func (d *dynamodbSDK) AddPacketIntoDatabase(databaseName, conditionExpression string, packet interface{}, expressAttributesNames map[string]string) error {
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func (d *dynamodbConfig) AddPacketIntoDatabase(databaseName, conditionExpression
 	return err
 }
 
-func (d *dynamodbConfig) GetPacketInDatabase(databaseName, databaseIndexName, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues map[string]types.AttributeValue) ([]map[string]interface{}, error) {
+func (d *dynamodbSDK) GetPacketInDatabase(databaseName, databaseIndexName, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues map[string]types.AttributeValue) ([]map[string]interface{}, error) {
 	var packets []map[string]interface{}
 
 	data, err := d.dynamodbClient.Query(d.cxt, &dynamodb.QueryInput{
@@ -68,7 +68,7 @@ func (d *dynamodbConfig) GetPacketInDatabase(databaseName, databaseIndexName, co
 	return packets, nil
 }
 
-func (d *dynamodbConfig) UpdatePacketInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error {
+func (d *dynamodbSDK) UpdatePacketInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error {
 	_, err := d.dynamodbClient.UpdateItem(d.cxt, &dynamodb.UpdateItemInput{
 		TableName:                 aws.String(databaseName),
 		Key:                       databaseKey,

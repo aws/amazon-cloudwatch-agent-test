@@ -3,7 +3,6 @@ module github.com/aws/amazon-cloudwatch-agent-test
 go 1.18
 
 require (
-	github.com/aws/aws-sdk-go v1.44.188
 	github.com/aws/aws-sdk-go-v2 v1.17.3
 	github.com/aws/aws-sdk-go-v2/config v1.18.4
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.10.0

@@ -104,7 +104,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			t.Logf("Agent logs %s", agentLog)
 
 			// check CWL to ensure we got the expected number of logs in the log stream
-			err = awsservice.AWS.CwlAPI.ValidateLogs(instanceId, instanceId, param.numExpectedLogs, start)
+			err = awsservice.AWS.CwlAPI.ValidateNumberOfLogsFound(instanceId, instanceId, param.numExpectedLogs, start)
 
 			if err != nil {
 				t.Fatalf("Validate logs failed: %v", err)

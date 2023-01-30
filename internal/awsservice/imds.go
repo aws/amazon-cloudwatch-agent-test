@@ -15,21 +15,21 @@ type imdsAPI interface {
 	GetInstanceId() (string, error)
 }
 
-type imdsConfig struct {
+type imdsSDK struct {
 	cxt        context.Context
 	imdsClient *imds.Client
 }
 
-func NewIMDSConfig(cfg aws.Config, cxt context.Context) imdsAPI {
+func NewIMDSSDKClient(cfg aws.Config, cxt context.Context) imdsAPI {
 	imdsClient := imds.NewFromConfig(cfg)
-	return &imdsConfig{
+	return &imdsSDK{
 		cxt:        cxt,
 		imdsClient: imdsClient,
 	}
 }
 
 // GetInstanceId returns the Instance ID of the current instance
-func (i *imdsConfig) GetInstanceId() (string, error) {
+func (i *imdsSDK) GetInstanceId() (string, error) {
 	metadata, err := i.imdsClient.GetInstanceIdentityDocument(i.cxt, &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		return "", err

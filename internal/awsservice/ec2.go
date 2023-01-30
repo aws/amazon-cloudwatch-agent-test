@@ -15,21 +15,21 @@ type ec2API interface {
 	GetInstancePrivateIpDns(instanceId string) (string, error)
 }
 
-type ec2Config struct {
+type ec2SDK struct {
 	cxt       context.Context
 	ec2Client *ec2.Client
 }
 
-func NewEC2Config(cfg aws.Config, cxt context.Context) ec2API {
+func NewEC2SDKClient(cfg aws.Config, cxt context.Context) ec2API {
 	ec2Client := ec2.NewFromConfig(cfg)
-	return &ec2Config{
+	return &ec2SDK{
 		cxt:       cxt,
 		ec2Client: ec2Client,
 	}
 }
 
 // GetInstancePrivateIpDns returns Instance Private IP Address
-func (e *ec2Config) GetInstancePrivateIpDns(instanceId string) (string, error) {
+func (e *ec2SDK) GetInstancePrivateIpDns(instanceId string) (string, error) {
 	instanceData, err := e.ec2Client.DescribeInstances(e.cxt, &ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceId},
 	})

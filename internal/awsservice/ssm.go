@@ -16,21 +16,21 @@ type ssmAPI interface {
 	PutStringParameter(name, value string) error
 }
 
-type ssmConfig struct {
+type ssmSDK struct {
 	cxt       context.Context
 	ssmClient *ssm.Client
 }
 
-func NewSSMConfig(cfg aws.Config, cxt context.Context) ssmAPI {
+func NewSSMSDKClient(cfg aws.Config, cxt context.Context) ssmAPI {
 	ssmClient := ssm.NewFromConfig(cfg)
-	return &ssmConfig{
+	return &ssmSDK{
 		cxt:       cxt,
 		ssmClient: ssmClient,
 	}
 }
 
 // PutStringParameter add a string parameter to the system. (e.g adding a CWA configuration to SSM)
-func (s *ssmConfig) PutStringParameter(name, value string) error {
+func (s *ssmSDK) PutStringParameter(name, value string) error {
 	_, err := s.ssmClient.PutParameter(s.cxt, &ssm.PutParameterInput{
 		Name:      aws.String(name),
 		Value:     aws.String(value),
