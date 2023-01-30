@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
 )
 
@@ -23,7 +24,7 @@ func (t *GlobalAppendDimensionsTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateNoAppendDimensionMetric(metricName)
+		testResults[i] = t.validateGlobalAppendDimensionMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -44,7 +45,7 @@ func (t *GlobalAppendDimensionsTestRunner) GetMeasuredMetrics() []string {
 	return []string{"cpu_time_active"}
 }
 
-func (t *GlobalAppendDimensionsTestRunner) validateNoAppendDimensionMetric(metricName string) status.TestResult {
+func (t *GlobalAppendDimensionsTestRunner) validateGlobalAppendDimensionMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -63,6 +64,10 @@ func (t *GlobalAppendDimensionsTestRunner) validateNoAppendDimensionMetric(metri
 			Key:   "InstanceType",
 			Value: dimension.UnknownDimensionValue(),
 		},
+		{
+			Key:   "cpu",
+			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
+		},
 	})
 
 	if len(failed) > 0 {
@@ -70,7 +75,7 @@ func (t *GlobalAppendDimensionsTestRunner) validateNoAppendDimensionMetric(metri
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, expDims, metric.AVERAGE)
+	values, err := fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, expDims, metric.AVERAGE)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
@@ -80,10 +85,16 @@ func (t *GlobalAppendDimensionsTestRunner) validateNoAppendDimensionMetric(metri
 		return testResult
 	}
 
+	// this is making sure once dimensions in "append_dimensions" are tagged, the agent does drop the 
+	// host dimension. We should not see the same metrics with host dimension anymore
 	dropDims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "host",
 			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "cpu",
+			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
 		},
 	})
 
@@ -91,7 +102,7 @@ func (t *GlobalAppendDimensionsTestRunner) validateNoAppendDimensionMetric(metri
 		return testResult
 	}
 
-	values, err = fetcher.Fetch("MetricAppendDimensionTest", metricName, dropDims, metric.AVERAGE)
+	values, err = fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, dropDims, metric.AVERAGE)
 	if err != nil || len(values) != 0 {
 		return testResult
 	}

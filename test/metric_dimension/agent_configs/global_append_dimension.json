@@ -6,7 +6,7 @@
     "logfile": ""
   },
   "metrics": {
-    "namespace": "MetricAppendDimensionTest",
+    "namespace": "MetricGlobalAppendDimensionTest",
     "append_dimensions":
     {
         "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
