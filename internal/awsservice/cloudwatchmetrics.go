@@ -66,12 +66,12 @@ func ValidateMetrics(t *testing.T, metricName, namespace string, dimensionsFilte
 
 }
 
-func ValidateSampleCount(t *testing.T, metricName, namespace string, dimensions []types.Dimension,
+func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimension,
 	startTime time.Time, endTime time.Time,
 	lowerBoundInclusive int, upperBoundInclusive int, periodInSeconds int32) bool {
 	cwmClient, clientContext, err := GetCloudWatchMetricsClient()
 	if err != nil {
-		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
+		return false
 	}
 
 	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
@@ -85,7 +85,6 @@ func ValidateSampleCount(t *testing.T, metricName, namespace string, dimensions 
 	}
 	data, err := cwmClient.GetMetricStatistics(*clientContext, &metricStatsInput)
 	if err != nil {
-		t.Errorf("Error getting metric data %v", err)
 		return false
 	}
 
@@ -94,10 +93,6 @@ func ValidateSampleCount(t *testing.T, metricName, namespace string, dimensions 
 	for _, datapoint := range data.Datapoints {
 		dataPoints = dataPoints + int(*datapoint.SampleCount)
 	}
-
-	t.Logf("Number of datapoints for start time %v with endtime %v and period %d "+
-		"is %d expected is inclusive between %d and %d",
-		startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
 
 	if !(lowerBoundInclusive <= dataPoints) || !(upperBoundInclusive >= dataPoints) {
 		return false

@@ -21,6 +21,8 @@ type ValidateConfig interface {
 	GetDataRate() int
 	GetCloudWatchAgentConfigPath() string
 	GetDataPointPeriod() time.Duration
+	GetMetricNamespace() string
+	GetMetricValidation() []MetricValidation
 }
 type validatorConfig struct {
 	Receivers  []string `yaml:"receivers"`
@@ -34,6 +36,19 @@ type validatorConfig struct {
 	DatapointPeriod int    `yaml:"datapoint_period"`
 
 	ConfigPath string `yaml:"cloudwatch_agent_config"`
+
+	MetricNamespace  string             `yaml:"metric_namespace"`
+	MetricValidation []MetricValidation `yaml:"metric_validation"`
+}
+
+type MetricValidation struct {
+	MetricName      string            `yaml:"metric_name"`
+	MetricDimension []MetricDimension `yaml:"metric_dimension"`
+}
+
+type MetricDimension struct {
+	Name  string `yaml:"name"`
+	Value string `yaml:"value"`
 }
 
 func NewValidateConfig(configPath string) (*validatorConfig, error) {
@@ -71,7 +86,6 @@ func (v *validatorConfig) GetDataRate() int {
 	if dataRate, err := strconv.ParseInt(v.DataRate, 10, 64); err == nil {
 		return int(dataRate)
 	}
-
 	return 0
 }
 
@@ -80,5 +94,13 @@ func (v *validatorConfig) GetCloudWatchAgentConfigPath() string {
 }
 
 func (v *validatorConfig) GetDataPointPeriod() time.Duration {
-	return time.Duration(v.DatapointPeriod) * time.Minute
+	return time.Duration(v.DatapointPeriod) * time.Second
+}
+
+func (v *validatorConfig) GetMetricNamespace() string {
+	return v.MetricNamespace
+}
+
+func (v *validatorConfig) GetMetricValidation() []MetricValidation {
+	return v.MetricValidation
 }

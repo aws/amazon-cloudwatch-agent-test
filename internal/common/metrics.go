@@ -5,7 +5,6 @@ package common
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/cactus/go-statsd-client/v5/statsd"
@@ -17,45 +16,43 @@ import (
 func StartSendingMetrics(receivers []string, agentRunDuration time.Duration, dataRate int) error {
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
 	var (
-		wg       sync.WaitGroup
 		multiErr error
 	)
 
 	for _, receiver := range receivers {
-		wg.Add(1)
-		go func() {
-			var err error
-			defer wg.Done()
-			switch receiver {
-			case "statsd":
-				err = sendStatsdMetrics(dataRate)
+		var err error
+		switch receiver {
+		case "statsd":
+			err = sendStatsdMetrics(dataRate)
 
-			default:
-			}
+		default:
+		}
 
-			multiErr = multierr.Append(multiErr, err)
+		multiErr = multierr.Append(multiErr, err)
 
-		}()
 	}
-
-	//wait until writing to logs finishes
-	wg.Wait()
 	return multiErr
 }
 
 func sendStatsdMetrics(dataRate int) error {
-	client, err := statsd.NewClient("127.0.0.1:8125", "test-client")
+	// https://github.com/cactus/go-statsd-client#example
+	statsdClientConfig := &statsd.ClientConfig{
+		Address:     ":8125",
+		Prefix:      "statsd",
+		UseBuffered: true,
+		// interval to force flush buffer. full buffers will flush on their own,
+		// but for data not frequently sent, a max threshold is useful
+		FlushInterval: 300 * time.Millisecond,
+	}
+	client, err := statsd.NewClientWithConfig(statsdClientConfig)
 
 	if err != nil {
 		return err
 	}
 
 	defer client.Close()
-
 	for time := 0; time < dataRate; time++ {
-		go func() {
-			client.Inc(fmt.Sprintf("statsd_%v", time), int64(time), 1.0)
-		}()
+		client.Inc(fmt.Sprintf("%v", time), int64(time), 1.0)
 	}
 	return nil
 }

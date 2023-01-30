@@ -3,23 +3,22 @@
     "debug": true
   },
   "metrics": {
+    "namespace": "CloudWatchAgentStress",
     "metrics_collected": {
       "statsd": {
         "service_address": ":8125",
         "metrics_collection_interval": 60
       },
-      
+
       "net": {
         "resources": [
           "eth0"
         ],
         "measurement": [
           "bytes_sent",
-          "bytes_recv",
-          "drop_in",
-          "drop_out",
           "packets_sent"
-        ]
+        ],
+        "metrics_collection_interval": 1
       },
       "procstat": [
         {
@@ -31,13 +30,14 @@
             "memory_vms",
             "num_fds",
             "write_bytes"
-          ]
+          ],
+          "metrics_collection_interval": 1
         }
       ]
     },
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },
-    "force_flush_interval": 60
+    "force_flush_interval": 30
   }
 }

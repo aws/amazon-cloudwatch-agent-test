@@ -1,16 +1,16 @@
-receivers: ["statsd"]
+receivers: []
 processors: []
 exporters: []
 
-test_case: "statsd_stress"
-validate_type: "stress"
-data_type: "metrics"
+test_case: "performance"
+validate_type: "performance"
+data_type: "logs"
 data_rate: "<data_rate>"
-datapoint_period: 60
+datapoint_period: 300
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 
-# Metric that the test needs to validate
+# Metric that the test needs to send to DynamoDb
 metric_namespace: "CloudWatchAgentStress"
 metric_validation: 
   - metric_name: "procstat_cpu_usage"

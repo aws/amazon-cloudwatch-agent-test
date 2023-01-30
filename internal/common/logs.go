@@ -6,6 +6,8 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -88,4 +90,67 @@ func getLogFilePaths(configPath string) ([]string, error) {
 	}
 
 	return filePaths, nil
+}
+
+/* GenerateLogConfig takes the number of logs to be monitored and applies it to the supplied config,
+* It writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
+* the supplied configuration
+* DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
+* (log being monitored will be overwritten - it is needed for json structure)
+* returns the path of the config generated and a list of log stream names
+ */
+func GenerateLogConfig(numberOfLogs int, filePath string) error {
+	var (
+		cfgFileData map[string]interface{}
+	)
+
+	type LogInfo struct {
+		FilePath      string `json:"file_path"`
+		LogGroupName  string `json:"log_group_name"`
+		LogStreamName string `json:"log_stream_name"`
+		Timezone      string `json:"timezone"`
+	}
+
+	//use default config (for metrics, structure, etc)
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(fileBytes, &cfgFileData)
+	if err != nil {
+		return err
+	}
+
+	var logFiles []LogInfo
+
+	for i := 0; i < numberOfLogs; i++ {
+		logStream := fmt.Sprintf("{instance_id}/tmp%d", i+1)
+
+		logFiles = append(logFiles, LogInfo{
+			FilePath:      fmt.Sprintf("/tmp/test%d.log", i+1),
+			LogGroupName:  "{instance_id}",
+			LogStreamName: logStream,
+			Timezone:      "UTC",
+		})
+	}
+
+	log.Printf("Writing config file with %d logs to %v", numberOfLogs, filePath)
+
+	cfgFileData["logs"].(map[string]interface{})["logs_collected"].(map[string]interface{})["files"].(map[string]interface{})["collect_list"] = logFiles
+
+	finalConfig, err := json.MarshalIndent(cfgFileData, "", " ")
+	if err != nil {
+		return err
+	}
+
+	file.Write(finalConfig)
+
+	return nil
 }

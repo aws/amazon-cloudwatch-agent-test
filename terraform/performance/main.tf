@@ -37,11 +37,12 @@ locals {
   cloudwatch_agent_config = "agent_config.json"
 }
 
-resource "local_file" "update-helm-config" {
+resource "local_file" "update-validation-config" {
   content  = replace(replace(file("${local.test_dir}/${local.validator_config}"), 
                 "<data_rate>", var.data_rate),
                 "<cloudwatch_agent_config>",local.cloudwatch_agent_config
-            )
+              )
+
   filename = "${local.test_dir}/${local.final_validator_config}"
 
 }
@@ -93,6 +94,7 @@ resource "null_resource" "integration_test" {
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
+      "go run ./validator/main.go --validator-config=/tmp/${local.final_validator_config} --preparation-mode=true",
     ]
   }
   

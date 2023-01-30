@@ -5,19 +5,19 @@
 	},
 	"metrics": {
 		"append_dimensions": {
-			"InstanceId": "${aws:InstanceId}",
+			"InstanceId": "${aws:InstanceId}"
 		},
 		"metrics_collected": {
 			"procstat": [
-                		{
-                    			"exe": "cloudwatch-agent",
-                    			"measurement": [
-                        			"cpu_usage",
+                {
+                    "exe": "cloudwatch-agent",
+                    "measurement": [
+                        "cpu_usage",
 						"memory_rss"
-                    			],
+                    ],
 					"metrics_collection_interval": 10
-                		}
-            		]
+                }
+            ]
 		}
 	},
 	"logs": {
