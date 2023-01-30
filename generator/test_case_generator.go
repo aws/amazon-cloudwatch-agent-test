@@ -52,7 +52,7 @@ var testTypeToTestDirMap = map[string][]string{
 		"./test/metric_value_benchmark",
 	},
 	"ec2_security": {
-		"./test/security",
+		"./test/acceptance",
 	},
 }
 

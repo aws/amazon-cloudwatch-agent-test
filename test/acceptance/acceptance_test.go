@@ -3,12 +3,11 @@
 
 //go:build !windows
 
-package security
+package acceptance
 
 import (
-	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/security/testrunners"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/acceptance/testrunners"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/stretchr/testify/suite"
@@ -21,18 +20,15 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-type SecurityTestSuite struct {
+type AcceptanceTestSuite struct {
 	suite.Suite
-	result status.TestSuiteResult
+	test_runner.TestSuite
 }
 
-func (suite *SecurityTestSuite) SetupSuite() {
-	fmt.Println(">>>> Starting SecurityTestSuite")
-}
+var _ test_runner.ITestSuite = (*AcceptanceTestSuite)(nil)
 
-func (suite *SecurityTestSuite) TearDownSuite() {
-	suite.result.Print()
-	fmt.Println(">>>> Finished SecurityTestSuite")
+func (suite *AcceptanceTestSuite) TestSuiteName() string {
+	return "SecurityTestSuite"
 }
 
 var (
@@ -48,18 +44,14 @@ func getEc2TestRunners() []*test_runner.TestRunner {
 	return ec2TestRunners
 }
 
-func (suite *SecurityTestSuite) TestAllInSuite() {
+func (suite *AcceptanceTestSuite) TestAllInSuite() {
 	for _, testRunner := range getEc2TestRunners() {
 		testRunner.Run(suite)
 	}
 
-	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Security Test Suite Failed")
-}
-
-func (suite *SecurityTestSuite) AddToSuiteResult(r status.TestGroupResult) {
-	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
+	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Security Test Suite Failed")
 }
 
 func TestSecurityTestSuite(t *testing.T) {
-	suite.Run(t, new(SecurityTestSuite))
+	suite.Run(t, new(AcceptanceTestSuite))
 }
