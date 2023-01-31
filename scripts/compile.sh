@@ -2,8 +2,6 @@
 
 mkdir -p ./test_binaries
 
-TEST_BINARIES_DIR="./test_binaries"
-
 # compiles a test folder
 # $1=filepath to a directory containing a go test
 compile() {
@@ -12,7 +10,7 @@ compile() {
   echo "compiling $testName"
   # compiles a test without running it
   # https://pkg.go.dev/cmd/go#hdr-Test_packages
-  go test -c "$root" -o "$TEST_BINARIES_DIR/$testName.test"
+  go test -c "$root" -o "./test_binaries/$testName.test"
 }
 
 # navigates the filesystem to identify folders with tests
