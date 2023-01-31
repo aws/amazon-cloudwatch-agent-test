@@ -16,16 +16,16 @@ compile() {
 # navigates the filesystem to identify folders with tests
 # $1=filepath of the current directory we searching through
 dfs() {
-  local root=$1
+  local dir=$1
   local hasTest=false
 
-  # base case: ensure that root is a directory
-  if [ ! -d "$root" ]; then
+  # base case: ensure that dir is a directory
+  if [ ! -d "$dir" ]; then
     return
   fi
 
   # look for tests
-  for path in "$root"/* ; do
+  for path in "$dir"/* ; do
     if [[ $path == *_test.go ]]; then
       hasTest=true
     fi
@@ -34,7 +34,7 @@ dfs() {
   done
 
   if $hasTest; then
-    compile "$root"
+    compile "$dir"
   fi
 }
 
