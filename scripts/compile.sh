@@ -1,3 +1,5 @@
+# compile.sh looks through a directory and compiles all of the tests
+
 mkdir -p ./test_binaries
 
 TEST_BINARIES_DIR="./test_binaries"
