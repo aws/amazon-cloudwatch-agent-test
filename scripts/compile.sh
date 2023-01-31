@@ -6,6 +6,7 @@ mkdir -p ./test_binaries
 # $1=filepath to a directory containing a go test
 compile() {
   local testDir=$1
+  # trim filepath to get name of folder
   testName=${testDir##*/}
   echo "compiling $testName"
   # compiles a test without running it
@@ -25,7 +26,7 @@ dfs() {
   fi
 
   # look for tests
-  for path in "$dir"/* ; do
+  for path in "$dir"/*; do
     if [[ $path == *_test.go ]]; then
       hasTest=true
     fi
