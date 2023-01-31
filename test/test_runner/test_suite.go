@@ -14,7 +14,7 @@ type ITestSuite interface {
 	SetupSuite()
 	TearDownSuite()
 	AddToSuiteResult(r status.TestGroupResult)
-	TestSuiteName() string
+	GetSuiteName() string
 }
 
 type TestSuite struct {
@@ -24,15 +24,15 @@ type TestSuite struct {
 var _ ITestSuite = (*TestSuite)(nil)
 
 func (suite *TestSuite) SetupSuite() {
-	fmt.Printf(">>>> Starting %s TestSuite", suite.TestSuiteName())
+	fmt.Printf(">>>> Starting %s TestSuite", suite.GetSuiteName())
 }
 
 func (suite *TestSuite) TearDownSuite() {
 	suite.Result.Print()
-	fmt.Printf(">>>> Finished %s TestSuite", suite.TestSuiteName())
+	fmt.Printf(">>>> Finished %s TestSuite", suite.GetSuiteName())
 }
 
-func (suite *TestSuite) TestSuiteName() string {
+func (suite *TestSuite) GetSuiteName() string {
 	return "Base"
 }
 

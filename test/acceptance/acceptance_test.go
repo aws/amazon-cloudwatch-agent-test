@@ -27,7 +27,7 @@ type AcceptanceTestSuite struct {
 
 var _ test_runner.ITestSuite = (*AcceptanceTestSuite)(nil)
 
-func (suite *AcceptanceTestSuite) TestSuiteName() string {
+func (suite *AcceptanceTestSuite) GetSuiteName() string {
 	return "SecurityTestSuite"
 }
 
@@ -52,6 +52,6 @@ func (suite *AcceptanceTestSuite) TestAllInSuite() {
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Security Test Suite Failed")
 }
 
-func TestSecurityTestSuite(t *testing.T) {
+func TestAcceptanceTestSuite(t *testing.T) {
 	suite.Run(t, new(AcceptanceTestSuite))
 }
