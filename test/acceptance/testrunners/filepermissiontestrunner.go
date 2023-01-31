@@ -1,12 +1,12 @@
 package testrunners
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/rule"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
-	"strings"
 	"time"
 )
 
@@ -17,34 +17,29 @@ type FilePermissionTestRunner struct {
 var _ test_runner.ITestRunner = (*FilePermissionTestRunner)(nil)
 
 const agentConfigPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const agentConfigOnlyRootRead = "-rw-r--r-- 1 root root "
 
 var (
-	onlyRootReadExactMatchRule = rule.Rule{
-		Conditions: []rule.ICondition{
-			&rule.ExactMatch{ExpectedValue: agentConfigOnlyRootRead},
+	onlyRootCanWriteRule = rule.Rule[string]{
+		Conditions: []rule.ICondition[string]{
+			&rule.PermittedEntityMatch{ExpectedOwner: aws.String("root"), ExpectedGroup: aws.String("root")},
+			&rule.FilePermissionExpected{PermissionCompared: filesystem.OwnerWrite, ShouldExist: true},
+			&rule.FilePermissionExpected{PermissionCompared: filesystem.GroupWrite, ShouldExist: true},
+			&rule.FilePermissionExpected{PermissionCompared: filesystem.AnyoneWrite, ShouldExist: false},
 		},
 	}
 )
 
-var testCases = map[string]rule.Rule{
-	agentConfigPath: onlyRootReadExactMatchRule,
+var testCases = map[string]rule.Rule[string]{
+	agentConfigPath: onlyRootCanWriteRule,
 }
 
-var actualPermissions = make(map[string]string)
+var testGroupResult *status.TestGroupResult = nil
 
 func (m *FilePermissionTestRunner) Validate() status.TestGroupResult {
-	testResults := make([]status.TestResult, len(testCases))
-
-	count := 0
-	for k, v := range testCases {
-		testResults[count] = m.validatePermissions(k, v)
-		count++
-	}
-
-	return status.TestGroupResult{
-		Name:        m.GetTestName(),
-		TestResults: testResults,
+	if testGroupResult == nil {
+		return m.createTestGroupFailure()
+	} else {
+		return *testGroupResult
 	}
 }
 
@@ -65,20 +60,22 @@ func (m *FilePermissionTestRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (m *FilePermissionTestRunner) SetupAfterAgentRun() error {
-	for k, _ := range testCases {
-		p, err := getFilePermission(k)
-		if err != nil {
-			return err
-		}
+	testResults := make([]status.TestResult, len(testCases))
 
-		log.Printf("file perission is %s", p)
-		actualPermissions[k] = p
+	count := 0
+	for k, v := range testCases {
+		testResults[count] = m.validatePermissions(k, v)
+		count++
 	}
 
+	testGroupResult = &status.TestGroupResult{
+		Name:        m.GetTestName(),
+		TestResults: testResults,
+	}
 	return nil
 }
 
-func (m *FilePermissionTestRunner) validatePermissions(fileTestedPath string, rule rule.Rule) status.TestResult {
+func (m *FilePermissionTestRunner) validatePermissions(fileTestedPath string, rule rule.Rule[string]) status.TestResult {
 	log.Printf("Validating Permission for  %v", fileTestedPath)
 
 	testResult := status.TestResult{
@@ -86,7 +83,8 @@ func (m *FilePermissionTestRunner) validatePermissions(fileTestedPath string, ru
 		Status: status.FAILED,
 	}
 
-	if !rule.Evaluate(actualPermissions[fileTestedPath]) {
+	success, err := rule.Evaluate(fileTestedPath)
+	if err != nil || !success {
 		return testResult
 	}
 
@@ -94,15 +92,13 @@ func (m *FilePermissionTestRunner) validatePermissions(fileTestedPath string, ru
 	return testResult
 }
 
-func getFilePermission(filePath string) (string, error) {
-	log.Printf("Retrieving file permission for %v", filePath)
-	p, err := common.RunCommand("ls -l " + agentConfigPath)
-	if err != nil {
-		return "", err
+func (m *FilePermissionTestRunner) createTestGroupFailure() status.TestGroupResult {
+	testResult := status.TestResult{
+		Name:   "",
+		Status: status.FAILED,
 	}
-
-	slice := strings.SplitAfterN(p, " ", 5)
-	onlyFirst4WordsInPermission := strings.Join(slice[:4], "")
-
-	return onlyFirst4WordsInPermission, nil
+	return status.TestGroupResult{
+		Name:        m.GetTestName(),
+		TestResults: []status.TestResult{testResult},
+	}
 }

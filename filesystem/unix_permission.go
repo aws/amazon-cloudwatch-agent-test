@@ -11,8 +11,69 @@ import (
 	"syscall"
 )
 
+// whose permission should exist (for this file's permission) = condition (... file permission... Owner is root, Owner Can Read, Non Owner Cannot read
+// condition = string condition.? or OwnerIsRoot(uint) or OwnerOfFileIsRoot(filename).
+// whose permission should not exist
+// There are all rules.
+
+// somewhere else, get permission Mode
+// create rule: root is owner (condition. bitwise evaluator? or filename. filename!
+
+// OwnerRoot confition => call CheckFileOwnerRights
+// OwnerReadPermission => get Mode() => wrapper function like OwnerRead..
+//
+
 // CheckFileRights check that the given file path has been protected by the owner.
 // If the owner is changed, they need at least the sudo permission to override the owner.
+
+type FilePermission string
+
+const (
+	OwnerWrite  FilePermission = "OwnerWrite"
+	GroupWrite  FilePermission = "GroupWrite"
+	AnyoneWrite FilePermission = "AnyoneWrite"
+)
+
+var FilePermissionInHex = map[FilePermission]uint16{
+	OwnerWrite:  syscall.S_IWUSR,
+	GroupWrite:  syscall.S_IWGRP,
+	AnyoneWrite: syscall.S_IWOTH,
+}
+
+func FileHasPermission(filePath string, permission FilePermission) (bool, error) {
+	fileStat, ok := GetFileStatPermission(filePath)
+	if ok != nil {
+		return false, ok
+	}
+
+	return IsInclude(fileStat, FilePermissionInHex[permission]), nil
+}
+
+func GetFileStatPermission(filePath string) (uint16, error) {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(filePath, &stat); err != nil {
+		return 0, fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
+	}
+
+	return stat.Mode, nil
+}
+
+func IsInclude(included uint16, include uint16) bool {
+	return included&include != 0
+}
+
+func GetFileGroupName(filePath string) (string, error) {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(filePath, &stat); err != nil {
+		return "", fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
+	}
+	if grp, err := user.LookupGroupId(fmt.Sprintf("%d", stat.Gid)); err != nil {
+		return "", fmt.Errorf("Cannot look up file owner's name %s: %v", filePath, err)
+	} else {
+		return grp.Name, nil
+	}
+}
+
 func CheckFileRights(filePath string) error {
 	var stat syscall.Stat_t
 	if err := syscall.Stat(filePath, &stat); err != nil {
