@@ -2,6 +2,9 @@
 
 mkdir -p ./test_binaries
 
+readonly TEST_FOLDER='./test'
+readonly TEST_BINARIES='./test_binaries'
+
 # compiles a test folder
 # $1=filepath to a directory containing a go test
 compile() {
@@ -11,12 +14,12 @@ compile() {
   echo "compiling $testName"
   # compiles a test without running it
   # https://pkg.go.dev/cmd/go#hdr-Test_packages
-  go test -c "$testDir" -o "./test_binaries/$testName.test"
+  go test -c "$testDir" -o "$TEST_BINARIES/$testName.test"
 }
 
-# navigates the filesystem to identify folders with tests
-# $1=filepath of the current directory we searching through
-dfs() {
+# navigates through the filesystem with DFS to compile tests
+# $1=filepath of the current directory
+compileIfContainsTest() {
   local dir=$1
   local hasTest=false
 
@@ -31,7 +34,7 @@ dfs() {
       hasTest=true
     fi
     # check every path
-    dfs "$path"
+    compileIfContainsTest "$path"
   done
 
   if $hasTest; then
@@ -40,4 +43,4 @@ dfs() {
 }
 
 # entry point
-dfs "./test"
+compileIfContainsTest "$TEST_FOLDER"
