@@ -1,0 +1,20 @@
+name: Build check
+on:
+  workflow_dispatch:
+  # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
+
+jobs:
+  compile_tests:
+    name: Compile tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Compile tests
+        run: |
+          echo "Compile tests"
+          make compile

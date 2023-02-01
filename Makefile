@@ -9,6 +9,5 @@ install-tools:
 lint: install-tools checklicense impi
 	${LINTER} run ./...
 
-# use this script as a build-check during development
 compile:
-	bash ./scripts/compile.sh
+	go test -run=NO_MATCH ./...
