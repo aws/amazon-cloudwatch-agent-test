@@ -8,3 +8,6 @@ install-tools:
 
 lint: install-tools checklicense impi
 	${LINTER} run ./...
+
+compile:
+	go test -run=NO_MATCH ./...

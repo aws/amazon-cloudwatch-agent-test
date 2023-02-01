@@ -17,4 +17,4 @@ jobs:
       - name: Compile tests
         run: |
           echo "Compile tests"
-          go test -run=NO_MATCH ./...
+          make compile
