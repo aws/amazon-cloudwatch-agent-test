@@ -47,6 +47,7 @@ func getTestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		factory := dimension.GetDimensionFactory(*env)
 		testRunners = []*test_runner.TestRunner{
 			{TestRunner: &NoAppendDimensionTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &GlobalAppendDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &OneAggregateDimensionTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}

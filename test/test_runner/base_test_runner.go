@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	agentConfigDirectory = "agent_configs"
-	extraConfigDirectory = "extra_configs"
-	MinimumAgentRuntime  = 3 * time.Minute
+	configOutputPath         = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	agentConfigDirectory     = "agent_configs"
+	extraConfigDirectory     = "extra_configs"
+	MinimumAgentRuntime      = 1 * time.Minute
+	HighResolutionStatPeriod = 30
 )
 
 type ITestRunner interface {
