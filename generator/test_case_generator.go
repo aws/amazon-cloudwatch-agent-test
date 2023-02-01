@@ -6,23 +6,25 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/mapstructure"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type matrixRow struct {
-	TestDir             string `json:"test_dir"`
-	Os                  string `json:"os"`
-	TestType            string `json:"testType"`
-	Arc                 string `json:"arc"`
-	InstanceType        string `json:"instanceType"`
-	Ami                 string `json:"ami"`
-	BinaryName          string `json:"binaryName"`
-	Username            string `json:"username"`
-	InstallAgentCommand string `json:"installAgentCommand"`
-	CaCertPath          string `json:"caCertPath"`
+	TestDir                 string `json:"test_dir"`
+	Os                      string `json:"os"`
+	TestType                string `json:"testType"`
+	Arc                     string `json:"arc"`
+	InstanceType            string `json:"instanceType"`
+	Ami                     string `json:"ami"`
+	BinaryName              string `json:"binaryName"`
+	Username                string `json:"username"`
+	InstallAgentCommand     string `json:"installAgentCommand"`
+	CaCertPath              string `json:"caCertPath"`
+	PerformanceNumberOfLogs string `json:"performance_number_of_logs"`
 }
 
 // you can't have a const map in golang

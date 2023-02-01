@@ -27,7 +27,7 @@ resource "aws_launch_configuration" "cluster" {
   instance_type = var.ec2_instance_type
 
   security_groups      = [data.aws_security_group.ecs_security_group.id]
-  iam_instance_profile = data.aws_iam_role.ecs_task_role.name
+  iam_instance_profile = data.aws_iam_instance_profile.cwagent_instance_profile.name
 
   user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
 }
