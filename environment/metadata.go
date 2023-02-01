@@ -24,6 +24,8 @@ type MetaData struct {
 	EcsServiceName            string
 	EC2PluginTests            map[string]struct{} // set of EC2 plugin names
 	Bucket                    string
+	CwaCommitSha              string
+	CaCertPath                string
 }
 
 type MetaDataStrings struct {
@@ -35,13 +37,21 @@ type MetaDataStrings struct {
 	EcsServiceName            string
 	EC2PluginTests            string // input comma delimited list of plugin names
 	Bucket                    string
+	CwaCommitSha              string
+	CaCertPath                string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS")
 }
 func registerBucket(dataString *MetaDataStrings) {
-	flag.StringVar(&(dataString.Bucket), "bucket", "", "cloudwatch-agent-integration-bucket")
+	flag.StringVar(&(dataString.Bucket), "bucket", "", "s3 bucket ex cloudwatch-agent-integration-bucket")
+}
+func registerCwaCommitSha(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.CwaCommitSha), "cwaCommitSha", "", "agent commit hash ex 0b81ac79ee13f5248b860bbda3afc4ee57f5b8b6")
+}
+func registerCaCertPath(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.CaCertPath), "caCertPath", "", "ec2 path to crts ex /etc/ssl/certs/ca-certificates.crt")
 }
 func registerECSData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EcsLaunchType), "ecsLaunchType", "", "EC2 or Fargate")
@@ -116,6 +126,8 @@ func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDat
 	registerComputeType(metaDataStrings)
 	registerECSData(metaDataStrings)
 	registerBucket(metaDataStrings)
+	registerCwaCommitSha(metaDataStrings)
+	registerCaCertPath(metaDataStrings)
 	registerPluginTestsToExecute(metaDataStrings)
 	return metaDataStrings
 }
@@ -126,6 +138,8 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData = fillECSData(metaData, data)
 	metaData = fillEC2PluginTests(metaData, data)
 	metaData.Bucket = data.Bucket
+	metaData.CwaCommitSha = data.CwaCommitSha
+	metaData.CaCertPath = data.CaCertPath
 
 	return metaData
 }
