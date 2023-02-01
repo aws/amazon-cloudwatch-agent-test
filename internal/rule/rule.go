@@ -12,7 +12,9 @@ type Rule[T any] struct {
 func (r *Rule[T]) Evaluate(target T) (bool, error) {
 	for _, c := range r.Conditions {
 		success, err := c.Evaluate(target)
+		log.Printf("success is %v", success)
 		if err != nil {
+			log.Printf("Error was %v", err)
 			return false, err
 		}
 		if !success {
