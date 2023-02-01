@@ -59,6 +59,11 @@ variable "test_name" {
   default = ""
 }
 
+variable "test_dir" {
+  type    = string
+  default = ""
+}
+
 variable "cwa_github_sha" {
   type    = string
   default = ""

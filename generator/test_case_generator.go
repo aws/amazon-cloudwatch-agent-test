@@ -6,10 +6,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/mapstructure"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type matrixRow struct {
@@ -23,6 +24,7 @@ type matrixRow struct {
 	Username            string `json:"username"`
 	InstallAgentCommand string `json:"installAgentCommand"`
 	CaCertPath          string `json:"caCertPath"`
+	DataRate            string `json:"dataRate`
 }
 
 // you can't have a const map in golang
@@ -39,8 +41,9 @@ var testTypeToTestDirMap = map[string][]string{
 		"./test/collection_interval",
 		"./test/metric_append_dimension",
 	},
-	"ec2_performance": {
-		"./test/performancetest",
+	"ec2_performance": {},
+	"ec2_stress": {
+		"./test/statsd_stress",
 	},
 	"ecs_fargate": {
 		"./test/ecs/ecs_metadata",
@@ -64,7 +67,7 @@ func genMatrix(testType string, testDirList []string) []matrixRow {
 		log.Panicf("can't read file %v_test_matrix.json err %v", testType, err)
 	}
 
-	byteValueTestMatrix, _ := ioutil.ReadAll(openTestMatrix)
+	byteValueTestMatrix, _ := io.ReadAll(openTestMatrix)
 	_ = openTestMatrix.Close()
 
 	var testMatrix []map[string]string
@@ -91,7 +94,7 @@ func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
 	if err != nil {
 		log.Panicf("Can't marshal json for target os %v, err %v", testType, err)
 	}
-	err = ioutil.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", testType), bytes, os.ModePerm)
+	err = os.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", testType), bytes, os.ModePerm)
 	if err != nil {
 		log.Panicf("Can't write json to file for target os %v, err %v", testType, err)
 	}
