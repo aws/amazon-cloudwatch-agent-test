@@ -11,8 +11,25 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 )
 
-// TODO: Refactor Structure and Interface for more easier follow that shares the same session
+var identityDoc *imds.GetInstanceIdentityDocumentOutput
+
 func GetInstanceId() string {
+	return GetImdsMetadata().InstanceID
+}
+
+func GetImageId() string {
+	return GetImdsMetadata().ImageID
+}
+
+func GetInstanceType() string {
+	return GetImdsMetadata().InstanceType
+}
+
+// TODO: Refactor Structure and Interface for more easier follow that shares the same session
+func GetImdsMetadata() *imds.GetInstanceIdentityDocumentOutput {
+	if identityDoc != nil {
+		return identityDoc
+	}
 	ctx := context.Background()
 	c, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -22,9 +39,9 @@ func GetInstanceId() string {
 
 	// TODO: this only works for EC2 based testing
 	client := imds.NewFromConfig(c)
-	metadata, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
+	identityDoc, err = client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
-		log.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
+		log.Fatalf("Error occurred while retrieving imds identityDoc: %v", err)
 	}
-	return metadata.InstanceID
+	return identityDoc
 }

@@ -21,7 +21,7 @@ import (
 type MetricValueFetcher struct {
 }
 
-func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
+func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics, metricQueryPeriod int32) (MetricValues, error) {
 	dimensions := metricSpecificDimensions
 	log.Printf("Metric query input dimensions : %s", fmt.Sprint(dimensions))
 
@@ -31,7 +31,6 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 		Dimensions: dimensions,
 	}
 
-	metricQueryPeriod := int32(60)
 	metricDataQueries := []types.MetricDataQuery{
 		{
 			MetricStat: &types.MetricStat{

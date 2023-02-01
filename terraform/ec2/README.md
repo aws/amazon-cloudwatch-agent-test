@@ -157,8 +157,10 @@ Outputs:
         "elasticfilesystem:CreateMountTarget",
         "elasticfilesystem:DeleteFileSystem",
         "elasticfilesystem:DeleteMountTarget",
+        "elasticfilesystem:DescribeMountTargets",
         "elasticfilesystem:DescribeFileSystems",
         "elasticfilesystem:DescribeLifecycleConfiguration",
+        "elasticfilesystem:DescribeMountTargetSecurityGroups",
         "ec2:CreateNetworkInterface",
         "ec2:DeleteNetworkInterface",
         "ec2:DescribeNetworkInterfaces",
@@ -169,6 +171,7 @@ Outputs:
         "s3:GetObject",
         "s3:GetObjectAcl",
         "s3:PutObject",
+        "s3:DeleteObject",
         "sts:GetCallerIdentity",
         "ssm:PutParameter",
         "ssm:DeleteParameter",
@@ -267,7 +270,7 @@ Outputs:
         "autoscaling:SetInstanceProtection",
         "ecs:DescribeContainerInstances",
         "cloudwatch:GetMetricData",
-        "logs:ListTagsForResource",
+        "logs:ListTagsForResource"
       ],
       "Resource": "*"
     }

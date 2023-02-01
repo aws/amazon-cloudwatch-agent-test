@@ -1,6 +1,6 @@
 {
     "agent": {
-      "metrics_collection_interval": 60,
+      "metrics_collection_interval": 15,
       "run_as_user": "root",
       "debug": true,
       "logfile": ""
@@ -8,6 +8,7 @@
     "logs": {
         "metrics_collected": {
             "emf": { }
-        }
+        },
+      "force_flush_interval": 5
     }
   }
