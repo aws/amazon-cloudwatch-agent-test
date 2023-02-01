@@ -9,14 +9,11 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/performance"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/stress"
 )
 
 func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFactory, err error) {
 	switch vConfig.GetValidateType() {
-	case "performance":
-		validator = performance.NewPerformanceValidator(vConfig)
 	case "stress":
 		validator = stress.NewStressValidator(vConfig)
 	default:

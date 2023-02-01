@@ -39,7 +39,7 @@ Side effects: Creates a dynamodb table if it doesn't already exist
 */
 func InitializeTransmitterAPI(DataBaseName string) *TransmitterAPI {
 	//setup aws session
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
 	if err != nil {
 		fmt.Printf("Error: Loading in config %s\n", err)
 	}
@@ -47,8 +47,7 @@ func InitializeTransmitterAPI(DataBaseName string) *TransmitterAPI {
 		dynamoDbClient: dynamodb.NewFromConfig(cfg),
 		DataBaseName:   DataBaseName,
 	}
-
-	fmt.Println("Transmitter ready")
+	fmt.Println("API ready")
 	return &transmitter
 
 }
