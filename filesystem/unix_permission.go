@@ -34,7 +34,7 @@ const (
 	AnyoneWrite FilePermission = "AnyoneWrite"
 )
 
-var FilePermissionInHex = map[FilePermission]uint16{
+var FilePermissionInHex = map[FilePermission]uint32{
 	OwnerWrite:  syscall.S_IWUSR,
 	GroupWrite:  syscall.S_IWGRP,
 	AnyoneWrite: syscall.S_IWOTH,
@@ -49,7 +49,7 @@ func FileHasPermission(filePath string, permission FilePermission) (bool, error)
 	return IsInclude(fileStat, FilePermissionInHex[permission]), nil
 }
 
-func GetFileStatPermission(filePath string) (uint16, error) {
+func GetFileStatPermission(filePath string) (uint32, error) {
 	var stat syscall.Stat_t
 	if err := syscall.Stat(filePath, &stat); err != nil {
 		return 0, fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
@@ -58,7 +58,7 @@ func GetFileStatPermission(filePath string) (uint16, error) {
 	return stat.Mode, nil
 }
 
-func IsInclude(included uint16, include uint16) bool {
+func IsInclude(included uint32, include uint32) bool {
 	return included&include != 0
 }
 
