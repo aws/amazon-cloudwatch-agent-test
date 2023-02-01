@@ -24,7 +24,7 @@ type matrixRow struct {
 	Username            string `json:"username"`
 	InstallAgentCommand string `json:"installAgentCommand"`
 	CaCertPath          string `json:"caCertPath"`
-	DataRate            string `json:"dataRate`
+	DataRate            string `json:"data_rate"`
 }
 
 // you can't have a const map in golang
