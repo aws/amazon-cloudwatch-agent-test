@@ -24,6 +24,8 @@ resource "aws_key_pair" "aws_ssh_key" {
 locals {
   ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  // Canary downloads latest binary. Integration test downloads binary connect to git hash.
+  binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
 }
 
 #####################################################################
@@ -55,18 +57,19 @@ resource "null_resource" "mount_efs" {
     host        = aws_instance.cwagent.public_ip
   }
 
+<<<<<<< HEAD
   provisioner "file" {
     source      = "./resources/install-efs-utils.sh"
     destination = "/tmp/install-efs-utils.sh"
   }
 
+=======
+>>>>>>> main
   provisioner "remote-exec" {
     # https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.html
     inline = [
-      "chmod +x /tmp/install-efs-utils.sh",
-      "/tmp/install-efs-utils.sh",
-      "sudo mkdir ${var.efs_mount_point}",
-      "sudo mount -t efs -o tls ${aws_efs_file_system.efs.dns_name} ${var.efs_mount_point}/",
+      "sudo mkdir ~/efs-mount-point",
+      "sudo mount -t efs -o tls ${aws_efs_file_system.efs.dns_name} ~/efs-mount-point/",
     ]
   }
 }
@@ -96,7 +99,7 @@ resource "null_resource" "integration_test" {
       "echo clone and install agent",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
+      "aws s3 cp s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
       "echo get ssl pem for localstack and export local stack host name",
@@ -126,7 +129,7 @@ resource "null_resource" "integration_test" {
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -v"
     ]
     connection {
       type        = "ssh"
