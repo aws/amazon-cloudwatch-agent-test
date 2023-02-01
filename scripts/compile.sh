@@ -19,7 +19,7 @@ compile() {
 
 # navigates through the filesystem with DFS to compile tests
 # $1=filepath of the current directory
-compileIfContainsTest() {
+compileIfHasTest() {
   local dir=$1
   local hasTest=false
 
@@ -34,7 +34,7 @@ compileIfContainsTest() {
       hasTest=true
     fi
     # check every path
-    compileIfContainsTest "$path"
+    compileIfHasTest "$path"
   done
 
   if $hasTest; then
@@ -43,4 +43,4 @@ compileIfContainsTest() {
 }
 
 # entry point
-compileIfContainsTest "$TEST_FOLDER"
+compileIfHasTest "$TEST_FOLDER"

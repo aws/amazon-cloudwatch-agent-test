@@ -11,5 +11,4 @@ lint: install-tools checklicense impi
 
 # use this script as a build-check during development
 compile:
-	chmod +x ./scripts/compile.sh
-	./scripts/compile.sh
+	bash ./scripts/compile.sh
