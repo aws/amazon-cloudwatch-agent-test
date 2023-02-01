@@ -82,5 +82,6 @@ func (t *DiskTestRunner) ValidateDiskMetric(metricName string) status.TestResult
 	}
 
 	testResult.Status = status.SUCCESSFUL
+	asdfasdfasdf
 	return testResult
 }
