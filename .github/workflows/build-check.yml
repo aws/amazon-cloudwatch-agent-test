@@ -7,9 +7,11 @@ on:
       - main
 
 jobs:
-  compile_tests:
-    name: Compile tests
-    runs-on: ubuntu-latest
+  compile:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - name: Compile tests
