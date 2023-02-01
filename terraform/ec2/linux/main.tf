@@ -57,14 +57,6 @@ resource "null_resource" "mount_efs" {
     host        = aws_instance.cwagent.public_ip
   }
 
-<<<<<<< HEAD
-  provisioner "file" {
-    source      = "./resources/install-efs-utils.sh"
-    destination = "/tmp/install-efs-utils.sh"
-  }
-
-=======
->>>>>>> main
   provisioner "remote-exec" {
     # https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.html
     inline = [

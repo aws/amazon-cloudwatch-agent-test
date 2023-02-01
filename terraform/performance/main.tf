@@ -1,8 +1,8 @@
 #####################################################################
 # Ensure there is unique testing_id for each test
 #####################################################################
-resource "random_id" "testing_id" {
-  byte_length = 8
+module "common" {
+  source = "../common"
 }
 
 #####################################################################
@@ -38,7 +38,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address = true
 
   tags = {
-    Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
+    Name = "cwagent-performance-${var.test_name}-${module.common.testing_id}"
   }
 }
 
