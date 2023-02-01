@@ -75,7 +75,7 @@ func (t *GlobalAppendDimensionsTestRunner) validateGlobalAppendDimensionMetric(m
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, expDims, metric.AVERAGE)
+	values, err := fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, expDims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
@@ -85,7 +85,7 @@ func (t *GlobalAppendDimensionsTestRunner) validateGlobalAppendDimensionMetric(m
 		return testResult
 	}
 
-	// this is making sure once dimensions in "append_dimensions" are tagged, the agent does drop the 
+	// this is making sure once dimensions in "append_dimensions" are tagged, the agent does drop the
 	// host dimension. We should not see the same metrics with host dimension anymore
 	dropDims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
@@ -102,7 +102,7 @@ func (t *GlobalAppendDimensionsTestRunner) validateGlobalAppendDimensionMetric(m
 		return testResult
 	}
 
-	values, err = fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, dropDims, metric.AVERAGE)
+	values, err = fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, dropDims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 	if err != nil || len(values) != 0 {
 		return testResult
 	}
