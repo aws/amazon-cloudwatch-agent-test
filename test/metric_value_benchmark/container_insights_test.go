@@ -77,7 +77,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, dims, metric.AVERAGE)
+	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}

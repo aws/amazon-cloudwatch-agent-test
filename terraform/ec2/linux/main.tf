@@ -94,13 +94,6 @@ resource "null_resource" "integration_test" {
       "aws s3 cp s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
-      "echo get ssl pem for localstack and export local stack host name",
-      "cd ~/amazon-cloudwatch-agent-test/localstack/ls_tmp",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} . --recursive",
-      "cat ${var.ca_cert_path} > original.pem",
-      "cat original.pem snakeoil.pem > combine.pem",
-      "sudo cp original.pem /opt/aws/amazon-cloudwatch-agent/original.pem",
-      "sudo cp combine.pem /opt/aws/amazon-cloudwatch-agent/combine.pem",
     ]
 
     connection {
@@ -121,7 +114,7 @@ resource "null_resource" "integration_test" {
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"
     ]
     connection {
       type        = "ssh"

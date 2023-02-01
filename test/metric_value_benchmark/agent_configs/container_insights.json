@@ -1,11 +1,12 @@
 {
   "agent": {
-    "region": "us-west-2"
+    "region": "us-west-2",
+    "metrics_collection_interval": 15
   },
   "logs": {
     "metrics_collected": {
       "ecs": {
-        "metrics_collection_interval": 30
+        "metrics_collection_interval": 15
       }
     },
     "force_flush_interval": 5
