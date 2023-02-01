@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
   pull_request:
-    types: [opened, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - main
