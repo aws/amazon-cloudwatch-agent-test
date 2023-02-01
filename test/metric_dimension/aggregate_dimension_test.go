@@ -57,7 +57,7 @@ func (t *OneAggregateDimensionTestRunner) validateNoAppendDimensionMetric(metric
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricAggregateDimensionTest", metricName, dims, metric.AVERAGE)
+	values, err := fetcher.Fetch("MetricAggregateDimensionTest", metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult

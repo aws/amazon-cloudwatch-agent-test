@@ -270,7 +270,7 @@ Outputs:
         "autoscaling:SetInstanceProtection",
         "ecs:DescribeContainerInstances",
         "cloudwatch:GetMetricData",
-        "logs:ListTagsForResource",
+        "logs:ListTagsForResource"
       ],
       "Resource": "*"
     }
