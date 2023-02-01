@@ -1,6 +1,9 @@
 package rule
 
-import "github.com/aws/amazon-cloudwatch-agent-test/filesystem"
+import (
+	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
+	"log"
+)
 
 type Rule[T any] struct {
 	Conditions []ICondition[T]
@@ -58,6 +61,7 @@ func (e *PermittedEntityMatch) Evaluate(target string) (bool, error) {
 
 	if e.ExpectedGroup != nil {
 		name, err := filesystem.GetFileGroupName(target)
+		log.Printf("FileGroupName is: %v", name)
 		if err != nil {
 			return false, err
 		} else if name != *e.ExpectedGroup {
@@ -69,4 +73,3 @@ func (e *PermittedEntityMatch) Evaluate(target string) (bool, error) {
 }
 
 var _ ICondition[string] = (*PermittedEntityMatch)(nil)
-
