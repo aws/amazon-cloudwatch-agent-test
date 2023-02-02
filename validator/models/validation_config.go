@@ -29,10 +29,12 @@ type validatorConfig struct {
 	Processors []string `yaml:"processors"`
 	Exporters  []string `yaml:"exporters"`
 
-	TestCase        string `yaml:"test_case"`
+	TestCase string `yaml:"test_case"`
+
+	// Validate type for the test https://github.com/aws/amazon-cloudwatch-agent-test/blob/39a9e16c70f07a17c43c0630647158cd496bd168/validator/validators/validator.go#L15-L24
 	ValidateType    string `yaml:"validate_type"`
-	DataType        string `yaml:"data_type"`
-	DataRate        string `yaml:"data_rate"`
+	DataType        string `yaml:"data_type"` // Only supports metrics/logs/traces
+	DataRate        string `yaml:"data_rate"` // Number of metrics to be sent or number of logs to be monitored
 	DatapointPeriod int    `yaml:"datapoint_period"`
 
 	ConfigPath string `yaml:"cloudwatch_agent_config"`

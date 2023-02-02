@@ -40,7 +40,7 @@ func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRa
 
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
 // for the specified duration
-func writeToLogs(filePath string, durationMinutes time.Duration, dataRate int) error {
+func writeToLogs(filePath string, durationMinute time.Duration, dataRate int) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func writeToLogs(filePath string, durationMinutes time.Duration, dataRate int) e
 
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	endTimeout := time.After(durationMinutes)
+	endTimeout := time.After(durationMinute)
 
 	//loop until the test duration is reached
 	for {

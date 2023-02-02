@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
@@ -23,6 +24,12 @@ const (
 	DynamoDBDataBase    = "CWAPerformanceMetrics"
 	testLogNum          = "PERFORMANCE_NUMBER_OF_LOGS"
 )
+
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+}
 
 // this struct is derived from plugins/inputs/logfile FileConfig struct
 type LogInfo struct {

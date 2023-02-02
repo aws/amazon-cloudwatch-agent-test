@@ -28,8 +28,7 @@
             "memory_rss",
             "memory_swap",
             "memory_vms",
-            "num_fds",
-            "write_bytes"
+            "num_fds"
           ],
           "metrics_collection_interval": 1
         }

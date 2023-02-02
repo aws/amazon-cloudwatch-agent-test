@@ -8,3 +8,7 @@ install-tools:
 
 lint: install-tools checklicense impi
 	${LINTER} run ./...
+
+compile:
+	# this is a workaround to compile and cache all of the tests without actually running any of them
+	go test -run=NO_MATCH ./...

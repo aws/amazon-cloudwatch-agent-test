@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	configPath      = flag.String("validator-config", "test", "Test's Validator Config Path")
-	preparationMode = flag.Bool("preparation-mode", false, "Preparation mode")
+	configPath      = flag.String("validator-config", "", "A yaml depicts test information")
+	preparationMode = flag.Bool("preparation-mode", false, "Prepare all the resources for the validation (e.g set up config) ")
 )
 
 func main() {
@@ -48,7 +48,7 @@ func main() {
 }
 
 func validate(vConfig models.ValidateConfig) error {
-	const maxRetry = 1
+	const maxRetry = 5
 	var err error
 	for i := 0; i < maxRetry; i++ {
 		err = validators.LaunchValidator(vConfig)
@@ -57,6 +57,7 @@ func validate(vConfig models.ValidateConfig) error {
 			return nil
 		}
 		time.Sleep(30 * time.Second)
+		log.Printf("test case: %s, validate type: %s, error: %v", vConfig.GetTestCase(), vConfig.GetValidateType(), err)
 		continue
 	}
 
