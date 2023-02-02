@@ -5,6 +5,12 @@
 
 package metric_value_benchmark
 
+import (
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+)
+
 func GetEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 	factory := dimension.GetDimensionFactory(*env)
 
@@ -20,7 +26,7 @@ func GetEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 
 func GetEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	factory := dimension.GetDimensionFactory(*env)
-	ec2TestRunners = []*test_runner.TestRunner{
+	ec2TestRunners := []*test_runner.TestRunner{
 		{TestRunner: &DiskTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		{TestRunner: &NetStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		{TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
