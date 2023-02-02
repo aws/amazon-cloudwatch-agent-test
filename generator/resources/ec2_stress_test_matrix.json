@@ -7,6 +7,6 @@
         "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
         "arc": "amd64",
         "binaryName": "amazon-cloudwatch-agent.rpm",
-        "dataRate": "10"
+        "data_rate": "10"
       }
 ]
