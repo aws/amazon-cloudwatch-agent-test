@@ -7,6 +7,36 @@
         "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
         "arc": "amd64",
         "binaryName": "amazon-cloudwatch-agent.rpm",
-        "data_rate": 10
+        "dataRate": 1000
+      },
+      {
+        "os": "al2",
+        "username": "ec2-user",
+        "installAgentCommand": "go run ./install/install_agent.go rpm",
+        "ami": "cloudwatch-agent-integration-test-al2*",
+        "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+        "arc": "amd64",
+        "binaryName": "amazon-cloudwatch-agent.rpm",
+        "dataRate": 5000
+      },
+      {
+        "os": "al2",
+        "username": "ec2-user",
+        "installAgentCommand": "go run ./install/install_agent.go rpm",
+        "ami": "cloudwatch-agent-integration-test-al2*",
+        "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+        "arc": "amd64",
+        "binaryName": "amazon-cloudwatch-agent.rpm",
+        "dataRate": 10000
+      },
+      {
+        "os": "al2",
+        "username": "ec2-user",
+        "installAgentCommand": "go run ./install/install_agent.go rpm",
+        "ami": "cloudwatch-agent-integration-test-al2*",
+        "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+        "arc": "amd64",
+        "binaryName": "amazon-cloudwatch-agent.rpm",
+        "dataRate": 50000
       }
 ]

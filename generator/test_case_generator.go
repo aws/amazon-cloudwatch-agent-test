@@ -16,7 +16,7 @@ import (
 type matrixRow struct {
 	TestDir             string `json:"test_dir"`
 	Os                  string `json:"os"`
-	TestType            string `json:"testType"`
+	TestType            string `json:"test_type"`
 	Arc                 string `json:"arc"`
 	InstanceType        string `json:"instanceType"`
 	Ami                 string `json:"ami"`
@@ -43,7 +43,7 @@ var testTypeToTestDirMap = map[string][]string{
 	},
 	"ec2_performance": {},
 	"ec2_stress": {
-		"./test/statsd_stress",
+		"../../test/statsd_stress",
 	},
 	"ecs_fargate": {
 		"./test/ecs/ecs_metadata",
@@ -67,10 +67,11 @@ func genMatrix(testType string, testDirList []string) []matrixRow {
 		log.Panicf("can't read file %v_test_matrix.json err %v", testType, err)
 	}
 
-	byteValueTestMatrix, _ := io.ReadAll(openTestMatrix)
-	_ = openTestMatrix.Close()
+	defer openTestMatrix.Close()
 
-	var testMatrix []map[string]string
+	byteValueTestMatrix, _ := io.ReadAll(openTestMatrix)
+
+	var testMatrix []map[string]interface{}
 	err = json.Unmarshal(byteValueTestMatrix, &testMatrix)
 	if err != nil {
 		log.Panicf("can't unmarshall file %v_test_matrix.json err %v", testType, err)

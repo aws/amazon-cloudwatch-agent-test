@@ -38,6 +38,6 @@
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },
-    "force_flush_interval": 30
+    "force_flush_interval": 10
   }
 }

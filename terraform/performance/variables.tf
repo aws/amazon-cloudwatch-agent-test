@@ -56,7 +56,7 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
-  default = ""
+  default = "../../test/statsd_stress"
 }
 
 variable "cwa_github_sha" {

@@ -17,22 +17,67 @@ import (
 	"go.uber.org/multierr"
 )
 
+type MetricPluginBoundValue map[string]map[string]map[string]float64
+
 // Todo:
 // * Create a database  to store these metrics instead of using cache?
 // * Create a workflow to update the bound metrics?
-// * Increase data rate to even a high loader (e.g 1000, 5000, 10000)
+// * Convert to Megabytes for some metrics?
 var (
-	metricErrorBound = 0.3
-	metricBoundValue = map[string]map[string]float64{
-		"10": {
-			"procstat_cpu_usage":   float64(5),
-			"procstat_memory_rss":  float64(66500000),
-			"procstat_memory_swap": float64(0),
-			"procstat_memory_vms":  float64(818000000),
-			"procstat_num_fds":     float64(9),
-			"procstat_write_bytes": float64(150000),
-			"net_bytes_sent":       float64(14000),
-			"net_packets_sent":     float64(35),
+	metricErrorBound       = 0.3
+	metricPluginBoundValue = MetricPluginBoundValue{
+		"1000": {
+			"statsd": {
+				"procstat_cpu_usage":   float64(4),
+				"procstat_memory_rss":  float64(66500000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_num_fds":     float64(9),
+				"procstat_write_bytes": float64(110000),
+				"net_bytes_sent":       float64(7500),
+				"net_packets_sent":     float64(21),
+			},
+		},
+		"5000": {
+			"statsd": {
+				"procstat_cpu_usage":   float64(5),
+				"procstat_memory_rss":  float64(66500000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_num_fds":     float64(9),
+				"procstat_write_bytes": float64(120000),
+				"net_bytes_sent":       float64(7500),
+				"net_packets_sent":     float64(21),
+			},
+		},
+		"10000": {
+			"statsd": {
+				"procstat_cpu_usage":   float64(10),
+				"procstat_memory_rss":  float64(66500000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_num_fds":     float64(9),
+				"procstat_write_bytes": float64(120000),
+				"net_bytes_sent":       float64(8000),
+				"net_packets_sent":     float64(24),
+			},
+		},
+		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
+		// https://github.com/aws/amazon-cloudwatch-agent/blob/c85501042b088014ec40b636a8b6b2ccc9739738/translator/translate/agent/ruleMetricBufferLimit.go#L14
+		// For more information on Metric Buffer and how they will exchange for the resources, please follow
+		// https://github.com/influxdata/telegraf/wiki/MetricBuffer
+
+		"50000": {
+			"statsd": {
+				"procstat_cpu_usage":   float64(45),
+				"procstat_memory_rss":  float64(120000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_num_fds":     float64(9),
+				"procstat_write_bytes": float64(110000),
+				"net_bytes_sent":       float64(8000),
+				"net_packets_sent":     float64(24),
+			},
 		},
 	}
 )
@@ -111,8 +156,9 @@ func (s *StressValidator) EndValidation() error {
 
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, startTime, endTime time.Time) error {
 	var (
-		dataRate       = fmt.Sprint(s.vConfig.GetDataRate())
-		boundAndPeriod = s.vConfig.GetDataPointPeriod().Seconds()
+		dataRate        = fmt.Sprint(s.vConfig.GetDataRate())
+		boundAndPeriod  = s.vConfig.GetDataPointPeriod().Seconds()
+		receivers, _, _ = s.vConfig.GetOtelConfig()
 	)
 
 	stressMetricQueries := s.buildStressMetricQueries(metricName, metricNamespace, metricDimensions)
@@ -130,20 +176,26 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 		return fmt.Errorf("getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, metricDimensions)
 	}
 
-	if _, ok := metricBoundValue[dataRate]; !ok {
-		return fmt.Errorf("metric %s does not have data rate", metricName)
+	for _, receiver := range receivers {
+		if _, ok := metricPluginBoundValue[dataRate][receiver]; !ok {
+			return fmt.Errorf("plugin %s does not have data rate", receiver)
+		}
+
+		if _, ok := metricPluginBoundValue[dataRate][receiver][metricName]; !ok {
+			return fmt.Errorf("metric %s does not have bound", receiver)
+		}
 	}
 
-	if _, ok := metricBoundValue[dataRate][metricName]; !ok {
-		return fmt.Errorf("metric %s does not have bound", metricName)
-	}
+	// Assuming each plugin are testing one at a time
+	for _, receiver := range receivers {
+		// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
+		metricValue := metrics.MetricDataResults[0].Values[0]
+		lowerBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 - metricErrorBound)
+		upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
+		if metricValue < 0 || metricValue > upperBoundValue || metricValue < lowerBoundValue {
+			return fmt.Errorf("metric %s with value %f is not within bound [ %f, %f ] ", metricName, metricValue, lowerBoundValue, upperBoundValue)
+		}
 
-	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
-	metricValue := metrics.MetricDataResults[0].Values[0]
-	lowerBoundValue := metricBoundValue[dataRate][metricName] * (1 - metricErrorBound)
-	upperBoundValue := metricBoundValue[dataRate][metricName] * (1 + metricErrorBound)
-	if metricValue < 0 || metricValue > upperBoundValue || metricValue < lowerBoundValue {
-		return fmt.Errorf("metric %s with value %f is not within bound [ %f, %f ] ", metricName, metricValue, lowerBoundValue, upperBoundValue)
 	}
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
