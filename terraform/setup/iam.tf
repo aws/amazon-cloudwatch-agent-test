@@ -55,12 +55,20 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
       "dynamodb:CreateTable",
       "dynamodb:Query",
       "dynamodb:UpdateItem",
+      "ecs:CreateCluster",
       "ecs:DescribeTasks",
       "ecs:ListTasks",
       "ecs:DescribeContainerInstances",
       "ecs:DescribeServices",
       "ecs:ListServices",
       "ecs:DescribeTaskDefinition",
+      "ecs:DeregisterContainerInstance",
+      "ecs:DiscoverPollEndpoint",
+      "ecs:Poll",
+      "ecs:RegisterContainerInstance",
+      "ecs:StartTelemetrySession",
+      "ecs:UpdateContainerInstancesState",
+      "ecs:Submit*",
       "ecr:GetAuthorizationToken",
       "ecr:BatchCheckLayerAvailability",
       "ecr:GetDownloadUrlForLayer",
@@ -71,6 +79,7 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
       "s3:GetObjectAcl",
       "s3:GetObject",
       "s3:ListBucket",
+      "s3:PutObject",
     ]
     resources = ["*"]
   }

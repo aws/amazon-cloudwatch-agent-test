@@ -97,3 +97,7 @@ data "aws_ami" "latest" {
     values = [var.ami]
   }
 }
+
+data "aws_dynamodb_table" "performance-dynamodb-table" {
+  name = module.common.performance-dynamodb-table
+}

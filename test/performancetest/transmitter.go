@@ -1,11 +1,9 @@
-
 package performancetest
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"strings"
@@ -49,96 +47,9 @@ func InitializeTransmitterAPI(DataBaseName string) *TransmitterAPI {
 		dynamoDbClient: dynamodb.NewFromConfig(cfg),
 		DataBaseName:   DataBaseName,
 	}
-	// check if the dynamo table exist if not create it
-	tableExist, err := transmitter.TableExist()
-	if err != nil {
-		return nil
-	}
-	if !tableExist {
-		fmt.Println("Table doesn't exist")
-		err := transmitter.CreateTable()
-		if err != nil {
-			return nil
-		}
-	}
 	fmt.Println("API ready")
 	return &transmitter
 
-}
-
-/*
-CreateTable()
-Desc: Will create a DynamoDB Table with given param. and config
-*/
-//add secondary index space vs time
-func (transmitter *TransmitterAPI) CreateTable() error {
-	_, err := transmitter.dynamoDbClient.CreateTable(
-		context.TODO(), &dynamodb.CreateTableInput{
-			AttributeDefinitions: []types.AttributeDefinition{
-				{
-					AttributeName: aws.String(PARTITION_KEY),
-					AttributeType: types.ScalarAttributeTypeN,
-				},
-				{
-					AttributeName: aws.String(COMMIT_DATE),
-					AttributeType: types.ScalarAttributeTypeN,
-				},
-				{
-					AttributeName: aws.String(HASH),
-					AttributeType: types.ScalarAttributeTypeS,
-				},
-			},
-			KeySchema: []types.KeySchemaElement{
-				{
-					AttributeName: aws.String(PARTITION_KEY),
-					KeyType:       types.KeyTypeHash,
-				},
-				{
-					AttributeName: aws.String(COMMIT_DATE),
-					KeyType:       types.KeyTypeRange,
-				},
-			},
-			GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{ // this make sure we can query hashes in O(1) time
-				{
-					IndexName: aws.String("Hash-index"),
-					KeySchema: []types.KeySchemaElement{
-						{
-							AttributeName: aws.String(HASH),
-							KeyType:       types.KeyTypeHash,
-						},
-						{
-							AttributeName: aws.String(COMMIT_DATE),
-							KeyType:       types.KeyTypeRange,
-						},
-					},
-					Projection: &types.Projection{
-						ProjectionType: "ALL",
-					},
-					ProvisionedThroughput: &types.ProvisionedThroughput{
-						ReadCapacityUnits:  aws.Int64(10),
-						WriteCapacityUnits: aws.Int64(10),
-					},
-				},
-			},
-			ProvisionedThroughput: &types.ProvisionedThroughput{
-				ReadCapacityUnits:  aws.Int64(10),
-				WriteCapacityUnits: aws.Int64(10),
-			},
-			TableName: aws.String(transmitter.DataBaseName),
-		}) // this is the config for the new table)
-	if err != nil {
-		fmt.Printf("Error calling CreateTable: %s", err)
-		return err
-	}
-	//https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GettingStarted.CreateTable.html
-	waiter := dynamodb.NewTableExistsWaiter(transmitter.dynamoDbClient)
-	err = waiter.Wait(context.TODO(), &dynamodb.DescribeTableInput{
-		TableName: aws.String(transmitter.DataBaseName)}, 5*time.Minute) //5 minutes is the timeout value for a table creation
-	if err != nil {
-		log.Printf("Wait for table exists failed. Here's why: %v\n", err)
-	}
-	fmt.Println("Created the table", transmitter.DataBaseName)
-	return nil
 }
 
 /*
@@ -146,8 +57,11 @@ AddItem()
 Desc: Takes in a packet and
 will convert to dynamodb format  and upload to dynamodb table.
 Param:
+
 	packet * map[string]interface{}:  is a map with data collection data
+
 Side effects:
+
 	Adds an item to dynamodb table
 */
 func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) (string, error) {
@@ -170,29 +84,6 @@ func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) (strin
 		fmt.Printf("Error adding item to table.  %v\n", err)
 	}
 	return fmt.Sprintf("%v", item), err
-}
-
-/*
-TableExist()
-Desc: Checks if the the table exist and returns the value
-//https://github.com/awsdocs/aws-doc-sdk-examples/blob/05a89da8c2f2e40781429a7c34cf2f2b9ae35f89/gov2/dynamodb/actions/table_basics.go
-*/
-func (transmitter *TransmitterAPI) TableExist() (bool, error) {
-	exists := true
-	_, err := transmitter.dynamoDbClient.DescribeTable(
-		context.TODO(), &dynamodb.DescribeTableInput{TableName: aws.String(transmitter.DataBaseName)},
-	)
-	if err != nil {
-		var notFoundEx *types.ResourceNotFoundException
-		if errors.As(err, &notFoundEx) {
-			fmt.Printf("Table %v does not exist.\n", transmitter.DataBaseName)
-			err = nil
-		} else {
-			fmt.Printf("Couldn't determine existence of table %v. Error: %v\n", transmitter.DataBaseName, err)
-		}
-		exists = false
-	}
-	return exists, err
 }
 
 /*
@@ -238,8 +129,11 @@ func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}, tps i
 /*
 PacketMerger()
 Desc:
+
 	This function updates the currentPacket with the unique parts of newPacket and returns in dynamo format
+
 Params:
+
 	newPacket: this is the agentData collected in this test
 	currentPacket: this is the agentData stored in dynamo currently
 */
@@ -282,8 +176,11 @@ func (transmitter *TransmitterAPI) PacketMerger(newPacket map[string]interface{}
 /*
 UpdateItem()
 Desc:
+
 	This function updates the item in dynamo if the atomic condition is true else it will return ConditionalCheckFailedException
+
 Params:
+
 	hash: this is the commitHash
 	targetAttributes: this is the targetAttribute to be added to the dynamo item
 	testHash: this is the hash of the last item, used like a version check
