@@ -27,7 +27,7 @@ func CopyFile(pathIn string, pathOut string) error {
 	}
 
 	log.Printf("File %s abs path %s", pathIn, pathInAbs)
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", "cp " + pathInAbs + " " + pathOut})
+	bashArgs := []string{"-NoProfile", "-NonInteractive", "-NoExit", "cp " + pathInAbs + " " + pathOut}
 	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil {
@@ -37,7 +37,46 @@ func CopyFile(pathIn string, pathOut string) error {
 
 	log.Printf("File : %s copied to : %s", pathIn, pathOut)
 	return nil
+}
 
+func DeleteFile(path string) error {
+	ps, err := exec.LookPath("powershell.exe")
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Delete file %s", path)
+	bashArgs := []string{"-NoProfile", "-NonInteractive", "-NoExit", "rm " + path}
+	out, err := exec.Command(ps, bashArgs...).Output()
+
+	if err != nil {
+		log.Printf("Delete file failed: %v; the output is: %s", err, string(out))
+		return err
+	}
+
+	log.Printf("Removed file: %s", path)
+	return nil
+}
+
+func TouchFile(path string) error {
+	ps, err := exec.LookPath("powershell.exe")
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Touch file %s", path)
+	bashArgs := []string{"-NoProfile", "-NonInteractive", "-NoExit", "Out-File", "-FilePath", path, "-Force", "-NoClobber", "-NoNewline"}
+	out, err := exec.Command(ps, bashArgs...).Output()
+
+	if err != nil {
+		log.Printf("Failed to create file: %v; output is : %s", err, string(out))
+		return err
+	}
+
+	log.Printf("Touched file: %s", path)
+	return nil
 }
 
 func StartAgent(configOutputPath string, fatalOnFailure bool) error {
