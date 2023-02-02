@@ -1,0 +1,34 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+output "testing_id" {
+  value = random_id.testing_id.hex
+}
+
+output "cwa_iam_role" {
+  value = "cwa-e2e-iam-role"
+}
+
+output "cwa_iam_policy" {
+  value = "cwa-e2e-iam-policy"
+}
+
+output "cwa_iam_instance_profile" {
+  value = "cwa-e2e-iam-instance-profile"
+}
+
+output "cwagent_image_repo" {
+  value = var.cwagent_image_repo
+}
+
+output "cwagent_image_tag" {
+  value = var.cwagent_image_tag
+}
+
+output "vpc_security_group" {
+  value = var.vpc_security_group
+}
+
+output "performance-dynamodb-table" {
+  value = "CWAPerformanceMetrics"
+}

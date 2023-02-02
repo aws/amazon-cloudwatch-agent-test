@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 variable "region" {
   type    = string
   default = "us-west-2"
@@ -76,7 +79,7 @@ variable "cwa_github_sha" {
 
 variable "github_test_repo" {
   type    = string
-  default = ""
+  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
 }
 
 variable "github_test_repo_branch" {

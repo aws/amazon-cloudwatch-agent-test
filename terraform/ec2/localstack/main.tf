@@ -1,8 +1,8 @@
-#####################################################################
-# Ensure there is unique testing_id for each test
-#####################################################################
-resource "random_id" "testing_id" {
-  byte_length = 8
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+module "common" {
+  source = "../../common"
 }
 
 #####################################################################
@@ -17,7 +17,7 @@ resource "tls_private_key" "ssh_key" {
 
 resource "aws_key_pair" "aws_ssh_key" {
   count      = var.ssh_key_name == "" ? 1 : 0
-  key_name   = "ec2-key-pair-${random_id.testing_id.hex}"
+  key_name   = "ec2-key-pair-${module.common.testing_id}"
   public_key = tls_private_key.ssh_key[0].public_key_openssh
 }
 
@@ -26,12 +26,16 @@ locals {
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
 }
 
+#####################################################################
+# Generate EC2 Instance and execute test commands
+#####################################################################
+
 resource "aws_instance" "integration-test" {
   ami                    = data.aws_ami.latest.id
   instance_type          = var.ec2_instance_type
   key_name               = local.ssh_key_name
-  iam_instance_profile   = aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids = [aws_security_group.ec2_security_group.id]
+  iam_instance_profile   = data.aws_iam_instance_profile.cwagent_instance_profile.name
+  vpc_security_group_ids = [data.aws_security_group.ec2_security_group.id]
   provisioner "remote-exec" {
     inline = [
       "cloud-init status --wait",
