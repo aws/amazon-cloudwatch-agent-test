@@ -19,7 +19,7 @@ func BuildDimensionFilterList(appendDimension int) ([]types.DimensionFilter, err
 	// we append dimension from 0 to max number - 2
 	// then we add dimension instance id
 	// thus for max dimension 10, 0 to 8 + instance id = 10 dimension
-	ec2InstanceId, err := AWS.ImdsAPI.GetInstanceId()
+	ec2InstanceId, err := GetInstanceId()
 
 	if err != nil {
 		return nil, err

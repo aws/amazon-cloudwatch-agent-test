@@ -124,7 +124,7 @@ func GetMetricDataWithCloudWatch(ids, metricNames []string, instanceId string, t
 	endTime := time.Unix(timeNow.Unix(), 0)
 	startTime := time.Unix(timeNow.Add(time.Duration(-timeDiff)*time.Minute).Unix(), 0)
 
-	return awsservice.AWS.CwmAPI.GetMetricData(metricDataQueries, startTime, endTime)
+	return awsservice.GetMetricData(metricDataQueries, startTime, endTime)
 }
 
 // ConstructMetricDataQuery is a helper function for GenerateGetMetricInputStruct and constructs individual metric requests

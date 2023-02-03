@@ -42,7 +42,7 @@ func TestPerformance(t *testing.T) {
 		t.Fatalf("Error: cannot convert test log number to integer, %v", err)
 	}
 
-	instanceId, err := awsservice.AWS.ImdsAPI.GetInstanceId()
+	instanceId, err := awsservice.GetInstanceId()
 
 	if err != nil {
 		t.Fatalf("Failed to get instance ID: %v", err)
@@ -50,7 +50,7 @@ func TestPerformance(t *testing.T) {
 
 	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
 
-	configFilePath, logStreams, err := GenerateConfig(logNum)
+	configFilePath, err := GenerateConfig(logNum)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -58,11 +58,7 @@ func TestPerformance(t *testing.T) {
 	//defer deleting log group and streams
 	//defer deleting log group first because golang handles defers in LIFO order
 	//and we want to delete the log group after deleting the log streamss
-	defer awsservice.AWS.CwlAPI.DeleteLogGroup(instanceId)
-
-	for _, logStream := range logStreams {
-		defer awsservice.AWS.CwlAPI.DeleteLogStream(instanceId, logStream)
-	}
+	defer awsservice.DeleteLogGroup(instanceId)
 
 	log.Printf("config generated at %s\n", configFilePath)
 	defer os.Remove(configFilePath)
@@ -124,18 +120,18 @@ func TestPerformance(t *testing.T) {
 * (log being monitored will be overwritten - it is needed for json structure)
 * returns the path of the config generated and a list of log stream names
  */
-func GenerateConfig(logNum int) (string, []string, error) {
+func GenerateConfig(logNum int) (string, error) {
 	var cfgFileData map[string]interface{}
 
 	//use default config (for metrics, structure, etc)
 	file, err := os.ReadFile("./resources/config.json")
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	err = json.Unmarshal(file, &cfgFileData)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	var logFiles []LogInfo
@@ -160,20 +156,20 @@ func GenerateConfig(logNum int) (string, []string, error) {
 
 	finalConfig, err := json.MarshalIndent(cfgFileData, "", " ")
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	configFilePath := fmt.Sprintf("./resources/config%d.json", logNum)
 	f, err := os.Create(configFilePath)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	defer f.Close()
 
 	f.Write(finalConfig)
 
-	return configFilePath, logStreams, nil
+	return configFilePath, nil
 }
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to

@@ -34,7 +34,7 @@ func (p *ContainerInsightsDimensionProvider) GetDimension(instruction Instructio
 
 	if instruction.Key == "ContainerInstanceId" {
 		//TODO currently assuming there's only one container
-		containerInstances, err := awsservice.AWS.EcsAPI.GetContainerInstances(p.Provider.env.EcsClusterArn)
+		containerInstances, err := awsservice.GetContainerInstances(p.Provider.env.EcsClusterArn)
 		if err != nil {
 			log.Print(err)
 			return types.Dimension{}

@@ -63,14 +63,14 @@ func init() {
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
-	instanceId, err := awsservice.AWS.ImdsAPI.GetInstanceId()
+	instanceId, err := awsservice.GetInstanceId()
 	log.Printf("Found instance id %s", instanceId)
 
 	if err != nil {
 		t.Fatalf("Failed to get instance ID: %v", err)
 	}
 
-	defer awsservice.AWS.CwlAPI.DeleteLogGroupAndLogStream(instanceId, instanceId)
+	defer awsservice.DeleteLogGroupAndLogStream(instanceId, instanceId)
 
 	f, err := os.Create(logFilePath)
 	if err != nil {
@@ -104,7 +104,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			t.Logf("Agent logs %s", agentLog)
 
 			// check CWL to ensure we got the expected number of logs in the log stream
-			err = awsservice.AWS.CwlAPI.ValidateNumberOfLogsFound(instanceId, instanceId, param.numExpectedLogs, start)
+			err = awsservice.ValidateNumberOfLogsFound(instanceId, instanceId, param.numExpectedLogs, start)
 
 			if err != nil {
 				t.Fatalf("Validate logs failed: %v", err)
@@ -122,7 +122,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	cfgFilePath := "resources/config_log_rotated.json"
 
-	instanceId, err := awsservice.AWS.ImdsAPI.GetInstanceId()
+	instanceId, err := awsservice.GetInstanceId()
 	if err != nil {
 		t.Fatalf("Failed to get instance ID: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 
 	logGroup := instanceId
 	logStream := instanceId + "Rotated"
-	defer awsservice.AWS.CwlAPI.DeleteLogGroupAndLogStream(logGroup, logStream)
+	defer awsservice.DeleteLogGroupAndLogStream(logGroup, logStream)
 
 	start := time.Now()
 	common.CopyFile(cfgFilePath, configOutputPath)
@@ -157,7 +157,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("09876", 10)),
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("1234567890", 10)),
 	}
-	err = awsservice.AWS.CwlAPI.ValidateLogsInOrder(logGroup, logStream, lines, start)
+	err = awsservice.ValidateLogsInOrder(logGroup, logStream, lines, start)
 	if err != nil {
 		t.Fatalf("Validate logs in ordered failed: %v", err)
 	}

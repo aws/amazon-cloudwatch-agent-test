@@ -41,13 +41,13 @@ func (r *ECSAgentRunStrategy) runAgent(e *environment.MetaData, configFilePath s
 
 	agentConfig := string(b)
 
-	err = awsservice.AWS.SsmAPI.PutStringParameter(e.CwagentConfigSsmParamName, agentConfig)
+	err = awsservice.PutStringParameter(e.CwagentConfigSsmParamName, agentConfig)
 	if err != nil {
 		return fmt.Errorf("failed while reading config file : %s", err.Error())
 	}
 	fmt.Print("Put parameter successful")
 
-	err = awsservice.AWS.EcsAPI.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
+	err = awsservice.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
 	if err != nil {
 		fmt.Print(err)
 	}

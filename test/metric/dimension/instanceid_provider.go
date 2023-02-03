@@ -30,7 +30,7 @@ func (p *ECSInstanceIdDimensionProvider) GetDimension(instruction Instruction) t
 	}
 
 	//TODO currently assuming there's only one container
-	containerInstances, err := awsservice.AWS.EcsAPI.GetContainerInstances(p.env.EcsClusterArn)
+	containerInstances, err := awsservice.GetContainerInstances(p.env.EcsClusterArn)
 	if err != nil {
 		log.Print(err)
 		return types.Dimension{}
@@ -60,7 +60,7 @@ func (p *LocalInstanceIdDimensionProvider) GetDimension(instruction Instruction)
 	if instruction.Key != "InstanceId" || instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}
-	ec2InstanceId, err := awsservice.AWS.ImdsAPI.GetInstanceId()
+	ec2InstanceId, err := awsservice.GetInstanceId()
 
 	if err != nil {
 		log.Print(err)

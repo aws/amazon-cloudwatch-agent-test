@@ -36,8 +36,8 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
 
-		if awsservice.AWS.CwlAPI.IsLogGroupExist(logGroupName) {
-			awsservice.AWS.CwlAPI.DeleteLogGroupAndLogStream(logGroupName, LogStreamName)
+		if awsservice.IsLogGroupExist(logGroupName) {
+			awsservice.DeleteLogGroupAndLogStream(logGroupName, LogStreamName)
 			break
 		}
 

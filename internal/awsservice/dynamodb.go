@@ -4,40 +4,19 @@
 package awsservice
 
 import (
-	"context"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-type dnmdbAPI interface {
-	AddPacketIntoDatabase(databaseName, conditionExpression string, packet interface{}, expressAttributesNames map[string]string) error
-	GetPacketInDatabase(databaseName, databaseIndexName, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues map[string]types.AttributeValue) ([]map[string]interface{}, error)
-	UpdatePacketInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error
-}
-
-type dynamodbSDK struct {
-	cxt            context.Context
-	dynamodbClient *dynamodb.Client
-}
-
-func NewDynamoDBSDKClient(cfg aws.Config, cxt context.Context) dnmdbAPI {
-	dynamodbClient := dynamodb.NewFromConfig(cfg)
-	return &dynamodbSDK{
-		cxt:            cxt,
-		dynamodbClient: dynamodbClient,
-	}
-}
-
-func (d *dynamodbSDK) AddPacketIntoDatabase(databaseName, conditionExpression string, packet interface{}, expressAttributesNames map[string]string) error {
+func AddPacketIntoDatabase(databaseName, conditionExpression string, packet interface{}, expressAttributesNames map[string]string) error {
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		return err
 	}
 
-	_, err = d.dynamodbClient.PutItem(d.cxt,
+	_, err = dynamodbClient.PutItem(cxt,
 		&dynamodb.PutItemInput{
 			Item:                     item,
 			TableName:                aws.String(databaseName),
@@ -48,10 +27,10 @@ func (d *dynamodbSDK) AddPacketIntoDatabase(databaseName, conditionExpression st
 	return err
 }
 
-func (d *dynamodbSDK) GetPacketInDatabase(databaseName, databaseIndexName, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues map[string]types.AttributeValue) ([]map[string]interface{}, error) {
+func GetPacketInDatabase(databaseName, databaseIndexName, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues map[string]types.AttributeValue) ([]map[string]interface{}, error) {
 	var packets []map[string]interface{}
 
-	data, err := d.dynamodbClient.Query(d.cxt, &dynamodb.QueryInput{
+	data, err := dynamodbClient.Query(cxt, &dynamodb.QueryInput{
 		TableName:                 aws.String(databaseName),
 		IndexName:                 aws.String(databaseIndexName),
 		KeyConditionExpression:    aws.String(conditionExpression),
@@ -68,8 +47,8 @@ func (d *dynamodbSDK) GetPacketInDatabase(databaseName, databaseIndexName, condi
 	return packets, nil
 }
 
-func (d *dynamodbSDK) UpdatePacketInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error {
-	_, err := d.dynamodbClient.UpdateItem(d.cxt, &dynamodb.UpdateItemInput{
+func UpdatePacketInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error {
+	_, err := dynamodbClient.UpdateItem(cxt, &dynamodb.UpdateItemInput{
 		TableName:                 aws.String(databaseName),
 		Key:                       databaseKey,
 		UpdateExpression:          aws.String(updateExpression),

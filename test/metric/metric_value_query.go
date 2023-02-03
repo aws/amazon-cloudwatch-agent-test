@@ -45,7 +45,7 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 	endTime := time.Now()
 	startTime := subtractMinutes(endTime, 10)
 
-	data, err := awsservice.AWS.CwmAPI.GetMetricData(metricDataQueries, startTime, endTime)
+	data, err := awsservice.GetMetricData(metricDataQueries, startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting metric data %v", err)
 	}

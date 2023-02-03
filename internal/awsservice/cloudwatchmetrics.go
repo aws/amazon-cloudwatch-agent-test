@@ -4,7 +4,6 @@
 package awsservice
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -13,32 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-type cwmAPI interface {
-	// ValidateMetric takes the metric name, metric dimension and metric namespace to know whether a metric is exist based on the previous parameters
-	ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error
-
-	// IsMetricSampleCountWithinBoundInclusive checking if certain metric's sample count is within the predefined bound interval
-	IsMetricSampleCountWithinBoundInclusive(metricName, namespace string, dimensions []types.Dimension, startTime, endTime time.Time, lowerBoundInclusive, upperBoundInclusive int, periodInSeconds int32) bool
-
-	// GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
-	GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error)
-}
-
-type cloudwatchSDK struct {
-	cxt      context.Context
-	cwClient *cloudwatch.Client
-}
-
-func NewCloudWatchSDKClient(cfg aws.Config, cxt context.Context) cwmAPI {
-	cwClient := cloudwatch.NewFromConfig(cfg)
-	return &cloudwatchSDK{
-		cxt:      cxt,
-		cwClient: cwClient,
-	}
-}
-
 // ValidateMetric takes the metric name, metric dimension and metric namespace to know whether a metric is exist based on the previous parametersfunc (c *cloudwatchConfig) ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error {
-func (c *cloudwatchSDK) ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error {
+func ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error {
 	listMetricsInput := cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
 		Namespace:      aws.String(namespace),
@@ -46,7 +21,7 @@ func (c *cloudwatchSDK) ValidateMetric(metricName, namespace string, dimensionsF
 		Dimensions:     dimensionsFilter,
 	}
 
-	data, err := c.cwClient.ListMetrics(c.cxt, &listMetricsInput)
+	data, err := cwmClient.ListMetrics(cxt, &listMetricsInput)
 	if err != nil {
 		return err
 	}
@@ -59,7 +34,7 @@ func (c *cloudwatchSDK) ValidateMetric(metricName, namespace string, dimensionsF
 }
 
 // isMetricSampleCountWithinBoundInclusive checking if certain metric's sample count is within the predefined bound interval
-func (c *cloudwatchSDK) IsMetricSampleCountWithinBoundInclusive(
+func IsMetricSampleCountWithinBoundInclusive(
 	metricName, namespace string,
 	dimensions []types.Dimension,
 	startTime, endTime time.Time,
@@ -75,7 +50,7 @@ func (c *cloudwatchSDK) IsMetricSampleCountWithinBoundInclusive(
 		Dimensions: dimensions,
 		Statistics: []types.Statistic{types.StatisticSampleCount},
 	}
-	data, err := c.cwClient.GetMetricStatistics(c.cxt, &metricStatsInput)
+	data, err := cwmClient.GetMetricStatistics(cxt, &metricStatsInput)
 
 	if err != nil {
 		return false
@@ -95,14 +70,14 @@ func (c *cloudwatchSDK) IsMetricSampleCountWithinBoundInclusive(
 }
 
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
-func (c *cloudwatchSDK) GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
+func getMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
 	getMetricDataInput := cloudwatch.GetMetricDataInput{
 		StartTime:         &startTime,
 		EndTime:           &endTime,
 		MetricDataQueries: metricDataQueries,
 	}
 
-	data, err := c.cwClient.GetMetricData(c.cxt, &getMetricDataInput)
+	data, err := cwmClient.GetMetricData(cxt, &getMetricDataInput)
 	if err != nil {
 		return nil, err
 	}

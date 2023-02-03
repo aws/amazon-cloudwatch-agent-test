@@ -11,27 +11,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
 
-type ssmAPI interface {
-	// PutStringParameter add a string parameter to the system. (e.g adding a CWA configuration to SSM)
-	PutStringParameter(name, value string) error
-}
-
 type ssmSDK struct {
 	cxt       context.Context
 	ssmClient *ssm.Client
 }
 
-func NewSSMSDKClient(cfg aws.Config, cxt context.Context) ssmAPI {
-	ssmClient := ssm.NewFromConfig(cfg)
-	return &ssmSDK{
-		cxt:       cxt,
-		ssmClient: ssmClient,
-	}
-}
-
 // PutStringParameter add a string parameter to the system. (e.g adding a CWA configuration to SSM)
-func (s *ssmSDK) PutStringParameter(name, value string) error {
-	_, err := s.ssmClient.PutParameter(s.cxt, &ssm.PutParameterInput{
+func PutStringParameter(name, value string) error {
+	_, err := ssmClient.PutParameter(cxt, &ssm.PutParameterInput{
 		Name:      aws.String(name),
 		Value:     aws.String(value),
 		Type:      types.ParameterTypeString,

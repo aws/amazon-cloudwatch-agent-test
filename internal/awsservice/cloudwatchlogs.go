@@ -4,7 +4,6 @@
 package awsservice
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -20,51 +19,10 @@ import (
 // are not useful exceptions to log errors on during cleanup
 var rnf *types.ResourceNotFoundException
 
-type cwlAPI interface {
-	// ValidateNumberOfLogsFound takes a log group and log stream, and fetches the log events via the GetLogEvents
-	// API for all the logs since a given timestamp, and checks if the number of log events matches
-	// the expected value.
-	ValidateNumberOfLogsFound(logGroup, logStream string, numExpectedLogs int, since time.Time) error
-
-	// ValidateLogsInOrder takes a log group, log stream, a list of specific log lines and a timestamp.
-	// It should query the given log stream for log events, and then confirm that the log lines that are
-	// returned match the expected log lines. This also sanitizes the log lines from both the output and
-	// the expected lines input to ensure that they don't diverge in JSON representation (" vs ')
-	ValidateLogsInOrder(logGroup, logStream string, logLines []string, since time.Time) error
-
-	// DeleteLogGroupAndLogStream cleans up a log group and stream by name. This gracefully handles
-	// ResourceNotFoundException errors from calling the APIs
-	DeleteLogGroupAndLogStream(logGroup, logStream string)
-
-	// DeleteLogStream cleans up a log  stream by name. This gracefully handles
-	// ResourceNotFoundException errors from calling the APIs
-	DeleteLogStream(logGroup, logStream string)
-
-	// DeleteLogGroup cleans up a log group  by name. This gracefully handles
-	// ResourceNotFoundException errors from calling the APIs
-	DeleteLogGroup(logGroup string)
-
-	// IsLogGroupExist confirms whether the logGroupName exists or not
-	IsLogGroupExist(logGroup string) bool
-}
-
-type cloudwatchLogSDK struct {
-	cxt       context.Context
-	cwlClient *cloudwatchlogs.Client
-}
-
-func NewCloudWatchLogsSDKClient(cfg aws.Config, cxt context.Context) cwlAPI {
-	cwlClient := cloudwatchlogs.NewFromConfig(cfg)
-	return &cloudwatchLogSDK{
-		cxt:       cxt,
-		cwlClient: cwlClient,
-	}
-}
-
 // ValidateNumberOfLogsFound takes a log group and log stream, and fetches the log events via the GetLogEvents
 // API for all the logs since a given timestamp, and checks if the number of log events matches
 // the expected value.
-func (c *cloudwatchLogSDK) ValidateNumberOfLogsFound(logGroup, logStream string, numExpectedLogs int, since time.Time) error {
+func ValidateNumberOfLogsFound(logGroup, logStream string, numExpectedLogs int, since time.Time) error {
 	log.Printf("Checking %s/%s since %s for %d expected logs", logGroup, logStream, since.UTC().Format(time.RFC3339), numExpectedLogs)
 
 	var (
@@ -88,7 +46,7 @@ func (c *cloudwatchLogSDK) ValidateNumberOfLogsFound(logGroup, logStream string,
 			params.NextToken = nextToken
 		}
 
-		output, err := c.cwlClient.GetLogEvents(c.cxt, params)
+		output, err := cwlClient.GetLogEvents(cxt, params)
 
 		attempts += 1
 
@@ -124,7 +82,7 @@ func (c *cloudwatchLogSDK) ValidateNumberOfLogsFound(logGroup, logStream string,
 // It should query the given log stream for log events, and then confirm that the log lines that are
 // returned match the expected log lines. This also sanitizes the log lines from both the output and
 // the expected lines input to ensure that they don't diverge in JSON representation (" vs ')
-func (c *cloudwatchLogSDK) ValidateLogsInOrder(logGroup, logStream string, logLines []string, since time.Time) error {
+func ValidateLogsInOrder(logGroup, logStream string, logLines []string, since time.Time) error {
 	var (
 		nextToken *string
 		attempts  = 0
@@ -149,7 +107,7 @@ func (c *cloudwatchLogSDK) ValidateLogsInOrder(logGroup, logStream string, logLi
 			params.NextToken = nextToken
 		}
 
-		output, err := c.cwlClient.GetLogEvents(c.cxt, params)
+		output, err := cwlClient.GetLogEvents(cxt, params)
 
 		attempts += 1
 
@@ -193,9 +151,9 @@ func (c *cloudwatchLogSDK) ValidateLogsInOrder(logGroup, logStream string, logLi
 }
 
 // IsLogGroupExist confirms whether the logGroupName exists or not
-func (c *cloudwatchLogSDK) IsLogGroupExist(logGroup string) bool {
+func IsLogGroupExist(logGroup string) bool {
 
-	describeLogGroupOutput, err := c.cwlClient.DescribeLogGroups(c.cxt, &cloudwatchlogs.DescribeLogGroupsInput{
+	describeLogGroupOutput, err := cwlClient.DescribeLogGroups(cxt, &cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(logGroup),
 	})
 
@@ -212,13 +170,13 @@ func (c *cloudwatchLogSDK) IsLogGroupExist(logGroup string) bool {
 
 // DeleteLogGroupAndLogStream cleans up a log group and stream by name. This gracefully handles
 // ResourceNotFoundException errors from calling the APIs
-func (c *cloudwatchLogSDK) DeleteLogGroupAndLogStream(logGroup, logStream string) {
-	c.DeleteLogStream(logGroup, logStream)
-	c.DeleteLogGroup(logGroup)
+func DeleteLogGroupAndLogStream(logGroup, logStream string) {
+	DeleteLogStream(logGroup, logStream)
+	DeleteLogGroup(logGroup)
 }
 
-func (c *cloudwatchLogSDK) DeleteLogStream(logGroup, logStream string) {
-	_, err := c.cwlClient.DeleteLogStream(c.cxt, &cloudwatchlogs.DeleteLogStreamInput{
+func DeleteLogStream(logGroup, logStream string) {
+	_, err := cwlClient.DeleteLogStream(cxt, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroup),
 		LogStreamName: aws.String(logStream),
 	})
@@ -227,8 +185,8 @@ func (c *cloudwatchLogSDK) DeleteLogStream(logGroup, logStream string) {
 	}
 }
 
-func (c *cloudwatchLogSDK) DeleteLogGroup(logGroupName string) {
-	_, err := c.cwlClient.DeleteLogGroup(c.cxt, &cloudwatchlogs.DeleteLogGroupInput{
+func DeleteLogGroup(logGroupName string) {
+	_, err := cwlClient.DeleteLogGroup(cxt, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
 	if err != nil && !errors.As(err, &rnf) {
