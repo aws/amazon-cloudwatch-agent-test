@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/performance"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/stress"
 )
 
@@ -16,6 +17,8 @@ func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFact
 	switch vConfig.GetValidateType() {
 	case "stress":
 		validator = stress.NewStressValidator(vConfig)
+	case "performance":
+		validator = performance.NewPerformanceValidator(vConfig)
 	default:
 		return nil, fmt.Errorf("unknown validation type %s provided by test case %s", vConfig.GetValidateType(), vConfig.GetTestCase())
 	}

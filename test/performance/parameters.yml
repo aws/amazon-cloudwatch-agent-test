@@ -1,17 +1,20 @@
-receivers: ["statsd"]
+receivers: ["procstat"]
 processors: []
-exporters: []
+exporters: ["cloudwatch"]
 
 test_case: "statsd_stress"
-validate_type: "stress"
-data_type: "metrics"
+validate_type: "performance"
+data_type: "logs"
 data_rate: "<data_rate>"
 datapoint_period: 60
+
+commit_hash: <commit_hash>
+commit_date: <commit_date>
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 
 # Metric that the test needs to validate
-metric_namespace: "CloudWatchAgentStress"
+metric_namespace: "CloudWatchAgentPerformance"
 metric_validation: 
   - metric_name: "procstat_cpu_usage"
     metric_dimension: 

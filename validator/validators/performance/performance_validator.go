@@ -1,24 +1,33 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package stress
+package performance
 
 import (
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/google/uuid"
+	"github.com/cenkalti/backoff/v4"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
-type MetricPluginBoundValue map[string]map[string]map[string]float64
+const (
+	DynamoDBDataBase = "CWAPerformanceMetrics"
+	RELEASE_NAME_ENV = "RELEASE_NAME"
+	IS_RELEASE       = "isRelease"
+)
+
+var (
+	metricsConvertToMB = []string{"memory_rss", "memory_swap", "memory_vms", "write_bytes", "bytes_sent"}
+)
 
 type PerformanceValidator struct {
 	vConfig models.ValidateConfig
@@ -51,18 +60,14 @@ func (s *PerformanceValidator) InitValidation() (err error) {
 }
 
 func (s *PerformanceValidator) StartValidation(startTime, endTime time.Time) error {
-	var (
-		ec2InstanceId    = awsservice.GetInstanceId()
-		metricNamespace  = s.vConfig.GetMetricNamespace()
-		validationMetric = s.vConfig.GetMetricValidation()
-	)
-
-	packet, err := s.GetPerformanceMetrics(startTime, endTime)
-	if err != nil || packet == nil {
+	metrics, err := s.GetPerformanceMetrics(startTime, endTime)
+	if err != nil {
 		return err
 	}
 
-	_, err = dynamoDB.SendItem(data, tps)
+	perfInfo := s.CalculateMetricStatsAndPackMetrics(metrics.MetricDataResults)
+
+	err = s.SendPacketToDatabase(perfInfo)
 	if err != nil {
 		return err
 	}
@@ -82,11 +87,64 @@ func (s *PerformanceValidator) EndValidation() error {
 	return nil
 }
 
-func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Time) (map[string]interface{}, error) {
+func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformation) error {
 	var (
-		ec2InstanceId                = awsservice.GetInstanceId()
+		receivers, processors, exporters = s.vConfig.GetOtelConfig()
+		commitHash, commitDate           = s.vConfig.GetCommitInformation()
+	)
+
+	err := backoff.Retry(func() error {
+		existingPerfInfo, err := awsservice.GetPacketInDatabase(DynamoDBDataBase, "CommitHash", commitHash, perfInfo)
+		if err != nil {
+			return err
+		}
+
+		// Get the latest performance information from the database and update by merging the existing one
+		// and finally replace the packet in the database
+		maps.Copy(existingPerfInfo["Results"].(map[string]interface{}), perfInfo["Results"].(map[string]interface{}))
+		finalPerfInfo := PackIntoPerformanceInformation(receivers, processors, exporters, commitHash, commitDate, false, existingPerfInfo["Results"])
+
+		err = awsservice.ReplacePacketInDatabase(DynamoDBDataBase, finalPerfInfo)
+
+		if err != nil {
+			return err
+		}
+		return nil
+	}, awsservice.StandardExponentialBackoff)
+
+	return err
+}
+func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []types.MetricDataResult) PerformanceInformation {
+	var (
+		receivers, processors, exporters = s.vConfig.GetOtelConfig()
+		commitHash, commitDate           = s.vConfig.GetCommitInformation()
+		dataRate                         = fmt.Sprint(s.vConfig.GetDataRate())
+		datapointPeriod                  = s.vConfig.GetDataPointPeriod().Seconds()
+	)
+	performanceMetricResults := make(map[string]Stats)
+
+	for _, metric := range metrics {
+		metricLabel := strings.Split(*metric.Label, " ")
+		metricName := metricLabel[len(metricLabel)-1]
+		metricValues := metric.Values
+		//Convert every bytes to MB
+		if slices.Contains(metricsConvertToMB, metricName) {
+			for i, val := range metricValues {
+				metricValues[i] = val / (1000000)
+			}
+		}
+		metricStats := CalculateMetricStatisticsBasedOnDataAndPeriod(metricValues, datapointPeriod)
+		performanceMetricResults[metricName] = metricStats
+	}
+
+	return PackIntoPerformanceInformation(receivers, processors, exporters, commitHash, commitDate, false, map[string]interface{}{dataRate: performanceMetricResults})
+}
+
+func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
+	var (
 		metricNamespace              = s.vConfig.GetMetricNamespace()
 		validationMetric             = s.vConfig.GetMetricValidation()
+		ec2InstanceId                = awsservice.GetInstanceId()
 		performanceMetricDataQueries = []types.MetricDataQuery{}
 	)
 	for _, metric := range validationMetric {
@@ -113,38 +171,10 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 		return nil, err
 	}
 
-	//craft packet to be sent to database
-	packet := make(map[string]interface{})
-	//add information about current release/commit
-	packet[PARTITION_KEY] = time.Now().Year()
-	packet[HASH] = os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
-	packet[COMMIT_DATE], _ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
-	packet[IS_RELEASE] = false
-	//add test metadata
-	packet[TEST_ID] = uuid.New().String()
-	testSettings := fmt.Sprintf("%d-%d", logNum, tps)
-	testMetricResults := make(map[string]Stats)
-
-	//add actual test data with statistics
-	for _, result := range metrics.MetricDataResults {
-		//convert memory bytes to MB
-		if *result.Label == "procstat_memory_rss" {
-			for i, val := range result.Values {
-				result.Values[i] = val / (1000000)
-			}
-		}
-		stats := CalcStats(result.Values)
-		testMetricResults[*result.Label] = stats
-	}
-	packet[RESULTS] = map[string]map[string]Stats{testSettings: testMetricResults}
-	return packet, nil
+	return metrics, nil
 }
 
 func (s *PerformanceValidator) buildStressMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {
-	var (
-		metricQueryPeriod = int32(s.vConfig.GetDataPointPeriod().Seconds())
-	)
-
 	metricInformation := types.Metric{
 		Namespace:  aws.String(metricNamespace),
 		MetricName: aws.String(metricName),
@@ -154,10 +184,22 @@ func (s *PerformanceValidator) buildStressMetricQueries(metricName, metricNamesp
 	metricDataQuery := types.MetricDataQuery{
 		MetricStat: &types.MetricStat{
 			Metric: &metricInformation,
-			Period: &metricQueryPeriod,
-			Stat:   aws.String(string(models.MAXIMUM)),
+			Period: aws.Int32(10),
+			Stat:   aws.String(string(models.AVERAGE)),
 		},
 		Id: aws.String(strings.ToLower(metricName)),
 	}
 	return metricDataQuery
+}
+
+func PackIntoPerformanceInformation(receivers, processors, exporters []string, commitHash string, commitDate int64, isRelease bool, result interface{}) PerformanceInformation {
+	return PerformanceInformation{
+		"Receivers":  receivers,
+		"Processors": processors,
+		"Exporters":  exporters,
+		"CommitHash": commitHash,
+		"CommitDate": commitDate,
+		"IsRelease":  isRelease,
+		"Results":    result,
+	}
 }

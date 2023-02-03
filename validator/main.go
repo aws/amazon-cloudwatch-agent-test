@@ -66,15 +66,18 @@ func validate(vConfig models.ValidateConfig) error {
 
 func prepare(vConfig models.ValidateConfig) error {
 	var (
+		err                 error
 		dataType            = vConfig.GetDataType()
 		dataRate            = vConfig.GetDataRate()
 		agentConfigFilePath = vConfig.GetCloudWatchAgentConfigPath()
 	)
+	log.Printf("helloo")
 	switch dataType {
 	case "logs":
-		common.GenerateLogConfig(dataRate, agentConfigFilePath)
+		log.Printf("LLLLL")
+		err = common.GenerateLogConfig(dataRate, agentConfigFilePath)
 	default:
 	}
 
-	return nil
+	return err
 }

@@ -100,10 +100,6 @@ func getLogFilePaths(configPath string) ([]string, error) {
 * returns the path of the config generated and a list of log stream names
  */
 func GenerateLogConfig(numberOfLogs int, filePath string) error {
-	var (
-		cfgFileData map[string]interface{}
-	)
-
 	type LogInfo struct {
 		FilePath      string `json:"file_path"`
 		LogGroupName  string `json:"log_group_name"`
@@ -111,18 +107,20 @@ func GenerateLogConfig(numberOfLogs int, filePath string) error {
 		Timezone      string `json:"timezone"`
 	}
 
-	//use default config (for metrics, structure, etc)
-	file, err := os.Open(filePath)
+	var cfgFileData map[string]interface{}
+	// For metrics and traces, we will keep the default config while log will be appended dynamically
+	file, err := os.OpenFile(filePath, os.O_RDWR, 0644)
 	if err != nil {
+		log.Printf("fail here?")
 		return err
 	}
 	defer file.Close()
-
+	log.Printf("fail 1")
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}
-
+	log.Printf("fail here")
 	err = json.Unmarshal(fileBytes, &cfgFileData)
 	if err != nil {
 		return err
@@ -131,12 +129,10 @@ func GenerateLogConfig(numberOfLogs int, filePath string) error {
 	var logFiles []LogInfo
 
 	for i := 0; i < numberOfLogs; i++ {
-		logStream := fmt.Sprintf("{instance_id}/tmp%d", i+1)
-
 		logFiles = append(logFiles, LogInfo{
 			FilePath:      fmt.Sprintf("/tmp/test%d.log", i+1),
 			LogGroupName:  "{instance_id}",
-			LogStreamName: logStream,
+			LogStreamName: fmt.Sprintf("{instance_id}/tmp%d", i+1),
 			Timezone:      "UTC",
 		})
 	}
@@ -145,12 +141,15 @@ func GenerateLogConfig(numberOfLogs int, filePath string) error {
 
 	cfgFileData["logs"].(map[string]interface{})["logs_collected"].(map[string]interface{})["files"].(map[string]interface{})["collect_list"] = logFiles
 
+	log.Printf("Logs %v", cfgFileData)
 	finalConfig, err := json.MarshalIndent(cfgFileData, "", " ")
 	if err != nil {
 		return err
 	}
 
-	file.Write(finalConfig)
-
+	_, err = file.WriteAt(finalConfig, 0)
+	if err != nil {
+		return err
+	}
 	return nil
 }

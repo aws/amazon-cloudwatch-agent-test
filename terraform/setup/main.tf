@@ -11,30 +11,16 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
   name           = module.common.performance-dynamodb-table
   read_capacity  = 10
   write_capacity = 10
-  hash_key       = "Year"
+  hash_key       = "CommitHash"
   range_key      = "CommitDate"
 
   attribute {
-    name = "Year"
-    type = "N"
-  }
-
-  attribute {
-    name = "Hash"
+    name = "CommitHash"
     type = "S"
   }
 
   attribute {
     name = "CommitDate"
     type = "N"
-  }
-
-  global_secondary_index {
-    name            = "Hash-index"
-    hash_key        = "Hash"
-    range_key       = "CommitDate"
-    write_capacity  = 10
-    read_capacity   = 10
-    projection_type = "ALL"
   }
 }

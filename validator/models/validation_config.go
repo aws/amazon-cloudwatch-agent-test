@@ -23,6 +23,7 @@ type ValidateConfig interface {
 	GetDataPointPeriod() time.Duration
 	GetMetricNamespace() string
 	GetMetricValidation() []MetricValidation
+	GetCommitInformation() (string, int64)
 }
 type validatorConfig struct {
 	Receivers  []string `yaml:"receivers"`
@@ -39,6 +40,9 @@ type validatorConfig struct {
 
 	MetricNamespace  string             `yaml:"metric_namespace"`
 	MetricValidation []MetricValidation `yaml:"metric_validation"`
+
+	CommitHash string `yaml:"commit_hash"`
+	CommitDate string `yaml:"commit_date"`
 }
 
 type MetricValidation struct {
@@ -103,4 +107,9 @@ func (v *validatorConfig) GetMetricNamespace() string {
 
 func (v *validatorConfig) GetMetricValidation() []MetricValidation {
 	return v.MetricValidation
+}
+
+func (v *validatorConfig) GetCommitInformation() (string, int64) {
+	commitDate, _ := strconv.ParseInt(v.CommitDate, 10, 64)
+	return v.CommitHash, commitDate
 }
