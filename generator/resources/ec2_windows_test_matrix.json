@@ -2,6 +2,8 @@
   {
     "os": "win-2022",
     "instanceType":"t3a.medium",
-    "ami": "cloudwatch-agent-integration-test-win-2022*"
+    "ami": "cloudwatch-agent-integration-test-win-2022*",
+    "arc": "amd64",
+    "installAgentCommand": "msiexec /i amazon-cloudwatch-agent.msi"
   }
 ]
