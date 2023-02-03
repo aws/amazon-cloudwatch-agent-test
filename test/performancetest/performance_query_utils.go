@@ -1,7 +1,6 @@
 package performancetest
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
@@ -104,7 +103,7 @@ func GetConfigMetrics(configPath string) ([]string, []string, error) {
 }
 
 // GenerateGetMetricInputStruct generates the struct required to make a query request to cloudwatch's GetMetrics
-func GenerateGetMetricInputStruct(ids, metricNames []string, instanceId string, timeDiff int) (*cloudwatch.GetMetricDataInput, error) {
+func GetMetricDataWithCloudWatch(ids, metricNames []string, instanceId string, timeDiff int) (*cloudwatch.GetMetricDataOutput, error) {
 	if len(ids) != len(metricNames) {
 		return nil, errors.New("Mismatching lengths of metric ids and metricNames")
 	}
@@ -122,13 +121,10 @@ func GenerateGetMetricInputStruct(ids, metricNames []string, instanceId string, 
 	}
 
 	timeNow := time.Now()
-	input := &cloudwatch.GetMetricDataInput{
-		EndTime:           aws.Time(time.Unix(timeNow.Unix(), 0)),
-		StartTime:         aws.Time(time.Unix(timeNow.Add(time.Duration(-timeDiff)*time.Minute).Unix(), 0)),
-		MetricDataQueries: metricDataQueries,
-	}
+	endTime := time.Unix(timeNow.Unix(), 0)
+	startTime := time.Unix(timeNow.Add(time.Duration(-timeDiff)*time.Minute).Unix(), 0)
 
-	return input, nil
+	return awsservice.AWS.CwmAPI.GetMetricData(metricDataQueries, startTime, endTime)
 }
 
 // ConstructMetricDataQuery is a helper function for GenerateGetMetricInputStruct and constructs individual metric requests
@@ -154,15 +150,7 @@ func ConstructMetricDataQuery(id, namespace, dimensionName, dimensionValue, metr
 	return query
 }
 
-func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, agentContext context.Context, configPath string) (map[string]interface{}, error) {
-
-	//load default configuration
-	cfg, err := config.LoadDefaultConfig(agentContext)
-	if err != nil {
-		return nil, err
-	}
-
-	client := cloudwatch.NewFromConfig(cfg)
+func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, configPath string) (map[string]interface{}, error) {
 
 	//fetch names of metrics to request and generate corresponding ids
 	metricNames, ids, err := GetConfigMetrics(configPath)
@@ -171,13 +159,7 @@ func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, age
 	}
 
 	//make input struct
-	input, err := GenerateGetMetricInputStruct(ids, metricNames, instanceId, agentRuntime)
-	if err != nil {
-		return nil, err
-	}
-
-	//call to CloudWatch API
-	metrics, err := client.GetMetricData(agentContext, input)
+	metrics, err := GetMetricDataWithCloudWatch(ids, metricNames, instanceId, agentRuntime)
 	if err != nil {
 		return nil, err
 	}
