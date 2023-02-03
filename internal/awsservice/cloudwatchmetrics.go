@@ -70,7 +70,7 @@ func IsMetricSampleCountWithinBoundInclusive(
 }
 
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
-func getMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
+func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
 	getMetricDataInput := cloudwatch.GetMetricDataInput{
 		StartTime:         &startTime,
 		EndTime:           &endTime,

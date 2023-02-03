@@ -1,11 +1,9 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
 //go:build !windows
 
 package performancetest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -15,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
@@ -25,6 +24,12 @@ const (
 	DynamoDBDataBase    = "CWAPerformanceMetrics"
 	testLogNum          = "PERFORMANCE_NUMBER_OF_LOGS"
 )
+
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+}
 
 // this struct is derived from plugins/inputs/logfile FileConfig struct
 type LogInfo struct {
@@ -42,12 +47,8 @@ func TestPerformance(t *testing.T) {
 		t.Fatalf("Error: cannot convert test log number to integer, %v", err)
 	}
 
-	instanceId, err := awsservice.GetInstanceId()
-
-	if err != nil {
-		t.Fatalf("Failed to get instance ID: %v", err)
-	}
-
+	agentContext := context.TODO()
+	instanceId := awsservice.GetInstanceId()
 	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
 
 	configFilePath, err := GenerateConfig(logNum)
@@ -55,9 +56,6 @@ func TestPerformance(t *testing.T) {
 		t.Fatalf("Error: %v", err)
 	}
 
-	//defer deleting log group and streams
-	//defer deleting log group first because golang handles defers in LIFO order
-	//and we want to delete the log group after deleting the log streamss
 	defer awsservice.DeleteLogGroup(instanceId)
 
 	log.Printf("config generated at %s\n", configFilePath)
@@ -79,11 +77,12 @@ func TestPerformance(t *testing.T) {
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
 			common.CopyFile(configFilePath, configOutputPath)
+
 			common.StartAgent(configOutputPath, true)
 
 			agentRunDuration := agentRuntimeMinutes * time.Minute
 
-			err = StartLogWrite(agentRunDuration, configFilePath, tps)
+			err := StartLogWrite(agentRunDuration, configFilePath, tps)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}
@@ -92,7 +91,7 @@ func TestPerformance(t *testing.T) {
 			common.StopAgent()
 
 			//collect data
-			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, logNum, tps, configFilePath)
+			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, logNum, tps, agentContext, configFilePath)
 
 			//@TODO check if metrics are zero remove them and make sure there are non-zero metrics existing
 			if err != nil {
@@ -105,7 +104,7 @@ func TestPerformance(t *testing.T) {
 			// this print shows the sendItem packet,it can be used to debug attribute issues
 			fmt.Printf("%v \n", data)
 
-			err = dynamoDB.SendItem(data, tps)
+			_, err = dynamoDB.SendItem(data, tps)
 			if err != nil {
 				t.Fatalf("Error: couldn't upload metric data to table, %v", err)
 			}
@@ -135,19 +134,16 @@ func GenerateConfig(logNum int) (string, error) {
 	}
 
 	var logFiles []LogInfo
-	var logStreams []string
 
 	for i := 0; i < logNum; i++ {
-		logStream := fmt.Sprintf("{instance_id}/tmp%d", i+1)
 
 		logFiles = append(logFiles, LogInfo{
 			FilePath:      fmt.Sprintf("/tmp/test%d.log", i+1),
 			LogGroupName:  "{instance_id}",
-			LogStreamName: logStream,
+			LogStreamName: fmt.Sprintf("{instance_id}/tmp%d", i+1),
 			Timezone:      "UTC",
 		})
 
-		logStreams = append(logStreams, logStream)
 	}
 
 	log.Printf("Writing config file with %d logs to ./resources/config%d.json\n", logNum, logNum)

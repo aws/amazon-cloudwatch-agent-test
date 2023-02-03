@@ -7,12 +7,12 @@
 package metrics_nvidia_gpu
 
 import (
-	"testing"
-	"time"
-
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"testing"
+	"time"
 )
 
 const (
@@ -24,7 +24,14 @@ const (
 	numberofWindowsAppendDimensions = 1
 )
 
-var expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use", "nvidia_smi utilization_gpu", "nvidia_smi utilization_memory", "nvidia_smi power_draw", "nvidia_smi temperature_gpu"}
+var (
+	envMetaDataStrings              = &(environment.MetaDataStrings{})
+	expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use", "nvidia_smi utilization_gpu", "nvidia_smi utilization_memory", "nvidia_smi power_draw", "nvidia_smi temperature_gpu"}
+)
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+}
 
 func TestNvidiaGPUWindows(t *testing.T) {
 	t.Run("Run CloudWatchAgent with Nvidia-smi on Windows", func(t *testing.T) {
@@ -55,7 +62,7 @@ func TestNvidiaGPUWindows(t *testing.T) {
 		}
 
 		for _, metricName := range expectedNvidiaGPUWindowsMetrics {
-			if err := awsservice.ValidateMetrics(metricName, metricWindowsnamespace, dimensionFilter); err != nil {
+			if err := awsservice.ValidateMetric(metricName, metricWindowsnamespace, dimensionFilter); err != nil {
 				t.Fatalf("Failed to get the corresponding metrics %s: %v", metricName, err)
 			}
 		}

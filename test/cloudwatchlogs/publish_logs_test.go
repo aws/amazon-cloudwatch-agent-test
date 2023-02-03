@@ -63,12 +63,8 @@ func init() {
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
-	instanceId, err := awsservice.GetInstanceId()
+	instanceId := awsservice.GetInstanceId()
 	log.Printf("Found instance id %s", instanceId)
-
-	if err != nil {
-		t.Fatalf("Failed to get instance ID: %v", err)
-	}
 
 	defer awsservice.DeleteLogGroupAndLogStream(instanceId, instanceId)
 
@@ -122,10 +118,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	cfgFilePath := "resources/config_log_rotated.json"
 
-	instanceId, err := awsservice.GetInstanceId()
-	if err != nil {
-		t.Fatalf("Failed to get instance ID: %v", err)
-	}
+	instanceId := awsservice.GetInstanceId()
 
 	log.Printf("Found instance id %s", instanceId)
 
@@ -157,7 +150,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("09876", 10)),
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("1234567890", 10)),
 	}
-	err = awsservice.ValidateLogsInOrder(logGroup, logStream, lines, start)
+	err := awsservice.ValidateLogsInOrder(logGroup, logStream, lines, start)
 	if err != nil {
 		t.Fatalf("Validate logs in ordered failed: %v", err)
 	}

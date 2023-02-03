@@ -1,14 +1,23 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build !windows
+
 package ca_bundle
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -20,10 +29,17 @@ const (
 	configJSON             = "/config.json"
 	commonConfigTOML       = "/common-config.toml"
 	targetString           = "x509: certificate signed by unknown authority"
-)
 
-// Let the agent run for 30 seconds. This will give agent enough time to call server
-const agentRuntime = 30 * time.Second
+	// Let the agent run for 30 seconds. This will give agent enough time to call server
+	agentRuntime         = 30 * time.Second
+	localstackS3Key      = "integration-test/ls_tmp/%s"
+	keyDelimiter         = "/"
+	localstackConfigPath = "../../localstack/ls_tmp/"
+	originalPem          = "original.pem"
+	combinePem           = "combine.pem"
+	snakeOilPem          = "snakeoil.pem"
+	tmpDirectory         = "/tmp/"
+)
 
 type input struct {
 	findTarget bool
@@ -39,6 +55,8 @@ func init() {
 // Must run this test with parallel 1 since this will fail if more than one test is running at the same time
 // This test uses a pem file created for the local stack endpoint to be able to connect via ssl
 func TestBundle(t *testing.T) {
+	metadata := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	setUpLocalstackConfig(metadata)
 
 	parameters := []input{
 		//Use the system pem ca bundle  + local stack pem file ssl should connect thus target string not found
@@ -76,4 +94,67 @@ func outputLogContainsTarget(output string) bool {
 	contains := strings.Contains(output, targetString)
 	log.Printf("Log file contains target string %t", contains)
 	return contains
+}
+
+// Get localstack pem files
+func setUpLocalstackConfig(metadata *environment.MetaData) {
+	// Download localstack config files
+	prefix := fmt.Sprintf(localstackS3Key, metadata.CwaCommitSha)
+	cxt := context.Background()
+	cfg, err := config.LoadDefaultConfig(cxt)
+	if err != nil {
+		log.Fatalf("Can't get config error: %v", err)
+	}
+	client := s3.NewFromConfig(cfg)
+	listObjectsInput := &s3.ListObjectsV2Input{
+		Bucket: aws.String(metadata.Bucket),
+		Prefix: aws.String(prefix),
+	}
+	listObjectsOutput, err := client.ListObjectsV2(cxt, listObjectsInput)
+	if err != nil {
+		log.Fatalf("Got error retrieving list of objects %v", err)
+	}
+	downloader := manager.NewDownloader(client)
+	for _, object := range listObjectsOutput.Contents {
+		key := *object.Key
+		log.Printf("Download object %s", key)
+		keySplit := strings.Split(key, keyDelimiter)
+		fileName := keySplit[len(keySplit)-1]
+		file, err := os.Create(localstackConfigPath + fileName)
+		if err != nil {
+			log.Println(err)
+		}
+		defer file.Close()
+		_, err = downloader.Download(cxt, file, &s3.GetObjectInput{
+			Bucket: aws.String(metadata.Bucket),
+			Key:    aws.String(key),
+		})
+		if err != nil {
+			log.Printf("Error downing file %s error %v", key, err)
+		}
+	}
+
+	// generate localstack crt files
+	writeFile(localstackConfigPath+originalPem, readFile(metadata.CaCertPath))
+	writeFile(localstackConfigPath+combinePem, readFile(metadata.CaCertPath))
+	writeFile(localstackConfigPath+combinePem, readFile(localstackConfigPath+snakeOilPem))
+
+	// copy crt files to agent directory
+	writeFile(tmpDirectory+originalPem, readFile(localstackConfigPath+originalPem))
+	writeFile(tmpDirectory+combinePem, readFile(localstackConfigPath+combinePem))
+}
+
+func readFile(path string) []byte {
+	file, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatalf("Failed to read file %s error %v", path, err)
+	}
+	return file
+}
+
+func writeFile(path string, output []byte) {
+	err := os.WriteFile(path, output, 0644)
+	if err != nil {
+		log.Fatalf("Error writting file %s, error %v,", path, err)
+	}
 }

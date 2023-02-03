@@ -1,8 +1,8 @@
 #####################################################################
 # Ensure there is unique testing_id for each test
 #####################################################################
-resource "random_id" "testing_id" {
-  byte_length = 8
+module "common" {
+  source = "../common"
 }
 
 #####################################################################
@@ -17,7 +17,7 @@ resource "tls_private_key" "ssh_key" {
 
 resource "aws_key_pair" "aws_ssh_key" {
   count      = var.ssh_key_name == "" ? 1 : 0
-  key_name   = "ec2-key-pair-${random_id.testing_id.hex}"
+  key_name   = "ec2-key-pair-${module.common.testing_id}"
   public_key = tls_private_key.ssh_key[0].public_key_openssh
 }
 
@@ -33,12 +33,12 @@ resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
+  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
 
   tags = {
-    Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
+    Name = "cwagent-performance-${var.test_name}-${module.common.testing_id}"
   }
 }
 
@@ -49,7 +49,6 @@ resource "null_resource" "integration_test" {
       "echo sha ${var.cwa_github_sha}",
       "cloud-init status --wait",
       "echo clone and install agent",
-      "rm -rf amazon-cloudwatch-agent-test",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
@@ -98,4 +97,8 @@ data "aws_ami" "latest" {
     name   = "name"
     values = [var.ami]
   }
+}
+
+data "aws_dynamodb_table" "performance-dynamodb-table" {
+  name = module.common.performance-dynamodb-table
 }

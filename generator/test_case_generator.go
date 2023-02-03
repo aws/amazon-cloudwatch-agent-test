@@ -24,7 +24,7 @@ type matrixRow struct {
 	Username                string `json:"username"`
 	InstallAgentCommand     string `json:"installAgentCommand"`
 	CaCertPath              string `json:"caCertPath"`
-	PerformanceNumberOfLogs string `json:"performanceNumberOfLogs"`
+	PerformanceNumberOfLogs string `json:"performance_number_of_logs"`
 }
 
 // you can't have a const map in golang
@@ -39,7 +39,7 @@ var testTypeToTestDirMap = map[string][]string{
 		"./test/metric_value_benchmark",
 		"./test/run_as_user",
 		"./test/collection_interval",
-		"./test/metric_append_dimension",
+		"./test/metric_dimension",
 	},
 	"ec2_performance": {
 		"./test/performancetest",

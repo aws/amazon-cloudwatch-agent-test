@@ -4,21 +4,29 @@
 package awsservice
 
 import (
-	"context"
+	"log"
 
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 )
 
-type imdsSDK struct {
-	cxt        context.Context
-	imdsClient *imds.Client
+var identityDocument *imds.GetInstanceIdentityDocumentOutput
+
+func GetInstanceId() string {
+	return GetImdsMetadata().InstanceID
 }
 
-// GetInstanceId returns the Instance ID of the current instance
-func GetInstanceId() (string, error) {
-	metadata, err := imdsClient.GetInstanceIdentityDocument(cxt, &imds.GetInstanceIdentityDocumentInput{})
+func GetImageId() string {
+	return GetImdsMetadata().ImageID
+}
+func GetInstanceType() string {
+	return GetImdsMetadata().InstanceType
+}
+
+// TODO: Refactor Structure and Interface for more easier follow that shares the same session
+func GetImdsMetadata() *imds.GetInstanceIdentityDocumentOutput {
+	identityDocument, err := imdsClient.GetInstanceIdentityDocument(cxt, &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
-		return "", err
+		log.Fatalf("Error occurred while retrieving imds identityDoc: %v", err)
 	}
-	return metadata.InstanceID, nil
+	return identityDocument
 }

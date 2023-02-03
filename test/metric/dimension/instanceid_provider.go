@@ -60,12 +60,7 @@ func (p *LocalInstanceIdDimensionProvider) GetDimension(instruction Instruction)
 	if instruction.Key != "InstanceId" || instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}
-	ec2InstanceId, err := awsservice.GetInstanceId()
-
-	if err != nil {
-		log.Print(err)
-		return types.Dimension{}
-	}
+	ec2InstanceId := awsservice.GetInstanceId()
 
 	return types.Dimension{
 		Name:  aws.String("InstanceId"),

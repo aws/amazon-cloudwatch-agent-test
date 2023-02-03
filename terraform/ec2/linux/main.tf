@@ -1,8 +1,8 @@
-#####################################################################
-# Ensure there is unique testing_id for each test
-#####################################################################
-resource "random_id" "testing_id" {
-  byte_length = 8
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+module "common" {
+  source = "../../common"
 }
 
 #####################################################################
@@ -17,29 +17,31 @@ resource "tls_private_key" "ssh_key" {
 
 resource "aws_key_pair" "aws_ssh_key" {
   count      = var.ssh_key_name == "" ? 1 : 0
-  key_name   = "ec2-key-pair-${random_id.testing_id.hex}"
+  key_name   = "ec2-key-pair-${module.common.testing_id}"
   public_key = tls_private_key.ssh_key[0].public_key_openssh
 }
 
 locals {
   ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  // Canary downloads latest binary. Integration test downloads binary connect to git hash.
+  binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
 }
 
 #####################################################################
 # Create EFS
 #####################################################################
 resource "aws_efs_file_system" "efs" {
-  creation_token = "efs-${random_id.testing_id.hex}"
-  tags           = {
-    Name = "efs-${random_id.testing_id.hex}"
+  creation_token = "efs-${module.common.testing_id}"
+  tags = {
+    Name = "efs-${module.common.testing_id}"
   }
 }
 
 resource "aws_efs_mount_target" "mount" {
-  file_system_id = aws_efs_file_system.efs.id
-  subnet_id = aws_instance.cwagent.subnet_id
-  security_groups = [aws_security_group.ec2_security_group.id]
+  file_system_id  = aws_efs_file_system.efs.id
+  subnet_id       = aws_instance.cwagent.subnet_id
+  security_groups = [data.aws_security_group.ec2_security_group.id]
 }
 
 resource "null_resource" "mount_efs" {
@@ -49,24 +51,17 @@ resource "null_resource" "mount_efs" {
   ]
 
   connection {
-    type = "ssh"
-    user = var.user
+    type        = "ssh"
+    user        = var.user
     private_key = local.private_key_content
-    host = aws_instance.cwagent.public_ip
-  }
-
-  provisioner "file" {
-    source = "install-efs-utils.sh"
-    destination = "/tmp/install-efs-utils.sh"
+    host        = aws_instance.cwagent.public_ip
   }
 
   provisioner "remote-exec" {
     # https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.html
     inline = [
-      "chmod +x /tmp/install-efs-utils.sh",
-      "/tmp/install-efs-utils.sh",
-      "sudo mkdir ${var.efs_mount_point}",
-      "sudo mount -t efs -o tls ${aws_efs_file_system.efs.dns_name} ${var.efs_mount_point}/",
+      "sudo mkdir ~/efs-mount-point",
+      "sudo mount -t efs -o tls ${aws_efs_file_system.efs.dns_name} ~/efs-mount-point/",
     ]
   }
 }
@@ -78,12 +73,12 @@ resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
+  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
 
   tags = {
-    Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
+    Name = "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
   }
 }
 
@@ -96,16 +91,9 @@ resource "null_resource" "integration_test" {
       "echo clone and install agent",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
+      "aws s3 cp s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
-      "echo get ssl pem for localstack and export local stack host name",
-      "cd ~/amazon-cloudwatch-agent-test/localstack/ls_tmp",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} . --recursive",
-      "cat ${var.ca_cert_path} > original.pem",
-      "cat original.pem snakeoil.pem > combine.pem",
-      "sudo cp original.pem /opt/aws/amazon-cloudwatch-agent/original.pem",
-      "sudo cp combine.pem /opt/aws/amazon-cloudwatch-agent/combine.pem",
     ]
 
     connection {
@@ -126,7 +114,7 @@ resource "null_resource" "integration_test" {
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"
     ]
     connection {
       type        = "ssh"

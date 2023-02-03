@@ -20,7 +20,7 @@ import (
 type MetricValueFetcher struct {
 }
 
-func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics) (MetricValues, error) {
+func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics, metricQueryPeriod int32) (MetricValues, error) {
 	dimensions := metricSpecificDimensions
 	log.Printf("Metric query input dimensions : %s", fmt.Sprint(dimensions))
 
@@ -30,7 +30,6 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 		Dimensions: dimensions,
 	}
 
-	metricQueryPeriod := int32(60)
 	metricDataQueries := []types.MetricDataQuery{
 		{
 			MetricStat: &types.MetricStat{
@@ -47,7 +46,7 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 
 	data, err := awsservice.GetMetricData(metricDataQueries, startTime, endTime)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting metric data %v", err)
+		return nil, fmt.Errorf("error getting metric data %v", err)
 	}
 
 	result := data.MetricDataResults[0].Values

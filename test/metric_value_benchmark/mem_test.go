@@ -64,7 +64,7 @@ func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}

@@ -157,8 +157,10 @@ Outputs:
         "elasticfilesystem:CreateMountTarget",
         "elasticfilesystem:DeleteFileSystem",
         "elasticfilesystem:DeleteMountTarget",
+        "elasticfilesystem:DescribeMountTargets",
         "elasticfilesystem:DescribeFileSystems",
         "elasticfilesystem:DescribeLifecycleConfiguration",
+        "elasticfilesystem:DescribeMountTargetSecurityGroups",
         "ec2:CreateNetworkInterface",
         "ec2:DeleteNetworkInterface",
         "ec2:DescribeNetworkInterfaces",
@@ -169,6 +171,7 @@ Outputs:
         "s3:GetObject",
         "s3:GetObjectAcl",
         "s3:PutObject",
+        "s3:DeleteObject",
         "sts:GetCallerIdentity",
         "ssm:PutParameter",
         "ssm:DeleteParameter",
@@ -267,7 +270,7 @@ Outputs:
         "autoscaling:SetInstanceProtection",
         "ecs:DescribeContainerInstances",
         "cloudwatch:GetMetricData",
-        "logs:ListTagsForResource",
+        "logs:ListTagsForResource"
       ],
       "Resource": "*"
     }
@@ -284,7 +287,16 @@ Outputs:
 ### Notes
 [reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
 
-## 7. Run the integration test action on your fork
+## 7. Setup the integration test resources
+1. Navigate to your fork
+2. Run the following command to setup all the resources being used for integration test (e.g vpc, iam, etc)
+```shell
+cd terraform/setup # assuming you are still in the ./terraform
+terraform init
+terraform apply --auto-approve 
+```
+
+## 8. Run the integration test action on your fork
 
 1. Navigate to your fork
 2. Go to `Actions`
@@ -354,10 +366,10 @@ upload: ./terraform.tfstate to s3://***/integration-test/local-stack-terraform-s
 
 In this example, you should keep track of `ec2-35-87-254-148.us-west-2.compute.amazonaws.com`
 
-### Start the linux integration tests (example):
+### Start the Linux integration tests (example):
 
 ```shell
-cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
+cd ./linux # assuming you are  in the ./terraform/ec2 directory
 terraform init
 terraform apply --auto-approve \
          -var="github_test_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent-test.git}" \
@@ -405,7 +417,7 @@ Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
 
 ### Start the Windows integration tests (example):
 ```shell
-cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
+cd ./win # assuming you are still in the ./terraform/ec2 directory
 terraform init
 terraform apply --auto-approve \
          -var="github_repo=${GH repo you want to use. Default: https://github.com/aws/amazon-cloudwatch-agent.git}" \
@@ -448,7 +460,7 @@ null_resource.integration_test: Creation complete after 2m52s [id=85912838849209
 After running tests, tear down everything with Terraform:
 
 ```shell
-# assuming still in the ./terraform/ec2/linux directory
+# assuming you are in in the ./terraform/ec2/linux directory
 terraform destroy --auto-approve
 cd ../localstack
 terraform destroy --auto-approve

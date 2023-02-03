@@ -100,7 +100,7 @@ func TestNumberMetricDimension(t *testing.T) {
 				t.Fatalf("Failed to build dimension filter list: %v", err)
 			}
 
-			err = awsservice.AWS.CwmAPI.ValidateMetric(parameter.metricName, namespace, dimensionFilter)
+			err = awsservice.ValidateMetric(parameter.metricName, namespace, dimensionFilter)
 			if err != nil {
 				t.Fatalf("Validate metrics failed: %v", err)
 			}

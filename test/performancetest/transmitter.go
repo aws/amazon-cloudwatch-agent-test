@@ -1,7 +1,6 @@
 package performancetest
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -9,10 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
 )
@@ -28,8 +25,7 @@ const (
 )
 
 type TransmitterAPI struct {
-	dynamoDbClient *dynamodb.Client
-	DataBaseName   string // this is the name of the table when test is run
+	DataBaseName string // this is the name of the table when test is run
 }
 
 /*
@@ -38,16 +34,9 @@ Desc: Initializes the transmitter class
 Side effects: Creates a dynamodb table if it doesn't already exist
 */
 func InitializeTransmitterAPI(DataBaseName string) *TransmitterAPI {
-	//setup aws session
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
-	if err != nil {
-		fmt.Printf("Error: Loading in config %s\n", err)
-	}
 	transmitter := TransmitterAPI{
-		dynamoDbClient: dynamodb.NewFromConfig(cfg),
-		DataBaseName:   DataBaseName,
+		DataBaseName: DataBaseName,
 	}
-
 	fmt.Println("API ready")
 	return &transmitter
 
@@ -65,26 +54,18 @@ Side effects:
 
 	Adds an item to dynamodb table
 */
-func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) error {
+func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) (string, error) {
 	var ae *types.ConditionalCheckFailedException // this exception represent the atomic check has failed
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		panic(err)
 	}
-	_, err = transmitter.dynamoDbClient.PutItem(context.TODO(),
-		&dynamodb.PutItemInput{
-			Item:                item,
-			TableName:           aws.String(transmitter.DataBaseName),
-			ConditionExpression: aws.String("attribute_not_exists(#hash)"),
-			ExpressionAttributeNames: map[string]string{
-				"#hash": HASH,
-			},
-		})
+	err = awsservice.AddPacketIntoDatabase(transmitter.DataBaseName, "attribute_not_exists(#hash)", packet, map[string]string{"#hash": HASH})
 
 	if err != nil && !errors.As(err, &ae) {
 		fmt.Printf("Error adding item to table.  %v\n", err)
 	}
-	return err
+	return fmt.Sprintf("%v", item), err
 }
 
 /*
@@ -92,25 +73,23 @@ SendItem()
 Desc: Parses the input data and adds it to the dynamo table
 Param: packet map[string]interface{} is the data collected by data collector
 */
-/* TO DO: Deprecate this since the whole process is query if it exist, if not adding, then updating it. However, its has already been included
-in the UpdateItem API https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateItem.html*/
-func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}, tps int) error {
+func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}, tps int) (string, error) {
+	var sentItem string
 	var ae *types.ConditionalCheckFailedException // this exception represent the atomic check has failed
 	// check if hash exists
 	currentItem, err := transmitter.Query(packet[HASH].(string))
 	if err != nil {
-		return err
+		return "", err
 	}
-
 	if len(currentItem) == 0 { // if an item with the same hash doesn't exist add it
-		err = transmitter.AddItem(packet)
+		sentItem, err = transmitter.AddItem(packet)
 		// this may be overwritten by other test threads, in that case it will return a specific error
 
 		if !errors.As(err, &ae) { // check if our add call got overwritten by other threads
-			return err
+			return sentItem, err
 		}
 		if err != nil { //any other error dont try again
-			return err
+			return "", err
 		}
 		// addItem failed due to a competing thread
 		// instead of adding, proceed to update the item, with the same data
@@ -122,10 +101,10 @@ func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}, tps i
 	err = transmitter.UpdateItem(packet[HASH].(string), packet, tps) //try to update the item
 	//this may be overwritten by other test threads, in that case it will return a specific error
 	if err != nil {
-		return err
+		return "", err
 	}
-
-	return nil
+	fmt.Println("SendItem Completed")
+	return sentItem, err
 
 }
 
@@ -229,17 +208,14 @@ func (transmitter *TransmitterAPI) UpdateItem(hash string, packet map[string]int
 		expressionAttributeValues[":testID"] = &types.AttributeValueMemberS{Value: testHash}
 		expressionAttributeNames["#testID"] = TEST_ID
 		//call update
-		_, err = transmitter.dynamoDbClient.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
-			TableName: aws.String(transmitter.DataBaseName),
-			Key: map[string]types.AttributeValue{
+		err = awsservice.UpdatePacketInDatabase(
+			transmitter.DataBaseName, expression,
+			"#testID = :testID", expressionAttributeNames, expressionAttributeValues,
+			map[string]types.AttributeValue{
 				"Year":       &types.AttributeValueMemberN{Value: year},
 				"CommitDate": &types.AttributeValueMemberN{Value: commitDate},
 			},
-			UpdateExpression:          aws.String(expression),
-			ExpressionAttributeValues: expressionAttributeValues,
-			ConditionExpression:       aws.String("#testID = :testID"),
-			ExpressionAttributeNames:  expressionAttributeNames,
-		})
+		)
 		if errors.As(err, &ae) { //check if our call got overwritten
 			// item has changed
 			fmt.Println("Retrying...")
@@ -276,24 +252,21 @@ func (transmitter *TransmitterAPI) UpdateReleaseTag(hash string, tagName string)
 }
 
 func (transmitter *TransmitterAPI) Query(hash string) ([]map[string]interface{}, error) {
-	var err error
-	var packets []map[string]interface{}
-	out, err := transmitter.dynamoDbClient.Query(context.TODO(), &dynamodb.QueryInput{
-		TableName:              aws.String(transmitter.DataBaseName),
-		IndexName:              aws.String("Hash-index"),
-		KeyConditionExpression: aws.String("#hash = :hash"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":hash": &types.AttributeValueMemberS{Value: hash},
-		},
-		ExpressionAttributeNames: map[string]string{
+	packets, err := awsservice.GetPacketInDatabase(
+		transmitter.DataBaseName,
+		"Hash-index",
+		"#hash = :hash",
+		map[string]string{
 			"#hash": HASH,
 		},
-		ScanIndexForward: aws.Bool(true), // true or false to sort by "date" Sort/Range key ascending or descending
-	})
+		map[string]types.AttributeValue{
+			":hash": &types.AttributeValueMemberS{Value: hash},
+		},
+	)
+
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Println(out.Items)
-	attributevalue.UnmarshalListOfMaps(out.Items, &packets)
+
 	return packets, err
 }

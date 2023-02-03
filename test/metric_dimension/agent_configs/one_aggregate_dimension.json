@@ -1,0 +1,24 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "MetricAggregateDimensionTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
+    "aggregation_dimensions": [[]],
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "time_active", "time_guest"
+        ]
+      }
+    },
+    "force_flush_interval": 5
+  }
+}
