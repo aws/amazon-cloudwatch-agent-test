@@ -57,27 +57,26 @@ msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
 EOF
 
   tags = {
-    Name = "cwagent-integ-test-ec2-windows-${element(split("/", var.test_dir),3)}-${random_id.testing_id.hex}"
+    Name = "cwagent-integ-test-ec2-windows-${var.test_name}-${random_id.testing_id.hex}"
   }
 }
 
 resource "null_resource" "integration_test" {
   depends_on = [aws_instance.cwagent]
-  # Install software
+  # Install software and run integration tests
   provisioner "remote-exec" {
     inline = [
       "start /wait timeout 120", //Wait some time to ensure all binaries have been downloaded
       "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
       "set AWS_REGION=${var.region}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
+      "start /wait ${var.install_agent} /norestart /qb-",
       "echo clone and install agent",
-      "git clone ${var.github_test_repo}",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
-      "git reset --hard ${var.cwa_test_github_sha}",
       "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 30m -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"
     ]
 
     connection {

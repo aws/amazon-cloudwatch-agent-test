@@ -10,7 +10,7 @@ variable "ec2_instance_type" {
 
 variable "ami" {
   type    = string
-  default = "Windows_Server-2019-English-Deep-Learning*"
+  default = "cloudwatch-agent-integration-test-ubuntu*"
 }
 
 variable "cwa_github_sha" {
@@ -23,9 +23,35 @@ variable "cwa_test_github_sha" {
   default = ""
 }
 
+variable "arc" {
+  type    = string
+  default = ""
+}
+
+variable "install_agent" {
+  description = "command to install the agent"
+  type        = string
+  default     = "msiexec /i amazon-cloudwatch-agent.msi"
+}
+
+variable "ca_cert_path" {
+  type    = string
+  default = ""
+}
+
 variable "github_test_repo" {
   type    = string
   default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+}
+
+variable "github_test_repo_branch" {
+  type    = string
+  default = "main"
+}
+
+variable "cwa_github_sha_date" {
+  type    = string
+  default = ""
 }
 
 variable "ssh_key_name" {
@@ -46,4 +72,9 @@ variable "s3_bucket" {
 variable "test_dir" {
   type    = string
   default = "./integration/test/nvidia_gpu"
+}
+
+variable "test_name" {
+  type    = string
+  default = ""
 }
