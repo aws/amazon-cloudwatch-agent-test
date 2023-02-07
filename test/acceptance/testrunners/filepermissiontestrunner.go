@@ -17,20 +17,30 @@ type FilePermissionTestRunner struct {
 var _ test_runner.ITestRunner = (*FilePermissionTestRunner)(nil)
 
 const agentConfigPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+const agentConfigCopiedDir = "/opt/aws/amazon-cloudwatch/etc/amazon-cloudwatch-agent.d"
+const agentLogPath = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 
 var (
 	onlyRootCanWriteRule = rule.Rule[string]{
 		Conditions: []rule.ICondition[string]{
 			&rule.PermittedEntityMatch{ExpectedOwner: aws.String("root"), ExpectedGroup: aws.String("root")},
 			&rule.FilePermissionExpected{PermissionCompared: filesystem.OwnerWrite, ShouldExist: true},
-			&rule.FilePermissionExpected{PermissionCompared: filesystem.GroupWrite, ShouldExist: true},
 			&rule.FilePermissionExpected{PermissionCompared: filesystem.AnyoneWrite, ShouldExist: false},
+		},
+	}
+	onlyRootCanReadRule = rule.Rule[string]{
+		Conditions: []rule.ICondition[string]{
+			&rule.PermittedEntityMatch{ExpectedOwner: aws.String("root"), ExpectedGroup: aws.String("root")},
+			&rule.FilePermissionExpected{PermissionCompared: filesystem.OwnerRead, ShouldExist: true},
+			&rule.FilePermissionExpected{PermissionCompared: filesystem.AnyoneRead, ShouldExist: false},
 		},
 	}
 )
 
 var testCases = map[string]rule.Rule[string]{
-	agentConfigPath: onlyRootCanWriteRule,
+	agentConfigPath:      onlyRootCanWriteRule,
+	agentConfigCopiedDir: onlyRootCanWriteRule,
+	agentLogPath:         onlyRootCanReadRule,
 }
 
 var testGroupResult *status.TestGroupResult = nil

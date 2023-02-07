@@ -33,12 +33,16 @@ const (
 	OwnerWrite  FilePermission = "OwnerWrite"
 	GroupWrite  FilePermission = "GroupWrite"
 	AnyoneWrite FilePermission = "AnyoneWrite"
+	OwnerRead   FilePermission = "OwnerRead"
+	AnyoneRead  FilePermission = "AnyoneRead"
 )
 
 var FilePermissionInHex = map[FilePermission]uint32{
 	OwnerWrite:  syscall.S_IWUSR,
 	GroupWrite:  syscall.S_IWGRP,
 	AnyoneWrite: syscall.S_IWOTH,
+	OwnerRead:   syscall.S_IRUSR,
+	AnyoneRead:  syscall.S_IROTH,
 }
 
 func FileHasPermission(filePath string, permission FilePermission) (bool, error) {
