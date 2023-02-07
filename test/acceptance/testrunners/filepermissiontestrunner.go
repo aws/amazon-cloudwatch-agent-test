@@ -17,10 +17,11 @@ type FilePermissionTestRunner struct {
 var _ test_runner.ITestRunner = (*FilePermissionTestRunner)(nil)
 
 const agentConfigPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const agentConfigCopiedDir = "/opt/aws/amazon-cloudwatch/etc/amazon-cloudwatch-agent.d"
+const agentConfigCopiedDir = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d"
 const agentLogPath = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+const translatedTomlPath = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"
 
-// stoping agent not possible. which script does that? agent script?
+// TODO stoping agent not possible. which script does that? agent script?
 
 var (
 	onlyRootCanWriteRule = rule.Rule[string]{
@@ -50,6 +51,7 @@ var testCases = map[string]rule.Rule[string]{
 	agentConfigPath:      onlyRootCanWriteRule,
 	agentConfigCopiedDir: onlyCWAgentCanWriteRule,
 	agentLogPath:         onlyRootCanReadRule,
+	translatedTomlPath:   onlyRootCanWriteRule,
 }
 
 var testGroupResult *status.TestGroupResult = nil
