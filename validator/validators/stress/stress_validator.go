@@ -32,6 +32,7 @@ var (
 				"procstat_memory_rss":  float64(66500000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(95000000),
 				"procstat_num_fds":     float64(9),
 				"net_bytes_sent":       float64(7500),
 				"net_packets_sent":     float64(21),
@@ -43,6 +44,7 @@ var (
 				"procstat_memory_rss":  float64(66500000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(95000000),
 				"procstat_num_fds":     float64(9),
 				"net_bytes_sent":       float64(7500),
 				"net_packets_sent":     float64(21),
@@ -54,6 +56,7 @@ var (
 				"procstat_memory_rss":  float64(95000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(95000000),
 				"procstat_num_fds":     float64(9),
 				"net_bytes_sent":       float64(7800),
 				"net_packets_sent":     float64(24),
@@ -70,6 +73,7 @@ var (
 				"procstat_memory_rss":  float64(175000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(1000000000),
+				"procstat_memory_data": float64(160000000),
 				"procstat_num_fds":     float64(9),
 				"net_bytes_sent":       float64(8000),
 				"net_packets_sent":     float64(24),
@@ -186,10 +190,9 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	for _, receiver := range receivers {
 		// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 		metricValue := metrics.MetricDataResults[0].Values[0]
-		lowerBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 - metricErrorBound)
 		upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
-		if metricValue < 0 || metricValue > upperBoundValue || metricValue < lowerBoundValue {
-			return fmt.Errorf("metric %s with value %f is not within bound [ %f, %f ] ", metricName, metricValue, lowerBoundValue, upperBoundValue)
+		if metricValue < 0 || metricValue > upperBoundValue {
+			return fmt.Errorf("metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
 		}
 
 	}

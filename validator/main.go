@@ -48,7 +48,7 @@ func main() {
 }
 
 func validate(vConfig models.ValidateConfig) error {
-	const maxRetry = 5
+	const maxRetry = 1
 	var err error
 	for i := 0; i < maxRetry; i++ {
 		err = validators.LaunchValidator(vConfig)
