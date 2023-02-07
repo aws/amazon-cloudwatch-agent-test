@@ -20,6 +20,8 @@ const agentConfigPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 const agentConfigCopiedDir = "/opt/aws/amazon-cloudwatch/etc/amazon-cloudwatch-agent.d"
 const agentLogPath = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 
+// stoping agent not possible. which script does that? agent script?
+
 var (
 	onlyRootCanWriteRule = rule.Rule[string]{
 		Conditions: []rule.ICondition[string]{
@@ -28,9 +30,16 @@ var (
 			&rule.FilePermissionExpected{PermissionCompared: filesystem.AnyoneWrite, ShouldExist: false},
 		},
 	}
+	onlyCWAgentCanWriteRule = rule.Rule[string]{
+		Conditions: []rule.ICondition[string]{
+			&rule.PermittedEntityMatch{ExpectedOwner: aws.String("cwagent"), ExpectedGroup: aws.String("cwagent")},
+			&rule.FilePermissionExpected{PermissionCompared: filesystem.OwnerWrite, ShouldExist: true},
+			&rule.FilePermissionExpected{PermissionCompared: filesystem.AnyoneWrite, ShouldExist: false},
+		},
+	}
 	onlyRootCanReadRule = rule.Rule[string]{
 		Conditions: []rule.ICondition[string]{
-			&rule.PermittedEntityMatch{ExpectedOwner: aws.String("root"), ExpectedGroup: aws.String("root")},
+			&rule.PermittedEntityMatch{ExpectedOwner: aws.String("cwagent"), ExpectedGroup: aws.String("cwagent")},
 			&rule.FilePermissionExpected{PermissionCompared: filesystem.OwnerRead, ShouldExist: true},
 			&rule.FilePermissionExpected{PermissionCompared: filesystem.AnyoneRead, ShouldExist: false},
 		},
@@ -39,7 +48,7 @@ var (
 
 var testCases = map[string]rule.Rule[string]{
 	agentConfigPath:      onlyRootCanWriteRule,
-	agentConfigCopiedDir: onlyRootCanWriteRule,
+	agentConfigCopiedDir: onlyCWAgentCanWriteRule,
 	agentLogPath:         onlyRootCanReadRule,
 }
 
