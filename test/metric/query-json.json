@@ -5,20 +5,27 @@
       "MetricStat": {
         "Metric": {
           "Namespace": "MetricValueBenchmarkTest",
-          "MetricName": "procstat_memory_swap",
+          "MetricName": "ethtool_bw_in_allowance_exceeded",
           "Dimensions": [
             {
               "Name": "InstanceId",
-              "Value": "i-X"
+              "Value": "i-014d094dcdfff54b5"
+            },
+            {
+              "Name": "driver",
+              "Value": "ena"
+            },
+            {
+              "Name": "interface",
+              "Value": "ens5"
             }
           ]
         },
         "Period": 60,
-        "Stat": "Average",
-        "Unit": "Bytes"
+        "Stat": "Average"
       }
     }
   ],
-  "StartTime": "2022-10-03T15:24:0000",
-  "EndTime": "2022-12-5T15:37:0000"
+  "StartTime": "2023-2-11T15:24:0000",
+  "EndTime": "2023-5-10T15:37:0000"
 }
