@@ -6,6 +6,7 @@ package environment
 import (
 	"flag"
 	"log"
+	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecsdeploymenttype"
@@ -21,6 +22,7 @@ type MetaData struct {
 	EcsClusterName            string
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
+	EC2PluginTests            map[string]struct{} // set of EC2 plugin names
 	Bucket                    string
 	CwaCommitSha              string
 	CaCertPath                string
@@ -33,6 +35,7 @@ type MetaDataStrings struct {
 	EcsClusterArn             string
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
+	EC2PluginTests            string // input comma delimited list of plugin names
 	Bucket                    string
 	CwaCommitSha              string
 	CaCertPath                string
@@ -56,6 +59,10 @@ func registerECSData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EcsClusterArn), "clusterArn", "", "Used to restart ecs task to apply new agent config")
 	flag.StringVar(&(dataString.CwagentConfigSsmParamName), "cwagentConfigSsmParamName", "", "Used to set new cwa config")
 	flag.StringVar(&(dataString.EcsServiceName), "cwagentECSServiceName", "", "Used to restart ecs task to apply new agent config")
+}
+
+func registerPluginTestsToExecute(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.EC2PluginTests), "plugins", "", "Comma-delimited list of plugins to test. Default is empty, which tests all")
 }
 
 func fillComputeType(e *MetaData, data *MetaDataStrings) *MetaData {
@@ -94,12 +101,34 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 	return e
 }
 
+func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) *MetaData {
+	if e.ComputeType != computetype.EC2 {
+		return e
+	}
+
+	if len(data.EC2PluginTests) == 0 {
+		log.Println("Testing all EC2 plugins")
+		return e
+	}
+
+	plugins := strings.Split(strings.ReplaceAll(data.EC2PluginTests, " ", ""), ",")
+	log.Printf("Executing subset of plugin tests: %v", plugins)
+	m := make(map[string]struct{}, len(plugins))
+	for _, p := range plugins {
+		m[strings.ToLower(p)] = struct{}{}
+	}
+	e.EC2PluginTests = m
+
+	return e
+}
+
 func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDataStrings {
 	registerComputeType(metaDataStrings)
 	registerECSData(metaDataStrings)
 	registerBucket(metaDataStrings)
 	registerCwaCommitSha(metaDataStrings)
 	registerCaCertPath(metaDataStrings)
+	registerPluginTestsToExecute(metaDataStrings)
 	return metaDataStrings
 }
 
@@ -107,6 +136,7 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData := &(MetaData{})
 	metaData = fillComputeType(metaData, data)
 	metaData = fillECSData(metaData, data)
+	metaData = fillEC2PluginTests(metaData, data)
 	metaData.Bucket = data.Bucket
 	metaData.CwaCommitSha = data.CwaCommitSha
 	metaData.CaCertPath = data.CaCertPath

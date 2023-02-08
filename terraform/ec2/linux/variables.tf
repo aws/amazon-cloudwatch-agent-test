@@ -96,3 +96,8 @@ variable "is_canary" {
   type = bool
   default = false
 }
+
+variable "plugin_tests" {
+  type = string
+  default = ""
+}
