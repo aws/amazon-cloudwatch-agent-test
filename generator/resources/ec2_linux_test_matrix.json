@@ -7,7 +7,8 @@
     "ami": "cloudwatch-agent-integration-test-ubuntu*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
     "arc": "amd64",
-    "binaryName": "amazon-cloudwatch-agent.deb"
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux"
   },
   {
     "os": "ubuntu-22.04",
@@ -17,7 +18,8 @@
     "ami": "cloudwatch-agent-integration-test-ubuntu-LTS-22*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
     "arc": "amd64",
-    "binaryName": "amazon-cloudwatch-agent.deb"
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux"
   },
   {
     "os": "debian-10",
@@ -27,7 +29,8 @@
     "ami": "cloudwatch-agent-integration-test-debian-10-arm64*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
     "arc": "arm64",
-    "binaryName": "amazon-cloudwatch-agent.deb"
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux"
   },
   {
     "os": "al2",
@@ -37,7 +40,8 @@
     "ami": "cloudwatch-agent-integration-test-al2*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
-    "binaryName": "amazon-cloudwatch-agent.rpm"
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
   },
   {
     "os": "rhel8",
@@ -47,7 +51,8 @@
     "ami": "cloudwatch-agent-integration-test-rhel8-base*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
-    "binaryName": "amazon-cloudwatch-agent.rpm"
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
   },
   {
     "os": "ol9",
@@ -57,6 +62,7 @@
     "ami": "cloudwatch-agent-integration-test-ol9*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
-    "binaryName": "amazon-cloudwatch-agent.rpm"
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
   }
 ]

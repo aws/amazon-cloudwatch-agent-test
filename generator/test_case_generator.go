@@ -16,6 +16,7 @@ import (
 type matrixRow struct {
 	TestDir                 string `json:"test_dir"`
 	Os                      string `json:"os"`
+	Family                  string `json:"family"`
 	TestType                string `json:"testType"`
 	Arc                     string `json:"arc"`
 	InstanceType            string `json:"instanceType"`
