@@ -107,9 +107,11 @@ func CheckFileOwnerRights(filePath, requiredOwner string) error {
 		return fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
 	}
 
+	log.Printf("UserId is : %s ", stat.Uid)
 	if owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid)); err != nil {
 		return fmt.Errorf("Cannot look up file owner's name %s: %v", filePath, err)
 	} else if owner.Name != requiredOwner {
+		log.Printf("user's username: %s", owner.Username)
 		log.Printf("actual owner name: %s", owner.Name)
 		log.Printf("required owner name: %s", requiredOwner)
 		return fmt.Errorf("Agent does not have permission to protect file %s", filePath)
