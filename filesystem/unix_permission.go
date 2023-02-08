@@ -7,7 +7,6 @@ package filesystem
 
 import (
 	"fmt"
-	"log"
 	"os/user"
 	"syscall"
 )
@@ -50,8 +49,6 @@ func FileHasPermission(filePath string, permission FilePermission) (bool, error)
 	if ok != nil {
 		return false, ok
 	}
-	log.Printf("FileStat was: %v", fileStat)
-	log.Printf("FilePermissionInHext was: %v", FilePermissionInHex[permission])
 
 	return IsInclude(fileStat, FilePermissionInHex[permission]), nil
 }

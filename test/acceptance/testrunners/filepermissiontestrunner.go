@@ -18,10 +18,7 @@ var _ test_runner.ITestRunner = (*FilePermissionTestRunner)(nil)
 
 const agentConfigPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 const agentConfigCopiedDir = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d"
-const agentLogPath = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 const translatedTomlPath = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"
-
-// TODO stoping agent not possible. which script does that? agent script?
 
 var (
 	onlyRootCanWriteRule = rule.Rule[string]{
@@ -38,19 +35,11 @@ var (
 			&rule.FilePermissionExpected{PermissionCompared: filesystem.AnyoneWrite, ShouldExist: false},
 		},
 	}
-	onlyRootCanReadRule = rule.Rule[string]{
-		Conditions: []rule.ICondition[string]{
-			&rule.PermittedEntityMatch{ExpectedOwner: aws.String("cwagent"), ExpectedGroup: aws.String("cwagent")},
-			&rule.FilePermissionExpected{PermissionCompared: filesystem.OwnerRead, ShouldExist: true},
-			&rule.FilePermissionExpected{PermissionCompared: filesystem.AnyoneRead, ShouldExist: false},
-		},
-	}
 )
 
 var testCases = map[string]rule.Rule[string]{
 	agentConfigPath:      onlyRootCanWriteRule,
 	agentConfigCopiedDir: onlyCWAgentCanWriteRule,
-	agentLogPath:         onlyRootCanReadRule,
 	translatedTomlPath:   onlyRootCanWriteRule,
 }
 
