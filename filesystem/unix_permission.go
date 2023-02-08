@@ -69,13 +69,25 @@ func IsInclude(included uint32, include uint32) bool {
 	return included&include != 0
 }
 
+func GetFileOwnerUserName(filePath string) (string, error) {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(filePath, &stat); err != nil {
+		return "", fmt.Errorf("cannot get file's stat %s: %v", filePath, err)
+	}
+	if owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid)); err != nil {
+		return "", fmt.Errorf("cannot look up file owner's name %s: %v", filePath, err)
+	} else {
+		return owner.Username, nil
+	}
+}
+
 func GetFileGroupName(filePath string) (string, error) {
 	var stat syscall.Stat_t
 	if err := syscall.Stat(filePath, &stat); err != nil {
-		return "", fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
+		return "", fmt.Errorf("cannot get file's stat %s: %v", filePath, err)
 	}
 	if grp, err := user.LookupGroupId(fmt.Sprintf("%d", stat.Gid)); err != nil {
-		return "", fmt.Errorf("Cannot look up file owner's name %s: %v", filePath, err)
+		return "", fmt.Errorf("cannot look up file group name %s: %v", filePath, err)
 	} else {
 		return grp.Name, nil
 	}
@@ -102,20 +114,12 @@ func CheckFileRights(filePath string) error {
 
 // CheckFileOwnerRights check that the given owner is the same owner of the given filepath
 func CheckFileOwnerRights(filePath, requiredOwner string) error {
-	var stat syscall.Stat_t
-	if err := syscall.Stat(filePath, &stat); err != nil {
-		return fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
-	}
+	ownerUsername, err := GetFileOwnerUserName(filePath)
 
-	log.Printf("UserId is : %s ", stat.Uid)
-	if owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid)); err != nil {
+	if err != nil {
 		return fmt.Errorf("Cannot look up file owner's name %s: %v", filePath, err)
-	} else if owner.Name != requiredOwner {
-		log.Printf("user's username: %s", owner.Username)
-		log.Printf("actual owner name: %s", owner.Name)
-		log.Printf("required owner name: %s", requiredOwner)
-		return fmt.Errorf("Agent does not have permission to protect file %s", filePath)
+	} else if ownerUsername != requiredOwner {
+		return fmt.Errorf("Owner does not have permission to protect file %s", filePath)
 	}
-
 	return nil
 }

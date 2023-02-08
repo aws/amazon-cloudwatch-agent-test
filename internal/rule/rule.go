@@ -55,9 +55,12 @@ type PermittedEntityMatch struct {
 
 func (e *PermittedEntityMatch) Evaluate(target string) (bool, error) {
 	if e.ExpectedOwner != nil {
-		err := filesystem.CheckFileOwnerRights(target, *e.ExpectedOwner)
+		name, err := filesystem.GetFileOwnerUserName(target)
+		log.Printf("FileOwnerUsername is: %v", name)
 		if err != nil {
 			return false, err
+		} else if name != *e.ExpectedOwner {
+			return false, nil
 		}
 	}
 
