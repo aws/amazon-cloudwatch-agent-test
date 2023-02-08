@@ -65,7 +65,9 @@ func (f *Factory) GetDimensions(instructions []Instruction) ([]types.Dimension, 
 			log.Printf("Result dim is : %s, %s", *dim.Name, *dim.Value)
 		} else {
 			unfulfilledInstructions = append(unfulfilledInstructions, instruction)
-			log.Printf("unfulfilled dim is : %s, %s", *dim.Name, *dim.Value)
+			if dim.Name != nil && dim.Value != nil {
+				log.Printf("unfulfilled dim is : %s, %s", *dim.Name, *dim.Value)
+			}
 		}
 	}
 

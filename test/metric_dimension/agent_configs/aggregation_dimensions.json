@@ -21,7 +21,7 @@
       [
         "foo",
         "bar",
-        "InstanceId"
+        "InstanceType"
       ]
     ],
     "metrics_collected": {

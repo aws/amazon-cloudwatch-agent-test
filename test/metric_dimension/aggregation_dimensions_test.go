@@ -44,34 +44,43 @@ func (t *AggregationDimensionsTestRunner) GetMeasuredMetrics() []string {
 	return []string{"mem_used_percent"}
 }
 
-// validate checks that a metric exists with each of the expected dimension lists.
+// validate checks that a metric exists with each of the expected dimension sets.
 func (t *AggregationDimensionsTestRunner) validate(metricName string) status.TestResult {
 	r := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
-	dd, errs := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "InstanceType",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "InstanceId",
-			Value: dimension.UnknownDimensionValue(),
-		},
-	})
-	if len(errs) > 0 {
-		return r
+	// Expect to find the metric with each of the following lists of dimensions.
+	// Except the last one - "InstanceType".
+	aggregations := [][]string{
+		{},
+		{"InstanceId"},
+		{"InstanceId", "InstanceType"},
+		{"InstanceType"},
 	}
-	f := metric.MetricValueFetcher{}
-	values, err := f.Fetch("TestAggregationDimensions", metricName, dd,
-		metric.AVERAGE, test_runner.HighResolutionStatPeriod)
-	log.Printf("metric values are %v", values)
-	if err != nil {
-		return r
+	for i, aggregation := range aggregations {
+		instructions := []dimension.Instruction{}
+		for _, d := range aggregation {
+			instruction := dimension.Instruction{
+				Key: d,
+				Value: dimension.UnknownDimensionValue(),
+			}
+			instructions = append(instructions, instruction)
+		}
+		dd, _ := t.DimensionFactory.GetDimensions(instructions)
+		f := metric.MetricValueFetcher{}
+		values, err := f.Fetch("TestAggregationDimensions", metricName, dd,
+			metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+		// Do not expect the last aggregation of just "InstanceType".
+		if i == len(aggregations)-1 && len(values) > 0 {
+			log.Printf("Expected no metrics with these dimensions - %v", aggregation)
+			return r
+		} else {
+			if err != nil || !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+				return r
+			}
+		}
 	}
-	if isAllValuesGreaterThanOrEqualToZero(metricName, values) {
-		r.Status = status.SUCCESSFUL
-	}
+	r.Status = status.SUCCESSFUL
 	return r
 }
