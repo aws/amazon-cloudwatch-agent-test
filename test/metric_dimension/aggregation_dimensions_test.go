@@ -72,10 +72,13 @@ func (t *AggregationDimensionsTestRunner) validate(metricName string) status.Tes
 		values, err := f.Fetch("TestAggregationDimensions", metricName, dd,
 			metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 		// Do not expect the last aggregation of just "InstanceType".
-		if i == len(aggregations)-1 && len(values) > 0 {
-			log.Printf("Expected no metrics with these dimensions - %v", aggregation)
-			return r
+		if i == len(aggregations)-1 {
+			if len(values) > 0 {
+				log.Printf("Expected no metrics with these dimensions - %v", aggregation)
+				return r
+			}
 		} else {
+			// Expect values for the metric with the current dimension list.
 			if err != nil || !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 				return r
 			}
