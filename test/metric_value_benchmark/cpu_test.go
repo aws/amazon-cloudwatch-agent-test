@@ -6,12 +6,13 @@
 package metric_value_benchmark
 
 import (
+	"log"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"log"
 )
 
 type CPUTestRunner struct {
@@ -74,6 +75,7 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 	log.Printf("metric values are %v", values)
 	if err != nil {
+		log.Printf("err: %v\n", err)
 		return testResult
 	}
 

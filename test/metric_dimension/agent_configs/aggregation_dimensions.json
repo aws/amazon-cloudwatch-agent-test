@@ -1,0 +1,31 @@
+{
+  "metrics": {
+    "namespace": "TestAggregationDimensions",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
+    "aggregation_dimensions": [
+      [],
+      [
+        "InstanceId"
+      ],
+      [
+        "InstanceId",
+        "InstanceType"
+      ],
+      [
+        "foo",
+        "bar",
+        "InstanceId"
+      ]
+    ],
+    "metrics_collected": {
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ]
+      }
+    }
+  }
+}

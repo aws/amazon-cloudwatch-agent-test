@@ -7,14 +7,14 @@ package metric_dimension
 
 import (
 	"fmt"
+	"log"
+	"testing"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/stretchr/testify/suite"
-	"log"
-	"testing"
 )
 
 type MetricsAppendDimensionTestSuite struct {
@@ -48,6 +48,7 @@ func getTestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &NoAppendDimensionTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &GlobalAppendDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &OneAggregateDimensionTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &AggregationDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return testRunners
@@ -58,7 +59,7 @@ func (suite *MetricsAppendDimensionTestSuite) TestAllInSuite() {
 	for _, testRunner := range getTestRunners(env) {
 		testRunner.Run(suite)
 	}
-	
+
 	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Append Dimension Test Suite Failed")
 }
 
