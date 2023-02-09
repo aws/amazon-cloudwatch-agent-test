@@ -79,7 +79,6 @@ func (f *Factory) executeInstruction(instruction Instruction) types.Dimension {
 		dim := provider.GetDimension(instruction)
 		log.Printf("instruction %v provider %s returned dimension %v", instruction, provider.Name(), dim)
 		if (dim != types.Dimension{}) {
-			log.Printf("dim %v, %v", *dim.Name, *dim.Value)
 			return dim
 		}
 	}
