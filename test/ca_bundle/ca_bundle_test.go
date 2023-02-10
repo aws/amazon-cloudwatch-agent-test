@@ -56,6 +56,7 @@ func init() {
 // This test uses a pem file created for the local stack endpoint to be able to connect via ssl
 func TestBundle(t *testing.T) {
 	metadata := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	t.Logf("metadata required for test cwa sha %s bucket %s ca cert path %s", metadata.CwaCommitSha, metadata.Bucket, metadata.CaCertPath)
 	setUpLocalstackConfig(metadata)
 
 	parameters := []input{
@@ -74,6 +75,7 @@ func TestBundle(t *testing.T) {
 		log.Printf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget)
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget), func(t *testing.T) {
 			common.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
+			t.Logf("config file after localstack host replace %s", string(readFile(parameter.dataInput+configJSON)))
 			common.CopyFile(parameter.dataInput+configJSON, configOutputPath)
 			common.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
 			common.StartAgent(configOutputPath, true)
