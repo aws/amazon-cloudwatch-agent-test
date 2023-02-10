@@ -5,7 +5,6 @@ package common
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/cactus/go-statsd-client/v5/statsd"
@@ -19,13 +18,10 @@ func StartSendingMetrics(receivers []string, agentRunDuration time.Duration, dat
 	var (
 		err      error
 		multiErr error
-		wg       sync.WaitGroup
 	)
 
 	for _, receiver := range receivers {
-		wg.Add(1)
 		go func(receiver string, durationMinute time.Duration) {
-			defer wg.Done()
 
 			switch receiver {
 			case "statsd":
@@ -37,8 +33,6 @@ func StartSendingMetrics(receivers []string, agentRunDuration time.Duration, dat
 			multiErr = multierr.Append(multiErr, err)
 		}(receiver, agentRunDuration)
 	}
-
-	wg.Wait()
 	return multiErr
 }
 
@@ -60,7 +54,7 @@ func sendStatsdMetrics(dataRate int, durationMinute time.Duration) error {
 
 	defer client.Close()
 
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 	endTimeout := time.After(durationMinute)
 

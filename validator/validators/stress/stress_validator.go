@@ -28,38 +28,38 @@ var (
 	metricPluginBoundValue = MetricPluginBoundValue{
 		"1000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(4),
+				"procstat_cpu_usage":   float64(19),
 				"procstat_memory_rss":  float64(66500000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
 				"procstat_memory_data": float64(95000000),
 				"procstat_num_fds":     float64(9),
-				"net_bytes_sent":       float64(7500),
-				"net_packets_sent":     float64(21),
+				"net_bytes_sent":       float64(100000),
+				"net_packets_sent":     float64(100),
 			},
 		},
 		"5000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(7),
-				"procstat_memory_rss":  float64(66500000),
+				"procstat_cpu_usage":   float64(120),
+				"procstat_memory_rss":  float64(130000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
-				"procstat_memory_data": float64(95000000),
-				"procstat_num_fds":     float64(9),
-				"net_bytes_sent":       float64(7500),
-				"net_packets_sent":     float64(21),
+				"procstat_memory_data": float64(130000000),
+				"procstat_num_fds":     float64(19),
+				"net_bytes_sent":       float64(524000),
+				"net_packets_sent":     float64(520),
 			},
 		},
 		"10000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(14),
-				"procstat_memory_rss":  float64(95000000),
+				"procstat_cpu_usage":   float64(200),
+				"procstat_memory_rss":  float64(160000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
-				"procstat_memory_data": float64(95000000),
-				"procstat_num_fds":     float64(9),
-				"net_bytes_sent":       float64(7800),
-				"net_packets_sent":     float64(24),
+				"procstat_memory_data": float64(177000000),
+				"procstat_num_fds":     float64(19),
+				"net_bytes_sent":       float64(980000),
+				"net_packets_sent":     float64(860),
 			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
@@ -69,14 +69,14 @@ var (
 
 		"50000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(45),
-				"procstat_memory_rss":  float64(175000000),
+				"procstat_cpu_usage":   float64(250),
+				"procstat_memory_rss":  float64(300000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(1000000000),
-				"procstat_memory_data": float64(160000000),
-				"procstat_num_fds":     float64(9),
-				"net_bytes_sent":       float64(8000),
-				"net_packets_sent":     float64(24),
+				"procstat_memory_data": float64(330000000),
+				"procstat_num_fds":     float64(18),
+				"net_bytes_sent":       float64(1700000),
+				"net_packets_sent":     float64(10400),
 			},
 		},
 	}
@@ -96,18 +96,18 @@ func NewStressValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 
 func (s *StressValidator) InitValidation() (err error) {
 	var (
-		datapointPeriod     = s.vConfig.GetDataPointPeriod()
-		agentConfigFilePath = s.vConfig.GetCloudWatchAgentConfigPath()
-		dataType            = s.vConfig.GetDataType()
-		dataRate            = s.vConfig.GetDataRate()
-		receivers, _, _     = s.vConfig.GetOtelConfig()
+		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
+		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
+		dataType              = s.vConfig.GetDataType()
+		dataRate              = s.vConfig.GetDataRate()
+		receivers, _, _       = s.vConfig.GetPluginsConfig()
 	)
 	switch dataType {
 	case "logs":
-		err = common.StartLogWrite(agentConfigFilePath, datapointPeriod, dataRate)
+		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, dataRate)
 	default:
 		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
-		err = common.StartSendingMetrics(receivers, datapointPeriod, dataRate)
+		err = common.StartSendingMetrics(receivers, agentCollectionPeriod, dataRate)
 	}
 
 	return err
@@ -158,8 +158,8 @@ func (s *StressValidator) EndValidation() error {
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, startTime, endTime time.Time) error {
 	var (
 		dataRate        = fmt.Sprint(s.vConfig.GetDataRate())
-		boundAndPeriod  = s.vConfig.GetDataPointPeriod().Seconds()
-		receivers, _, _ = s.vConfig.GetOtelConfig()
+		boundAndPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
+		receivers, _, _ = s.vConfig.GetPluginsConfig()
 	)
 
 	stressMetricQueries := s.buildStressMetricQueries(metricName, metricNamespace, metricDimensions)
@@ -208,7 +208,7 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 
 func (s *StressValidator) buildStressMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) []types.MetricDataQuery {
 	var (
-		metricQueryPeriod = int32(s.vConfig.GetDataPointPeriod().Seconds())
+		metricQueryPeriod = int32(s.vConfig.GetAgentCollectionPeriod().Seconds())
 	)
 
 	metricInformation := types.Metric{

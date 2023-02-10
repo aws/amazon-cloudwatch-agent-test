@@ -38,7 +38,7 @@ locals {
 
 resource "local_file" "update-validation-config" {
   content  = replace(replace(file("${var.test_dir}/${local.validator_config}"), 
-                "<data_rate>", var.data_rate),
+                "<values_per_minute>", var.values_per_minute),
                 "<cloudwatch_agent_config>",local.cloudwatch_agent_config
               )
 
@@ -92,7 +92,7 @@ resource "null_resource" "integration_test" {
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-       var.install_agent,
+      var.install_agent,
       "go run ./validator/main.go --validator-config=/tmp/${local.final_validator_config} --preparation-mode=true",
     ]
   }

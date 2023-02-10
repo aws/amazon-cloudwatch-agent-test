@@ -48,7 +48,7 @@ func main() {
 }
 
 func validate(vConfig models.ValidateConfig) error {
-	const maxRetry = 1
+	const maxRetry = 2
 	var err error
 	for i := 0; i < maxRetry; i++ {
 		err = validators.LaunchValidator(vConfig)
@@ -56,7 +56,7 @@ func validate(vConfig models.ValidateConfig) error {
 		if err == nil {
 			return nil
 		}
-		time.Sleep(30 * time.Second)
+		time.Sleep(60 * time.Second)
 		log.Printf("test case: %s, validate type: %s, error: %v", vConfig.GetTestCase(), vConfig.GetValidateType(), err)
 		continue
 	}
@@ -68,12 +68,12 @@ func validate(vConfig models.ValidateConfig) error {
 func prepare(vConfig models.ValidateConfig) error {
 	var (
 		dataType            = vConfig.GetDataType()
-		dataRate            = vConfig.GetDataRate()
+		numberLogsMonitored = vConfig.GetNumberMonitoredLogs()
 		agentConfigFilePath = vConfig.GetCloudWatchAgentConfigPath()
 	)
 	switch dataType {
 	case "logs":
-		common.GenerateLogConfig(dataRate, agentConfigFilePath)
+		common.GenerateLogConfig(numberLogsMonitored, agentConfigFilePath)
 	default:
 	}
 

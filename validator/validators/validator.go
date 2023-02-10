@@ -25,9 +25,9 @@ func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFact
 
 func LaunchValidator(vConfig models.ValidateConfig) error {
 	var (
-		datapointPeriod          = vConfig.GetDataPointPeriod()
+		agentCollectionPeriod    = vConfig.GetAgentCollectionPeriod()
 		startTimeValidation      = time.Now().Truncate(time.Minute).Add(time.Minute)
-		endTimeValidation        = startTimeValidation.Add(datapointPeriod)
+		endTimeValidation        = startTimeValidation.Add(agentCollectionPeriod)
 		durationBeforeNextMinute = time.Until(startTimeValidation)
 	)
 
@@ -45,8 +45,8 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 
 	}
 
-	log.Printf("Start to sleep %f s for the agent to collect and send all the metrics to CloudWatch within the datapoint period ", datapointPeriod.Seconds())
-	time.Sleep(datapointPeriod)
+	log.Printf("Start to sleep %f s for the agent to collect and send all the metrics to CloudWatch within the datapoint period ", agentCollectionPeriod.Seconds())
+	time.Sleep(agentCollectionPeriod)
 
 	log.Printf("Start to sleep 60s for CloudWatch to process all the metrics")
 	time.Sleep(60 * time.Second)

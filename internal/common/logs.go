@@ -9,15 +9,16 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
 	"time"
+
+	"go.uber.org/multierr"
 )
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
 func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRate int) error {
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
-	var wg sync.WaitGroup
+	var multiErr error
 
 	logPaths, err := getLogFilePaths(configFilePath)
 	if err != nil {
@@ -25,17 +26,13 @@ func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRa
 	}
 
 	for _, logPath := range logPaths {
-		filePath := logPath //necessary weird golang thing
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			err = writeToLogs(filePath, agentRunDuration, dataRate)
-		}()
+		go func(logPath string) {
+			err = writeToLogs(logPath, agentRunDuration, dataRate)
+			multiErr = multierr.Append(multiErr, err)
+		}(logPath)
 	}
 
-	//wait until writing to logs finishes
-	wg.Wait()
-	return err
+	return multiErr
 }
 
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
@@ -48,7 +45,7 @@ func writeToLogs(filePath string, durationMinute time.Duration, dataRate int) er
 	defer f.Close()
 	defer os.Remove(filePath)
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 	endTimeout := time.After(durationMinute)
 
@@ -56,7 +53,7 @@ func writeToLogs(filePath string, durationMinute time.Duration, dataRate int) er
 	for {
 		select {
 		case <-ticker.C:
-			for i := 0; i < 1000; i++ {
+			for i := 0; i < dataRate; i++ {
 				_, err = f.WriteString(fmt.Sprintln(ticker, " - #", i, " This is a log line."))
 				if err != nil {
 					return err
@@ -99,7 +96,7 @@ func getLogFilePaths(configPath string) ([]string, error) {
 * (log being monitored will be overwritten - it is needed for json structure)
 * returns the path of the config generated and a list of log stream names
  */
-func GenerateLogConfig(numberOfLogs int, filePath string) error {
+func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	var (
 		cfgFileData map[string]interface{}
 	)
@@ -130,7 +127,7 @@ func GenerateLogConfig(numberOfLogs int, filePath string) error {
 
 	var logFiles []LogInfo
 
-	for i := 0; i < numberOfLogs; i++ {
+	for i := 0; i < numberMonitoredLogs; i++ {
 		logStream := fmt.Sprintf("{instance_id}/tmp%d", i+1)
 
 		logFiles = append(logFiles, LogInfo{
@@ -141,7 +138,7 @@ func GenerateLogConfig(numberOfLogs int, filePath string) error {
 		})
 	}
 
-	log.Printf("Writing config file with %d logs to %v", numberOfLogs, filePath)
+	log.Printf("Writing config file with %d logs to %v", numberMonitoredLogs, filePath)
 
 	cfgFileData["logs"].(map[string]interface{})["logs_collected"].(map[string]interface{})["files"].(map[string]interface{})["collect_list"] = logFiles
 
