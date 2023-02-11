@@ -8,6 +8,7 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"log"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -65,11 +66,21 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
+			{TestRunner: &DiskTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &NetStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CPUTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &MemTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &ProcStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &DiskIOTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &NetTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &EthtoolTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// TODO: The following plugins are not fully supported by CCWA, hence disabled temporarily. Restore back once supported.
 			//{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			//{TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			//{TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &SwapTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return ec2TestRunners
@@ -84,7 +95,9 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 		}
 	} else {
 		for _, testRunner := range getEc2TestRunners(env) {
-			testRunner.Run(suite)
+			if shouldRunEC2Test(env, testRunner) {
+				testRunner.Run(suite)
+			}
 		}
 	}
 
@@ -97,6 +110,14 @@ func (suite *MetricBenchmarkTestSuite) AddToSuiteResult(r status.TestGroupResult
 
 func TestMetricValueBenchmarkSuite(t *testing.T) {
 	suite.Run(t, new(MetricBenchmarkTestSuite))
+}
+
+func shouldRunEC2Test(env *environment.MetaData, t *test_runner.TestRunner) bool {
+	if env.EC2PluginTests == nil {
+		return true // default behavior is to run all tests
+	}
+	_, ok := env.EC2PluginTests[strings.ToLower(t.TestRunner.GetTestName())]
+	return ok
 }
 
 func isAllValuesGreaterThanOrEqualToZero(metricName string, values []float64) bool {
