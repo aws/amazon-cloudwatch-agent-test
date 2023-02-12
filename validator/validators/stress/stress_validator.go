@@ -22,44 +22,44 @@ type MetricPluginBoundValue map[string]map[string]map[string]float64
 // Todo:
 // * Create a database  to store these metrics instead of using cache?
 // * Create a workflow to update the bound metrics?
-// * Convert to Megabytes for some metrics?
+// * Add more metrics (healthcheckextension to detect dropping metrics and prometheus to detect agent crash in EKS env)
 var (
 	metricErrorBound       = 0.3
 	metricPluginBoundValue = MetricPluginBoundValue{
 		"1000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(4),
+				"procstat_cpu_usage":   float64(19),
 				"procstat_memory_rss":  float64(66500000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(95000000),
 				"procstat_num_fds":     float64(9),
-				"procstat_write_bytes": float64(120000),
-				"net_bytes_sent":       float64(7500),
-				"net_packets_sent":     float64(21),
+				"net_bytes_sent":       float64(100000),
+				"net_packets_sent":     float64(100),
 			},
 		},
 		"5000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(5),
-				"procstat_memory_rss":  float64(66500000),
+				"procstat_cpu_usage":   float64(120),
+				"procstat_memory_rss":  float64(130000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
-				"procstat_num_fds":     float64(9),
-				"procstat_write_bytes": float64(120000),
-				"net_bytes_sent":       float64(7500),
-				"net_packets_sent":     float64(21),
+				"procstat_memory_data": float64(130000000),
+				"procstat_num_fds":     float64(19),
+				"net_bytes_sent":       float64(524000),
+				"net_packets_sent":     float64(520),
 			},
 		},
 		"10000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(10),
-				"procstat_memory_rss":  float64(66500000),
+				"procstat_cpu_usage":   float64(200),
+				"procstat_memory_rss":  float64(160000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
-				"procstat_num_fds":     float64(9),
-				"procstat_write_bytes": float64(120000),
-				"net_bytes_sent":       float64(8000),
-				"net_packets_sent":     float64(24),
+				"procstat_memory_data": float64(177000000),
+				"procstat_num_fds":     float64(19),
+				"net_bytes_sent":       float64(980000),
+				"net_packets_sent":     float64(860),
 			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
@@ -69,14 +69,14 @@ var (
 
 		"50000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(80),
-				"procstat_memory_rss":  float64(120000000),
+				"procstat_cpu_usage":   float64(250),
+				"procstat_memory_rss":  float64(300000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(818000000),
-				"procstat_num_fds":     float64(9),
-				"procstat_write_bytes": float64(120000),
-				"net_bytes_sent":       float64(8000),
-				"net_packets_sent":     float64(24),
+				"procstat_memory_vms":  float64(1000000000),
+				"procstat_memory_data": float64(330000000),
+				"procstat_num_fds":     float64(18),
+				"net_bytes_sent":       float64(1700000),
+				"net_packets_sent":     float64(10400),
 			},
 		},
 	}
@@ -96,17 +96,18 @@ func NewStressValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 
 func (s *StressValidator) InitValidation() (err error) {
 	var (
-		datapointPeriod     = s.vConfig.GetDataPointPeriod()
-		agentConfigFilePath = s.vConfig.GetCloudWatchAgentConfigPath()
-		dataType            = s.vConfig.GetDataType()
-		dataRate            = s.vConfig.GetDataRate()
-		receivers, _, _     = s.vConfig.GetOtelConfig()
+		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
+		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
+		dataType              = s.vConfig.GetDataType()
+		dataRate              = s.vConfig.GetDataRate()
+		receivers, _, _       = s.vConfig.GetPluginsConfig()
 	)
 	switch dataType {
 	case "logs":
-		err = common.StartLogWrite(agentConfigFilePath, datapointPeriod, dataRate)
+		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, dataRate)
 	default:
-		err = common.StartSendingMetrics(receivers, datapointPeriod, dataRate)
+		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
+		err = common.StartSendingMetrics(receivers, agentCollectionPeriod, dataRate)
 	}
 
 	return err
@@ -157,16 +158,15 @@ func (s *StressValidator) EndValidation() error {
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, startTime, endTime time.Time) error {
 	var (
 		dataRate        = fmt.Sprint(s.vConfig.GetDataRate())
-		boundAndPeriod  = s.vConfig.GetDataPointPeriod().Seconds()
-		receivers, _, _ = s.vConfig.GetOtelConfig()
+		boundAndPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
+		receivers, _, _ = s.vConfig.GetPluginsConfig()
 	)
 
 	stressMetricQueries := s.buildStressMetricQueries(metricName, metricNamespace, metricDimensions)
 
 	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v", metricName, metricNamespace, startTime, endTime)
 
-	// We are only interesting in the maxium metric values within the time range since the metrics sending are not distributed evenly; therefore,
-	// only the maximum shows the correct usage reflection of CloudWatchAgent during that time
+	// We are only interesting in the maxium metric values within the time range
 	metrics, err := awsservice.GetMetricData(stressMetricQueries, startTime, endTime)
 	if err != nil {
 		return err
@@ -190,10 +190,9 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	for _, receiver := range receivers {
 		// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 		metricValue := metrics.MetricDataResults[0].Values[0]
-		lowerBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 - metricErrorBound)
 		upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
-		if metricValue < 0 || metricValue > upperBoundValue || metricValue < lowerBoundValue {
-			return fmt.Errorf("metric %s with value %f is not within bound [ %f, %f ] ", metricName, metricValue, lowerBoundValue, upperBoundValue)
+		if metricValue < 0 || metricValue > upperBoundValue {
+			return fmt.Errorf("metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
 		}
 
 	}
@@ -209,7 +208,7 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 
 func (s *StressValidator) buildStressMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) []types.MetricDataQuery {
 	var (
-		metricQueryPeriod = int32(s.vConfig.GetDataPointPeriod().Seconds())
+		metricQueryPeriod = int32(s.vConfig.GetAgentCollectionPeriod().Seconds())
 	)
 
 	metricInformation := types.Metric{

@@ -58,7 +58,7 @@ func (suite *MetricsAppendDimensionTestSuite) TestAllInSuite() {
 	for _, testRunner := range getTestRunners(env) {
 		testRunner.Run(suite)
 	}
-	
+
 	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Append Dimension Test Suite Failed")
 }
 

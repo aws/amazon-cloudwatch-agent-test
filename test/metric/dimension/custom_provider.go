@@ -27,7 +27,7 @@ func (p *CustomDimensionProvider) GetDimension(instruction Instruction) types.Di
 
 	return types.Dimension{
 		Name:  aws.String(instruction.Key),
-		Value: instruction.Value.Value,
+		Value: aws.String(*instruction.Value.Value),
 	}
 }
 

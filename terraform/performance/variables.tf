@@ -78,7 +78,7 @@ variable "cwa_github_sha_date" {
   type    = string
   default = ""
 }
-variable "data_rate" {
+variable "values_per_minute" {
   type    = number
   default = 10
 }

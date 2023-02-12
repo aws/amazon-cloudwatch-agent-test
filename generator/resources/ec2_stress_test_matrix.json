@@ -7,7 +7,8 @@
         "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
         "arc": "amd64",
         "binaryName": "amazon-cloudwatch-agent.rpm",
-        "dataRate": 1000
+        "valuesPerMinute": 1000,
+        "family": "linux"
       },
       {
         "os": "al2",
@@ -17,7 +18,8 @@
         "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
         "arc": "amd64",
         "binaryName": "amazon-cloudwatch-agent.rpm",
-        "dataRate": 5000
+        "valuesPerMinute": 5000,
+        "family": "linux"
       },
       {
         "os": "al2",
@@ -27,7 +29,8 @@
         "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
         "arc": "amd64",
         "binaryName": "amazon-cloudwatch-agent.rpm",
-        "dataRate": 10000
+        "valuesPerMinute": 10000,
+        "family": "linux"
       },
       {
         "os": "al2",
@@ -37,6 +40,7 @@
         "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
         "arc": "amd64",
         "binaryName": "amazon-cloudwatch-agent.rpm",
-        "dataRate": 50000
+        "valuesPerMinute": 50000,
+        "family": "linux"
       }
 ]
