@@ -59,6 +59,8 @@ type MetricDimension struct {
 	Value string `yaml:"value"`
 }
 
+var _ ValidateConfig = (*validatorConfig)(nil)
+
 func NewValidateConfig(configPath string) (*validatorConfig, error) {
 	configPathBytes, err := os.ReadFile(configPath)
 	if err != nil {

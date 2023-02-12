@@ -25,11 +25,7 @@ type matrixRow struct {
 	Username            string `json:"username"`
 	InstallAgentCommand string `json:"installAgentCommand"`
 	CaCertPath          string `json:"caCertPath"`
-<<<<<<< HEAD
-	DataRate            int    `json:"data_rate"`
-=======
 	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
->>>>>>> validate
 }
 
 // you can't have a const map in golang

@@ -72,15 +72,9 @@ func prepare(vConfig models.ValidateConfig) error {
 		numberLogsMonitored = vConfig.GetNumberMonitoredLogs()
 		agentConfigFilePath = vConfig.GetCloudWatchAgentConfigPath()
 	)
-	log.Printf("helloo")
 	switch dataType {
 	case "logs":
-<<<<<<< HEAD
-		log.Printf("LLLLL")
-		err = common.GenerateLogConfig(dataRate, agentConfigFilePath)
-=======
-		common.GenerateLogConfig(numberLogsMonitored, agentConfigFilePath)
->>>>>>> validate
+		err = common.GenerateLogConfig(numberLogsMonitored, agentConfigFilePath)
 	default:
 	}
 

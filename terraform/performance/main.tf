@@ -42,10 +42,8 @@ resource "local_file" "update-validation-config" {
                 "<values_per_minute>", var.values_per_minute),
                 "<commit_hash>", var.cwa_github_sha),
                 "<commit_date>", var.cwa_github_sha_date),
-                "<cloudwatch_agent_config>","${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
-                )
-                
-
+                "<cloudwatch_agent_config>","${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
+              
   filename = "${var.test_dir}/${local.final_validator_config}"
 
 }
@@ -92,6 +90,7 @@ resource "null_resource" "integration_test" {
       "echo sha ${var.cwa_github_sha}",
       "cloud-init status --wait",
       "echo clone and install agent",
+      "rm -rf amazon-cloudwatch-agent-test",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
@@ -103,11 +102,9 @@ resource "null_resource" "integration_test" {
   #Run sanity check and integration test
   provisioner "remote-exec" {
     inline = [
-      "helo",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",
-      "cat${local.instance_temp_directory}/${local.cloudwatch_agent_config} ",
       "cd ~/amazon-cloudwatch-agent-test",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
       "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config}",

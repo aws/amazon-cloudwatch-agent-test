@@ -11,9 +11,13 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
   name           = module.common.performance-dynamodb-table
   read_capacity  = 10
   write_capacity = 10
-  // Even though CommitDate would be better for a range key to easily sort; however, query without a hashkey is impossible.
-  hash_key       = "CommitDate"
-  range_key      = "CommitHash"
+  hash_key       = "Service"
+  range_key      = "CommitDate"
+
+  attribute {
+    name = "Service"
+    type = "S"
+  }
 
   attribute {
     name = "CommitHash"
@@ -23,5 +27,14 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
   attribute {
     name = "CommitDate"
     type = "N"
+  }
+
+  global_secondary_index {
+    name            = "CommitGithub"
+    hash_key        = "CommitHash"
+    range_key       = "CommitDate"
+    write_capacity  = 10
+    read_capacity   = 10
+    projection_type = "ALL"
   }
 }

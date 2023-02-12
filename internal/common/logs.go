@@ -108,16 +108,13 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	// For metrics and traces, we will keep the default config while log will be appended dynamically
 	file, err := os.OpenFile(filePath, os.O_RDWR, 0644)
 	if err != nil {
-		log.Printf("fail here?")
 		return err
 	}
 	defer file.Close()
-	log.Printf("fail 1")
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}
-	log.Printf("fail here")
 	err = json.Unmarshal(fileBytes, &cfgFileData)
 	if err != nil {
 		return err
@@ -135,10 +132,8 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	}
 
 	log.Printf("Writing config file with %d logs to %v", numberMonitoredLogs, filePath)
-
 	cfgFileData["logs"].(map[string]interface{})["logs_collected"].(map[string]interface{})["files"].(map[string]interface{})["collect_list"] = logFiles
 
-	log.Printf("Logs %v", cfgFileData)
 	finalConfig, err := json.MarshalIndent(cfgFileData, "", " ")
 	if err != nil {
 		return err
