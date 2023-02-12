@@ -4,7 +4,6 @@
 package performance
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -15,14 +14,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/cenkalti/backoff/v4"
-	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
 
 const (
 	DynamoDBDataBase = "CWAPerformanceMetrics"
-	RELEASE_NAME_ENV = "RELEASE_NAME"
-	IS_RELEASE       = "isRelease"
 )
 
 var (
@@ -88,27 +84,13 @@ func (s *PerformanceValidator) EndValidation() error {
 }
 
 func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformation) error {
-	var (
-		receivers, processors, exporters = s.vConfig.GetOtelConfig()
-		commitHash, commitDate           = s.vConfig.GetCommitInformation()
-	)
-
 	err := backoff.Retry(func() error {
-		existingPerfInfo, err := awsservice.GetPacketInDatabase(DynamoDBDataBase, "CommitHash", commitHash, perfInfo)
-		if err != nil {
-			return err
-		}
-
-		// Get the latest performance information from the database and update by merging the existing one
-		// and finally replace the packet in the database
-		maps.Copy(existingPerfInfo["Results"].(map[string]interface{}), perfInfo["Results"].(map[string]interface{}))
-		finalPerfInfo := PackIntoPerformanceInformation(receivers, processors, exporters, commitHash, commitDate, false, existingPerfInfo["Results"])
-
-		err = awsservice.ReplacePacketInDatabase(DynamoDBDataBase, finalPerfInfo)
+		err := awsservice.UpdateOrAddPacketInDatabase(DynamoDBDataBase, perfInfo)
 
 		if err != nil {
 			return err
 		}
+
 		return nil
 	}, awsservice.StandardExponentialBackoff)
 
@@ -118,10 +100,10 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 	var (
 		receivers, processors, exporters = s.vConfig.GetOtelConfig()
 		commitHash, commitDate           = s.vConfig.GetCommitInformation()
-		dataRate                         = fmt.Sprint(s.vConfig.GetDataRate())
+		dataRate                         = s.vConfig.GetDataRate()
 		datapointPeriod                  = s.vConfig.GetDataPointPeriod().Seconds()
 	)
-	performanceMetricResults := make(map[string]Stats)
+	performanceMetricResults := make(PerformanceData)
 
 	for _, metric := range metrics {
 		metricLabel := strings.Split(*metric.Label, " ")
@@ -137,7 +119,7 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 		performanceMetricResults[metricName] = metricStats
 	}
 
-	return PackIntoPerformanceInformation(receivers, processors, exporters, commitHash, commitDate, false, map[string]interface{}{dataRate: performanceMetricResults})
+	return PackIntoPerformanceInformation(receivers, processors, exporters, commitHash, commitDate, dataRate, performanceMetricResults)
 }
 
 func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
@@ -192,14 +174,14 @@ func (s *PerformanceValidator) buildStressMetricQueries(metricName, metricNamesp
 	return metricDataQuery
 }
 
-func PackIntoPerformanceInformation(receivers, processors, exporters []string, commitHash string, commitDate int64, isRelease bool, result interface{}) PerformanceInformation {
+func PackIntoPerformanceInformation(receivers, processors, exporters []string, commitHash string, commitDate int64, dataRate int, result PerformanceData) PerformanceInformation {
 	return PerformanceInformation{
 		"Receivers":  receivers,
 		"Processors": processors,
 		"Exporters":  exporters,
 		"CommitHash": commitHash,
 		"CommitDate": commitDate,
-		"IsRelease":  isRelease,
+		"DataRate":   dataRate,
 		"Results":    result,
 	}
 }

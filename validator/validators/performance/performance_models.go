@@ -15,3 +15,5 @@ type PerformanceInformation map[string]interface{}
 		"IsRelease":  isRelease,
 		"Results":    result,
 */
+
+type PerformanceData map[string]Stats
