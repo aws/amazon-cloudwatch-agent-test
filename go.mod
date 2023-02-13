@@ -3,6 +3,7 @@ module github.com/aws/amazon-cloudwatch-agent-test
 go 1.18
 
 require (
+	github.com/aws/aws-sdk-go v1.44.188
 	github.com/aws/aws-sdk-go-v2 v1.17.4
 	github.com/aws/aws-sdk-go-v2/config v1.18.10
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.10.0
@@ -15,10 +16,13 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.23.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.33.0
+	github.com/cactus/go-statsd-client/v5 v5.0.0
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.8.1
+	go.uber.org/multierr v1.9.0
 	golang.org/x/sys v0.2.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -41,5 +45,5 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
 )

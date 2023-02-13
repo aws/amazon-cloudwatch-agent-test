@@ -56,7 +56,7 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
-  default = ""
+  default = "../../test/statsd_stress"
 }
 
 variable "cwa_github_sha" {
@@ -78,7 +78,7 @@ variable "cwa_github_sha_date" {
   type    = string
   default = ""
 }
-variable "performance_number_of_logs" {
-  type    = string
-  default = ""
+variable "values_per_minute" {
+  type    = number
+  default = 10
 }

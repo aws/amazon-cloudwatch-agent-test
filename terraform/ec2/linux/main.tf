@@ -83,6 +83,13 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
+
   # Prepare Integration Test
   provisioner "remote-exec" {
     inline = [
@@ -95,13 +102,6 @@ resource "null_resource" "integration_test" {
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
     ]
-
-    connection {
-      type        = "ssh"
-      user        = var.user
-      private_key = local.private_key_content
-      host        = aws_instance.cwagent.public_ip
-    }
   }
 
   #Run sanity check and integration test
@@ -116,12 +116,6 @@ resource "null_resource" "integration_test" {
       "echo run sanity test && go test ./test/sanity -p 1 -v",
       "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path}" #-v if want verbose
     ]
-    connection {
-      type        = "ssh"
-      user        = var.user
-      private_key = local.private_key_content
-      host        = aws_instance.cwagent.public_ip
-    }
   }
 
   depends_on = [
