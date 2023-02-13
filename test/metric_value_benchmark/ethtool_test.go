@@ -21,13 +21,13 @@ type EthtoolTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-var _ test_runner.ITestRunner = (*NetTestRunner)(nil)
+var _ test_runner.ITestRunner = (*EthtoolTestRunner)(nil)
 
 func (m *EthtoolTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := m.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, name := range metricsToFetch {
-		testResults[i] = m.validateNetMetric(name)
+		testResults[i] = m.validateEthtoolMetric(name)
 	}
 
 	return status.TestGroupResult{
@@ -46,12 +46,11 @@ func (m *EthtoolTestRunner) GetAgentConfigFileName() string {
 
 func (m *EthtoolTestRunner) GetMeasuredMetrics() []string {
 	return []string{
-		"ethtool_bw_in_allowance_exceeded", "ethtool_bw_out_allowance_exceeded", "ethtool_pps_allowance_exceeded", "ethtool_conntrack_allowance_exceeded",
-		"ethtool_linklocal_allowance_exceeded",
+		"ethtool_queue_0_tx_cnt", "ethtool_queue_0_rx_cnt",
 	}
 }
 
-func (m *EthtoolTestRunner) validateNetMetric(metricName string) status.TestResult {
+func (m *EthtoolTestRunner) validateEthtoolMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
