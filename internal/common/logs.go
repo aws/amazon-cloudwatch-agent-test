@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"go.uber.org/multierr"
@@ -18,7 +19,10 @@ import (
 // the config provided
 func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRate int) error {
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
-	var multiErr error
+	var (
+		multiErr error
+		wg       sync.WaitGroup
+	)
 
 	logPaths, err := getLogFilePaths(configFilePath)
 	if err != nil {
@@ -26,18 +30,21 @@ func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRa
 	}
 
 	for _, logPath := range logPaths {
+		wg.Add(1)
 		go func(logPath string) {
+			defer wg.Done()
 			err = writeToLogs(logPath, agentRunDuration, dataRate)
 			multiErr = multierr.Append(multiErr, err)
 		}(logPath)
 	}
 
+	wg.Wait()
 	return multiErr
 }
 
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
 // for the specified duration
-func writeToLogs(filePath string, durationMinute time.Duration, dataRate int) error {
+func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -47,7 +54,7 @@ func writeToLogs(filePath string, durationMinute time.Duration, dataRate int) er
 
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
-	endTimeout := time.After(durationMinute)
+	endTimeout := time.After(duration)
 
 	//loop until the test duration is reached
 	for {
@@ -111,10 +118,12 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 		return err
 	}
 	defer file.Close()
+
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}
+
 	err = json.Unmarshal(fileBytes, &cfgFileData)
 	if err != nil {
 		return err

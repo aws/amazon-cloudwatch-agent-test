@@ -7,13 +7,14 @@ type PerformanceInformation map[string]interface{}
 
 /*
 	Contains the following:
-		"Receivers":  receivers,
-		"Processors": processors,
-		"Exporters":  exporters,
-		"CommitHash": commitHash,
-		"CommitDate": commitDate,
-		"IsRelease":  isRelease,
-		"Results":    result,
+		"UseCase":          receiver,
+		"CommitDate":       commitDate,
+		"CommitHash":       commitHash,
+		"DataType":         dataType,
+		"Results":          result,
+		"CollectionPeriod": collectionPeriod,
+		"InstanceAMI":      instanceAMI,
+		"InstanceType":     instanceType,
 */
 
 type PerformanceData map[string]Stats

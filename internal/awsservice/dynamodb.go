@@ -27,7 +27,7 @@ func ReplacePacketInDatabase(databaseName string, packet map[string]interface{})
 	return err
 }
 
-func AddPacketIntoDatabaseIfNotExist(databaseName, checkingAttribute string, packet map[string]interface{}) error {
+func AddPacketIntoDatabaseIfNotExist(databaseName, useCase, checkingAttribute, checkingAttributeValue string, packet map[string]interface{}) error {
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		return err
@@ -37,27 +37,32 @@ func AddPacketIntoDatabaseIfNotExist(databaseName, checkingAttribute string, pac
 		&dynamodb.PutItemInput{
 			Item:                item,
 			TableName:           aws.String(databaseName),
-			ConditionExpression: aws.String("attribute_not_exists(#attribute)"),
+			ConditionExpression: aws.String("#usecase <> :usecase_name and #attribute <> :attribute_value"),
 			ExpressionAttributeNames: map[string]string{
+				"#usecase":   "UseCase",
 				"#attribute": checkingAttribute,
+			},
+			ExpressionAttributeValues: map[string]types.AttributeValue{
+				":usecase_name":    &types.AttributeValueMemberS{Value: useCase},
+				":attribute_value": &types.AttributeValueMemberN{Value: checkingAttributeValue},
 			},
 		})
 
 	return err
 }
 
-func GetPacketInDatabase(databaseName, serviceName, checkingAttribute, checkingAttributeValue string, packet map[string]interface{}) (map[string]interface{}, error) {
+func GetPacketInDatabase(databaseName, useCase, checkingAttribute, checkingAttributeValue string, packet map[string]interface{}) (map[string]interface{}, error) {
 	var packets []map[string]interface{}
 
 	data, err := dynamodbClient.Query(cxt, &dynamodb.QueryInput{
 		TableName:              aws.String(databaseName),
-		KeyConditionExpression: aws.String("#service = :service_name and #attribute = :attribute_value"),
+		KeyConditionExpression: aws.String("#usecase = :usecase_name and #attribute = :attribute_value"),
 		ExpressionAttributeNames: map[string]string{
-			"#service":   "Service",
+			"#usecase":   "UseCase",
 			"#attribute": checkingAttribute,
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":service_name":    &types.AttributeValueMemberS{Value: serviceName},
+			":usecase_name":    &types.AttributeValueMemberS{Value: useCase},
 			":attribute_value": &types.AttributeValueMemberN{Value: checkingAttributeValue},
 		},
 		ScanIndexForward: aws.Bool(true), // Sort Range Key in ascending by Sort/Range key in numeric order since range key is CommitDate
@@ -71,7 +76,7 @@ func GetPacketInDatabase(databaseName, serviceName, checkingAttribute, checkingA
 
 	if len(packets) == 0 {
 		if packet != nil {
-			if err = AddPacketIntoDatabaseIfNotExist(databaseName, checkingAttribute, packet); err != nil {
+			if err = AddPacketIntoDatabaseIfNotExist(databaseName, useCase, checkingAttribute, checkingAttributeValue, packet); err != nil {
 				return nil, err
 			}
 			return packet, nil

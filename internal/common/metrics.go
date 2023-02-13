@@ -5,38 +5,36 @@ package common
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cactus/go-statsd-client/v5/statsd"
-	"go.uber.org/multierr"
 )
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
-func StartSendingMetrics(receivers []string, agentRunDuration time.Duration, dataRate int) error {
+func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRate int) error {
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
 	var (
-		err      error
-		multiErr error
+		err error
+		wg  sync.WaitGroup
 	)
 
-	for _, receiver := range receivers {
-		go func(receiver string, durationMinute time.Duration) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		switch receiver {
+		case "statsd":
+			err = sendStatsdMetrics(dataRate, agentRunDuration)
+		default:
+		}
+	}()
 
-			switch receiver {
-			case "statsd":
-				err = sendStatsdMetrics(dataRate, durationMinute)
-
-			default:
-			}
-
-			multiErr = multierr.Append(multiErr, err)
-		}(receiver, agentRunDuration)
-	}
-	return multiErr
+	wg.Wait()
+	return err
 }
 
-func sendStatsdMetrics(dataRate int, durationMinute time.Duration) error {
+func sendStatsdMetrics(dataRate int, duration time.Duration) error {
 	// https://github.com/cactus/go-statsd-client#example
 	statsdClientConfig := &statsd.ClientConfig{
 		Address:     ":8125",
@@ -56,7 +54,7 @@ func sendStatsdMetrics(dataRate int, durationMinute time.Duration) error {
 
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
-	endTimeout := time.After(durationMinute)
+	endTimeout := time.After(duration)
 
 	for {
 		select {
