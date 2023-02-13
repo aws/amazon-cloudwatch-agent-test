@@ -29,6 +29,14 @@ output "vpc_security_group" {
   value = var.vpc_security_group
 }
 
+output "vpc_subnet" {
+  value = var.vpc_subnet
+}
+
 output "performance-dynamodb-table" {
   value = "CWAPerformanceMetrics"
+}
+
+output "efs_mount_system" {
+  value = "efs_file_system"
 }

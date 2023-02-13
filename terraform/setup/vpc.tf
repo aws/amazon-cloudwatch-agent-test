@@ -49,3 +49,11 @@ resource "aws_security_group" "ec2_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+resource "aws_subnet" "ec2_subnet" {
+  vpc_id     = data.aws_vpc.default.id
+  cidr_block =  data.aws_vpc.default.cidr_block
+  tags = {
+    Name = module.common.vpc_subnet
+  }
+}

@@ -38,3 +38,18 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
     projection_type = "ALL"
   }
 }
+
+
+# Create EFS for mounting EFS
+resource "aws_efs_file_system" "efs" {
+  creation_token = module.common.efs_mount_system
+  tags = {
+    Name = module.common.efs_mount_system
+  }
+}
+
+resource "aws_efs_mount_target" "mount" {
+  file_system_id  = aws_efs_file_system.efs.id
+  subnet_id       = aws_subnet.ec2_subnet.id
+  security_groups = [aws_security_group.ec2_security_group.id]
+}

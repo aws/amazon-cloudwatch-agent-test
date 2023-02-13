@@ -28,20 +28,11 @@ locals {
   binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
 }
 
-#####################################################################
-# Create EFS
-#####################################################################
-resource "aws_efs_file_system" "efs" {
-  creation_token = "efs-${module.common.testing_id}"
+// 
+data "aws_efs_file_system" "efs" {
   tags = {
-    Name = "efs-${module.common.testing_id}"
+    Name = module.common.efs_mount_system
   }
-}
-
-resource "aws_efs_mount_target" "mount" {
-  file_system_id  = aws_efs_file_system.efs.id
-  subnet_id       = aws_instance.cwagent.subnet_id
-  security_groups = [data.aws_security_group.ec2_security_group.id]
 }
 
 resource "null_resource" "mount_efs" {
@@ -60,7 +51,7 @@ resource "null_resource" "mount_efs" {
   provisioner "remote-exec" {
     # https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.html
     inline = [
-      "sudo mkdir ~/efs-mount-point",
+      "sudo mkdir -p ~/efs-mount-point",
       "sudo mount -t efs -o tls ${aws_efs_file_system.efs.dns_name} ~/efs-mount-point/",
     ]
   }
