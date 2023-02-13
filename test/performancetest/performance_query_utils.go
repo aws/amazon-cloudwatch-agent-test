@@ -45,7 +45,7 @@ const (
 	*/
 )
 
-//struct that holds statistics on the returned data
+// struct that holds statistics on the returned data
 type Stats struct {
 	Average float64
 	P99     float64 //99% percent process

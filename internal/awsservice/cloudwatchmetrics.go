@@ -6,6 +6,7 @@ package awsservice
 import (
 	"context"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -66,12 +67,12 @@ func ValidateMetrics(t *testing.T, metricName, namespace string, dimensionsFilte
 
 }
 
-func ValidateSampleCount(t *testing.T, metricName, namespace string, dimensions []types.Dimension,
+func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimension,
 	startTime time.Time, endTime time.Time,
 	lowerBoundInclusive int, upperBoundInclusive int, periodInSeconds int32) bool {
 	cwmClient, clientContext, err := GetCloudWatchMetricsClient()
 	if err != nil {
-		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
+		return false
 	}
 
 	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
@@ -85,7 +86,6 @@ func ValidateSampleCount(t *testing.T, metricName, namespace string, dimensions 
 	}
 	data, err := cwmClient.GetMetricStatistics(*clientContext, &metricStatsInput)
 	if err != nil {
-		t.Errorf("Error getting metric data %v", err)
 		return false
 	}
 
@@ -95,9 +95,7 @@ func ValidateSampleCount(t *testing.T, metricName, namespace string, dimensions 
 		dataPoints = dataPoints + int(*datapoint.SampleCount)
 	}
 
-	t.Logf("Number of datapoints for start time %v with endtime %v and period %d "+
-		"is %d expected is inclusive between %d and %d",
-		startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
+	log.Printf("Number of datapoints for start time %v with endtime %v and period %d is %d is inclusive between %d and %d", startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
 
 	if !(lowerBoundInclusive <= dataPoints) || !(upperBoundInclusive >= dataPoints) {
 		return false
@@ -118,6 +116,28 @@ func GetCloudWatchMetricsClient() (*cloudwatch.Client, *context.Context, error) 
 		cwm = cloudwatch.NewFromConfig(c)
 	}
 	return cwm, &metricsCtx, nil
+}
+
+// GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
+
+func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
+	cwmClient, clientContext, err := GetCloudWatchMetricsClient()
+	if err != nil {
+		return nil, err
+	}
+
+	getMetricDataInput := cloudwatch.GetMetricDataInput{
+		StartTime:         &startTime,
+		EndTime:           &endTime,
+		MetricDataQueries: metricDataQueries,
+	}
+
+	data, err := cwmClient.GetMetricData(*clientContext, &getMetricDataInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func BuildDimensionFilterList(appendDimension int) []types.DimensionFilter {
