@@ -105,6 +105,7 @@ func (t *AggregationDimensionsTestRunner) validate(metricName string) status.Tes
 		Name:   metricName,
 		Status: status.FAILED,
 	}
+	f := metric.MetricValueFetcher{}
 	// Validate the metric name with some expected dimension sets.
 	aggregations := getExpectedDimensions(metricName)
 	for _, aggregation := range aggregations {
@@ -115,7 +116,6 @@ func (t *AggregationDimensionsTestRunner) validate(metricName string) status.Tes
 			instructions = append(instructions, i)
 		}
 		dd, _ := t.DimensionFactory.GetDimensions(instructions)
-		f := metric.MetricValueFetcher{}
 		values, err := f.Fetch("TestAggregationDimensions", metricName, dd,
 			metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 		// Expect values for the metric with the current dimension list.
@@ -134,7 +134,6 @@ func (t *AggregationDimensionsTestRunner) validate(metricName string) status.Tes
 			instructions = append(instructions, i)
 		}
 		dd, _ := t.DimensionFactory.GetDimensions(instructions)
-		f := metric.MetricValueFetcher{}
 		values, _ := f.Fetch("TestAggregationDimensions", metricName, dd,
 			metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 		// Expect no values.
