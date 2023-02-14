@@ -10,7 +10,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"log"
 )
 
 type OneAggregateDimensionTestRunner struct {
@@ -58,7 +57,6 @@ func (t *OneAggregateDimensionTestRunner) validateNoAppendDimensionMetric(metric
 
 	fetcher := metric.MetricValueFetcher{}
 	values, err := fetcher.Fetch("MetricAggregateDimensionTest", metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
-	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
 	}
