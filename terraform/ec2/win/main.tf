@@ -37,15 +37,40 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
-  get_password_data           = true
   user_data                   = <<EOF
 <powershell>
 Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
 Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
 Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
 
-Start-Service sshd
+
 Set-Service -Name sshd -StartupType 'Automatic'
+Start-Service sshd
+
+# Confirm the Firewall rule is configured. It should be created automatically by setup. Run the following to verify
+if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue | Select-Object Name, Enabled)) {
+    Write-Output "Firewall Rule 'OpenSSH-Server-In-TCP' does not exist, creating it..."
+    New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+} else {
+    Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
+}
+
+# Set default shell for OpenSSH
+New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell
+
+# Get the public key 
+$authorized_key = "${trimspace(tls_private_key.ssh_key[0].public_key_openssh)}"
+New-Item -Force -ItemType Directory -Path $env:USERPROFILE\.ssh; Add-Content -Force -Path $env:USERPROFILE\.ssh\authorized_keys -Value $authorized_key
+
+# Set the config to allow the pubkey auth
+$sshd_config="C:\ProgramData\ssh\sshd_config" 
+(Get-Content $sshd_config) -replace '#PubkeyAuthentication', 'PubkeyAuthentication' | Out-File -encoding ASCII $sshd_config
+(Get-Content $sshd_config) -replace 'AuthorizedKeysFile __PROGRAMDATA__', '#AuthorizedKeysFile __PROGRAMDATA__' | Out-File -encoding ASCII $sshd_config
+(Get-Content $sshd_config) -replace 'Match Group administrators', '#Match Group administrators' | Out-File -encoding ASCII $sshd_config
+Get-Content C:\ProgramData\ssh\sshd_config
+
+# Reload the config
+Restart-Service sshd
 
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
@@ -67,14 +92,13 @@ resource "null_resource" "integration_test" {
   depends_on = [aws_instance.cwagent]
   # Install software
   provisioner "remote-exec" {
-    inline = [
-      "start /wait timeout 120",                             //Wait some time to ensure all binaries have been downloaded
+    inline = [                                               //Wait some time to ensure all binaries have been downloaded
       "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
       "set AWS_REGION=${var.region}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
       "echo clone and install agent",
-      "git clone ${var.github_test_repo}",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "git reset --hard ${var.cwa_test_github_sha}",
       "echo run tests with the tag integration, one at a time, and verbose",
@@ -85,8 +109,8 @@ resource "null_resource" "integration_test" {
     connection {
       type            = "ssh"
       user            = "Administrator"
-      password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-      host            = aws_instance.cwagent.public_ip
+      private_key     = local.private_key_content
+      host            = aws_instance.cwagent.public_dns
       target_platform = "windows"
       timeout         = "6m"
     }

@@ -21,11 +21,10 @@ variable "cwa_github_sha" {
   default = "4cefc9f0e9b411c6765c5122877c136dbb23588d"
 }
 
-variable "cwa_test_github_sha" {
+variable "github_test_repo_branch" {
   type    = string
-  default = ""
+  default = "main"
 }
-
 variable "github_test_repo" {
   type    = string
   default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
