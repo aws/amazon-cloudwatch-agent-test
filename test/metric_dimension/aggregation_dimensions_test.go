@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type AggregationDimensionsTestRunner struct {
@@ -41,7 +42,61 @@ func (t *AggregationDimensionsTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *AggregationDimensionsTestRunner) GetMeasuredMetrics() []string {
-	return []string{"mem_used_percent"}
+	return []string{"mem_used_percent", "cpu_usage_user"}
+}
+
+// getExpectedDimensions returns a list of expected dimensions for the given metric name.
+// This is based on the JSON configuration.
+func getExpectedDimensions(metricName string) [][]string {
+	switch metricName {
+	case "mem_used_percent":
+		return [][]string{
+			{"foo", "bar", "baz", "InstanceId", "InstanceType"},
+			{},
+			{"InstanceId"},
+			{"InstanceId", "InstanceType"},
+			{"foo", "bar", "InstanceType"},
+		}
+	case "cpu_usage_user":
+		return [][]string{
+			{"InstanceId", "InstanceType"},
+			{},
+			{"InstanceId"},
+		}
+	}
+	return nil
+}
+
+func getUnexpectedDimensions(metricName string) [][]string {
+	switch metricName {
+	case "mem_used_percent":
+		return [][]string{
+			{"foo"},
+			{"foo", "bar"},
+			{"InstanceType"},
+		}
+	case "cpu_usage_user":
+		return [][]string{
+			{"foo"},
+			{"foo", "bar"},
+			{"InstanceType"},
+			{"foo", "bar", "baz", "InstanceId", "InstanceType"},
+		}
+	}
+	return nil
+}
+
+func getDimensionValue(dimensionKey string) dimension.ExpectedDimensionValue {
+	switch dimensionKey {
+	case "foo":
+		return dimension.ExpectedDimensionValue{aws.String("fooval")}
+	case "bar":
+		return dimension.ExpectedDimensionValue{aws.String("barval")}
+	case "baz":
+		return dimension.ExpectedDimensionValue{aws.String("bazval")}
+	default:
+		return dimension.UnknownDimensionValue()
+	}
 }
 
 // validate checks that a metric exists with each of the expected dimension sets.
@@ -50,38 +105,42 @@ func (t *AggregationDimensionsTestRunner) validate(metricName string) status.Tes
 		Name:   metricName,
 		Status: status.FAILED,
 	}
-	// Expect to find the metric with each of the following lists of dimensions.
-	// Except the last one - "InstanceType".
-	aggregations := [][]string{
-		{},
-		{"InstanceId"},
-		{"InstanceId", "InstanceType"},
-		{"InstanceType"},
-	}
-	for i, aggregation := range aggregations {
+	// Validate the metric name with some expected dimension sets.
+	aggregations := getExpectedDimensions(metricName)
+	for _, aggregation := range aggregations {
 		instructions := []dimension.Instruction{}
-		for _, d := range aggregation {
-			instruction := dimension.Instruction{
-				Key: d,
-				Value: dimension.UnknownDimensionValue(),
-			}
-			instructions = append(instructions, instruction)
+		for _, k := range aggregation {
+			v := getDimensionValue(k)
+			i := dimension.Instruction{Key: k, Value: v}
+			instructions = append(instructions, i)
 		}
 		dd, _ := t.DimensionFactory.GetDimensions(instructions)
 		f := metric.MetricValueFetcher{}
 		values, err := f.Fetch("TestAggregationDimensions", metricName, dd,
 			metric.AVERAGE, test_runner.HighResolutionStatPeriod)
-		// Do not expect the last aggregation of just "InstanceType".
-		if i == len(aggregations)-1 {
-			if len(values) > 0 {
-				log.Printf("Expected no metrics with these dimensions - %v", aggregation)
-				return r
-			}
-		} else {
-			// Expect values for the metric with the current dimension list.
-			if err != nil || !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
-				return r
-			}
+		// Expect values for the metric with the current dimension list.
+		if err != nil || !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+			return r
+		}
+	}
+
+	// Validate the metric with some dimensions DO NOT EXIST.
+	aggregations = getUnexpectedDimensions(metricName)
+	for _, aggregation := range aggregations {
+		instructions := []dimension.Instruction{}
+		for _, k := range aggregation {
+			v := getDimensionValue(k)
+			i := dimension.Instruction{Key: k, Value: v}
+			instructions = append(instructions, i)
+		}
+		dd, _ := t.DimensionFactory.GetDimensions(instructions)
+		f := metric.MetricValueFetcher{}
+		values, _ := f.Fetch("TestAggregationDimensions", metricName, dd,
+			metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+		// Expect no values.
+		if len(values) > 0 {
+			log.Printf("Expected no metrics with these dimensions - %v", aggregation)
+			return r
 		}
 	}
 	r.Status = status.SUCCESSFUL
