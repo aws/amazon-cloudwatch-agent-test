@@ -22,14 +22,42 @@ type AggregationDimensionsTestRunner struct {
 var _ test_runner.ITestRunner = (*AggregationDimensionsTestRunner)(nil)
 
 func (t *AggregationDimensionsTestRunner) Validate() status.TestGroupResult {
-	mm := t.GetMeasuredMetrics()
-	r := make([]status.TestResult, len(mm))
-	for i, m := range mm {
-		r[i] = t.validate(m)
+	f := metric.MetricValueFetcher{}
+	results := []status.TestResult{}
+
+	for _, testCase := range testCases {
+		r := status.TestResult{Name: testCase.metricName, Status: status.SUCCESSFUL}
+		instructions := []dimension.Instruction{}
+		for _, d := range testCase.dimensions {
+			// If dimension value is not explicit, then rely on a provider.
+			v := dimension.UnknownDimensionValue()
+			if d[1] != "" {
+				v = dimension.ExpectedDimensionValue{Value: aws.String(d[1])}
+			}
+			i := dimension.Instruction{Key: d[0], Value: v}
+			instructions = append(instructions, i)
+		}
+		dd, _ := t.DimensionFactory.GetDimensions(instructions)
+		values, err := f.Fetch("TestAggregationDimensions",
+			testCase.metricName, dd, metric.AVERAGE,
+			test_runner.HighResolutionStatPeriod)
+		if err != nil {
+			r.Status = status.FAILED
+		} else if testCase.shouldExist && len(values) == 0 {
+			log.Printf("error: did not find values for metric %v with dimensions %v",
+				testCase.metricName, testCase.dimensions)
+			r.Status = status.FAILED
+		} else if !testCase.shouldExist && len(values) > 0 {
+			log.Printf("error: found values for metric %v with dimensions %v",
+				testCase.metricName, testCase.dimensions)
+			r.Status = status.FAILED
+		}
+		results = append(results, r)
 	}
+
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
-		TestResults: r,
+		TestResults: results,
 	}
 }
 
@@ -41,107 +69,134 @@ func (t *AggregationDimensionsTestRunner) GetAgentConfigFileName() string {
 	return "aggregation_dimensions.json"
 }
 
+// GetMeasuredMetrics is not used in this test.
 func (t *AggregationDimensionsTestRunner) GetMeasuredMetrics() []string {
 	return []string{"mem_used_percent", "cpu_usage_user"}
 }
 
-// getExpectedDimensions returns a list of expected dimensions for the given metric name.
-// This is based on the JSON configuration.
-func getExpectedDimensions(metricName string) [][]string {
-	switch metricName {
-	case "mem_used_percent":
-		return [][]string{
-			{"foo", "bar", "baz", "InstanceId", "InstanceType"},
-			{},
-			{"InstanceId"},
-			{"InstanceId", "InstanceType"},
-			{"foo", "bar", "InstanceType"},
-		}
-	case "cpu_usage_user":
-		return [][]string{
-			{"InstanceId", "InstanceType"},
-			{},
-			{"InstanceId"},
-		}
-	}
-	return nil
+type pair [2]string
+
+type testCase struct {
+	shouldExist bool
+	metricName  string
+	// dimensions is a list of pairs.
+	// If the 2nd item in the pair is nil, then rely on a provider get dim val.
+	dimensions []pair
 }
 
-func getUnexpectedDimensions(metricName string) [][]string {
-	switch metricName {
-	case "mem_used_percent":
-		return [][]string{
-			{"foo"},
-			{"foo", "bar"},
-			{"InstanceType"},
-		}
-	case "cpu_usage_user":
-		return [][]string{
-			{"foo"},
-			{"foo", "bar"},
-			{"InstanceType"},
-			{"foo", "bar", "baz", "InstanceId", "InstanceType"},
-		}
-	}
-	return nil
-}
-
-func getDimensionValue(dimensionKey string) dimension.ExpectedDimensionValue {
-	switch dimensionKey {
-	case "foo":
-		return dimension.ExpectedDimensionValue{aws.String("fooval")}
-	case "bar":
-		return dimension.ExpectedDimensionValue{aws.String("barval")}
-	case "baz":
-		return dimension.ExpectedDimensionValue{aws.String("bazval")}
-	default:
-		return dimension.UnknownDimensionValue()
-	}
-}
-
-// validate checks that a metric exists with each of the expected dimension sets.
-func (t *AggregationDimensionsTestRunner) validate(metricName string) status.TestResult {
-	r := status.TestResult{
-		Name:   metricName,
-		Status: status.FAILED,
-	}
-	f := metric.MetricValueFetcher{}
-	// Validate the metric name with some expected dimension sets.
-	aggregations := getExpectedDimensions(metricName)
-	for _, aggregation := range aggregations {
-		instructions := []dimension.Instruction{}
-		for _, k := range aggregation {
-			v := getDimensionValue(k)
-			i := dimension.Instruction{Key: k, Value: v}
-			instructions = append(instructions, i)
-		}
-		dd, _ := t.DimensionFactory.GetDimensions(instructions)
-		values, err := f.Fetch("TestAggregationDimensions", metricName, dd,
-			metric.AVERAGE, test_runner.HighResolutionStatPeriod)
-		// Expect values for the metric with the current dimension list.
-		if err != nil || !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
-			return r
-		}
-	}
-
-	// Validate the metric with some dimensions DO NOT EXIST.
-	aggregations = getUnexpectedDimensions(metricName)
-	for _, aggregation := range aggregations {
-		instructions := []dimension.Instruction{}
-		for _, k := range aggregation {
-			v := getDimensionValue(k)
-			i := dimension.Instruction{Key: k, Value: v}
-			instructions = append(instructions, i)
-		}
-		dd, _ := t.DimensionFactory.GetDimensions(instructions)
-		values, _ := f.Fetch("TestAggregationDimensions", metricName, dd,
-			metric.AVERAGE, test_runner.HighResolutionStatPeriod)
-		// Expect no values.
-		if len(values) > 0 {
-			log.Printf("Expected no metrics with these dimensions - %v", aggregation)
-			return r
-		}
-	}
-	r.Status = status.SUCCESSFUL
-	return r
+var testCases = []testCase{
+	// Appended dimensions, no aggregation.
+	{
+		shouldExist: true,
+		metricName:  "mem_used_percent",
+		dimensions: []pair{
+			{"foo", "fooval"},
+			{"bar", "barval"},
+			{"baz", "bazval"},
+			{"InstanceId", ""},
+			{"InstanceType", ""},
+		},
+	},
+	// Aggregate to 0 dimensions.
+	{
+		shouldExist: true,
+		metricName:  "mem_used_percent",
+		dimensions:  []pair{},
+	},
+	// More aggregations...
+	{
+		shouldExist: true,
+		metricName:  "mem_used_percent",
+		dimensions: []pair{
+			{"InstanceId", ""},
+			{"InstanceType", ""},
+		},
+	},
+	{
+		shouldExist: true,
+		metricName:  "mem_used_percent",
+		dimensions: []pair{
+			{"foo", "fooval"},
+			{"bar", "barval"},
+			{"InstanceType", ""},
+		},
+	},
+	// Unexpected dimensions.
+	{
+		shouldExist: false,
+		metricName:  "mem_used_percent",
+		dimensions: []pair{
+			{"foo", "fooval"},
+		},
+	},
+	{
+		shouldExist: false,
+		metricName:  "mem_used_percent",
+		dimensions: []pair{
+			{"foo", "fooval"},
+			{"bar", "barval"},
+		},
+	},
+	{
+		shouldExist: false,
+		metricName:  "mem_used_percent",
+		dimensions: []pair{
+			{"InstanceType", ""},
+		},
+	},
+	// Appended dimensions, no aggregation.
+	{
+		shouldExist: true,
+		metricName:  "cpu_usage_user",
+		dimensions: []pair{
+			{"InstanceId", ""},
+			{"InstanceType", ""},
+		},
+	},
+	{
+		shouldExist: true,
+		metricName:  "cpu_usage_user",
+		dimensions:  []pair{},
+	},
+	{
+		shouldExist: true,
+		metricName:  "cpu_usage_user",
+		dimensions: []pair{
+			{"InstanceId", ""},
+		},
+	},
+	// Unexpected dimensions.
+	{
+		shouldExist: false,
+		metricName:  "cpu_usage_user",
+		dimensions: []pair{
+			{"foo", "fooval"},
+		},
+	},
+	{
+		shouldExist: false,
+		metricName:  "cpu_usage_user",
+		dimensions: []pair{
+			{"foo", "fooval"},
+			{"bar", "barval"},
+		},
+	},
+	{
+		shouldExist: false,
+		metricName:  "cpu_usage_user",
+		dimensions: []pair{
+			{"InstanceType", ""},
+		},
+	},
+	{
+		shouldExist: false,
+		metricName:  "cpu_usage_user",
+		dimensions: []pair{
+			{"foo", "fooval"},
+			{"bar", "barval"},
+			{"baz", "bazval"},
+			{"InstanceId", ""},
+			{"InstanceType", ""},
+		},
+	},
 }
