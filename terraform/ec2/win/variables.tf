@@ -18,7 +18,7 @@ variable "ami" {
 
 variable "cwa_github_sha" {
   type    = string
-  default = "4cefc9f0e9b411c6765c5122877c136dbb23588d"
+  default = "219753e3d0dac95b65ff29834d56b8ffa94cec8b"
 }
 
 variable "github_test_repo_branch" {
@@ -47,5 +47,5 @@ variable "s3_bucket" {
 
 variable "test_dir" {
   type    = string
-  default = "./integration/test/nvidia_gpu"
+  default = "../../../test/nvidia_gpu"
 }
