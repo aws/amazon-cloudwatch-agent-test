@@ -27,7 +27,7 @@ terraform {
 #Create S3 bucket to record terraform state for this setup in order to share the state for configuration setup when using integration test account
 #Document: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket
 resource "aws_s3_bucket" "setup-remote-state-s3-bucket" {
-  bucket        = "remote-terraform-state-s3-bucket"
+  bucket        = "remote-terraform-state-s3-bucket-${module.common.testing_id}"
   force_destroy = true
 }
 
