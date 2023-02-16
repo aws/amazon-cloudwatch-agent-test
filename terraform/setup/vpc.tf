@@ -10,9 +10,25 @@ resource "aws_security_group" "ec2_security_group" {
   vpc_id = data.aws_vpc.default.id
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  // Allow access to IMDS
+  egress {
+    from_port = 80
+    to_port   = 80
+    protocol = "TCP"
+    cidr_blocks = ["169.254.169.254/32"]
+  }
+
+  // Allow access to EFS. https://docs.aws.amazon.com/efs/latest/ug/troubleshooting-efs-mounting.html#mount-hangs-fails-timeout
+  egress {
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "TCP"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
