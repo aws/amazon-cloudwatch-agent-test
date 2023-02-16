@@ -98,7 +98,7 @@ func TestCollectionInterval(t *testing.T) {
 				time.Sleep(agentRuntime)
 				common.StopAgent()
 				endTime := time.Now()
-				if awsservice.IsMetricSampleCountWithinBoundInclusive(metricName, common.Namespace, dimensions, startTime, endTime, parameter.lowerBoundInclusive, parameter.upperBoundInclusive, periodInSeconds) {
+				if awsservice.IsMetricSampleCountWithinBound(metricName, common.Namespace, dimensions, startTime, endTime, parameter.lowerBoundInclusive, parameter.upperBoundInclusive, periodInSeconds) {
 					pass = true
 					break
 				}

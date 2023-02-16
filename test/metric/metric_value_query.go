@@ -20,10 +20,19 @@ import (
 type MetricValueFetcher struct {
 }
 
+func logDimensions(dims []types.Dimension) {
+	log.Printf("\tDimensions:\n")
+	for _, d := range dims {
+		if d.Name != nil && d.Value != nil {
+			log.Printf("\t\tDim(name=%q, val=%q\n", *d.Name, *d.Value)
+		}
+	}
+}
+
 func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics, metricQueryPeriod int32) (MetricValues, error) {
 	dimensions := metricSpecificDimensions
-	log.Printf("Metric query input dimensions : %s", fmt.Sprint(dimensions))
-
+	log.Println("Metric query input dimensions")
+	logDimensions(dimensions)
 	metricToFetch := types.Metric{
 		Namespace:  aws.String(namespace),
 		MetricName: aws.String(metricName),

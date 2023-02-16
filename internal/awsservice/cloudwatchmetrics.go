@@ -5,6 +5,7 @@ package awsservice
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -33,8 +34,8 @@ func ValidateMetric(metricName, namespace string, dimensionsFilter []types.Dimen
 	return nil
 }
 
-// isMetricSampleCountWithinBoundInclusive checking if certain metric's sample count is within the predefined bound interval
-func IsMetricSampleCountWithinBoundInclusive(
+// IsMetricSampleCountWithinBound checking if certain metric's sample count is within the predefined bound interval
+func IsMetricSampleCountWithinBound(
 	metricName, namespace string,
 	dimensions []types.Dimension,
 	startTime, endTime time.Time,
@@ -61,6 +62,8 @@ func IsMetricSampleCountWithinBoundInclusive(
 	for _, datapoint := range data.Datapoints {
 		dataPoints = dataPoints + int(*datapoint.SampleCount)
 	}
+
+	log.Printf("Number of datapoints for start time %v with endtime %v and period %d is %d is inclusive between %d and %d", startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
 
 	if !(lowerBoundInclusive <= dataPoints) || !(upperBoundInclusive >= dataPoints) {
 		return false

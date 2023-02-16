@@ -8,5 +8,6 @@ release
 .terraform.*
 terraform.*
 **/.terraform/*
+/test/**/final_*.yml
 coverage.txt
 generator/resources/*complete*.json

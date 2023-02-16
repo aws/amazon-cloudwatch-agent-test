@@ -6,7 +6,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 
@@ -14,18 +14,18 @@ import (
 )
 
 type matrixRow struct {
-	TestDir                 string `json:"test_dir"`
-	Os                      string `json:"os"`
-	Family                  string `json:"family"`
-	TestType                string `json:"testType"`
-	Arc                     string `json:"arc"`
-	InstanceType            string `json:"instanceType"`
-	Ami                     string `json:"ami"`
-	BinaryName              string `json:"binaryName"`
-	Username                string `json:"username"`
-	InstallAgentCommand     string `json:"installAgentCommand"`
-	CaCertPath              string `json:"caCertPath"`
-	PerformanceNumberOfLogs string `json:"performance_number_of_logs"`
+	TestDir             string `json:"test_dir"`
+	Os                  string `json:"os"`
+	Family              string `json:"family"`
+	TestType            string `json:"testType"`
+	Arc                 string `json:"arc"`
+	InstanceType        string `json:"instanceType"`
+	Ami                 string `json:"ami"`
+	BinaryName          string `json:"binaryName"`
+	Username            string `json:"username"`
+	InstallAgentCommand string `json:"installAgentCommand"`
+	CaCertPath          string `json:"caCertPath"`
+	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
 }
 
 // you can't have a const map in golang
@@ -42,8 +42,9 @@ var testTypeToTestDirMap = map[string][]string{
 		"./test/collection_interval",
 		"./test/metric_dimension",
 	},
-	"ec2_performance": {
-		"./test/performancetest",
+	"ec2_performance": {},
+	"ec2_stress": {
+		"../../test/statsd_stress",
 	},
 	"ecs_fargate": {
 		"./test/ecs/ecs_metadata",
@@ -67,10 +68,11 @@ func genMatrix(testType string, testDirList []string) []matrixRow {
 		log.Panicf("can't read file %v_test_matrix.json err %v", testType, err)
 	}
 
-	byteValueTestMatrix, _ := ioutil.ReadAll(openTestMatrix)
-	_ = openTestMatrix.Close()
+	defer openTestMatrix.Close()
 
-	var testMatrix []map[string]string
+	byteValueTestMatrix, _ := io.ReadAll(openTestMatrix)
+
+	var testMatrix []map[string]interface{}
 	err = json.Unmarshal(byteValueTestMatrix, &testMatrix)
 	if err != nil {
 		log.Panicf("can't unmarshall file %v_test_matrix.json err %v", testType, err)
@@ -94,7 +96,7 @@ func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
 	if err != nil {
 		log.Panicf("Can't marshal json for target os %v, err %v", testType, err)
 	}
-	err = ioutil.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", testType), bytes, os.ModePerm)
+	err = os.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", testType), bytes, os.ModePerm)
 	if err != nil {
 		log.Panicf("Can't write json to file for target os %v, err %v", testType, err)
 	}

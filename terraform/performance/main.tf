@@ -1,8 +1,13 @@
-#####################################################################
-# Ensure there is unique testing_id for each test
-#####################################################################
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 module "common" {
   source = "../common"
+}
+
+locals {
+  ssh_key_name            = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
+  private_key_content     = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
 }
 
 #####################################################################
@@ -21,9 +26,24 @@ resource "aws_key_pair" "aws_ssh_key" {
   public_key = tls_private_key.ssh_key[0].public_key_openssh
 }
 
+#####################################################################
+# Prepare Parameters Tests
+#####################################################################
+
 locals {
-  ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
-  private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  validator_config        = "parameters.yml"
+  final_validator_config  = "final_parameters.yml"
+  cloudwatch_agent_config = "agent_config.json"
+}
+
+resource "local_file" "update-validation-config" {
+  content  = replace(replace(file("${var.test_dir}/${local.validator_config}"), 
+                "<values_per_minute>", var.values_per_minute),
+                "<cloudwatch_agent_config>",local.cloudwatch_agent_config
+              )
+
+  filename = "${var.test_dir}/${local.final_validator_config}"
+
 }
 
 #####################################################################
@@ -43,7 +63,26 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
+  connection {
+      type        = "ssh"
+      user        = var.user
+      private_key = local.private_key_content
+      host        = aws_instance.cwagent.public_ip
+    }
+
   # Prepare Integration Test
+  provisioner "file" {
+    source      = "${var.test_dir}/${local.final_validator_config}"
+    destination = "/tmp/${local.final_validator_config}"
+
+    
+  }
+
+  provisioner "file" {
+    source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
+    destination = "/tmp/${local.cloudwatch_agent_config}"
+  }
+
   provisioner "remote-exec" {
     inline = [
       "echo sha ${var.cwa_github_sha}",
@@ -54,15 +93,10 @@ resource "null_resource" "integration_test" {
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
+      "go run ./validator/main.go --validator-config=/tmp/${local.final_validator_config} --preparation-mode=true",
     ]
-
-    connection {
-      type        = "ssh"
-      user        = var.user
-      private_key = local.private_key_content
-      host        = aws_instance.cwagent.public_ip
-    }
   }
+  
 
   #Run sanity check and integration test
   provisioner "remote-exec" {
@@ -70,17 +104,9 @@ resource "null_resource" "integration_test" {
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "cd ~/amazon-cloudwatch-agent-test",
-      "export SHA=${var.cwa_github_sha}",
-      "export SHA_DATE=${var.cwa_github_sha_date}",
-      "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
-      "go test ${var.test_dir} -p 1 -timeout 1h -v"
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/tmp/${local.cloudwatch_agent_config}",
+      "go run ./validator/main.go --validator-config=/tmp/${local.final_validator_config}",
     ]
-    connection {
-      type        = "ssh"
-      user        = var.user
-      private_key = local.private_key_content
-      host        = aws_instance.cwagent.public_ip
-    }
   }
 
   depends_on = [
