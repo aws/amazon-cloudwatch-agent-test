@@ -19,6 +19,7 @@ require (
 	github.com/cactus/go-statsd-client/v5 v5.0.0
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/qri-io/jsonschema v0.2.1
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/multierr v1.9.0
 	golang.org/x/sys v0.2.0
@@ -45,5 +46,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/qri-io/jsonpointer v0.1.1 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 )

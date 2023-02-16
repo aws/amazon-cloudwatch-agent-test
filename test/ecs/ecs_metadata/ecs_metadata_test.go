@@ -4,6 +4,8 @@
 package ecs_metadata
 
 import (
+	"context"
+	_ "embed"
 	"flag"
 	"fmt"
 	"log"
@@ -11,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/qri-io/jsonschema"
 )
 
 // Purpose: Detect the changes in metadata endpoint for ECS Container Agent https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/util/ecsutil/ecsutil.go#L67-L75
@@ -27,21 +30,54 @@ const (
 
 var clusterName = flag.String("clusterName", "", "Please provide the os preference, valid value: windows/linux.")
 
+//go:embed resources/emf_prometheus_redis_schema.json
+var schema string
+
 func TestValidatingCloudWatchLogs(t *testing.T) {
+	defer func() {
+		if err := recover(); err != nil {
+			t.Logf("panic occurred: %v", err)
+			t.FailNow()
+		}
+	}()
+
+	rs := jsonschema.Must(schema)
+
+	start := time.Now()
+
 	logGroupName := fmt.Sprintf(ECSLogGroupNameFormat, *clusterName)
 
+	var logGroupFound bool
 	for currentRetry := 1; ; currentRetry++ {
 
 		if currentRetry == RetryTime {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
 
-		if awsservice.IsLogGroupExists(t, logGroupName) {
-			awsservice.DeleteLogGroupAndStream(logGroupName, LogStreamName)
-			break
+		if !awsservice.IsLogGroupExists(t, logGroupName) {
+			log.Printf("Current retry: %v/%v and begin to sleep for 20s \n", currentRetry, RetryTime)
+			time.Sleep(20 * time.Second)
+			continue
 		}
 
-		log.Printf("Current retry: %v/%v and begin to sleep for 20s \n", currentRetry, RetryTime)
-		time.Sleep(20 * time.Second)
+		end := time.Now()
+
+		awsservice.ValidateLogs(t, logGroupName, LogStreamName, &start, &end, func(logs []string) bool {
+			for _, l := range logs {
+				keyErrors, e := rs.ValidateBytes(context.Background(), []byte(l))
+				if e != nil {
+					log.Println("failed to execute schema validator:", e)
+					return false
+				} else if len(keyErrors) > 0 {
+					log.Printf("failed schema validation: %v\n", keyErrors)
+				}
+			}
+			return true
+		})
+		break
+	}
+
+	if logGroupFound {
+		awsservice.DeleteLogGroupAndStream(logGroupName, LogStreamName)
 	}
 }
