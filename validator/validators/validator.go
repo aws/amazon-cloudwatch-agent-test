@@ -39,24 +39,22 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 	log.Printf("Start to sleep %f s for the metric to be available in the beginning of next minute ", durationBeforeNextMinute.Seconds())
 	time.Sleep(durationBeforeNextMinute)
 
-	err = validator.InitValidation()
+	log.Printf("Start to generate load in %f s for the agent to collect and send all the metrics to CloudWatch within the datapoint period ", agentCollectionPeriod.Seconds())
+	err = validator.GenerateLoad()
 	if err != nil {
 		return err
 
 	}
-
-	log.Printf("Start to sleep %f s for the agent to collect and send all the metrics to CloudWatch within the datapoint period ", agentCollectionPeriod.Seconds())
-	time.Sleep(agentCollectionPeriod)
 
 	log.Printf("Start to sleep 60s for CloudWatch to process all the metrics")
 	time.Sleep(60 * time.Second)
 
-	err = validator.StartValidation(startTimeValidation, endTimeValidation)
+	err = validator.CheckData(startTimeValidation, endTimeValidation)
 	if err != nil {
 		return err
 	}
 
-	err = validator.EndValidation()
+	err = validator.Cleanup()
 	if err != nil {
 		return err
 	}
