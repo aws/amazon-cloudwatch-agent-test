@@ -60,7 +60,7 @@ func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) (strin
 	if err != nil {
 		panic(err)
 	}
-	err = awsservice.AddPacketIntoDatabase(transmitter.DataBaseName, "attribute_not_exists(#hash)", packet, map[string]string{"#hash": HASH})
+	err = awsservice.AddItemIntoDatabase(transmitter.DataBaseName, "attribute_not_exists(#hash)", packet, map[string]string{"#hash": HASH})
 
 	if err != nil && !errors.As(err, &ae) {
 		fmt.Printf("Error adding item to table.  %v\n", err)
@@ -208,7 +208,7 @@ func (transmitter *TransmitterAPI) UpdateItem(hash string, packet map[string]int
 		expressionAttributeValues[":testID"] = &types.AttributeValueMemberS{Value: testHash}
 		expressionAttributeNames["#testID"] = TEST_ID
 		//call update
-		err = awsservice.UpdatePacketInDatabase(
+		err = awsservice.UpdateItemInDatabase(
 			transmitter.DataBaseName, expression,
 			"#testID = :testID", expressionAttributeNames, expressionAttributeValues,
 			map[string]types.AttributeValue{
@@ -252,7 +252,7 @@ func (transmitter *TransmitterAPI) UpdateReleaseTag(hash string, tagName string)
 }
 
 func (transmitter *TransmitterAPI) Query(hash string) ([]map[string]interface{}, error) {
-	packets, err := awsservice.GetPacketInDatabase(
+	packets, err := awsservice.GetItemInDatabase(
 		transmitter.DataBaseName,
 		"Hash-index",
 		"#hash = :hash",

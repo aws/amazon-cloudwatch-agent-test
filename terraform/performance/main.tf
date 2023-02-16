@@ -109,9 +109,7 @@ resource "null_resource" "integration_test" {
     ]
   }
 
-  depends_on = [
-    aws_instance.cwagent
-  ]
+  depends_on = [aws_instance.cwagent]
 
 }
 

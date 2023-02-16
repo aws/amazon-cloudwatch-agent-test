@@ -103,7 +103,7 @@ func GetConfigMetrics(configPath string) ([]string, []string, error) {
 	return metricNames, ids, nil
 }
 
-// GetMetrics generates the struct required to make a query request to cloudwatch's GetMetrics
+// GetMetrics gets the required metrics for performance in CloudWatch
 func GetMetrics(ids, metricNames []string, instanceId string, timeDiff int) (*cloudwatch.GetMetricDataOutput, error) {
 	if len(ids) != len(metricNames) {
 		return nil, errors.New("Mismatching lengths of metric ids and metricNames")
@@ -134,7 +134,7 @@ func GetMetrics(ids, metricNames []string, instanceId string, timeDiff int) (*cl
 	return metric, err
 }
 
-// ConstructMetricDataQuery is a helper function for GenerateGetMetricInputStruct and constructs individual metric requests
+// ConstructMetricDataQuery is a helper function for GetMetricData and constructs individual metric requests
 func ConstructMetricDataQuery(id, namespace, dimensionName, dimensionValue, metricName string, timeDiff int) types.MetricDataQuery {
 	query := types.MetricDataQuery{
 		Id: aws.String(id),

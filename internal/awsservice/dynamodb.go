@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func AddPacketIntoDatabase(databaseName, conditionExpression string, packet interface{}, expressAttributesNames map[string]string) error {
+func AddItemIntoDatabase(databaseName, conditionExpression string, packet interface{}, expressAttributesNames map[string]string) error {
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func AddPacketIntoDatabase(databaseName, conditionExpression string, packet inte
 	return err
 }
 
-func GetPacketInDatabase(databaseName, databaseIndexName, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues map[string]types.AttributeValue) ([]map[string]interface{}, error) {
+func GetItemInDatabase(databaseName, databaseIndexName, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues map[string]types.AttributeValue) ([]map[string]interface{}, error) {
 	var packets []map[string]interface{}
 
 	data, err := dynamodbClient.Query(cxt, &dynamodb.QueryInput{
@@ -47,7 +47,7 @@ func GetPacketInDatabase(databaseName, databaseIndexName, conditionExpression st
 	return packets, nil
 }
 
-func UpdatePacketInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error {
+func UpdateItemInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error {
 	_, err := dynamodbClient.UpdateItem(cxt, &dynamodb.UpdateItemInput{
 		TableName:                 aws.String(databaseName),
 		Key:                       databaseKey,

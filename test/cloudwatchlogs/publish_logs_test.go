@@ -119,9 +119,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	cfgFilePath := "resources/config_log_rotated.json"
 
 	instanceId := awsservice.GetInstanceId()
-
 	log.Printf("Found instance id %s", instanceId)
-
 	logGroup := instanceId
 	logStream := instanceId + "Rotated"
 	defer awsservice.DeleteLogGroupAndLogStream(logGroup, logStream)
