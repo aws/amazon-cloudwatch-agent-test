@@ -6,6 +6,7 @@ package awsservice
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -78,17 +79,13 @@ func DeleteLogGroup(logGroupName string) {
 // returned match the expected log lines. This also sanitizes the log lines from both the output and
 // the expected lines input to ensure that they don't diverge in JSON representation (" vs ')
 func ValidateLogs(t *testing.T, logGroup, logStream string, since, until *time.Time, validator func(logs []string) bool) {
+	t.Helper()
 	log.Printf("Checking %s/%s since %s", logGroup, logStream, since.UTC().Format(time.RFC3339))
 
 	foundLogs, err := getLogsSince(t, logGroup, logStream, since, until)
 	assert.NoError(t, err)
 
 	assert.True(t, validator(foundLogs))
-	//for i := 0; i < len(logLines); i++ {
-	//	expected := strings.ReplaceAll(logLines[i], "'", "\"")
-	//	actual := strings.ReplaceAll(foundLogs[i], "'", "\"")
-	//	assert.Equal(t, expected, actual)
-	//}
 }
 
 func getLogsSince(t *testing.T, logGroup, logStream string, since, until *time.Time) ([]string, error) {
@@ -152,11 +149,11 @@ func getLogsSince(t *testing.T, logGroup, logStream string, since, until *time.T
 }
 
 // IsLogGroupExists confirms whether the logGroupName exists or not
-func IsLogGroupExists(t *testing.T, logGroupName string) bool {
-
+func IsLogGroupExists(logGroupName string) (bool, error) {
 	cwlClient, clientContext, err := getCloudWatchLogsClient()
 	if err != nil {
-		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
+		log.Println("error occurred while creating CWL client", err)
+		return false, err
 	}
 
 	describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
@@ -166,14 +163,17 @@ func IsLogGroupExists(t *testing.T, logGroupName string) bool {
 	describeLogGroupOutput, err := cwlClient.DescribeLogGroups(*clientContext, &describeLogGroupInput)
 
 	if err != nil {
-		t.Errorf("Error getting log group data %v", err)
+		log.Println("error occurred while calling DescribeLogGroups", err)
+		return false, err
 	}
 
 	if len(describeLogGroupOutput.LogGroups) > 0 {
-		return true
+		log.Println("found log group", logGroupName)
+		return true, nil
 	}
 
-	return false
+	log.Println("log group not found:", logGroupName)
+	return false, fmt.Errorf("log group %s not found", logGroupName)
 }
 
 // getCloudWatchLogsClient returns a singleton SDK client for interfacing with CloudWatch Logs
