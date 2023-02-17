@@ -1,6 +1,9 @@
 {
   "logs": {
     "metrics_collected": {
+      "ecs": {
+        "metrics_collection_interval": 15
+      },
       "prometheus": {
         "prometheus_config_path": "env:PROMETHEUS_CONFIG_CONTENT",
         "ecs_service_discovery": {
