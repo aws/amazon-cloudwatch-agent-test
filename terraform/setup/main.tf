@@ -12,10 +12,15 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
   read_capacity  = 10
   write_capacity = 10
   hash_key       = "Service"
-  range_key      = "CommitDate"
+  range_key      = "UniqueID"
 
   attribute {
     name = "Service"
+    type = "S"
+  }
+
+  attribute {
+    name = "UniqueID"
     type = "S"
   }
 
@@ -32,6 +37,15 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
   global_secondary_index {
     name            = "UseCaseDate"
     hash_key        = "UseCase"
+    range_key       = "CommitDate"
+    write_capacity  = 10
+    read_capacity   = 10
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "ServiceDate"
+    hash_key        = "Service"
     range_key       = "CommitDate"
     write_capacity  = 10
     read_capacity   = 10

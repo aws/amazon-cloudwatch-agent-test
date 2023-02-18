@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	metricsConvertToMB = []string{"memory_rss", "memory_swap", "memory_vms", "write_bytes", "bytes_sent"}
+	metricsConvertToMB = []string{"mem_total", "procstat_memory_rss", "procstat_memory_swap", "procstat_memory_data", "procstat_memory_vms", "procstat_write_bytes", "procstat_bytes_sent"}
 )
 
 type PerformanceValidator struct {
@@ -110,7 +110,9 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 		// Get the latest performance information from the database and update by merging the existing one
 		// and finally replace the packet in the database
 		maps.Copy(existingPerfInfo["Results"].(map[string]interface{}), perfInfo["Results"].(map[string]interface{}))
-		finalPerfInfo := packIntoPerformanceInformation(receiver, dataType, agentCollectionPeriod, commitHash, commitDate, existingPerfInfo["Results"])
+
+		uniqueID := existingPerfInfo["UniqueID"].(string)
+		finalPerfInfo := packIntoPerformanceInformation(uniqueID, receiver, dataType, agentCollectionPeriod, commitHash, commitDate, existingPerfInfo["Results"])
 
 		err = awsservice.ReplacePacketInDatabase(DynamoDBDataBase, finalPerfInfo)
 
@@ -124,6 +126,7 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 }
 func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []types.MetricDataResult) (PerformanceInformation, error) {
 	var (
+		uniqueID               = s.vConfig.GetUniqueID()
 		receiver               = s.vConfig.GetPluginsConfig()
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
 		dataType               = s.vConfig.GetDataType()
@@ -142,7 +145,7 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 				metricValues[i] = val / (1000000)
 			}
 		}
-		log.Printf("Start calculate metric statictics for metric %s", metricName)
+		log.Printf("Start calculate metric statictics for metric %s %v", metricName, metricValues)
 		if !isAllValuesGreaterThanOrEqualToZero(metricValues) {
 			return nil, fmt.Errorf("values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
 		}
@@ -151,7 +154,7 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 		performanceMetricResults[metricName] = metricStats
 	}
 
-	return packIntoPerformanceInformation(receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
+	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
 }
 
 func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
@@ -205,12 +208,13 @@ func (s *PerformanceValidator) buildStressMetricQueries(metricName, metricNamesp
 	return metricDataQuery
 }
 
-func packIntoPerformanceInformation(receiver string, dataType, collectionPeriod, commitHash string, commitDate int64, result interface{}) PerformanceInformation {
+func packIntoPerformanceInformation(uniqueID, receiver, dataType, collectionPeriod, commitHash string, commitDate int64, result interface{}) PerformanceInformation {
 	instanceAMI := awsservice.GetImageId()
 	instanceType := awsservice.GetInstanceType()
 
 	return PerformanceInformation{
 		"Service":          ServiceName,
+		"UniqueID":         uniqueID,
 		"UseCase":          receiver,
 		"CommitDate":       commitDate,
 		"CommitHash":       commitHash,

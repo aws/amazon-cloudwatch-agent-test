@@ -18,7 +18,7 @@ func ReplacePacketInDatabase(databaseName string, packet map[string]interface{})
 	if err != nil {
 		return err
 	}
-
+	log.Println("hmmmm")
 	_, err = dynamodbClient.PutItem(cxt,
 		&dynamodb.PutItemInput{
 			Item:      item,

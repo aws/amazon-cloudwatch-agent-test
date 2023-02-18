@@ -68,3 +68,5 @@ metric_validation:
     metric_dimension: 
       - name: "interface"
         value: "eth0"
+  - metric_name: "mem_total"
+    metric_dimension: []
