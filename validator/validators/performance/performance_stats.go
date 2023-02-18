@@ -52,11 +52,15 @@ func CalculateMetricStatisticsBasedOnDataAndPeriod(data []float64, dataPeriod fl
 	}
 
 	return Stats{
-		Average: avg,
-		Max:     max,
-		Min:     min,
-		P99:     p99Val,
-		Std:     math.Sqrt(stdDevSum / float64(length)),
+		Average: RoundToNearestInteger(avg),
+		Max:     RoundToNearestInteger(max),
+		Min:     RoundToNearestInteger(min),
+		P99:     RoundToNearestInteger(p99Val),
+		Std:     RoundToNearestInteger(math.Sqrt(stdDevSum / float64(length))),
 		Period:  int(dataPeriod / float64(length)),
 	}
+}
+
+func RoundToNearestInteger(number float64) float64 {
+	return math.Round(number/0.05) * 0.05
 }

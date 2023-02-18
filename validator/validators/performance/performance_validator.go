@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	ServiceName      = "AmazonCloudWatchAgent"
 	DynamoDBDataBase = "CWAPerformanceMetrics"
 )
 
@@ -95,10 +96,13 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 		receiver               = s.vConfig.GetPluginsConfig()
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
 		agentCollectionPeriod  = fmt.Sprint(s.vConfig.GetAgentCollectionPeriod().Seconds())
+		// The secondary global index that is used for checking if there are item has already been exist in the table
+		kCheckingAttribute = []string{"CommitDate", "UseCase"}
+		vCheckingAttribute = []string{fmt.Sprint(commitDate), receiver}
 	)
 
 	err := backoff.Retry(func() error {
-		existingPerfInfo, err := awsservice.GetPacketInDatabase(DynamoDBDataBase, receiver, "CommitDate", fmt.Sprint(commitDate), perfInfo)
+		existingPerfInfo, err := awsservice.GetPacketInDatabase(DynamoDBDataBase, "UseCaseDate", kCheckingAttribute, vCheckingAttribute, perfInfo)
 		if err != nil {
 			return err
 		}
@@ -206,6 +210,7 @@ func packIntoPerformanceInformation(receiver string, dataType, collectionPeriod,
 	instanceType := awsservice.GetInstanceType()
 
 	return PerformanceInformation{
+		"Service":          ServiceName,
 		"UseCase":          receiver,
 		"CommitDate":       commitDate,
 		"CommitHash":       commitHash,

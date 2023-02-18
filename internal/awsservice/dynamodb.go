@@ -5,6 +5,7 @@ package awsservice
 
 import (
 	"errors"
+	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -27,7 +28,7 @@ func ReplacePacketInDatabase(databaseName string, packet map[string]interface{})
 	return err
 }
 
-func AddPacketIntoDatabaseIfNotExist(databaseName, useCase, checkingAttribute, checkingAttributeValue string, packet map[string]interface{}) error {
+func AddPacketIntoDatabaseIfNotExist(databaseName string, checkingAttribute, checkingAttributeValue []string, packet map[string]interface{}) error {
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		return err
@@ -37,33 +38,34 @@ func AddPacketIntoDatabaseIfNotExist(databaseName, useCase, checkingAttribute, c
 		&dynamodb.PutItemInput{
 			Item:                item,
 			TableName:           aws.String(databaseName),
-			ConditionExpression: aws.String("#usecase <> :usecase_name and #attribute <> :attribute_value"),
+			ConditionExpression: aws.String("#first_attribute <> :first_attribute and #second_attribute <> :second_attribute"),
 			ExpressionAttributeNames: map[string]string{
-				"#usecase":   "UseCase",
-				"#attribute": checkingAttribute,
+				"#first_attribute":  checkingAttribute[0],
+				"#second_attribute": checkingAttribute[1],
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":usecase_name":    &types.AttributeValueMemberS{Value: useCase},
-				":attribute_value": &types.AttributeValueMemberN{Value: checkingAttributeValue},
+				":first_attribute":  &types.AttributeValueMemberN{Value: checkingAttributeValue[0]},
+				":second_attribute": &types.AttributeValueMemberS{Value: checkingAttributeValue[1]},
 			},
 		})
 
 	return err
 }
 
-func GetPacketInDatabase(databaseName, useCase, checkingAttribute, checkingAttributeValue string, packet map[string]interface{}) (map[string]interface{}, error) {
+func GetPacketInDatabase(databaseName, indexName string, checkingAttribute, checkingAttributeValue []string, packet map[string]interface{}) (map[string]interface{}, error) {
 	var packets []map[string]interface{}
-
+	log.Printf("index name %s %v %v", indexName, checkingAttribute, checkingAttributeValue)
 	data, err := dynamodbClient.Query(cxt, &dynamodb.QueryInput{
 		TableName:              aws.String(databaseName),
-		KeyConditionExpression: aws.String("#usecase = :usecase_name and #attribute = :attribute_value"),
+		IndexName:              aws.String(indexName),
+		KeyConditionExpression: aws.String("#first_attribute = :first_attribute and #second_attribute = :second_attribute"),
 		ExpressionAttributeNames: map[string]string{
-			"#usecase":   "UseCase",
-			"#attribute": checkingAttribute,
+			"#first_attribute":  checkingAttribute[0],
+			"#second_attribute": checkingAttribute[1],
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":usecase_name":    &types.AttributeValueMemberS{Value: useCase},
-			":attribute_value": &types.AttributeValueMemberN{Value: checkingAttributeValue},
+			":first_attribute":  &types.AttributeValueMemberN{Value: checkingAttributeValue[0]},
+			":second_attribute": &types.AttributeValueMemberS{Value: checkingAttributeValue[1]},
 		},
 		ScanIndexForward: aws.Bool(true), // Sort Range Key in ascending by Sort/Range key in numeric order since range key is CommitDate
 	})
@@ -76,7 +78,7 @@ func GetPacketInDatabase(databaseName, useCase, checkingAttribute, checkingAttri
 
 	if len(packets) == 0 {
 		if packet != nil {
-			if err = AddPacketIntoDatabaseIfNotExist(databaseName, useCase, checkingAttribute, checkingAttributeValue, packet); err != nil {
+			if err = AddPacketIntoDatabaseIfNotExist(databaseName, checkingAttribute, checkingAttributeValue, packet); err != nil {
 				return nil, err
 			}
 			return packet, nil

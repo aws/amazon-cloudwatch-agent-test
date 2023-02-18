@@ -27,6 +27,7 @@
 					"memory_rss",
 					"memory_swap",
 					"memory_vms",
+					"memory_data",
 					"num_fds",
 					"write_bytes"
 				  ],
