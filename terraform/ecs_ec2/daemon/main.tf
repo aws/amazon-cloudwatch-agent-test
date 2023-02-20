@@ -30,6 +30,10 @@ resource "aws_launch_configuration" "cluster" {
   iam_instance_profile = data.aws_iam_instance_profile.cwagent_instance_profile.name
 
   user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
 }
 
 resource "aws_autoscaling_group" "cluster" {
@@ -93,7 +97,7 @@ resource "aws_cloudwatch_log_group" "log_group" {
 
 locals {
   cwagent_config                = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
-  cwagent_ecs_taskdef           = fileexists("../../../${var.test_dir}/resources/ecs_taskdef.tpl") ? "../../../${var.test_dir}/resources/ecs_taskdef.tpl" : "./default_resources/default_ecs_taskdef.tpl"
+  cwagent_ecs_taskdef           = fileexists("../../../${var.test_dir}/ecs_resources/ec2_launch/daemon/ecs_taskdef.tpl") ? "../../../${var.test_dir}/ecs_resources/ec2_launch/daemon/ecs_taskdef.tpl" : "./default_resources/default_ecs_taskdef.tpl"
   prometheus_config             = fileexists("../../../${var.test_dir}/resources/ecs_prometheus.tpl") ? "../../../${var.test_dir}/resources/ecs_prometheus.tpl" : "./default_resources/default_ecs_prometheus.tpl"
   extra_apps_ecs_taskdef        = fileexists("../../../${var.test_dir}/resources/extra_apps.tpl") ? "../../../${var.test_dir}/resources/extra_apps.tpl" : "./default_resources/default_extra_apps.tpl"
   cwagent_config_ssm_param_name = "cwagent-integ-test-ssm-config-${module.common.testing_id}"

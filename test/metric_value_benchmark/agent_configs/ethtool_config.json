@@ -1,0 +1,27 @@
+{
+    "agent": {
+        "metrics_collection_interval": 15,
+        "run_as_user": "root",
+        "debug": true,
+        "logfile": ""
+      },
+      "metrics": {
+        "namespace": "MetricValueBenchmarkTest",
+        "append_dimensions": {
+          "InstanceId": "${aws:InstanceId}"
+        },
+        "metrics_collected": {
+            "ethtool": {
+                "interface_include": [
+                    "eth0",
+                    "ens5"
+                ],
+                "metrics_include": [
+                  "queue_0_tx_cnt",
+                  "queue_0_rx_cnt"
+                ]
+            }
+        },
+        "force_flush_interval": 5
+      }
+}
