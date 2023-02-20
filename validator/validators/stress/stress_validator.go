@@ -185,7 +185,6 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	}
 
 	// Assuming each plugin are testing one at a time
-
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 	metricValue := metrics.MetricDataResults[0].Values[0]
 	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)

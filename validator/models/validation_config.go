@@ -29,7 +29,7 @@ type ValidateConfig interface {
 	GetUniqueID() string
 }
 type validatorConfig struct {
-	Receivers string `yaml:"receivers"` // Receivers that agent needs to tests
+	Receiver string `yaml:"receivers"` // Receivers that agent needs to tests
 
 	TestCase string `yaml:"test_case"` // Test case name
 
@@ -88,7 +88,7 @@ func (v *validatorConfig) GetValidateType() string {
 
 // GetPluginsConfig returns the agent plugin being used or need to validate (e.g statsd, collectd, cpu)
 func (v *validatorConfig) GetPluginsConfig() string {
-	return v.Receivers
+	return v.Receiver
 }
 
 // GetPluginsConfig returns the type needs to validate or send. Only supports metrics, traces, logs

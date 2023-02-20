@@ -93,11 +93,11 @@ variable "cwa_github_sha_date" {
 }
 
 variable "is_canary" {
-  type = bool
+  type    = bool
   default = false
 }
 
 variable "plugin_tests" {
-  type = string
+  type    = string
   default = ""
 }

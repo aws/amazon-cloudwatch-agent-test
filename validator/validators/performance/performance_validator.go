@@ -102,7 +102,7 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 	)
 
 	err := backoff.Retry(func() error {
-		existingPerfInfo, err := awsservice.GetPacketInDatabase(DynamoDBDataBase, "UseCaseDate", kCheckingAttribute, vCheckingAttribute, perfInfo)
+		existingPerfInfo, err := awsservice.GetItemInDatabase(DynamoDBDataBase, "UseCaseDate", kCheckingAttribute, vCheckingAttribute, perfInfo)
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 		uniqueID := existingPerfInfo["UniqueID"].(string)
 		finalPerfInfo := packIntoPerformanceInformation(uniqueID, receiver, dataType, agentCollectionPeriod, commitHash, commitDate, existingPerfInfo["Results"])
 
-		err = awsservice.ReplacePacketInDatabase(DynamoDBDataBase, finalPerfInfo)
+		err = awsservice.ReplaceItemInDatabase(DynamoDBDataBase, finalPerfInfo)
 
 		if err != nil {
 			return err

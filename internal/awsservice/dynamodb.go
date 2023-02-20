@@ -13,12 +13,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func ReplacePacketInDatabase(databaseName string, packet map[string]interface{}) error {
+func ReplaceItemInDatabase(databaseName string, packet map[string]interface{}) error {
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		return err
 	}
-	log.Println("hmmmm")
+
 	_, err = dynamodbClient.PutItem(cxt,
 		&dynamodb.PutItemInput{
 			Item:      item,
@@ -28,7 +28,7 @@ func ReplacePacketInDatabase(databaseName string, packet map[string]interface{})
 	return err
 }
 
-func AddPacketIntoDatabaseIfNotExist(databaseName string, checkingAttribute, checkingAttributeValue []string, packet map[string]interface{}) error {
+func AddItemIntoDatabaseIfNotExist(databaseName string, checkingAttribute, checkingAttributeValue []string, packet map[string]interface{}) error {
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func AddPacketIntoDatabaseIfNotExist(databaseName string, checkingAttribute, che
 	return err
 }
 
-func GetPacketInDatabase(databaseName, indexName string, checkingAttribute, checkingAttributeValue []string, packet map[string]interface{}) (map[string]interface{}, error) {
+func GetItemInDatabase(databaseName, indexName string, checkingAttribute, checkingAttributeValue []string, packet map[string]interface{}) (map[string]interface{}, error) {
 	var packets []map[string]interface{}
 	log.Printf("index name %s %v %v", indexName, checkingAttribute, checkingAttributeValue)
 	data, err := dynamodbClient.Query(cxt, &dynamodb.QueryInput{
@@ -78,7 +78,7 @@ func GetPacketInDatabase(databaseName, indexName string, checkingAttribute, chec
 
 	if len(packets) == 0 {
 		if packet != nil {
-			if err = AddPacketIntoDatabaseIfNotExist(databaseName, checkingAttribute, checkingAttributeValue, packet); err != nil {
+			if err = AddItemIntoDatabaseIfNotExist(databaseName, checkingAttribute, checkingAttributeValue, packet); err != nil {
 				return nil, err
 			}
 			return packet, nil

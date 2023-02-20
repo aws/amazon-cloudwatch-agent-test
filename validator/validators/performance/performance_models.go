@@ -7,6 +7,8 @@ type PerformanceInformation map[string]interface{}
 
 /*
 	Contains the following:
+		"Service":          ServiceName,
+		"UniqueID":         uniqueID,
 		"UseCase":          receiver,
 		"CommitDate":       commitDate,
 		"CommitHash":       commitHash,
@@ -16,5 +18,3 @@ type PerformanceInformation map[string]interface{}
 		"InstanceAMI":      instanceAMI,
 		"InstanceType":     instanceType,
 */
-
-type PerformanceData map[string]Stats

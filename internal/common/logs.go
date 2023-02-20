@@ -141,6 +141,7 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	}
 
 	log.Printf("Writing config file with %d logs to %v", numberMonitoredLogs, filePath)
+
 	cfgFileData["logs"].(map[string]interface{})["logs_collected"].(map[string]interface{})["files"].(map[string]interface{})["collect_list"] = logFiles
 
 	finalConfig, err := json.MarshalIndent(cfgFileData, "", " ")
@@ -152,5 +153,6 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
