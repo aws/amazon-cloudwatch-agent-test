@@ -38,7 +38,7 @@ resource "aws_instance" "integration-test" {
   vpc_security_group_ids = [data.aws_security_group.ec2_security_group.id]
   metadata_options {
     http_endpoint = "enabled"
-    http_tokens  = "required"
+    http_tokens   = "required"
   }
   provisioner "remote-exec" {
     inline = [
