@@ -34,13 +34,6 @@ var clusterName = flag.String("clusterName", "", "Please provide the os preferen
 var schema string
 
 func TestValidatingCloudWatchLogs(t *testing.T) {
-	defer func() {
-		if err := recover(); err != nil {
-			t.Logf("panic occurred: %v", err)
-			t.FailNow()
-		}
-	}()
-
 	rs := jsonschema.Must(schema)
 
 	start := time.Now()
