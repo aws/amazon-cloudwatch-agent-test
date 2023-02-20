@@ -6,7 +6,6 @@ package awsservice
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -149,11 +148,11 @@ func getLogsSince(t *testing.T, logGroup, logStream string, since, until *time.T
 }
 
 // IsLogGroupExists confirms whether the logGroupName exists or not
-func IsLogGroupExists(logGroupName string) (bool, error) {
+func IsLogGroupExists(logGroupName string) bool {
 	cwlClient, clientContext, err := getCloudWatchLogsClient()
 	if err != nil {
 		log.Println("error occurred while creating CWL client", err)
-		return false, err
+		return false
 	}
 
 	describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
@@ -164,16 +163,10 @@ func IsLogGroupExists(logGroupName string) (bool, error) {
 
 	if err != nil {
 		log.Println("error occurred while calling DescribeLogGroups", err)
-		return false, err
+		return false
 	}
 
-	if len(describeLogGroupOutput.LogGroups) > 0 {
-		log.Println("found log group", logGroupName)
-		return true, nil
-	}
-
-	log.Println("log group not found:", logGroupName)
-	return false, fmt.Errorf("log group %s not found", logGroupName)
+	return len(describeLogGroupOutput.LogGroups) > 0
 }
 
 // getCloudWatchLogsClient returns a singleton SDK client for interfacing with CloudWatch Logs
