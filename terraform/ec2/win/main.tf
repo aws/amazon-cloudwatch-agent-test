@@ -38,6 +38,10 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
   get_password_data           = true
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens  = "required"
+  }
   user_data                   = <<EOF
 <powershell>
 Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
