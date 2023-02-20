@@ -56,6 +56,10 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens  = "required"
+  }
 
   tags = {
     Name = "cwagent-performance-${var.test_name}-${module.common.testing_id}"
