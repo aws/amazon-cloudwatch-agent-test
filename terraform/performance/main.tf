@@ -6,8 +6,8 @@ module "common" {
 }
 
 locals {
-  ssh_key_name            = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
-  private_key_content     = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
+  private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
 }
 
 #####################################################################
@@ -37,10 +37,10 @@ locals {
 }
 
 resource "local_file" "update-validation-config" {
-  content  = replace(replace(file("${var.test_dir}/${local.validator_config}"), 
-                "<values_per_minute>", var.values_per_minute),
-                "<cloudwatch_agent_config>",local.cloudwatch_agent_config
-              )
+  content = replace(replace(file("${var.test_dir}/${local.validator_config}"),
+    "<values_per_minute>", var.values_per_minute),
+    "<cloudwatch_agent_config>", local.cloudwatch_agent_config
+  )
 
   filename = "${var.test_dir}/${local.final_validator_config}"
 
@@ -58,7 +58,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address = true
   metadata_options {
     http_endpoint = "enabled"
-    http_tokens  = "required"
+    http_tokens   = "required"
   }
 
   tags = {
@@ -68,18 +68,18 @@ resource "aws_instance" "cwagent" {
 
 resource "null_resource" "integration_test" {
   connection {
-      type        = "ssh"
-      user        = var.user
-      private_key = local.private_key_content
-      host        = aws_instance.cwagent.public_ip
-    }
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
 
   # Prepare Integration Test
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
     destination = "/tmp/${local.final_validator_config}"
 
-    
+
   }
 
   provisioner "file" {
@@ -100,7 +100,7 @@ resource "null_resource" "integration_test" {
       "go run ./validator/main.go --validator-config=/tmp/${local.final_validator_config} --preparation-mode=true",
     ]
   }
-  
+
 
   #Run sanity check and integration test
   provisioner "remote-exec" {
