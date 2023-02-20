@@ -78,7 +78,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address = true
   metadata_options {
     http_endpoint = "enabled"
-    http_tokens  = "required"
+    http_tokens   = "required"
   }
 
   tags = {
