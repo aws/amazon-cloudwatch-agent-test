@@ -40,9 +40,9 @@ resource "aws_instance" "cwagent" {
   get_password_data           = true
   metadata_options {
     http_endpoint = "enabled"
-    http_tokens  = "required"
+    http_tokens   = "required"
   }
-  user_data                   = <<EOF
+  user_data = <<EOF
 <powershell>
 Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
 Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
