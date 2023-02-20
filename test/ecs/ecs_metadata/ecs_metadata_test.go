@@ -23,7 +23,7 @@ import (
 const (
 	RetryTime = 15
 	// Log group format: https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/translate/logs/metrics_collected/prometheus/ruleLogGroupName.go#L33
-	ECSLogGroupNameFormat = "/aws/ecs/containerinsights/%s"
+	ECSLogGroupNameFormat = "/aws/ecs/containerinsights/%s/prometheus"
 	// Log stream based on job name: https://github.com/khanhntd/amazon-cloudwatch-agent/blob/ecs_metadata/integration/test/ecs/ecs_metadata/resources/extra_apps.tpl#L41
 	LogStreamName = "prometheus-redis"
 )
