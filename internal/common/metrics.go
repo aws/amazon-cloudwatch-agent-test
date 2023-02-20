@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cactus/go-statsd-client/v5/statsd"
+	"go.uber.org/multierr"
 )
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
@@ -16,8 +17,9 @@ import (
 func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRate int) error {
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
 	var (
-		err error
-		wg  sync.WaitGroup
+		err      error
+		multiErr error
+		wg       sync.WaitGroup
 	)
 
 	wg.Add(1)
@@ -26,12 +28,15 @@ func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRa
 		switch receiver {
 		case "statsd":
 			err = sendStatsdMetrics(dataRate, agentRunDuration)
+
 		default:
 		}
+
+		multiErr = multierr.Append(multiErr, err)
 	}()
 
 	wg.Wait()
-	return err
+	return multiErr
 }
 
 func sendStatsdMetrics(dataRate int, duration time.Duration) error {

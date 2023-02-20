@@ -18,9 +18,9 @@ resource "aws_security_group" "ec2_security_group" {
 
   // Allow access to IMDS
   egress {
-    from_port = 80
-    to_port   = 80
-    protocol = "TCP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "TCP"
     cidr_blocks = ["169.254.169.254/32"]
   }
 

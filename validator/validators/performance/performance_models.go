@@ -16,5 +16,3 @@ type PerformanceInformation map[string]interface{}
 		"InstanceAMI":      instanceAMI,
 		"InstanceType":     instanceType,
 */
-
-type PerformanceData map[string]Stats
