@@ -4,7 +4,6 @@
 package awsservice
 
 import (
-	"context"
 	"errors"
 	"log"
 	"strings"
@@ -12,29 +11,20 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 )
 
-const allowedRetries = 5
-
-// TODO: Refactor Structure and Interface for more easier follow that shares the same session
-var (
-	ctx context.Context
-	cwl *cloudwatchlogs.Client
-)
+// catch ResourceNotFoundException when deleting the log group and log stream, as these
+// are not useful exceptions to log errors on during cleanup
+var rnf *types.ResourceNotFoundException
 
 // ValidateLogs takes a log group and log stream, and fetches the log events via the GetLogEvents
 // API for all the logs since a given timestamp, and checks if the number of log events matches
 // the expected value.
 func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int, since time.Time) {
 	log.Printf("Checking %s/%s since %s for %d expected logs", logGroup, logStream, since.UTC().Format(time.RFC3339), numExpectedLogs)
-	cwlClient, clientContext, err := getCloudWatchLogsClient()
-	if err != nil {
-		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
-	}
 
 	sinceMs := since.UnixNano() / 1e6 // convert to millisecond timestamp
 
@@ -49,20 +39,18 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 
 	numLogsFound := 0
 	attempts := 0
-	var output *cloudwatchlogs.GetLogEventsOutput
 	var nextToken *string
 
 	for {
 		if nextToken != nil {
 			params.NextToken = nextToken
 		}
-		output, err = cwlClient.GetLogEvents(*clientContext, params)
+		output, err := CwlClient.GetLogEvents(cxt, params)
 
 		attempts += 1
 
 		if err != nil {
-			var rnf *types.ResourceNotFoundException
-			if errors.As(err, &rnf) && attempts <= allowedRetries {
+			if errors.As(err, &rnf) && attempts <= StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(time.Minute)
 				continue
@@ -95,17 +83,8 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 
 // DeleteLogStream cleans up log stream by name
 func DeleteLogStream(logGroupName, logStreamName string) {
-	cwlClient, clientContext, err := getCloudWatchLogsClient()
-	if err != nil {
-		log.Printf("Error occurred while creating CloudWatch Logs SDK client: %v", err)
-		return // terminate gracefully so this alone doesn't cause integration test failures
-	}
 
-	// catch ResourceNotFoundException when deleting the log group and log stream, as these
-	// are not useful exceptions to log errors on during cleanup
-	var rnf *types.ResourceNotFoundException
-
-	_, err = cwlClient.DeleteLogStream(*clientContext, &cloudwatchlogs.DeleteLogStreamInput{
+	_, err := CwlClient.DeleteLogStream(cxt, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
 	})
@@ -116,17 +95,11 @@ func DeleteLogStream(logGroupName, logStreamName string) {
 
 // DeleteLogGroup cleans up log group by name
 func DeleteLogGroup(logGroupName string) {
-	cwlClient, clientContext, err := getCloudWatchLogsClient()
-	if err != nil {
-		log.Printf("Error occurred while creating CloudWatch Logs SDK client: %v", err)
-		return // terminate gracefully so this alone doesn't cause integration test failures
-	}
-
 	// catch ResourceNotFoundException when deleting the log group and log stream, as these
 	// are not useful exceptions to log errors on during cleanup
 	var rnf *types.ResourceNotFoundException
 
-	_, err = cwlClient.DeleteLogGroup(*clientContext, &cloudwatchlogs.DeleteLogGroupInput{
+	_, err := CwlClient.DeleteLogGroup(cxt, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
 	if err != nil && !errors.As(err, &rnf) {
@@ -140,10 +113,6 @@ func DeleteLogGroup(logGroupName string) {
 // the expected lines input to ensure that they don't diverge in JSON representation (" vs ')
 func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []string, since time.Time) {
 	log.Printf("Checking %s/%s since %s for %d expected logs", logGroup, logStream, since.UTC().Format(time.RFC3339), len(logLines))
-	cwlClient, clientContext, err := getCloudWatchLogsClient()
-	if err != nil {
-		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
-	}
 
 	sinceMs := since.UnixNano() / 1e6 // convert to millisecond timestamp
 
@@ -158,7 +127,6 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 	}
 
 	foundLogs := make([]string, 0)
-	var output *cloudwatchlogs.GetLogEventsOutput
 	var nextToken *string
 	attempts := 0
 
@@ -166,13 +134,12 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 		if nextToken != nil {
 			params.NextToken = nextToken
 		}
-		output, err = cwlClient.GetLogEvents(*clientContext, params)
+		output, err := CwlClient.GetLogEvents(cxt, params)
 
 		attempts += 1
 
 		if err != nil {
-			var rnf *types.ResourceNotFoundException
-			if errors.As(err, &rnf) && attempts <= allowedRetries {
+			if errors.As(err, &rnf) && attempts <= StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(time.Minute)
 				continue
@@ -207,16 +174,11 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 // isLogGroupExists confirms whether the logGroupName exists or not
 func IsLogGroupExists(t *testing.T, logGroupName string) bool {
 
-	cwlClient, clientContext, err := getCloudWatchLogsClient()
-	if err != nil {
-		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
-	}
-
 	describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(logGroupName),
 	}
 
-	describeLogGroupOutput, err := cwlClient.DescribeLogGroups(*clientContext, &describeLogGroupInput)
+	describeLogGroupOutput, err := CwlClient.DescribeLogGroups(cxt, &describeLogGroupInput)
 
 	if err != nil {
 		t.Errorf("Error getting log group data %v", err)
@@ -227,18 +189,4 @@ func IsLogGroupExists(t *testing.T, logGroupName string) bool {
 	}
 
 	return false
-}
-
-// getCloudWatchLogsClient returns a singleton SDK client for interfacing with CloudWatch Logs
-func getCloudWatchLogsClient() (*cloudwatchlogs.Client, *context.Context, error) {
-	if cwl == nil {
-		ctx = context.Background()
-		c, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		cwl = cloudwatchlogs.NewFromConfig(c)
-	}
-	return cwl, &ctx, nil
 }

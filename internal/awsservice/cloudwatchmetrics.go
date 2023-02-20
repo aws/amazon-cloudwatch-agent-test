@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
@@ -35,18 +34,13 @@ type metric struct {
 
 // ValidateMetrics takes the metric name, metric dimension and corresponding namespace that contains the metric
 func ValidateMetrics(t *testing.T, metricName, namespace string, dimensionsFilter []types.DimensionFilter) {
-	cwmClient, clientContext, err := GetCloudWatchMetricsClient()
-	if err != nil {
-		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
-	}
-
 	listMetricsInput := cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
 		Namespace:      aws.String(namespace),
 		RecentlyActive: "PT3H",
 		Dimensions:     dimensionsFilter,
 	}
-	data, err := cwmClient.ListMetrics(*clientContext, &listMetricsInput)
+	data, err := CwmClient.ListMetrics(cxt, &listMetricsInput)
 	if err != nil {
 		t.Errorf("Error getting metric data %v", err)
 	}
@@ -70,10 +64,6 @@ func ValidateMetrics(t *testing.T, metricName, namespace string, dimensionsFilte
 func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimension,
 	startTime time.Time, endTime time.Time,
 	lowerBoundInclusive int, upperBoundInclusive int, periodInSeconds int32) bool {
-	cwmClient, clientContext, err := GetCloudWatchMetricsClient()
-	if err != nil {
-		return false
-	}
 
 	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
 		MetricName: aws.String(metricName),
@@ -84,7 +74,7 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 		Dimensions: dimensions,
 		Statistics: []types.Statistic{types.StatisticSampleCount},
 	}
-	data, err := cwmClient.GetMetricStatistics(*clientContext, &metricStatsInput)
+	data, err := CwmClient.GetMetricStatistics(cxt, &metricStatsInput)
 	if err != nil {
 		return false
 	}
@@ -104,27 +94,9 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 	return true
 }
 
-// getCloudWatchMetricsClient returns a singleton SDK client for interfacing with CloudWatch Metrics
-func GetCloudWatchMetricsClient() (*cloudwatch.Client, *context.Context, error) {
-	if cwm == nil {
-		metricsCtx = context.Background()
-		c, err := config.LoadDefaultConfig(metricsCtx)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		cwm = cloudwatch.NewFromConfig(c)
-	}
-	return cwm, &metricsCtx, nil
-}
-
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
 
 func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
-	cwmClient, clientContext, err := GetCloudWatchMetricsClient()
-	if err != nil {
-		return nil, err
-	}
 
 	getMetricDataInput := cloudwatch.GetMetricDataInput{
 		StartTime:         &startTime,
@@ -132,7 +104,7 @@ func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime
 		MetricDataQueries: metricDataQueries,
 	}
 
-	data, err := cwmClient.GetMetricData(*clientContext, &getMetricDataInput)
+	data, err := CwmClient.GetMetricData(cxt, &getMetricDataInput)
 	if err != nil {
 		return nil, err
 	}
