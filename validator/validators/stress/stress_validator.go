@@ -94,26 +94,26 @@ func NewStressValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 	}
 }
 
-func (s *StressValidator) InitValidation() (err error) {
+func (s *StressValidator) GenerateLoad() (err error) {
 	var (
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
 		dataType              = s.vConfig.GetDataType()
 		dataRate              = s.vConfig.GetDataRate()
-		receivers, _, _       = s.vConfig.GetPluginsConfig()
+		receiver              = s.vConfig.GetPluginsConfig()
 	)
 	switch dataType {
 	case "logs":
 		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, dataRate)
 	default:
 		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
-		err = common.StartSendingMetrics(receivers, agentCollectionPeriod, dataRate)
+		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, dataRate)
 	}
 
 	return err
 }
 
-func (s *StressValidator) StartValidation(startTime, endTime time.Time) error {
+func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 	var (
 		multiErr         error
 		ec2InstanceId    = awsservice.GetInstanceId()
@@ -142,7 +142,7 @@ func (s *StressValidator) StartValidation(startTime, endTime time.Time) error {
 	return multiErr
 }
 
-func (s *StressValidator) EndValidation() error {
+func (s *StressValidator) Cleanup() error {
 	var (
 		dataType      = s.vConfig.GetDataType()
 		ec2InstanceId = awsservice.GetInstanceId()
@@ -157,9 +157,9 @@ func (s *StressValidator) EndValidation() error {
 
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, startTime, endTime time.Time) error {
 	var (
-		dataRate        = fmt.Sprint(s.vConfig.GetDataRate())
-		boundAndPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
-		receivers, _, _ = s.vConfig.GetPluginsConfig()
+		dataRate       = fmt.Sprint(s.vConfig.GetDataRate())
+		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
+		receiver       = s.vConfig.GetPluginsConfig()
 	)
 
 	stressMetricQueries := s.buildStressMetricQueries(metricName, metricNamespace, metricDimensions)
@@ -176,25 +176,20 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 		return fmt.Errorf("getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, metricDimensions)
 	}
 
-	for _, receiver := range receivers {
-		if _, ok := metricPluginBoundValue[dataRate][receiver]; !ok {
-			return fmt.Errorf("plugin %s does not have data rate", receiver)
-		}
+	if _, ok := metricPluginBoundValue[dataRate][receiver]; !ok {
+		return fmt.Errorf("plugin %s does not have data rate", receiver)
+	}
 
-		if _, ok := metricPluginBoundValue[dataRate][receiver][metricName]; !ok {
-			return fmt.Errorf("metric %s does not have bound", receiver)
-		}
+	if _, ok := metricPluginBoundValue[dataRate][receiver][metricName]; !ok {
+		return fmt.Errorf("metric %s does not have bound", receiver)
 	}
 
 	// Assuming each plugin are testing one at a time
-	for _, receiver := range receivers {
-		// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
-		metricValue := metrics.MetricDataResults[0].Values[0]
-		upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
-		if metricValue < 0 || metricValue > upperBoundValue {
-			return fmt.Errorf("metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
-		}
-
+	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
+	metricValue := metrics.MetricDataResults[0].Values[0]
+	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
+	if metricValue < 0 || metricValue > upperBoundValue {
+		return fmt.Errorf("metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
 	}
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1

@@ -14,7 +14,7 @@ import (
 )
 
 type ValidateConfig interface {
-	GetPluginsConfig() ([]string, []string, []string)
+	GetPluginsConfig() string
 	GetValidateType() string
 	GetTestCase() string
 	GetDataType() string
@@ -26,9 +26,7 @@ type ValidateConfig interface {
 	GetMetricValidation() []MetricValidation
 }
 type validatorConfig struct {
-	Receivers  []string `yaml:"receivers"`  // Receivers that agent needs to tests
-	Processors []string `yaml:"processors"` // Processors that agent needs to tests
-	Exporters  []string `yaml:"exporters"`  // Exporters that agent needs to tests
+	Receiver string `yaml:"receivers"` // Receivers that agent needs to tests
 
 	TestCase string `yaml:"test_case"` // Test case name
 
@@ -81,8 +79,8 @@ func (v *validatorConfig) GetValidateType() string {
 }
 
 // GetPluginsConfig returns the agent plugin being used or need to validate (e.g statsd, collectd, cpu)
-func (v *validatorConfig) GetPluginsConfig() ([]string, []string, []string) {
-	return v.Receivers, v.Processors, v.Exporters
+func (v *validatorConfig) GetPluginsConfig() string {
+	return v.Receiver
 }
 
 // GetPluginsConfig returns the type needs to validate or send. Only supports metrics, traces, logs
