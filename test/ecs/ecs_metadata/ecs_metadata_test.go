@@ -57,6 +57,9 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 		end := time.Now()
 
 		awsservice.ValidateLogs(t, logGroupName, LogStreamName, &start, &end, func(logs []string) bool {
+			if len(logs) < 1 {
+				return false
+			}
 			for _, l := range logs {
 				keyErrors, e := rs.ValidateBytes(context.Background(), []byte(l))
 				if e != nil {
@@ -64,6 +67,7 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 					return false
 				} else if len(keyErrors) > 0 {
 					log.Printf("failed schema validation: %v\n", keyErrors)
+					return false
 				}
 			}
 			return true
