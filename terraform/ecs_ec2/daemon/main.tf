@@ -30,6 +30,10 @@ resource "aws_launch_configuration" "cluster" {
   iam_instance_profile = data.aws_iam_instance_profile.cwagent_instance_profile.name
 
   user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens  = "required"
+  }
 }
 
 resource "aws_autoscaling_group" "cluster" {
