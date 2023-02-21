@@ -4,13 +4,15 @@
 package awsservice
 
 import (
+	"errors"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func AddItemIntoDatabase(databaseName, conditionExpression string, packet interface{}, expressAttributesNames map[string]string) error {
+func ReplaceItemInDatabase(databaseName string, packet map[string]interface{}) error {
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		return err
@@ -18,44 +20,76 @@ func AddItemIntoDatabase(databaseName, conditionExpression string, packet interf
 
 	_, err = DynamodbClient.PutItem(ctx,
 		&dynamodb.PutItemInput{
-			Item:                     item,
-			TableName:                aws.String(databaseName),
-			ConditionExpression:      aws.String(conditionExpression),
-			ExpressionAttributeNames: expressAttributesNames,
+			Item:      item,
+			TableName: aws.String(databaseName),
 		})
 
 	return err
 }
 
-func GetItemInDatabase(databaseName, databaseIndexName, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues map[string]types.AttributeValue) ([]map[string]interface{}, error) {
+func AddItemIntoDatabaseIfNotExist(databaseName string, checkingAttribute, checkingAttributeValue []string, packet map[string]interface{}) error {
+	item, err := attributevalue.MarshalMap(packet)
+	if err != nil {
+		return err
+	}
+
+	// DynamoDb only allows query two conditions key. Therefore, only needs an array with length 2
+	// https://stackoverflow.com/questions/65390063/dynamodbexception-conditions-can-be-of-length-1-or-2-only
+	_, err = DynamodbClient.PutItem(ctx,
+		&dynamodb.PutItemInput{
+			Item:                item,
+			TableName:           aws.String(databaseName),
+			ConditionExpression: aws.String("#first_attribute <> :first_attribute and #second_attribute <> :second_attribute"),
+			ExpressionAttributeNames: map[string]string{
+				"#first_attribute":  checkingAttribute[0],
+				"#second_attribute": checkingAttribute[1],
+			},
+			ExpressionAttributeValues: map[string]types.AttributeValue{
+				":first_attribute":  &types.AttributeValueMemberN{Value: checkingAttributeValue[0]},
+				":second_attribute": &types.AttributeValueMemberS{Value: checkingAttributeValue[1]},
+			},
+		})
+
+	return err
+}
+
+func GetItemInDatabase(databaseName, indexName string, checkingAttribute, checkingAttributeValue []string, packet map[string]interface{}) (map[string]interface{}, error) {
 	var packets []map[string]interface{}
 
-	data, err := DynamodbClient.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(databaseName),
-		IndexName:                 aws.String(databaseIndexName),
-		KeyConditionExpression:    aws.String(conditionExpression),
-		ExpressionAttributeNames:  expressionAttributesNames,
-		ExpressionAttributeValues: expressionAttributesValues,
+	// DynamoDb only allows query two conditions key. Therefore, only needs an array with length 2
+	// https://stackoverflow.com/questions/65390063/dynamodbexception-conditions-can-be-of-length-1-or-2-only
 
-		ScanIndexForward: aws.Bool(true), // true or false to sort by "date" Sort/Range key ascending or descending
+	data, err := DynamodbClient.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(databaseName),
+		IndexName:              aws.String(indexName),
+		KeyConditionExpression: aws.String("#first_attribute = :first_attribute and #second_attribute = :second_attribute"),
+		ExpressionAttributeNames: map[string]string{
+			"#first_attribute":  checkingAttribute[0],
+			"#second_attribute": checkingAttribute[1],
+		},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":first_attribute":  &types.AttributeValueMemberN{Value: checkingAttributeValue[0]},
+			":second_attribute": &types.AttributeValueMemberS{Value: checkingAttributeValue[1]},
+		},
+		ScanIndexForward: aws.Bool(true), // Sort Range Key in ascending by Sort/Range key in numeric order since range key is CommitDate
 	})
+
 	if err != nil {
 		return nil, err
 	}
 
 	attributevalue.UnmarshalListOfMaps(data.Items, &packets)
-	return packets, nil
-}
 
-func UpdateItemInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error {
-	_, err := DynamodbClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-		TableName:                 aws.String(databaseName),
-		Key:                       databaseKey,
-		UpdateExpression:          aws.String(updateExpression),
-		ExpressionAttributeNames:  expressionAttributesNames,
-		ExpressionAttributeValues: expressionAttributesValues,
-		ConditionExpression:       aws.String(conditionExpression),
-	})
+	if len(packets) == 0 {
+		if packet != nil {
+			if err = AddItemIntoDatabaseIfNotExist(databaseName, checkingAttribute, checkingAttributeValue, packet); err != nil {
+				return nil, err
+			}
+			return packet, nil
+		}
 
-	return err
+		return nil, errors.New("there is no exist package from the database")
+	}
+
+	return packets[0], nil
 }

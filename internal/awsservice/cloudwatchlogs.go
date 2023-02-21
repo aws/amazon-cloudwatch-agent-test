@@ -178,7 +178,7 @@ func IsLogGroupExists(t *testing.T, logGroupName string) bool {
 		LogGroupNamePrefix: aws.String(logGroupName),
 	}
 
-	describeLogGroupOutput, err := CwlClient.DescribeLogGroups(cxt, &describeLogGroupInput)
+	describeLogGroupOutput, err := CwlClient.DescribeLogGroups(ctx, &describeLogGroupInput)
 
 	if err != nil {
 		t.Errorf("Error getting log group data %v", err)
