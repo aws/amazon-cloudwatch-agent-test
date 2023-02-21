@@ -17,7 +17,7 @@ func GetInstancePrivateIpDns(instanceId string) (*string, error) {
 }
 
 func DescribeInstances(instanceIds []string) (*ec2.DescribeInstancesOutput, error) {
-	return Ec2Client.DescribeInstances(cxt, &ec2.DescribeInstancesInput{
+	return Ec2Client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: instanceIds,
 	})
 }

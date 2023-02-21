@@ -31,7 +31,7 @@ func GetImdsMetadata() *imds.GetInstanceIdentityDocumentOutput {
 	var err error
 
 	// TODO: this only works for EC2 based testing
-	identityDoc, err = ImdsClient.GetInstanceIdentityDocument(cxt, &imds.GetInstanceIdentityDocumentInput{})
+	identityDoc, err = ImdsClient.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		log.Fatalf("Error occurred while retrieving imds identityDoc: %v", err)
 	}

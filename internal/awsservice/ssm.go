@@ -16,7 +16,7 @@ func PutStringParameter(name, value string) error {
 func putParameter(name, value string, paramType types.ParameterType) error {
 	isOverwriteAllowed := true
 
-	_, err := SsmClient.PutParameter(cxt, &ssm.PutParameterInput{
+	_, err := SsmClient.PutParameter(ctx, &ssm.PutParameterInput{
 		Name:      aws.String(name),
 		Value:     aws.String(value),
 		Type:      paramType,

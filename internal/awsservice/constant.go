@@ -35,8 +35,8 @@ var (
 )
 
 var (
-	cxt            = context.Background()
-	awsCfg, _      = config.LoadDefaultConfig(cxt)
+	ctx            = context.Background()
+	awsCfg, _      = config.LoadDefaultConfig(ctx)
 	Ec2Client      = ec2.NewFromConfig(awsCfg)
 	EcsClient      = ecs.NewFromConfig(awsCfg)
 	SsmClient      = ssm.NewFromConfig(awsCfg)

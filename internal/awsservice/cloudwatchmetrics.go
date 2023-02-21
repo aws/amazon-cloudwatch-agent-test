@@ -4,7 +4,6 @@
 package awsservice
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"testing"
@@ -13,11 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-)
-
-var (
-	metricsCtx context.Context
-	cwm        *cloudwatch.Client
 )
 
 const (
@@ -40,7 +34,7 @@ func ValidateMetrics(t *testing.T, metricName, namespace string, dimensionsFilte
 		RecentlyActive: "PT3H",
 		Dimensions:     dimensionsFilter,
 	}
-	data, err := CwmClient.ListMetrics(cxt, &listMetricsInput)
+	data, err := CwmClient.ListMetrics(ctx, &listMetricsInput)
 	if err != nil {
 		t.Errorf("Error getting metric data %v", err)
 	}
@@ -74,7 +68,7 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 		Dimensions: dimensions,
 		Statistics: []types.Statistic{types.StatisticSampleCount},
 	}
-	data, err := CwmClient.GetMetricStatistics(cxt, &metricStatsInput)
+	data, err := CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
 	if err != nil {
 		return false
 	}
@@ -104,7 +98,7 @@ func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime
 		MetricDataQueries: metricDataQueries,
 	}
 
-	data, err := CwmClient.GetMetricData(cxt, &getMetricDataInput)
+	data, err := CwmClient.GetMetricData(ctx, &getMetricDataInput)
 	if err != nil {
 		return nil, err
 	}

@@ -24,7 +24,7 @@ func RestartService(clusterArn string, desiredCount *int32, serviceName string) 
 		updateServiceInput.DesiredCount = desiredCount
 	}
 
-	_, err := EcsClient.UpdateService(cxt, updateServiceInput)
+	_, err := EcsClient.UpdateService(ctx, updateServiceInput)
 
 	return err
 }
@@ -78,19 +78,14 @@ func GetClusterName(clusterArn string) string {
 }
 
 func listContainerInstances(clusterArn string) (*ecs.ListContainerInstancesOutput, error) {
-
-	input := &ecs.ListContainerInstancesInput{
+	return EcsClient.ListContainerInstances(ctx, &ecs.ListContainerInstancesInput{
 		Cluster: aws.String(clusterArn),
-	}
-
-	return EcsClient.ListContainerInstances(cxt, input)
+	})
 }
 
 func describeContainerInstances(clusterArn string, containerInstanceArns []string) (*ecs.DescribeContainerInstancesOutput, error) {
-	input := &ecs.DescribeContainerInstancesInput{
+	return EcsClient.DescribeContainerInstances(ctx, &ecs.DescribeContainerInstancesInput{
 		Cluster:            aws.String(clusterArn),
 		ContainerInstances: containerInstanceArns,
-	}
-
-	return EcsClient.DescribeContainerInstances(cxt, input)
+	})
 }

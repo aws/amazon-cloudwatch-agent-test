@@ -45,7 +45,7 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 		if nextToken != nil {
 			params.NextToken = nextToken
 		}
-		output, err := CwlClient.GetLogEvents(cxt, params)
+		output, err := CwlClient.GetLogEvents(ctx, params)
 
 		attempts += 1
 
@@ -84,7 +84,7 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 // DeleteLogStream cleans up log stream by name
 func DeleteLogStream(logGroupName, logStreamName string) {
 
-	_, err := CwlClient.DeleteLogStream(cxt, &cloudwatchlogs.DeleteLogStreamInput{
+	_, err := CwlClient.DeleteLogStream(ctx, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
 	})
@@ -99,7 +99,7 @@ func DeleteLogGroup(logGroupName string) {
 	// are not useful exceptions to log errors on during cleanup
 	var rnf *types.ResourceNotFoundException
 
-	_, err := CwlClient.DeleteLogGroup(cxt, &cloudwatchlogs.DeleteLogGroupInput{
+	_, err := CwlClient.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
 	if err != nil && !errors.As(err, &rnf) {
@@ -134,7 +134,7 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 		if nextToken != nil {
 			params.NextToken = nextToken
 		}
-		output, err := CwlClient.GetLogEvents(cxt, params)
+		output, err := CwlClient.GetLogEvents(ctx, params)
 
 		attempts += 1
 

@@ -16,7 +16,7 @@ func AddItemIntoDatabase(databaseName, conditionExpression string, packet interf
 		return err
 	}
 
-	_, err = DynamodbClient.PutItem(cxt,
+	_, err = DynamodbClient.PutItem(ctx,
 		&dynamodb.PutItemInput{
 			Item:                     item,
 			TableName:                aws.String(databaseName),
@@ -30,7 +30,7 @@ func AddItemIntoDatabase(databaseName, conditionExpression string, packet interf
 func GetItemInDatabase(databaseName, databaseIndexName, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues map[string]types.AttributeValue) ([]map[string]interface{}, error) {
 	var packets []map[string]interface{}
 
-	data, err := DynamodbClient.Query(cxt, &dynamodb.QueryInput{
+	data, err := DynamodbClient.Query(ctx, &dynamodb.QueryInput{
 		TableName:                 aws.String(databaseName),
 		IndexName:                 aws.String(databaseIndexName),
 		KeyConditionExpression:    aws.String(conditionExpression),
@@ -48,7 +48,7 @@ func GetItemInDatabase(databaseName, databaseIndexName, conditionExpression stri
 }
 
 func UpdateItemInDatabase(databaseName, updateExpression, conditionExpression string, expressionAttributesNames map[string]string, expressionAttributesValues, databaseKey map[string]types.AttributeValue) error {
-	_, err := DynamodbClient.UpdateItem(cxt, &dynamodb.UpdateItemInput{
+	_, err := DynamodbClient.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName:                 aws.String(databaseName),
 		Key:                       databaseKey,
 		UpdateExpression:          aws.String(updateExpression),
