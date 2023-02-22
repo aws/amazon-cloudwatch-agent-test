@@ -7,14 +7,12 @@ import (
 	"context"
 	"errors"
 	"log"
-	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
-	"github.com/stretchr/testify/assert"
 )
 
 const allowedRetries = 5
@@ -77,18 +75,18 @@ func DeleteLogGroup(logGroupName string) {
 // It should query the given log stream for log events, and then confirm that the log lines that are
 // returned match the expected log lines. This also sanitizes the log lines from both the output and
 // the expected lines input to ensure that they don't diverge in JSON representation (" vs ')
-func ValidateLogs(t *testing.T, logGroup, logStream string, since, until *time.Time, validator func(logs []string) bool) {
-	t.Helper()
+func ValidateLogs(logGroup, logStream string, since, until *time.Time, validator func(logs []string) bool) (bool, error) {
 	log.Printf("Checking %s/%s since %s", logGroup, logStream, since.UTC().Format(time.RFC3339))
 
-	foundLogs, err := getLogsSince(t, logGroup, logStream, since, until)
-	assert.NoError(t, err)
+	foundLogs, err := getLogsSince(logGroup, logStream, since, until)
+	if err != nil {
+		return false, err
+	}
 
-	assert.True(t, validator(foundLogs))
+	return validator(foundLogs), nil
 }
 
-func getLogsSince(t *testing.T, logGroup, logStream string, since, until *time.Time) ([]string, error) {
-	t.Helper()
+func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string, error) {
 	foundLogs := make([]string, 0)
 
 	cwlClient, clientContext, err := getCloudWatchLogsClient()
@@ -96,16 +94,25 @@ func getLogsSince(t *testing.T, logGroup, logStream string, since, until *time.T
 		return foundLogs, err
 	}
 
-	sinceMs := since.UnixNano() / 1e6 // convert to millisecond timestamp
-
 	// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html
 	// GetLogEvents can return an empty result while still having more log events on a subsequent page,
 	// so rather than expecting all the events to show up in one GetLogEvents API call, we need to paginate.
 	params := &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName:  aws.String(logGroup),
 		LogStreamName: aws.String(logStream),
-		StartTime:     aws.Int64(sinceMs),
 		StartFromHead: aws.Bool(true), // read from the beginning
+	}
+
+	var sinceMs int64
+	if since != nil {
+		sinceMs = since.UnixNano() / 1e6 // convert to millisecond timestamp
+		params.StartTime = aws.Int64(sinceMs)
+	}
+
+	var untilMs int64
+	if until != nil {
+		untilMs = until.UnixNano() / 1e6
+		params.EndTime = aws.Int64(untilMs)
 	}
 
 	var output *cloudwatchlogs.GetLogEventsOutput

@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
 	"time"
@@ -56,7 +57,7 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 
 		end := time.Now()
 
-		awsservice.ValidateLogs(t, logGroupName, LogStreamName, &start, &end, func(logs []string) bool {
+		ok, err := awsservice.ValidateLogs(logGroupName, LogStreamName, &start, &end, func(logs []string) bool {
 			if len(logs) < 1 {
 				return false
 			}
@@ -72,6 +73,9 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			}
 			return true
 		})
+		assert.NoError(t, err)
+		assert.True(t, ok)
+
 		break
 	}
 

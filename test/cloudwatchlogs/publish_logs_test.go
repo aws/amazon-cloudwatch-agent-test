@@ -7,6 +7,7 @@ package cloudwatchlogs
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"os"
 	"strings"
@@ -99,9 +100,11 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			end := time.Now()
 
 			// check CWL to ensure we got the expected number of logs in the log stream
-			awsservice.ValidateLogs(t, instanceId, instanceId, &start, &end, func(logs []string) bool {
+			ok, err := awsservice.ValidateLogs(instanceId, instanceId, &start, &end, func(logs []string) bool {
 				return param.numExpectedLogs == len(logs)
 			})
+			assert.NoError(t, err)
+			assert.True(t, ok)
 		})
 	}
 }
@@ -149,7 +152,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 
 	end := time.Now()
 
-	awsservice.ValidateLogs(t, logGroup, logStream, &start, &end, func(logs []string) bool {
+	ok, err := awsservice.ValidateLogs(logGroup, logStream, &start, &end, func(logs []string) bool {
 		if len(logs) != len(lines) {
 			return false
 		}
@@ -164,6 +167,8 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 
 		return true
 	})
+	assert.NoError(t, err)
+	assert.True(t, ok)
 }
 
 func writeLogs(t *testing.T, f *os.File, iterations int) {
