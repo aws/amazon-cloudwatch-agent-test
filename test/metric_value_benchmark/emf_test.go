@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/qri-io/jsonschema"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -99,8 +100,14 @@ func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+	if len(values) == 0 {
 		return testResult
+	}
+
+	for _, v := range values {
+		if v != 5 {
+			return testResult
+		}
 	}
 
 	testResult.Status = status.SUCCESSFUL
@@ -128,6 +135,10 @@ func validateEMFLogs(group, stream string) status.TestResult {
 				return false
 			} else if len(keyErrors) > 0 {
 				log.Printf("failed schema validation: %v\n", keyErrors)
+				return false
+			}
+
+			if !strings.Contains(l, "\"EMFCounter\": 5") {
 				return false
 			}
 		}
