@@ -71,10 +71,8 @@ func DeleteLogGroup(logGroupName string) {
 	}
 }
 
-// ValidateLogs takes a log group, log stream, a list of specific log lines and a timestamp.
-// It should query the given log stream for log events, and then confirm that the log lines that are
-// returned match the expected log lines. This also sanitizes the log lines from both the output and
-// the expected lines input to ensure that they don't diverge in JSON representation (" vs ')
+// ValidateLogs queries a given LogGroup/LogStream combination given the start and end times, and executes an
+// arbitrary validator function on the found logs.
 func ValidateLogs(logGroup, logStream string, since, until *time.Time, validator func(logs []string) bool) (bool, error) {
 	log.Printf("Checking %s/%s since %s", logGroup, logStream, since.UTC().Format(time.RFC3339))
 
@@ -86,6 +84,8 @@ func ValidateLogs(logGroup, logStream string, since, until *time.Time, validator
 	return validator(foundLogs), nil
 }
 
+// getLogsSince makes GetLogEvents API calls, paginates through the results for the given time frame, and returns
+// the raw log strings
 func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string, error) {
 	foundLogs := make([]string, 0)
 
