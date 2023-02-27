@@ -5,27 +5,6 @@
   "type": "object",
   "properties": {
     "_aws": {
-      "$ref": "#/definitions/emfDefinition"
-    },
-    "Type": {
-      "type": "string"
-    },
-    "EMFCounter": {
-      "type": "integer"
-    },
-    "InstanceId": {
-      "type": "string"
-    }
-  },
-  "required": [
-    "_aws",
-    "Type",
-    "EMFCounter",
-    "InstanceId"
-  ],
-  "additionalProperties": true,
-  "definitions": {
-    "emfDefinition": {
       "type": "object",
       "additionalProperties": true,
       "properties": {
@@ -45,7 +24,10 @@
               "Dimensions": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "Metrics": {
@@ -67,6 +49,22 @@
           }
         }
       }
+    },
+    "Type": {
+      "type": "string"
+    },
+    "EMFCounter": {
+      "type": "integer"
+    },
+    "InstanceId": {
+      "type": "string"
     }
-  }
+  },
+  "required": [
+    "_aws",
+    "Type",
+    "EMFCounter",
+    "InstanceId"
+  ],
+  "additionalProperties": true
 }
