@@ -75,7 +75,7 @@ func DeleteLogGroup(logGroupName string) {
 // ValidateLogs queries a given LogGroup/LogStream combination given the start and end times, and executes an
 // arbitrary validator function on the found logs.
 func ValidateLogs(logGroup, logStream string, since, until *time.Time, validator func(logs []string) bool) (bool, error) {
-	log.Printf("Checking %s/%s", logGroup, logStream)
+	log.Printf("Checking %s/%s\n", logGroup, logStream)
 
 	foundLogs, err := getLogsSince(logGroup, logStream, since, until)
 	if err != nil {
@@ -192,6 +192,8 @@ func getCloudWatchLogsClient() (*cloudwatchlogs.Client, *context.Context, error)
 }
 
 func MatchEMFLogWithSchema(logEntry string, s *jsonschema.Schema, logValidator func(string) bool) bool {
+	log.Println("validating", logEntry)
+
 	keyErrors, e := s.ValidateBytes(context.Background(), []byte(logEntry))
 	if e != nil {
 		log.Println("failed to execute schema validator:", e)

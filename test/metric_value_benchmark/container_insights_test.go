@@ -112,10 +112,6 @@ func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult
 
 	rs := jsonschema.Must(emfContainerInsightsSchema)
 
-	validateLogContents := func(s string) bool {
-		return strings.Contains(s, "\"Namespace\": \"ECS/ContainerInsights\"")
-	}
-
 	now := time.Now()
 	group := fmt.Sprintf("/aws/ecs/containerinsights/%s/performance", e.EcsClusterName)
 
@@ -126,6 +122,10 @@ func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult
 	}
 
 	for _, container := range containers {
+		validateLogContents := func(s string) bool {
+			return strings.Contains(s, fmt.Sprintf("'ContainerInstanceId': '%s'", container.ContainerInstanceId))
+		}
+
 		var ok bool
 		stream := fmt.Sprintf("NodeTelemetry-%s", container.ContainerInstanceId)
 		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {

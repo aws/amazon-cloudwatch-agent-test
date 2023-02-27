@@ -4,12 +4,12 @@
 package ecs_metadata
 
 import (
-	"context"
 	_ "embed"
 	"flag"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"log"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,12 +62,13 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 				return false
 			}
 			for _, l := range logs {
-				keyErrors, e := rs.ValidateBytes(context.Background(), []byte(l))
-				if e != nil {
-					log.Println("failed to execute schema validator:", e)
-					return false
-				} else if len(keyErrors) > 0 {
-					log.Printf("failed schema validation: %v\n", keyErrors)
+				if !awsservice.MatchEMFLogWithSchema(l, rs, func(s string) bool {
+					ok := true
+					if strings.Contains(l, "CloudWatchMetrics") {
+						ok = ok && strings.Contains(l, "'Namespace': 'ECS/ContainerInsights/Prometheus")
+					}
+					return ok && strings.Contains(l, "'job': 'prometheus-redis'")
+				}) {
 					return false
 				}
 			}
