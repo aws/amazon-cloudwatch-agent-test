@@ -75,7 +75,7 @@ func DeleteLogGroup(logGroupName string) {
 // ValidateLogs queries a given LogGroup/LogStream combination given the start and end times, and executes an
 // arbitrary validator function on the found logs.
 func ValidateLogs(logGroup, logStream string, since, until *time.Time, validator func(logs []string) bool) (bool, error) {
-	log.Printf("Checking %s/%s since %s", logGroup, logStream, since.UTC().Format(time.RFC3339))
+	log.Printf("Checking %s/%s", logGroup, logStream)
 
 	foundLogs, err := getLogsSince(logGroup, logStream, since, until)
 	if err != nil {
