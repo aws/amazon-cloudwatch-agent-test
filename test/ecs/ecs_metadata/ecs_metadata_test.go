@@ -65,9 +65,9 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 				if !awsservice.MatchEMFLogWithSchema(l, rs, func(s string) bool {
 					ok := true
 					if strings.Contains(l, "CloudWatchMetrics") {
-						ok = ok && strings.Contains(l, "'Namespace': 'ECS/ContainerInsights/Prometheus")
+						ok = ok && strings.Contains(l, "\"Namespace\":\"ECS/ContainerInsights/Prometheus\"")
 					}
-					return ok && strings.Contains(l, "'job': 'prometheus-redis'")
+					return ok && strings.Contains(l, "\"job\":\"prometheus-redis\"")
 				}) {
 					return false
 				}

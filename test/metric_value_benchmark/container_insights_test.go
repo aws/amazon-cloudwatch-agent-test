@@ -123,7 +123,7 @@ func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult
 
 	for _, container := range containers {
 		validateLogContents := func(s string) bool {
-			return strings.Contains(s, fmt.Sprintf("'ContainerInstanceId': '%s'", container.ContainerInstanceId))
+			return strings.Contains(s, fmt.Sprintf("\"ContainerInstanceId\":\"%s\"", container.ContainerInstanceId))
 		}
 
 		var ok bool
