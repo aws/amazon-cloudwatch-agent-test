@@ -192,8 +192,6 @@ func getCloudWatchLogsClient() (*cloudwatchlogs.Client, *context.Context, error)
 }
 
 func MatchEMFLogWithSchema(logEntry string, s *jsonschema.Schema, logValidator func(string) bool) bool {
-	log.Println("validating", logEntry)
-
 	keyErrors, e := s.ValidateBytes(context.Background(), []byte(logEntry))
 	if e != nil {
 		log.Println("failed to execute schema validator:", e)
