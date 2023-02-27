@@ -6,6 +6,7 @@ package awsservice
 import (
 	"context"
 	"errors"
+	"github.com/qri-io/jsonschema"
 	"log"
 	"time"
 
@@ -188,4 +189,17 @@ func getCloudWatchLogsClient() (*cloudwatchlogs.Client, *context.Context, error)
 		cwl = cloudwatchlogs.NewFromConfig(c)
 	}
 	return cwl, &ctx, nil
+}
+
+func MatchEMFLogWithSchema(logEntry string, s *jsonschema.Schema, logValidator func(string) bool) bool {
+	keyErrors, e := s.ValidateBytes(context.Background(), []byte(logEntry))
+	if e != nil {
+		log.Println("failed to execute schema validator:", e)
+		return false
+	} else if len(keyErrors) > 0 {
+		log.Printf("failed schema validation: %v\n", keyErrors)
+		return false
+	}
+
+	return logValidator(logEntry)
 }

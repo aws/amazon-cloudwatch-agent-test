@@ -6,7 +6,6 @@
 package metric_value_benchmark
 
 import (
-	"context"
 	_ "embed"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -16,7 +15,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/qri-io/jsonschema"
-	"log"
 	"strings"
 	"time"
 )
@@ -26,7 +24,7 @@ type EMFTestRunner struct {
 }
 
 //go:embed agent_resources/emf_counter.json
-var schema string
+var emfMetricValueBenchmarkSchema string
 
 var _ test_runner.ITestRunner = (*EMFTestRunner)(nil)
 
@@ -36,6 +34,8 @@ func (t *EMFTestRunner) Validate() status.TestGroupResult {
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateEMFMetric(metricName)
 	}
+
+	testResults = append(testResults, validateEMFLogs("MetricValueBenchmarkTest", awsservice.GetInstanceId()))
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -120,7 +120,11 @@ func validateEMFLogs(group, stream string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	rs := jsonschema.Must(schema)
+	rs := jsonschema.Must(emfMetricValueBenchmarkSchema)
+
+	validateLogContents := func(s string) bool {
+		return strings.Contains(s, "\"EMFCounter\": 5")
+	}
 
 	now := time.Now()
 	ok, err := awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
@@ -129,16 +133,7 @@ func validateEMFLogs(group, stream string) status.TestResult {
 		}
 
 		for _, l := range logs {
-			keyErrors, e := rs.ValidateBytes(context.Background(), []byte(l))
-			if e != nil {
-				log.Println("failed to execute schema validator:", e)
-				return false
-			} else if len(keyErrors) > 0 {
-				log.Printf("failed schema validation: %v\n", keyErrors)
-				return false
-			}
-
-			if !strings.Contains(l, "\"EMFCounter\": 5") {
+			if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
 				return false
 			}
 		}

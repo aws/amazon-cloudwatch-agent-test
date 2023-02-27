@@ -96,13 +96,12 @@ func getLogFilePaths(configPath string) ([]string, error) {
 	return filePaths, nil
 }
 
-/* GenerateLogConfig takes the number of logs to be monitored and applies it to the supplied config,
-* It writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
-* the supplied configuration
-* DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
-* (log being monitored will be overwritten - it is needed for json structure)
-* returns the path of the config generated and a list of log stream names
- */
+// GenerateLogConfig takes the number of logs to be monitored and applies it to the supplied config,
+// It writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
+// the supplied configuration
+// DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
+// (log being monitored will be overwritten - it is needed for json structure)
+// returns the path of the config generated and a list of log stream names
 func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	type LogInfo struct {
 		FilePath      string `json:"file_path"`
