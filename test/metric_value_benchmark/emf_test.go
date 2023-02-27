@@ -123,7 +123,7 @@ func validateEMFLogs(group, stream string) status.TestResult {
 	rs := jsonschema.Must(emfMetricValueBenchmarkSchema)
 
 	validateLogContents := func(s string) bool {
-		return strings.Contains(s, "\"EMFCounter\": 5")
+		return strings.Contains(s, "'EMFCounter': 5")
 	}
 
 	now := time.Now()

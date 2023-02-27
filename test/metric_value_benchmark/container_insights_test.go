@@ -127,7 +127,7 @@ func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult
 
 	for _, container := range containers {
 		var ok bool
-		stream := fmt.Sprintf("NodeTelemetry-%s", container.EC2InstanceId)
+		stream := fmt.Sprintf("NodeTelemetry-%s", container.ContainerInstanceId)
 		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
 			if len(logs) < 1 {
 				return false

@@ -5,6 +5,39 @@
   "type": "object",
   "properties": {
     "ClusterName": {},
+    "CloudWatchMetrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "Namespace": {
+            "type": "string"
+          },
+          "Dimensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Metrics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "Name": {
+                  "type": "string"
+                },
+                "Unit": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "ECS_PROMETHEUS_EXPORTER_PORT": {},
     "LaunchType": {},
     "StartedBy": {},
@@ -15,19 +48,13 @@
     "TaskRevision": {},
     "Timestamp": {},
     "Version": {},
-    "app_x": {},
-    "build_date": {},
-    "commit_sha": {},
     "container_name": {},
-    "golang_version": {},
-    "instance": {},
     "job": {},
-    "prom_metric_type": {},
-    "redis_exporter_build_info": {},
-    "version": {}
+    "prom_metric_type": {}
   },
   "required": [
     "ClusterName",
+    "CloudWatchMetrics",
     "ECS_PROMETHEUS_EXPORTER_PORT",
     "LaunchType",
     "StartedBy",
@@ -38,16 +65,9 @@
     "TaskRevision",
     "Timestamp",
     "Version",
-    "app_x",
-    "build_date",
-    "commit_sha",
     "container_name",
-    "golang_version",
-    "instance",
     "job",
-    "prom_metric_type",
-    "redis_exporter_build_info",
-    "version"
+    "prom_metric_type"
   ],
   "additionalProperties": true
 }
