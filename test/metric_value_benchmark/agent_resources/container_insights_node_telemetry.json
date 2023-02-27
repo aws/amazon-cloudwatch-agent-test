@@ -8,38 +8,6 @@
     "CloudWatchMetrics": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/emfDefinition"
-      }
-    },
-    "ClusterName": {},
-    "ContainerInstanceId": {},
-    "InstanceId": {},
-    "InstanceType": {},
-    "Sources": {
-      "type": "array"
-    },
-    "Timestamp": {},
-    "Type": {},
-    "Version": {}
-  },
-  "required": [
-    "AutoScalingGroupName",
-    "CloudWatchMetrics",
-    "ClusterName",
-    "ContainerInstanceId",
-    "InstanceId",
-    "InstanceType",
-    "Sources",
-    "Timestamp",
-    "Type",
-    "Version"
-  ],
-  "additionalProperties": true,
-  "definitions": {
-    "emfDefinition": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
         "Namespace": {
           "type": "string"
         },
@@ -68,6 +36,28 @@
           }
         }
       }
-    }
-  }
+    },
+    "ClusterName": {},
+    "ContainerInstanceId": {},
+    "InstanceId": {},
+    "InstanceType": {},
+    "Sources": {
+      "type": "array"
+    },
+    "Timestamp": {},
+    "Type": {},
+    "Version": {}
+  },
+  "required": [
+    "AutoScalingGroupName",
+    "ClusterName",
+    "ContainerInstanceId",
+    "InstanceId",
+    "InstanceType",
+    "Sources",
+    "Timestamp",
+    "Type",
+    "Version"
+  ],
+  "additionalProperties": true
 }

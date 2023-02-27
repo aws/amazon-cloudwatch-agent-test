@@ -57,7 +57,6 @@
   },
   "required": [
     "ClusterName",
-    "CloudWatchMetrics",
     "ECS_PROMETHEUS_EXPORTER_PORT",
     "LaunchType",
     "StartedBy",
