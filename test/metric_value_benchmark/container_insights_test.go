@@ -15,7 +15,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/qri-io/jsonschema"
-	"log"
 	"strings"
 	"time"
 )
@@ -36,7 +35,7 @@ func (t *ContainerInsightsTestRunner) validate(e *environment.MetaData) status.T
 		testResults[i] = t.validateContainerInsightsMetrics(metricName)
 	}
 
-	testResults = append(testResults, validateLogsForContainerInsights(e.EcsClusterName, awsservice.GetInstanceId()))
+	testResults = append(testResults, validateLogsForContainerInsights(e))
 
 	return status.TestGroupResult{
 		Name:        t.getTestName(),
@@ -105,9 +104,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 	return testResult
 }
 
-func validateLogsForContainerInsights(clusterName, instanceID string) status.TestResult {
-	log.Printf("validating CI logs for %s:%s\n", clusterName, instanceID)
-
+func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult {
 	testResult := status.TestResult{
 		Name:   "emf-logs",
 		Status: status.FAILED,
@@ -120,23 +117,33 @@ func validateLogsForContainerInsights(clusterName, instanceID string) status.Tes
 	}
 
 	now := time.Now()
-	group := fmt.Sprintf("/aws/ecs/containerinsights/%s/performance", clusterName)
-	stream := fmt.Sprintf("NodeTelemetry-%s", instanceID)
-	ok, err := awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
-		if len(logs) < 1 {
-			return false
-		}
+	group := fmt.Sprintf("/aws/ecs/containerinsights/%s/performance", e.EcsClusterName)
 
-		for _, l := range logs {
-			if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
+	// need to derive the container Instance ID first
+	containers, err := awsservice.GetContainerInstances(e.EcsClusterArn)
+	if err != nil {
+		return testResult
+	}
+
+	for _, container := range containers {
+		var ok bool
+		stream := fmt.Sprintf("NodeTelemetry-%s", container.EC2InstanceId)
+		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
+			if len(logs) < 1 {
 				return false
 			}
-		}
-		return true
-	})
 
-	if err != nil || !ok {
-		return testResult
+			for _, l := range logs {
+				if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
+					return false
+				}
+			}
+			return true
+		})
+
+		if err != nil || !ok {
+			return testResult
+		}
 	}
 
 	testResult.Status = status.SUCCESSFUL
