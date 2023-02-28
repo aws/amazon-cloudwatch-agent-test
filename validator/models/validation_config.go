@@ -24,6 +24,7 @@ type ValidateConfig interface {
 	GetAgentCollectionPeriod() time.Duration
 	GetMetricNamespace() string
 	GetMetricValidation() []MetricValidation
+	GetCommitInformation() (string, int64)
 }
 type validatorConfig struct {
 	Receiver string `yaml:"receivers"` // Receivers that agent needs to tests
@@ -41,6 +42,9 @@ type validatorConfig struct {
 
 	MetricNamespace  string             `yaml:"metric_namespace"`
 	MetricValidation []MetricValidation `yaml:"metric_validation"`
+
+	CommitHash string `yaml:"commit_hash"`
+	CommitDate string `yaml:"commit_date"`
 }
 
 type MetricValidation struct {
@@ -52,6 +56,8 @@ type MetricDimension struct {
 	Name  string `yaml:"name"`
 	Value string `yaml:"value"`
 }
+
+var _ ValidateConfig = (*validatorConfig)(nil)
 
 func NewValidateConfig(configPath string) (*validatorConfig, error) {
 	configPathBytes, err := os.ReadFile(configPath)
@@ -119,4 +125,9 @@ func (v *validatorConfig) GetMetricNamespace() string {
 // GetMetricValidation returns the metrics need for validation
 func (v *validatorConfig) GetMetricValidation() []MetricValidation {
 	return v.MetricValidation
+}
+
+func (v *validatorConfig) GetCommitInformation() (string, int64) {
+	commitDate, _ := strconv.ParseInt(v.CommitDate, 10, 64)
+	return v.CommitHash, commitDate
 }
