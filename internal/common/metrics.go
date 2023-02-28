@@ -5,40 +5,10 @@ package common
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/cactus/go-statsd-client/v5/statsd"
 )
-
-// SendStatsd will run until signaled to stop.
-// It will write the given list of metrics at the specified interval.
-func SendStatsd(stop <-chan struct{}, metricNames []string, interval time.Duration) error {
-	config := statsd.ClientConfig{
-		Address:     ":8125",
-		Prefix:      "statsd_prefix",
-		UseBuffered: true,
-		FlushInterval: 300 * time.Millisecond,
-	}
-	client, err := statsd.NewClientWithConfig(&config)
-	if err != nil {
-		log.Println("error creating statsd client", err)
-		return err
-	}
-	defer client.Close()
-
-	ticker := time.NewTicker(interval)
-	for {
-		select {
-		case <-stop:
-			return nil
-		case <-ticker.C:
-			for _, metricName := range metricNames {
-				client.Inc(metricName, 1, 1)
-			}
-		}
-	}
-}
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
