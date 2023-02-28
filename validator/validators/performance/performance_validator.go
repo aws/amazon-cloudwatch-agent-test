@@ -97,12 +97,12 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
 		agentCollectionPeriod  = fmt.Sprint(s.vConfig.GetAgentCollectionPeriod().Seconds())
 		// The secondary global index that is used for checking if there are item has already been exist in the table
-		kCheckingAttribute = []string{"CommitDate", "UseCase"}
-		vCheckingAttribute = []string{fmt.Sprint(commitDate), receiver}
+		kCheckingAttribute = []string{"CommitHash", "UseCase"}
+		vCheckingAttribute = []string{fmt.Sprint(commitHash), receiver}
 	)
 
 	err := backoff.Retry(func() error {
-		existingPerfInfo, err := awsservice.GetItemInDatabase(DynamoDBDataBase, "UseCaseDate", kCheckingAttribute, vCheckingAttribute, perfInfo)
+		existingPerfInfo, err := awsservice.GetItemInDatabase(DynamoDBDataBase, "UseCaseHash", kCheckingAttribute, vCheckingAttribute, perfInfo)
 		if err != nil {
 			return err
 		}

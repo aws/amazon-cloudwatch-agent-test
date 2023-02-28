@@ -30,6 +30,11 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
   }
 
   attribute {
+    name = "CommitHash"
+    type = "S"
+  }
+
+  attribute {
     name = "UseCase"
     type = "S"
   }
@@ -38,6 +43,15 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
     name            = "UseCaseDate"
     hash_key        = "UseCase"
     range_key       = "CommitDate"
+    write_capacity  = 10
+    read_capacity   = 10
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "UseCaseHash"
+    hash_key        = "UseCase"
+    range_key       = "CommitHash"
     write_capacity  = 10
     read_capacity   = 10
     projection_type = "ALL"
