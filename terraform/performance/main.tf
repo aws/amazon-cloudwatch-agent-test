@@ -111,7 +111,7 @@ resource "null_resource" "integration_test" {
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/tmp/${local.cloudwatch_agent_config}",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
       "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config}",
     ]
   }
