@@ -5,7 +5,6 @@ package awsservice
 
 import (
 	"errors"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -19,7 +18,7 @@ func ReplaceItemInDatabase(databaseName string, packet map[string]interface{}) e
 		return err
 	}
 
-	_, err = dynamodbClient.PutItem(cxt,
+	_, err = DynamodbClient.PutItem(ctx,
 		&dynamodb.PutItemInput{
 			Item:      item,
 			TableName: aws.String(databaseName),
@@ -34,7 +33,9 @@ func AddItemIntoDatabaseIfNotExist(databaseName string, checkingAttribute, check
 		return err
 	}
 
-	_, err = dynamodbClient.PutItem(cxt,
+	// DynamoDb only allows query two conditions key. Therefore, only needs an array with length 2
+	// https://stackoverflow.com/questions/65390063/dynamodbexception-conditions-can-be-of-length-1-or-2-only
+	_, err = DynamodbClient.PutItem(ctx,
 		&dynamodb.PutItemInput{
 			Item:                item,
 			TableName:           aws.String(databaseName),
@@ -54,8 +55,11 @@ func AddItemIntoDatabaseIfNotExist(databaseName string, checkingAttribute, check
 
 func GetItemInDatabase(databaseName, indexName string, checkingAttribute, checkingAttributeValue []string, packet map[string]interface{}) (map[string]interface{}, error) {
 	var packets []map[string]interface{}
-	log.Printf("index name %s %v %v", indexName, checkingAttribute, checkingAttributeValue)
-	data, err := dynamodbClient.Query(cxt, &dynamodb.QueryInput{
+
+	// DynamoDb only allows query two conditions key. Therefore, only needs an array with length 2
+	// https://stackoverflow.com/questions/65390063/dynamodbexception-conditions-can-be-of-length-1-or-2-only
+
+	data, err := DynamodbClient.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(databaseName),
 		IndexName:              aws.String(indexName),
 		KeyConditionExpression: aws.String("#first_attribute = :first_attribute and #second_attribute = :second_attribute"),

@@ -4,17 +4,10 @@
 package awsservice
 
 import (
-	"context"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
-)
-
-var (
-	ecsCtx    context.Context
-	ecsClient *ecs.Client
 )
 
 func RestartDaemonService(clusterArn, serviceName string) error {
@@ -22,11 +15,6 @@ func RestartDaemonService(clusterArn, serviceName string) error {
 }
 
 func RestartService(clusterArn string, desiredCount *int32, serviceName string) error {
-	svc, ctx, err := getEcsClient()
-	if err != nil {
-		return err
-	}
-
 	updateServiceInput := &ecs.UpdateServiceInput{
 		Cluster:            aws.String(clusterArn),
 		Service:            aws.String(serviceName),
@@ -36,7 +24,7 @@ func RestartService(clusterArn string, desiredCount *int32, serviceName string) 
 		updateServiceInput.DesiredCount = desiredCount
 	}
 
-	_, err = svc.UpdateService(ctx, updateServiceInput)
+	_, err := EcsClient.UpdateService(ctx, updateServiceInput)
 
 	return err
 }
@@ -90,41 +78,14 @@ func GetClusterName(clusterArn string) string {
 }
 
 func listContainerInstances(clusterArn string) (*ecs.ListContainerInstancesOutput, error) {
-	svc, ctx, err := getEcsClient()
-	if err != nil {
-		return nil, err
-	}
-
-	input := &ecs.ListContainerInstancesInput{
+	return EcsClient.ListContainerInstances(ctx, &ecs.ListContainerInstancesInput{
 		Cluster: aws.String(clusterArn),
-	}
-
-	return svc.ListContainerInstances(ctx, input)
+	})
 }
 
 func describeContainerInstances(clusterArn string, containerInstanceArns []string) (*ecs.DescribeContainerInstancesOutput, error) {
-	svc, ctx, err := getEcsClient()
-	if err != nil {
-		return nil, err
-	}
-
-	input := &ecs.DescribeContainerInstancesInput{
+	return EcsClient.DescribeContainerInstances(ctx, &ecs.DescribeContainerInstancesInput{
 		Cluster:            aws.String(clusterArn),
 		ContainerInstances: containerInstanceArns,
-	}
-
-	return svc.DescribeContainerInstances(ctx, input)
-}
-
-func getEcsClient() (*ecs.Client, context.Context, error) {
-	if ecsClient == nil {
-		ecsCtx = context.Background()
-		cfg, err := config.LoadDefaultConfig(ecsCtx)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		ecsClient = ecs.NewFromConfig(cfg)
-	}
-	return ecsClient, ecsCtx, nil
+	})
 }

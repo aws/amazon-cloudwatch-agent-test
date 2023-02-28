@@ -8,7 +8,13 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	backoff "github.com/cenkalti/backoff/v4"
 )
 
@@ -29,7 +35,13 @@ var (
 )
 
 var (
-	cxt            = context.Background()
-	awsCfg, _      = config.LoadDefaultConfig(cxt)
-	dynamodbClient = dynamodb.NewFromConfig(awsCfg)
+	ctx            = context.Background()
+	awsCfg, _      = config.LoadDefaultConfig(ctx)
+	Ec2Client      = ec2.NewFromConfig(awsCfg)
+	EcsClient      = ecs.NewFromConfig(awsCfg)
+	SsmClient      = ssm.NewFromConfig(awsCfg)
+	ImdsClient     = imds.NewFromConfig(awsCfg)
+	CwmClient      = cloudwatch.NewFromConfig(awsCfg)
+	CwlClient      = cloudwatchlogs.NewFromConfig(awsCfg)
+	DynamodbClient = dynamodb.NewFromConfig(awsCfg)
 )
