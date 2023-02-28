@@ -24,7 +24,7 @@ func GetInstanceType() string {
 
 // TODO: Refactor Structure and Interface for more easier follow that shares the same session
 func GetImdsMetadata() *imds.GetInstanceIdentityDocumentOutput {
-	identityDocument, err := imdsClient.GetInstanceIdentityDocument(cxt, &imds.GetInstanceIdentityDocumentInput{})
+	identityDocument, err := ImdsClient.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		log.Fatalf("Error occurred while retrieving imds identityDoc: %v", err)
 	}

@@ -18,9 +18,9 @@ resource "aws_security_group" "ec2_security_group" {
 
   // Allow access to IMDS
   egress {
-    from_port = 80
-    to_port   = 80
-    protocol = "TCP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "TCP"
     cidr_blocks = ["169.254.169.254/32"]
   }
 
@@ -61,6 +61,14 @@ resource "aws_security_group" "ec2_security_group" {
   ingress {
     from_port   = 2049
     to_port     = 2049
+    protocol    = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  // localstack http and https
+  ingress {
+    from_port   = 4566
+    to_port     = 4566
     protocol    = "TCP"
     cidr_blocks = ["0.0.0.0/0"]
   }

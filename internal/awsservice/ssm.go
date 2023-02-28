@@ -4,21 +4,14 @@
 package awsservice
 
 import (
-	"context"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
 
-type ssmSDK struct {
-	cxt       context.Context
-	ssmClient *ssm.Client
-}
-
 // PutStringParameter add a string parameter to the system. (e.g adding a CWA configuration to SSM)
 func PutStringParameter(name, value string) error {
-	_, err := ssmClient.PutParameter(cxt, &ssm.PutParameterInput{
+	_, err := SsmClient.PutParameter(ctx, &ssm.PutParameterInput{
 		Name:      aws.String(name),
 		Value:     aws.String(value),
 		Type:      types.ParameterTypeString,

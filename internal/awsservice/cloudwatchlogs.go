@@ -45,8 +45,7 @@ func ValidateNumberOfLogsFound(logGroup, logStream string, numExpectedLogs int, 
 		if nextToken != nil {
 			params.NextToken = nextToken
 		}
-
-		output, err := cwlClient.GetLogEvents(cxt, params)
+		output, err := CwlClient.GetLogEvents(ctx, params)
 
 		attempts += 1
 
@@ -106,8 +105,7 @@ func ValidateLogsInOrder(logGroup, logStream string, logLines []string, since ti
 		if nextToken != nil {
 			params.NextToken = nextToken
 		}
-
-		output, err := cwlClient.GetLogEvents(cxt, params)
+		output, err := CwlClient.GetLogEvents(ctx, params)
 
 		attempts += 1
 
@@ -152,8 +150,7 @@ func ValidateLogsInOrder(logGroup, logStream string, logLines []string, since ti
 
 // IsLogGroupExist confirms whether the logGroupName exists or not
 func IsLogGroupExist(logGroup string) bool {
-
-	describeLogGroupOutput, err := cwlClient.DescribeLogGroups(cxt, &cloudwatchlogs.DescribeLogGroupsInput{
+	describeLogGroupOutput, err := CwlClient.DescribeLogGroups(ctx, &cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(logGroup),
 	})
 
@@ -176,7 +173,7 @@ func DeleteLogGroupAndLogStream(logGroup, logStream string) {
 }
 
 func DeleteLogStream(logGroup, logStream string) {
-	_, err := cwlClient.DeleteLogStream(cxt, &cloudwatchlogs.DeleteLogStreamInput{
+	_, err := CwlClient.DeleteLogStream(ctx, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroup),
 		LogStreamName: aws.String(logStream),
 	})
@@ -186,7 +183,7 @@ func DeleteLogStream(logGroup, logStream string) {
 }
 
 func DeleteLogGroup(logGroupName string) {
-	_, err := cwlClient.DeleteLogGroup(cxt, &cloudwatchlogs.DeleteLogGroupInput{
+	_, err := CwlClient.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
 	if err != nil && !errors.As(err, &rnf) {

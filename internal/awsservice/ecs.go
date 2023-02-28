@@ -4,31 +4,27 @@
 package awsservice
 
 import (
-	"context"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 )
 
-type ecsSDK struct {
-	cxt       context.Context
-	ecsClient *ecs.Client
-}
-
-// RestartDaemonService restarts the service as a daemon by create a new single task and return error if not able to restart it
 func RestartDaemonService(clusterArn, serviceName string) error {
-	return RestartService(clusterArn, 1, serviceName)
+	return RestartService(clusterArn, nil, serviceName)
 }
 
-// RestartService restarts the service by create desired tasks and return error if not able to restart it
-func RestartService(clusterArn string, desiredCount int, serviceName string) error {
-	_, err := ecsClient.UpdateService(cxt, &ecs.UpdateServiceInput{
+func RestartService(clusterArn string, desiredCount *int32, serviceName string) error {
+	updateServiceInput := &ecs.UpdateServiceInput{
 		Cluster:            aws.String(clusterArn),
 		Service:            aws.String(serviceName),
 		ForceNewDeployment: true,
-		DesiredCount:       aws.Int32(int32(desiredCount)),
-	})
+	}
+	if desiredCount != nil {
+		updateServiceInput.DesiredCount = desiredCount
+	}
+
+	_, err := EcsClient.UpdateService(ctx, updateServiceInput)
 
 	return err
 }
@@ -46,7 +42,7 @@ func GetContainerInstances(clusterArn string) ([]ContainerInstance, error) {
 		return []ContainerInstance{}, err
 	}
 
-	describeContainerInstancesOutput, err := ecsClient.DescribeContainerInstances(cxt, &ecs.DescribeContainerInstancesInput{
+	describeContainerInstancesOutput, err := EcsClient.DescribeContainerInstances(ctx, &ecs.DescribeContainerInstancesInput{
 		Cluster:            aws.String(clusterArn),
 		ContainerInstances: containerInstanceArns,
 	})
@@ -72,7 +68,7 @@ func GetContainerInstances(clusterArn string) ([]ContainerInstance, error) {
 
 // GetContainerInstances gets a list of container ARN given a cluster ARN
 func GetContainerInstanceArns(clusterArn string) ([]string, error) {
-	listContainerInstancesOutput, err := ecsClient.ListContainerInstances(cxt, &ecs.ListContainerInstancesInput{
+	listContainerInstancesOutput, err := EcsClient.ListContainerInstances(ctx, &ecs.ListContainerInstancesInput{
 		Cluster: aws.String(clusterArn),
 	})
 
@@ -91,4 +87,17 @@ func GetContainerInstanceId(containerInstanceArn string) string {
 // GetClusterName parses cluster ARN and return cluster name
 func GetClusterName(clusterArn string) string {
 	return strings.Split(clusterArn, ":cluster/")[1]
+}
+
+func listContainerInstances(clusterArn string) (*ecs.ListContainerInstancesOutput, error) {
+	return EcsClient.ListContainerInstances(ctx, &ecs.ListContainerInstancesInput{
+		Cluster: aws.String(clusterArn),
+	})
+}
+
+func describeContainerInstances(clusterArn string, containerInstanceArns []string) (*ecs.DescribeContainerInstancesOutput, error) {
+	return EcsClient.DescribeContainerInstances(ctx, &ecs.DescribeContainerInstancesInput{
+		Cluster:            aws.String(clusterArn),
+		ContainerInstances: containerInstanceArns,
+	})
 }

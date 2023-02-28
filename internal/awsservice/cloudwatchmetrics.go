@@ -15,14 +15,13 @@ import (
 
 // ValidateMetric takes the metric name, metric dimension and metric namespace to know whether a metric is exist based on the previous parametersfunc (c *cloudwatchConfig) ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error {
 func ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error {
-	listMetricsInput := cloudwatch.ListMetricsInput{
+
+	data, err := CwmClient.ListMetrics(ctx, &cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
 		Namespace:      aws.String(namespace),
 		RecentlyActive: "PT3H",
 		Dimensions:     dimensionsFilter,
-	}
-
-	data, err := cwmClient.ListMetrics(cxt, &listMetricsInput)
+	})
 	if err != nil {
 		return err
 	}
@@ -42,7 +41,7 @@ func IsMetricSampleCountWithinBound(
 	lowerBoundInclusive, upperBoundInclusive int,
 	periodInSeconds int32,
 ) bool {
-	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
+	data, err := CwmClient.GetMetricStatistics(ctx, &cloudwatch.GetMetricStatisticsInput{
 		MetricName: aws.String(metricName),
 		Namespace:  aws.String(namespace),
 		StartTime:  aws.Time(startTime),
@@ -50,9 +49,7 @@ func IsMetricSampleCountWithinBound(
 		Period:     aws.Int32(periodInSeconds),
 		Dimensions: dimensions,
 		Statistics: []types.Statistic{types.StatisticSampleCount},
-	}
-	data, err := cwmClient.GetMetricStatistics(cxt, &metricStatsInput)
-
+	})
 	if err != nil {
 		return false
 	}
@@ -74,13 +71,12 @@ func IsMetricSampleCountWithinBound(
 
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
 func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
-	getMetricDataInput := cloudwatch.GetMetricDataInput{
+
+	data, err := CwmClient.GetMetricData(ctx, &cloudwatch.GetMetricDataInput{
 		StartTime:         &startTime,
 		EndTime:           &endTime,
 		MetricDataQueries: metricDataQueries,
-	}
-
-	data, err := cwmClient.GetMetricData(cxt, &getMetricDataInput)
+	})
 	if err != nil {
 		return nil, err
 	}

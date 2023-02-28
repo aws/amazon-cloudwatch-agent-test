@@ -6,8 +6,8 @@ module "common" {
 }
 
 locals {
-  ssh_key_name            = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
-  private_key_content     = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
+  private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
 }
 
 #####################################################################
@@ -34,13 +34,15 @@ locals {
   validator_config        = "parameters.yml"
   final_validator_config  = "final_parameters.yml"
   cloudwatch_agent_config = "agent_config.json"
+  instance_temp_directory = "/tmp"
 }
 
 resource "local_file" "update-validation-config" {
-  content  = replace(replace(file("${var.test_dir}/${local.validator_config}"), 
-                "<values_per_minute>", var.values_per_minute),
-                "<cloudwatch_agent_config>",local.cloudwatch_agent_config
-              )
+  content = replace(replace(replace(replace(file("${var.test_dir}/${local.validator_config}"),
+    "<values_per_minute>", var.values_per_minute),
+    "<commit_hash>", var.cwa_github_sha),
+    "<commit_date>", var.cwa_github_sha_date),
+  "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
 
   filename = "${var.test_dir}/${local.final_validator_config}"
 
@@ -56,6 +58,10 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
 
   tags = {
     Name = "cwagent-performance-${var.test_name}-${module.common.testing_id}"
@@ -64,23 +70,23 @@ resource "aws_instance" "cwagent" {
 
 resource "null_resource" "integration_test" {
   connection {
-      type        = "ssh"
-      user        = var.user
-      private_key = local.private_key_content
-      host        = aws_instance.cwagent.public_ip
-    }
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
 
   # Prepare Integration Test
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
-    destination = "/tmp/${local.final_validator_config}"
+    destination = "${local.instance_temp_directory}/${local.final_validator_config}"
 
-    
+
   }
 
   provisioner "file" {
     source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
-    destination = "/tmp/${local.cloudwatch_agent_config}"
+    destination = "${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
   }
 
   provisioner "remote-exec" {
@@ -93,10 +99,10 @@ resource "null_resource" "integration_test" {
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
-      "go run ./validator/main.go --validator-config=/tmp/${local.final_validator_config} --preparation-mode=true",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
     ]
   }
-  
+
 
   #Run sanity check and integration test
   provisioner "remote-exec" {
@@ -104,8 +110,8 @@ resource "null_resource" "integration_test" {
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "cd ~/amazon-cloudwatch-agent-test",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/tmp/${local.cloudwatch_agent_config}",
-      "go run ./validator/main.go --validator-config=/tmp/${local.final_validator_config}",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config}",
     ]
   }
 

@@ -1,9 +1,5 @@
 # Receivers that agent needs to tests
-receivers: ["statsd"]
-# Processors that agent needs to tests
-processors: []
-# Exporters that agent needs to tests
-exporters: ["cloudwatch"]
+receivers: "statsd"
 
 #Test case name
 test_case: "statsd_stress"
