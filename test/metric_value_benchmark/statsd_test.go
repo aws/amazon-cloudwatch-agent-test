@@ -44,26 +44,26 @@ func (t *StatsdTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
-	return time.Minute
+	return 5*time.Minute
+}
+
+var metricNames []string = []string{
+	"my_statsd_metric_1",
+	"my_statsd_metric_2",
+	"my_statsd_metric_3",
 }
 
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
-	// EC2 Image Builder creates a bash script that sends statsd format to cwagent at port 8125
-	// The bash script is at /etc/statsd.sh
-	//    for times in  {1..3}
-	//    do
-	//      echo "statsd.counter:1|c" | nc -w 1 -u 127.0.0.1 8125
-	//      sleep 60
-	//    done
-	startStatsdCommand := []string{
-		"sudo bash /etc/statsd.sh",
-	}
-
-	return common.RunCommands(startStatsdCommand)
+	stop := make(chan struct{})
+	// Send unique metrics each second.
+	// Expect agent to collect every 5 seconds.
+	// Expect agent to aggregate collections into 60 second buckets.
+	common.SendStatsd(stop, metricNames, time.Second)
+	return nil
 }
 
 func (t *StatsdTestRunner) GetMeasuredMetrics() []string {
-	return []string{"statsd_counter"}
+	return metricNames
 }
 
 func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestResult {
@@ -79,7 +79,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		},
 		{
 			Key:   "metric_type",
-			Value: dimension.ExpectedDimensionValue{aws.String("counter")},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("counter")},
 		},
 	})
 
