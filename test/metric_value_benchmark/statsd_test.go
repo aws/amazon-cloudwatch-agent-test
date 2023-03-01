@@ -141,7 +141,8 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		return testResult
 	}
 	// Aggregation interval is 30 seconds, so expect 2 * runTimeInMinutes.
-	numExpected := 2 * int(t.GetAgentRunDuration().Minutes())
+	// allow for a 1 minute delay in CW-Metrics-Service (so 2 missing data points).
+	numExpected := 2 * int(t.GetAgentRunDuration().Minutes()) - 2
 	if numExpected != len(values) {
 		log.Printf("fail: expected %v data points, got %v",
 			numExpected, len(values))
