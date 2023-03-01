@@ -6,6 +6,7 @@
 package metric_value_benchmark
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -30,12 +31,12 @@ type metricInfo struct {
 // The metric generator uses the name, type and dimensions in this map.
 // And the validate function uses it too.
 var metricMap = map[string]metricInfo{
-	"my_statsd_counter_1": {
+	"my_statsd_counter_": {
 		"counter",
 		// Verify users can pass in dimensions via statsd.
 		[]statsd.Tag{{"key1", "val1"}},
 	},
-	"my_statsd_gauge_2": {
+	"my_statsd_gauge_": {
 		"gauge",
 		[]statsd.Tag{{"key2", "val2"}, {"key3", "val3"}},
 	},
@@ -44,12 +45,14 @@ var metricMap = map[string]metricInfo{
 var stopChan chan struct{} = make(chan struct{})
 
 func (t *StatsdTestRunner) Validate() status.TestGroupResult {
+	// Stop generating metrics.
+	stopChan <- struct{}{}
+
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateStatsdMetric(metricName)
 	}
-
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
 		TestResults: testResults,
@@ -65,10 +68,23 @@ func (t *StatsdTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
-	return 5*time.Minute
+	return 3*time.Minute
 }
 
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
+	// For each test run we want a unique metric name.
+	// Just in case 2 different people run this test in parallel, using the
+	// same AWS account...
+	// Populate a temp map with the new metric names.
+	suffix := fmt.Sprint(time.Now().UnixNano())
+	newMap := map[string]metricInfo{}
+	for k, v := range metricMap {
+		newKey := k + suffix
+		newMap[newKey] = v
+	}
+	// Replace global map with the temp one.
+	metricMap = newMap
+
 	// Send unique metrics each second.
 	// Expect agent to collect every 5 seconds.
 	// Expect agent to aggregate collections into 30 second buckets.
@@ -85,8 +101,6 @@ func (t *StatsdTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestResult {
-	// Stop generating metrics.
-	stopChan <- struct{}{}
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -156,10 +170,10 @@ func sendStatsd() error {
 	defer client.Close()
 
 	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-stopChan:
-			log.Println("stopping statsd generator")
 			return nil
 		case <-ticker.C:
 			// The type depends on the name.
