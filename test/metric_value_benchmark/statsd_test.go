@@ -120,7 +120,6 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 			Value: dimension.ExpectedDimensionValue{Value: &metricInfo.metricType},
 		},
 	}
-	//
 	for _, d := range metricInfo.dimensions {
 		instructions = append(instructions, dimension.Instruction{
 			Key: d[0],
