@@ -152,7 +152,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 	return testResult
 }
 
-// SendStatsd will run until signaled to stop.
+// sendStatsd will run until signaled to stop.
 // It sends each metric with dimensions at a 1 second interval.
 func sendStatsd() error {
 	config := statsd.ClientConfig{
