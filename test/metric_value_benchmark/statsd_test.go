@@ -124,11 +124,11 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 	if err != nil {
 		return testResult
 	}
-	if len(values) > int(t.GetAgentRunDuration().Minutes()) {
-		log.Println("fail: fetched too many metric values")
-	}
-	if len(values) < int(t.GetAgentRunDuration().Minutes()) {
-		log.Println("fail: fetched too few metric values")
+	// Aggregation interval is 30 seconds, so expect 2 * runTimeInMinutes.
+	numExpected := 2 * int(t.GetAgentRunDuration().Minutes()
+	if len(numExpected) != len(values)) {
+		log.Printf("fail: expected %v data points, got %v",
+			numExpected, len(values))
 	}
 	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 		return testResult
