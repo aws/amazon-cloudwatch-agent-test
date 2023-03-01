@@ -69,7 +69,7 @@ func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 	// Send unique metrics each second.
 	// Expect agent to collect every 5 seconds.
-	// Expect agent to aggregate collections into 60 second buckets.
+	// Expect agent to aggregate collections into 30 second buckets.
 	go sendStatsd()
 	return nil
 }
@@ -116,7 +116,8 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		return testResult
 	}
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE,
+		test_runner.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
@@ -155,6 +156,7 @@ func sendStatsd() error {
 	for {
 		select {
 		case <-stopChan:
+			log.Println("stopping statsd generator")
 			return nil
 		case <-ticker.C:
 			// The type depends on the name.
