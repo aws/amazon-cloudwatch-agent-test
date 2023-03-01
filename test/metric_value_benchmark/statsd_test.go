@@ -18,11 +18,22 @@ import (
 	"github.com/cactus/go-statsd-client/v5/statsd"
 )
 
+var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
 type StatsdTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
+var (
+	// stopChan allows the test to stop the goroutine generating statsd metrics.
+	stopChan chan struct{} = make(chan struct{})
+	aggregationInterval = 30 * time.Second
+	runDuration = 3 * time.Minute
+	// If aggregation is not happening there could be a data point every 5 seconds.
+	upperBound = int(runDuration / aggregationInterval)
+	// Allow 2 missing data points in case CW-Metrics-Web-Service has a 1 minute
+	// delay to store.
+	lowerBound = upperBound - 2
+)
 
 type metricInfo struct {
 	metricType string
@@ -43,9 +54,6 @@ var metricMap = map[string]metricInfo{
 		[]statsd.Tag{{"key2", "val2"}, {"key3", "val3"}},
 	},
 }
-
-// stopChan allows the test to stop the goroutine generating statsd metrics.
-var stopChan chan struct{} = make(chan struct{})
 
 func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 	// Stop generating metrics.
@@ -140,12 +148,10 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 	if err != nil {
 		return testResult
 	}
-	// Aggregation interval is 30 seconds, so expect 2 * runTimeInMinutes.
-	// allow for a 1 minute delay in CW-Metrics-Service (so 2 missing data points).
-	numExpected := 2 * int(t.GetAgentRunDuration().Minutes()) - 2
-	if numExpected != len(values) {
-		log.Printf("fail: expected %v data points, got %v",
-			numExpected, len(values))
+
+	if len(values) < lowerBound || len(values) > upperBound  {
+		log.Printf("fail: lowerBound %v, upperBound %v, actual %v",
+			lowerBound, upperBound, len(values))
 	}
 	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 		return testResult
