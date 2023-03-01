@@ -44,6 +44,7 @@ var metricMap = map[string]metricInfo{
 	},
 }
 
+// stopChan allows the test to stop the goroutine generating statsd metrics.
 var stopChan chan struct{} = make(chan struct{})
 
 func (t *StatsdTestRunner) Validate() status.TestGroupResult {
