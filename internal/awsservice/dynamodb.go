@@ -68,7 +68,7 @@ func GetItemInDatabase(databaseName, indexName string, checkingAttribute, checki
 			"#second_attribute": checkingAttribute[1],
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":first_attribute":  &types.AttributeValueMemberN{Value: checkingAttributeValue[0]},
+			":first_attribute":  &types.AttributeValueMemberS{Value: checkingAttributeValue[0]},
 			":second_attribute": &types.AttributeValueMemberS{Value: checkingAttributeValue[1]},
 		},
 		ScanIndexForward: aws.Bool(true), // Sort Range Key in ascending by Sort/Range key in numeric order since range key is CommitDate
