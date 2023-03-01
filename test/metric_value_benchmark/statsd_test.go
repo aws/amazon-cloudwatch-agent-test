@@ -26,10 +26,11 @@ type metricInfo struct {
 	metricType string
 	dimensions []statsd.Tag
 }
-// map the metricName to metricInfo
+// Map the metricName to metricInfo.
 var metricMap = map[string]metricInfo{
 	"my_statsd_counter_1": {
 		"counter",
+		// Verify users can pass in dimensions via statsd.
 		[]statsd.Tag{{"key1", "val1"}},
 	},
 	"my_statsd_gauge_2": {
@@ -65,8 +66,6 @@ func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 	return 5*time.Minute
 }
 
-
-
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 	// Send unique metrics each second.
 	// Expect agent to collect every 5 seconds.
@@ -90,14 +89,23 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		Name:   metricName,
 		Status: status.FAILED,
 	}
+	// Get the metric info for the current metricName.
+	// Just assume it exists.
+	metricInfo := metricMap[metricName]
 	// Populate the list of expected dimensions.
 	instructions := []dimension.Instruction{
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
+		{
+			// CWA adds this metric_type dimension.
+			Key:   "metric_type",
+			Value: dimension.ExpectedDimensionValue{Value: &metricInfo.metricType},
+		},
 	}
-	for _, d := range metricMap[metricName].dimensions {
+	//
+	for _, d := range metricInfo.dimensions {
 		instructions = append(instructions, dimension.Instruction{
 			Key: d[0],
 			Value: dimension.ExpectedDimensionValue{Value: aws.String(d[1])},
