@@ -21,12 +21,14 @@ import (
 type StatsdTestRunner struct {
 	test_runner.BaseTestRunner
 }
+
 var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
 
 type metricInfo struct {
 	metricType string
 	dimensions []statsd.Tag
 }
+
 // Map the metricName to metricInfo.
 // The metric generator uses the name, type and dimensions in this map.
 // And the validate function uses it too.
@@ -68,7 +70,7 @@ func (t *StatsdTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
-	return 3*time.Minute
+	return 3 * time.Minute
 }
 
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
@@ -122,7 +124,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 	}
 	for _, d := range metricInfo.dimensions {
 		instructions = append(instructions, dimension.Instruction{
-			Key: d[0],
+			Key:   d[0],
 			Value: dimension.ExpectedDimensionValue{Value: aws.String(d[1])},
 		})
 	}
@@ -156,9 +158,9 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 // It sends each metric with dimensions at a 1 second interval.
 func sendStatsd() error {
 	config := statsd.ClientConfig{
-		Address:     ":8125",
-		Prefix:      "",
-		UseBuffered: true,
+		Address:       ":8125",
+		Prefix:        "",
+		UseBuffered:   true,
 		FlushInterval: 300 * time.Millisecond,
 	}
 	client, err := statsd.NewClientWithConfig(&config)
