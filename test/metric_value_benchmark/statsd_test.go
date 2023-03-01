@@ -125,8 +125,8 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		return testResult
 	}
 	// Aggregation interval is 30 seconds, so expect 2 * runTimeInMinutes.
-	numExpected := 2 * int(t.GetAgentRunDuration().Minutes()
-	if len(numExpected) != len(values)) {
+	numExpected := 2 * int(t.GetAgentRunDuration().Minutes())
+	if numExpected != len(values) {
 		log.Printf("fail: expected %v data points, got %v",
 			numExpected, len(values))
 	}
