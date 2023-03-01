@@ -27,6 +27,8 @@ type metricInfo struct {
 	dimensions []statsd.Tag
 }
 // Map the metricName to metricInfo.
+// The metric generator uses the name, type and dimensions in this map.
+// And the validate function uses it too.
 var metricMap = map[string]metricInfo{
 	"my_statsd_counter_1": {
 		"counter",
@@ -116,7 +118,8 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		return testResult
 	}
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE,
+	// Namespace must match the JSON config.
+	values, err := fetcher.Fetch("statsd_test", metricName, dims, metric.AVERAGE,
 		test_runner.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult

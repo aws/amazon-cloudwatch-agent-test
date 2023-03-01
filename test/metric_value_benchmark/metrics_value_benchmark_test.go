@@ -108,7 +108,7 @@ func shouldRunEC2Test(env *environment.MetaData, t *test_runner.TestRunner) bool
 
 func isAllValuesGreaterThanOrEqualToZero(metricName string, values []float64) bool {
 	if len(values) == 0 {
-		log.Printf("No values found %v", metricName)
+		log.Printf("No values found for: %v", metricName)
 		return false
 	}
 	for _, value := range values {
