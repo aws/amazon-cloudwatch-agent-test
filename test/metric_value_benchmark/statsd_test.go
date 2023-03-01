@@ -24,15 +24,17 @@ type StatsdTestRunner struct {
 }
 
 var (
-	// stopChan allows the test to stop the goroutine generating statsd metrics.
+	// stopChan is for stopping the goroutine generating statsd metrics.
 	stopChan chan struct{} = make(chan struct{})
+	// aggregationInterval must match the JSON configuration.
 	aggregationInterval = 30 * time.Second
 	runDuration = 3 * time.Minute
 	// If aggregation is not happening there could be a data point every 5 seconds.
-	upperBound = int(runDuration / aggregationInterval)
+	// So validate the upper bound.
+	upperBound = int(runDuration / aggregationInterval) + 2
 	// Allow 2 missing data points in case CW-Metrics-Web-Service has a 1 minute
 	// delay to store.
-	lowerBound = upperBound - 2
+	lowerBound = int(runDuration / aggregationInterval) - 2
 )
 
 type metricInfo struct {
@@ -85,7 +87,7 @@ func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 	// For each test run we want a unique metric name.
 	// That way the test can be run back to back on the same EC2 instance.
-	// And the 2nd test run won't be affects by the metrics from the 1st test run.
+	// And the 2nd test run won't be affected by the metrics from the 1st test run.
 	// Populate a temp map with the new metric names.
 	suffix := fmt.Sprint(time.Now().UnixNano())
 	newMap := map[string]metricInfo{}
@@ -97,8 +99,6 @@ func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 	metricMap = newMap
 
 	// Send unique metrics each second.
-	// Expect agent to collect every 5 seconds.
-	// Expect agent to aggregate collections into 30 second buckets.
 	go sendStatsd()
 	return nil
 }
@@ -152,6 +152,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 	if len(values) < lowerBound || len(values) > upperBound  {
 		log.Printf("fail: lowerBound %v, upperBound %v, actual %v",
 			lowerBound, upperBound, len(values))
+		return testResult
 	}
 	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 		return testResult
