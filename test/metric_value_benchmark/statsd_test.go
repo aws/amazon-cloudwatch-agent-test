@@ -76,8 +76,8 @@ func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 	// For each test run we want a unique metric name.
-	// Just in case 2 different people run this test in parallel, using the
-	// same AWS account...
+	// That way the test can be run back to back on the same EC2 instance.
+	// And the 2nd test run won't be affects by the metrics from the 1st test run.
 	// Populate a temp map with the new metric names.
 	suffix := fmt.Sprint(time.Now().UnixNano())
 	newMap := map[string]metricInfo{}
