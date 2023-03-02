@@ -23,9 +23,10 @@ type StatsdTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-var (
-	// stopChan is for stopping the goroutine generating statsd metrics.
-	stopChan chan struct{} = make(chan struct{})
+// stopChan is for stopping the goroutine generating statsd metrics.
+var stopChan chan struct{} = make(chan struct{})
+
+const (
 	// aggregationInterval must match the JSON configuration.
 	aggregationInterval = 30 * time.Second
 	runDuration = 3 * time.Minute
