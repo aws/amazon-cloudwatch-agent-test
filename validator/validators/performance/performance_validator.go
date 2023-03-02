@@ -9,15 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/cenkalti/backoff/v4"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 )
 
 const (

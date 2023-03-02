@@ -15,6 +15,8 @@ import (
 
 func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFactory, err error) {
 	switch vConfig.GetValidateType() {
+	case "performance":
+		validator = performance.NewPerformanceValidator(vConfig)
 	case "stress":
 		validator = stress.NewStressValidator(vConfig)
 	case "performance":

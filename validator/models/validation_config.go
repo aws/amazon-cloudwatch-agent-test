@@ -26,7 +26,10 @@ type ValidateConfig interface {
 	GetMetricNamespace() string
 	GetMetricValidation() []MetricValidation
 	GetCommitInformation() (string, int64)
+<<<<<<< HEAD
 	GetUniqueID() string
+=======
+>>>>>>> main
 }
 type validatorConfig struct {
 	Receiver string `yaml:"receivers"` // Receivers that agent needs to tests
@@ -133,7 +136,10 @@ func (v *validatorConfig) GetCommitInformation() (string, int64) {
 	commitDate, _ := strconv.ParseInt(v.CommitDate, 10, 64)
 	return v.CommitHash, commitDate
 }
+<<<<<<< HEAD
 
 func (v *validatorConfig) GetUniqueID() string {
 	return uuid.New().String()
 }
+=======
+>>>>>>> main
