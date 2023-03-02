@@ -73,5 +73,4 @@ func sendStatsdMetrics(dataRate int, duration time.Duration) error {
 			return nil
 		}
 	}
-
 }
