@@ -4,10 +4,16 @@
 package common
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
+	"collectd.org/api"
+	"collectd.org/exec"
+	"collectd.org/network"
 	"github.com/cactus/go-statsd-client/v5/statsd"
 	"go.uber.org/multierr"
 )
@@ -28,7 +34,8 @@ func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRa
 		switch receiver {
 		case "statsd":
 			err = sendStatsdMetrics(dataRate, agentRunDuration)
-
+		case "collectd":
+			err = sendCollectDMetrics(dataRate, agentRunDuration)
 		default:
 		}
 
@@ -37,6 +44,57 @@ func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRa
 
 	wg.Wait()
 	return multiErr
+}
+
+func sendCollectDMetrics(dataRate int, duration time.Duration) error {
+	// https://github.com/collectd/go-collectd/tree/92e86f95efac5eb62fa84acc6033e7a57218b606
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client, err := network.Dial(
+		net.JoinHostPort("127.0.0.1", network.DefaultService),
+		network.ClientOptions{
+			SecurityLevel: network.None,
+		})
+
+	if err != nil {
+		return err
+	}
+
+	defer client.Close()
+
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	endTimeout := time.After(duration)
+
+	for {
+		select {
+		case <-ticker.C:
+			for t := 0; t < dataRate; t++ {
+				err = client.Write(ctx, &api.ValueList{
+					Identifier: api.Identifier{
+						Host:   exec.Hostname(),
+						Plugin: fmt.Sprint(t),
+						Type:   "gauge",
+					},
+					Time:     time.Now(),
+					Interval: time.Minute,
+					Values:   []api.Value{api.Gauge(t)},
+				})
+
+				if err != nil && !errors.Is(err, network.ErrNotEnoughSpace) {
+					return err
+				}
+			}
+
+			if err := client.Flush(); err != nil {
+				return err
+			}
+		case <-endTimeout:
+			return nil
+		}
+	}
+
 }
 
 func sendStatsdMetrics(dataRate int, duration time.Duration) error {
@@ -64,10 +122,9 @@ func sendStatsdMetrics(dataRate int, duration time.Duration) error {
 	for {
 		select {
 		case <-ticker.C:
-			for time := 0; time < dataRate; time++ {
-				go func(time int) {
-					client.Inc(fmt.Sprintf("%v", time), int64(time), 1.0)
-				}(time)
+			for t := 0; t < dataRate; t++ {
+				client.Inc(fmt.Sprint(t), int64(t), 1.0)
+
 			}
 		case <-endTimeout:
 			return nil

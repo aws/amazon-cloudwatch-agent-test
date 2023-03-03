@@ -35,6 +35,7 @@ func (s *PerformanceValidator) GenerateLoad() (err error) {
 	case "logs":
 		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, dataRate)
 	default:
+		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
 		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, dataRate)
 	}
 

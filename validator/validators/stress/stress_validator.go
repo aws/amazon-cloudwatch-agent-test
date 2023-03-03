@@ -9,12 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"go.uber.org/multierr"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 )
 
 type MetricPluginBoundValue map[string]map[string]map[string]float64
@@ -28,38 +29,68 @@ var (
 	metricPluginBoundValue = MetricPluginBoundValue{
 		"1000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(19),
-				"procstat_memory_rss":  float64(66500000),
+				"procstat_cpu_usage":   float64(25),
+				"procstat_memory_rss":  float64(82000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
-				"procstat_memory_data": float64(95000000),
-				"procstat_num_fds":     float64(9),
-				"net_bytes_sent":       float64(100000),
-				"net_packets_sent":     float64(100),
+				"procstat_memory_data": float64(83000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(105000),
+				"net_packets_sent":     float64(105),
+			},
+			"collectd": {
+				"procstat_cpu_usage":   float64(20),
+				"procstat_memory_rss":  float64(80000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(82000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(102000),
+				"net_packets_sent":     float64(105),
 			},
 		},
 		"5000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(120),
+				"procstat_cpu_usage":   float64(90),
 				"procstat_memory_rss":  float64(130000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(818000000),
-				"procstat_memory_data": float64(130000000),
-				"procstat_num_fds":     float64(19),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(135000000),
+				"procstat_num_fds":     float64(15),
 				"net_bytes_sent":       float64(524000),
 				"net_packets_sent":     float64(520),
+			},
+			"collectd": {
+				"procstat_cpu_usage":   float64(90),
+				"procstat_memory_rss":  float64(120000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(135000000),
+				"procstat_num_fds":     float64(17),
+				"net_bytes_sent":       float64(490000),
+				"net_packets_sent":     float64(450),
 			},
 		},
 		"10000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(200),
+				"procstat_cpu_usage":   float64(135),
 				"procstat_memory_rss":  float64(160000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_vms":  float64(888000000),
 				"procstat_memory_data": float64(177000000),
-				"procstat_num_fds":     float64(19),
+				"procstat_num_fds":     float64(17),
 				"net_bytes_sent":       float64(980000),
 				"net_packets_sent":     float64(860),
+			},
+			"collectd": {
+				"procstat_cpu_usage":   float64(120),
+				"procstat_memory_rss":  float64(130000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(150000000),
+				"procstat_num_fds":     float64(17),
+				"net_bytes_sent":       float64(760000),
+				"net_packets_sent":     float64(700),
 			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
@@ -70,13 +101,23 @@ var (
 		"50000": {
 			"statsd": {
 				"procstat_cpu_usage":   float64(250),
-				"procstat_memory_rss":  float64(300000000),
+				"procstat_memory_rss":  float64(310000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(1000000000),
+				"procstat_memory_vms":  float64(1100000000),
 				"procstat_memory_data": float64(330000000),
 				"procstat_num_fds":     float64(18),
 				"net_bytes_sent":       float64(1700000),
-				"net_packets_sent":     float64(10400),
+				"net_packets_sent":     float64(1400),
+			},
+			"collectd": {
+				"procstat_cpu_usage":   float64(220),
+				"procstat_memory_rss":  float64(218000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(980000000),
+				"procstat_memory_data": float64(240000000),
+				"procstat_num_fds":     float64(18),
+				"net_bytes_sent":       float64(1250000),
+				"net_packets_sent":     float64(1100),
 			},
 		},
 	}
@@ -188,6 +229,8 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 	metricValue := metrics.MetricDataResults[0].Values[0]
 	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
+	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f", metricName, metricNamespace, metricValue, upperBoundValue)
+
 	if metricValue < 0 || metricValue > upperBoundValue {
 		return fmt.Errorf("metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
 	}
