@@ -18,7 +18,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.33.0
 	github.com/cactus/go-statsd-client/v5 v5.0.0
 	github.com/cenkalti/backoff/v4 v4.2.0
-	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/multierr v1.9.0
