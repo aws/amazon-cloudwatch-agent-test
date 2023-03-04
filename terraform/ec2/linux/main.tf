@@ -29,44 +29,6 @@ locals {
 }
 
 #####################################################################
-# Create EFS
-#####################################################################
-resource "aws_efs_file_system" "efs" {
-  creation_token = "efs-${module.common.testing_id}"
-  tags = {
-    Name = "efs-${module.common.testing_id}"
-  }
-}
-
-resource "aws_efs_mount_target" "mount" {
-  file_system_id  = aws_efs_file_system.efs.id
-  subnet_id       = aws_instance.cwagent.subnet_id
-  security_groups = [data.aws_security_group.ec2_security_group.id]
-}
-
-resource "null_resource" "mount_efs" {
-  depends_on = [
-    aws_efs_mount_target.mount,
-    aws_instance.cwagent
-  ]
-
-  connection {
-    type        = "ssh"
-    user        = var.user
-    private_key = local.private_key_content
-    host        = aws_instance.cwagent.public_ip
-  }
-
-  provisioner "remote-exec" {
-    # https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.html
-    inline = [
-      "sudo mkdir ~/efs-mount-point",
-      "sudo mount -t efs -o tls ${aws_efs_file_system.efs.dns_name} ~/efs-mount-point/",
-    ]
-  }
-}
-
-#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
@@ -124,7 +86,6 @@ resource "null_resource" "integration_test" {
 
   depends_on = [
     aws_instance.cwagent,
-    null_resource.mount_efs
   ]
 }
 
