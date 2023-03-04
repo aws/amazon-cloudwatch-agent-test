@@ -9,12 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"go.uber.org/multierr"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 )
 
 type MetricPluginBoundValue map[string]map[string]map[string]float64
@@ -37,6 +38,16 @@ var (
 				"net_bytes_sent":       float64(100000),
 				"net_packets_sent":     float64(100),
 			},
+			"host": {
+				"procstat_cpu_usage":   float64(19),
+				"procstat_memory_rss":  float64(66500000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(95000000),
+				"procstat_num_fds":     float64(9),
+				"net_bytes_sent":       float64(100000),
+				"net_packets_sent":     float64(100),
+			},
 		},
 		"5000": {
 			"statsd": {
@@ -49,6 +60,16 @@ var (
 				"net_bytes_sent":       float64(524000),
 				"net_packets_sent":     float64(520),
 			},
+			"host": {
+				"procstat_cpu_usage":   float64(19),
+				"procstat_memory_rss":  float64(66500000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(95000000),
+				"procstat_num_fds":     float64(9),
+				"net_bytes_sent":       float64(100000),
+				"net_packets_sent":     float64(100),
+			},
 		},
 		"10000": {
 			"statsd": {
@@ -58,8 +79,18 @@ var (
 				"procstat_memory_vms":  float64(818000000),
 				"procstat_memory_data": float64(177000000),
 				"procstat_num_fds":     float64(19),
-				"net_bytes_sent":       float64(980000),
+				"net_bytes_sent":       float64(20500000),
 				"net_packets_sent":     float64(860),
+			},
+			"host": {
+				"procstat_cpu_usage":   float64(19),
+				"procstat_memory_rss":  float64(66500000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(95000000),
+				"procstat_num_fds":     float64(9),
+				"net_bytes_sent":       float64(20500000),
+				"net_packets_sent":     float64(100),
 			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
@@ -77,6 +108,16 @@ var (
 				"procstat_num_fds":     float64(18),
 				"net_bytes_sent":       float64(1700000),
 				"net_packets_sent":     float64(10400),
+			},
+			"host": {
+				"procstat_cpu_usage":   float64(19),
+				"procstat_memory_rss":  float64(66500000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(95000000),
+				"procstat_num_fds":     float64(9),
+				"net_bytes_sent":       float64(100000),
+				"net_packets_sent":     float64(100),
 			},
 		},
 	}
