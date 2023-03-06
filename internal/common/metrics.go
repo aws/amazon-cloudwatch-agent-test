@@ -12,10 +12,8 @@ import (
 	"go.uber.org/multierr"
 )
 
-// StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
-// the config provided
-func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRate int) error {
-	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
+// StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
+func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinute int) error {
 	var (
 		err      error
 		multiErr error
@@ -27,7 +25,7 @@ func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRa
 		defer wg.Done()
 		switch receiver {
 		case "statsd":
-			err = sendStatsdMetrics(dataRate, agentRunDuration)
+			err = sendStatsdMetrics(metricPerMinute, duration)
 
 		default:
 		}
@@ -39,7 +37,7 @@ func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRa
 	return multiErr
 }
 
-func sendStatsdMetrics(dataRate int, duration time.Duration) error {
+func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 	// https://github.com/cactus/go-statsd-client#example
 	statsdClientConfig := &statsd.ClientConfig{
 		Address:     ":8125",
@@ -64,13 +62,11 @@ func sendStatsdMetrics(dataRate int, duration time.Duration) error {
 	for {
 		select {
 		case <-ticker.C:
-			for t := 0; t < dataRate; t++ {
-				client.Inc(fmt.Sprint(t), int64(t), 1.0)
-
+			for time := 0; time < metricPerMinute; time++ {
+				client.Inc(fmt.Sprintf("%v", time), int64(time), 1.0)
 			}
 		case <-endTimeout:
 			return nil
 		}
 	}
-
 }
