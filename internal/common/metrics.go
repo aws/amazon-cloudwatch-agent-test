@@ -18,10 +18,8 @@ import (
 	"go.uber.org/multierr"
 )
 
-// StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
-// the config provided
-func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRate int) error {
-	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
+// StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
+func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinute int) error {
 	var (
 		err      error
 		multiErr error
@@ -33,9 +31,9 @@ func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRa
 		defer wg.Done()
 		switch receiver {
 		case "statsd":
-			err = sendStatsdMetrics(dataRate, agentRunDuration)
+			err = sendStatsdMetrics(metricPerMinute, duration)
 		case "collectd":
-			err = sendCollectDMetrics(dataRate, agentRunDuration)
+			err = sendCollectDMetrics(metricPerMinute, duration)
 		default:
 		}
 
@@ -46,7 +44,7 @@ func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRa
 	return multiErr
 }
 
-func sendCollectDMetrics(dataRate int, duration time.Duration) error {
+func sendCollectDMetrics(metricPerMinute int, duration time.Duration) error {
 	// https://github.com/collectd/go-collectd/tree/92e86f95efac5eb62fa84acc6033e7a57218b606
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -70,7 +68,7 @@ func sendCollectDMetrics(dataRate int, duration time.Duration) error {
 	for {
 		select {
 		case <-ticker.C:
-			for t := 0; t < dataRate; t++ {
+			for t := 0; t < metricPerMinute; t++ {
 				err = client.Write(ctx, &api.ValueList{
 					Identifier: api.Identifier{
 						Host:   exec.Hostname(),
@@ -97,7 +95,7 @@ func sendCollectDMetrics(dataRate int, duration time.Duration) error {
 
 }
 
-func sendStatsdMetrics(dataRate int, duration time.Duration) error {
+func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 	// https://github.com/cactus/go-statsd-client#example
 	statsdClientConfig := &statsd.ClientConfig{
 		Address:     ":8125",
@@ -122,7 +120,7 @@ func sendStatsdMetrics(dataRate int, duration time.Duration) error {
 	for {
 		select {
 		case <-ticker.C:
-			for t := 0; t < dataRate; t++ {
+			for t := 0; t < metricPerMinute; t++ {
 				client.Inc(fmt.Sprint(t), int64(t), 1.0)
 
 			}
@@ -130,5 +128,4 @@ func sendStatsdMetrics(dataRate int, duration time.Duration) error {
 			return nil
 		}
 	}
-
 }
