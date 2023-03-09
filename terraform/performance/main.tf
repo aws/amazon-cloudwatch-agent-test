@@ -89,30 +89,24 @@ resource "null_resource" "integration_test" {
     destination = "${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
   }
 
+  # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "echo sha ${var.cwa_github_sha}",
       "cloud-init status --wait",
-      "echo clone and install agent",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd amazon-cloudwatch-agent-test",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      var.install_agent,
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/amazon-cloudwatch-agent.rpm .",
+      "sudo rpm -U ./amazon-cloudwatch-agent.rpm"
     ]
   }
 
-
-  #Run sanity check and integration test
+  #Prepare the requirement before validation and validate the metrics/logs/traces
   provisioner "remote-exec" {
     inline = [
       "export AWS_REGION=${var.region}",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      "echo run integration test",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd ~/amazon-cloudwatch-agent-test",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config}",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
 
@@ -121,7 +115,6 @@ resource "null_resource" "integration_test" {
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"
