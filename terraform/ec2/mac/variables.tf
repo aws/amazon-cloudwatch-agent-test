@@ -8,7 +8,7 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "t3a.medium"
+  default = "mac2.metal"
 }
 
 variable "ssh_key_name" {
@@ -18,7 +18,7 @@ variable "ssh_key_name" {
 
 variable "ami" {
   type    = string
-  default = "cloudwatch-agent-integration-test-ubuntu*"
+  default = "amzn-ec2-macos-13.*-arm64"
 }
 
 variable "ssh_key_value" {
@@ -28,33 +28,12 @@ variable "ssh_key_value" {
 
 variable "user" {
   type    = string
-  default = ""
-}
-
-variable "install_agent" {
-  description = "go run ./install/install_agent.go deb or go run ./install/install_agent.go rpm"
-  type        = string
-  default     = "go run ./install/install_agent.go rpm"
-}
-
-variable "ca_cert_path" {
-  type    = string
-  default = ""
+  default = "ec2-user"
 }
 
 variable "arc" {
   type    = string
   default = ""
-}
-
-variable "binary_name" {
-  type    = string
-  default = ""
-}
-
-variable "local_stack_host_name" {
-  type    = string
-  default = "localhost.localstack.cloud"
 }
 
 variable "s3_bucket" {
@@ -88,16 +67,6 @@ variable "github_test_repo_branch" {
 }
 
 variable "cwa_github_sha_date" {
-  type    = string
-  default = ""
-}
-
-variable "is_canary" {
-  type    = bool
-  default = false
-}
-
-variable "plugin_tests" {
   type    = string
   default = ""
 }

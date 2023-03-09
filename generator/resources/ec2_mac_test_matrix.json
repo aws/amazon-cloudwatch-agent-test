@@ -1,2 +1,16 @@
 [
+    {
+        "os": "macOS Big Sur",
+        "instanceType":"mac1.metal",
+        "ami": "amzn-ec2-macos-13.*-arm64",
+        "arc": "arm64",
+        "family": "macOS"
+      },
+      {
+        "os": "macOS Ventura",
+        "instanceType":"mac2.metal",
+        "ami": "amzn-ec2-macos-11.6.4",
+        "arc": "amd64",
+        "family": "macOS"
+      }
 ]
