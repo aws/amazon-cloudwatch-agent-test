@@ -1,0 +1,105 @@
+{
+    "agent": {
+        "debug": true
+    },
+    "metrics": {
+      "namespace": "CloudWatchAgentMacFeature",
+      "metrics_collected": {
+        "statsd": {
+          "service_address": ":8125",
+          "metrics_collection_interval": 60
+        },
+        "cpu": {
+          "measurement": [
+            "time_active", "time_guest", "time_guest_nice", 
+            "usage_idle", "usage_iowait", "usage_irq"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "swap": {
+            "measurement": [
+                "free",
+                "used",
+                "used_percent"
+            ]
+        },
+        "processes": {
+            "measurement": [
+              "blocked","running","sleeping","stopped"
+            ],
+            "metrics_collection_interval": 1
+        },
+        "netstat": {
+            "measurement": [
+              "tcp_close",
+              "tcp_close_wait",
+              "tcp_closing",
+              "tcp_established",
+              "tcp_fin_wait1",
+              "tcp_fin_wait2",
+              "udp_socket"
+            ],
+            "metrics_collection_interval": 1
+          },
+          "mem": {
+            "measurement": [
+              "active", "available", "available_percent", "used", "used_percent"
+            ],
+            "metrics_collection_interval": 1
+          },
+          "diskio": {
+            "resources": [
+              "*"
+            ],
+            "measurement": [
+              "iops_in_progress", "io_time", "reads"
+            ],
+            "metrics_collection_interval": 1
+          },
+          "disk": {
+            "resources": [
+              "*"
+            ],
+            "measurement": [
+              "free",
+              "inodes_free",
+              "used_percent"
+            ],
+            "drop_device": true
+          },
+          "ethtool": {
+            "interface_include": [
+                "eth0",
+                "ens5"
+            ],
+            "metrics_include": [
+              "queue_0_tx_cnt",
+              "queue_0_rx_cnt"
+            ]
+          },
+          "net": {
+            "resources": [
+              "eth0"
+            ],
+            "measurement": [
+              "bytes_sent", "bytes_recv"
+            ],
+            "metrics_collection_interval": 1
+          },
+          "procstat": [
+            {
+              "exe": "cloudwatch-agent",
+              "measurement": [
+                "cpu_usage",
+                "memory_rss"
+              ],
+              "metrics_collection_interval": 1
+            }
+          ]
+      },
+      "append_dimensions": {
+        "InstanceId": "${aws:InstanceId}"
+      },
+      "force_flush_interval": 10
+    }
+  }
