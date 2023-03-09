@@ -1,0 +1,39 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Build CA Bundle
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Run Every Day At Midnight
+  workflow_dispatch:
+
+env:
+  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+
+jobs:
+  build-ca:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Build CA bundle
+        run: |
+          cd internal/localstack/ls_tmp
+          openssl req -new -x509 -newkey rsa:2048 -sha256 -nodes -out snakeoil.pem -keyout snakeoil.key -config snakeoil.conf
+          cat snakeoil.key snakeoil.pem > server.test.pem"
+          cat snakeoil.key > server.test.pem.key"
+          cat snakeoil.pem > server.test.pem.crt"
+          cd ..
+          docker-compose up -d --force-recreate
+          aws s3 cp ls_tmp s3://${S3_INTEGRATION_BUCKET}/integration-test/ls_tmp/

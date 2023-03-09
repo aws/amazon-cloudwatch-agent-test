@@ -61,17 +61,3 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
     projection_type = "ALL"
   }
 }
-
-
-## Setup Dedicated Host for Mac Resources
-## https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_host
-## It is a requirement before creating an EC2 Mac Host
-## https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-mac-instances.html
-## Moreover, you can only place 1 mac instance on a dedicate host a single time.
-
-resource "aws_ec2_host" "dedicated_host" {
-  count             = 2
-  instance_type     = "mac2.metal"
-  availability_zone = "${var.region}a"
-  auto_placement    = "on"
-}
