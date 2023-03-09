@@ -61,3 +61,29 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
     projection_type = "ALL"
   }
 }
+
+## Setup Dedicated Host for Mac Resources
+## https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_host
+## It is a requirement before creating an EC2 Mac Host
+## https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-mac-instances.html
+## Moreover, you can only place 1 mac instance on a dedicate host a single time.
+## Therefore, limit down the scope for testing in Mac since EC2 can be done with Linux
+## and Mac under the hood share similar plugins with Linux
+## Mac has scrubbing to avoid patching 
+## https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-mac-instances.html#mac-instance-stop
+resource "aws_ec2_host" "dedicated_host" {
+  ## Use lower bound and upper bound rule for Mac (e.g lower bound with the oldest version of Mac we support MacOs Catalina
+  ## and upper bound for the newest version of Mac we support MacOS Ventura)
+  for_each = {
+    "Ventura_x86_64" : "mac1.metal"
+    "Big_Sur_x86_64" : "mac1.metal"
+    "Ventura_arm64" : "mac2.metal"
+    "Big_Sur_arm64" : "mac2.metal"
+  }
+
+  ## Map 4x1 for avoid claimng resources
+  count             = 1
+  instance_type     = each.value
+  availability_zone = "${var.region}b"
+  auto_placement    = "on"
+}
