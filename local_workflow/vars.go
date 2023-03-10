@@ -55,8 +55,8 @@ func mapMatrixRowFieldToTerraformVar(matrixRowField string) string {
 
 func buildTfvar(key string, val any) string {
 	const (
-		defaultFmt = "TF_VAR_%v=%v"
-		stringFmt  = `TF_VAR_%v="%v"`
+		defaultFmt = "%v=%v"
+		stringFmt  = `%v="%v"`
 	)
 	if _, ok := val.(string); ok {
 		return fmt.Sprintf(stringFmt, key, val)
