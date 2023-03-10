@@ -12,3 +12,6 @@ lint: install-tools checklicense impi
 compile:
 	# this is a workaround to compile and cache all of the tests without actually running any of them
 	go test -run=NO_MATCH ./...
+
+integ:
+	go clean -testcache && go test ./integration -v
