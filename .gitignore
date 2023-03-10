@@ -11,3 +11,4 @@ terraform.*
 /test/**/final_*.yml
 coverage.txt
 generator/resources/*complete*.json
+*_ignore.tfvars

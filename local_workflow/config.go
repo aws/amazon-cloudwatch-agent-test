@@ -32,7 +32,7 @@ type Config struct {
 func FetchConfig() Config {
 	const configPath = "config.json"
 	raw, err := os.ReadFile(configPath)
-	PanicIfError(err)
+	LogFatalIfError(err)
 	var config Config
 	err = json.Unmarshal(raw, &config)
 	if err != nil {

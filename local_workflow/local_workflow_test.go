@@ -11,5 +11,5 @@ type LocalWorkflowSuite struct {
 
 func TestLocalWorkflowSuite(t *testing.T) {
 	config := FetchConfig()
-	PrettyPrint(config)
+	WriteVarsFile(config)
 }
