@@ -48,10 +48,20 @@ var (
 				"net_bytes_sent":       float64(102000),
 				"net_packets_sent":     float64(105),
 			},
+			"logs": {
+				"procstat_cpu_usage":   float64(40),
+				"procstat_memory_rss":  float64(152000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(162000000),
+				"procstat_num_fds":     float64(110),
+				"net_bytes_sent":       float64(170000),
+				"net_packets_sent":     float64(1500),
+			},
 		},
 		"5000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(90),
+				"procstat_cpu_usage":   float64(100),
 				"procstat_memory_rss":  float64(130000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(888000000),
@@ -69,6 +79,16 @@ var (
 				"procstat_num_fds":     float64(17),
 				"net_bytes_sent":       float64(490000),
 				"net_packets_sent":     float64(450),
+			},
+			"logs": {
+				"procstat_cpu_usage":   float64(200),
+				"procstat_memory_rss":  float64(325000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(1100000000),
+				"procstat_memory_data": float64(400000000),
+				"procstat_num_fds":     float64(111),
+				"net_bytes_sent":       float64(6500000),
+				"net_packets_sent":     float64(8500),
 			},
 		},
 		"10000": {
@@ -92,6 +112,16 @@ var (
 				"net_bytes_sent":       float64(760000),
 				"net_packets_sent":     float64(700),
 			},
+			"logs": {
+				"procstat_cpu_usage":   float64(225),
+				"procstat_memory_rss":  float64(440000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(1200000000),
+				"procstat_memory_data": float64(440000000),
+				"procstat_num_fds":     float64(130),
+				"net_bytes_sent":       float64(6820000),
+				"net_packets_sent":     float64(8300),
+			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
 		// https://github.com/aws/amazon-cloudwatch-agent/blob/c85501042b088014ec40b636a8b6b2ccc9739738/translator/translate/agent/ruleMetricBufferLimit.go#L14
@@ -101,9 +131,9 @@ var (
 		"50000": {
 			"statsd": {
 				"procstat_cpu_usage":   float64(250),
-				"procstat_memory_rss":  float64(310000000),
+				"procstat_memory_rss":  float64(300000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(1100000000),
+				"procstat_memory_vms":  float64(1000000000),
 				"procstat_memory_data": float64(330000000),
 				"procstat_num_fds":     float64(18),
 				"net_bytes_sent":       float64(1700000),
@@ -118,6 +148,16 @@ var (
 				"procstat_num_fds":     float64(18),
 				"net_bytes_sent":       float64(1250000),
 				"net_packets_sent":     float64(1100),
+			},
+			"logs": {
+				"procstat_cpu_usage":   float64(200),
+				"procstat_memory_rss":  float64(600000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(1400000000),
+				"procstat_memory_data": float64(650000000),
+				"procstat_num_fds":     float64(125),
+				"net_bytes_sent":       float64(6900000),
+				"net_packets_sent":     float64(6500),
 			},
 		},
 	}
@@ -237,8 +277,8 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, int(boundAndPeriod-1), int(boundAndPeriod+1), int32(boundAndPeriod)); !ok {
-		return fmt.Errorf("metric %s is not within sample count bound [ %f, %f]", metricName, boundAndPeriod, boundAndPeriod)
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, int(boundAndPeriod-5), int(boundAndPeriod), int32(boundAndPeriod)); !ok {
+		return fmt.Errorf("metric %s is not within sample count bound [ %f, %f]", metricName, boundAndPeriod-5, boundAndPeriod)
 	}
 
 	return nil

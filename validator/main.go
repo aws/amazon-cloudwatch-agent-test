@@ -54,7 +54,7 @@ func validate(vConfig models.ValidateConfig) error {
 		err = validators.LaunchValidator(vConfig)
 
 		if err == nil {
-			log.Printf("test case: %s, validate type: %s has been validated successfully", vConfig.GetTestCase(), vConfig.GetValidateType())
+			log.Printf("Test case: %s, validate type: %s has been successfully validated", vConfig.GetTestCase(), vConfig.GetValidateType())
 			return nil
 		}
 		time.Sleep(60 * time.Second)
