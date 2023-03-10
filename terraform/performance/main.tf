@@ -45,7 +45,6 @@ resource "local_file" "update-validation-config" {
   "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
 
   filename = "${var.test_dir}/${local.final_validator_config}"
-
 }
 
 #####################################################################

@@ -6,7 +6,7 @@ test_case: "macos_feature"
 validate_type: "feature"
 # Only support metrics/traces/logs, even in this case we validate more than logs,
 # we only make this data_type as a placeholder
-data_type: "metrics"
+data_type: "logs"
 
 # Number of metrics to be sent or number of log lines being written  each minute
 values_per_minute: "60"
@@ -90,7 +90,3 @@ metric_validation:
     metric_dimension: []
   - metric_name: "mem_used_percent"
     metric_dimension: []
-  
-        
-    
-

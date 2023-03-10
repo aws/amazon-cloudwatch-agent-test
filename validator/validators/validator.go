@@ -18,7 +18,7 @@ func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFact
 	switch vConfig.GetValidateType() {
 	case "performance":
 		validator = performance.NewPerformanceValidator(vConfig)
-	case "simple":
+	case "feature":
 		validator = feature.NewFeatureValidator(vConfig)
 	case "stress":
 		validator = stress.NewStressValidator(vConfig)

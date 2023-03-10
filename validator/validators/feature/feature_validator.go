@@ -58,10 +58,13 @@ func (s *FeatureValidator) CheckData(startTime, endTime time.Time) error {
 
 func (s *FeatureValidator) Cleanup() error {
 	var (
+		dataType      = s.vConfig.GetDataType()
 		ec2InstanceId = awsservice.GetInstanceId()
 	)
-
-	awsservice.DeleteLogGroup(ec2InstanceId)
+	switch dataType {
+	case "logs":
+		awsservice.DeleteLogGroup(ec2InstanceId)
+	}
 
 	return nil
 }
