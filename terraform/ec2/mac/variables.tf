@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 variable "region" {
   type    = string
   default = "us-west-2"
@@ -5,7 +8,7 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "t3a.xlarge"
+  default = "mac2.metal"
 }
 
 variable "ssh_key_name" {
@@ -15,7 +18,7 @@ variable "ssh_key_name" {
 
 variable "ami" {
   type    = string
-  default = "cloudwatch-agent-integration-test-ubuntu*"
+  default = "amzn-ec2-macos-13.*-arm64"
 }
 
 variable "ssh_key_value" {
@@ -25,17 +28,17 @@ variable "ssh_key_value" {
 
 variable "user" {
   type    = string
-  default = ""
+  default = "ec2-user"
 }
 
 variable "arc" {
   type    = string
-  default = ""
+  default = "arm64"
 }
 
 variable "s3_bucket" {
   type    = string
-  default = ""
+  default = "cloudwatch-agent-integration-bucket"
 }
 
 variable "test_name" {
@@ -45,17 +48,17 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
-  default = "../../test/stress/statsd"
+  default = ""
 }
 
 variable "cwa_github_sha" {
   type    = string
-  default = ""
+  default = "007192508454371edb98801d62c434f2bec2f94f"
 }
 
 variable "github_test_repo" {
   type    = string
-  default = ""
+  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
 }
 
 variable "github_test_repo_branch" {
@@ -66,8 +69,4 @@ variable "github_test_repo_branch" {
 variable "cwa_github_sha_date" {
   type    = string
   default = ""
-}
-variable "values_per_minute" {
-  type    = number
-  default = 10
 }
