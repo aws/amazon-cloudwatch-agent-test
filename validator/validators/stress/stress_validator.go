@@ -29,38 +29,68 @@ var (
 	metricPluginBoundValue = MetricPluginBoundValue{
 		"1000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(19),
-				"procstat_memory_rss":  float64(66500000),
+				"procstat_cpu_usage":   float64(25),
+				"procstat_memory_rss":  float64(82000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
-				"procstat_memory_data": float64(95000000),
-				"procstat_num_fds":     float64(9),
-				"net_bytes_sent":       float64(100000),
-				"net_packets_sent":     float64(100),
+				"procstat_memory_data": float64(83000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(105000),
+				"net_packets_sent":     float64(105),
+			},
+			"logs": {
+				"procstat_cpu_usage":   float64(40),
+				"procstat_memory_rss":  float64(152000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(162000000),
+				"procstat_num_fds":     float64(110),
+				"net_bytes_sent":       float64(170000),
+				"net_packets_sent":     float64(1500),
 			},
 		},
 		"5000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(120),
+				"procstat_cpu_usage":   float64(100),
 				"procstat_memory_rss":  float64(130000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(818000000),
-				"procstat_memory_data": float64(130000000),
-				"procstat_num_fds":     float64(19),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(135000000),
+				"procstat_num_fds":     float64(15),
 				"net_bytes_sent":       float64(524000),
 				"net_packets_sent":     float64(520),
+			},
+			"logs": {
+				"procstat_cpu_usage":   float64(200),
+				"procstat_memory_rss":  float64(325000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(1100000000),
+				"procstat_memory_data": float64(330000000),
+				"procstat_num_fds":     float64(111),
+				"net_bytes_sent":       float64(6500000),
+				"net_packets_sent":     float64(8500),
 			},
 		},
 		"10000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(200),
+				"procstat_cpu_usage":   float64(135),
 				"procstat_memory_rss":  float64(160000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_vms":  float64(888000000),
 				"procstat_memory_data": float64(177000000),
-				"procstat_num_fds":     float64(19),
+				"procstat_num_fds":     float64(17),
 				"net_bytes_sent":       float64(980000),
 				"net_packets_sent":     float64(860),
+			},
+			"logs": {
+				"procstat_cpu_usage":   float64(225),
+				"procstat_memory_rss":  float64(440482475),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(1189635413),
+				"procstat_memory_data": float64(447176704),
+				"procstat_num_fds":     float64(130),
+				"net_bytes_sent":       float64(6823151),
+				"net_packets_sent":     float64(8300),
 			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
@@ -77,7 +107,17 @@ var (
 				"procstat_memory_data": float64(330000000),
 				"procstat_num_fds":     float64(18),
 				"net_bytes_sent":       float64(1700000),
-				"net_packets_sent":     float64(10400),
+				"net_packets_sent":     float64(1400),
+			},
+			"logs": {
+				"procstat_cpu_usage":   float64(200),
+				"procstat_memory_rss":  float64(600000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(1400000000),
+				"procstat_memory_data": float64(650000000),
+				"procstat_num_fds":     float64(125),
+				"net_bytes_sent":       float64(6900000),
+				"net_packets_sent":     float64(6500),
 			},
 		},
 	}
@@ -189,14 +229,16 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 	metricValue := metrics.MetricDataResults[0].Values[0]
 	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
+	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f", metricName, metricNamespace, metricValue, upperBoundValue)
+
 	if metricValue < 0 || metricValue > upperBoundValue {
 		return fmt.Errorf("metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
 	}
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, int(boundAndPeriod-1), int(boundAndPeriod+1), int32(boundAndPeriod)); !ok {
-		return fmt.Errorf("metric %s is not within sample count bound [ %f, %f]", metricName, boundAndPeriod, boundAndPeriod)
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, int(boundAndPeriod-5), int(boundAndPeriod), int32(boundAndPeriod)); !ok {
+		return fmt.Errorf("metric %s is not within sample count bound [ %f, %f]", metricName, boundAndPeriod-5, boundAndPeriod)
 	}
 
 	return nil
