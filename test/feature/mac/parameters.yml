@@ -2,9 +2,10 @@
 receivers: "host"
 
 #Test case name
-test_case: "macOS_feature"
-validate_type: "simple"
-# Only support metrics/traces/logs
+test_case: "macos_feature"
+validate_type: "feature"
+# Only support metrics/traces/logs, even in this case we validate more than logs,
+# we only make this data_type as a placeholder
 data_type: "metrics"
 
 # Number of metrics to be sent or number of log lines being written  each minute
@@ -18,4 +19,78 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # InstanceID dimension; therefore, does not need to validate it
 # https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
 metric_namespace: "CloudWatchAgentMacFeature"
-metric_validation: []
+metric_validation:
+  - metric_name: "cpu_time_active"
+    metric_dimension: 
+      - name: "cpu"
+        value: "cpu-total"
+
+  - metric_name: "cpu_usage_idle"
+    metric_dimension: 
+      - name: "cpu"
+        value: "cpu-total"
+
+  - metric_name: "net_bytes_sent"
+    metric_dimension: 
+      - name: "interface"
+        value: "en0"
+
+  - metric_name: "net_bytes_recv"
+    metric_dimension: 
+      - name: "interface"
+        value: "en0"
+ 
+  - metric_name: "diskio_iops_in_progress"
+    metric_dimension: 
+      - name: "name"
+        value: "devfs"
+
+  - metric_name: "diskio_io_time"
+    metric_dimension: 
+      - name: "name"
+        value: "devfs"
+
+  - metric_name: "disk_free"
+    metric_dimension: 
+      - name: "name"
+        value: "devfs"
+
+  - metric_name: "disk_used_percent"
+    metric_dimension: 
+      - name: "name"
+        value: "devfs"
+
+  - metric_name: "ethtool_queue_0_tx_cnt"
+    metric_dimension: 
+      - name: "driver"
+        value: "ena"
+      - name: "interface"
+        value: "en0"
+        
+  - metric_name: "ethtool_queue_0_rx_cnt"
+    metric_dimension: 
+      - name: "driver"
+        value: "ena"
+      - name: "interface"
+        value: "en0"
+
+  - metric_name: "swap_free"
+    metric_dimension: []
+  - metric_name: "swap_used_percent"
+    metric_dimension: []
+  - metric_name: "processes_blocked"
+    metric_dimension: []
+  - metric_name: "processes_running"
+    metric_dimension: []
+  - metric_name: "netstat_tcp_close"
+    metric_dimension: []
+  - metric_name: "netstat_udp_socket"
+    metric_dimension: []
+  - metric_name: "mem_available_percent"
+    metric_dimension: []
+  - metric_name: "mem_used_percent"
+    metric_dimension: []
+  
+        
+    
+

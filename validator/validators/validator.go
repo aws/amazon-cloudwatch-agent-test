@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/feature"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/performance"
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/simple"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/stress"
 )
 
@@ -19,7 +19,7 @@ func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFact
 	case "performance":
 		validator = performance.NewPerformanceValidator(vConfig)
 	case "simple":
-		validator = simple.NewSimpleValidator(vConfig)
+		validator = feature.NewFeatureValidator(vConfig)
 	case "stress":
 		validator = stress.NewStressValidator(vConfig)
 	default:

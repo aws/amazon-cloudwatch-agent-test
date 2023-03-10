@@ -9,68 +9,66 @@
           "service_address": ":8125",
           "metrics_collection_interval": 60
         },
+        "collectd": {
+          "collectd_security_level": "none"
+        },
         "cpu": {
           "measurement": [
-            "time_active", "time_guest", "time_guest_nice", 
-            "usage_idle", "usage_iowait", "usage_irq"
+            "time_active", 
+            "usage_idle"
           ],
           "metrics_collection_interval": 1
         },
         "swap": {
             "measurement": [
-                "free",
-                "used",
-                "used_percent"
+              "free",
+              "used_percent"
             ]
         },
         "processes": {
             "measurement": [
-              "blocked","running","sleeping","stopped"
+              "blocked",
+              "running"
             ],
             "metrics_collection_interval": 1
         },
         "netstat": {
             "measurement": [
               "tcp_close",
-              "tcp_close_wait",
-              "tcp_closing",
-              "tcp_established",
-              "tcp_fin_wait1",
-              "tcp_fin_wait2",
               "udp_socket"
             ],
             "metrics_collection_interval": 1
           },
           "mem": {
             "measurement": [
-              "active", "available", "available_percent", "used", "used_percent"
+              "available_percent", 
+              "used_percent"
             ],
             "metrics_collection_interval": 1
           },
           "diskio": {
             "resources": [
-              "*"
+              "devfs"
             ],
             "measurement": [
-              "iops_in_progress", "io_time", "reads"
+              "iops_in_progress", 
+              "io_time"
             ],
             "metrics_collection_interval": 1
           },
           "disk": {
             "resources": [
-              "*"
+              "devfs"
             ],
             "measurement": [
               "free",
-              "inodes_free",
               "used_percent"
             ],
             "drop_device": true
           },
           "ethtool": {
             "interface_include": [
-                "eth0",
-                "ens5"
+                "en0"
             ],
             "metrics_include": [
               "queue_0_tx_cnt",
@@ -79,16 +77,17 @@
           },
           "net": {
             "resources": [
-              "eth0"
+              "en0"
             ],
             "measurement": [
-              "bytes_sent", "bytes_recv"
+              "bytes_sent", 
+              "bytes_recv"
             ],
             "metrics_collection_interval": 1
           },
           "procstat": [
             {
-              "exe": "cloudwatch-agent",
+              "exe": "amazon-cloudwatch-agent",
               "measurement": [
                 "cpu_usage",
                 "memory_rss"
@@ -100,6 +99,24 @@
       "append_dimensions": {
         "InstanceId": "${aws:InstanceId}"
       },
-      "force_flush_interval": 10
+      "force_flush_interval": 60
+    },
+    "logs": {
+      "logs_collected": {
+        "files": {
+        "collect_list": [
+          {
+          "file_path": "/tmp/test1.log",
+          "log_group_name": "{instance_id}",
+          "log_stream_name": "{instance_id}",
+          "timezone": "UTC"
+          }
+        ]
+        }
+      },
+      "metrics_collected": {
+        "emf": { }
+      },
+      "force_flush_interval": 5
     }
-  }
+}
