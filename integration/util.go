@@ -1,4 +1,4 @@
-package local_workflow
+package integration
 
 import (
 	"encoding/json"

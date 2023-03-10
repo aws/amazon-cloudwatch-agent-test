@@ -1,4 +1,4 @@
-package local_workflow
+package integration
 
 import (
 	"fmt"
@@ -6,22 +6,22 @@ import (
 	"testing"
 )
 
-type LocalWorkflowTestSuite struct {
+type IntegrationTestSuite struct {
 	suite.Suite
 	Config       Config
 	VarsFilepath string
 }
 
-func (suite *LocalWorkflowTestSuite) SetupTest() {
+func (suite *IntegrationTestSuite) SetupTest() {
 	suite.Config = FetchConfig()
 	suite.VarsFilepath = WriteVarsFile(suite.Config)
 }
 
-func (suite *LocalWorkflowTestSuite) TestLocalWorkflow() {
+func (suite *IntegrationTestSuite) TestLocalWorkflow() {
 	fmt.Println(suite.VarsFilepath)
 	PrettyPrint(suite.Config)
 }
 
 func TestLocalWorkflowSuite(t *testing.T) {
-	suite.Run(t, new(LocalWorkflowTestSuite))
+	suite.Run(t, new(IntegrationTestSuite))
 }
