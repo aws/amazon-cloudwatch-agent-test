@@ -2,21 +2,17 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/hc-install/product"
 	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"log"
 	"os"
-	"path"
 )
 
-func RunIntegrationTest(rootDir, terraformRelativePath, varsAbsolutePath string) {
-	terraformAbsolutePath := path.Join(rootDir, terraformRelativePath)
-	tfExec(terraformAbsolutePath, varsAbsolutePath)
-}
-
-func tfExec(terraformAbsolutePath, varsAbsolutePath string) {
+func RunIntegrationTest(terraformAbsolutePath, varsAbsolutePath string) {
+	fmt.Println("Running terraform suite =", terraformAbsolutePath)
 	installer := &releases.ExactVersion{
 		Product: product.Terraform,
 		Version: version.Must(version.NewVersion("1.0.6")),
@@ -53,5 +49,4 @@ func tfExec(terraformAbsolutePath, varsAbsolutePath string) {
 	if err != nil {
 		log.Fatalf("error running tf.Destroy(): %s", err)
 	}
-
 }
