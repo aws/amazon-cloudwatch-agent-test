@@ -45,7 +45,6 @@ resource "local_file" "update-validation-config" {
   "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
 
   filename = "${var.test_dir}/${local.final_validator_config}"
-
 }
 
 #####################################################################
@@ -76,12 +75,9 @@ resource "null_resource" "integration_test" {
     host        = aws_instance.cwagent.public_ip
   }
 
-  # Prepare Integration Test
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
     destination = "${local.instance_temp_directory}/${local.final_validator_config}"
-
-
   }
 
   provisioner "file" {

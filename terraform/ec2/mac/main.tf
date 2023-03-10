@@ -27,6 +27,24 @@ locals {
 }
 
 #####################################################################
+# Prepare Parameters Tests
+#####################################################################
+
+locals {
+  validator_config        = "parameters.yml"
+  final_validator_config  = "final_parameters.yml"
+  cloudwatch_agent_config = "agent_config.json"
+  instance_temp_directory = "/tmp"
+}
+
+resource "local_file" "update-validation-config" {
+  content = replace(file("${var.test_dir}/${local.validator_config}"),
+  "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
+
+  filename = "${var.test_dir}/${local.final_validator_config}"
+}
+
+#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
@@ -56,6 +74,17 @@ resource "null_resource" "integration_test" {
     host        = aws_instance.cwagent.public_ip
     timeout     = "10m"
   }
+
+  provisioner "file" {
+    source      = "${var.test_dir}/${local.final_validator_config}"
+    destination = "${local.instance_temp_directory}/${local.final_validator_config}"
+  }
+
+  provisioner "file" {
+    source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
+    destination = "${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
+  }
+
   provisioner "remote-exec" {
     inline = [
       #Install AWS CLI
@@ -64,7 +93,7 @@ resource "null_resource" "integration_test" {
       "sudo installer -pkg AWSCLIV2.pkg -target /",
       #Install Golang
       "mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew",
-      "homebrew/bin/brew install go",
+      "~/homebrew/bin/brew install go",
     ]
   }
   # Install agent binaries
@@ -81,9 +110,9 @@ resource "null_resource" "integration_test" {
       "export AWS_REGION=${var.region}",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd ~/amazon-cloudwatch-agent-test",
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "~/homebrew/bin/go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "~/homebrew/bin/go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
 

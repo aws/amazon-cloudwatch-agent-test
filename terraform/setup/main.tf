@@ -82,8 +82,7 @@ resource "aws_ec2_host" "dedicated_host" {
   }
 
   ## Map 4x1 for avoid claimng resources
-  count             = 1
   instance_type     = each.value
-  availability_zone = "${var.region}a"
+  availability_zone = "${var.region}b"
   auto_placement    = "on"
 }

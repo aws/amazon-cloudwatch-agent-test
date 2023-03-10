@@ -48,12 +48,14 @@ var testTypeToTestDirMap = map[string][]string{
 		and Mac under the hood share similar plugins with Linux
 	*/
 	"ec2_mac": {
-		"../../test/feature/mac",
+		"../../../test/feature/mac",
 	},
 	"ec2_performance": {
 		"../../test/performance/logs",
+		"../../test/performance/statsd",
 	},
 	"ec2_stress": {
+		"../../test/stress/logs",
 		"../../test/stress/statsd",
 	},
 	"ecs_fargate": {

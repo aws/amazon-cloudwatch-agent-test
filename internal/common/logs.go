@@ -17,7 +17,7 @@ import (
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
-func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRate int) error {
+func StartLogWrite(configFilePath string, duration time.Duration, logPerMinute int) error {
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
 	var (
 		multiErr error
@@ -33,7 +33,7 @@ func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRa
 		wg.Add(1)
 		go func(logPath string) {
 			defer wg.Done()
-			err = writeToLogs(logPath, agentRunDuration, dataRate)
+			err = writeToLogs(logPath, duration, logPerMinute)
 			multiErr = multierr.Append(multiErr, err)
 		}(logPath)
 	}
@@ -61,7 +61,7 @@ func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
 		select {
 		case <-ticker.C:
 			for i := 0; i < dataRate; i++ {
-				_, err = f.WriteString(fmt.Sprintln(ticker, " - #", i, " This is a log line."))
+				_, err = f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
 				if err != nil {
 					return err
 				}
