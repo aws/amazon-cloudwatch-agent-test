@@ -29,7 +29,6 @@ locals {
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
-
 resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
@@ -57,10 +56,22 @@ resource "null_resource" "integration_test" {
     host        = aws_instance.cwagent.public_ip
     timeout     = "10m"
   }
-
-  # Prepare Integration Test
   provisioner "remote-exec" {
     inline = [
+      #Install AWS CLI
+      "sudo softwareupdate --install-rosetta --agree-to-license",
+      "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
+      "sudo installer -pkg AWSCLIV2.pkg -target /",
+      #Install Golang
+      "mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew",
+      "homebrew/bin/brew install go",
+    ]
+  }
+  # Install agent binaries
+  provisioner "remote-exec" {
+    inline = [
+      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${var.arc}/amazon-cloudwatch-agent.pkg .",
+      "sudo installer -pkg ./amazon-cloudwatch-agent.pkg -target /",
     ]
   }
 
@@ -75,5 +86,10 @@ data "aws_ami" "latest" {
   filter {
     name   = "name"
     values = [var.ami]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [var.arc == "arm64" ? "arm64_mac" : "x86_64_mac"]
   }
 }

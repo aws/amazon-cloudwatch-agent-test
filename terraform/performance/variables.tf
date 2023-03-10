@@ -28,18 +28,7 @@ variable "user" {
   default = ""
 }
 
-variable "install_agent" {
-  description = "go run ./install/install_agent.go deb or go run ./install/install_agent.go rpm"
-  type        = string
-  default     = "go run ./install/install_agent.go rpm"
-}
-
 variable "arc" {
-  type    = string
-  default = ""
-}
-
-variable "binary_name" {
   type    = string
   default = ""
 }

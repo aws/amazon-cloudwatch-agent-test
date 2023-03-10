@@ -33,12 +33,12 @@ variable "user" {
 
 variable "arc" {
   type    = string
-  default = ""
+  default = "arm64"
 }
 
 variable "s3_bucket" {
   type    = string
-  default = ""
+  default = "cloudwatch-agent-integration-bucket"
 }
 
 variable "test_name" {
@@ -53,7 +53,7 @@ variable "test_dir" {
 
 variable "cwa_github_sha" {
   type    = string
-  default = ""
+  default = "007192508454371edb98801d62c434f2bec2f94f"
 }
 
 variable "github_test_repo" {

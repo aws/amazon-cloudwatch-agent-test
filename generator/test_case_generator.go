@@ -43,7 +43,7 @@ var testTypeToTestDirMap = map[string][]string{
 		"./test/metric_dimension",
 	},
 	/*
-		Uou can only place 1 mac instance on a dedicate host a single time.
+		You can only place 1 mac instance on a dedicate host a single time.
 		Therefore, limit down the scope for testing in Mac since EC2 can be done with Linux
 		and Mac under the hood share similar plugins with Linux
 	*/
