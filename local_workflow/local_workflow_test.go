@@ -19,6 +19,7 @@ func (suite *LocalWorkflowTestSuite) SetupTest() {
 
 func (suite *LocalWorkflowTestSuite) TestLocalWorkflow() {
 	fmt.Println(suite.VarsFilepath)
+	PrettyPrint(suite.Config)
 }
 
 func TestLocalWorkflowSuite(t *testing.T) {

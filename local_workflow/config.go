@@ -8,26 +8,7 @@ import (
 
 const ConfigTfvarsFilename = "config_ignore.tfvars"
 
-type Config struct {
-	TerraformPath        string `json:"terraformPath"`
-	S3Bucket             string `json:"s3Bucket"`
-	CwaGithubSha         string `json:"cwaGithubSha"`
-	GithubTestRepo       string `json:"githubTestRepo"`
-	GithubTestRepoBranch string `json:"githubTestRepoBranch"`
-	PluginTests          string `json:"pluginTests"`
-	TestDir              string `json:"test_dir"`
-	TestName             string `json:"os"`
-	Family               string `json:"family"`
-	TestType             string `json:"testType"`
-	Arc                  string `json:"arc"`
-	Ec2InstanceType      string `json:"instanceType"`
-	Ami                  string `json:"ami"`
-	BinaryName           string `json:"binaryName"`
-	User                 string `json:"username"`
-	InstallAgent         string `json:"installAgentCommand"`
-	CaCertPath           string `json:"caCertPath"`
-	ValuesPerMinute      int    `json:"valuesPerMinute"`
-}
+type Config map[string]any
 
 func FetchConfig() Config {
 	const configPath = "config.json"

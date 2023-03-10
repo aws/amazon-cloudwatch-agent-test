@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
 )
 
 const varsFilename = "config_ignore.tfvars"
@@ -19,6 +18,10 @@ func WriteVarsFile(config Config) string {
 		LogFatalIfError(err)
 	}
 
+	return getAbsoluteVarsFilepath()
+}
+
+func getAbsoluteVarsFilepath() string {
 	wd, err := os.Getwd()
 	LogFatalIfError(err)
 	return path.Join(wd, varsFilename)
@@ -26,22 +29,34 @@ func WriteVarsFile(config Config) string {
 
 func fetchVars(config Config) []string {
 	var vars []string
-	values := reflect.ValueOf(config)
-	types := values.Type()
-	for i := 0; i < values.NumField(); i++ {
-		key := types.Field(i).Name
-		key = ConvertCamelToSnakeCase(key)
-		val := values.Field(i).Interface()
+	for key, val := range config {
+		key = mapMatrixRowFieldToTerraformVar(key)
 		configVar := buildTfvar(key, val)
 		vars = append(vars, configVar)
 	}
 	return vars
 }
 
+func mapMatrixRowFieldToTerraformVar(matrixRowField string) string {
+	var exceptions = map[string]string{
+		"test_dir":            "test_dir",
+		"os":                  "test_name",
+		"instanceType":        "ec2_instance_type",
+		"installAgentCommand": "install_agent",
+		"username":            "user",
+	}
+
+	if tfVarException, ok := exceptions[matrixRowField]; ok {
+		return tfVarException
+	}
+
+	return ConvertCamelToSnakeCase(matrixRowField)
+}
+
 func buildTfvar(key string, val any) string {
 	const (
-		stringFmt  = `%v="%v"`
-		defaultFmt = "%v=%v"
+		defaultFmt = "TF_VAR_%v=%v"
+		stringFmt  = `TF_VAR_%v="%v"`
 	)
 	if _, ok := val.(string); ok {
 		return fmt.Sprintf(stringFmt, key, val)
