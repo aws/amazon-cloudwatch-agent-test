@@ -12,3 +12,4 @@ terraform.*
 coverage.txt
 generator/resources/*complete*.json
 *_ignore.*
+integration/config.json

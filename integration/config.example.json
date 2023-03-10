@@ -1,0 +1,20 @@
+{
+  "terraformRelativePath": "terraform/ecs_ec2/daemon",
+  "s3Bucket": "localstack-integ-test",
+  "cwaGithubSha": "a791b1484fbc0611e515ccbb9bd24bea469cb9fb",
+  "githubTestRepo": "https://github.com/aws/amazon-cloudwatch-agent-test.git",
+  "githubTestRepoBranch": "main",
+  "pluginTests": "",
+  "test_dir": "./test/metric_value_benchmark",
+  "os": "",
+  "family": "linux",
+  "testType": "ecs_ec2_daemon",
+  "arc": "",
+  "instanceType": "t3a.xlarge",
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "binaryName": "",
+  "username": "",
+  "installAgentCommand": "",
+  "caCertPath": "",
+  "values_per_minute": 0
+}
