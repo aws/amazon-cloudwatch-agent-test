@@ -76,12 +76,9 @@ resource "null_resource" "integration_test" {
     host        = aws_instance.cwagent.public_ip
   }
 
-  # Prepare Integration Test
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
     destination = "${local.instance_temp_directory}/${local.final_validator_config}"
-
-
   }
 
   provisioner "file" {

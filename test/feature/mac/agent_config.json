@@ -9,9 +9,6 @@
           "service_address": ":8125",
           "metrics_collection_interval": 60
         },
-        "collectd": {
-          "collectd_security_level": "none"
-        },
         "cpu": {
           "measurement": [
             "time_active", 
