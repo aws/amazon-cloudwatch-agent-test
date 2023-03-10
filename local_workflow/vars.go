@@ -3,20 +3,25 @@ package local_workflow
 import (
 	"fmt"
 	"os"
+	"path"
 	"reflect"
 )
 
-const VarsFilename = "config_ignore.tfvars"
+const varsFilename = "config_ignore.tfvars"
 
-func WriteVarsFile(config Config) {
+func WriteVarsFile(config Config) string {
 	configVars := fetchVars(config)
-	file, err := os.Create(VarsFilename)
+	file, err := os.Create(varsFilename)
 	LogFatalIfError(err)
 	defer file.Close()
 	for _, configVar := range configVars {
 		_, err := file.WriteString(configVar + "\n")
 		LogFatalIfError(err)
 	}
+
+	wd, err := os.Getwd()
+	LogFatalIfError(err)
+	return path.Join(wd, varsFilename)
 }
 
 func fetchVars(config Config) []string {

@@ -15,16 +15,16 @@ type Config struct {
 	GithubTestRepo       string `json:"githubTestRepo"`
 	GithubTestRepoBranch string `json:"githubTestRepoBranch"`
 	PluginTests          string `json:"pluginTests"`
-	TestDir              string `json:"testDir"`
-	Os                   string `json:"os"`
+	TestDir              string `json:"test_dir"`
+	TestName             string `json:"os"`
 	Family               string `json:"family"`
 	TestType             string `json:"testType"`
 	Arc                  string `json:"arc"`
-	InstanceType         string `json:"instanceType"`
+	Ec2InstanceType      string `json:"instanceType"`
 	Ami                  string `json:"ami"`
 	BinaryName           string `json:"binaryName"`
-	User                 string `json:"user"`
-	InstallAgent         string `json:"installAgent"`
+	User                 string `json:"username"`
+	InstallAgent         string `json:"installAgentCommand"`
 	CaCertPath           string `json:"caCertPath"`
 	ValuesPerMinute      int    `json:"valuesPerMinute"`
 }
