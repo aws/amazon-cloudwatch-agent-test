@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )
@@ -18,8 +17,10 @@ func (suite *IntegrationTestSuite) SetupTest() {
 }
 
 func (suite *IntegrationTestSuite) TestLocalWorkflow() {
-	fmt.Println(suite.VarsFilepath)
-	PrettyPrint(suite.Config)
+	rootDir := GetRootDir()
+	terraformPath := suite.Config["terraformPath"].(string)
+	apply := BuildTerraformCommand(rootDir, terraformPath, suite.VarsFilepath)
+	PrettyPrint(apply)
 }
 
 func TestLocalWorkflowSuite(t *testing.T) {
