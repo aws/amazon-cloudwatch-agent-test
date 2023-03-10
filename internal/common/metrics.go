@@ -63,9 +63,7 @@ func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 		select {
 		case <-ticker.C:
 			for time := 0; time < metricPerMinute; time++ {
-				go func(time int) {
-					client.Inc(fmt.Sprintf("%v", time), int64(time), 1.0)
-				}(time)
+				client.Inc(fmt.Sprintf("%v", time), int64(time), 1.0)
 			}
 		case <-endTimeout:
 			return nil

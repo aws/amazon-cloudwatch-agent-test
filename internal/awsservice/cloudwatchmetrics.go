@@ -81,11 +81,11 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 
 	log.Printf("Number of datapoints for start time %v with endtime %v and period %d is %d is inclusive between %d and %d", startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
 
-	if !(lowerBoundInclusive <= dataPoints) || !(upperBoundInclusive >= dataPoints) {
-		return false
+	if lowerBoundInclusive <= dataPoints && dataPoints <= upperBoundInclusive {
+		return true
 	}
 
-	return true
+	return false
 }
 
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
