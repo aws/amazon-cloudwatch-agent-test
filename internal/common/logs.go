@@ -61,7 +61,7 @@ func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
 		select {
 		case <-ticker.C:
 			for i := 0; i < dataRate; i++ {
-				_, err = f.WriteString(fmt.Sprintln(ticker, " - #", i, " This is a log line."))
+				_, err = f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
 				if err != nil {
 					return err
 				}
