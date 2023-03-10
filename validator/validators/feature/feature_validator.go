@@ -4,17 +4,16 @@
 package feature
 
 import (
-	"time"
-
 	"go.uber.org/multierr"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 type FeatureValidator struct {
 	vConfig models.ValidateConfig
+	basic.BasicValidator
 }
 
 var _ models.ValidatorFactory = (*FeatureValidator)(nil)
@@ -46,25 +45,4 @@ func (s *FeatureValidator) GenerateLoad() error {
 	}
 
 	return multiErr
-}
-
-func (s *FeatureValidator) CheckData(startTime, endTime time.Time) error {
-	var (
-		multiErr error
-	)
-
-	return multiErr
-}
-
-func (s *FeatureValidator) Cleanup() error {
-	var (
-		dataType      = s.vConfig.GetDataType()
-		ec2InstanceId = awsservice.GetInstanceId()
-	)
-	switch dataType {
-	case "logs":
-		awsservice.DeleteLogGroup(ec2InstanceId)
-	}
-
-	return nil
 }
