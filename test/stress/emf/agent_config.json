@@ -5,10 +5,6 @@
   "metrics": {
     "namespace": "CloudWatchAgentStress",
     "metrics_collected": {
-      "statsd": {
-        "service_address": ":8125",
-        "metrics_collection_interval": 60
-      },
       "net": {
         "resources": [
           "eth0"
@@ -38,5 +34,11 @@
       "InstanceId": "${aws:InstanceId}"
     },
     "force_flush_interval": 10
+  },
+  "logs": {
+    "metrics_collected": {
+      "emf": { }
+    },
+    "force_flush_interval": 5
   }
 }

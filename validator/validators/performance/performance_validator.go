@@ -49,12 +49,14 @@ func (s *PerformanceValidator) GenerateLoad() (err error) {
 		dataType              = s.vConfig.GetDataType()
 		dataRate              = s.vConfig.GetDataRate()
 		receiver              = s.vConfig.GetPluginsConfig()
+		metricLogGroup        = awsservice.GetInstanceId()
+		metricNamespace       = s.vConfig.GetMetricNamespace()
 	)
 	switch dataType {
 	case "logs":
 		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, dataRate)
 	default:
-		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, dataRate)
+		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, dataRate, metricLogGroup, metricNamespace)
 	}
 
 	return err

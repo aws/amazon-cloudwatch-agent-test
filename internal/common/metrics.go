@@ -5,15 +5,17 @@ package common
 
 import (
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
 	"github.com/cactus/go-statsd-client/v5/statsd"
+	"github.com/prozz/aws-embedded-metrics-golang/emf"
 	"go.uber.org/multierr"
 )
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
-func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinute int) error {
+func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinute int, metricLogGroup, metricNamespace string) error {
 	var (
 		err      error
 		multiErr error
@@ -26,7 +28,8 @@ func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinut
 		switch receiver {
 		case "statsd":
 			err = sendStatsdMetrics(metricPerMinute, duration)
-
+		case "emf":
+			err = sendEMFMetrics(metricLogGroup, metricNamespace, metricPerMinute, duration)
 		default:
 		}
 
@@ -62,10 +65,39 @@ func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 	for {
 		select {
 		case <-ticker.C:
-			for time := 0; time < metricPerMinute; time++ {
-				go func(time int) {
-					client.Inc(fmt.Sprintf("%v", time), int64(time), 1.0)
-				}(time)
+			for t := 0; t < metricPerMinute; t++ {
+				client.Inc(fmt.Sprint(t), int64(t), 1.0)
+			}
+		case <-endTimeout:
+			return nil
+		}
+	}
+}
+
+func sendEMFMetrics(metricLogGroup, metricNamespace string, metricPerMinute int, duration time.Duration) error {
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:25888", time.Millisecond*10000)
+	defer conn.Close()
+
+	if err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	endTimeout := time.After(duration)
+
+	for {
+		select {
+		case <-ticker.C:
+			for t := 0; t < metricPerMinute; t++ {
+				emf.New(emf.WithWriter(metricOutput), emf.WithLogGroup(metricLogGroup)).
+					Namespace(metricNamespace).
+					DimensionSet(
+						emf.NewDimension("Time", t),
+					).
+					MetricAs("Time", t, emf.Milliseconds).
+					Log()
+
 			}
 		case <-endTimeout:
 			return nil
