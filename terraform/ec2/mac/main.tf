@@ -45,7 +45,7 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
+    Name = "cwagent-integ-test-ec2-mac-${module.common.testing_id}"
   }
 }
 
@@ -59,7 +59,7 @@ resource "null_resource" "integration_test" {
   }
   provisioner "remote-exec" {
     inline = [
-      // Install AWS CLI
+      # Install AWS CLI
       "sudo softwareupdate --install-rosetta --agree-to-license",
       "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
       "sudo installer -pkg AWSCLIV2.pkg -target /",

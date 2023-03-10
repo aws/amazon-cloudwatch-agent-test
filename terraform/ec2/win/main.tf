@@ -27,6 +27,23 @@ locals {
 }
 
 #####################################################################
+# Prepare Parameters Tests
+#####################################################################
+
+locals {
+  validator_config        = "parameters.yml"
+  final_validator_config  = "final_parameters.yml"
+  cloudwatch_agent_config = "agent_config.json"
+  instance_temp_directory = "C:\\"
+}
+
+resource "local_file" "update-validation-config" {
+  content = replace(file("${var.test_dir}/${local.validator_config}"),
+  "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
+
+  filename = "${var.test_dir}/${local.final_validator_config}"
+}
+#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 
@@ -37,63 +54,92 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
-  get_password_data           = true
+  user_data                   = <<EOF
+<powershell>
+# Install SSH
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+
+# OPTIONAL but recommended:
+Set-Service -Name sshd -StartupType 'Automatic'
+
+# Start the sshd service
+Start-Service sshd
+
+# Confirm the Firewall rule is configured. It should be created automatically by setup. Run the following to verify
+if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue | Select-Object Name, Enabled)) {
+    Write-Output "Firewall Rule 'OpenSSH-Server-In-TCP' does not exist, creating it..."
+    New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+} else {
+    Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
+}
+
+# Set default shell for OpenSSH
+New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force;
+
+# Get the public key 
+$authorized_key = "${trimspace(tls_private_key.ssh_key[0].public_key_openssh)}"
+New-Item -Force -ItemType Directory -Path $env:USERPROFILE\.ssh; Add-Content -Force -Path $env:USERPROFILE\.ssh\authorized_keys -Value $authorized_key
+
+# Set the config to allow the pubkey auth
+$sshd_config="C:\ProgramData\ssh\sshd_config" 
+(Get-Content $sshd_config) -replace '#PubkeyAuthentication', 'PubkeyAuthentication' | Out-File -encoding ASCII $sshd_config
+(Get-Content $sshd_config) -replace 'AuthorizedKeysFile __PROGRAMDATA__', '#AuthorizedKeysFile __PROGRAMDATA__' | Out-File -encoding ASCII $sshd_config
+(Get-Content $sshd_config) -replace 'Match Group administrators', '#Match Group administrators' | Out-File -encoding ASCII $sshd_config
+Get-Content C:\ProgramData\ssh\sshd_config
+
+# Reload the config
+Restart-Service sshd
+</powershell>
+EOF
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
   }
-  user_data = <<EOF
-<powershell>
-Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
-Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
-Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
-
-Start-Service sshd
-Set-Service -Name sshd -StartupType 'Automatic'
-
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-
-choco install git --confirm
-choco install go --confirm
-msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
-
-[Environment]::SetEnvironmentVariable("PATH", "C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\Go\bin;C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0\", [System.EnvironmentVariableTarget]::Machine)
-</powershell>
-EOF
 
   tags = {
-    Name = "cwagent-integ-test-ec2-windows-${element(split("/", var.test_dir), 3)}-$${module.common.testing_id}"
+    Name = "cwagent-integ-test-ec2-windows-${module.common.testing_id}"
   }
 }
 
 resource "null_resource" "integration_test" {
   depends_on = [aws_instance.cwagent]
-  # Install software
+  connection {
+    type            = "ssh"
+    user            = "Administrator"
+    private_key     = local.private_key_content
+    host            = aws_instance.cwagent.public_ip
+    target_platform = "windows"
+    timeout         = "15m"
+  }
+  provisioner "file" {
+    source      = "${var.test_dir}/${local.final_validator_config}"
+    destination = "${local.instance_temp_directory}/${local.final_validator_config}"
+  }
+
+  provisioner "file" {
+    source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
+    destination = "${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
+  }
+
+  # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "start /wait timeout 120",                             //Wait some time to ensure all binaries have been downloaded
-      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
-      "set AWS_REGION=${var.region}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
-      "echo clone and install agent",
-      "git clone ${var.github_test_repo}",
-      "cd amazon-cloudwatch-agent-test",
-      "git reset --hard ${var.cwa_test_github_sha}",
-      "echo run tests with the tag integration, one at a time, and verbose",
-      "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 30m -v"
+      "sudo installer -pkg ./amazon-cloudwatch-agent.pkg -target /",
     ]
+  }
 
-    connection {
-      type            = "ssh"
-      user            = "Administrator"
-      password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-      host            = aws_instance.cwagent.public_ip
-      target_platform = "windows"
-      timeout         = "6m"
-    }
+  #Prepare the requirement before validation and validate the metrics/logs/traces
+  provisioner "remote-exec" {
+    inline = [
+      "set AWS_REGION=${var.region}",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "cd ~/amazon-cloudwatch-agent-test",
+      "~/homebrew/bin/go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
+      "~/homebrew/bin/go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+    ]
   }
 }
 
