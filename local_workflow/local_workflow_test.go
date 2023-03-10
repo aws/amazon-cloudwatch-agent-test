@@ -1,7 +1,6 @@
 package local_workflow
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )
@@ -11,5 +10,6 @@ type LocalWorkflowSuite struct {
 }
 
 func TestLocalWorkflowSuite(t *testing.T) {
-	fmt.Println("Hello LocalWorkflowSuite")
+	config := FetchConfig()
+	PrettyPrint(config)
 }

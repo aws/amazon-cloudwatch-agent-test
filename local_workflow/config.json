@@ -1,0 +1,20 @@
+{
+  "terraformPath": "terraform/ec2/linux",
+  "s3Bucket": "local-integ-test",
+  "cwaGithubSha": "a791b1484fbc0611e515ccbb9bd24bea469cb9fb",
+  "githubTestRepo": "https://github.com/aws/amazon-cloudwatch-agent-test.git",
+  "githubTestRepoBranch": "main",
+  "pluginTests": "",
+  "testDir": "./test/metric_value_benchmark",
+  "os": "ubuntu-22.04",
+  "family": "linux",
+  "testType": "ec2_linux",
+  "arc": "amd64",
+  "instanceType": "t3a.medium",
+  "ami": "cloudwatch-agent-integration-test-ubuntu-LTS-22*",
+  "binaryName": "amazon-cloudwatch-agent.deb",
+  "user": "ubuntu",
+  "installAgent": "go run ./install/install_agent.go deb",
+  "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
+  "valuesPerMinute": 0
+}
