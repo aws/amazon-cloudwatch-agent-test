@@ -75,6 +75,18 @@ resource "null_resource" "integration_test" {
     ]
   }
 
+  #Prepare the requirement before validation and validate the metrics/logs/traces
+  provisioner "remote-exec" {
+    inline = [
+      "export AWS_REGION=${var.region}",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "cd ~/amazon-cloudwatch-agent-test",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+    ]
+  }
+
   depends_on = [
     aws_instance.cwagent,
   ]

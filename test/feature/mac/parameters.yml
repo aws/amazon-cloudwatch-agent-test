@@ -2,7 +2,7 @@
 receivers: "host"
 
 #Test case name
-test_case: "macOS_feature"
+test_case: "macos_feature"
 validate_type: "simple"
 # Only support metrics/traces/logs
 data_type: "metrics"
