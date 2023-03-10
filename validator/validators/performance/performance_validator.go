@@ -48,7 +48,7 @@ func (s *PerformanceValidator) GenerateLoad() (err error) {
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
 		dataType              = s.vConfig.GetDataType()
 		dataRate              = s.vConfig.GetDataRate()
-		receiver              = s.vConfig.GetPluginsConfig()
+		receiver              = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 	)
 	switch dataType {
 	case "logs":
@@ -94,7 +94,7 @@ func (s *PerformanceValidator) Cleanup() error {
 func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformation) error {
 	var (
 		dataType               = s.vConfig.GetDataType()
-		receiver               = s.vConfig.GetPluginsConfig()
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
 		agentCollectionPeriod  = fmt.Sprint(s.vConfig.GetAgentCollectionPeriod().Seconds())
 		// The secondary global index that is used for checking if there are item has already been exist in the table
@@ -129,7 +129,7 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 }
 func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []types.MetricDataResult) (PerformanceInformation, error) {
 	var (
-		receiver               = s.vConfig.GetPluginsConfig()
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
 		dataType               = s.vConfig.GetDataType()
 		dataRate               = fmt.Sprint(s.vConfig.GetDataRate())

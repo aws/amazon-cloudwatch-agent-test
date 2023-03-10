@@ -14,7 +14,7 @@ import (
 )
 
 type ValidateConfig interface {
-	GetPluginsConfig() string
+	GetPluginsConfig() []string
 	GetValidateType() string
 	GetTestCase() string
 	GetDataType() string
@@ -24,10 +24,12 @@ type ValidateConfig interface {
 	GetAgentCollectionPeriod() time.Duration
 	GetMetricNamespace() string
 	GetMetricValidation() []MetricValidation
+	GetLogValidation() []LogValidation
 	GetCommitInformation() (string, int64)
 }
+
 type validatorConfig struct {
-	Receiver string `yaml:"receivers"` // Receivers that agent needs to tests
+	Receivers []string `yaml:"receivers"` // Receivers that agent needs to tests
 
 	TestCase string `yaml:"test_case"` // Test case name
 
@@ -42,6 +44,7 @@ type validatorConfig struct {
 
 	MetricNamespace  string             `yaml:"metric_namespace"`
 	MetricValidation []MetricValidation `yaml:"metric_validation"`
+	LogValidation    []LogValidation    `yaml:"log_validation"`
 
 	CommitHash string `yaml:"commit_hash"`
 	CommitDate string `yaml:"commit_date"`
@@ -50,6 +53,11 @@ type validatorConfig struct {
 type MetricValidation struct {
 	MetricName      string            `yaml:"metric_name"`
 	MetricDimension []MetricDimension `yaml:"metric_dimension"`
+}
+
+type LogValidation struct {
+	LogValue string `yaml:"log_value"`
+	LogLines int    `yaml:"log_lines"`
 }
 
 type MetricDimension struct {
@@ -85,8 +93,8 @@ func (v *validatorConfig) GetValidateType() string {
 }
 
 // GetPluginsConfig returns the agent plugin being used or need to validate (e.g statsd, collectd, cpu)
-func (v *validatorConfig) GetPluginsConfig() string {
-	return v.Receiver
+func (v *validatorConfig) GetPluginsConfig() []string {
+	return v.Receivers
 }
 
 // GetPluginsConfig returns the type needs to validate or send. Only supports metrics, traces, logs
@@ -125,6 +133,11 @@ func (v *validatorConfig) GetMetricNamespace() string {
 // GetMetricValidation returns the metrics need for validation
 func (v *validatorConfig) GetMetricValidation() []MetricValidation {
 	return v.MetricValidation
+}
+
+// GetMetricValidation returns the logs need for validation
+func (v *validatorConfig) GetLogValidation() []LogValidation {
+	return v.LogValidation
 }
 
 func (v *validatorConfig) GetCommitInformation() (string, int64) {

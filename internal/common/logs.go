@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
 	"time"
 
 	"go.uber.org/multierr"
@@ -21,7 +20,6 @@ func StartLogWrite(configFilePath string, duration time.Duration, logPerMinute i
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
 	var (
 		multiErr error
-		wg       sync.WaitGroup
 	)
 
 	logPaths, err := getLogFilePaths(configFilePath)
@@ -30,15 +28,13 @@ func StartLogWrite(configFilePath string, duration time.Duration, logPerMinute i
 	}
 
 	for _, logPath := range logPaths {
-		wg.Add(1)
 		go func(logPath string) {
-			defer wg.Done()
-			err = writeToLogs(logPath, duration, logPerMinute)
-			multiErr = multierr.Append(multiErr, err)
+			if err = writeToLogs(logPath, duration, logPerMinute); err != nil {
+				multiErr = multierr.Append(multiErr, err)
+			}
 		}(logPath)
 	}
 
-	wg.Wait()
 	return multiErr
 }
 
@@ -61,12 +57,8 @@ func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
 		select {
 		case <-ticker.C:
 			for i := 0; i < dataRate; i++ {
-				_, err = f.WriteString(fmt.Sprintln(ticker, " - #", i, " This is a log line."))
-				if err != nil {
-					return err
-				}
+				f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
 			}
-
 		case <-endTimeout:
 			return nil
 		}
