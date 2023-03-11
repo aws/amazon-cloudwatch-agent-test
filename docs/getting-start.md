@@ -16,7 +16,7 @@ If you haven't for the choice of your AWS account, do
 4. For request 1, select All Standard (A, C, D, H, I, M, R, T, Z) instances - new limit 512
 5. For request 2, select All G and VT instances - new limit value 64
 
-![](readme_resources/vCPU-limit-increase.png)
+![](resources/vCPU-limit-increase.png)
 
 ### Notes
 - Integ tests run in parallel and will go over 32 vCPU total limit that is given to you by default. To run everything successfully, your increase limit request needs to be approved.
