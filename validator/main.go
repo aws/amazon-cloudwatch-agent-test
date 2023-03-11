@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators"
@@ -48,12 +49,12 @@ func main() {
 }
 
 func validate(vConfig models.ValidateConfig) error {
-	const maxRetry = 2
 	var err error
-	for i := 0; i < maxRetry; i++ {
+	for i := 0; i < awsservice.StandardRetries; i++ {
 		err = validators.LaunchValidator(vConfig)
 
 		if err == nil {
+			log.Printf("Test case: %s, validate type: %s has been successfully validated", vConfig.GetTestCase(), vConfig.GetValidateType())
 			return nil
 		}
 		time.Sleep(60 * time.Second)
@@ -67,15 +68,16 @@ func validate(vConfig models.ValidateConfig) error {
 
 func prepare(vConfig models.ValidateConfig) error {
 	var (
+		err                 error
 		dataType            = vConfig.GetDataType()
 		numberLogsMonitored = vConfig.GetNumberMonitoredLogs()
 		agentConfigFilePath = vConfig.GetCloudWatchAgentConfigPath()
 	)
 	switch dataType {
 	case "logs":
-		common.GenerateLogConfig(numberLogsMonitored, agentConfigFilePath)
+		err = common.GenerateLogConfig(numberLogsMonitored, agentConfigFilePath)
 	default:
 	}
 
-	return nil
+	return err
 }

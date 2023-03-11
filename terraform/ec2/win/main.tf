@@ -26,18 +26,6 @@ locals {
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
 }
 
-data "template_file" "windows-userdata" {
-  template = <<EOF
-<powershell>
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-choco install git --confirm
-choco install go --confirm
-msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
-[Environment]::SetEnvironmentVariable("PATH", "C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\Go\bin;C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0\", [System.EnvironmentVariableTarget]::Machine)
-</powershell>
-EOF
-}
 
 #####################################################################
 # Generate EC2 Instance and execute test commands
@@ -51,7 +39,33 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
   get_password_data           = true
-  user_data                   = data.template_file.windows-userdata.rendered 
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
+
+  user_data = <<EOF
+<powershell>
+winrm quickconfig -q
+winrm set winrm/config/winrs '@{MaxShellsPerUser="100"}'
+winrm set winrm/config/winrs '@{MaxConcurrentUsers="30"}'
+winrm set winrm/config/winrs '@{MaxProcessesPerShell="100"}'
+winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="1024"}'
+winrm set winrm/config '@{MaxTimeoutms="1800000"}'
+winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+winrm set winrm/config/service/auth '@{Basic="true"}'
+netsh advfirewall firewall add rule name="WinRM 5985" protocol=TCP dir=in localport=5985 action=allow
+netsh advfirewall firewall add rule name="WinRM 5986" protocol=TCP dir=in localport=5986 action=allow
+net stop winrm
+sc.exe config winrm start=auto
+net start winrm
+Set-NetFirewallProfile -Profile Public -Enabled False
+Write-Verbose -Verbose "Listing the WinRM listeners:"
+Write-Verbose -Verbose "Querying WinRM listeners by running command: winrm enumerate winrm/config/listener"
+winrm enumerate winrm/config/listener
+</powershell>
+EOF
+
 
   tags = {
     Name = "cwagent-integ-test-ec2-windows-${module.common.testing_id}"
@@ -60,26 +74,29 @@ resource "aws_instance" "cwagent" {
 
 resource "null_resource" "integration_test" {
   depends_on = [aws_instance.cwagent]
-  
-  connection {
-      type            = "winrm"
-      user            = "Administrator"
-      password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-      host            = aws_instance.cwagent.public_dns
-      target_platform = "windows"
-    }
 
-  # Install software
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+    timeout  = "15m"
+  }
+
+  # Install agent binaries
   provisioner "remote-exec" {
-    inline = [                                               
-      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
-      "set AWS_REGION=${var.region}",
+    inline = [
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
-      "echo clone and install agent",
+    ]
+  }
+
+  #Prepare the requirement before validation and validate the metrics/logs/traces
+  provisioner "remote-exec" {
+    inline = [
+      "set AWS_REGION=${var.region}",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
-      "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
       "go test ${var.test_dir} -p 1 -timeout 30m -v"
     ]
@@ -88,8 +105,6 @@ resource "null_resource" "integration_test" {
 
 data "aws_ami" "latest" {
   most_recent = true
-  // @Todo: Add back when nvidia_gpu pipeline has been able to produced the AMI
-  #owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"

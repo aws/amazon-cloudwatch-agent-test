@@ -36,6 +36,10 @@ resource "aws_instance" "integration-test" {
   key_name               = local.ssh_key_name
   iam_instance_profile   = data.aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids = [data.aws_security_group.ec2_security_group.id]
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
   provisioner "remote-exec" {
     inline = [
       "cloud-init status --wait",
@@ -68,7 +72,6 @@ resource "aws_instance" "integration-test" {
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"

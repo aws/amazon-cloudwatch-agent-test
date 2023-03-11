@@ -16,7 +16,7 @@ import (
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
-func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRate int) error {
+func StartLogWrite(configFilePath string, duration time.Duration, logLinesPerMinute int) error {
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
 	var multiErr error
 
@@ -27,8 +27,11 @@ func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRa
 
 	for _, logPath := range logPaths {
 		go func(logPath string) {
-			err = writeToLogs(logPath, agentRunDuration, dataRate)
-			multiErr = multierr.Append(multiErr, err)
+			err = writeToLogs(logPath, duration, logLinesPerMinute)
+			if err != nil {
+				multiErr = multierr.Append(multiErr, err)
+			}
+
 		}(logPath)
 	}
 
@@ -37,7 +40,7 @@ func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRa
 
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
 // for the specified duration
-func writeToLogs(filePath string, durationMinute time.Duration, dataRate int) error {
+func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -47,17 +50,14 @@ func writeToLogs(filePath string, durationMinute time.Duration, dataRate int) er
 
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
-	endTimeout := time.After(durationMinute)
+	endTimeout := time.After(duration)
 
 	//loop until the test duration is reached
 	for {
 		select {
 		case <-ticker.C:
 			for i := 0; i < dataRate; i++ {
-				_, err = f.WriteString(fmt.Sprintln(ticker, " - #", i, " This is a log line."))
-				if err != nil {
-					return err
-				}
+				f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
 			}
 
 		case <-endTimeout:
@@ -97,10 +97,6 @@ func getLogFilePaths(configPath string) ([]string, error) {
 * returns the path of the config generated and a list of log stream names
  */
 func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
-	var (
-		cfgFileData map[string]interface{}
-	)
-
 	type LogInfo struct {
 		FilePath      string `json:"file_path"`
 		LogGroupName  string `json:"log_group_name"`
@@ -108,8 +104,9 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 		Timezone      string `json:"timezone"`
 	}
 
-	//use default config (for metrics, structure, etc)
-	file, err := os.Open(filePath)
+	var cfgFileData map[string]interface{}
+	// For metrics and traces, we will keep the default config while log will be appended dynamically
+	file, err := os.OpenFile(filePath, os.O_RDWR, 0644)
 	if err != nil {
 		return err
 	}
@@ -128,12 +125,10 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	var logFiles []LogInfo
 
 	for i := 0; i < numberMonitoredLogs; i++ {
-		logStream := fmt.Sprintf("{instance_id}/tmp%d", i+1)
-
 		logFiles = append(logFiles, LogInfo{
 			FilePath:      fmt.Sprintf("/tmp/test%d.log", i+1),
 			LogGroupName:  "{instance_id}",
-			LogStreamName: logStream,
+			LogStreamName: fmt.Sprintf("{instance_id}/tmp%d", i+1),
 			Timezone:      "UTC",
 		})
 	}
@@ -147,7 +142,10 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 		return err
 	}
 
-	file.Write(finalConfig)
+	_, err = file.WriteAt(finalConfig, 0)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

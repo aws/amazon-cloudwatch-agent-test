@@ -34,13 +34,15 @@ locals {
   validator_config        = "parameters.yml"
   final_validator_config  = "final_parameters.yml"
   cloudwatch_agent_config = "agent_config.json"
+  instance_temp_directory = "/tmp"
 }
 
 resource "local_file" "update-validation-config" {
-  content = replace(replace(file("${var.test_dir}/${local.validator_config}"),
+  content = replace(replace(replace(replace(file("${var.test_dir}/${local.validator_config}"),
     "<values_per_minute>", var.values_per_minute),
-    "<cloudwatch_agent_config>", local.cloudwatch_agent_config
-  )
+    "<commit_hash>", var.cwa_github_sha),
+    "<commit_date>", var.cwa_github_sha_date),
+  "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
 
   filename = "${var.test_dir}/${local.final_validator_config}"
 
@@ -56,6 +58,10 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
 
   tags = {
     Name = "cwagent-performance-${var.test_name}-${module.common.testing_id}"
@@ -73,40 +79,34 @@ resource "null_resource" "integration_test" {
   # Prepare Integration Test
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
-    destination = "/tmp/${local.final_validator_config}"
+    destination = "${local.instance_temp_directory}/${local.final_validator_config}"
 
 
   }
 
   provisioner "file" {
     source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
-    destination = "/tmp/${local.cloudwatch_agent_config}"
+    destination = "${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
   }
 
+  # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "echo sha ${var.cwa_github_sha}",
       "cloud-init status --wait",
-      "echo clone and install agent",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd amazon-cloudwatch-agent-test",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name} .",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      var.install_agent,
-      "go run ./validator/main.go --validator-config=/tmp/${local.final_validator_config} --preparation-mode=true",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/amazon-cloudwatch-agent.rpm .",
+      "sudo rpm -U ./amazon-cloudwatch-agent.rpm"
     ]
   }
 
-
-  #Run sanity check and integration test
+  #Prepare the requirement before validation and validate the metrics/logs/traces
   provisioner "remote-exec" {
     inline = [
       "export AWS_REGION=${var.region}",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      "echo run integration test",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd ~/amazon-cloudwatch-agent-test",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/tmp/${local.cloudwatch_agent_config}",
-      "go run ./validator/main.go --validator-config=/tmp/${local.final_validator_config}",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
 
@@ -115,7 +115,6 @@ resource "null_resource" "integration_test" {
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"

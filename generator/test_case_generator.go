@@ -42,9 +42,19 @@ var testTypeToTestDirMap = map[string][]string{
 		"./test/collection_interval",
 		"./test/metric_dimension",
 	},
-	"ec2_performance": {},
+	/*
+		You can only place 1 mac instance on a dedicate host a single time.
+		Therefore, limit down the scope for testing in Mac since EC2 can be done with Linux
+		and Mac under the hood share similar plugins with Linux
+	*/
+	"ec2_mac": {},
+	"ec2_performance": {
+		"../../test/performance/logs",
+		"../../test/performance/statsd",
+	},
 	"ec2_stress": {
-		"../../test/statsd_stress",
+		"../../test/stress/logs",
+		"../../test/stress/statsd",
 	},
 	"ecs_fargate": {
 		"./test/ecs/ecs_metadata",

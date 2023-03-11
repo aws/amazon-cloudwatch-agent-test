@@ -6,6 +6,7 @@
 package metric
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -21,10 +22,19 @@ import (
 type MetricValueFetcher struct {
 }
 
+func logDimensions(dims []types.Dimension) {
+	log.Printf("\tDimensions:\n")
+	for _, d := range dims {
+		if d.Name != nil && d.Value != nil {
+			log.Printf("\t\tDim(name=%q, val=%q\n", *d.Name, *d.Value)
+		}
+	}
+}
+
 func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics, metricQueryPeriod int32) (MetricValues, error) {
 	dimensions := metricSpecificDimensions
-	log.Printf("Metric query input dimensions : %s", fmt.Sprint(dimensions))
-
+	log.Println("Metric query input dimensions")
+	logDimensions(dimensions)
 	metricToFetch := types.Metric{
 		Namespace:  aws.String(namespace),
 		MetricName: aws.String(metricName),
@@ -50,14 +60,10 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 		MetricDataQueries: metricDataQueries,
 	}
 
-	log.Printf("Metric data input is : %s", fmt.Sprint(getMetricDataInput))
+	log.Printf("Metric data input: namespace %v, name %v, stat %v, period %v",
+		namespace, metricName, stat, metricQueryPeriod)
 
-	cwmClient, clientContext, err := awsservice.GetCloudWatchMetricsClient()
-	if err != nil {
-		return nil, fmt.Errorf("Error occurred while creating CloudWatch client: %v", err.Error())
-	}
-
-	output, err := cwmClient.GetMetricData(*clientContext, &getMetricDataInput)
+	output, err := awsservice.CwmClient.GetMetricData(context.Background(), &getMetricDataInput)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting metric data %v", err)
 	}

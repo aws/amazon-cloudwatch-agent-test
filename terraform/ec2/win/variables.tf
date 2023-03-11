@@ -8,12 +8,12 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "g4dn.xlarge"
+  default = "t3a.medium"
 }
 
 variable "ami" {
   type    = string
-  default = "Windows_Server-2019-English-Deep-Learning*"
+  default = "Windows_Server-2022-English-Full-Base*"
 }
 
 variable "cwa_github_sha" {
