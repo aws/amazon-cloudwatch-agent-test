@@ -112,6 +112,7 @@ resource "null_resource" "integration_test" {
     target_platform = "windows"
     timeout         = "15m"
   }
+
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
     destination = "${local.instance_temp_directory}/${local.final_validator_config}"
@@ -136,9 +137,9 @@ resource "null_resource" "integration_test" {
       "set AWS_REGION=${var.region}",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd ~/amazon-cloudwatch-agent-test",
-      "~/homebrew/bin/go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "~/homebrew/bin/go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
+      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
 }
