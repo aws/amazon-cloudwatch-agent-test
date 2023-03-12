@@ -110,7 +110,7 @@ resource "null_resource" "integration_test" {
     private_key     = local.private_key_content
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
-    timeout         = "15m"
+    timeout         = "6m"
   }
 
   provisioner "file" {
@@ -127,7 +127,7 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
-      "sudo installer -pkg ./amazon-cloudwatch-agent.pkg -target /",
+      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
     ]
   }
 

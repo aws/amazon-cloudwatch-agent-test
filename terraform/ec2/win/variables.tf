@@ -48,5 +48,5 @@ variable "s3_bucket" {
 
 variable "test_dir" {
   type    = string
-  default = ""
+  default = "../../../test/performance/logs"
 }
