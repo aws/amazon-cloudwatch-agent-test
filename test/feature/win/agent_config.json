@@ -1,0 +1,84 @@
+{
+    "agent": {
+        "debug": true
+    },
+    "metrics": {
+      "namespace": "CloudWatchAgentWinFeature",
+      "metrics_collected": {
+        "statsd": {
+          "service_address": ":8125",
+          "metrics_collection_interval": 60
+        },
+        "LogicalDisk": {
+            "measurement": [
+              "% Free Space"
+            ],
+            "metrics_collection_interval": 1,
+            "resources": [
+              "*"
+            ]
+        },
+        "Memory": {
+            "measurement": [
+              "% Committed Bytes In Use"
+            ],
+            "metrics_collection_interval": 1
+        },
+        "Processor": {
+            "measurement": [
+              "% User Time"
+            ],
+            "metrics_collection_interval": 1,
+            "resources": [
+              "*"
+            ]
+        },
+        "procstat": [
+            {
+              "exe": "amazon-cloudwatch-agent",
+              "measurement": [
+                "cpu_usage",
+                "memory_rss"
+              ],
+              "metrics_collection_interval": 1
+            }
+        ]
+        },
+      "append_dimensions": {
+        "InstanceId": "${aws:InstanceId}"
+      },
+      "force_flush_interval": 60
+    },
+    "logs": {
+      "logs_collected": {
+        "windows_events": {
+            "collect_list": [
+              {
+                "event_name": "System",
+                "event_levels": [
+                  "INFORMATION",
+                  "ERROR"
+                ],
+                "log_group_name": "{instance_id}",
+                "log_stream_name": "{instance_id}"
+              }
+            ]
+          }
+        },
+        "files": {
+        "collect_list": [
+          {
+          "file_path": "/tmp/test1.log",
+          "log_group_name": "{instance_id}",
+          "log_stream_name": "{instance_id}",
+          "timezone": "UTC"
+          }
+        ]
+        }
+      },
+      "metrics_collected": {
+        "emf": { }
+      },
+      "force_flush_interval": 5
+    }
+}

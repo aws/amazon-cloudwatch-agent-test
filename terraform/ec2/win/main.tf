@@ -10,20 +10,19 @@ module "common" {
 #####################################################################
 
 resource "tls_private_key" "ssh_key" {
-  count     = var.ssh_key_name == "" ? 1 : 0
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
 resource "aws_key_pair" "aws_ssh_key" {
-  count      = var.ssh_key_name == "" ? 1 : 0
   key_name   = "ec2-key-pair-${module.common.testing_id}"
-  public_key = tls_private_key.ssh_key[0].public_key_openssh
+  public_key = tls_private_key.ssh_key.public_key_openssh
 }
 
 locals {
-  ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
-  private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  ssh_key_name        = aws_key_pair.aws_ssh_key.key_name
+  public_key_content  = tls_private_key.ssh_key.public_key_openssh
+  private_key_content = tls_private_key.ssh_key.private_key_pem
 }
 
 #####################################################################
@@ -59,7 +58,6 @@ resource "aws_instance" "cwagent" {
 # Install SSH
 Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
 
-# OPTIONAL but recommended:
 Set-Service -Name sshd -StartupType 'Automatic'
 
 # Start the sshd service
@@ -77,7 +75,7 @@ if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyCon
 New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force;
 
 # Get the public key 
-$authorized_key = "${trimspace(tls_private_key.ssh_key[0].public_key_openssh)}"
+$authorized_key = "${trimspace(local.public_key_content)}"
 New-Item -Force -ItemType Directory -Path $env:USERPROFILE\.ssh; Add-Content -Force -Path $env:USERPROFILE\.ssh\authorized_keys -Value $authorized_key
 
 # Set the config to allow the pubkey auth
@@ -110,7 +108,7 @@ resource "null_resource" "integration_test" {
     private_key     = local.private_key_content
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
-    timeout         = "6m"
+    timeout         = "15m"
   }
 
   provisioner "file" {

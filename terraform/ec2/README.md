@@ -385,7 +385,6 @@ terraform apply --auto-approve \
          -var="arc=${what arc to use ex amd64}" \
          -var="binary_name=${binary to install ex amazon-cloudwatch-agent.deb}" \
          -var="local_stack_host_name=${dns value you got from the local stack terraform apply step}" \
-         -var="test_name=${what you want to call the ec2 instance name}" \
          -var="ssh_key_value=${your key that you downloaded}"
 ```
 
@@ -424,7 +423,6 @@ terraform apply --auto-approve \
          -var="github_sha=${Commit sha you want to use. Default: a029f69cd3b4164cb601cfa20f10b717c5f85957}" \
          -var="s3_bucket=${Name of your s3 bucket created}" \
          -var="ami=${AMI for test you want to use. Default: cloudwatch-agent-integration-test-win-2022*}" \
-         -var="test_name=${What you want to call the ec2 instance name. Default: windows-2022}" \
          -var="ssh_key_name=${Name of key pair your created}" \
          -var="ssh_key_value=${Your key that you downloaded}"
 ```
@@ -435,7 +433,6 @@ For these parameters, you are **not required to input them**:
 * ssh_key_name
 * ssh_key_value
 * ami
-* test_name
 
 After running the tests, you should see the following results as a success integration test:
 ```

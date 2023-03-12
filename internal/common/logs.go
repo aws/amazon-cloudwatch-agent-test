@@ -54,7 +54,10 @@ func writeToLogs(filePath string, duration time.Duration, logLinesPerMinute int)
 		select {
 		case <-ticker.C:
 			for i := 0; i < logLinesPerMinute; i++ {
-				f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
+				_, err := f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
+				if err != nil {
+					log.Printf("Error in writing a string to the file %s: %v ", filePath, err)
+				}
 			}
 		case <-endTimeout:
 			return nil
