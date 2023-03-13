@@ -13,7 +13,7 @@ variable "ec2_instance_type" {
 
 variable "ami" {
   type    = string
-  default = "cloudwatch-agent-integration-test-win-2012*"
+  default = "cloudwatch-agent-integration-test-win-2019*"
 }
 
 variable "cwa_github_sha" {
@@ -33,10 +33,20 @@ variable "github_test_repo_branch" {
 
 variable "s3_bucket" {
   type    = string
-  default = ""
+  default = "integration-test-cwagent"
 }
 
 variable "test_dir" {
   type    = string
   default = "../../../test/feature/win"
+}
+
+variable "ssh_key_name" {
+  type    = string
+  default = ""
+}
+
+variable "ssh_key_value" {
+  type    = string
+  default = ""
 }

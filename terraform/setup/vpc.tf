@@ -1,13 +1,27 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-data "aws_vpc" "default" {
-  default = true
+# create vpc with nat gateway so that we can use it to launch awsvpc ecs task in both ecs and fargate
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+
+  name = module.common.vpc
+  cidr = "10.0.0.0/16"
+
+  azs             = ["${var.region}a", "${var.region}b", "${var.region}c"]
+  private_subnets = ["10.0.0.0/19", "10.0.32.0/19", "10.0.64.0/19"]
+  public_subnets  = ["10.0.128.0/19", "10.0.160.0/19", "10.0.192.0/19"]
+
+  enable_nat_gateway = true
+  enable_vpn_gateway = true
+
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 }
 
 resource "aws_security_group" "ec2_security_group" {
   name   = module.common.vpc_security_group
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = module.vpc.vpc_id
 
   egress {
     from_port   = 443
