@@ -50,6 +50,22 @@ resource "local_file" "update-validation-config" {
   filename = "${var.test_dir}/${local.final_validator_config}"
 }
 
+// Build and uploading the validator to spending less time in 
+// and avoid memory issue in allocating memory with Windows
+resource "null_resource" "build-validator" {
+  provisioner "local-exec" {
+    command = "cd ../../.. && make validator-build"
+  }
+}
+
+resource "aws_s3_object" "upload-validator" {
+  count      = var.s3_bucket != "" ? 1 : 0
+  bucket     = var.s3_bucket
+  key        = "integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe"
+  source     = "../../../build/validator/windows/${var.arc}/validator.exe"
+  depends_on = [null_resource.build-validator]
+}
+
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
@@ -70,21 +86,19 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-integ-test-ec2-windows-${module.common.testing_id}"
+    Name = "cwagent-integ-test-ec2-windows-${var.test_name}-${module.common.testing_id}"
   }
 }
 
 resource "null_resource" "integration_test" {
-  depends_on = [aws_instance.cwagent]
+  depends_on = [aws_instance.cwagent, aws_s3_object.upload-validator]
 
   # Install software
   connection {
-    type            = "ssh"
-    user            = "Administrator"
-    private_key     = local.private_key_content
-    password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host            = aws_instance.cwagent.public_ip
-    target_platform = "windows"
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
   }
 
   provisioner "file" {
@@ -101,6 +115,7 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
     ]
   }
@@ -108,11 +123,9 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "validator.exe --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
       "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}\"",
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "validator.exe --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
 }

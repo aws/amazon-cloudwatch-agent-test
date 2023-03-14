@@ -51,7 +51,7 @@
     },
     "logs": {
       "logs_collected": {
-        "windows_events": {
+          "windows_events": {
             "collect_list": [
               {
                 "event_name": "System",
@@ -63,18 +63,18 @@
                 "log_stream_name": "{instance_id}"
               }
             ]
+          },
+        
+          "files": {
+            "collect_list": [
+              {
+                "file_path": "/tmp/test1.log",
+                "log_group_name": "{instance_id}",
+                "log_stream_name": "{instance_id}",
+                "timezone": "UTC"
+              }
+            ]
           }
-        },
-        "files": {
-        "collect_list": [
-          {
-          "file_path": "/tmp/test1.log",
-          "log_group_name": "{instance_id}",
-          "log_stream_name": "{instance_id}",
-          "timezone": "UTC"
-          }
-        ]
-        }
       },
       "metrics_collected": {
         "emf": { }

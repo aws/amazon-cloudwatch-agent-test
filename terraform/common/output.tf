@@ -25,10 +25,6 @@ output "cwagent_image_tag" {
   value = var.cwagent_image_tag
 }
 
-output "vpc" {
-  value = var.vpc
-}
-
 output "vpc_security_group" {
   value = var.vpc_security_group
 }

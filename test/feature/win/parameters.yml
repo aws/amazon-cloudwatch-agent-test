@@ -8,6 +8,8 @@ validate_type: "feature"
 # we only make this data_type as a placeholder
 data_type: "logs"
 
+# Number of logs being written
+number_monitored_logs: 1
 # Number of metrics to be sent or number of log lines being written  each minute
 values_per_minute: "2"
 # Number of seconds the agent should run and collect the metrics. In this case, 1 minutes
