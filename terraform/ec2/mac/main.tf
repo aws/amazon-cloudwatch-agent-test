@@ -24,8 +24,6 @@ resource "aws_key_pair" "aws_ssh_key" {
 locals {
   ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
-  // Canary downloads latest binary. Integration test downloads binary connect to git hash.
-  binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
 }
 
 #####################################################################
@@ -38,6 +36,9 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
+  tenancy                     = "host"
+
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
@@ -54,33 +55,24 @@ resource "null_resource" "integration_test" {
     user        = var.user
     private_key = local.private_key_content
     host        = aws_instance.cwagent.public_ip
+    timeout     = "10m"
   }
-
-  # Prepare Integration Test
   provisioner "remote-exec" {
     inline = [
-      "echo sha ${var.cwa_github_sha}",
-      "cloud-init status --wait",
-      "echo clone and install agent",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd amazon-cloudwatch-agent-test",
-      "aws s3 cp s3://${local.binary_uri} .",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      var.install_agent,
+      // Install AWS CLI
+      "sudo softwareupdate --install-rosetta --agree-to-license",
+      "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
+      "sudo installer -pkg AWSCLIV2.pkg -target /",
+      #Install Golang
+      "mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew",
+      "homebrew/bin/brew install go",
     ]
   }
-
-  #Run sanity check and integration test
+  # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "echo prepare environment",
-      "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
-      "export AWS_REGION=${var.region}",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      "echo run integration test",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"
+      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${var.arc}/amazon-cloudwatch-agent.pkg .",
+      "sudo installer -pkg ./amazon-cloudwatch-agent.pkg -target /",
     ]
   }
 
@@ -95,5 +87,10 @@ data "aws_ami" "latest" {
   filter {
     name   = "name"
     values = [var.ami]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [var.arc == "arm64" ? "arm64_mac" : "x86_64_mac"]
   }
 }
