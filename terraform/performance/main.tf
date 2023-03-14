@@ -88,8 +88,6 @@ resource "null_resource" "integration_test" {
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
     destination = "${local.instance_temp_directory}/${local.final_validator_config}"
-
-
   }
 
   provisioner "file" {

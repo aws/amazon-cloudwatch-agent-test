@@ -14,26 +14,13 @@ data "aws_iam_role" "cwagent_iam_role" {
 }
 
 data "aws_vpc" "vpc" {
-  filter {
-    name   = "tag:Name"
-    values = [module.common.vpc]
-  }
+  default = true
 }
 
-# return public subnets
 data "aws_subnets" "public_subnet_ids" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.vpc.id]
-  }
-
-  filter {
-    name = "tag:Name"
-    values = [
-      "${module.common.vpc}-public-${var.region}a",
-      "${module.common.vpc}-public-${var.region}b",
-      "${module.common.vpc}-public-${var.region}c",
-    ]
   }
 }
 

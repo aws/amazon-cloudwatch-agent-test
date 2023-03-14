@@ -17,7 +17,3 @@ variable "vpc_security_group" {
   default = "vpc_security_group"
 }
 
-variable "vpc" {
-  type    = string
-  default = "vpc"
-}

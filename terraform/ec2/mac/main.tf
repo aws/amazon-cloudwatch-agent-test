@@ -52,7 +52,7 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-integ-test-ec2-mac-${module.common.testing_id}"
+    Name = "cwagent-integ-test-ec2-mac-${var.test_name}-${module.common.testing_id}"
   }
 }
 
