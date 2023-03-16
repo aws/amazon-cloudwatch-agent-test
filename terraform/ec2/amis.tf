@@ -6,6 +6,7 @@ variable "ami_family" {
     debian = {
       login_user               = "ubuntu"
       install_package          = "amazon-cloudwatch-agent.deb"
+      temp_folder              = "/tmp"
       agent_config_destination = "/tmp/agent_config.json"
       download_command_pattern = "aws s3 cp %s amazon-cloudwatch-agent.deb"
       install_command          = "while sudo fuser /var/cache/apt/archives/lock /var/lib/apt/lists/lock /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend; do echo 'Waiting for dpkg lock...' && sleep 1; done; echo 'No dpkg lock and install agent.' && sudo dpkg -i amazon-cloudwatch-agent.deb"
@@ -18,6 +19,7 @@ variable "ami_family" {
     linux = {
       login_user               = "ec2-user"
       install_package          = "amazon-cloudwatch-agent.rpm"
+      temp_folder              = "/tmp"
       agent_config_destination = "/tmp/agent_config.json"
       download_command_pattern = "aws s3 cp %s amazon-cloudwatch-agent.rpm"
       install_command          = "sudo rpm -Uvh amazon-cloudwatch-agent.rpm"
@@ -30,21 +32,19 @@ variable "ami_family" {
     windows = {
       login_user               = "Administrator"
       install_package          = "amazon-cloudwatch-agent.msi"
+      temp_folder              = "C:\\"
       agent_config_destination = "C:\\agent_config.json"
       download_command_pattern = "powershell -command \"Invoke-WebRequest -Uri %s -OutFile C:\\amazon-cloudwatch-agent.msi\""
       install_command          = "msiexec /i C:\\amazon-cloudwatch-agent.msi"
       start_command            = "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c C:\\agent_config.json\""
       status_command           = "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a status\""
       connection_type          = "ssh"
-      user_data                = <<EOF
-<powershell>
-</powershell>
-EOF
       wait_cloud_init          = " "
     }
     mac = {
       login_user               = "ec2-user"
-      install_package          = "amazon-cloudwatch-agent.rpm"
+      install_package          = "amazon-cloudwatch-agent.pkg"
+      temp_folder              = "/tmp"
       agent_config_destination = "/tmp/agent_config.json"
       download_command_pattern = "/usr/local/bin/aws s3 cp %s --output ./amazon-cloudwatch-agent.pkg"
       install_command          = "sudo installer -pkg ./amazon-cloudwatch-agent.pkg -target /"

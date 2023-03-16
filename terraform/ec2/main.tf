@@ -5,6 +5,12 @@ module "common" {
   source = "../../common"
 }
 
+module "basic_components" {
+  source = "../basic_components"
+
+  region = var.region
+}
+
 locals {
   selected_ami             = var.family
   ami_family               = var.ami_family[local.selected_ami]
@@ -15,6 +21,38 @@ locals {
   download_command         = format(local.ami_family["download_command_pattern"], "https://${var.package_s3_bucket}.s3.amazonaws.com/${local.selected_ami["os_family"]}/${local.selected_ami["arch"]}/${var.aoc_version}/${local.ami_family["install_package"]}")
   // Canary downloads latest binary. Integration test downloads binary connect to git hash.
   binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
+}
+
+#####################################################################
+# Prepare Parameters Tests
+#####################################################################
+
+locals {
+  validator_config        = "parameters.yml"
+  final_validator_config  = "final_parameters.yml"
+  cloudwatch_agent_config = "agent_config.json"
+}
+
+resource "local_file" "update-validation-config" {
+  content = replace(file("${var.test_dir}/${local.validator_config}"),
+  "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
+
+  filename = "${var.test_dir}/${local.final_validator_config}"
+}
+
+// Build and uploading the validator to spending less time in 
+// and avoid memory issue in allocating memory with Windows
+resource "null_resource" "build-validator" {
+  provisioner "local-exec" {
+    command = "cd ../.. && make validator-build"
+  }
+}
+
+resource "aws_s3_object" "upload-validator" {
+  bucket     = var.s3_bucket
+  key        = "integration-test/validator/${var.cwa_github_sha}/windows_${var.arc}/validator.exe"
+  source     = "../../build/validator/windows_${var.arc}/validator.exe"
+  depends_on = [null_resource.build-validator]
 }
 
 #####################################################################
@@ -32,7 +70,7 @@ resource "aws_efs_mount_target" "mount" {
   count           = local.selected_ami == "" ? 1 : 0
   file_system_id  = aws_efs_file_system.efs.id
   subnet_id       = aws_instance.cwagent.subnet_id
-  security_groups = [data.aws_security_group.ec2_security_group.id]
+  security_groups = [module.basic_components.security_group]
 }
 
 resource "null_resource" "mount_efs" {
@@ -66,9 +104,11 @@ resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = module.basic_components.instance_profile
+  subnet_id                   = module.basic_components.random_subnet_instance_id
+  vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
+  get_password_data           = var.family == "windows" ? true : null
 
   metadata_options {
     http_endpoint = "enabled"
@@ -76,16 +116,18 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-integ-test-ec2-${module.common.testing_id}"
+    Name = "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
   }
 }
 
-resource "null_resource" "integration_test" {
+
+resource "null_resource" "validator" {
   connection {
     type        = local.connection_type
     user        = local.login_user
-    private_key = local.private_key_content
-    host        = aws_instance.cwagent.public_ip
+    private_key = local.connection_type == "ssh" ? local.private_key_content : null
+    password    = local.connection_type == "winrm" ? rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content) : null
+    host        = aws_instance.cwagent.public_dns
   }
 
   # Prepare Integration Test
@@ -97,18 +139,42 @@ resource "null_resource" "integration_test" {
     ]
   }
 
-  #Run sanity check and integration test
+  provisioner "file" {
+    source      = "${var.test_dir}/${local.final_validator_config}"
+    destination = "${local.instance_temp_directory}/${local.final_validator_config}"
+  }
+
+  provisioner "file" {
+    source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
+    destination = "${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
+  }
+
+  # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
-      "export AWS_REGION=${var.region}",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"
+      local.ami_family["wait_cloud_init"],
+      local.download_command,
+      local.ami_family["install_command"],
+    ]
+
+
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows_${var.arc}/validator.exe .",
     ]
   }
 
+  # Run validator 
+  provisioner "remote-exec" {
+    inline = [
+      "set AWS_REGION=${var.region}",
+      "validator.exe --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}\"",
+      "validator.exe --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+    ]
+  }
   depends_on = [
     aws_instance.cwagent,
     null_resource.mount_efs

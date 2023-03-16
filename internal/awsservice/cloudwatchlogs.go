@@ -95,10 +95,6 @@ func DeleteLogStream(logGroupName, logStreamName string) {
 
 // DeleteLogGroup cleans up log group by name
 func DeleteLogGroup(logGroupName string) {
-	// catch ResourceNotFoundException when deleting the log group and log stream, as these
-	// are not useful exceptions to log errors on during cleanup
-	var rnf *types.ResourceNotFoundException
-
 	_, err := CwlClient.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})

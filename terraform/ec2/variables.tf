@@ -46,6 +46,11 @@ variable "s3_bucket" {
   default = ""
 }
 
+variable "test_name" {
+  type    = string
+  default = ""
+}
+
 variable "test_dir" {
   type    = string
   default = ""
@@ -64,11 +69,6 @@ variable "github_test_repo" {
 variable "github_test_repo_branch" {
   type    = string
   default = "main"
-}
-
-variable "cwa_github_sha_date" {
-  type    = string
-  default = ""
 }
 
 variable "is_canary" {
