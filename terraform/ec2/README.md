@@ -198,6 +198,7 @@ Outputs:
         "ecs:RunTask",
         "ecs:StartTask",
         "ecs:StopTask",
+        "ecs:PutClusterCapacityProviders",
         "ecr:GetAuthorizationToken",
         "ecr:DescribeRepositories",
         "ecr:ListImages",
