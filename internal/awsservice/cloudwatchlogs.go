@@ -6,13 +6,13 @@ package awsservice
 import (
 	"context"
 	"errors"
-	"github.com/qri-io/jsonschema"
 	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/qri-io/jsonschema"
 )
 
 // catch ResourceNotFoundException when deleting the log group and log stream, as these
