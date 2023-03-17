@@ -75,12 +75,13 @@ func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 }
 
 func sendEMFMetrics(metricLogGroup, metricNamespace string, metricPerMinute int, duration time.Duration) error {
+	// github.com/prozz/aws-embedded-metrics-golang/emf
 	conn, err := net.DialTimeout("tcp", "127.0.0.1:25888", time.Millisecond*10000)
-	defer conn.Close()
-
 	if err != nil {
 		return err
 	}
+
+	defer conn.Close()
 
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
@@ -90,10 +91,10 @@ func sendEMFMetrics(metricLogGroup, metricNamespace string, metricPerMinute int,
 		select {
 		case <-ticker.C:
 			for t := 0; t < metricPerMinute; t++ {
-				emf.New(emf.WithWriter(metricOutput), emf.WithLogGroup(metricLogGroup)).
+				emf.New(emf.WithWriter(conn), emf.WithLogGroup(metricLogGroup)).
 					Namespace(metricNamespace).
 					DimensionSet(
-						emf.NewDimension("Time", t),
+						emf.NewDimension("Time", fmt.Sprint(t)),
 					).
 					MetricAs("Time", t, emf.Milliseconds).
 					Log()

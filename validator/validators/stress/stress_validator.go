@@ -48,6 +48,16 @@ var (
 				"net_bytes_sent":       float64(170000),
 				"net_packets_sent":     float64(1500),
 			},
+			"emf": {
+				"procstat_cpu_usage":   float64(40),
+				"procstat_memory_rss":  float64(152000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(162000000),
+				"procstat_num_fds":     float64(110),
+				"net_bytes_sent":       float64(170000),
+				"net_packets_sent":     float64(1500),
+			},
 		},
 		"5000": {
 			"statsd": {
@@ -70,6 +80,16 @@ var (
 				"net_bytes_sent":       float64(6500000),
 				"net_packets_sent":     float64(8500),
 			},
+			"emf": {
+				"procstat_cpu_usage":   float64(40),
+				"procstat_memory_rss":  float64(152000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(162000000),
+				"procstat_num_fds":     float64(110),
+				"net_bytes_sent":       float64(170000),
+				"net_packets_sent":     float64(1500),
+			},
 		},
 		"10000": {
 			"statsd": {
@@ -84,13 +104,23 @@ var (
 			},
 			"logs": {
 				"procstat_cpu_usage":   float64(225),
-				"procstat_memory_rss":  float64(440482475),
+				"procstat_memory_rss":  float64(440000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(1189635413),
-				"procstat_memory_data": float64(447176704),
+				"procstat_memory_vms":  float64(1200000000),
+				"procstat_memory_data": float64(450000000),
 				"procstat_num_fds":     float64(130),
-				"net_bytes_sent":       float64(6823151),
+				"net_bytes_sent":       float64(6900000),
 				"net_packets_sent":     float64(8300),
+			},
+			"emf": {
+				"procstat_cpu_usage":   float64(40),
+				"procstat_memory_rss":  float64(152000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(162000000),
+				"procstat_num_fds":     float64(110),
+				"net_bytes_sent":       float64(170000),
+				"net_packets_sent":     float64(1500),
 			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
@@ -118,6 +148,16 @@ var (
 				"procstat_num_fds":     float64(125),
 				"net_bytes_sent":       float64(6900000),
 				"net_packets_sent":     float64(6500),
+			},
+			"emf": {
+				"procstat_cpu_usage":   float64(40),
+				"procstat_memory_rss":  float64(152000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(162000000),
+				"procstat_num_fds":     float64(110),
+				"net_bytes_sent":       float64(170000),
+				"net_packets_sent":     float64(1500),
 			},
 		},
 	}

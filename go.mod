@@ -19,6 +19,7 @@ require (
 	github.com/cactus/go-statsd-client/v5 v5.0.0
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/prozz/aws-embedded-metrics-golang v1.2.0
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/multierr v1.9.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2

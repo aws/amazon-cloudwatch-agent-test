@@ -1,6 +1,6 @@
-receivers: "statsd"
+receivers: "emf"
 
-test_case: "statsd_performance"
+test_case: "emf_performance"
 validate_type: "performance"
 data_type: "metrics"
 
