@@ -11,18 +11,13 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 )
 
-const allowedRetries = 5
-
-// TODO: Refactor Structure and Interface for more easier follow that shares the same session
-var (
-	ctx context.Context
-	cwl *cloudwatchlogs.Client
-)
+// catch ResourceNotFoundException when deleting the log group and log stream, as these
+// are not useful exceptions to log errors on during cleanup
+var rnf *types.ResourceNotFoundException
 
 // DeleteLogGroupAndStream cleans up a log group and stream by name. This gracefully handles
 // ResourceNotFoundException errors from calling the APIs
@@ -33,17 +28,8 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 
 // DeleteLogStream cleans up log stream by name
 func DeleteLogStream(logGroupName, logStreamName string) {
-	cwlClient, clientContext, err := getCloudWatchLogsClient()
-	if err != nil {
-		log.Printf("Error occurred while creating CloudWatch Logs SDK client: %v", err)
-		return // terminate gracefully so this alone doesn't cause integration test failures
-	}
 
-	// catch ResourceNotFoundException when deleting the log group and log stream, as these
-	// are not useful exceptions to log errors on during cleanup
-	var rnf *types.ResourceNotFoundException
-
-	_, err = cwlClient.DeleteLogStream(*clientContext, &cloudwatchlogs.DeleteLogStreamInput{
+	_, err := CwlClient.DeleteLogStream(ctx, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
 	})
@@ -54,17 +40,11 @@ func DeleteLogStream(logGroupName, logStreamName string) {
 
 // DeleteLogGroup cleans up log group by name
 func DeleteLogGroup(logGroupName string) {
-	cwlClient, clientContext, err := getCloudWatchLogsClient()
-	if err != nil {
-		log.Printf("Error occurred while creating CloudWatch Logs SDK client: %v", err)
-		return // terminate gracefully so this alone doesn't cause integration test failures
-	}
-
 	// catch ResourceNotFoundException when deleting the log group and log stream, as these
 	// are not useful exceptions to log errors on during cleanup
 	var rnf *types.ResourceNotFoundException
 
-	_, err = cwlClient.DeleteLogGroup(*clientContext, &cloudwatchlogs.DeleteLogGroupInput{
+	_, err := CwlClient.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
 	if err != nil && !errors.As(err, &rnf) {
@@ -90,11 +70,6 @@ func ValidateLogs(logGroup, logStream string, since, until *time.Time, validator
 func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string, error) {
 	foundLogs := make([]string, 0)
 
-	cwlClient, clientContext, err := getCloudWatchLogsClient()
-	if err != nil {
-		return foundLogs, err
-	}
-
 	// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html
 	// GetLogEvents can return an empty result while still having more log events on a subsequent page,
 	// so rather than expecting all the events to show up in one GetLogEvents API call, we need to paginate.
@@ -116,7 +91,6 @@ func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string
 		params.EndTime = aws.Int64(untilMs)
 	}
 
-	var output *cloudwatchlogs.GetLogEventsOutput
 	var nextToken *string
 	attempts := 0
 
@@ -124,13 +98,12 @@ func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string
 		if nextToken != nil {
 			params.NextToken = nextToken
 		}
-		output, err = cwlClient.GetLogEvents(*clientContext, params)
+		output, err := CwlClient.GetLogEvents(ctx, params)
 
 		attempts += 1
 
 		if err != nil {
-			var rnf *types.ResourceNotFoundException
-			if errors.As(err, &rnf) && attempts <= allowedRetries {
+			if errors.As(err, &rnf) && attempts <= StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(time.Minute)
 				continue
@@ -157,17 +130,11 @@ func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string
 
 // IsLogGroupExists confirms whether the logGroupName exists or not
 func IsLogGroupExists(logGroupName string) bool {
-	cwlClient, clientContext, err := getCloudWatchLogsClient()
-	if err != nil {
-		log.Println("error occurred while creating CWL client", err)
-		return false
-	}
-
 	describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(logGroupName),
 	}
 
-	describeLogGroupOutput, err := cwlClient.DescribeLogGroups(*clientContext, &describeLogGroupInput)
+	describeLogGroupOutput, err := CwlClient.DescribeLogGroups(ctx, &describeLogGroupInput)
 
 	if err != nil {
 		log.Println("error occurred while calling DescribeLogGroups", err)
@@ -175,20 +142,6 @@ func IsLogGroupExists(logGroupName string) bool {
 	}
 
 	return len(describeLogGroupOutput.LogGroups) > 0
-}
-
-// getCloudWatchLogsClient returns a singleton SDK client for interfacing with CloudWatch Logs
-func getCloudWatchLogsClient() (*cloudwatchlogs.Client, *context.Context, error) {
-	if cwl == nil {
-		ctx = context.Background()
-		c, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		cwl = cloudwatchlogs.NewFromConfig(c)
-	}
-	return cwl, &ctx, nil
 }
 
 func MatchEMFLogWithSchema(logEntry string, s *jsonschema.Schema, logValidator func(string) bool) bool {

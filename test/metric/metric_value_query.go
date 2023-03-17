@@ -6,6 +6,7 @@
 package metric
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -59,14 +60,10 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 		MetricDataQueries: metricDataQueries,
 	}
 
-	log.Printf("Metric data input is : %s", fmt.Sprint(getMetricDataInput))
+	log.Printf("Metric data input: namespace %v, name %v, stat %v, period %v",
+		namespace, metricName, stat, metricQueryPeriod)
 
-	cwmClient, clientContext, err := awsservice.GetCloudWatchMetricsClient()
-	if err != nil {
-		return nil, fmt.Errorf("Error occurred while creating CloudWatch client: %v", err.Error())
-	}
-
-	output, err := cwmClient.GetMetricData(*clientContext, &getMetricDataInput)
+	output, err := awsservice.CwmClient.GetMetricData(context.Background(), &getMetricDataInput)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting metric data %v", err)
 	}
