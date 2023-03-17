@@ -48,8 +48,8 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
 
-		exists := awsservice.IsLogGroupExists(logGroupName)
-		if !exists {
+		logGroupFound = awsservice.IsLogGroupExists(logGroupName)
+		if !logGroupFound {
 			log.Printf("Current retry: %v/%v and begin to sleep for 20s \n", currentRetry, RetryTime)
 			time.Sleep(20 * time.Second)
 			continue
