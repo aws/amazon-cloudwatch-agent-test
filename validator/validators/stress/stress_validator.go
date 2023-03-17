@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 type MetricPluginBoundValue map[string]map[string]map[string]float64
@@ -125,6 +126,7 @@ var (
 
 type StressValidator struct {
 	vConfig models.ValidateConfig
+	basic.BasicValidator
 }
 
 var _ models.ValidatorFactory = (*StressValidator)(nil)
@@ -181,19 +183,6 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 	}
 
 	return multiErr
-}
-
-func (s *StressValidator) Cleanup() error {
-	var (
-		dataType      = s.vConfig.GetDataType()
-		ec2InstanceId = awsservice.GetInstanceId()
-	)
-	switch dataType {
-	case "logs":
-		awsservice.DeleteLogGroup(ec2InstanceId)
-	}
-
-	return nil
 }
 
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, startTime, endTime time.Time) error {

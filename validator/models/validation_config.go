@@ -24,6 +24,7 @@ type ValidateConfig interface {
 	GetAgentCollectionPeriod() time.Duration
 	GetMetricNamespace() string
 	GetMetricValidation() []MetricValidation
+	GetLogValidation() []LogValidation
 	GetCommitInformation() (string, int64)
 }
 type validatorConfig struct {
@@ -42,14 +43,22 @@ type validatorConfig struct {
 
 	MetricNamespace  string             `yaml:"metric_namespace"`
 	MetricValidation []MetricValidation `yaml:"metric_validation"`
+	LogValidation    []LogValidation    `yaml:"log_validation"`
 
 	CommitHash string `yaml:"commit_hash"`
 	CommitDate string `yaml:"commit_date"`
 }
 
+type LogValidation struct {
+	LogValue  string `mapstructure:"log_value,omitempty"`
+	LogLines  int    `mapstructure:"log_lines,omitempty"`
+	LogStream string `mapstructure:"log_stream,omitempty"`
+}
+
 type MetricValidation struct {
-	MetricName      string            `yaml:"metric_name"`
-	MetricDimension []MetricDimension `yaml:"metric_dimension"`
+	MetricName      string            `mapstructure:"metric_name,omitempty"`
+	MetricDimension []MetricDimension `mapstructure:"metric_dimension,omitempty"`
+	MetricValue     float64           `mapstructure:"metric_value,omitempty"`
 }
 
 type MetricDimension struct {
@@ -125,6 +134,11 @@ func (v *validatorConfig) GetMetricNamespace() string {
 // GetMetricValidation returns the metrics need for validation
 func (v *validatorConfig) GetMetricValidation() []MetricValidation {
 	return v.MetricValidation
+}
+
+// GetLogValidation returns the logs need for validation
+func (v *validatorConfig) GetLogValidation() []LogValidation {
+	return v.LogValidation
 }
 
 func (v *validatorConfig) GetCommitInformation() (string, int64) {

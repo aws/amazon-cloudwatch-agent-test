@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 const (
@@ -32,6 +33,7 @@ var (
 
 type PerformanceValidator struct {
 	vConfig models.ValidateConfig
+	basic.BasicValidator
 }
 
 var _ models.ValidatorFactory = (*PerformanceValidator)(nil)
@@ -75,19 +77,6 @@ func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (s *PerformanceValidator) Cleanup() error {
-	var (
-		dataType      = s.vConfig.GetDataType()
-		ec2InstanceId = awsservice.GetInstanceId()
-	)
-	switch dataType {
-	case "logs":
-		awsservice.DeleteLogGroup(ec2InstanceId)
-	}
-
 	return nil
 }
 
