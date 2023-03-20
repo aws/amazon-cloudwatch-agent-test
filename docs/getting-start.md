@@ -16,7 +16,7 @@ If you haven't for the choice of your AWS account, do
 4. For request 1, select All Standard (A, C, D, H, I, M, R, T, Z) instances - new limit 512
 5. For request 2, select All G and VT instances - new limit value 64
 
-![](readme_resources/vCPU-limit-increase.png)
+![](resources/vCPU-limit-increase.png)
 
 ### Notes
 - Integ tests run in parallel and will go over 32 vCPU total limit that is given to you by default. To run everything successfully, your increase limit request needs to be approved.
@@ -417,7 +417,7 @@ terraform apply --auto-approve \
          -var="github_sha=${Commit sha you want to use. Default: a029f69cd3b4164cb601cfa20f10b717c5f85957}" \
          -var="s3_bucket=${Name of your s3 bucket created}" \
          -var="ami=${AMI for test you want to use. Default: cloudwatch-agent-integration-test-win-2022*}" \
-         -var="test_name=${What you want to call the ec2 instance name. Default: windows-2022}" \
+         -var="test_name=${What you want to call the ec2 instance name}" \
          -var="ssh_key_name=${Name of key pair your created}" \
          -var="ssh_key_value=${Your key that you downloaded}"
 ```
