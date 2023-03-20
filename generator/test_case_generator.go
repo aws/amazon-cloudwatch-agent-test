@@ -50,6 +50,9 @@ var testTypeToTestDirMap = map[string][]string{
 	"ec2_mac": {
 		"../../../test/feature/mac",
 	},
+	"ec2_windows": {
+		"../../../test/feature/win",
+	},
 	"ec2_performance": {
 		"../../test/performance/logs",
 		"../../test/performance/statsd",

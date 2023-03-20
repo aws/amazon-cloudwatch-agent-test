@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
 	"time"
 
 	"go.uber.org/multierr"
@@ -17,12 +16,8 @@ import (
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
-func StartLogWrite(configFilePath string, duration time.Duration, logPerMinute int) error {
-	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
-	var (
-		multiErr error
-		wg       sync.WaitGroup
-	)
+func StartLogWrite(configFilePath string, duration time.Duration, logLinesPerMinute int) error {
+	var multiErr error
 
 	logPaths, err := getLogFilePaths(configFilePath)
 	if err != nil {
@@ -30,21 +25,19 @@ func StartLogWrite(configFilePath string, duration time.Duration, logPerMinute i
 	}
 
 	for _, logPath := range logPaths {
-		wg.Add(1)
 		go func(logPath string) {
-			defer wg.Done()
-			err = writeToLogs(logPath, duration, logPerMinute)
-			multiErr = multierr.Append(multiErr, err)
+			if err := writeToLogs(logPath, duration, logLinesPerMinute); err != nil {
+				multiErr = multierr.Append(multiErr, err)
+			}
 		}(logPath)
 	}
 
-	wg.Wait()
 	return multiErr
 }
 
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
 // for the specified duration
-func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
+func writeToLogs(filePath string, duration time.Duration, logLinesPerMinute int) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -60,13 +53,12 @@ func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
 	for {
 		select {
 		case <-ticker.C:
-			for i := 0; i < dataRate; i++ {
-				_, err = f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
+			for i := 0; i < logLinesPerMinute; i++ {
+				_, err := f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
 				if err != nil {
-					return err
+					log.Printf("Error in writing a string to the file %s: %v ", filePath, err)
 				}
 			}
-
 		case <-endTimeout:
 			return nil
 		}

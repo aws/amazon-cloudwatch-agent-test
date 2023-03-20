@@ -5,6 +5,12 @@ module "common" {
   source = "../../common"
 }
 
+module "basic_components" {
+  source = "../../basic_components"
+
+  region = var.region
+}
+
 #####################################################################
 # Generate EC2 Key Pair for log in access to EC2
 #####################################################################
@@ -44,6 +50,22 @@ resource "local_file" "update-validation-config" {
   filename = "${var.test_dir}/${local.final_validator_config}"
 }
 
+// Build and uploading the validator to spending less time in 
+// and avoid memory issue in allocating memory 
+resource "null_resource" "build-validator" {
+  provisioner "local-exec" {
+    command = "cd ../../.. && make validator-build"
+  }
+}
+
+resource "aws_s3_object" "upload-validator" {
+  count      = var.s3_bucket != "" ? 1 : 0
+  bucket     = var.s3_bucket
+  key        = "integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator"
+  source     = "../../../build/validator/darwin/${var.arc}/validator"
+  depends_on = [null_resource.build-validator]
+}
+
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
@@ -51,8 +73,9 @@ resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = module.basic_components.instance_profile
+  subnet_id                   = module.basic_components.random_subnet_instance_id
+  vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
   tenancy                     = "host"
 
@@ -62,11 +85,13 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
+    Name = "cwagent-integ-test-ec2-mac-${var.test_name}-${module.common.testing_id}"
   }
 }
 
 resource "null_resource" "integration_test" {
+  depends_on = [aws_instance.cwagent, aws_s3_object.upload-validator]
+
   connection {
     type        = "ssh"
     user        = var.user
@@ -87,7 +112,7 @@ resource "null_resource" "integration_test" {
 
   provisioner "remote-exec" {
     inline = [
-      #Install AWS CLI
+      # Install AWS CLI
       "sudo softwareupdate --install-rosetta --agree-to-license",
       "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
       "sudo installer -pkg AWSCLIV2.pkg -target /",
@@ -100,7 +125,8 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${var.arc}/amazon-cloudwatch-agent.pkg .",
-      "sudo installer -pkg ./amazon-cloudwatch-agent.pkg -target /",
+      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator .",
+      "sudo installer -pkg amazon-cloudwatch-agent.pkg -target /",
     ]
   }
 
@@ -108,17 +134,12 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "export AWS_REGION=${var.region}",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "~/homebrew/bin/go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "~/homebrew/bin/go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
 
-  depends_on = [
-    aws_instance.cwagent,
-  ]
 }
 
 data "aws_ami" "latest" {
