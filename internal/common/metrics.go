@@ -8,27 +8,17 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"sync"
 	"time"
 
 	"collectd.org/api"
 	"collectd.org/exec"
 	"collectd.org/network"
 	"github.com/cactus/go-statsd-client/v5/statsd"
-	"go.uber.org/multierr"
 )
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
-func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinute int) error {
-	var (
-		err      error
-		multiErr error
-		wg       sync.WaitGroup
-	)
-
-	wg.Add(1)
+func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinute int) (err error) {
 	go func() {
-		defer wg.Done()
 		switch receiver {
 		case "statsd":
 			err = sendStatsdMetrics(metricPerMinute, duration)
@@ -37,11 +27,9 @@ func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinut
 		default:
 		}
 
-		multiErr = multierr.Append(multiErr, err)
 	}()
 
-	wg.Wait()
-	return multiErr
+	return err
 }
 
 func sendCollectDMetrics(metricPerMinute int, duration time.Duration) error {
@@ -122,7 +110,6 @@ func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 		case <-ticker.C:
 			for t := 0; t < metricPerMinute; t++ {
 				client.Inc(fmt.Sprint(t), int64(t), 1.0)
-
 			}
 		case <-endTimeout:
 			return nil
