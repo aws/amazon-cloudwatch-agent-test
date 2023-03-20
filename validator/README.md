@@ -9,8 +9,9 @@ Validator is used to get the generator configuration (e.g [statsd stress paramet
 
 | Name            | Description                                                                                            |
 |-----------------| -------------------------------------------------------------------------------------------------------|
-|`performance`    | [Record CloudWatchAgent's performance metrics](https://github.com/aws/amazon-cloudwatch-agent-test/tree/main/validator/validators/performance//performance_validator.go) by using procstat (e.g cpu_usage) and send it to DynamoDB                                        |
-|`stress`         | [Record CloudWatchAgent's performance metrics](https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/validator/validators/stress/stress_validator.go) when sending high metrics/logs/traces loads and ensure the performance stays consistent between                            |releases                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+|`performance`    | [Record CloudWatchAgent's performance metrics](https://github.com/aws/amazon-cloudwatch-agent-test/tree/main/validator/validators/performance//performance_validator.go) by using procstat (e.g cpu_usage) and send it to DynamoDB.                                        |
+|`stress`         | [Record CloudWatchAgent's performance metrics](https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/validator/validators/stress/stress_validator.go) when sending high metrics/logs/traces loads and ensure the performance stays consistent between releases. |   
+
 ## Validator Configuration
 
 The following receiver configuration parameters are supported.
