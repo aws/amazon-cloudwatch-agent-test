@@ -32,3 +32,4 @@ output "vpc_security_group" {
 output "performance-dynamodb-table" {
   value = "CWAPerformanceMetrics"
 }
+
