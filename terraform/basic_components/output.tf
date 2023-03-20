@@ -21,6 +21,4 @@ output "instance_profile" {
   value = data.aws_iam_instance_profile.cwagent_instance_profile.name
 }
 
-output "random_subnet_instance_id" {
-  value = local.random_instance_subnet_id
-}
+

@@ -14,8 +14,8 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 type MetricPluginBoundValue map[string]map[string]map[string]float64
@@ -125,7 +125,6 @@ var (
 
 type StressValidator struct {
 	vConfig models.ValidateConfig
-	basic.BasicValidator
 }
 
 var _ models.ValidatorFactory = (*StressValidator)(nil)
@@ -134,6 +133,25 @@ func NewStressValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 	return &StressValidator{
 		vConfig: vConfig,
 	}
+}
+
+func (s *StressValidator) GenerateLoad() (err error) {
+	var (
+		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
+		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
+		dataType              = s.vConfig.GetDataType()
+		dataRate              = s.vConfig.GetDataRate()
+		receiver              = s.vConfig.GetPluginsConfig()
+	)
+	switch dataType {
+	case "logs":
+		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, dataRate)
+	default:
+		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
+		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, dataRate)
+	}
+
+	return err
 }
 
 func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
@@ -163,6 +181,19 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 	}
 
 	return multiErr
+}
+
+func (s *StressValidator) Cleanup() error {
+	var (
+		dataType      = s.vConfig.GetDataType()
+		ec2InstanceId = awsservice.GetInstanceId()
+	)
+	switch dataType {
+	case "logs":
+		awsservice.DeleteLogGroup(ec2InstanceId)
+	}
+
+	return nil
 }
 
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, startTime, endTime time.Time) error {

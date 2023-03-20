@@ -52,18 +52,18 @@ resource "local_file" "update-validation-config" {
 
 // Build and uploading the validator to spending less time in 
 // and avoid memory issue in allocating memory 
-resource "null_resource" "build-validator" {
+resource "null_resource" "upload-validator" {
   provisioner "local-exec" {
-    command = "cd ../../.. && make validator-build"
+    command = <<-EOT
+    cd ../../.. 
+    make validator-build
+    aws s3 cp ./build/validator/darwin/${var.arc}/validator s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator
+    EOT
   }
-}
 
-resource "aws_s3_object" "upload-validator" {
-  count      = var.s3_bucket != "" ? 1 : 0
-  bucket     = var.s3_bucket
-  key        = "integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator"
-  source     = "../../../build/validator/darwin/${var.arc}/validator"
-  depends_on = [null_resource.build-validator]
+  triggers = {
+    always_run = "${timestamp()}"
+  }
 }
 
 #####################################################################
@@ -74,7 +74,6 @@ resource "aws_instance" "cwagent" {
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
   iam_instance_profile        = module.basic_components.instance_profile
-  subnet_id                   = module.basic_components.random_subnet_instance_id
   vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
   tenancy                     = "host"
@@ -90,7 +89,7 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
-  depends_on = [aws_instance.cwagent, aws_s3_object.upload-validator]
+  depends_on = [aws_instance.cwagent, null_resource.upload-validator]
 
   connection {
     type        = "ssh"
@@ -118,7 +117,7 @@ resource "null_resource" "integration_test" {
       "sudo installer -pkg AWSCLIV2.pkg -target /",
       #Install Golang
       "mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew",
-      "~/homebrew/bin/brew install go",
+      "homebrew/bin/brew install go",
     ]
   }
   # Install agent binaries
@@ -133,10 +132,11 @@ resource "null_resource" "integration_test" {
   #Prepare the requirement before validation and validate the metrics/logs/traces
   provisioner "remote-exec" {
     inline = [
+      "sudo chmod +x ./validator",
       "export AWS_REGION=${var.region}",
-      "validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
 
