@@ -6,12 +6,13 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/aws-sdk-go-v2/aws"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type CollectDTestRunner struct {
@@ -101,12 +102,9 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+	if !isAllValuesGreaterThanOrEqualToValue(metricName, values, 1) {
 		return testResult
 	}
-
-	// TODO: Range test with >0 and <100
-	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult

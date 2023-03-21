@@ -6,12 +6,12 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/aws-sdk-go-v2/aws"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type NetTestRunner struct {
@@ -75,7 +75,7 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+	if !isAllValuesGreaterThanOrEqualToValue(metricName, values, 0) {
 		return testResult
 	}
 

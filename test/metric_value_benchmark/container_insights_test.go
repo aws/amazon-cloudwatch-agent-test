@@ -6,11 +6,12 @@
 package metric_value_benchmark
 
 import (
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"time"
 )
 
 type ContainerInsightsTestRunner struct {
@@ -82,7 +83,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+	if !isAllValuesGreaterThanOrEqualToValue(metricName, values, 0) {
 		return testResult
 	}
 

@@ -1,9 +1,8 @@
-receivers: "statsd"
+receivers: "collectd"
 
-test_case: "statsd_performance"
+test_case: "collectd_performance"
 validate_type: "performance"
 data_type: "metrics"
-
 # Number of metrics to be sent or number of log lines being written  each minute
 values_per_minute: "<values_per_minute>"
 # Number of seconds the agent should run and collect the metrics. In this case, 5 minutes
