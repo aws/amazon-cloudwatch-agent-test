@@ -97,10 +97,11 @@ func getLogFilePaths(configPath string) ([]string, error) {
  */
 func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	type LogInfo struct {
-		FilePath      string `json:"file_path"`
-		LogGroupName  string `json:"log_group_name"`
-		LogStreamName string `json:"log_stream_name"`
-		Timezone      string `json:"timezone"`
+		FilePath        string `json:"file_path"`
+		LogGroupName    string `json:"log_group_name"`
+		LogStreamName   string `json:"log_stream_name"`
+		RetentionInDays int    `json:"retention_in_days"`
+		Timezone        string `json:"timezone"`
 	}
 
 	var cfgFileData map[string]interface{}
@@ -125,10 +126,11 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 
 	for i := 0; i < numberMonitoredLogs; i++ {
 		logFiles = append(logFiles, LogInfo{
-			FilePath:      fmt.Sprintf("/tmp/test%d.log", i+1),
-			LogGroupName:  "{instance_id}",
-			LogStreamName: fmt.Sprintf("{instance_id}/tmp%d", i+1),
-			Timezone:      "UTC",
+			FilePath:        fmt.Sprintf("/tmp/test%d.log", i+1),
+			LogGroupName:    "{instance_id}",
+			LogStreamName:   fmt.Sprintf("{instance_id}/tmp%d", i+1),
+			RetentionInDays: 1,
+			Timezone:        "UTC",
 		})
 	}
 

@@ -1,0 +1,42 @@
+{
+    "agent": {
+      "debug": true
+    },
+    "metrics": {
+      "namespace": "CloudWatchAgentStress",
+      "metrics_collected": {
+        "collectd": {
+            "collectd_security_level": "none"
+        },
+  
+        "net": {
+          "resources": [
+            "eth0"
+          ],
+          "measurement": [
+            "bytes_sent",
+            "packets_sent"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "procstat": [
+          {
+            "exe": "cloudwatch-agent",
+            "measurement": [
+              "cpu_usage",
+              "memory_rss",
+              "memory_swap",
+              "memory_vms",
+              "memory_data",
+              "num_fds"
+            ],
+            "metrics_collection_interval": 1
+          }
+        ]
+      },
+      "append_dimensions": {
+        "InstanceId": "${aws:InstanceId}"
+      },
+      "force_flush_interval": 10
+    }
+  }
