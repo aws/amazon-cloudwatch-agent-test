@@ -156,8 +156,6 @@ resource "null_resource" "validator" {
       local.download_command,
       local.ami_family["install_command"],
     ]
-
-
   }
 
   provisioner "remote-exec" {
