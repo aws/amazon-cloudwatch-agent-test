@@ -5,8 +5,6 @@ Validator is used to get the generator configuration (e.g [statsd stress paramet
 ## Architectural
 ![](Architectural.png)
 
-## Validator Type
-
 ## Validator Configuration
 
 The following receiver configuration parameters are supported.
@@ -26,3 +24,4 @@ go run ./validator/main.go --validator-config=/tmp/parameters.yml --preparation-
 **Step 1:** Add a `parameters.yml` to generate the generator config (e.g [statsd](https://github.com/aws/amazon-cloudwatch-agent-test/blob/2c859b71d067e482985b9c57ca2d2617de8a7795/test/stress/statsd/parameters.yml)). For full configuration of generator configuration, here are [all the configuration options](https://github.com/aws/amazon-cloudwatch-agent-test/blob/c1b2aee40859e46bad858b66f2042122ca46520c/validator/models/validation_config.go#L31)
 
 **Step 2:** Add an CloudWatchAgent json configuration that runs along with the validator (e.g [statsd](https://github.com/aws/amazon-cloudwatch-agent-test/blob/2c859b71d067e482985b9c57ca2d2617de8a7795/test/stress/statsd/agent_config.json))
+

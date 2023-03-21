@@ -12,10 +12,15 @@ resource "aws_dynamodb_table" "performance-dynamodb-table" {
   read_capacity  = 10
   write_capacity = 10
   hash_key       = "Service"
-  range_key      = "CommitHash"
+  range_key      = "UniqueID"
 
   attribute {
     name = "Service"
+    type = "S"
+  }
+
+  attribute {
+    name = "UniqueID"
     type = "S"
   }
 

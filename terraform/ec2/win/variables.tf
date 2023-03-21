@@ -8,20 +8,20 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "g4dn.xlarge"
+  default = "t3a.medium"
 }
 
 variable "ami" {
   type    = string
-  default = "Windows_Server-2019-English-Deep-Learning*"
+  default = "cloudwatch-agent-integration-test-win-2022*"
+}
+
+variable "arc" {
+  type    = string
+  default = "amd64"
 }
 
 variable "cwa_github_sha" {
-  type    = string
-  default = "4cefc9f0e9b411c6765c5122877c136dbb23588d"
-}
-
-variable "cwa_test_github_sha" {
   type    = string
   default = ""
 }
@@ -29,6 +29,16 @@ variable "cwa_test_github_sha" {
 variable "github_test_repo" {
   type    = string
   default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+}
+
+variable "github_test_repo_branch" {
+  type    = string
+  default = "main"
+}
+
+variable "s3_bucket" {
+  type    = string
+  default = ""
 }
 
 variable "ssh_key_name" {
@@ -41,12 +51,13 @@ variable "ssh_key_value" {
   default = ""
 }
 
-variable "s3_bucket" {
+variable "test_name" {
   type    = string
   default = ""
 }
 
 variable "test_dir" {
   type    = string
-  default = "./integration/test/nvidia_gpu"
+  default = "../../../test/feature/win"
 }
+

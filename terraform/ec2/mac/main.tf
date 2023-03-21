@@ -5,6 +5,12 @@ module "common" {
   source = "../../common"
 }
 
+module "basic_components" {
+  source = "../../basic_components"
+
+  region = var.region
+}
+
 #####################################################################
 # Generate EC2 Key Pair for log in access to EC2
 #####################################################################
@@ -33,8 +39,9 @@ resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = module.basic_components.instance_profile
+  subnet_id                   = module.basic_components.random_subnet_instance_id
+  vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
   tenancy                     = "host"
 
@@ -45,7 +52,7 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
+    Name = "cwagent-integ-test-ec2-mac-${var.test_name}-${module.common.testing_id}"
   }
 }
 
@@ -59,7 +66,7 @@ resource "null_resource" "integration_test" {
   }
   provisioner "remote-exec" {
     inline = [
-      // Install AWS CLI
+      # Install AWS CLI
       "sudo softwareupdate --install-rosetta --agree-to-license",
       "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
       "sudo installer -pkg AWSCLIV2.pkg -target /",

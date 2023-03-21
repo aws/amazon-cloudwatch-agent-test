@@ -103,7 +103,6 @@ func DeleteLogStream(logGroupName, logStreamName string) {
 
 // DeleteLogGroup cleans up log group by name
 func DeleteLogGroup(logGroupName string) {
-
 	_, err := CwlClient.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
