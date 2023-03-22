@@ -52,18 +52,18 @@ resource "local_file" "update-validation-config" {
 
 // Build and uploading the validator to spending less time in 
 // and avoid memory issue in allocating memory with Windows
-resource "null_resource" "build-validator" {
+resource "null_resource" "upload-validator" {
   provisioner "local-exec" {
-    command = "cd ../../.. && make validator-build"
+    command = <<-EOT
+    cd ../../.. 
+    make validator-build
+    aws s3 cp ./build/validator/windows/${var.arc}/validator.exe s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe
+    EOT
   }
-}
 
-resource "aws_s3_object" "upload-validator" {
-  count      = var.s3_bucket != "" ? 1 : 0
-  bucket     = var.s3_bucket
-  key        = "integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe"
-  source     = "../../../build/validator/windows/${var.arc}/validator.exe"
-  depends_on = [null_resource.build-validator]
+  triggers = {
+    always_run = "${timestamp()}"
+  }
 }
 
 #####################################################################
@@ -75,7 +75,6 @@ resource "aws_instance" "cwagent" {
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
   iam_instance_profile        = module.basic_components.instance_profile
-  subnet_id                   = module.basic_components.random_subnet_instance_id
   vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
   get_password_data           = true
@@ -91,7 +90,7 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
-  depends_on = [aws_instance.cwagent, aws_s3_object.upload-validator]
+  depends_on = [aws_instance.cwagent, null_resource.upload-validator]
 
   # Install software
   connection {

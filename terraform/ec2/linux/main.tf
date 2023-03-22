@@ -42,7 +42,6 @@ resource "aws_instance" "cwagent" {
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
   iam_instance_profile        = module.basic_components.instance_profile
-  subnet_id                   = module.basic_components.random_subnet_instance_id
   vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
 
