@@ -182,7 +182,7 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 				Value: aws.String(dimension.Value),
 			})
 		}
-		performanceMetricDataQueries = append(performanceMetricDataQueries, s.buildStressMetricQueries(metric.MetricName, metricNamespace, metricDimensions))
+		performanceMetricDataQueries = append(performanceMetricDataQueries, s.buildPerformanceMetricQueries(metric.MetricName, metricNamespace, metricDimensions))
 	}
 
 	metrics, err := awsservice.GetMetricData(performanceMetricDataQueries, startTime, endTime)
@@ -194,7 +194,7 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 	return metrics.MetricDataResults, nil
 }
 
-func (s *PerformanceValidator) buildStressMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {
+func (s *PerformanceValidator) buildPerformanceMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {
 	metricInformation := types.Metric{
 		Namespace:  aws.String(metricNamespace),
 		MetricName: aws.String(metricName),
