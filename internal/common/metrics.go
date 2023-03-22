@@ -13,7 +13,7 @@ import (
 	"collectd.org/api"
 	"collectd.org/exec"
 	"collectd.org/network"
-	"github.com/cactus/go-statsd-client/v5/statsd"
+	"github.com/DataDog/datadog-go/statsd"
 )
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
@@ -21,9 +21,9 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 	go func() {
 		switch receiver {
 		case "statsd":
-			err = sendStatsdMetrics(metricPerInterval, sendingInterval, duration)
+			err = SendStatsdMetrics(metricPerInterval, []string{}, sendingInterval, duration)
 		case "collectd":
-			err = sendCollectDMetrics(metricPerInterval, sendingInterval, duration)
+			err = SendCollectDMetrics(metricPerInterval, sendingInterval, duration)
 		default:
 		}
 
@@ -32,7 +32,7 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 	return err
 }
 
-func sendCollectDMetrics(metricPerMinute int, sendingInterval, duration time.Duration) error {
+func SendCollectDMetrics(metricPerMinute int, sendingInterval, duration time.Duration) error {
 	// https://github.com/collectd/go-collectd/tree/92e86f95efac5eb62fa84acc6033e7a57218b606
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -56,7 +56,7 @@ func sendCollectDMetrics(metricPerMinute int, sendingInterval, duration time.Dur
 	for {
 		select {
 		case <-ticker.C:
-			for t := 0; t < metricPerMinute/2; t++ {
+			for t := 1; t <= metricPerMinute/2; t++ {
 				_ = client.Write(ctx, &api.ValueList{
 					Identifier: api.Identifier{
 						Host:   exec.Hostname(),
@@ -94,17 +94,9 @@ func sendCollectDMetrics(metricPerMinute int, sendingInterval, duration time.Dur
 
 }
 
-func sendStatsdMetrics(metricPerMinute int, sendingInterval, duration time.Duration) error {
-	// https://github.com/cactus/go-statsd-client#example
-	statsdClientConfig := &statsd.ClientConfig{
-		Address:     ":8125",
-		Prefix:      "statsd",
-		UseBuffered: true,
-		// interval to force flush buffer. full buffers will flush on their own,
-		// but for data not frequently sent, a max threshold is useful
-		FlushInterval: 300 * time.Millisecond,
-	}
-	client, err := statsd.NewClientWithConfig(statsdClientConfig)
+func SendStatsdMetrics(metricPerMinute int, metricDimension []string, sendingInterval, duration time.Duration) error {
+	// https://github.com/DataDog/datadog-go#metrics
+	client, err := statsd.New("127.0.0.1:8125", statsd.WithMaxMessagesPerPayload(100), statsd.WithNamespace("statsd"))
 
 	if err != nil {
 		return err
@@ -116,13 +108,12 @@ func sendStatsdMetrics(metricPerMinute int, sendingInterval, duration time.Durat
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
-	statsdDimension := []statsd.Tag{{"key", "val"}}
 	for {
 		select {
 		case <-ticker.C:
-			for t := 0; t < metricPerMinute/2; t++ {
-				client.Inc(fmt.Sprint("counter_", t), int64(t), 1.0, statsdDimension...)
-				client.Gauge(fmt.Sprint("gauge_", t), int64(t), 1, statsdDimension...)
+			for t := 1; t <= metricPerMinute/2; t++ {
+				client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0)
+				client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0)
 			}
 		case <-endTimeout:
 			return nil

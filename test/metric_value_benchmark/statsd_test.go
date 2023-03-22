@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/cactus/go-statsd-client/v5/statsd"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -25,15 +24,7 @@ type StatsdTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-type metricInfo struct {
-	metricType string
-	dimensions []statsd.Tag
-}
-
 func (t *StatsdTestRunner) Validate() status.TestGroupResult {
-	// Stop generating metrics.
-	stopChan <- struct{}{}
-
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -58,7 +49,7 @@ func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
-	return common.StartSendingMetrics("statsd", t.GetAgentRunDuration(), time.Second, 2)
+	return common.SendStatsdMetrics(2, []string{"key:value"}, time.Second, t.GetAgentRunDuration())
 }
 
 func (t *StatsdTestRunner) GetMeasuredMetrics() []string {

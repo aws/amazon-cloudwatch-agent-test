@@ -28,19 +28,20 @@ func NewFeatureValidator(vConfig models.ValidateConfig) models.ValidatorFactory 
 func (s *FeatureValidator) GenerateLoad() error {
 	var (
 		multiErr              error
+		metricSendingInterval = time.Minute
 		dataRate              = s.vConfig.GetDataRate()
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
 		receiver              = s.vConfig.GetPluginsConfig()
 	)
 
-	err := common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, dataRate)
+	err := common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
 	if err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}
 
 	// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
-	err = common.StartSendingMetrics(receiver, agentCollectionPeriod, dataRate)
+	err = common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate)
 	if err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}

@@ -46,7 +46,7 @@ func (t *CollectDTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *CollectDTestRunner) SetupAfterAgentRun() error {
-	return common.StartSendingMetrics("collectd", t.GetAgentRunDuration(), time.Second, 2)
+	return common.SendCollectDMetrics(2, time.Second, t.GetAgentRunDuration())
 }
 
 func (t *CollectDTestRunner) GetMeasuredMetrics() []string {
@@ -64,11 +64,6 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
-		{
-			// CWA adds this metric_type dimension.
-			Key:   "key",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("value")},
-		},
 	}
 	switch metricName {
 	case "collectd_counter_1_value":
@@ -80,7 +75,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 	case "collectd_gauge_1_value":
 		instructions = append(instructions, dimension.Instruction{
 			// CWA adds this metric_type dimension.
-			Key:   "metric_type",
+			Key:   "type",
 			Value: dimension.ExpectedDimensionValue{Value: aws.String("gauge")},
 		})
 	}
@@ -91,7 +86,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 	}
 	fetcher := metric.MetricValueFetcher{}
 	// Namespace must match the JSON config.
-	values, err := fetcher.Fetch("statsd_test", metricName, dims, metric.AVERAGE,
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE,
 		test_runner.HighResolutionStatPeriod)
 
 	if err != nil {
@@ -113,6 +108,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 			lowerBound, upperBound, len(values))
 		return testResult
 	}
+
 	if !isAllValuesGreaterThanOrEqualToValue(metricName, values, 1) {
 		return testResult
 	}

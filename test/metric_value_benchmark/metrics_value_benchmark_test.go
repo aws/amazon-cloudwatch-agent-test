@@ -66,6 +66,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
+			{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
@@ -129,10 +130,10 @@ func isAllValuesGreaterThanOrEqualToValue(metricName string, values []float64, e
 	upperBoundValue := expectedValue * (1 + metricErrorBound)
 	lowerBoundValue := expectedValue * (1 - metricErrorBound)
 	if expectedValue > 0 && (metricAverageValue > upperBoundValue || metricAverageValue < lowerBoundValue) {
-		log.Printf("The average value %f for metric %s are not within bound [%f, %f]", metricName, expectedValue, lowerBoundValue, upperBoundValue)
+		log.Printf("The average value %f for metric %s are not within bound [%f, %f]", metricAverageValue, metricName, lowerBoundValue, upperBoundValue)
 		return false
 	}
 
-	log.Printf("Values are all greater than or equal to zero for %v", metricName)
+	log.Printf("Values are all greater than or equal to %v for %v", expectedValue, metricName)
 	return true
 }

@@ -7,6 +7,7 @@ replace collectd.org v0.5.0 => github.com/collectd/go-collectd v0.5.0
 
 require (
 	collectd.org v0.5.0
+	github.com/DataDog/datadog-go v4.8.3+incompatible
 	github.com/aws/aws-sdk-go v1.44.188
 	github.com/aws/aws-sdk-go-v2 v1.17.4
 	github.com/aws/aws-sdk-go-v2/config v1.18.10
@@ -20,7 +21,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.23.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.33.0
-	github.com/cactus/go-statsd-client/v5 v5.0.0
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
@@ -32,6 +32,7 @@ require (
 )
 
 require (
+	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.10 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.28 // indirect
@@ -52,4 +53,6 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
+	golang.org/x/mod v0.6.0 // indirect
+	golang.org/x/tools v0.2.0 // indirect
 )
