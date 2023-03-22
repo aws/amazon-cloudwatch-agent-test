@@ -26,6 +26,11 @@ metric_validation:
     metric_dimension: 
       - name: "metric_type"
         value: "counter"
+  
+  - metric_name: "statsd_2"
+    metric_dimension: 
+      - name: "metric_type"
+        value: "counter"
 
   - metric_name: "LogicalDisk % Free Space"
     metric_dimension: 

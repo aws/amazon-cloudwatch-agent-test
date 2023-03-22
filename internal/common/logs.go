@@ -5,6 +5,7 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -96,6 +97,9 @@ func getLogFilePaths(configPath string) ([]string, error) {
 * returns the path of the config generated and a list of log stream names
  */
 func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
+	if numberMonitoredLogs == 0 || filePath == "" {
+		return errors.New("number of monitored logs or file path is empty")
+	}
 	type LogInfo struct {
 		FilePath        string `json:"file_path"`
 		LogGroupName    string `json:"log_group_name"`
@@ -143,7 +147,7 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 		return err
 	}
 
-	_, err = file.WriteAt(finalConfig, 0)
+	err = os.WriteFile(filePath, finalConfig, 0644)
 	if err != nil {
 		return err
 	}
