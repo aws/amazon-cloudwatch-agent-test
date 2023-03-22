@@ -12,6 +12,7 @@
       },
       "metrics_collected": {
         "collectd": {
+          "metrics_aggregation_interval": 5,
           "collectd_security_level": "none"
         }
       },

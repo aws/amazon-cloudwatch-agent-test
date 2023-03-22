@@ -17,13 +17,13 @@ import (
 )
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
-func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinute int) (err error) {
+func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int) (err error) {
 	go func() {
 		switch receiver {
 		case "statsd":
-			err = sendStatsdMetrics(metricPerMinute, duration)
+			err = sendStatsdMetrics(metricPerInterval, sendingInterval, duration)
 		case "collectd":
-			err = sendCollectDMetrics(metricPerMinute, duration)
+			err = sendCollectDMetrics(metricPerInterval, sendingInterval, duration)
 		default:
 		}
 
@@ -32,7 +32,7 @@ func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinut
 	return err
 }
 
-func sendCollectDMetrics(metricPerMinute int, duration time.Duration) error {
+func sendCollectDMetrics(metricPerMinute int, sendingInterval, duration time.Duration) error {
 	// https://github.com/collectd/go-collectd/tree/92e86f95efac5eb62fa84acc6033e7a57218b606
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -49,23 +49,34 @@ func sendCollectDMetrics(metricPerMinute int, duration time.Duration) error {
 
 	defer client.Close()
 
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
 	for {
 		select {
 		case <-ticker.C:
-			for t := 0; t < metricPerMinute; t++ {
-				err = client.Write(ctx, &api.ValueList{
+			for t := 0; t < metricPerMinute/2; t++ {
+				_ = client.Write(ctx, &api.ValueList{
 					Identifier: api.Identifier{
 						Host:   exec.Hostname(),
-						Plugin: fmt.Sprint(t),
+						Plugin: fmt.Sprint("gauge_", t),
 						Type:   "gauge",
 					},
 					Time:     time.Now(),
 					Interval: time.Minute,
 					Values:   []api.Value{api.Gauge(t)},
+				})
+
+				err = client.Write(ctx, &api.ValueList{
+					Identifier: api.Identifier{
+						Host:   exec.Hostname(),
+						Plugin: fmt.Sprint("counter_", t),
+						Type:   "counter",
+					},
+					Time:     time.Now(),
+					Interval: time.Minute,
+					Values:   []api.Value{api.Counter(t)},
 				})
 
 				if err != nil && !errors.Is(err, network.ErrNotEnoughSpace) {
@@ -83,7 +94,7 @@ func sendCollectDMetrics(metricPerMinute int, duration time.Duration) error {
 
 }
 
-func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
+func sendStatsdMetrics(metricPerMinute int, sendingInterval, duration time.Duration) error {
 	// https://github.com/cactus/go-statsd-client#example
 	statsdClientConfig := &statsd.ClientConfig{
 		Address:     ":8125",
@@ -101,7 +112,7 @@ func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 
 	defer client.Close()
 
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 

@@ -6,6 +6,9 @@
 package metric_value_benchmark
 
 import (
+	"log"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -43,28 +46,11 @@ func (t *CollectDTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *CollectDTestRunner) SetupAfterAgentRun() error {
-	// EC2 Image Builder creates the collectd's default configuration and collectd will pick it up.
-	// For Linux the static is at /etc/collectd.conf, fox Ubuntu it is at /etc/collectd/collectd.conf
-	// Collectd's static configuration
-	//		LoadPlugin network
-	//		LoadPlugin cpu
-	// 		<Plugin cpu>
-	//			ReportByState = true
-	//			ReportByCpu = true
-	//			ValuesPercentage = true
-	//		</Plugin>
-	//		<Plugin network>
-	//			Server "127.0.0.1" "25826"
-	//		</Plugin>
-	startCollectdCommands := []string{
-		"sudo systemctl restart collectd",
-	}
-
-	return common.RunCommands(startCollectdCommands)
+	return common.StartSendingMetrics("collectd", t.GetAgentRunDuration(), time.Second, 2)
 }
 
 func (t *CollectDTestRunner) GetMeasuredMetrics() []string {
-	return []string{"collectd_cpu_value"}
+	return []string{"collectd_gauge_1_value", "collectd_counter_1_value"}
 }
 
 func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.TestResult {
@@ -73,35 +59,60 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+	instructions := []dimension.Instruction{
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
 		{
-			Key:   "type_instance",
-			Value: dimension.ExpectedDimensionValue{aws.String("user")},
+			// CWA adds this metric_type dimension.
+			Key:   "key",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("value")},
 		},
-		{
-			Key:   "instance",
-			Value: dimension.ExpectedDimensionValue{aws.String("0")},
-		},
-		{
+	}
+	switch metricName {
+	case "collectd_counter_1_value":
+		instructions = append(instructions, dimension.Instruction{
+			// CWA adds this metric_type dimension.
 			Key:   "type",
-			Value: dimension.ExpectedDimensionValue{aws.String("percent")},
-		},
-	})
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("counter")},
+		})
+	case "collectd_gauge_1_value":
+		instructions = append(instructions, dimension.Instruction{
+			// CWA adds this metric_type dimension.
+			Key:   "metric_type",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("gauge")},
+		})
+	}
 
+	dims, failed := t.DimensionFactory.GetDimensions(instructions)
 	if len(failed) > 0 {
 		return testResult
 	}
-
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	// Namespace must match the JSON config.
+	values, err := fetcher.Fetch("statsd_test", metricName, dims, metric.AVERAGE,
+		test_runner.HighResolutionStatPeriod)
+
 	if err != nil {
 		return testResult
 	}
 
+	runDuration := t.GetAgentRunDuration()
+	// aggregationInterval must match the JSON configuration.
+	aggregationInterval := 30 * time.Second
+	// If aggregation is not happening there could be a data point every 5 seconds.
+	// So validate the upper bound.
+	upperBound := int(runDuration/aggregationInterval) + 2
+	// Allow 2 missing data points in case CW-Metrics-Web-Service has a 1 minute
+	// delay to store.
+	lowerBound := int(runDuration/aggregationInterval) - 2
+
+	if len(values) < lowerBound || len(values) > upperBound {
+		log.Printf("fail: lowerBound %v, upperBound %v, actual %v",
+			lowerBound, upperBound, len(values))
+		return testResult
+	}
 	if !isAllValuesGreaterThanOrEqualToValue(metricName, values, 1) {
 		return testResult
 	}

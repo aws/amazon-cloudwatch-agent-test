@@ -58,8 +58,7 @@ func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
-
-	return common.StartSendingMetrics("statsd", t.GetAgentRunDuration(), 2)
+	return common.StartSendingMetrics("statsd", t.GetAgentRunDuration(), time.Second, 2)
 }
 
 func (t *StatsdTestRunner) GetMeasuredMetrics() []string {
@@ -71,16 +70,12 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		Name:   metricName,
 		Status: status.FAILED,
 	}
-	// Get the metric info for the current metricName.
-	// Just assume it exists.
-	// Populate the list of expected dimensions.
 	instructions := []dimension.Instruction{
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
 		{
-			// CWA adds this metric_type dimension.
 			Key:   "key",
 			Value: dimension.ExpectedDimensionValue{Value: aws.String("value")},
 		},
@@ -106,7 +101,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 	}
 	fetcher := metric.MetricValueFetcher{}
 	// Namespace must match the JSON config.
-	values, err := fetcher.Fetch("statsd_test", metricName, dims, metric.AVERAGE,
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE,
 		test_runner.HighResolutionStatPeriod)
 
 	if err != nil {
