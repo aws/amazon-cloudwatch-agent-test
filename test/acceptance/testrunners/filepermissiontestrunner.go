@@ -1,3 +1,8 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+//go:build !windows
+
 package testrunners
 
 import (
@@ -16,9 +21,11 @@ type FilePermissionTestRunner struct {
 
 var _ test_runner.ITestRunner = (*FilePermissionTestRunner)(nil)
 
-const agentConfigPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const agentConfigCopiedDir = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d"
-const translatedTomlPath = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"
+const (
+	agentConfigPath      = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	agentConfigCopiedDir = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d"
+	translatedTomlPath   = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"
+)
 
 var (
 	onlyRootCanWriteRule = rule.Rule[string]{
@@ -66,7 +73,7 @@ func (m *FilePermissionTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (m *FilePermissionTestRunner) GetAgentRunDuration() time.Duration {
-	return 1 * time.Minute
+	return 1 * time.Second
 }
 
 func (m *FilePermissionTestRunner) SetupAfterAgentRun() error {

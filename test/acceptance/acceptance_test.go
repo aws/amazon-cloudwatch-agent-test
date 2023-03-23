@@ -28,27 +28,19 @@ type AcceptanceTestSuite struct {
 var _ test_runner.ITestSuite = (*AcceptanceTestSuite)(nil)
 
 func (suite *AcceptanceTestSuite) GetSuiteName() string {
-	return "SecurityTestSuite"
+	return "AcceptanceTestSuite"
 }
 
-var (
-	ec2TestRunners []*test_runner.TestRunner
-)
-
 func getEc2TestRunners() []*test_runner.TestRunner {
-	if ec2TestRunners == nil {
-		ec2TestRunners = []*test_runner.TestRunner{
-			{TestRunner: &testrunners.FilePermissionTestRunner{}},
-		}
+	return []*test_runner.TestRunner{
+		{TestRunner: &testrunners.FilePermissionTestRunner{}},
 	}
-	return ec2TestRunners
 }
 
 func (suite *AcceptanceTestSuite) TestAllInSuite() {
 	for _, testRunner := range getEc2TestRunners() {
 		testRunner.Run(suite)
 	}
-
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Security Test Suite Failed")
 }
 
