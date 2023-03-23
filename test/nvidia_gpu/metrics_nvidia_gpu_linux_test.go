@@ -6,12 +6,13 @@
 package metrics_nvidia_gpu
 
 import (
+	"testing"
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-	"testing"
-	"time"
 )
 
 const (

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/feature"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/performance"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/stress"
 )
@@ -17,6 +18,8 @@ func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFact
 	switch vConfig.GetValidateType() {
 	case "performance":
 		validator = performance.NewPerformanceValidator(vConfig)
+	case "feature":
+		validator = feature.NewFeatureValidator(vConfig)
 	case "stress":
 		validator = stress.NewStressValidator(vConfig)
 	default:
@@ -48,7 +51,7 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 		return err
 
 	}
-
+	time.Sleep(agentCollectionPeriod)
 	log.Printf("Start to sleep 60s for CloudWatch to process all the metrics")
 	time.Sleep(60 * time.Second)
 

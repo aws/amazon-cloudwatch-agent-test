@@ -5,6 +5,12 @@ module "common" {
   source = "../common"
 }
 
+module "basic_components" {
+  source = "../basic_components"
+
+  region = var.region
+}
+
 locals {
   ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
@@ -45,7 +51,6 @@ resource "local_file" "update-validation-config" {
   "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
 
   filename = "${var.test_dir}/${local.final_validator_config}"
-
 }
 
 #####################################################################
@@ -55,16 +60,17 @@ resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = module.basic_components.instance_profile
+  vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
   }
 
   tags = {
-    Name = "cwagent-performance-${var.test_name}-${module.common.testing_id}"
+    Name = "cwagent-performance-${module.common.testing_id}"
   }
 }
 
@@ -76,12 +82,9 @@ resource "null_resource" "integration_test" {
     host        = aws_instance.cwagent.public_ip
   }
 
-  # Prepare Integration Test
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
     destination = "${local.instance_temp_directory}/${local.final_validator_config}"
-
-
   }
 
   provisioner "file" {
