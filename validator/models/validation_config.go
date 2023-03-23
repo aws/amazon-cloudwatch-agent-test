@@ -53,13 +53,15 @@ type validatorConfig struct {
 }
 
 type MetricValidation struct {
-	MetricName      string            `yaml:"metric_name"`
-	MetricDimension []MetricDimension `yaml:"metric_dimension"`
+	MetricName      string            `mapstructure:"metric_name,omitempty"`
+	MetricDimension []MetricDimension `mapstructure:"metric_dimension,omitempty"`
+	MetricValue     float64           `mapstructure:"metric_value,omitempty"`
 }
 
 type LogValidation struct {
-	LogValue string `yaml:"log_value"`
-	LogLines int    `yaml:"log_lines"`
+	LogValue  string `mapstructure:"log_value,omitempty"`
+	LogLines  int    `mapstructure:"log_lines,omitempty"`
+	LogStream string `mapstructure:"log_stream,omitempty"`
 }
 
 type MetricDimension struct {

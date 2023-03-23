@@ -1,4 +1,4 @@
-receivers: "statsd"
+receivers: ["statsd"]
 
 test_case: "statsd_performance"
 validate_type: "performance"

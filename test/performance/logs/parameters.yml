@@ -1,4 +1,4 @@
-receivers: "logs"
+receivers: ["logs"]
 
 test_case: "logs_performance"
 validate_type: "performance"

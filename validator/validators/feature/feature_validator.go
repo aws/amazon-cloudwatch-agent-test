@@ -104,7 +104,29 @@ func (s *FeatureValidator) Cleanup() error {
 	return nil
 }
 
-func (s *FeatureValidator) ValidateLogs(logLine string, numberOfLogLine int) error {
+func (s *FeatureValidator) ValidateLogs(logStream string, logLine string, numberOfLogLine int, startTime, endTime time.Time) error {
+	var (
+		logGroup = awsservice.GetInstanceId()
+	)
+	ok, err := awsservice.ValidateLogs(logGroup, logStream, &startTime, &endTime, func(logs []string) bool {
+		if len(logs) < 1 {
+			return false
+		}
+		actualNumberOfLogLines := 0
+		for _, log := range logs {
+			if strings.Contains(log, logLine) {
+				actualNumberOfLogLines += 1
+			}
+		}
+		if actualNumberOfLogLines != numberOfLogLine {
+			return false
+		}
+		return true
+	})
+
+	if !ok || err != nil {
+		return fmt.Errorf("Validate logs failed")
+	}
 	return nil
 }
 
