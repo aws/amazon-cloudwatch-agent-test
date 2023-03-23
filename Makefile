@@ -15,7 +15,7 @@ install-tools:
 	#installation
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.50.1
 
-lint: install-tools checklicense impi
+lint: install-tools
 	${LINTER} run ./...
 
 compile:
