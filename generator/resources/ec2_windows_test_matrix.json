@@ -1,8 +1,12 @@
 [
   {
     "os": "win-2019",
-    "instanceType":"g4dn.xlarge",
-    "ami": "Windows_Server-2019-English-Deep-Learning*",
-    "family": "windows"
+    "instanceType":"t3a.medium",
+    "ami": "cloudwatch-agent-integration-test-win-2019*"
+  },
+  {
+    "os": "win-2022",
+    "instanceType":"t3a.medium",
+    "ami": "cloudwatch-agent-integration-test-win-2022*"
   }
 ]

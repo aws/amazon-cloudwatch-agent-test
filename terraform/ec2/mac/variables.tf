@@ -38,7 +38,7 @@ variable "arc" {
 
 variable "s3_bucket" {
   type    = string
-  default = "cloudwatch-agent-integration-bucket"
+  default = ""
 }
 
 variable "test_name" {
@@ -53,20 +53,6 @@ variable "test_dir" {
 
 variable "cwa_github_sha" {
   type    = string
-  default = "007192508454371edb98801d62c434f2bec2f94f"
-}
-
-variable "github_test_repo" {
-  type    = string
-  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-}
-
-variable "github_test_repo_branch" {
-  type    = string
-  default = "main"
-}
-
-variable "cwa_github_sha_date" {
-  type    = string
   default = ""
 }
+

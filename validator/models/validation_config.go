@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,6 +27,7 @@ type ValidateConfig interface {
 	GetMetricValidation() []MetricValidation
 	GetLogValidation() []LogValidation
 	GetCommitInformation() (string, int64)
+	GetUniqueID() string
 }
 
 type validatorConfig struct {
@@ -143,4 +145,8 @@ func (v *validatorConfig) GetLogValidation() []LogValidation {
 func (v *validatorConfig) GetCommitInformation() (string, int64) {
 	commitDate, _ := strconv.ParseInt(v.CommitDate, 10, 64)
 	return v.CommitHash, commitDate
+}
+
+func (v *validatorConfig) GetUniqueID() string {
+	return uuid.NewString()
 }
