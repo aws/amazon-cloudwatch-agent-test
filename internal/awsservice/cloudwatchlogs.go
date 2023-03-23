@@ -75,16 +75,12 @@ func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string
 		StartFromHead: aws.Bool(true), // read from the beginning
 	}
 
-	var sinceMs int64
 	if since != nil {
-		sinceMs = since.UnixNano() / 1e6 // convert to millisecond timestamp
-		params.StartTime = aws.Int64(sinceMs)
+		params.StartTime = aws.Int64(since.UnixMilli())
 	}
 
-	var untilMs int64
 	if until != nil {
-		untilMs = until.UnixNano() / 1e6
-		params.EndTime = aws.Int64(untilMs)
+		params.EndTime = aws.Int64(until.UnixMilli())
 	}
 
 	var nextToken *string
