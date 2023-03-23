@@ -15,6 +15,8 @@ import (
 	"go.uber.org/multierr"
 )
 
+const logLine = "# %d - This is a log line. \n"
+
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
 func StartLogWrite(configFilePath string, duration time.Duration, logLinesPerMinute int) error {
@@ -50,12 +52,25 @@ func writeToLogs(filePath string, duration time.Duration, logLinesPerMinute int)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
-	//loop until the test duration is reached
+	// Sending the logs within the first minute before the ticker kicks in the next minute
+	for i := 0; i < logLinesPerMinute; i++ {
+		_, err := f.WriteString(fmt.Sprintf(logLine, i))
+		if err != nil {
+			return err
+		}
+	}
+
+	bytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	log.Printf("test hello %v", string(bytes))
+
 	for {
 		select {
 		case <-ticker.C:
 			for i := 0; i < logLinesPerMinute; i++ {
-				f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
+				f.WriteString(fmt.Sprintf(logLine, i))
 			}
 		case <-endTimeout:
 			return nil
@@ -129,7 +144,7 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 		logFiles = append(logFiles, LogInfo{
 			FilePath:        fmt.Sprintf("/tmp/test%d.log", i+1),
 			LogGroupName:    "{instance_id}",
-			LogStreamName:   fmt.Sprintf("{instance_id}/tmp%d", i+1),
+			LogStreamName:   fmt.Sprintf("test%d.log", i+1),
 			RetentionInDays: 1,
 			Timezone:        "UTC",
 		})

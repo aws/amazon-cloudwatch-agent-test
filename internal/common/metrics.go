@@ -53,6 +53,28 @@ func sendCollectDMetrics(metricPerMinute int, duration time.Duration) error {
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
+	// Sending the collectd metric within the first minute before the ticker kicks in the next minute
+	for t := 0; t < metricPerMinute; t++ {
+		err = client.Write(ctx, &api.ValueList{
+			Identifier: api.Identifier{
+				Host:   exec.Hostname(),
+				Plugin: fmt.Sprint(t),
+				Type:   "gauge",
+			},
+			Time:     time.Now(),
+			Interval: time.Minute,
+			Values:   []api.Value{api.Gauge(t)},
+		})
+
+		if err != nil && !errors.Is(err, network.ErrNotEnoughSpace) {
+			return err
+		}
+	}
+
+	if err := client.Flush(); err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case <-ticker.C:
@@ -104,6 +126,11 @@ func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
+
+	// Sending the statsd metric within the first minute before the ticker kicks in the next minute
+	for t := 0; t < metricPerMinute; t++ {
+		client.Inc(fmt.Sprint(t), int64(t), 1.0)
+	}
 
 	for {
 		select {

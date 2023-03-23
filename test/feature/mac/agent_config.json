@@ -105,7 +105,7 @@
           {
           "file_path": "/tmp/test1.log",
           "log_group_name": "{instance_id}",
-          "log_stream_name": "{instance_id}",
+          "log_stream_name": "test1.log",
           "timezone": "UTC"
           }
         ]

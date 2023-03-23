@@ -137,6 +137,7 @@ resource "null_resource" "integration_test" {
       "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
       "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "exit 1"
     ]
   }
 
