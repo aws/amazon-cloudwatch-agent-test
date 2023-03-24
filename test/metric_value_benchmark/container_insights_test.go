@@ -6,10 +6,16 @@
 package metric_value_benchmark
 
 import (
+	_ "embed"
+	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/qri-io/jsonschema"
+	"strings"
 	"time"
 )
 
@@ -17,14 +23,19 @@ type ContainerInsightsTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
+//go:embed agent_resources/container_insights_node_telemetry.json
+var emfContainerInsightsSchema string
+
 var _ IECSTestRunner = (*ContainerInsightsTestRunner)(nil)
 
-func (t *ContainerInsightsTestRunner) validate() status.TestGroupResult {
+func (t *ContainerInsightsTestRunner) validate(e *environment.MetaData) status.TestGroupResult {
 	metricsToFetch := t.getMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateContainerInsightsMetrics(metricName)
 	}
+
+	testResults = append(testResults, validateLogsForContainerInsights(e))
 
 	return status.TestGroupResult{
 		Name:        t.getTestName(),
@@ -88,6 +99,52 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 
 	// TODO: Range test with >0 and <100
 	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult {
+	testResult := status.TestResult{
+		Name:   "emf-logs",
+		Status: status.FAILED,
+	}
+
+	rs := jsonschema.Must(emfContainerInsightsSchema)
+
+	now := time.Now()
+	group := fmt.Sprintf("/aws/ecs/containerinsights/%s/performance", e.EcsClusterName)
+
+	// need to derive the container Instance ID first
+	containers, err := awsservice.GetContainerInstances(e.EcsClusterArn)
+	if err != nil {
+		return testResult
+	}
+
+	for _, container := range containers {
+		validateLogContents := func(s string) bool {
+			return strings.Contains(s, fmt.Sprintf("\"ContainerInstanceId\":\"%s\"", container.ContainerInstanceId))
+		}
+
+		var ok bool
+		stream := fmt.Sprintf("NodeTelemetry-%s", container.ContainerInstanceId)
+		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
+			if len(logs) < 1 {
+				return false
+			}
+
+			for _, l := range logs {
+				if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
+					return false
+				}
+			}
+			return true
+		})
+
+		if err != nil || !ok {
+			return testResult
+		}
+	}
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult

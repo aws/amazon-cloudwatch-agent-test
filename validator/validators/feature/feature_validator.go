@@ -77,7 +77,7 @@ func (s *FeatureValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(dimension.Value),
 			})
 		}
-		err := s.ValidateMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricValue, startTime, endTime)
+		err := s.ValidateMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricValue, metric.MetricSampleCount, startTime, endTime)
 		if err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
@@ -110,19 +110,19 @@ func (s *FeatureValidator) ValidateLogs(logStream string, logLine string, number
 	var (
 		logGroup = awsservice.GetInstanceId()
 	)
-	log.Printf("Start to validate log %s with number of logs lines %d within log group %s, log stream %s, start time %v and end time %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime)
+	log.Printf("Start to validate log '%s' with number of logs lines %d within log group %s, log stream %s, start time %v and end time %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime)
 	ok, err := awsservice.ValidateLogs(logGroup, logStream, &startTime, &endTime, func(logs []string) bool {
 		if len(logs) < 1 {
 			return false
 		}
 		actualNumberOfLogLines := 0
-		for _, log := range logs {
-			if strings.Contains(log, logLine) {
+		for _, l := range logs {
+			if strings.Contains(l, logLine) {
 				actualNumberOfLogLines += 1
 			}
 		}
 
-		return actualNumberOfLogLines != numberOfLogLine
+		return numberOfLogLine <= actualNumberOfLogLines
 	})
 
 	if !ok || err != nil {
@@ -132,20 +132,15 @@ func (s *FeatureValidator) ValidateLogs(logStream string, logLine string, number
 	return nil
 }
 
-func (s *FeatureValidator) ValidateMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, metricValue float64, startTime, endTime time.Time) error {
-	var boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
-	// Metric being send every one minute; therefore, the sample count is only 1
-	// https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/internal/common/metrics.go#L58-L72
-	// and the aggregation is 1 minute too
-	if strings.Contains(metricName, "statsd") || strings.Contains(metricName, "collectd") {
-		boundAndPeriod = 1
-	}
+func (s *FeatureValidator) ValidateMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, metricValue float64, metricSampleCount int, startTime, endTime time.Time) error {
+	var (
+		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
+	)
 
 	metricQueries := s.buildMetricQueries(metricName, metricNamespace, metricDimensions)
 
 	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v", metricName, metricNamespace, startTime, endTime)
 
-	// We are only interesting in the maxium metric values within the time range
 	metrics, err := awsservice.GetMetricData(metricQueries, startTime, endTime)
 	if err != nil {
 		return err
@@ -157,16 +152,16 @@ func (s *FeatureValidator) ValidateMetric(metricName, metricNamespace string, me
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, int(boundAndPeriod), int(boundAndPeriod), int32(boundAndPeriod)); !ok {
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount, metricSampleCount, int32(boundAndPeriod)); !ok {
 		return fmt.Errorf("metric %s is not within sample count bound [ %f, %f]", metricName, boundAndPeriod, boundAndPeriod)
 	}
 
-	// Assuming each plugin are testing one at a time
-	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
+	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 10%]
 	actualMetricValue := metrics.MetricDataResults[0].Values[0]
 	upperBoundValue := metricValue * (1 + metricErrorBound)
 	lowerBoundValue := metricValue * (1 - metricErrorBound)
-	if metricValue != 0 && (actualMetricValue < lowerBoundValue || actualMetricValue > upperBoundValue) {
+
+	if metricValue != 0.0 && (actualMetricValue < lowerBoundValue || actualMetricValue > upperBoundValue) {
 		return fmt.Errorf("metric %s value %f is different from the actual value %f", metricName, metricValue, metrics.MetricDataResults[0].Values[0])
 	}
 

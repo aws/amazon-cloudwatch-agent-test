@@ -13,7 +13,7 @@ import (
 	"collectd.org/api"
 	"collectd.org/exec"
 	"collectd.org/network"
-	"github.com/cactus/go-statsd-client/v5/statsd"
+	"github.com/DataDog/datadog-go/statsd"
 )
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
@@ -106,16 +106,8 @@ func sendCollectDMetrics(metricPerMinute int, duration time.Duration) error {
 }
 
 func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
-	// https://github.com/cactus/go-statsd-client#example
-	statsdClientConfig := &statsd.ClientConfig{
-		Address:     ":8125",
-		Prefix:      "statsd",
-		UseBuffered: true,
-		// interval to force flush buffer. full buffers will flush on their own,
-		// but for data not frequently sent, a max threshold is useful
-		FlushInterval: 300 * time.Millisecond,
-	}
-	client, err := statsd.NewClientWithConfig(statsdClientConfig)
+	// https://github.com/DataDog/datadog-go#metrics
+	client, err := statsd.New("127.0.0.1:8125", statsd.WithMaxMessagesPerPayload(100), statsd.WithNamespace("statsd"), statsd.WithoutTelemetry())
 
 	if err != nil {
 		return err
@@ -129,14 +121,16 @@ func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 
 	// Sending the statsd metric within the first minute before the ticker kicks in the next minute
 	for t := 0; t < metricPerMinute; t++ {
-		client.Inc(fmt.Sprint(t), int64(t), 1.0)
+		if err := client.Count(fmt.Sprint(t), int64(t), []string{}, 1.0); err != nil {
+			return err
+		}
 	}
 
 	for {
 		select {
 		case <-ticker.C:
 			for t := 0; t < metricPerMinute; t++ {
-				client.Inc(fmt.Sprint(t), int64(t), 1.0)
+				client.Count(fmt.Sprint(t), int64(t), []string{}, 1.0)
 			}
 		case <-endTimeout:
 			return nil

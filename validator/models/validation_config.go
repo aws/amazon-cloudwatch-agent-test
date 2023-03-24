@@ -53,9 +53,10 @@ type validatorConfig struct {
 }
 
 type MetricValidation struct {
-	MetricName      string            `yaml:"metric_name"`
-	MetricDimension []MetricDimension `yaml:"metric_dimension,omitempty"`
-	MetricValue     float64           `yaml:"metric_value,omitempty"`
+	MetricName        string            `yaml:"metric_name"`
+	MetricDimension   []MetricDimension `yaml:"metric_dimension"`
+	MetricValue       float64           `yaml:"metric_value"`
+	MetricSampleCount int               `yaml:"metric_sample_count"`
 }
 
 type LogValidation struct {
@@ -126,7 +127,7 @@ func (v *validatorConfig) GetCloudWatchAgentConfigPath() string {
 
 // GetNumberMonitoredLogs returns the number of seconds the agent should run and collect the metrics
 func (v *validatorConfig) GetAgentCollectionPeriod() time.Duration {
-	return time.Duration(v.AgentCollectionPeriod)*time.Second 
+	return time.Duration(v.AgentCollectionPeriod) * time.Second
 }
 
 // GetNumberMonitoredLogs returns the namespace that metrics need to be validated

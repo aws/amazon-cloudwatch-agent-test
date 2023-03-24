@@ -35,11 +35,19 @@ resource "aws_security_group" "ec2_security_group" {
   }
 
   egress {
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
     from_port   = 9121
     to_port     = 9121
     protocol    = "TCP"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
 
   ingress {
     from_port   = 6379

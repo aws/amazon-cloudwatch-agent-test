@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 	"time"
 
 	"go.uber.org/multierr"
@@ -60,12 +61,6 @@ func writeToLogs(filePath string, duration time.Duration, logLinesPerMinute int)
 		}
 	}
 
-	bytes, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-	log.Printf("test hello %v", string(bytes))
-
 	for {
 		select {
 		case <-ticker.C:
@@ -101,17 +96,17 @@ func getLogFilePaths(configPath string) ([]string, error) {
 	return filePaths, nil
 }
 
-/* GenerateLogConfig takes the number of logs to be monitored and applies it to the supplied config,
-* It writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
-* the supplied configuration
-* DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
-* (log being monitored will be overwritten - it is needed for json structure)
-* returns the path of the config generated and a list of log stream names
- */
+// GenerateLogConfig takes the number of logs to be monitored and applies it to the supplied config,
+// It writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
+// the supplied configuration
+// DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
+// (log being monitored will be overwritten - it is needed for json structure)
+// returns the path of the config generated and a list of log stream names
 func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	if numberMonitoredLogs == 0 || filePath == "" {
 		return errors.New("number of monitored logs or file path is empty")
 	}
+
 	type LogInfo struct {
 		FilePath        string `json:"file_path"`
 		LogGroupName    string `json:"log_group_name"`
@@ -139,10 +134,11 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	}
 
 	var logFiles []LogInfo
+	tempFolder := getTempFolder()
 
 	for i := 0; i < numberMonitoredLogs; i++ {
 		logFiles = append(logFiles, LogInfo{
-			FilePath:        fmt.Sprintf("/tmp/test%d.log", i+1),
+			FilePath:        fmt.Sprintf("%s/test%d.log", tempFolder, i+1),
 			LogGroupName:    "{instance_id}",
 			LogStreamName:   fmt.Sprintf("test%d.log", i+1),
 			RetentionInDays: 1,
@@ -165,4 +161,13 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	}
 
 	return nil
+}
+
+// getTempFolder gets the temp folder for generate logs
+// depends on the operating system
+func getTempFolder() string {
+	if runtime.GOOS == "windows" {
+		return "C:"
+	}
+	return "/tmp"
 }

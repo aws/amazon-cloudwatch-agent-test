@@ -6,13 +6,14 @@
       "namespace": "CloudWatchAgentMacFeature",
       "metrics_collected": {
         "statsd": {
-          "service_address": ":8125",
-          "metrics_collection_interval": 60
+          "metrics_aggregation_interval": 60,
+          "metrics_collection_interval": 30,
+          "service_address": ":8125"
         },
         "cpu": {
           "measurement": [
             "time_active", 
-            "usage_idle"
+            "time_guest"
           ],
           "metrics_collection_interval": 1
         },
@@ -20,7 +21,8 @@
             "measurement": [
               "free",
               "used_percent"
-            ]
+            ],
+            "metrics_collection_interval": 1
         },
         "processes": {
             "measurement": [
@@ -36,43 +38,35 @@
             ],
             "metrics_collection_interval": 1
           },
-          "mem": {
+        "mem": {
             "measurement": [
               "available_percent", 
               "used_percent"
             ],
             "metrics_collection_interval": 1
-          },
-          "diskio": {
+        },
+        "diskio": {
             "resources": [
-              "devfs"
+              "*"
             ],
             "measurement": [
               "iops_in_progress", 
               "io_time"
             ],
             "metrics_collection_interval": 1
-          },
-          "disk": {
+        },
+        "disk": {
             "resources": [
-              "devfs"
+              "*"
             ],
             "measurement": [
               "free",
               "used_percent"
             ],
-            "drop_device": true
-          },
-          "ethtool": {
-            "interface_include": [
-                "en0"
-            ],
-            "metrics_include": [
-              "queue_0_tx_cnt",
-              "queue_0_rx_cnt"
-            ]
-          },
-          "net": {
+            "drop_device": true,
+            "metrics_collection_interval": 1
+        },
+        "net": {
             "resources": [
               "en0"
             ],
@@ -81,8 +75,8 @@
               "bytes_recv"
             ],
             "metrics_collection_interval": 1
-          },
-          "procstat": [
+        },
+        "procstat": [
             {
               "exe": "amazon-cloudwatch-agent",
               "measurement": [
@@ -91,12 +85,12 @@
               ],
               "metrics_collection_interval": 1
             }
-          ]
+        ]
       },
       "append_dimensions": {
         "InstanceId": "${aws:InstanceId}"
       },
-      "force_flush_interval": 60
+      "force_flush_interval": 30
     },
     "logs": {
       "logs_collected": {

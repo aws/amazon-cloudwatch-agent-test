@@ -8,7 +8,27 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "mac2.metal"
+  default = "t3a.medium"
+}
+
+variable "ami" {
+  type    = string
+  default = "cloudwatch-agent-integration-test-win-2022*"
+}
+
+variable "arc" {
+  type    = string
+  default = "amd64"
+}
+
+variable "cwa_github_sha" {
+  type    = string
+  default = ""
+}
+
+variable "s3_bucket" {
+  type    = string
+  default = ""
 }
 
 variable "ssh_key_name" {
@@ -16,22 +36,7 @@ variable "ssh_key_name" {
   default = ""
 }
 
-variable "ami" {
-  type    = string
-  default = "amzn-ec2-macos-13.*-arm64"
-}
-
 variable "ssh_key_value" {
-  type    = string
-  default = ""
-}
-
-variable "arc" {
-  type    = string
-  default = "arm64"
-}
-
-variable "s3_bucket" {
   type    = string
   default = ""
 }
@@ -43,11 +48,5 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
-  default = "../../../test/feature/mac"
+  default = "../../../test/feature/windows"
 }
-
-variable "cwa_github_sha" {
-  type    = string
-  default = ""
-}
-

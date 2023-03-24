@@ -1,5 +1,5 @@
 # Receivers that agent needs to tests
-receivers: ["host"]
+receivers: ["host","statsd"]
 
 #Test case name
 test_case: "win_feature"
@@ -22,49 +22,31 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
 metric_namespace: "CloudWatchAgentWinFeature"
 metric_validation:
+  - metric_name: "statsd_0"
+    metric_value: 0.0
+    metric_sample_count: 1
+    metric_dimension: 
+      - name: "metric_type"
+        value: "counter"
+
   - metric_name: "statsd_1"
-    metric_dimension: 
-      - name: "metric_type"
-        value: "counter"
-  
-  - metric_name: "statsd_2"
+    metric_value: 1.0
+    metric_sample_count: 1
     metric_dimension: 
       - name: "metric_type"
         value: "counter"
 
-  - metric_name: "LogicalDisk % Free Space"
-    metric_dimension: 
-      - name: "objectname"
-        value: "LogicalDisk"
-      - name: "instance"
-        value: "C:"
-
-  - metric_name: "Memory % Committed Bytes In Use"
+  - metric_name: "Available_Bytes"
+    metric_sample_count: 60
     metric_dimension: 
       - name: "objectname"
         value: "Memory"
 
-  - metric_name: "Processor % User Time"
+  - metric_name: "Processor_Queue_Length"
+    metric_sample_count: 60
     metric_dimension: 
       - name: "objectname"
-        value: "Processor"
-      - name: "instance"
-        value: "0"
-
-  - metric_name: "procstat_cpu_usage"
-    metric_dimension: 
-      - name: "exe"
-        value: "amazon-cloudwatch-agent"
-      - name: "process_name"
-        value: "amazon-cloudwatch-agent"
-
-  - metric_name: "procstat_memory_rss"
-    metric_dimension: 
-      - name: "exe"
-        value: "amazon-cloudwatch-agent"
-      - name: "process_name"
-        value: "amazon-cloudwatch-agent"
-
+        value: "System"
 
 # Logs that the test needs to validate; moreover, the feature validation already has
 # InstanceID as a log group; therefore, does not need to pass it
@@ -76,6 +58,12 @@ metric_validation:
 # and the collection period is 60. If X minutes, the logs line would be X * log lines
 
 log_validation:
+  - log_value: "Microsoft-Windows-Security-Auditing"
+    log_lines: 1
+    log_stream: "SecurityEvent"
+  - log_value: "Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'"
+    log_lines: 1
+    log_stream: "SecurityEvent"
   - log_value: "This is a log line."
     log_lines: 2
     log_stream: "test1.log"

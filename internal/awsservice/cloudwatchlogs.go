@@ -4,6 +4,7 @@
 package awsservice
 
 import (
+	"context"
 	"errors"
 	"log"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/qri-io/jsonschema"
 )
 
 // catch ResourceNotFoundException when deleting the log group and log stream, as these
@@ -26,7 +28,6 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 
 // DeleteLogStream cleans up log stream by name
 func DeleteLogStream(logGroupName, logStreamName string) {
-
 	_, err := CwlClient.DeleteLogStream(ctx, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
@@ -38,10 +39,6 @@ func DeleteLogStream(logGroupName, logStreamName string) {
 
 // DeleteLogGroup cleans up log group by name
 func DeleteLogGroup(logGroupName string) {
-	// catch ResourceNotFoundException when deleting the log group and log stream, as these
-	// are not useful exceptions to log errors on during cleanup
-	var rnf *types.ResourceNotFoundException
-
 	_, err := CwlClient.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
@@ -77,16 +74,12 @@ func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string
 		StartFromHead: aws.Bool(true), // read from the beginning
 	}
 
-	var sinceMs int64
 	if since != nil {
-		sinceMs = since.UnixNano() / 1e6 // convert to millisecond timestamp
-		params.StartTime = aws.Int64(sinceMs)
+		params.StartTime = aws.Int64(since.UnixMilli())
 	}
 
-	var untilMs int64
 	if until != nil {
-		untilMs = until.UnixNano() / 1e6
-		params.EndTime = aws.Int64(untilMs)
+		params.EndTime = aws.Int64(until.UnixMilli())
 	}
 
 	var nextToken *string
@@ -103,7 +96,7 @@ func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string
 		if err != nil {
 			if errors.As(err, &rnf) && attempts <= StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
-				time.Sleep(time.Minute)
+				time.Sleep(30 * time.Second)
 				continue
 			}
 
@@ -140,4 +133,17 @@ func IsLogGroupExists(logGroupName string) bool {
 	}
 
 	return len(describeLogGroupOutput.LogGroups) > 0
+}
+
+func MatchEMFLogWithSchema(logEntry string, s *jsonschema.Schema, logValidator func(string) bool) bool {
+	keyErrors, e := s.ValidateBytes(context.Background(), []byte(logEntry))
+	if e != nil {
+		log.Println("failed to execute schema validator:", e)
+		return false
+	} else if len(keyErrors) > 0 {
+		log.Printf("failed schema validation: %v\n", keyErrors)
+		return false
+	}
+
+	return logValidator(logEntry)
 }

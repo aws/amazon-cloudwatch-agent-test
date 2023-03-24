@@ -6,17 +6,25 @@
 package metric_value_benchmark
 
 import (
+	_ "embed"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/qri-io/jsonschema"
+	"strings"
+	"time"
 )
 
 type EMFTestRunner struct {
 	test_runner.BaseTestRunner
 }
+
+//go:embed agent_resources/emf_counter.json
+var emfMetricValueBenchmarkSchema string
 
 var _ test_runner.ITestRunner = (*EMFTestRunner)(nil)
 
@@ -26,6 +34,8 @@ func (t *EMFTestRunner) Validate() status.TestGroupResult {
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateEMFMetric(metricName)
 	}
+
+	testResults = append(testResults, validateEMFLogs("MetricValueBenchmarkTest", awsservice.GetInstanceId()))
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -76,7 +86,7 @@ func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 		},
 		{
 			Key:   "Type",
-			Value: dimension.ExpectedDimensionValue{aws.String("Counter")},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("Counter")},
 		},
 	})
 
@@ -90,7 +100,47 @@ func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+	if len(values) == 0 {
+		return testResult
+	}
+
+	for _, v := range values {
+		if v != 5 {
+			return testResult
+		}
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func validateEMFLogs(group, stream string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   "emf-logs",
+		Status: status.FAILED,
+	}
+
+	rs := jsonschema.Must(emfMetricValueBenchmarkSchema)
+
+	validateLogContents := func(s string) bool {
+		return strings.Contains(s, "\"EMFCounter\":5")
+	}
+
+	now := time.Now()
+	ok, err := awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
+		if len(logs) < 1 {
+			return false
+		}
+
+		for _, l := range logs {
+			if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
+				return false
+			}
+		}
+		return true
+	})
+
+	if err != nil || !ok {
 		return testResult
 	}
 

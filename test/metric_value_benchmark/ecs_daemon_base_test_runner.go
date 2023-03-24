@@ -18,7 +18,7 @@ import (
 )
 
 type IECSTestRunner interface {
-	validate() status.TestGroupResult
+	validate(e *environment.MetaData) status.TestGroupResult
 	getTestName() string
 	getAgentConfigFileName() string
 	getAgentRunDuration() time.Duration
@@ -72,7 +72,7 @@ func (t *ECSTestRunner) Run(s test_runner.ITestSuite, e *environment.MetaData) {
 	fmt.Printf("Running %s", testName)
 	testGroupResult, err := t.runAgent(e)
 	if err == nil {
-		testGroupResult = t.testRunner.validate()
+		testGroupResult = t.testRunner.validate(e)
 	}
 
 	s.AddToSuiteResult(testGroupResult)

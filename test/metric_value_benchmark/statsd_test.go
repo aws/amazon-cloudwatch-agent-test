@@ -8,17 +8,20 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
+
+	"github.com/DataDog/datadog-go/statsd"
+	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/cactus/go-statsd-client/v5/statsd"
 )
 
 var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
+
 type StatsdTestRunner struct {
 	test_runner.BaseTestRunner
 }
@@ -29,18 +32,18 @@ var stopChan chan struct{} = make(chan struct{})
 const (
 	// aggregationInterval must match the JSON configuration.
 	aggregationInterval = 30 * time.Second
-	runDuration = 3 * time.Minute
+	runDuration         = 3 * time.Minute
 	// If aggregation is not happening there could be a data point every 5 seconds.
 	// So validate the upper bound.
-	upperBound = int(runDuration / aggregationInterval) + 2
+	upperBound = int(runDuration/aggregationInterval) + 2
 	// Allow 2 missing data points in case CW-Metrics-Web-Service has a 1 minute
 	// delay to store.
-	lowerBound = int(runDuration / aggregationInterval) - 2
+	lowerBound = int(runDuration/aggregationInterval) - 2
 )
 
 type metricInfo struct {
 	metricType string
-	dimensions []statsd.Tag
+	dimensions []string
 }
 
 // Map the metricName to metricInfo.
@@ -50,11 +53,11 @@ var metricMap = map[string]metricInfo{
 	"my_statsd_counter_": {
 		"counter",
 		// Verify users can pass in dimensions via statsd.
-		[]statsd.Tag{{"key1", "val1"}},
+		[]string{"key1:val1"},
 	},
 	"my_statsd_gauge_": {
 		"gauge",
-		[]statsd.Tag{{"key2", "val2"}, {"key3", "val3"}},
+		[]string{"key2:val2", "key3:val3"},
 	},
 }
 
@@ -133,9 +136,10 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		},
 	}
 	for _, d := range metricInfo.dimensions {
+		tag := strings.SplitN(d, ":", 2)
 		instructions = append(instructions, dimension.Instruction{
-			Key:   d[0],
-			Value: dimension.ExpectedDimensionValue{Value: aws.String(d[1])},
+			Key:   tag[0],
+			Value: dimension.ExpectedDimensionValue{Value: aws.String(tag[1])},
 		})
 	}
 	dims, failed := t.DimensionFactory.GetDimensions(instructions)
@@ -150,7 +154,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		return testResult
 	}
 
-	if len(values) < lowerBound || len(values) > upperBound  {
+	if len(values) < lowerBound || len(values) > upperBound {
 		log.Printf("fail: lowerBound %v, upperBound %v, actual %v",
 			lowerBound, upperBound, len(values))
 		return testResult
@@ -167,13 +171,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 // sendStatsd will run until signaled to stop.
 // It sends each metric with dimensions at a 1 second interval.
 func sendStatsd() error {
-	config := statsd.ClientConfig{
-		Address:       ":8125",
-		Prefix:        "",
-		UseBuffered:   true,
-		FlushInterval: 300 * time.Millisecond,
-	}
-	client, err := statsd.NewClientWithConfig(&config)
+	client, err := statsd.New("127.0.0.1:8125", statsd.WithMaxMessagesPerPayload(100))
 	if err != nil {
 		log.Println("error creating statsd client", err)
 		return err
@@ -191,9 +189,9 @@ func sendStatsd() error {
 			for name, info := range metricMap {
 				switch info.metricType {
 				case "counter":
-					client.Inc(name, 1, 1, info.dimensions...)
+					client.Count(name, 1, info.dimensions, 1.0)
 				case "gauge":
-					client.Gauge(name, 1, 1, info.dimensions...)
+					client.Gauge(name, 1, info.dimensions, 1.0)
 				}
 			}
 		}
