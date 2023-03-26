@@ -5,6 +5,7 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -88,19 +89,22 @@ func getLogFilePaths(configPath string) ([]string, error) {
 	return filePaths, nil
 }
 
-/* GenerateLogConfig takes the number of logs to be monitored and applies it to the supplied config,
-* It writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
-* the supplied configuration
-* DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
-* (log being monitored will be overwritten - it is needed for json structure)
-* returns the path of the config generated and a list of log stream names
- */
+// GenerateLogConfig takes the number of logs to be monitored and applies it to the supplied config,
+// It writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
+// the supplied configuration
+// DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
+// (log being monitored will be overwritten - it is needed for json structure)
+// returns the path of the config generated and a list of log stream names
 func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
+	if numberMonitoredLogs == 0 || filePath == "" {
+		return errors.New("number of monitored logs or file path is empty")
+	}
 	type LogInfo struct {
-		FilePath      string `json:"file_path"`
-		LogGroupName  string `json:"log_group_name"`
-		LogStreamName string `json:"log_stream_name"`
-		Timezone      string `json:"timezone"`
+		FilePath        string `json:"file_path"`
+		LogGroupName    string `json:"log_group_name"`
+		LogStreamName   string `json:"log_stream_name"`
+		RetentionInDays int    `json:"retention_in_days"`
+		Timezone        string `json:"timezone"`
 	}
 
 	var cfgFileData map[string]interface{}
@@ -125,10 +129,11 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 
 	for i := 0; i < numberMonitoredLogs; i++ {
 		logFiles = append(logFiles, LogInfo{
-			FilePath:      fmt.Sprintf("/tmp/test%d.log", i+1),
-			LogGroupName:  "{instance_id}",
-			LogStreamName: fmt.Sprintf("{instance_id}/tmp%d", i+1),
-			Timezone:      "UTC",
+			FilePath:        fmt.Sprintf("/tmp/test%d.log", i+1),
+			LogGroupName:    "{instance_id}",
+			LogStreamName:   fmt.Sprintf("{instance_id}/tmp%d", i+1),
+			RetentionInDays: 1,
+			Timezone:        "UTC",
 		})
 	}
 
@@ -141,7 +146,7 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 		return err
 	}
 
-	_, err = file.WriteAt(finalConfig, 0)
+	err = os.WriteFile(filePath, finalConfig, 0644)
 	if err != nil {
 		return err
 	}

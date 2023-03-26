@@ -51,7 +51,6 @@ resource "local_file" "update-validation-config" {
   "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
 
   filename = "${var.test_dir}/${local.final_validator_config}"
-
 }
 
 #####################################################################
@@ -62,7 +61,6 @@ resource "aws_instance" "cwagent" {
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
   iam_instance_profile        = module.basic_components.instance_profile
-  subnet_id                   = module.basic_components.random_subnet_instance_id
   vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
 
@@ -84,7 +82,6 @@ resource "null_resource" "integration_test" {
     host        = aws_instance.cwagent.public_ip
   }
 
-  # Prepare Integration Test
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
     destination = "${local.instance_temp_directory}/${local.final_validator_config}"

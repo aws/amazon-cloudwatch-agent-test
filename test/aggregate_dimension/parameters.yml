@@ -1,0 +1,78 @@
+# Receivers that agent needs to tests
+receivers: "host"
+
+#Test case name
+test_case: "aggregate_dimension"
+validate_type: "basic"
+# Only support metrics/traces/logs
+data_type: "metrics"
+
+# Number of seconds the agent should run and collect the metrics. In this case, 1 minutes
+agent_collection_period: 60 
+
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+
+# Metric that the test needs to validate; moreover, the stress validation already has
+# InstanceID dimension; therefore, does not need to validate it
+# https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
+metric_namespace: "MetricAggregationDimensions"
+metric_validation: 
+  - metric_name: "mem_used_percent"
+    metric_exist: true
+    metric_sample_count: 1
+    metric_dimension: 
+      - name: "foo"
+        value: "fooval"
+      - name: "bar"
+        value: "barval"
+      - name: "bar"
+        value: "barval"
+      - name: "InstanceId"
+        value: ""
+      - name: "InstanceType"
+        value: ""
+  
+  - metric_name: "mem_used_percent"
+    metric_exist: true
+    metric_sample_count: 1
+    metric_dimension: []
+  
+  - metric_name: "mem_used_percent"
+    metric_exist: true
+    metric_sample_count: 1
+    metric_dimension: 
+      - name: "InstanceId"
+        value: ""
+      - name: "InstanceType"
+        value: ""
+  
+  - metric_name: "mem_used_percent"
+    metric_exist: true
+    metric_sample_count: 1
+    metric_dimension: 
+      - name: "foo"
+        value: "fooval"
+      - name: "bar"
+        value: "barval"
+      - name: "InstanceType"
+        value: ""
+  
+  - metric_name: "mem_used_percent"
+    metric_exist: false
+    metric_dimension: 
+      - name: "foo"
+        value: "fooval"
+  
+  - metric_name: "mem_used_percent"
+    metric_exist: false
+    metric_dimension: 
+      - name: "foo"
+        value: "fooval"
+      - name: "bar"
+        value: "barval"
+  
+  - metric_name: "mem_used_percent"
+    metric_exist: false
+    metric_dimension: 
+      - name: "InstanceType"
+        value: ""

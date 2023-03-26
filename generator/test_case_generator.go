@@ -47,17 +47,21 @@ var testTypeToTestDirMap = map[string][]string{
 		Therefore, limit down the scope for testing in Mac since EC2 can be done with Linux
 		and Mac under the hood share similar plugins with Linux
 	*/
+	"ec2_mac": {
+		"../../../test/feature/mac",
+	},
 	"ec2_windows": {
 		"../../../test/feature/win",
 	},
-	"ec2_mac": {},
 	"ec2_performance": {
 		"../../test/performance/logs",
 		"../../test/performance/statsd",
+		"../../test/performance/collectd",
 	},
 	"ec2_stress": {
 		"../../test/stress/logs",
 		"../../test/stress/statsd",
+		"../../test/stress/collectd",
 	},
 	"ecs_fargate": {
 		"./test/ecs/ecs_metadata",

@@ -73,7 +73,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(dimension.Value),
 			})
 		}
-		err := s.ValidateMetric(metric.MetricName, metricNamespace, metric.MetricValue, metricDimensions, startTime, endTime)
+		err := s.ValidateMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricValue, metric.MetricSampleCount, metric.MetricExist, startTime, endTime)
 		if err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
@@ -103,59 +103,59 @@ func (s *BasicValidator) Cleanup() error {
 }
 
 func (s *BasicValidator) ValidateLogs(logStream string, logLine string, numberOfLogLine int, startTime, endTime time.Time) error {
-	var (
-		logGroup = awsservice.GetInstanceId()
-	)
+	var logGroup = awsservice.GetInstanceId()
 
-	err := awsservice.ValidateLogs(logGroup, logStream, startTime, endTime, func(logs []string) error {
+	log.Printf("Start to validate log '%s' with number of logs lines %d within log group %s, log stream %s, start time %v and end time %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime)
+	ok, err := awsservice.ValidateLogs(logGroup, logStream, &startTime, &endTime, func(logs []string) bool {
 		if len(logs) < 1 {
-			return fmt.Errorf("no logs exist with the log group %s, log stream %s, start time %v and end time %v", logGroup, logStream, startTime, endTime)
+			return false
 		}
-
 		actualNumberOfLogLines := 0
-		for _, log := range logs {
-			if strings.Contains(log, logLine) {
+		for _, l := range logs {
+			if strings.Contains(l, logLine) {
 				actualNumberOfLogLines += 1
 			}
 		}
-		if actualNumberOfLogLines != numberOfLogLine {
-			return fmt.Errorf("the number of log line for '%s' is %d which does not match the actual number with log group %s, log stream %s, start time %v and end time %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime)
-		}
 
-		return nil
+		return numberOfLogLine <= actualNumberOfLogLines
 	})
 
-	return err
+	if !ok || err != nil {
+		return fmt.Errorf("the number of log line for '%s' is %d which does not match the actual number with log group %s, log stream %s, start time %v and end time %v with err %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime, err)
+	}
+
+	return nil
 }
 
-func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metricValue float64, metricDimensions []types.Dimension, startTime, endTime time.Time) error {
+func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, metricValue float64, metricSampleCount int, metricExist bool, startTime, endTime time.Time) error {
 	var (
 		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
-		receiver       = s.vConfig.GetPluginsConfig()
 	)
 
 	metricQueries := s.buildMetricQueries(metricName, metricNamespace, metricDimensions)
 
 	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v", metricName, metricNamespace, startTime, endTime)
 
-	// We are only interesting in the maxium metric values within the time range
 	metrics, err := awsservice.GetMetricData(metricQueries, startTime, endTime)
 	if err != nil {
 		return err
 	}
 
 	if len(metrics.MetricDataResults) == 0 || len(metrics.MetricDataResults[0].Values) == 0 {
-		return fmt.Errorf("getting metric %s failed with the namespace %s and dimension %v %v", metricName, metricNamespace, metricDimensions, receiver)
+		if !metricExist {
+			return nil
+		}
+
+		return fmt.Errorf("getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, metricDimensions)
 	}
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, int(boundAndPeriod), int(boundAndPeriod), int32(boundAndPeriod)); !ok {
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount, metricSampleCount, int32(boundAndPeriod)); !ok {
 		return fmt.Errorf("metric %s is not within sample count bound [ %f, %f]", metricName, boundAndPeriod, boundAndPeriod)
 	}
 
-	// Assuming each plugin are testing one at a time
-	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
+	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 10%]
 	actualMetricValue := metrics.MetricDataResults[0].Values[0]
 	upperBoundValue := metricValue * (1 + metricErrorBound)
 	lowerBoundValue := metricValue * (1 - metricErrorBound)

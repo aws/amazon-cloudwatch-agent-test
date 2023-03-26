@@ -1,0 +1,41 @@
+{
+    "agent": {
+        "debug": true
+    },
+    "metrics": {
+        "namespace": "MetricAggregationDimensions",
+        "append_dimensions": {
+            "InstanceId": "${aws:InstanceId}",
+            "InstanceType": "${aws:InstanceType}"
+        },
+        "aggregation_dimensions": [
+            [],
+            [
+                "InstanceId"
+            ],
+            [
+                "InstanceId",
+                "InstanceType"
+            ],
+            [
+                "foo",
+                "bar",
+                "InstanceType"
+            ]
+        ],
+        "metrics_collected": {
+            "mem": {
+                "append_dimensions": {
+                    "foo": "fooval",
+                    "bar": "barval",
+                    "baz": "bazval"
+                },
+                "measurement": [
+                    "mem_used_percent"
+                ],
+                "metrics_collection_interval": 60
+            }
+        },
+        "force_flush_interval": 60
+    }
+}

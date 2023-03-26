@@ -16,7 +16,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 type MetricPluginBoundValue map[string]map[string]map[string]float64
@@ -37,6 +36,16 @@ var (
 				"procstat_memory_data": float64(83000000),
 				"procstat_num_fds":     float64(11),
 				"net_bytes_sent":       float64(105000),
+				"net_packets_sent":     float64(105),
+			},
+			"collectd": {
+				"procstat_cpu_usage":   float64(20),
+				"procstat_memory_rss":  float64(80000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(82000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(102000),
 				"net_packets_sent":     float64(105),
 			},
 			"logs": {
@@ -61,6 +70,16 @@ var (
 				"net_bytes_sent":       float64(524000),
 				"net_packets_sent":     float64(520),
 			},
+			"collectd": {
+				"procstat_cpu_usage":   float64(90),
+				"procstat_memory_rss":  float64(120000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(135000000),
+				"procstat_num_fds":     float64(17),
+				"net_bytes_sent":       float64(490000),
+				"net_packets_sent":     float64(450),
+			},
 			"logs": {
 				"procstat_cpu_usage":   float64(200),
 				"procstat_memory_rss":  float64(325000000),
@@ -82,6 +101,16 @@ var (
 				"procstat_num_fds":     float64(17),
 				"net_bytes_sent":       float64(980000),
 				"net_packets_sent":     float64(860),
+			},
+			"collectd": {
+				"procstat_cpu_usage":   float64(120),
+				"procstat_memory_rss":  float64(130000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(888000000),
+				"procstat_memory_data": float64(150000000),
+				"procstat_num_fds":     float64(17),
+				"net_bytes_sent":       float64(760000),
+				"net_packets_sent":     float64(700),
 			},
 			"logs": {
 				"procstat_cpu_usage":   float64(225),
@@ -110,6 +139,16 @@ var (
 				"net_bytes_sent":       float64(1700000),
 				"net_packets_sent":     float64(1400),
 			},
+			"collectd": {
+				"procstat_cpu_usage":   float64(220),
+				"procstat_memory_rss":  float64(218000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(980000000),
+				"procstat_memory_data": float64(240000000),
+				"procstat_num_fds":     float64(18),
+				"net_bytes_sent":       float64(1250000),
+				"net_packets_sent":     float64(1100),
+			},
 			"logs": {
 				"procstat_cpu_usage":   float64(200),
 				"procstat_memory_rss":  float64(600000000),
@@ -126,7 +165,6 @@ var (
 
 type StressValidator struct {
 	vConfig models.ValidateConfig
-	basic.BasicValidator
 }
 
 var _ models.ValidatorFactory = (*StressValidator)(nil)
@@ -183,6 +221,19 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 	}
 
 	return multiErr
+}
+
+func (s *StressValidator) Cleanup() error {
+	var (
+		dataType      = s.vConfig.GetDataType()
+		ec2InstanceId = awsservice.GetInstanceId()
+	)
+	switch dataType {
+	case "logs":
+		awsservice.DeleteLogGroup(ec2InstanceId)
+	}
+
+	return nil
 }
 
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, startTime, endTime time.Time) error {
