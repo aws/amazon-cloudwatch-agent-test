@@ -87,11 +87,6 @@ variable "github_test_repo_branch" {
   default = "main"
 }
 
-variable "is_canary" {
-  type    = bool
-  default = false
-}
-
 variable "plugin_tests" {
   type    = string
   default = ""

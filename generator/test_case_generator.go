@@ -63,6 +63,12 @@ var testTypeToTestDirMap = map[string][]string{
 		"../../test/stress/statsd",
 		"../../test/stress/collectd",
 	},
+	/*
+		Canary is feature wide for various platform instead of a single OS
+	*/
+	"ec2_canary": {
+		"../../../test/feature",
+	},
 	"ecs_fargate": {
 		"./test/ecs/ecs_metadata",
 	},

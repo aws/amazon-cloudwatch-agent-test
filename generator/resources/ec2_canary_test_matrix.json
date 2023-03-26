@@ -1,0 +1,16 @@
+[
+    {
+        "os": "al2",
+        "instanceType":"t3a.medium",
+        "ami": "cloudwatch-agent-integration-test-al2*",
+        "arc": "amd64",
+        "family": "linux"
+    },
+    {
+        "os": "win-2022",
+        "instanceType":"t3a.medium",
+        "ami": "cloudwatch-agent-integration-test-win-2022*",
+        "arc": "amd64",
+        "family": "windows"
+    }
+  ]

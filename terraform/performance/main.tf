@@ -53,6 +53,22 @@ resource "local_file" "update-validation-config" {
   filename = "${var.test_dir}/${local.final_validator_config}"
 }
 
+// Build and uploading the validator to spending less time in 
+// and avoid memory issue in allocating memory 
+resource "null_resource" "upload-validator" {
+  provisioner "local-exec" {
+    command = <<-EOT
+    cd ../..
+    make validator-build
+    aws s3 cp ./build/validator/linux/${var.arc}/validator s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/linux/${var.arc}/validator
+    EOT
+  }
+
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+}
+
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
@@ -75,6 +91,8 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
+  depends_on = [aws_instance.cwagent, null_resource.upload-validator]
+
   connection {
     type        = "ssh"
     user        = var.user
@@ -97,7 +115,8 @@ resource "null_resource" "integration_test" {
     inline = [
       "cloud-init status --wait",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/amazon-cloudwatch-agent.rpm .",
-      "sudo rpm -U ./amazon-cloudwatch-agent.rpm"
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/linux/${var.arc}/validator .",
+      "sudo rpm -Uvh ./amazon-cloudwatch-agent.rpm"
     ]
   }
 
@@ -105,15 +124,13 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "export AWS_REGION=${var.region}",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "sudo chmod +x ./validator",
+      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
 
-  depends_on = [aws_instance.cwagent]
 }
 
 data "aws_ami" "latest" {
