@@ -70,7 +70,8 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-performance-${module.common.testing_id}"
+    Name  = "cwagent-performance-${module.common.testing_id}",
+    patch = "ssm"
   }
 }
 

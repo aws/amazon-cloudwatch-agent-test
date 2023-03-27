@@ -74,7 +74,8 @@ resource "aws_instance" "integration-test" {
   }
 
   tags = {
-    Name = "LocalStackIntegrationTestInstance"
+    Name  = "LocalStackIntegrationTestInstance",
+    patch = "ssm"
   }
 }
 
