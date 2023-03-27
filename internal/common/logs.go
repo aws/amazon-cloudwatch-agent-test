@@ -167,7 +167,7 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 // depends on the operating system
 func getTempFolder() string {
 	if runtime.GOOS == "windows" {
-		return "C:"
+		return "C:/Users/Administrator/AppData/Local/Temp"
 	}
 	return "/tmp"
 }

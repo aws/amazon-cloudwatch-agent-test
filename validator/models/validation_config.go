@@ -140,7 +140,7 @@ func (v *validatorConfig) GetMetricValidation() []MetricValidation {
 	return v.MetricValidation
 }
 
-// GetMetricValidation returns the logs need for validation
+// GetLogValidation returns the logs need for validation
 func (v *validatorConfig) GetLogValidation() []LogValidation {
 	return v.LogValidation
 }
