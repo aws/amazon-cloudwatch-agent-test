@@ -85,16 +85,13 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 	fetcher := metric.MetricValueFetcher{}
-	// Namespace must match the JSON config.
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE,
-		test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 
 	if err != nil {
 		return testResult
 	}
 
 	runDuration := t.GetAgentRunDuration()
-	// aggregationInterval must match the JSON configuration.
 	aggregationInterval := 30 * time.Second
 	// If aggregation is not happening there could be a data point every 5 seconds.
 	// So validate the upper bound.
@@ -109,7 +106,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToValue(metricName, values, 1) {
+	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
 		return testResult
 	}
 

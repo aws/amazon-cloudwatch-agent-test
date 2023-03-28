@@ -155,7 +155,7 @@ func (t *PrometheusTestRunner) validatePrometheusMetric(metricName string) statu
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToValue(metricName, values, 0) {
+	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

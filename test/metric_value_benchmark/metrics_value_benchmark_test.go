@@ -67,6 +67,18 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
 			{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &DiskTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &NetStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CPUTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &MemTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &ProcStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &DiskIOTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &NetTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &EthtoolTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &SwapTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
@@ -107,11 +119,11 @@ func shouldRunEC2Test(env *environment.MetaData, t *test_runner.TestRunner) bool
 	return ok
 }
 
-// isAllValuesGreaterThanOrEqualToValue will compare if the given array is larger than 0
+// isAllValuesGreaterThanOrEqualToExpectedValue will compare if the given array is larger than 0
 // and check if the average value for the array is not la
 // TODO: Moving metric_value_benchmark to validator
 // https://github.com/aws/amazon-cloudwatch-agent-test/pull/162
-func isAllValuesGreaterThanOrEqualToValue(metricName string, values []float64, expectedValue float64) bool {
+func isAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []float64, expectedValue float64) bool {
 	if len(values) == 0 {
 		log.Printf("No values found %v", metricName)
 		return false
@@ -134,6 +146,6 @@ func isAllValuesGreaterThanOrEqualToValue(metricName string, values []float64, e
 		return false
 	}
 
-	log.Printf("Values are all greater than or equal to %v for %v", expectedValue, metricName)
+	log.Printf("The average value %f for metric %s are within bound [%f, %f]", expectedValue, metricName, lowerBoundValue, upperBoundValue)
 	return true
 }

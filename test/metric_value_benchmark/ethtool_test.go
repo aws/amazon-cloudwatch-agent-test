@@ -97,7 +97,7 @@ func (m *EthtoolTestRunner) validateEthtoolMetric(metricName string) status.Test
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToValue(metricName, values, 0) {
+	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

@@ -82,7 +82,7 @@ func (m *ProcStatTestRunner) validateProcStatMetric(metricName string) status.Te
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToValue(metricName, values, 0) {
+	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 
