@@ -6,12 +6,16 @@
 package metric_value_benchmark
 
 import (
+	"log"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type CollectDTestRunner struct {
@@ -42,28 +46,11 @@ func (t *CollectDTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *CollectDTestRunner) SetupAfterAgentRun() error {
-	// EC2 Image Builder creates the collectd's default configuration and collectd will pick it up.
-	// For Linux the static is at /etc/collectd.conf, fox Ubuntu it is at /etc/collectd/collectd.conf
-	// Collectd's static configuration
-	//		LoadPlugin network
-	//		LoadPlugin cpu
-	// 		<Plugin cpu>
-	//			ReportByState = true
-	//			ReportByCpu = true
-	//			ValuesPercentage = true
-	//		</Plugin>
-	//		<Plugin network>
-	//			Server "127.0.0.1" "25826"
-	//		</Plugin>
-	startCollectdCommands := []string{
-		"sudo systemctl restart collectd",
-	}
-
-	return common.RunCommands(startCollectdCommands)
+	return common.SendCollectDMetrics(2, time.Second, t.GetAgentRunDuration())
 }
 
 func (t *CollectDTestRunner) GetMeasuredMetrics() []string {
-	return []string{"collectd_cpu_value"}
+	return []string{"collectd_gauge_1_value", "collectd_counter_1_value"}
 }
 
 func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.TestResult {
@@ -72,41 +59,56 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+	instructions := []dimension.Instruction{
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
-		{
-			Key:   "type_instance",
-			Value: dimension.ExpectedDimensionValue{aws.String("user")},
-		},
-		{
-			Key:   "instance",
-			Value: dimension.ExpectedDimensionValue{aws.String("0")},
-		},
-		{
+	}
+	switch metricName {
+	case "collectd_counter_1_value":
+		instructions = append(instructions, dimension.Instruction{
+			// CWA adds this metric_type dimension.
 			Key:   "type",
-			Value: dimension.ExpectedDimensionValue{aws.String("percent")},
-		},
-	})
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("counter")},
+		})
+	case "collectd_gauge_1_value":
+		instructions = append(instructions, dimension.Instruction{
+			// CWA adds this metric_type dimension.
+			Key:   "type",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("gauge")},
+		})
+	}
 
+	dims, failed := t.DimensionFactory.GetDimensions(instructions)
 	if len(failed) > 0 {
 		return testResult
 	}
-
 	fetcher := metric.MetricValueFetcher{}
 	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+
 	if err != nil {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
+	runDuration := t.GetAgentRunDuration()
+	aggregationInterval := 30 * time.Second
+	// If aggregation is not happening there could be a data point every 5 seconds.
+	// So validate the upper bound.
+	upperBound := int(runDuration/aggregationInterval) + 2
+	// Allow 2 missing data points in case CW-Metrics-Web-Service has a 1 minute
+	// delay to store.
+	lowerBound := int(runDuration/aggregationInterval) - 2
+
+	if len(values) < lowerBound || len(values) > upperBound {
+		log.Printf("fail: lowerBound %v, upperBound %v, actual %v",
+			lowerBound, upperBound, len(values))
 		return testResult
 	}
 
-	// TODO: Range test with >0 and <100
-	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
+	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
+		return testResult
+	}
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
