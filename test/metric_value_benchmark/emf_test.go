@@ -7,16 +7,18 @@ package metric_value_benchmark
 
 import (
 	_ "embed"
+	"strings"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/qri-io/jsonschema"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/qri-io/jsonschema"
-	"strings"
-	"time"
 )
 
 type EMFTestRunner struct {
@@ -100,14 +102,8 @@ func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	if len(values) == 0 {
+	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 5) {
 		return testResult
-	}
-
-	for _, v := range values {
-		if v != 5 {
-			return testResult
-		}
 	}
 
 	testResult.Status = status.SUCCESSFUL
