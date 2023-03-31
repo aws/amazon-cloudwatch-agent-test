@@ -20,7 +20,7 @@ const logLine = "# %d - This is a log line. \n"
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
-func StartLogWrite(configFilePath string, duration time.Duration, logLinesPerMinute int) error {
+func StartLogWrite(configFilePath string, duration time.Duration, sendingInterval time.Duration, logLinesPerMinute int) error {
 	var multiErr error
 
 	logPaths, err := getLogFilePaths(configFilePath)
@@ -30,7 +30,7 @@ func StartLogWrite(configFilePath string, duration time.Duration, logLinesPerMin
 
 	for _, logPath := range logPaths {
 		go func(logPath string) {
-			if err := writeToLogs(logPath, duration, logLinesPerMinute); err != nil {
+			if err := writeToLogs(logPath, duration, sendingInterval, logLinesPerMinute); err != nil {
 				multiErr = multierr.Append(multiErr, err)
 			}
 		}(logPath)
@@ -41,7 +41,7 @@ func StartLogWrite(configFilePath string, duration time.Duration, logLinesPerMin
 
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
 // for the specified duration
-func writeToLogs(filePath string, duration time.Duration, logLinesPerMinute int) error {
+func writeToLogs(filePath string, duration, sendingInterval time.Duration, logLinesPerMinute int) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -49,7 +49,7 @@ func writeToLogs(filePath string, duration time.Duration, logLinesPerMinute int)
 	defer f.Close()
 	defer os.Remove(filePath)
 
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 

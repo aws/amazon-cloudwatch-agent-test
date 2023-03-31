@@ -11,8 +11,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
+
+var supportedReceivers = []string{"logs", "statsd", "collectd", "host"}
 
 type ValidateConfig interface {
 	GetPluginsConfig() []string
@@ -84,6 +87,13 @@ func NewValidateConfig(configPath string) (*validatorConfig, error) {
 		return nil, err
 	}
 	log.Printf("Parameters validation for %v", vConfig)
+
+	for _, receiver := range vConfig.Receivers {
+		if !slices.Contains(supportedReceivers, receiver) {
+			return nil, fmt.Errorf("only support %v, the validator does not support %s", supportedReceivers, receiver)
+		}
+	}
+
 	return &vConfig, nil
 }
 
@@ -109,8 +119,8 @@ func (v *validatorConfig) GetDataType() string {
 
 // GetDataRate returns number of metrics to be sent or number of log lines to write
 func (v *validatorConfig) GetDataRate() int {
-	if dataRate, err := strconv.ParseInt(v.ValuesPerMinute, 10, 64); err == nil {
-		return int(dataRate)
+	if dataRate, err := strconv.Atoi(v.ValuesPerMinute); err == nil {
+		return dataRate
 	}
 	return 0
 }
