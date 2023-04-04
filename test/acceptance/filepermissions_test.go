@@ -1,3 +1,7 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+//go:build !windows
+
 package acceptance
 
 import (
@@ -52,7 +56,7 @@ func createGroupResult() status.TestGroupResult {
 	}
 	testResults[0] = onlyUserCanWriteToFilepath("root", agentConfigPath)
 	testResults[1] = onlyUserCanWriteToFilepath("cwagent", agentConfigCopiedDir)
-	testResults[2] = onlyUserCanWriteToFilepath("root", translatedTomlPath)
+	testResults[2] = onlyUserCanWriteToFilepath("cwagent", translatedTomlPath)
 	return testGroupResult
 }
 
