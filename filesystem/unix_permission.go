@@ -30,12 +30,12 @@ var FilePermissionInHex = map[FilePermission]uint32{
 }
 
 func FileHasPermission(filePath string, permission FilePermission) (bool, error) {
-	fileStat, ok := GetFileStatPermission(filePath)
-	if ok != nil {
-		return false, ok
+	filePermission, err := GetFileStatPermission(filePath)
+	if err != nil {
+		return false, err
 	}
 
-	hasPermission := fileStat&FilePermissionInHex[permission] != 0
+	hasPermission := filePermission&FilePermissionInHex[permission] != 0
 	return hasPermission, nil
 }
 
@@ -54,7 +54,7 @@ func GetFileOwnerUserName(filePath string) (string, error) {
 	}
 	owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid))
 	if err != nil {
-		return "", fmt.Errorf("cannot look up file owner's name %s: %v", filePath, err)
+		return "", fmt.Errorf("cannot look up file owner's name %s: %w", filePath, err)
 	}
 	return owner.Username, nil
 
@@ -63,10 +63,10 @@ func GetFileOwnerUserName(filePath string) (string, error) {
 func GetFileGroupName(filePath string) (string, error) {
 	var stat unix.Stat_t
 	if err := unix.Stat(filePath, &stat); err != nil {
-		return "", fmt.Errorf("cannot get file's stat %s: %v", filePath, err)
+		return "", fmt.Errorf("cannot get file's stat %s: %w", filePath, err)
 	}
 	if grp, err := user.LookupGroupId(fmt.Sprintf("%d", stat.Gid)); err != nil {
-		return "", fmt.Errorf("cannot look up file group name %s: %v", filePath, err)
+		return "", fmt.Errorf("cannot look up file group name %s: %w", filePath, err)
 	} else {
 		return grp.Name, nil
 	}
@@ -98,7 +98,7 @@ func CheckFileOwnerRights(filePath, requiredOwner string) error {
 	ownerUsername, err := GetFileOwnerUserName(filePath)
 
 	if err != nil {
-		return fmt.Errorf("cannot look up file owner's name %s: %v", filePath, err)
+		return fmt.Errorf("cannot look up file owner's name %s: %w", filePath, err)
 	} else if ownerUsername != requiredOwner {
 		return fmt.Errorf("owner does not have permission to protect file %s", filePath)
 	}

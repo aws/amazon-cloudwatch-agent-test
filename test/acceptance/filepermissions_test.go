@@ -89,7 +89,7 @@ func onlyUserCanWriteToFilepath(user, filepath string) status.TestResult {
 func fileHasOwnerAndGroup(filepath, expectedOwner, expectedGroup string) (bool, error) {
 	owner, err := filesystem.GetFileOwnerUserName(filepath)
 	if err != nil {
-		err := fmt.Errorf("FAILED fileHasOwnerAndGroup(); error=%v", err)
+		err := fmt.Errorf("FAILED fileHasOwnerAndGroup(); error=%w", err)
 		log.Println(err)
 		return false, err
 	} else if owner != expectedOwner {
@@ -99,8 +99,8 @@ func fileHasOwnerAndGroup(filepath, expectedOwner, expectedGroup string) (bool, 
 
 	group, err := filesystem.GetFileGroupName(filepath)
 	if err != nil {
-		err := fmt.Errorf("FAILED fileHasOwnerAndGroup(); error=%v", err)
-		log.Printf("%v", err)
+		err := fmt.Errorf("FAILED fileHasOwnerAndGroup(); error=%w", err)
+		log.Println(err)
 		return false, err
 	} else if group != expectedGroup {
 		log.Printf("FAILED fileHasOwnerAndGroup(); expected GROUP=%v; actual=%v", expectedGroup, group)
@@ -112,7 +112,9 @@ func fileHasOwnerAndGroup(filepath, expectedOwner, expectedGroup string) (bool, 
 func fileHasPermission(filepath string, permission filesystem.FilePermission, shouldHavePermission bool) (bool, error) {
 	hasPermission, err := filesystem.FileHasPermission(filepath, permission)
 	if err != nil {
-		return false, fmt.Errorf("fileHasPermission(), could not invoke filesystem.FileHasPermission; err=%v", err)
+		err := fmt.Errorf("fileHasPermission(), could not invoke filesystem.FileHasPermission; err=%w", err)
+		log.Println(err)
+		return false, err
 	}
 	return hasPermission == shouldHavePermission, nil
 }
