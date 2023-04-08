@@ -66,6 +66,33 @@ func TouchFile(filePathAbsolute string) error {
 	return nil
 }
 
+func printOutputAndError(function string, stdout []byte, err error) {
+	if err == nil {
+		return
+	}
+	stderr := ""
+	ee, ok :=  err.(*exec.ExitError)
+	if ok {
+		stderr = string(ee.Stderr)
+	}
+	log.Printf("%v failed\n\toutput:\n%v\n\terror:\n%v\n",
+		function, string(stdout), stderr)
+}
+
+func UninstallAgent() error {
+	c := exec.Command("bash", "-c", "sudo rpm -e amazon-cloudwatch-agent")
+	out, err := c.Output()
+	printOutputAndError("UninstallAgent", out, err)
+	return err
+}
+
+func InstallAgent(installerFilePath string) error {
+	c := exec.Command("bash", "-c", "sudo rpm -Uvh " + installerFilePath)
+	out, err := c.Output()
+	printOutputAndError("InstallAgent", out, err)
+	return err
+}
+
 func StartAgent(configOutputPath string, fatalOnFailure bool) error {
 	out, err := exec.
 		Command("bash", "-c", "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:"+configOutputPath).
@@ -156,3 +183,4 @@ func ReplaceLocalStackHostName(pathIn string) {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
 }
+

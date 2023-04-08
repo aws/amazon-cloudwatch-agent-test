@@ -5,24 +5,21 @@
 package canary
 
 import (
-	"context"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/stretchr/testify/assert"
+	"errors"
 	"log"
 	"os"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/stretchr/testify/require"
 )
 
 const (
 	configInputPath           = "resources/canary_config.json"
 	configOutputPath          = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	cloudwatchAgentVersionKey = "release/CWAGENT_VERSION"
-	downloadAgentVersionPath  = "./CWAGENT_VERSION"
 	installAgentVersionPath   = "/opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION"
 )
 
@@ -32,46 +29,57 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-// This copies the canary config, starts the agent, and confirm version is correct.
-// Sanity test runs earlier in the terraform code execution
+// TestCanary verifies customers can download the agent, install it, and it "works".
+// Reports metrics on the number of download failures, install failures, and start failures.
 func TestCanary(t *testing.T) {
-	// Canary set up
-	downloadVersionFile()
-	common.CopyFile(configInputPath, configOutputPath)
-	common.StartAgent(configOutputPath, true)
+	installerFilePath := "/tmp/downloaded_cwa.rpm"
+	err := downloadInstaller(installerFilePath)
+	reportMetric(t, "DownloadFail", err)
 
-	// Version validation
-	expectedVersion, err := os.ReadFile(downloadAgentVersionPath)
-	if err != nil {
-		t.Fatalf("Failure reading downloaded version file %s err %v", downloadAgentVersionPath, err)
+	// Don't care if uninstall fails. Agent might not be installed anyways.
+	_ = common.UninstallAgent()
+
+	err = common.InstallAgent(installerFilePath)
+	reportMetric(t, "InstallFail", err)
+
+	common.CopyFile(configInputPath, configOutputPath)
+	err = common.StartAgent(configOutputPath, false)
+	reportMetric(t, "StartFail", err)
+
+	actualVersion, _ := os.ReadFile(installAgentVersionPath)
+	expectedVersion, _ := getVersionFromS3()
+	if expectedVersion != string(actualVersion) {
+		err = errors.New("agent version mismatch")
 	}
-	actualVersion, err := os.ReadFile(installAgentVersionPath)
-	if err != nil {
-		t.Fatalf("Failure reading installed version file %s err %v", installAgentVersionPath, err)
-	}
-	assert.Equal(t, string(expectedVersion), string(actualVersion))
+	reportMetric(t, "VersionFail", err)
 }
 
-func downloadVersionFile() {
-	metadata := environment.GetEnvironmentMetaData(envMetaDataStrings)
-	ctx := context.Background()
-	c, err := config.LoadDefaultConfig(ctx)
+// reportMetric is just a helper to report a metric and conditionally fail
+// the test based on the error.
+func reportMetric(t *testing.T, name string, err error) {
+	var v float64 = 0
 	if err != nil {
-		log.Fatalf("Failed to create config")
+		log.Printf("error: name %v, err %v", name, err)
+		v += 1
 	}
-	file, err := os.Create(downloadAgentVersionPath)
+	awsservice.ReportMetric("CanaryTest", name, v, types.StandardUnitCount)
+	require.NoError(t, err)
+}
+
+func downloadInstaller(filepath string) error {
+	bucket := environment.GetEnvironmentMetaData(envMetaDataStrings).Bucket
+	key := "release/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm"
+	return awsservice.DownloadFile(bucket, key, filepath)
+}
+
+func getVersionFromS3() (string, error) {
+	filename := "./CWAGENT_VERSION"
+	bucket := environment.GetEnvironmentMetaData(envMetaDataStrings).Bucket
+	key := "release/CWAGENT_VERSION"
+	err := awsservice.DownloadFile(bucket, key, filename)
 	if err != nil {
-		log.Fatalf("Failed to create file %s err %v", downloadAgentVersionPath, err)
+		return "", err
 	}
-	defer file.Close()
-	s3Client := s3.NewFromConfig(c)
-	s3GetObjectInput := s3.GetObjectInput{
-		Bucket: aws.String(metadata.Bucket),
-		Key:    aws.String(cloudwatchAgentVersionKey),
-	}
-	downloader := manager.NewDownloader(s3Client)
-	_, err = downloader.Download(ctx, file, &s3GetObjectInput)
-	if err != nil {
-		log.Fatalf("Can't get cloud agent version from s3 err %v", err)
-	}
+	v, err := os.ReadFile(filename)
+	return string(v), err
 }
