@@ -48,16 +48,6 @@ variable "cwa_github_sha" {
   default = ""
 }
 
-variable "github_test_repo" {
-  type    = string
-  default = ""
-}
-
-variable "github_test_repo_branch" {
-  type    = string
-  default = "main"
-}
-
 variable "cwa_github_sha_date" {
   type    = string
   default = ""

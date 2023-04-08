@@ -44,6 +44,7 @@ func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFact
 
 func (s *PerformanceValidator) GenerateLoad() (err error) {
 	var (
+		metricSendingInterval = time.Minute
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
 		dataType              = s.vConfig.GetDataType()
@@ -52,10 +53,10 @@ func (s *PerformanceValidator) GenerateLoad() (err error) {
 	)
 	switch dataType {
 	case "logs":
-		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, dataRate)
+		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
 	default:
 		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
-		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, dataRate)
+		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate)
 	}
 
 	return err

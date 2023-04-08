@@ -6,7 +6,6 @@
 package filesystem
 
 import (
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -31,7 +30,7 @@ const (
 )
 
 var (
-	advapi32                 = syscall.NewLazyDLL("advapi32.dll")
+	advapi32                 = windows.NewLazyDLL("advapi32.dll")
 	procGetAclInformation    = advapi32.NewProc("GetAclInformation")
 	procGetNamedSecurityInfo = advapi32.NewProc("GetNamedSecurityInfoW")
 	procGetAce               = advapi32.NewProc("GetAce")
