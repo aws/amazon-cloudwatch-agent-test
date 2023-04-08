@@ -36,18 +36,8 @@ locals {
 # Prepare Parameters Tests
 #####################################################################
 
-locals {
-  validator_config        = "parameters.yml"
-  final_validator_config  = "final_parameters.yml"
-  cloudwatch_agent_config = "agent_config.json"
-  instance_temp_directory = "C:"
-}
-
-resource "local_file" "update-validation-config" {
-  content = replace(file("${var.test_dir}/${local.validator_config}"),
-  "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
-
-  filename = "${var.test_dir}/${local.final_validator_config}"
+module "validator" {
+  source = "../validator"
 }
 
 // Build and uploading the validator to spending less time in 

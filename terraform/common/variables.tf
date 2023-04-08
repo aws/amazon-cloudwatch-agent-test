@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-
 variable "cwagent_image_repo" {
   type    = string
   default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"

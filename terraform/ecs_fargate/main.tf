@@ -26,7 +26,7 @@ resource "aws_cloudwatch_log_group" "log_group" {
 ##########################################
 
 locals {
-  cwagent_config         = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
+  cwagent_config         = fileexists("../../../${var.test_dir}/agent_config.json") ? "../../../${var.test_dir}/agent_config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
   cwagent_ecs_taskdef    = fileexists("../../../${var.test_dir}/resources/ecs_taskdef.tpl") ? "../../../${var.test_dir}/resources/ecs_taskdef.tpl" : "./default_resources/default_ecs_taskdef.tpl"
   prometheus_config      = fileexists("../../../${var.test_dir}/resources/ecs_prometheus.tpl") ? "../../../${var.test_dir}/resources/ecs_prometheus.tpl" : "./default_resources/default_ecs_prometheus.tpl"
   extra_apps_ecs_taskdef = fileexists("../../../${var.test_dir}/resources/extra_apps.tpl") ? "../../../${var.test_dir}/resources/extra_apps.tpl" : "./default_resources/default_extra_apps.tpl"
@@ -140,12 +140,20 @@ resource "aws_ecs_service" "extra_apps_service" {
   depends_on = [aws_ecs_task_definition.extra_apps_task_definition]
 }
 
+#####################################################################
+# Prepare Parameters Tests
+#####################################################################
+module "validator" {
+  source = "../validator"
+}
+
+#####################################################################
+# Start validation
+#####################################################################
 resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating metrics/logs"
-      cd ../../..
-      go test ${var.test_dir} -clusterName=${aws_ecs_cluster.cluster.name} -v
+      go run ./validator/main.go --validator-config=${module.validator.validator_config} --preparation-mode=false
     EOT
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service]

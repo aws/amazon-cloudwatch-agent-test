@@ -228,12 +228,20 @@ resource "aws_ecs_service" "extra_apps_service" {
   depends_on = [aws_ecs_task_definition.extra_apps_task_definition]
 }
 
+#####################################################################
+# Prepare Parameters Tests
+#####################################################################
+module "validator" {
+  source = "../validator"
+}
+
+#####################################################################
+# Start validation
+#####################################################################
 resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating metrics/logs"
-      cd ../../..
-      go test ${var.test_dir} -timeout 0 -computeType=ECS -ecsLaunchType=EC2 -ecsDeploymentStrategy=DAEMON -cwagentConfigSsmParamName=${local.cwagent_config_ssm_param_name} -clusterArn=${aws_ecs_cluster.cluster.arn} -cwagentECSServiceName=${aws_ecs_service.cwagent_service.name} -v
+      go run ./validator/main.go --validator-config=${module.validator.validator_config} --preparation-mode=false
     EOT
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service]

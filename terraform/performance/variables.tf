@@ -15,7 +15,7 @@ variable "ssh_key_name" {
 
 variable "ami" {
   type    = string
-  default = "cloudwatch-agent-integration-test-ubuntu*"
+  default = "cloudwatch-agent-integration-test-win-2019*"
 }
 
 variable "ssh_key_value" {
@@ -24,11 +24,6 @@ variable "ssh_key_value" {
 }
 
 variable "user" {
-  type    = string
-  default = ""
-}
-
-variable "arc" {
   type    = string
   default = ""
 }
@@ -52,6 +47,7 @@ variable "cwa_github_sha_date" {
   type    = string
   default = ""
 }
+
 variable "values_per_minute" {
   type    = number
   default = 10

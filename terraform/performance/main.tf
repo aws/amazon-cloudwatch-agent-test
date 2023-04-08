@@ -35,22 +35,14 @@ resource "aws_key_pair" "aws_ssh_key" {
 #####################################################################
 # Prepare Parameters Tests
 #####################################################################
+module "validator" {
+  source = "../validator"
 
-locals {
-  validator_config        = "parameters.yml"
-  final_validator_config  = "final_parameters.yml"
-  cloudwatch_agent_config = "agent_config.json"
+  cwa_github_sha      = var.cwa_github_sha
+  cwa_github_sha_date = var.cwa_github_sha_date
+  values_per_minute   = var.values_per_minute
+
   instance_temp_directory = "/tmp"
-}
-
-resource "local_file" "update-validation-config" {
-  content = replace(replace(replace(replace(file("${var.test_dir}/${local.validator_config}"),
-    "<values_per_minute>", var.values_per_minute),
-    "<commit_hash>", var.cwa_github_sha),
-    "<commit_date>", var.cwa_github_sha_date),
-  "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
-
-  filename = "${var.test_dir}/${local.final_validator_config}"
 }
 
 // Build and uploading the validator to spending less time in 
@@ -102,13 +94,13 @@ resource "null_resource" "integration_test" {
   }
 
   provisioner "file" {
-    source      = "${var.test_dir}/${local.final_validator_config}"
-    destination = "${local.instance_temp_directory}/${local.final_validator_config}"
+    source      = module.validator.cloudwatch_agent_config
+    destination = module.validator.instance_cloudwatch_agent_config
   }
 
   provisioner "file" {
-    source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
-    destination = "${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
+    source      = module.validator.validator_config
+    destination = module.validator.instance_validator_config
   }
 
   # Install agent binaries
@@ -126,9 +118,9 @@ resource "null_resource" "integration_test" {
     inline = [
       "export AWS_REGION=${var.region}",
       "sudo chmod +x ./validator",
-      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_cloudwatch_agent_config}",
+      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
   }
 
