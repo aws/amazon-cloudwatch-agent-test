@@ -6,6 +6,7 @@ package canary
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -32,7 +33,7 @@ func init() {
 // TestCanary verifies customers can download the agent, install it, and it "works".
 // Reports metrics on the number of download failures, install failures, and start failures.
 func TestCanary(t *testing.T) {
-	installerFilePath := "/tmp/downloaded_cwa.rpm"
+	installerFilePath := "./downloaded_cwa.rpm"
 	err := downloadInstaller(installerFilePath)
 	reportMetric(t, "DownloadFail", err)
 
@@ -52,6 +53,8 @@ func TestCanary(t *testing.T) {
 		err = errors.New("agent version mismatch")
 	}
 	reportMetric(t, "VersionFail", err)
+
+	setupCron()
 }
 
 // reportMetric is just a helper to report a metric and conditionally fail
@@ -82,4 +85,28 @@ func getVersionFromS3() (string, error) {
 	}
 	v, err := os.ReadFile(filename)
 	return string(v), err
+}
+
+func setupCron() {
+	// default to us-west-2
+	region := os.Getenv("AWS_REGION")
+	if  region == "" {
+		region = "us-west-2"
+	}
+	bucket := environment.GetEnvironmentMetaData(envMetaDataStrings).Bucket
+	// Need to create a temporary file at low privilege.
+	// Then use sudo to copy it to the CRON directory.
+	src := "resources/canary_test_cron"
+	updateCron(src, region, bucket)
+	dst := "/etc/cron.d/canary_test_cron"
+	common.CopyFile(src, dst)
+}
+
+func updateCron(filepath, region, bucket string) {
+	s := fmt.Sprintf("MAILTO=\"\"\n*/5 * * * * root (cd /home/ec2-user/amazon-cloudwatch-agent-test && AWS_REGION=%s go test ./test/canary/ -v -p 1 -count=1 -computeType=EC2 -bucket=%s > ./cron_run.log", region, bucket)
+	b := []byte(s)
+	err := os.WriteFile(filepath, b, 0644)
+	if err != nil {
+		log.Println("error: creating temp cron file")
+	}
 }
