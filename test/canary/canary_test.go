@@ -33,6 +33,7 @@ func init() {
 // TestCanary verifies customers can download the agent, install it, and it "works".
 // Reports metrics on the number of download failures, install failures, and start failures.
 func TestCanary(t *testing.T) {
+	defer setupCron()
 	installerFilePath := "./downloaded_cwa.rpm"
 	err := downloadInstaller(installerFilePath)
 	reportMetric(t, "DownloadFail", err)
@@ -53,8 +54,6 @@ func TestCanary(t *testing.T) {
 		err = errors.New("agent version mismatch")
 	}
 	reportMetric(t, "VersionFail", err)
-
-	setupCron()
 }
 
 // reportMetric is just a helper to report a metric and conditionally fail
