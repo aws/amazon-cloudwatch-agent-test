@@ -4,52 +4,44 @@
 package common
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"sync"
+	"net"
 	"time"
 
-	"github.com/cactus/go-statsd-client/v5/statsd"
-	"go.uber.org/multierr"
+	"collectd.org/api"
+	"collectd.org/exec"
+	"collectd.org/network"
+	"github.com/DataDog/datadog-go/statsd"
 )
 
-// StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
-// the config provided
-func StartSendingMetrics(receiver string, agentRunDuration time.Duration, dataRate int) error {
-	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
-	var (
-		err      error
-		multiErr error
-		wg       sync.WaitGroup
-	)
-
-	wg.Add(1)
+// StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
+func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int) (err error) {
 	go func() {
-		defer wg.Done()
 		switch receiver {
 		case "statsd":
-			err = sendStatsdMetrics(dataRate, agentRunDuration)
-
+			err = SendStatsdMetrics(metricPerInterval, []string{}, sendingInterval, duration)
+		case "collectd":
+			err = SendCollectDMetrics(metricPerInterval, sendingInterval, duration)
 		default:
 		}
 
-		multiErr = multierr.Append(multiErr, err)
 	}()
 
-	wg.Wait()
-	return multiErr
+	return err
 }
 
-func sendStatsdMetrics(dataRate int, duration time.Duration) error {
-	// https://github.com/cactus/go-statsd-client#example
-	statsdClientConfig := &statsd.ClientConfig{
-		Address:     ":8125",
-		Prefix:      "statsd",
-		UseBuffered: true,
-		// interval to force flush buffer. full buffers will flush on their own,
-		// but for data not frequently sent, a max threshold is useful
-		FlushInterval: 300 * time.Millisecond,
-	}
-	client, err := statsd.NewClientWithConfig(statsdClientConfig)
+func SendCollectDMetrics(metricPerMinute int, sendingInterval, duration time.Duration) error {
+	// https://github.com/collectd/go-collectd/tree/92e86f95efac5eb62fa84acc6033e7a57218b606
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client, err := network.Dial(
+		net.JoinHostPort("127.0.0.1", network.DefaultService),
+		network.ClientOptions{
+			SecurityLevel: network.None,
+		})
 
 	if err != nil {
 		return err
@@ -57,21 +49,74 @@ func sendStatsdMetrics(dataRate int, duration time.Duration) error {
 
 	defer client.Close()
 
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
 	for {
 		select {
 		case <-ticker.C:
-			for time := 0; time < dataRate; time++ {
-				go func(time int) {
-					client.Inc(fmt.Sprintf("%v", time), int64(time), 1.0)
-				}(time)
+			for t := 1; t <= metricPerMinute/2; t++ {
+				_ = client.Write(ctx, &api.ValueList{
+					Identifier: api.Identifier{
+						Host:   exec.Hostname(),
+						Plugin: fmt.Sprint("gauge_", t),
+						Type:   "gauge",
+					},
+					Time:     time.Now(),
+					Interval: time.Minute,
+					Values:   []api.Value{api.Gauge(t)},
+				})
+
+				err = client.Write(ctx, &api.ValueList{
+					Identifier: api.Identifier{
+						Host:   exec.Hostname(),
+						Plugin: fmt.Sprint("counter_", t),
+						Type:   "counter",
+					},
+					Time:     time.Now(),
+					Interval: time.Minute,
+					Values:   []api.Value{api.Counter(t)},
+				})
+
+				if err != nil && !errors.Is(err, network.ErrNotEnoughSpace) {
+					return err
+				}
+			}
+
+			if err := client.Flush(); err != nil {
+				return err
 			}
 		case <-endTimeout:
 			return nil
 		}
 	}
 
+}
+
+func SendStatsdMetrics(metricPerMinute int, metricDimension []string, sendingInterval, duration time.Duration) error {
+	// https://github.com/DataDog/datadog-go#metrics
+	client, err := statsd.New("127.0.0.1:8125", statsd.WithMaxMessagesPerPayload(100), statsd.WithNamespace("statsd"))
+
+	if err != nil {
+		return err
+	}
+
+	defer client.Close()
+
+	ticker := time.NewTicker(sendingInterval)
+	defer ticker.Stop()
+	endTimeout := time.After(duration)
+
+	for {
+		select {
+		case <-ticker.C:
+			for t := 1; t <= metricPerMinute/2; t++ {
+				client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0)
+				client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0)
+			}
+		case <-endTimeout:
+			return nil
+		}
+	}
 }

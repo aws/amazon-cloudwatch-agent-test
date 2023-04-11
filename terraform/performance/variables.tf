@@ -15,7 +15,7 @@ variable "ssh_key_name" {
 
 variable "ami" {
   type    = string
-  default = "cloudwatch-agent-integration-test-ubuntu*"
+  default = "cloudwatch-agent-integration-test-al2*"
 }
 
 variable "ssh_key_value" {
@@ -25,31 +25,15 @@ variable "ssh_key_value" {
 
 variable "user" {
   type    = string
-  default = ""
-}
-
-variable "install_agent" {
-  description = "go run ./install/install_agent.go deb or go run ./install/install_agent.go rpm"
-  type        = string
-  default     = "go run ./install/install_agent.go rpm"
+  default = "ec2-user"
 }
 
 variable "arc" {
   type    = string
-  default = ""
-}
-
-variable "binary_name" {
-  type    = string
-  default = ""
+  default = "amd64"
 }
 
 variable "s3_bucket" {
-  type    = string
-  default = ""
-}
-
-variable "test_name" {
   type    = string
   default = ""
 }
@@ -62,16 +46,6 @@ variable "test_dir" {
 variable "cwa_github_sha" {
   type    = string
   default = ""
-}
-
-variable "github_test_repo" {
-  type    = string
-  default = ""
-}
-
-variable "github_test_repo_branch" {
-  type    = string
-  default = "main"
 }
 
 variable "cwa_github_sha_date" {

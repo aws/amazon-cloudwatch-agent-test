@@ -5,11 +5,11 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"sync"
 	"time"
 
 	"go.uber.org/multierr"
@@ -17,12 +17,8 @@ import (
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
-func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRate int) error {
-	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
-	var (
-		multiErr error
-		wg       sync.WaitGroup
-	)
+func StartLogWrite(configFilePath string, duration time.Duration, sendingInterval time.Duration, logLinesPerMinute int) error {
+	var multiErr error
 
 	logPaths, err := getLogFilePaths(configFilePath)
 	if err != nil {
@@ -30,21 +26,19 @@ func StartLogWrite(configFilePath string, agentRunDuration time.Duration, dataRa
 	}
 
 	for _, logPath := range logPaths {
-		wg.Add(1)
 		go func(logPath string) {
-			defer wg.Done()
-			err = writeToLogs(logPath, agentRunDuration, dataRate)
-			multiErr = multierr.Append(multiErr, err)
+			if err := writeToLogs(logPath, duration, sendingInterval, logLinesPerMinute); err != nil {
+				multiErr = multierr.Append(multiErr, err)
+			}
 		}(logPath)
 	}
 
-	wg.Wait()
 	return multiErr
 }
 
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
 // for the specified duration
-func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
+func writeToLogs(filePath string, duration, sendingInterval time.Duration, logLinesPerMinute int) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -52,7 +46,7 @@ func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
 	defer f.Close()
 	defer os.Remove(filePath)
 
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
@@ -60,13 +54,12 @@ func writeToLogs(filePath string, duration time.Duration, dataRate int) error {
 	for {
 		select {
 		case <-ticker.C:
-			for i := 0; i < dataRate; i++ {
-				_, err = f.WriteString(fmt.Sprintln(ticker, " - #", i, " This is a log line."))
+			for i := 0; i < logLinesPerMinute; i++ {
+				_, err := f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
 				if err != nil {
-					return err
+					log.Printf("Error in writing a string to the file %s: %v ", filePath, err)
 				}
 			}
-
 		case <-endTimeout:
 			return nil
 		}
@@ -96,19 +89,22 @@ func getLogFilePaths(configPath string) ([]string, error) {
 	return filePaths, nil
 }
 
-/* GenerateLogConfig takes the number of logs to be monitored and applies it to the supplied config,
-* It writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
-* the supplied configuration
-* DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
-* (log being monitored will be overwritten - it is needed for json structure)
-* returns the path of the config generated and a list of log stream names
- */
+// GenerateLogConfig takes the number of logs to be monitored and applies it to the supplied config,
+// It writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
+// the supplied configuration
+// DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
+// (log being monitored will be overwritten - it is needed for json structure)
+// returns the path of the config generated and a list of log stream names
 func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
+	if numberMonitoredLogs == 0 || filePath == "" {
+		return errors.New("number of monitored logs or file path is empty")
+	}
 	type LogInfo struct {
-		FilePath      string `json:"file_path"`
-		LogGroupName  string `json:"log_group_name"`
-		LogStreamName string `json:"log_stream_name"`
-		Timezone      string `json:"timezone"`
+		FilePath        string `json:"file_path"`
+		LogGroupName    string `json:"log_group_name"`
+		LogStreamName   string `json:"log_stream_name"`
+		RetentionInDays int    `json:"retention_in_days"`
+		Timezone        string `json:"timezone"`
 	}
 
 	var cfgFileData map[string]interface{}
@@ -133,10 +129,11 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 
 	for i := 0; i < numberMonitoredLogs; i++ {
 		logFiles = append(logFiles, LogInfo{
-			FilePath:      fmt.Sprintf("/tmp/test%d.log", i+1),
-			LogGroupName:  "{instance_id}",
-			LogStreamName: fmt.Sprintf("{instance_id}/tmp%d", i+1),
-			Timezone:      "UTC",
+			FilePath:        fmt.Sprintf("/tmp/test%d.log", i+1),
+			LogGroupName:    "{instance_id}",
+			LogStreamName:   fmt.Sprintf("{instance_id}/tmp%d", i+1),
+			RetentionInDays: 1,
+			Timezone:        "UTC",
 		})
 	}
 
@@ -149,7 +146,7 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 		return err
 	}
 
-	_, err = file.WriteAt(finalConfig, 0)
+	err = os.WriteFile(filePath, finalConfig, 0644)
 	if err != nil {
 		return err
 	}

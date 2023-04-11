@@ -1,0 +1,66 @@
+# Receivers that agent needs to tests
+receivers: "host"
+
+#Test case name
+test_case: "win_feature"
+validate_type: "feature"
+# Only support metrics/traces/logs, even in this case we validate more than logs,
+# we only make this data_type as a placeholder
+data_type: "logs"
+
+# Number of logs being written
+number_monitored_logs: 1
+# Number of metrics to be sent or number of log lines being written  each minute
+values_per_minute: "2"
+# Number of seconds the agent should run and collect the metrics. In this case, 1 minutes
+agent_collection_period: 60 
+
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+
+# Metric that the test needs to validate; moreover, the stress validation already has
+# InstanceID dimension; therefore, does not need to validate it
+# https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
+metric_namespace: "CloudWatchAgentWinFeature"
+metric_validation:
+  - metric_name: "statsd_1"
+    metric_dimension: 
+      - name: "metric_type"
+        value: "counter"
+  
+  - metric_name: "statsd_2"
+    metric_dimension: 
+      - name: "metric_type"
+        value: "counter"
+
+  - metric_name: "LogicalDisk % Free Space"
+    metric_dimension: 
+      - name: "objectname"
+        value: "LogicalDisk"
+      - name: "instance"
+        value: "C:"
+
+  - metric_name: "Memory % Committed Bytes In Use"
+    metric_dimension: 
+      - name: "objectname"
+        value: "Memory"
+
+  - metric_name: "Processor % User Time"
+    metric_dimension: 
+      - name: "objectname"
+        value: "Processor"
+      - name: "instance"
+        value: "0"
+
+  - metric_name: "procstat_cpu_usage"
+    metric_dimension: 
+      - name: "exe"
+        value: "amazon-cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"
+
+  - metric_name: "procstat_memory_rss"
+    metric_dimension: 
+      - name: "exe"
+        value: "amazon-cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"

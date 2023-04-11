@@ -7,6 +7,12 @@ module "common" {
   cwagent_image_tag  = var.cwagent_image_tag
 }
 
+module "basic_components" {
+  source = "../../basic_components"
+
+  region = var.region
+}
+
 resource "aws_ecs_cluster" "cluster" {
   name = "cwagent-integ-test-cluster-${module.common.testing_id}"
 }
@@ -69,13 +75,13 @@ data "template_file" "cwagent_container_definitions" {
 resource "aws_ecs_task_definition" "cwagent_task_definition" {
   family                   = "cwagent-task-family-${module.common.testing_id}"
   network_mode             = "awsvpc"
-  task_role_arn            = data.aws_iam_role.ecs_task_role.arn
-  execution_role_arn       = data.aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = module.basic_components.role_arn
+  execution_role_arn       = module.basic_components.role_arn
   cpu                      = 256
   memory                   = 2048
   requires_compatibilities = ["FARGATE"]
   container_definitions    = data.template_file.cwagent_container_definitions.rendered
-  depends_on               = [aws_cloudwatch_log_group.log_group, data.aws_iam_role.ecs_task_role, data.aws_iam_role.ecs_task_execution_role]
+  depends_on               = [aws_cloudwatch_log_group.log_group]
 }
 
 resource "aws_ecs_service" "cwagent_service" {
@@ -86,8 +92,8 @@ resource "aws_ecs_service" "cwagent_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    security_groups  = [data.aws_security_group.ecs_security_group.id]
-    subnets          = toset(data.aws_subnets.default.ids)
+    security_groups  = [module.basic_components.security_group]
+    subnets          = module.basic_components.public_subnet_ids
     assign_public_ip = true
   }
 
@@ -109,13 +115,13 @@ data "template_file" "extra_apps" {
 resource "aws_ecs_task_definition" "extra_apps_task_definition" {
   family                   = "extra-apps-family-${module.common.testing_id}"
   network_mode             = "awsvpc"
-  task_role_arn            = data.aws_iam_role.ecs_task_role.arn
-  execution_role_arn       = data.aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = module.basic_components.role_arn
+  execution_role_arn       = module.basic_components.role_arn
   cpu                      = 256
   memory                   = 1024
   requires_compatibilities = ["FARGATE"]
   container_definitions    = data.template_file.extra_apps.rendered
-  depends_on               = [aws_cloudwatch_log_group.log_group, data.aws_iam_role.ecs_task_role, data.aws_iam_role.ecs_task_execution_role]
+  depends_on               = [aws_cloudwatch_log_group.log_group]
 }
 
 resource "aws_ecs_service" "extra_apps_service" {
@@ -126,8 +132,8 @@ resource "aws_ecs_service" "extra_apps_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    security_groups  = [data.aws_security_group.ecs_security_group.id]
-    subnets          = toset(data.aws_subnets.default.ids)
+    security_groups  = [module.basic_components.security_group]
+    subnets          = module.basic_components.public_subnet_ids
     assign_public_ip = true
   }
 
@@ -139,7 +145,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating metrics/logs"
       cd ../../..
-      go test ${var.test_dir} -clusterName=${aws_ecs_cluster.cluster.name}
+      go test ${var.test_dir} -clusterName=${aws_ecs_cluster.cluster.name} -v
     EOT
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service]

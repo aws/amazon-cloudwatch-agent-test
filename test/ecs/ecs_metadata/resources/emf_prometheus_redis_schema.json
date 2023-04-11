@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Prometheus-Redis structured log schema",
+  "description": "JSON schema for the CloudWatch agent ECS structured log",
+  "type": "object",
+  "properties": {
+    "ClusterName": {},
+    "CloudWatchMetrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "Namespace": {
+            "type": "string"
+          },
+          "Dimensions": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "Metrics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "Name": {
+                  "type": "string"
+                },
+                "Unit": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ECS_PROMETHEUS_EXPORTER_PORT": {},
+    "LaunchType": {},
+    "StartedBy": {},
+    "TaskClusterName": {},
+    "TaskDefinitionFamily": {},
+    "TaskGroup": {},
+    "TaskId": {},
+    "TaskRevision": {},
+    "Timestamp": {},
+    "Version": {},
+    "container_name": {},
+    "job": {},
+    "prom_metric_type": {}
+  },
+  "required": [
+    "ClusterName",
+    "ECS_PROMETHEUS_EXPORTER_PORT",
+    "LaunchType",
+    "StartedBy",
+    "TaskClusterName",
+    "TaskDefinitionFamily",
+    "TaskGroup",
+    "TaskId",
+    "TaskRevision",
+    "Timestamp",
+    "Version",
+    "container_name",
+    "job",
+    "prom_metric_type"
+  ],
+  "additionalProperties": true
+}

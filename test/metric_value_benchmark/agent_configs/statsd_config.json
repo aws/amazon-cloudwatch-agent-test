@@ -1,22 +1,16 @@
 {
-    "agent": {
-      "metrics_collection_interval": 15,
-      "run_as_user": "root",
-      "debug": true,
-      "logfile": ""
-    },
     "metrics": {
-      "namespace": "MetricValueBenchmarkTest",
-      "append_dimensions": {
-        "InstanceId": "${aws:InstanceId}"
-      },
-      "metrics_collected": {
-        "statsd": {
-            "metrics_aggregation_interval": 15,
-            "metrics_collection_interval": 15,
-            "service_address": ":8125"
-        }
-      },
-      "force_flush_interval": 5
+        "namespace": "MetricValueBenchmarkTest",
+        "append_dimensions": {
+            "InstanceId": "${aws:InstanceId}"
+        },
+        "metrics_collected": {
+            "statsd": {
+                "metrics_aggregation_interval": 30,
+                "metrics_collection_interval": 5,
+                "service_address": ":8125"
+            }
+        },
+        "force_flush_interval": 5
     }
-  }
+}

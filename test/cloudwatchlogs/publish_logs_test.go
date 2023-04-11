@@ -7,14 +7,14 @@ package cloudwatchlogs
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"os"
 	"strings"
-
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
@@ -97,8 +97,14 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			}
 			t.Logf("Agent logs %s", agentLog)
 
+			end := time.Now()
+
 			// check CWL to ensure we got the expected number of logs in the log stream
-			awsservice.ValidateLogs(t, instanceId, instanceId, param.numExpectedLogs, start)
+			ok, err := awsservice.ValidateLogs(instanceId, instanceId, &start, &end, func(logs []string) bool {
+				return param.numExpectedLogs == len(logs)
+			})
+			assert.NoError(t, err)
+			assert.True(t, ok)
 		})
 	}
 }
@@ -143,7 +149,26 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("09876", 10)),
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("1234567890", 10)),
 	}
-	awsservice.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
+
+	end := time.Now()
+
+	ok, err := awsservice.ValidateLogs(logGroup, logStream, &start, &end, func(logs []string) bool {
+		if len(logs) != len(lines) {
+			return false
+		}
+
+		for i := 0; i < len(logs); i++ {
+			expected := strings.ReplaceAll(lines[i], "'", "\"")
+			actual := strings.ReplaceAll(logs[i], "'", "\"")
+			if expected != actual {
+				return false
+			}
+		}
+
+		return true
+	})
+	assert.NoError(t, err)
+	assert.True(t, ok)
 }
 
 func writeLogs(t *testing.T, f *os.File, iterations int) {

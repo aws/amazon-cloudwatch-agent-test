@@ -1,0 +1,101 @@
+{
+    "agent": {
+        "debug": true
+    },
+    "metrics": {
+      "namespace": "CloudWatchAgentPerformance",
+      "append_dimensions": {
+        "InstanceId": "${aws:InstanceId}"
+      },
+      "metrics_collected": {
+        "cpu": {
+          "measurement": [
+            "time_active", "time_guest", "time_guest_nice", "time_idle", "time_iowait", "time_irq",
+            "time_nice", "time_softirq", "time_steal", "time_system", "time_user",
+            "usage_active", "usage_guest", "usage_guest_nice", "usage_idle", "usage_iowait", "usage_irq",
+            "usage_nice", "usage_softirq", "usage_steal", "usage_system", "usage_user"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "swap": {
+          "measurement": [
+              "free","used","used_percent"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "processes": {
+            "measurement": [
+              "blocked","running","sleeping","stopped","total","dead","idle","paging","total_threads","zombies"
+            ],
+            "metrics_collection_interval": 1
+        },
+        "netstat": {
+            "measurement": [
+              "tcp_close","tcp_close_wait","tcp_closing", "tcp_established","tcp_fin_wait1","tcp_fin_wait2","tcp_last_ack",
+              "tcp_listen","tcp_none","tcp_syn_sent","tcp_syn_recv","tcp_time_wait","udp_socket"
+            ],
+            "metrics_collection_interval": 1
+        },
+        "mem": {
+          "measurement": [
+            "active", "available", "available_percent", "buffered", "cached", "free", "inactive", "total",
+            "used", "used_percent"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "diskio": {
+            "resources": [
+              "*"
+            ],
+            "measurement": [
+              "iops_in_progress", "io_time", "reads", "read_bytes", "read_time", "writes", "write_bytes", "write_time"
+            ],
+            "metrics_collection_interval": 1
+        },
+        "disk": {
+            "resources": [
+              "*"
+            ],
+            "measurement": [
+              "free","inodes_free","inodes_total","inodes_used","total","used","used_percent"
+            ],
+            "drop_device": true,
+            "metrics_collection_interval": 1
+        },
+        "ethtool": {
+          "interface_include": [
+              "eth0",
+              "ens5"
+          ],
+          "metrics_include": [
+            "queue_0_tx_cnt","queue_0_rx_cnt"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "net": {
+          "resources": [
+            "eth0"
+          ],
+          "measurement": [
+            "bytes_sent", "bytes_recv", "drop_in", "drop_out", "err_in", "err_out", "packets_sent", "packets_recv"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "procstat": [
+          {
+            "exe": "cloudwatch-agent",
+            "measurement": [
+            "cpu_usage",
+            "memory_rss",
+            "memory_swap",
+            "memory_vms",
+            "memory_data",
+            "num_fds",
+            "write_bytes"
+            ],
+            "metrics_collection_interval": 1
+          }
+        ]
+      }
+    }
+  }

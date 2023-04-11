@@ -5,6 +5,12 @@ module "common" {
   source = "../../common"
 }
 
+module "basic_components" {
+  source = "../../basic_components"
+
+  region = var.region
+}
+
 #####################################################################
 # Generate EC2 Key Pair for log in access to EC2
 #####################################################################
@@ -29,53 +35,16 @@ locals {
 }
 
 #####################################################################
-# Create EFS
-#####################################################################
-resource "aws_efs_file_system" "efs" {
-  creation_token = "efs-${module.common.testing_id}"
-  tags = {
-    Name = "efs-${module.common.testing_id}"
-  }
-}
-
-resource "aws_efs_mount_target" "mount" {
-  file_system_id  = aws_efs_file_system.efs.id
-  subnet_id       = aws_instance.cwagent.subnet_id
-  security_groups = [data.aws_security_group.ec2_security_group.id]
-}
-
-resource "null_resource" "mount_efs" {
-  depends_on = [
-    aws_efs_mount_target.mount,
-    aws_instance.cwagent
-  ]
-
-  connection {
-    type        = "ssh"
-    user        = var.user
-    private_key = local.private_key_content
-    host        = aws_instance.cwagent.public_ip
-  }
-
-  provisioner "remote-exec" {
-    # https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.html
-    inline = [
-      "sudo mkdir ~/efs-mount-point",
-      "sudo mount -t efs -o tls ${aws_efs_file_system.efs.dns_name} ~/efs-mount-point/",
-    ]
-  }
-}
-
-#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = module.basic_components.instance_profile
+  vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
@@ -124,13 +93,11 @@ resource "null_resource" "integration_test" {
 
   depends_on = [
     aws_instance.cwagent,
-    null_resource.mount_efs
   ]
 }
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"

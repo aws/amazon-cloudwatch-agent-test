@@ -5,6 +5,12 @@ module "common" {
   source = "../../common"
 }
 
+module "basic_components" {
+  source = "../../basic_components"
+
+  region = var.region
+}
+
 #####################################################################
 # Generate EC2 Key Pair for log in access to EC2
 #####################################################################
@@ -27,6 +33,22 @@ locals {
 }
 
 #####################################################################
+# Prepare Parameters Tests
+#####################################################################
+
+module "validator" {
+  source = "../../validator"
+
+  arc            = var.arc
+  family         = "windows"
+  action         = "upload"
+  s3_bucket      = var.s3_bucket
+  test_dir       = var.test_dir
+  temp_directory = "C:/Users/Administrator/AppData/Local/Temp"
+  cwa_github_sha = var.cwa_github_sha
+}
+
+#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 
@@ -34,73 +56,63 @@ resource "aws_instance" "cwagent" {
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = module.basic_components.instance_profile
+  vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
   get_password_data           = true
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
   }
-  user_data = <<EOF
-<powershell>
-Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
-Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
-Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
-
-Start-Service sshd
-Set-Service -Name sshd -StartupType 'Automatic'
-
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-
-choco install git --confirm
-choco install go --confirm
-msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
-
-[Environment]::SetEnvironmentVariable("PATH", "C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\Go\bin;C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0\", [System.EnvironmentVariableTarget]::Machine)
-</powershell>
-EOF
 
   tags = {
-    Name = "cwagent-integ-test-ec2-windows-${element(split("/", var.test_dir), 3)}-$${module.common.testing_id}"
+    Name = "cwagent-integ-test-ec2-windows-${var.test_name}-${module.common.testing_id}"
   }
 }
 
 resource "null_resource" "integration_test" {
-  depends_on = [aws_instance.cwagent]
+  depends_on = [aws_instance.cwagent, module.validator]
+
   # Install software
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+  }
+
+  provisioner "file" {
+    source      = module.validator.agent_config
+    destination = module.validator.instance_agent_config
+  }
+
+  provisioner "file" {
+    source      = module.validator.validator_config
+    destination = module.validator.instance_validator_config
+  }
+
+  # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "start /wait timeout 120",                             //Wait some time to ensure all binaries have been downloaded
-      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
-      "set AWS_REGION=${var.region}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
-      "echo clone and install agent",
-      "git clone ${var.github_test_repo}",
-      "cd amazon-cloudwatch-agent-test",
-      "git reset --hard ${var.cwa_test_github_sha}",
-      "echo run tests with the tag integration, one at a time, and verbose",
-      "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 30m -v"
     ]
+  }
 
-    connection {
-      type            = "ssh"
-      user            = "Administrator"
-      password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-      host            = aws_instance.cwagent.public_ip
-      target_platform = "windows"
-      timeout         = "6m"
-    }
+  provisioner "remote-exec" {
+    inline = [
+      "set AWS_REGION=${var.region}",
+      "validator.exe --validator-config=${module.validator.instance_agent_config} --preparation-mode=true",
+      "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
+      "validator.exe --validator-config=${module.validator.instance_agent_config} --preparation-mode=false",
+    ]
   }
 }
 
 data "aws_ami" "latest" {
   most_recent = true
-  // @Todo: Add back when nvidia_gpu pipeline has been able to produced the AMI
-  #owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"
