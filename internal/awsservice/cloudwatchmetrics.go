@@ -131,7 +131,7 @@ func ReportMetric(namespace string,
 	units types.StandardUnit,
 ) error {
 	_, err := CwmClient.PutMetricData(ctx, &cloudwatch.PutMetricDataInput{
-		Namespace: aws.String("CanaryTest"),
+		Namespace: aws.String(namespace),
 		MetricData: []types.MetricDatum{
 			{
 				MetricName: aws.String(name),
