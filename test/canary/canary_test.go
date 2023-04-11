@@ -103,7 +103,7 @@ func setupCron() {
 }
 
 func updateCron(filepath, region, bucket string) {
-	s := fmt.Sprintf("MAILTO=\"\"\n*/5 * * * * ec2-user cd /home/ec2-user/amazon-cloudwatch-agent-test && AWS_REGION=%s go test ./test/canary/ -v -p 1 -count=1 -computeType=EC2 -bucket=%s > ./cron_run.log", region, bucket)
+	s := fmt.Sprintf("MAILTO=\"\"\n*/5 * * * * ec2-user cd /home/ec2-user/amazon-cloudwatch-agent-test && AWS_REGION=%s go test ./test/canary/ -v -p 1 -count=1 -computeType=EC2 -bucket=%s > ./cron_run.log\n", region, bucket)
 	b := []byte(s)
 	err := os.WriteFile(filepath, b, 0644)
 	if err != nil {
