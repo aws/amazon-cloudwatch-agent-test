@@ -34,6 +34,7 @@ func init() {
 // Reports metrics on the number of download failures, install failures, and start failures.
 func TestCanary(t *testing.T) {
 	defer setupCron()
+
 	installerFilePath := "./downloaded_cwa.rpm"
 	err := downloadInstaller(installerFilePath)
 	reportMetric(t, "DownloadFail", err)
