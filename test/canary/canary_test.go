@@ -64,7 +64,7 @@ func reportMetric(t *testing.T, name string, err error) {
 		log.Printf("error: name %v, err %v", name, err)
 		v += 1
 	}
-	awsservice.ReportMetric("CanaryTest", name, v, types.StandardUnitCount)
+	require.NoError(t, awsservice.ReportMetric("CanaryTest", name, v, types.StandardUnitCount))
 	require.NoError(t, err)
 }
 
