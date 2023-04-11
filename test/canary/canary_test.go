@@ -103,9 +103,16 @@ func setupCron() {
 }
 
 func updateCron(filepath, region, bucket string) {
-	s := fmt.Sprintf("MAILTO=\"\"\n*/5 * * * * ec2-user cd /home/ec2-user/amazon-cloudwatch-agent-test && AWS_REGION=%s go test ./test/canary/ -v -p 1 -count=1 -computeType=EC2 -bucket=%s > ./cron_run.log\n", region, bucket)
+	// cwd will be something like .../amazon-cloudwatch-agent-test/test/canary/
+	cwd, err := os.Getwd()
+	log.Printf("cwd %s", cwd)
+	if err != nil {
+		log.Fatalf("error: Getwd(), %s", err)
+	}
+	s := fmt.Sprintf("MAILTO=\"\"\n*/1 * * * * ec2-user cd %s && AWS_REGION=%s go test ./ -count=1 -computeType=EC2 -bucket=%s > ./cron_run.log\n",
+		cwd, region, bucket)
 	b := []byte(s)
-	err := os.WriteFile(filepath, b, 0644)
+	err = os.WriteFile(filepath, b, 0644)
 	if err != nil {
 		log.Println("error: creating temp cron file")
 	}
