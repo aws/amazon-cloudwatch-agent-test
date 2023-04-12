@@ -60,7 +60,7 @@ func TestCanary(t *testing.T) {
 func reportMetric(t *testing.T, name string, err error) {
 	var v float64 = 0
 	if err != nil {
-		log.Printf("error: name %v, err %v", name, err)
+		log.Printf("error: name %s, err %s", name, err)
 		v += 1
 	}
 	require.NoError(t, awsservice.ReportMetric("CanaryTest", name, v,

@@ -84,7 +84,7 @@ func printOutputAndError(stdout []byte, err error) {
 	if ok {
 		stderr = string(ee.Stderr)
 	}
-	log.Printf("failed\n\tstdout:\n%v\n\tstderr:\n%v\n", string(stdout), stderr)
+	log.Printf("failed\n\tstdout:\n%s\n\tstderr:\n%s\n", string(stdout), stderr)
 }
 
 func UninstallAgent(pm PackageManager) error {
