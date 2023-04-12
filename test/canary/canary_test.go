@@ -35,12 +35,12 @@ func init() {
 func TestCanary(t *testing.T) {
 	defer setupCron()
 
+	// Don't care if uninstall fails. Agent might not be installed anyways.
+	_ = common.UninstallAgent(common.RPM)
+
 	installerFilePath := "./downloaded_cwa.rpm"
 	err := downloadInstaller(installerFilePath)
 	reportMetric(t, "DownloadFail", err)
-
-	// Don't care if uninstall fails. Agent might not be installed anyways.
-	_ = common.UninstallAgent(common.RPM)
 
 	err = common.InstallAgent(installerFilePath)
 	reportMetric(t, "InstallFail", err)
