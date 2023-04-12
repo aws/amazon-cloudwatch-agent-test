@@ -93,7 +93,7 @@ resource "null_resource" "integration_test" {
 
   connection {
     type        = "ssh"
-    user        = var.user
+    user        = "ec2-user"
     private_key = local.private_key_content
     host        = aws_instance.cwagent.public_ip
     timeout     = "10m"

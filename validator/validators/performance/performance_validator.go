@@ -16,8 +16,8 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 const (
@@ -32,34 +32,16 @@ var (
 
 type PerformanceValidator struct {
 	vConfig models.ValidateConfig
+	models.ValidatorFactory
 }
 
 var _ models.ValidatorFactory = (*PerformanceValidator)(nil)
 
 func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 	return &PerformanceValidator{
-		vConfig: vConfig,
+		vConfig:          vConfig,
+		ValidatorFactory: basic.NewBasicValidator(vConfig),
 	}
-}
-
-func (s *PerformanceValidator) GenerateLoad() (err error) {
-	var (
-		metricSendingInterval = time.Minute
-		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
-		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
-		dataType              = s.vConfig.GetDataType()
-		dataRate              = s.vConfig.GetDataRate()
-		receiver              = s.vConfig.GetPluginsConfig()
-	)
-	switch dataType {
-	case "logs":
-		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
-	default:
-		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
-		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate)
-	}
-
-	return err
 }
 
 func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
@@ -80,23 +62,10 @@ func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
 	return nil
 }
 
-func (s *PerformanceValidator) Cleanup() error {
-	var (
-		dataType      = s.vConfig.GetDataType()
-		ec2InstanceId = awsservice.GetInstanceId()
-	)
-	switch dataType {
-	case "logs":
-		awsservice.DeleteLogGroup(ec2InstanceId)
-	}
-
-	return nil
-}
-
 func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformation) error {
 	var (
 		dataType               = s.vConfig.GetDataType()
-		receiver               = s.vConfig.GetPluginsConfig()
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
 		agentCollectionPeriod  = fmt.Sprint(s.vConfig.GetAgentCollectionPeriod().Seconds())
 		// The secondary global index that is used for checking if there are item has already been exist in the table
@@ -131,7 +100,7 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 }
 func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []types.MetricDataResult) (PerformanceInformation, error) {
 	var (
-		receiver               = s.vConfig.GetPluginsConfig()
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
 		dataType               = s.vConfig.GetDataType()
 		dataRate               = fmt.Sprint(s.vConfig.GetDataRate())

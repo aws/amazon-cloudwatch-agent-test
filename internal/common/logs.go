@@ -10,10 +10,13 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 	"time"
 
 	"go.uber.org/multierr"
 )
+
+const logLine = "# %d - This is a log line. \n"
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided
@@ -50,15 +53,19 @@ func writeToLogs(filePath string, duration, sendingInterval time.Duration, logLi
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
-	//loop until the test duration is reached
+	// Sending the logs within the first minute before the ticker kicks in the next minute
+	for i := 0; i < logLinesPerMinute; i++ {
+		_, err := f.WriteString(fmt.Sprintf(logLine, i))
+		if err != nil {
+			return err
+		}
+	}
+
 	for {
 		select {
 		case <-ticker.C:
 			for i := 0; i < logLinesPerMinute; i++ {
-				_, err := f.WriteString(fmt.Sprintf("# %d - This is a log line.", i))
-				if err != nil {
-					log.Printf("Error in writing a string to the file %s: %v ", filePath, err)
-				}
+				f.WriteString(fmt.Sprintf(logLine, i))
 			}
 		case <-endTimeout:
 			return nil
@@ -99,6 +106,7 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	if numberMonitoredLogs == 0 || filePath == "" {
 		return errors.New("number of monitored logs or file path is empty")
 	}
+
 	type LogInfo struct {
 		FilePath        string `json:"file_path"`
 		LogGroupName    string `json:"log_group_name"`
@@ -126,12 +134,13 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	}
 
 	var logFiles []LogInfo
+	tempFolder := getTempFolder()
 
 	for i := 0; i < numberMonitoredLogs; i++ {
 		logFiles = append(logFiles, LogInfo{
-			FilePath:        fmt.Sprintf("/tmp/test%d.log", i+1),
+			FilePath:        fmt.Sprintf("%s/test%d.log", tempFolder, i+1),
 			LogGroupName:    "{instance_id}",
-			LogStreamName:   fmt.Sprintf("{instance_id}/tmp%d", i+1),
+			LogStreamName:   fmt.Sprintf("test%d.log", i+1),
 			RetentionInDays: 1,
 			Timezone:        "UTC",
 		})
@@ -152,4 +161,13 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 	}
 
 	return nil
+}
+
+// getTempFolder gets the temp folder for generate logs
+// depends on the operating system
+func getTempFolder() string {
+	if runtime.GOOS == "windows" {
+		return "C:/Users/Administrator/AppData/Local/Temp"
+	}
+	return "/tmp"
 }
