@@ -40,7 +40,7 @@ func TestCanary(t *testing.T) {
 	reportMetric(t, "DownloadFail", err)
 
 	// Don't care if uninstall fails. Agent might not be installed anyways.
-	_ = common.UninstallAgent()
+	_ = common.UninstallAgent(common.RPM)
 
 	err = common.InstallAgent(installerFilePath)
 	reportMetric(t, "InstallFail", err)

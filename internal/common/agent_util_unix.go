@@ -10,6 +10,7 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -20,6 +21,12 @@ const (
 	Namespace        = "CWAgent"
 	Host             = "host"
 	AgentLogFile     = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+)
+
+type PackageManager int
+const (
+	RPM PackageManager = iota
+	DEB
 )
 
 func CopyFile(pathIn string, pathOut string) {
@@ -66,7 +73,9 @@ func TouchFile(filePathAbsolute string) error {
 	return nil
 }
 
-func printOutputAndError(function string, stdout []byte, err error) {
+// printOutputAndError does nothing if there was no error.
+// Else it prints stdout and stderr.
+func printOutputAndError(message string, stdout []byte, err error) {
 	if err == nil {
 		return
 	}
@@ -76,18 +85,33 @@ func printOutputAndError(function string, stdout []byte, err error) {
 		stderr = string(ee.Stderr)
 	}
 	log.Printf("%v failed\n\toutput:\n%v\n\terror:\n%v\n",
-		function, string(stdout), stderr)
+		message, string(stdout), stderr)
 }
 
-func UninstallAgent() error {
-	c := exec.Command("bash", "-c", "sudo rpm -e amazon-cloudwatch-agent")
+func UninstallAgent(pm PackageManager) error {
+	var c *exec.Cmd
+	switch pm {
+	case RPM:
+		c = exec.Command("bash", "-c", "sudo rpm -e amazon-cloudwatch-agent")
+	case DEB:
+		c = exec.Command("bash", "-c", "sudo dpkg -r amazon-cloudwatch-agent")
+	default:
+		log.Fatalf("unsupported package manager, %v", pm)
+	}
 	out, err := c.Output()
 	printOutputAndError("UninstallAgent", out, err)
 	return err
 }
 
+// InstallAgent can determine the package manager based on the installer suffix.
 func InstallAgent(installerFilePath string) error {
-	c := exec.Command("bash", "-c", "sudo rpm -Uvh " + installerFilePath)
+	var c *exec.Cmd
+	// Assuming lower case
+	if strings.HasSuffix(installerFilePath, ".rpm") {
+		c = exec.Command("bash", "-c", "sudo rpm -Uvh " + installerFilePath)
+	} else {
+		c = exec.Command("bash", "-c", "sudo dpkg -i -E " + installerFilePath)
+	}
 	out, err := c.Output()
 	printOutputAndError("InstallAgent", out, err)
 	return err
