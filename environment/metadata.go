@@ -145,6 +145,7 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData = fillECSData(metaData, data)
 	metaData = fillEC2PluginTests(metaData, data)
 	metaData.Bucket = data.Bucket
+	metaData.S3Key = data.S3Key
 	metaData.CwaCommitSha = data.CwaCommitSha
 	metaData.CaCertPath = data.CaCertPath
 
