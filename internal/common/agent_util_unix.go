@@ -75,7 +75,7 @@ func TouchFile(filePathAbsolute string) error {
 
 // printOutputAndError does nothing if there was no error.
 // Else it prints stdout and stderr.
-func printOutputAndError(message string, stdout []byte, err error) {
+func printOutputAndError(stdout []byte, err error) {
 	if err == nil {
 		return
 	}
@@ -84,11 +84,11 @@ func printOutputAndError(message string, stdout []byte, err error) {
 	if ok {
 		stderr = string(ee.Stderr)
 	}
-	log.Printf("%v failed\n\toutput:\n%v\n\terror:\n%v\n",
-		message, string(stdout), stderr)
+	log.Printf("failed\n\tstdout:\n%v\n\tstderr:\n%v\n", string(stdout), stderr)
 }
 
 func UninstallAgent(pm PackageManager) error {
+	log.Printf("Uninstalling Agent...")
 	var c *exec.Cmd
 	switch pm {
 	case RPM:
@@ -99,12 +99,13 @@ func UninstallAgent(pm PackageManager) error {
 		log.Fatalf("unsupported package manager, %v", pm)
 	}
 	out, err := c.Output()
-	printOutputAndError("UninstallAgent", out, err)
+	printOutputAndError(out, err)
 	return err
 }
 
 // InstallAgent can determine the package manager based on the installer suffix.
 func InstallAgent(installerFilePath string) error {
+	log.Printf("Installing Agent...")
 	var c *exec.Cmd
 	// Assuming lower case
 	if strings.HasSuffix(installerFilePath, ".rpm") {
@@ -113,7 +114,7 @@ func InstallAgent(installerFilePath string) error {
 		c = exec.Command("bash", "-c", "sudo dpkg -i -E " + installerFilePath)
 	}
 	out, err := c.Output()
-	printOutputAndError("InstallAgent", out, err)
+	printOutputAndError(out, err)
 	return err
 }
 
