@@ -24,6 +24,7 @@ type MetaData struct {
 	EcsServiceName            string
 	EC2PluginTests            map[string]struct{} // set of EC2 plugin names
 	Bucket                    string
+	S3Key                     string
 	CwaCommitSha              string
 	CaCertPath                string
 }
@@ -37,6 +38,7 @@ type MetaDataStrings struct {
 	EcsServiceName            string
 	EC2PluginTests            string // input comma delimited list of plugin names
 	Bucket                    string
+	S3Key                     string
 	CwaCommitSha              string
 	CaCertPath                string
 }
@@ -46,6 +48,10 @@ func registerComputeType(dataString *MetaDataStrings) {
 }
 func registerBucket(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.Bucket), "bucket", "", "s3 bucket ex cloudwatch-agent-integration-bucket")
+}
+func registerS3Key(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.S3Key), "s3key", "release/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm",
+		"s3 key ex cloudwatch-agent-integration-bucket")
 }
 func registerCwaCommitSha(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.CwaCommitSha), "cwaCommitSha", "", "agent commit hash ex 0b81ac79ee13f5248b860bbda3afc4ee57f5b8b6")
@@ -126,6 +132,7 @@ func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDat
 	registerComputeType(metaDataStrings)
 	registerECSData(metaDataStrings)
 	registerBucket(metaDataStrings)
+	registerS3Key(metaDataStrings)
 	registerCwaCommitSha(metaDataStrings)
 	registerCaCertPath(metaDataStrings)
 	registerPluginTestsToExecute(metaDataStrings)

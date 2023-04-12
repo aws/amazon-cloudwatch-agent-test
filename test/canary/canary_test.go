@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -30,27 +31,24 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-// TestCanary verifies customers can download the agent, install it, and it "works".
-// Reports metrics on the number of download failures, install failures, and start failures.
+// TestCanary verifies downloading, installing, and starting the agent.
+// Reports metrics for each failure type.
 func TestCanary(t *testing.T) {
-	defer setupCron()
-
+	e := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	defer setupCron(e.Bucket, e.S3Key)
 	// Don't care if uninstall fails. Agent might not be installed anyways.
 	_ = common.UninstallAgent(common.RPM)
-
-	installerFilePath := "./downloaded_cwa.rpm"
-	err := downloadInstaller(installerFilePath)
+	// S3 keys always use backslash, so split on that to get filename.
+	installerFilePath := "./" + e.S3Key[strings.LastIndex(e.S3Key, "/")+1:]
+	err := awsservice.DownloadFile(e.Bucket, e.S3Key, installerFilePath)
 	reportMetric(t, "DownloadFail", err)
-
 	err = common.InstallAgent(installerFilePath)
 	reportMetric(t, "InstallFail", err)
-
 	common.CopyFile(configInputPath, configOutputPath)
 	err = common.StartAgent(configOutputPath, false)
 	reportMetric(t, "StartFail", err)
-
 	actualVersion, _ := os.ReadFile(installAgentVersionPath)
-	expectedVersion, _ := getVersionFromS3()
+	expectedVersion, _ := getVersionFromS3(e.Bucket)
 	if expectedVersion != string(actualVersion) {
 		err = errors.New("agent version mismatch")
 	}
@@ -65,19 +63,14 @@ func reportMetric(t *testing.T, name string, err error) {
 		log.Printf("error: name %v, err %v", name, err)
 		v += 1
 	}
-	require.NoError(t, awsservice.ReportMetric("CanaryTest", name, v, types.StandardUnitCount))
+	require.NoError(t, awsservice.ReportMetric("CanaryTest", name, v,
+		types.StandardUnitCount))
 	require.NoError(t, err)
 }
 
-func downloadInstaller(filepath string) error {
-	bucket := environment.GetEnvironmentMetaData(envMetaDataStrings).Bucket
-	key := "release/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm"
-	return awsservice.DownloadFile(bucket, key, filepath)
-}
-
-func getVersionFromS3() (string, error) {
+func getVersionFromS3(bucket string) (string, error) {
 	filename := "./CWAGENT_VERSION"
-	bucket := environment.GetEnvironmentMetaData(envMetaDataStrings).Bucket
+	// Assuming the release process will create this s3 key.
 	key := "release/CWAGENT_VERSION"
 	err := awsservice.DownloadFile(bucket, key, filename)
 	if err != nil {
@@ -87,30 +80,30 @@ func getVersionFromS3() (string, error) {
 	return string(v), err
 }
 
-func setupCron() {
+func setupCron(bucket, key string) {
 	// default to us-west-2
 	region := os.Getenv("AWS_REGION")
 	if  region == "" {
 		region = "us-west-2"
 	}
-	bucket := environment.GetEnvironmentMetaData(envMetaDataStrings).Bucket
+
 	// Need to create a temporary file at low privilege.
 	// Then use sudo to copy it to the CRON directory.
 	src := "resources/canary_test_cron"
-	updateCron(src, region, bucket)
+	updateCron(src, region, bucket, key)
 	dst := "/etc/cron.d/canary_test_cron"
 	common.CopyFile(src, dst)
 }
 
-func updateCron(filepath, region, bucket string) {
+func updateCron(filepath, region, bucket, s3Key string) {
 	// cwd will be something like .../amazon-cloudwatch-agent-test/test/canary/
 	cwd, err := os.Getwd()
 	log.Printf("cwd %s", cwd)
 	if err != nil {
 		log.Fatalf("error: Getwd(), %s", err)
 	}
-	s := fmt.Sprintf("MAILTO=\"\"\n*/1 * * * * ec2-user cd %s && AWS_REGION=%s go test ./ -count=1 -computeType=EC2 -bucket=%s > ./cron_run.log\n",
-		cwd, region, bucket)
+	s := fmt.Sprintf("MAILTO=\"\"\n*/1 * * * * ec2-user cd %s && AWS_REGION=%s go test ./ -count=1 -computeType=EC2 -bucket=%s -s3key=%s > ./cron_run.log\n",
+		cwd, region, bucket, s3Key)
 	b := []byte(s)
 	err = os.WriteFile(filepath, b, 0644)
 	if err != nil {

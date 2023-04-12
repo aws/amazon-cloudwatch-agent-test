@@ -14,6 +14,7 @@ import (
 
 
 func DownloadFile(bucket, key, outFilename string) error {
+	log.Printf("downloading, %s, %s, to %s...", bucket, key, outFilename)
 	file, err := os.Create(outFilename)
 	if err != nil {
 		log.Printf("error: creating file %s err %v", outFilename, err)
