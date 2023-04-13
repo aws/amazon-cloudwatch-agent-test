@@ -56,3 +56,13 @@ variable "values_per_minute" {
   type    = number
   default = 10
 }
+
+variable "family" {
+  type    = string
+  default = "linux"
+
+  validation {
+    condition     = contains(["windows", "mac", "linux"], var.family)
+    error_message = "Valid values for family are (windows, mac, linux)."
+  }
+}

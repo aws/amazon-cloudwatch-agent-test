@@ -89,9 +89,7 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 }
 
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
-
 func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
-
 	getMetricDataInput := cloudwatch.GetMetricDataInput{
 		StartTime:         &startTime,
 		EndTime:           &endTime,
@@ -123,4 +121,24 @@ func BuildDimensionFilterList(appendDimension int) []types.DimensionFilter {
 		Value: aws.String(ec2InstanceId),
 	}
 	return dimensionFilter
+}
+
+// ReportMetric sends a single metric to CloudWatch.
+// Does not support sending dimensions.
+func ReportMetric(namespace string,
+	name string,
+	value float64,
+	units types.StandardUnit,
+) error {
+	_, err := CwmClient.PutMetricData(ctx, &cloudwatch.PutMetricDataInput{
+		Namespace: aws.String(namespace),
+		MetricData: []types.MetricDatum{
+			{
+				MetricName: aws.String(name),
+				Value: aws.Float64(value),
+				Unit: units,
+			},
+		},
+	})
+	return err
 }

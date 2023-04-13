@@ -10,6 +10,7 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -20,6 +21,12 @@ const (
 	Namespace        = "CWAgent"
 	Host             = "host"
 	AgentLogFile     = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+)
+
+type PackageManager int
+const (
+	RPM PackageManager = iota
+	DEB
 )
 
 func CopyFile(pathIn string, pathOut string) {
@@ -64,6 +71,51 @@ func TouchFile(filePathAbsolute string) error {
 
 	log.Printf("Touched file: %s", filePathAbsolute)
 	return nil
+}
+
+// printOutputAndError does nothing if there was no error.
+// Else it prints stdout and stderr.
+func printOutputAndError(stdout []byte, err error) {
+	if err == nil {
+		return
+	}
+	stderr := ""
+	ee, ok :=  err.(*exec.ExitError)
+	if ok {
+		stderr = string(ee.Stderr)
+	}
+	log.Printf("failed\n\tstdout:\n%s\n\tstderr:\n%s\n", string(stdout), stderr)
+}
+
+func UninstallAgent(pm PackageManager) error {
+	log.Printf("Uninstalling Agent...")
+	var c *exec.Cmd
+	switch pm {
+	case RPM:
+		c = exec.Command("bash", "-c", "sudo rpm -e amazon-cloudwatch-agent")
+	case DEB:
+		c = exec.Command("bash", "-c", "sudo dpkg -r amazon-cloudwatch-agent")
+	default:
+		log.Fatalf("unsupported package manager, %v", pm)
+	}
+	out, err := c.Output()
+	printOutputAndError(out, err)
+	return err
+}
+
+// InstallAgent can determine the package manager based on the installer suffix.
+func InstallAgent(installerFilePath string) error {
+	log.Printf("Installing Agent...")
+	var c *exec.Cmd
+	// Assuming lower case
+	if strings.HasSuffix(installerFilePath, ".rpm") {
+		c = exec.Command("bash", "-c", "sudo rpm -Uvh " + installerFilePath)
+	} else {
+		c = exec.Command("bash", "-c", "sudo dpkg -i -E " + installerFilePath)
+	}
+	out, err := c.Output()
+	printOutputAndError(out, err)
+	return err
 }
 
 func StartAgent(configOutputPath string, fatalOnFailure bool) error {
@@ -156,3 +208,4 @@ func ReplaceLocalStackHostName(pathIn string) {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
 }
+
