@@ -7,6 +7,12 @@ The integration test GitHub actions workflow installs terraform, builds the agen
 to the configured S3 bucket, so all you need to do is configure the secrets in the GitHub repo in order to allow the
 actions to run.
 
+## Prerequisites
+You need to install terraform and configure AWS credential to run terraform commands.
+1. Install `terraform` on your local machine ([download](https://www.terraform.io/downloads))
+2. Install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) on your local machine
+3. [Configure your AWS credentials](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html#getting-started-quickstart-new)
+
 ## 0. vCPU limit
 Newer accounts have lowered default vCPU limits which constrains workflow (eg. running CWAgent GitHub actions on personal forks).  
 If you haven't for the choice of your AWS account, do
@@ -281,7 +287,7 @@ Outputs:
 [reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
 
 ## 7. Setup the integration test resources
-1. Navigate to your fork
+1. Fork amazon-cloudwatch-agent-test(or you can just download the terraform folder)
 2. Run the following command to setup all the resources being used for integration test (e.g vpc, iam, etc)
 ```shell
 cd terraform/setup # assuming you are still in the ./terraform
