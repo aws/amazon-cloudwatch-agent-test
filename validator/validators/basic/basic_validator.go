@@ -4,6 +4,7 @@
 package basic
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"strings"
@@ -19,6 +20,12 @@ import (
 )
 
 const metricErrorBound = 0.1
+
+//go:embed resources/prometheus_redis_schema.json
+var prometheusRedisSchema string
+
+//go:embed resources/ecs_container_insight_schema.json
+var emfContainerInsightsSchema string
 
 type BasicValidator struct {
 	vConfig models.ValidateConfig
@@ -63,6 +70,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		metricNamespace  = s.vConfig.GetMetricNamespace()
 		validationMetric = s.vConfig.GetMetricValidation()
 		validationLog    = s.vConfig.GetLogValidation()
+		validationEMF    = s.vConfig.GetEMFValidation()
 	)
 
 	for _, metric := range validationMetric {
@@ -91,6 +99,13 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		}
 	}
 
+	for _, emf := range validationEMF {
+		err := s.ValidateEMF(emf.LogStream, emf.SchemaName, startTime, endTime)
+		if err != nil {
+			multiErr = multierr.Append(multiErr, err)
+		}
+	}
+
 	return multiErr
 }
 
@@ -102,6 +117,32 @@ func (s *BasicValidator) Cleanup() error {
 	switch dataType {
 	case "logs":
 		awsservice.DeleteLogGroup(ec2InstanceId)
+	}
+
+	return nil
+}
+
+func (s *BasicValidator) ValidateEMF(logStream, emfSchemaName string, startTime, endTime time.Time) error {
+	var (
+		logGroup = awsservice.GetInstanceId()
+	)
+	log.Printf("Start to validate log '%s' with number of logs lines %d within log group %s, log stream %s, start time %v and end time %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime)
+	ok, err := awsservice.ValidateLogs(logGroup, logStream, &startTime, &endTime, func(logs []string) bool {
+		if len(logs) < 1 {
+			return false
+		}
+		actualNumberOfLogLines := 0
+		for _, l := range logs {
+			if strings.Contains(l, logLine) {
+				actualNumberOfLogLines += 1
+			}
+		}
+
+		return numberOfLogLine <= actualNumberOfLogLines
+	})
+
+	if !ok || err != nil {
+		return fmt.Errorf("the number of log line for '%s' is %d which does not match the actual number with log group %s, log stream %s, start time %v and end time %v with err %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime, err)
 	}
 
 	return nil

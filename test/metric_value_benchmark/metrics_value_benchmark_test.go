@@ -24,7 +24,7 @@ const namespace = "MetricValueBenchmarkTest"
 
 type MetricBenchmarkTestSuite struct {
 	suite.Suite
-	result status.TestSuiteResult
+	test_runner.TestSuite
 }
 
 func (suite *MetricBenchmarkTestSuite) SetupSuite() {
@@ -32,7 +32,7 @@ func (suite *MetricBenchmarkTestSuite) SetupSuite() {
 }
 
 func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
-	suite.result.Print()
+	suite.Result.Print()
 	fmt.Println(">>>> Finished MetricBenchmarkTestSuite")
 }
 
@@ -100,11 +100,11 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 		}
 	}
 
-	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Benchmark Test Suite Failed")
+	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Metric Benchmark Test Suite Failed")
 }
 
 func (suite *MetricBenchmarkTestSuite) AddToSuiteResult(r status.TestGroupResult) {
-	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
+	suite.Result.TestGroupResults = append(suite.Result.TestGroupResults, r)
 }
 
 func TestMetricValueBenchmarkSuite(t *testing.T) {

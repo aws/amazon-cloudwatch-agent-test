@@ -2,7 +2,7 @@
 receivers: ["prometheus_redis"]
 
 #Test case name
-test_case: "prometheus_redis_ecs"
+test_case: "prometheus_redis"
 validate_type: "basic"
 # Only support metrics/traces/logs
 data_type: "metrics"
@@ -10,12 +10,10 @@ data_type: "metrics"
 # Number of seconds the agent should run and collect the metrics. In this case, 5 minutes
 agent_collection_period: 180 
 
-cloudwatch_agent_config: "<cloudwatch_agent_config>"
-
 # Metric that the test needs to validate; moreover, the stress validation already has
 # InstanceID dimension; therefore, does not need to validate it
 # https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
-metric_namespace: "CloudWatchAgentStress"
+metric_namespace: "PrometheusECSServiceDiscovery"
 metric_validation: 
   - metric_name: "procstat_cpu_usage"
     metric_dimension: 
@@ -61,3 +59,6 @@ metric_validation:
     metric_dimension: 
       - name: "interface"
         value: "eth0"
+
+emf_validation:
+  - log_stream: "SecurityEvent"

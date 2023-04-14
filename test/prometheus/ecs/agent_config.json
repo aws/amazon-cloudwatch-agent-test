@@ -7,6 +7,7 @@
   "logs": {
     "metrics_collected": {
       "prometheus": {
+        "log_group_name": "{instance_id}",
         "prometheus_config_path": "env:PROMETHEUS_CONFIG_CONTENT",
         "ecs_service_discovery": {
           "sd_frequency": "1m",
@@ -14,6 +15,7 @@
           "docker_label": {}
         },
         "emf_processor": {
+          "metric_namespace": "PrometheusECSServiceDiscovery",
           "metric_declaration": [
             {
               "source_labels": ["container_name"],

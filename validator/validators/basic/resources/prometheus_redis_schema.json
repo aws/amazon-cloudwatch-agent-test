@@ -65,8 +65,6 @@
     "TaskGroup",
     "TaskId",
     "TaskRevision",
-    "Timestamp",
-    "Version",
     "container_name",
     "job",
     "prom_metric_type"

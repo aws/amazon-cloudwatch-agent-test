@@ -29,6 +29,7 @@ type ValidateConfig interface {
 	GetMetricNamespace() string
 	GetMetricValidation() []MetricValidation
 	GetLogValidation() []LogValidation
+	GetEMFValidation() []EmfValidation
 	GetCommitInformation() (string, int64)
 	GetUniqueID() string
 }
@@ -50,6 +51,7 @@ type validatorConfig struct {
 	MetricNamespace  string             `yaml:"metric_namespace"`
 	MetricValidation []MetricValidation `yaml:"metric_validation"`
 	LogValidation    []LogValidation    `yaml:"log_validation"`
+	EmfValidation    []EmfValidation    `yaml:"emf_validation"`
 
 	CommitHash string `yaml:"commit_hash"`
 	CommitDate string `yaml:"commit_date"`
@@ -66,6 +68,11 @@ type LogValidation struct {
 	LogValue  string `yaml:"log_value"`
 	LogLines  int    `yaml:"log_lines"`
 	LogStream string `yaml:"log_stream"`
+}
+
+type EmfValidation struct {
+	SchemaName int    `yaml:"schema_name"`
+	LogStream  string `yaml:"log_stream"`
 }
 
 type MetricDimension struct {
@@ -153,6 +160,11 @@ func (v *validatorConfig) GetMetricValidation() []MetricValidation {
 // GetLogValidation returns the logs need for validation
 func (v *validatorConfig) GetLogValidation() []LogValidation {
 	return v.LogValidation
+}
+
+// GetLogValidation returns the emf logs need for validation
+func (v *validatorConfig) GetEMFValidation() []EmfValidation {
+	return v.EmfValidation
 }
 
 func (v *validatorConfig) GetCommitInformation() (string, int64) {

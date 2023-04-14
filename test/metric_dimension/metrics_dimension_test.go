@@ -19,7 +19,7 @@ import (
 
 type MetricsAppendDimensionTestSuite struct {
 	suite.Suite
-	result status.TestSuiteResult
+	test_runner.TestSuite
 }
 
 func (suite *MetricsAppendDimensionTestSuite) SetupSuite() {
@@ -27,7 +27,7 @@ func (suite *MetricsAppendDimensionTestSuite) SetupSuite() {
 }
 
 func (suite *MetricsAppendDimensionTestSuite) TearDownSuite() {
-	suite.result.Print()
+	suite.Result.Print()
 	fmt.Println(">>>> Finished MetricAppendDimensionTestSuite")
 }
 
@@ -59,12 +59,11 @@ func (suite *MetricsAppendDimensionTestSuite) TestAllInSuite() {
 	for _, testRunner := range getTestRunners(env) {
 		testRunner.Run(suite)
 	}
-
-	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Append Dimension Test Suite Failed")
+	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Metric Append Dimension Test Suite Failed")
 }
 
 func (suite *MetricsAppendDimensionTestSuite) AddToSuiteResult(r status.TestGroupResult) {
-	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
+	suite.Result.TestGroupResults = append(suite.Result.TestGroupResults, r)
 }
 
 func TestMetricsAppendDimensionTestSuite(t *testing.T) {
