@@ -1,6 +1,6 @@
-receivers: "cpu"
+receivers: ["system"]
 
-test_case: "cpu_performance"
+test_case: "system_performance"
 validate_type: "performance"
 data_type: "metrics"
 # Number of metrics to be sent or number of log lines being written  each minute

@@ -48,6 +48,5 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
-  default = "../../../test/feature/win"
+  default = "../../../test/feature/windows"
 }
-

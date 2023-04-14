@@ -8,20 +8,22 @@ import (
 
 	"go.uber.org/multierr"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 type FeatureValidator struct {
 	vConfig models.ValidateConfig
+	models.ValidatorFactory
 }
 
 var _ models.ValidatorFactory = (*FeatureValidator)(nil)
 
 func NewFeatureValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 	return &FeatureValidator{
-		vConfig: vConfig,
+		vConfig:          vConfig,
+		ValidatorFactory: basic.NewBasicValidator(vConfig),
 	}
 }
 
@@ -32,36 +34,19 @@ func (s *FeatureValidator) GenerateLoad() error {
 		dataRate              = s.vConfig.GetDataRate()
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
-		receiver              = s.vConfig.GetPluginsConfig()
+		receivers             = s.vConfig.GetPluginsConfig()
 	)
 
-	err := common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
-	if err != nil {
+	if err := common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}
 
 	// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
-	err = common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate)
-	if err != nil {
-		multiErr = multierr.Append(multiErr, err)
+	for _, receiver := range receivers {
+		if err := common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
+			multiErr = multierr.Append(multiErr, err)
+		}
 	}
 
 	return multiErr
-}
-
-func (s *FeatureValidator) CheckData(startTime, endTime time.Time) error {
-	return nil
-}
-
-func (s *FeatureValidator) Cleanup() error {
-	var (
-		dataType      = s.vConfig.GetDataType()
-		ec2InstanceId = awsservice.GetInstanceId()
-	)
-	switch dataType {
-	case "logs":
-		awsservice.DeleteLogGroup(ec2InstanceId)
-	}
-
-	return nil
 }

@@ -1,5 +1,5 @@
 # Receivers that agent needs to tests
-receivers: "collectd"
+receivers: ["collectd"]
 
 #Test case name
 test_case: "collectd_stress"

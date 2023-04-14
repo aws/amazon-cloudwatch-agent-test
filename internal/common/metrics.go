@@ -53,6 +53,39 @@ func SendCollectDMetrics(metricPerMinute int, sendingInterval, duration time.Dur
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
+	// Sending the collectd metric within the first minute before the ticker kicks in the next minute
+	for t := 1; t <= metricPerMinute/2; t++ {
+		_ = client.Write(ctx, &api.ValueList{
+			Identifier: api.Identifier{
+				Host:   exec.Hostname(),
+				Plugin: fmt.Sprint("gauge_", t),
+				Type:   "gauge",
+			},
+			Time:     time.Now(),
+			Interval: time.Minute,
+			Values:   []api.Value{api.Gauge(t)},
+		})
+
+		err = client.Write(ctx, &api.ValueList{
+			Identifier: api.Identifier{
+				Host:   exec.Hostname(),
+				Plugin: fmt.Sprint("counter_", t),
+				Type:   "counter",
+			},
+			Time:     time.Now(),
+			Interval: time.Minute,
+			Values:   []api.Value{api.Counter(t)},
+		})
+
+		if err != nil && !errors.Is(err, network.ErrNotEnoughSpace) {
+			return err
+		}
+	}
+
+	if err := client.Flush(); err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case <-ticker.C:
@@ -96,7 +129,7 @@ func SendCollectDMetrics(metricPerMinute int, sendingInterval, duration time.Dur
 
 func SendStatsdMetrics(metricPerMinute int, metricDimension []string, sendingInterval, duration time.Duration) error {
 	// https://github.com/DataDog/datadog-go#metrics
-	client, err := statsd.New("127.0.0.1:8125", statsd.WithMaxMessagesPerPayload(100), statsd.WithNamespace("statsd"))
+	client, err := statsd.New("127.0.0.1:8125", statsd.WithMaxMessagesPerPayload(100), statsd.WithNamespace("statsd"), statsd.WithoutTelemetry())
 
 	if err != nil {
 		return err
@@ -107,6 +140,16 @@ func SendStatsdMetrics(metricPerMinute int, metricDimension []string, sendingInt
 	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
+
+	// Sending the statsd metric within the first minute before the ticker kicks in the next minute
+	for t := 1; t <= metricPerMinute/2; t++ {
+		if err := client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0); err != nil {
+			return err
+		}
+		if err := client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0); err != nil {
+			return err
+		}
+	}
 
 	for {
 		select {

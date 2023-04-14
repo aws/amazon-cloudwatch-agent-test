@@ -1,4 +1,4 @@
-receivers: "collectd"
+receivers: ["collectd"]
 
 test_case: "collectd_performance"
 validate_type: "performance"

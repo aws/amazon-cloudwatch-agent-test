@@ -26,11 +26,6 @@ variable "ssh_key_value" {
   default = ""
 }
 
-variable "user" {
-  type    = string
-  default = "ec2-user"
-}
-
 variable "arc" {
   type    = string
   default = "arm64"

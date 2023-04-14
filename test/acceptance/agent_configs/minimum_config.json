@@ -1,0 +1,14 @@
+{
+  "agent": {
+    "run_as_user": "cwagent"
+  },
+  "metrics": {
+    "metrics_collected": {
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ]
+      }
+    }
+  }
+}
