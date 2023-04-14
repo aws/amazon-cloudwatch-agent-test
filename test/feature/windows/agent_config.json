@@ -1,0 +1,82 @@
+{
+    "agent": {
+        "debug": true
+    },
+    "metrics": {
+      "namespace": "CloudWatchAgentWinFeature",
+      "metrics_collected": {
+        "statsd": {
+          "metrics_aggregation_interval": 60,
+          "metrics_collection_interval": 60,
+          "service_address": ":8125"
+        },
+        "Memory": {
+          "measurement": [
+            {
+              "name": "Available Bytes",
+              "rename": "Available_Bytes"
+            }
+          ],
+          "metrics_collection_interval": 1
+        },
+        "System": {
+            "measurement": [
+              {
+                "name": "Processor Queue Length",
+                "rename": "Processor_Queue_Length"
+              }
+            ],
+            "metrics_collection_interval": 1
+        },
+        "procstat": [
+            {
+              "exe": "amazon-cloudwatch-agent",
+              "measurement": [
+                  "cpu_usage",
+                  "memory_rss"
+              ],
+              "metrics_collection_interval": 1
+            }
+        ]
+        },
+      "append_dimensions": {
+        "InstanceId": "${aws:InstanceId}"
+      },
+      "force_flush_interval": 30
+    },
+    "logs": {
+      "logs_collected": {
+          "windows_events": {
+            "collect_list": [
+              {
+                "event_name": "Security",
+                "event_levels": [
+                  "INFORMATION",
+                  "WARNING",
+                  "ERROR",
+                  "CRITICAL",
+                  "VERBOSE"
+                ],
+                "log_group_name": "{instance_id}",
+                "log_stream_name": "SecurityEvent"
+              }
+            ]
+          },
+        
+          "files": {
+            "collect_list": [
+              {
+                "file_path": "C:/Users/Administrator/AppData/Local/Temp/test1.log",
+                "log_group_name": "{instance_id}",
+                "log_stream_name": "test1.log",
+                "timezone": "UTC"
+              }
+            ]
+          }
+      },
+      "metrics_collected": {
+        "emf": { }
+      },
+      "force_flush_interval": 5
+    }
+}

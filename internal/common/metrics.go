@@ -4,53 +4,47 @@
 package common
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
-	"sync"
 	"time"
 
-	"github.com/cactus/go-statsd-client/v5/statsd"
+	"collectd.org/api"
+	"collectd.org/exec"
+	"collectd.org/network"
+	"github.com/DataDog/datadog-go/statsd"
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
-	"go.uber.org/multierr"
 )
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
-func StartSendingMetrics(receiver string, duration time.Duration, metricPerMinute int, metricLogGroup, metricNamespace string) error {
-	var (
-		err      error
-		multiErr error
-		wg       sync.WaitGroup
-	)
-
-	wg.Add(1)
+func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
 	go func() {
-		defer wg.Done()
 		switch receiver {
 		case "statsd":
-			err = sendStatsdMetrics(metricPerMinute, duration)
+			err = SendStatsdMetrics(metricPerInterval, []string{}, sendingInterval, duration)
+		case "collectd":
+			err = SendCollectDMetrics(metricPerInterval, sendingInterval, duration)
 		case "emf":
-			err = sendEMFMetrics(metricLogGroup, metricNamespace, metricPerMinute, duration)
+			err = SendEMFMetrics(metricPerInterval, metricLogGroup, metricNamespace, sendingInterval, duration)
 		default:
 		}
 
-		multiErr = multierr.Append(multiErr, err)
 	}()
 
-	wg.Wait()
-	return multiErr
+	return err
 }
 
-func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
-	// https://github.com/cactus/go-statsd-client#example
-	statsdClientConfig := &statsd.ClientConfig{
-		Address:     ":8125",
-		Prefix:      "statsd",
-		UseBuffered: true,
-		// interval to force flush buffer. full buffers will flush on their own,
-		// but for data not frequently sent, a max threshold is useful
-		FlushInterval: 300 * time.Millisecond,
-	}
-	client, err := statsd.NewClientWithConfig(statsdClientConfig)
+func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.Duration) error {
+	// https://github.com/collectd/go-collectd/tree/92e86f95efac5eb62fa84acc6033e7a57218b606
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client, err := network.Dial(
+		net.JoinHostPort("127.0.0.1", network.DefaultService),
+		network.ClientOptions{
+			SecurityLevel: network.None,
+		})
 
 	if err != nil {
 		return err
@@ -58,15 +52,114 @@ func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 
 	defer client.Close()
 
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
+
+	// Sending the collectd metric within the first minute before the ticker kicks in the next minute
+	for t := 1; t <= metricPerInterval/2; t++ {
+		_ = client.Write(ctx, &api.ValueList{
+			Identifier: api.Identifier{
+				Host:   exec.Hostname(),
+				Plugin: fmt.Sprint("gauge_", t),
+				Type:   "gauge",
+			},
+			Time:     time.Now(),
+			Interval: time.Minute,
+			Values:   []api.Value{api.Gauge(t)},
+		})
+
+		err = client.Write(ctx, &api.ValueList{
+			Identifier: api.Identifier{
+				Host:   exec.Hostname(),
+				Plugin: fmt.Sprint("counter_", t),
+				Type:   "counter",
+			},
+			Time:     time.Now(),
+			Interval: time.Minute,
+			Values:   []api.Value{api.Counter(t)},
+		})
+
+		if err != nil && !errors.Is(err, network.ErrNotEnoughSpace) {
+			return err
+		}
+	}
+
+	if err := client.Flush(); err != nil {
+		return err
+	}
 
 	for {
 		select {
 		case <-ticker.C:
-			for t := 0; t < metricPerMinute; t++ {
-				client.Inc(fmt.Sprint(t), int64(t), 1.0)
+			for t := 1; t <= metricPerInterval/2; t++ {
+				_ = client.Write(ctx, &api.ValueList{
+					Identifier: api.Identifier{
+						Host:   exec.Hostname(),
+						Plugin: fmt.Sprint("gauge_", t),
+						Type:   "gauge",
+					},
+					Time:     time.Now(),
+					Interval: time.Minute,
+					Values:   []api.Value{api.Gauge(t)},
+				})
+
+				err = client.Write(ctx, &api.ValueList{
+					Identifier: api.Identifier{
+						Host:   exec.Hostname(),
+						Plugin: fmt.Sprint("counter_", t),
+						Type:   "counter",
+					},
+					Time:     time.Now(),
+					Interval: time.Minute,
+					Values:   []api.Value{api.Counter(t)},
+				})
+
+				if err != nil && !errors.Is(err, network.ErrNotEnoughSpace) {
+					return err
+				}
+			}
+
+			if err := client.Flush(); err != nil {
+				return err
+			}
+		case <-endTimeout:
+			return nil
+		}
+	}
+
+}
+
+func SendStatsdMetrics(metricPerInterval int, metricDimension []string, sendingInterval, duration time.Duration) error {
+	// https://github.com/DataDog/datadog-go#metrics
+	client, err := statsd.New("127.0.0.1:8125", statsd.WithMaxMessagesPerPayload(100), statsd.WithNamespace("statsd"), statsd.WithoutTelemetry())
+
+	if err != nil {
+		return err
+	}
+
+	defer client.Close()
+
+	ticker := time.NewTicker(sendingInterval)
+	defer ticker.Stop()
+	endTimeout := time.After(duration)
+
+	// Sending the statsd metric within the first minute before the ticker kicks in the next minute
+	for t := 1; t <= metricPerInterval/2; t++ {
+		if err := client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0); err != nil {
+			return err
+		}
+		if err := client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0); err != nil {
+			return err
+		}
+	}
+
+	for {
+		select {
+		case <-ticker.C:
+			for t := 1; t <= metricPerInterval/2; t++ {
+				client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0)
+				client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0)
 			}
 		case <-endTimeout:
 			return nil
@@ -74,7 +167,7 @@ func sendStatsdMetrics(metricPerMinute int, duration time.Duration) error {
 	}
 }
 
-func sendEMFMetrics(metricLogGroup, metricNamespace string, metricPerMinute int, duration time.Duration) error {
+func SendEMFMetrics(metricPerInterval int, metricLogGroup, metricNamespace string, sendingInterval, duration time.Duration) error {
 	// github.com/prozz/aws-embedded-metrics-golang/emf
 	conn, err := net.DialTimeout("tcp", "127.0.0.1:25888", time.Millisecond*10000)
 	if err != nil {
@@ -87,14 +180,25 @@ func sendEMFMetrics(metricLogGroup, metricNamespace string, metricPerMinute int,
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
+	for t := 0; t < metricPerInterval; t++ {
+		emf.New(emf.WithWriter(conn), emf.WithLogGroup(metricLogGroup)).
+			Namespace(metricNamespace).
+			DimensionSet(
+				emf.NewDimension("InstanceId", metricLogGroup),
+			).
+			MetricAs("Time", t, emf.Milliseconds).
+			Log()
+
+	}
+
 	for {
 		select {
 		case <-ticker.C:
-			for t := 0; t < metricPerMinute; t++ {
+			for t := 0; t < metricPerInterval; t++ {
 				emf.New(emf.WithWriter(conn), emf.WithLogGroup(metricLogGroup)).
 					Namespace(metricNamespace).
 					DimensionSet(
-						emf.NewDimension("Time", fmt.Sprint(t)),
+						emf.NewDimension("InstanceId", metricLogGroup),
 					).
 					MetricAs("Time", t, emf.Milliseconds).
 					Log()

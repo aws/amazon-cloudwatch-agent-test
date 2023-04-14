@@ -4,75 +4,20 @@
 package awsservice
 
 import (
+	"context"
 	"errors"
 	"log"
-	"strings"
-	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/qri-io/jsonschema"
 )
 
 // catch ResourceNotFoundException when deleting the log group and log stream, as these
 // are not useful exceptions to log errors on during cleanup
 var rnf *types.ResourceNotFoundException
-
-// ValidateLogs takes a log group and log stream, and fetches the log events via the GetLogEvents
-// API for all the logs since a given timestamp, and checks if the number of log events matches
-// the expected value.
-func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int, since time.Time) {
-	log.Printf("Checking %s/%s since %s for %d expected logs", logGroup, logStream, since.UTC().Format(time.RFC3339), numExpectedLogs)
-
-	sinceMs := since.UnixNano() / 1e6 // convert to millisecond timestamp
-
-	// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html
-	// GetLogEvents can return an empty result while still having more log events on a subsequent page,
-	// so rather than expecting all the events to show up in one GetLogEvents API call, we need to paginate.
-	params := &cloudwatchlogs.GetLogEventsInput{
-		LogGroupName:  aws.String(logGroup),
-		LogStreamName: aws.String(logStream),
-		StartTime:     aws.Int64(sinceMs),
-	}
-
-	numLogsFound := 0
-	attempts := 0
-	var nextToken *string
-
-	for {
-		if nextToken != nil {
-			params.NextToken = nextToken
-		}
-		output, err := CwlClient.GetLogEvents(ctx, params)
-
-		attempts += 1
-
-		if err != nil {
-			if errors.As(err, &rnf) && attempts <= StandardRetries {
-				// The log group/stream hasn't been created yet, so wait and retry
-				time.Sleep(time.Minute)
-				continue
-			}
-
-			// if the error is not a ResourceNotFoundException, we should fail here.
-			t.Fatalf("Error occurred while getting log events: %v", err.Error())
-		}
-
-		if nextToken != nil && output.NextForwardToken != nil && *output.NextForwardToken == *nextToken {
-			// From the docs: If you have reached the end of the stream, it returns the same token you passed in.
-			log.Printf("Done paginating log events for %s/%s and found %d logs", logGroup, logStream, numLogsFound)
-			break
-		}
-
-		nextToken = output.NextForwardToken
-		numLogsFound += len(output.Events)
-	}
-
-	// using assert.Len() prints out the whole splice of log events which bloats the test log
-	assert.Equal(t, numExpectedLogs, numLogsFound)
-}
 
 // DeleteLogGroupAndStream cleans up a log group and stream by name. This gracefully handles
 // ResourceNotFoundException errors from calling the APIs
@@ -83,7 +28,6 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 
 // DeleteLogStream cleans up log stream by name
 func DeleteLogStream(logGroupName, logStreamName string) {
-
 	_, err := CwlClient.DeleteLogStream(ctx, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
@@ -95,10 +39,6 @@ func DeleteLogStream(logGroupName, logStreamName string) {
 
 // DeleteLogGroup cleans up log group by name
 func DeleteLogGroup(logGroupName string) {
-	// catch ResourceNotFoundException when deleting the log group and log stream, as these
-	// are not useful exceptions to log errors on during cleanup
-	var rnf *types.ResourceNotFoundException
-
 	_, err := CwlClient.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
@@ -107,14 +47,23 @@ func DeleteLogGroup(logGroupName string) {
 	}
 }
 
-// ValidateLogsInOrder takes a log group, log stream, a list of specific log lines and a timestamp.
-// It should query the given log stream for log events, and then confirm that the log lines that are
-// returned match the expected log lines. This also sanitizes the log lines from both the output and
-// the expected lines input to ensure that they don't diverge in JSON representation (" vs ')
-func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []string, since time.Time) {
-	log.Printf("Checking %s/%s since %s for %d expected logs", logGroup, logStream, since.UTC().Format(time.RFC3339), len(logLines))
+// ValidateLogs queries a given LogGroup/LogStream combination given the start and end times, and executes an
+// arbitrary validator function on the found logs.
+func ValidateLogs(logGroup, logStream string, since, until *time.Time, validator func(logs []string) bool) (bool, error) {
+	log.Printf("Checking %s/%s\n", logGroup, logStream)
 
-	sinceMs := since.UnixNano() / 1e6 // convert to millisecond timestamp
+	foundLogs, err := getLogsSince(logGroup, logStream, since, until)
+	if err != nil {
+		return false, err
+	}
+
+	return validator(foundLogs), nil
+}
+
+// getLogsSince makes GetLogEvents API calls, paginates through the results for the given time frame, and returns
+// the raw log strings
+func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string, error) {
+	foundLogs := make([]string, 0)
 
 	// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html
 	// GetLogEvents can return an empty result while still having more log events on a subsequent page,
@@ -122,11 +71,17 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 	params := &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName:  aws.String(logGroup),
 		LogStreamName: aws.String(logStream),
-		StartTime:     aws.Int64(sinceMs),
 		StartFromHead: aws.Bool(true), // read from the beginning
 	}
 
-	foundLogs := make([]string, 0)
+	if since != nil {
+		params.StartTime = aws.Int64(since.UnixMilli())
+	}
+
+	if until != nil {
+		params.EndTime = aws.Int64(until.UnixMilli())
+	}
+
 	var nextToken *string
 	attempts := 0
 
@@ -141,12 +96,12 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 		if err != nil {
 			if errors.As(err, &rnf) && attempts <= StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
-				time.Sleep(time.Minute)
+				time.Sleep(30 * time.Second)
 				continue
 			}
 
 			// if the error is not a ResourceNotFoundException, we should fail here.
-			t.Fatalf("Error occurred while getting log events: %v", err.Error())
+			return foundLogs, err
 		}
 
 		for _, e := range output.Events {
@@ -161,19 +116,11 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 
 		nextToken = output.NextForwardToken
 	}
-
-	// Validate that each of the logs are found, in order and in full.
-	assert.Len(t, foundLogs, len(logLines))
-	for i := 0; i < len(logLines); i++ {
-		expected := strings.ReplaceAll(logLines[i], "'", "\"")
-		actual := strings.ReplaceAll(foundLogs[i], "'", "\"")
-		assert.Equal(t, expected, actual)
-	}
+	return foundLogs, nil
 }
 
-// isLogGroupExists confirms whether the logGroupName exists or not
-func IsLogGroupExists(t *testing.T, logGroupName string) bool {
-
+// IsLogGroupExists confirms whether the logGroupName exists or not
+func IsLogGroupExists(logGroupName string) bool {
 	describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(logGroupName),
 	}
@@ -181,12 +128,22 @@ func IsLogGroupExists(t *testing.T, logGroupName string) bool {
 	describeLogGroupOutput, err := CwlClient.DescribeLogGroups(ctx, &describeLogGroupInput)
 
 	if err != nil {
-		t.Errorf("Error getting log group data %v", err)
+		log.Println("error occurred while calling DescribeLogGroups", err)
+		return false
 	}
 
-	if len(describeLogGroupOutput.LogGroups) > 0 {
-		return true
+	return len(describeLogGroupOutput.LogGroups) > 0
+}
+
+func MatchEMFLogWithSchema(logEntry string, s *jsonschema.Schema, logValidator func(string) bool) bool {
+	keyErrors, e := s.ValidateBytes(context.Background(), []byte(logEntry))
+	if e != nil {
+		log.Println("failed to execute schema validator:", e)
+		return false
+	} else if len(keyErrors) > 0 {
+		log.Printf("failed schema validation: %v\n", keyErrors)
+		return false
 	}
 
-	return false
+	return logValidator(logEntry)
 }

@@ -16,8 +16,8 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 const (
@@ -32,34 +32,16 @@ var (
 
 type PerformanceValidator struct {
 	vConfig models.ValidateConfig
+	models.ValidatorFactory
 }
 
 var _ models.ValidatorFactory = (*PerformanceValidator)(nil)
 
 func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 	return &PerformanceValidator{
-		vConfig: vConfig,
+		vConfig:          vConfig,
+		ValidatorFactory: basic.NewBasicValidator(vConfig),
 	}
-}
-
-func (s *PerformanceValidator) GenerateLoad() (err error) {
-	var (
-		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
-		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
-		dataType              = s.vConfig.GetDataType()
-		dataRate              = s.vConfig.GetDataRate()
-		receiver              = s.vConfig.GetPluginsConfig()
-		metricLogGroup        = awsservice.GetInstanceId()
-		metricNamespace       = s.vConfig.GetMetricNamespace()
-	)
-	switch dataType {
-	case "logs":
-		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, dataRate)
-	default:
-		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, dataRate, metricLogGroup, metricNamespace)
-	}
-
-	return err
 }
 
 func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
@@ -80,23 +62,10 @@ func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
 	return nil
 }
 
-func (s *PerformanceValidator) Cleanup() error {
-	var (
-		dataType      = s.vConfig.GetDataType()
-		ec2InstanceId = awsservice.GetInstanceId()
-	)
-	switch dataType {
-	case "logs":
-		awsservice.DeleteLogGroup(ec2InstanceId)
-	}
-
-	return nil
-}
-
 func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformation) error {
 	var (
 		dataType               = s.vConfig.GetDataType()
-		receiver               = s.vConfig.GetPluginsConfig()
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
 		agentCollectionPeriod  = fmt.Sprint(s.vConfig.GetAgentCollectionPeriod().Seconds())
 		// The secondary global index that is used for checking if there are item has already been exist in the table
@@ -117,7 +86,7 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 		// and finally replace the packet in the database
 		maps.Copy(existingPerfInfo["Results"].(map[string]interface{}), perfInfo["Results"].(map[string]interface{}))
 
-		finalPerfInfo := packIntoPerformanceInformation(receiver, dataType, agentCollectionPeriod, commitHash, commitDate, existingPerfInfo["Results"])
+		finalPerfInfo := packIntoPerformanceInformation(existingPerfInfo["UniqueID"].(string), receiver, dataType, agentCollectionPeriod, commitHash, commitDate, existingPerfInfo["Results"])
 
 		err = awsservice.ReplaceItemInDatabase(DynamoDBDataBase, finalPerfInfo)
 
@@ -131,10 +100,11 @@ func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformat
 }
 func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []types.MetricDataResult) (PerformanceInformation, error) {
 	var (
-		receiver               = s.vConfig.GetPluginsConfig()
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
 		dataType               = s.vConfig.GetDataType()
 		dataRate               = fmt.Sprint(s.vConfig.GetDataRate())
+		uniqueID               = s.vConfig.GetUniqueID()
 		agentCollectionPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
 	)
 	performanceMetricResults := make(map[string]Stats)
@@ -158,7 +128,7 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 		performanceMetricResults[metricName] = metricStats
 	}
 
-	return packIntoPerformanceInformation(receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
+	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
 }
 
 func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Time) ([]types.MetricDataResult, error) {
@@ -182,7 +152,7 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 				Value: aws.String(dimension.Value),
 			})
 		}
-		performanceMetricDataQueries = append(performanceMetricDataQueries, s.buildStressMetricQueries(metric.MetricName, metricNamespace, metricDimensions))
+		performanceMetricDataQueries = append(performanceMetricDataQueries, s.buildPerformanceMetricQueries(metric.MetricName, metricNamespace, metricDimensions))
 	}
 
 	metrics, err := awsservice.GetMetricData(performanceMetricDataQueries, startTime, endTime)
@@ -194,7 +164,7 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 	return metrics.MetricDataResults, nil
 }
 
-func (s *PerformanceValidator) buildStressMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {
+func (s *PerformanceValidator) buildPerformanceMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {
 	metricInformation := types.Metric{
 		Namespace:  aws.String(metricNamespace),
 		MetricName: aws.String(metricName),
@@ -214,11 +184,12 @@ func (s *PerformanceValidator) buildStressMetricQueries(metricName, metricNamesp
 
 // packIntoPerformanceInformation will package all the information into the required format of MongoDb Database
 // https://github.com/aws/amazon-cloudwatch-agent-test/blob/e07fe7adb1b1d75244d8984507d3f83a7237c3d3/terraform/setup/main.tf#L8-L63
-func packIntoPerformanceInformation(receiver, dataType, collectionPeriod, commitHash string, commitDate int64, result interface{}) PerformanceInformation {
+func packIntoPerformanceInformation(uniqueID, receiver, dataType, collectionPeriod, commitHash string, commitDate int64, result interface{}) PerformanceInformation {
 	instanceAMI := awsservice.GetImageId()
 	instanceType := awsservice.GetInstanceType()
 
 	return PerformanceInformation{
+		"UniqueID":         uniqueID,
 		"Service":          ServiceName,
 		"UseCase":          receiver,
 		"CommitDate":       commitDate,

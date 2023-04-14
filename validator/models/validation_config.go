@@ -10,11 +10,15 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
+	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
 
+var supportedReceivers = []string{"logs", "statsd", "collectd", "host", "emf"}
+
 type ValidateConfig interface {
-	GetPluginsConfig() string
+	GetPluginsConfig() []string
 	GetValidateType() string
 	GetTestCase() string
 	GetDataType() string
@@ -24,10 +28,13 @@ type ValidateConfig interface {
 	GetAgentCollectionPeriod() time.Duration
 	GetMetricNamespace() string
 	GetMetricValidation() []MetricValidation
+	GetLogValidation() []LogValidation
 	GetCommitInformation() (string, int64)
+	GetUniqueID() string
 }
+
 type validatorConfig struct {
-	Receiver string `yaml:"receivers"` // Receivers that agent needs to tests
+	Receivers []string `yaml:"receivers"` // Receivers that agent needs to tests
 
 	TestCase string `yaml:"test_case"` // Test case name
 
@@ -42,14 +49,23 @@ type validatorConfig struct {
 
 	MetricNamespace  string             `yaml:"metric_namespace"`
 	MetricValidation []MetricValidation `yaml:"metric_validation"`
+	LogValidation    []LogValidation    `yaml:"log_validation"`
 
 	CommitHash string `yaml:"commit_hash"`
 	CommitDate string `yaml:"commit_date"`
 }
 
 type MetricValidation struct {
-	MetricName      string            `yaml:"metric_name"`
-	MetricDimension []MetricDimension `yaml:"metric_dimension"`
+	MetricName        string            `yaml:"metric_name"`
+	MetricDimension   []MetricDimension `yaml:"metric_dimension"`
+	MetricValue       float64           `yaml:"metric_value"`
+	MetricSampleCount int               `yaml:"metric_sample_count"`
+}
+
+type LogValidation struct {
+	LogValue  string `yaml:"log_value"`
+	LogLines  int    `yaml:"log_lines"`
+	LogStream string `yaml:"log_stream"`
 }
 
 type MetricDimension struct {
@@ -71,7 +87,20 @@ func NewValidateConfig(configPath string) (*validatorConfig, error) {
 		return nil, err
 	}
 	log.Printf("Parameters validation for %v", vConfig)
+
+	if err := ValidateValidatorConfig(vConfig); err != nil {
+		return nil, err
+	}
 	return &vConfig, nil
+}
+
+func ValidateValidatorConfig(vConfig validatorConfig) error {
+	for _, receiver := range vConfig.Receivers {
+		if !slices.Contains(supportedReceivers, receiver) {
+			return fmt.Errorf("only support %v, the validator does not support %s", supportedReceivers, receiver)
+		}
+	}
+	return nil
 }
 
 // GetTestCase return the test case name
@@ -85,8 +114,8 @@ func (v *validatorConfig) GetValidateType() string {
 }
 
 // GetPluginsConfig returns the agent plugin being used or need to validate (e.g statsd, collectd, cpu)
-func (v *validatorConfig) GetPluginsConfig() string {
-	return v.Receiver
+func (v *validatorConfig) GetPluginsConfig() []string {
+	return v.Receivers
 }
 
 // GetPluginsConfig returns the type needs to validate or send. Only supports metrics, traces, logs
@@ -96,8 +125,8 @@ func (v *validatorConfig) GetDataType() string {
 
 // GetDataRate returns number of metrics to be sent or number of log lines to write
 func (v *validatorConfig) GetDataRate() int {
-	if dataRate, err := strconv.ParseInt(v.ValuesPerMinute, 10, 64); err == nil {
-		return int(dataRate)
+	if dataRate, err := strconv.Atoi(v.ValuesPerMinute); err == nil {
+		return dataRate
 	}
 	return 0
 }
@@ -127,7 +156,16 @@ func (v *validatorConfig) GetMetricValidation() []MetricValidation {
 	return v.MetricValidation
 }
 
+// GetLogValidation returns the logs need for validation
+func (v *validatorConfig) GetLogValidation() []LogValidation {
+	return v.LogValidation
+}
+
 func (v *validatorConfig) GetCommitInformation() (string, int64) {
 	commitDate, _ := strconv.ParseInt(v.CommitDate, 10, 64)
 	return v.CommitHash, commitDate
+}
+
+func (v *validatorConfig) GetUniqueID() string {
+	return uuid.NewString()
 }

@@ -5,6 +5,12 @@ module "common" {
   source = "../common"
 }
 
+module "basic_components" {
+  source = "../basic_components"
+
+  region = var.region
+}
+
 locals {
   ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
@@ -45,30 +51,49 @@ resource "local_file" "update-validation-config" {
   "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
 
   filename = "${var.test_dir}/${local.final_validator_config}"
+}
 
+// Build and uploading the validator to spending less time in 
+// and avoid memory issue in allocating memory 
+resource "null_resource" "upload-validator" {
+  provisioner "local-exec" {
+    command = <<-EOT
+    cd ../..
+    make validator-build
+    aws s3 cp ./build/validator/linux/${var.arc}/validator s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/linux/${var.arc}/validator
+    EOT
+  }
+
+  triggers = {
+    always_run = "${timestamp()}"
+  }
 }
 
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
+
   ami                         = data.aws_ami.latest.id
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
-  iam_instance_profile        = data.aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [data.aws_security_group.ec2_security_group.id]
+  iam_instance_profile        = module.basic_components.instance_profile
+  vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
   }
 
   tags = {
-    Name = "cwagent-performance-${var.test_name}-${module.common.testing_id}"
+    Name = "cwagent-performance-${module.common.testing_id}"
   }
 }
 
 resource "null_resource" "integration_test" {
+  depends_on = [aws_instance.cwagent, null_resource.upload-validator]
+
   connection {
     type        = "ssh"
     user        = var.user
@@ -76,12 +101,9 @@ resource "null_resource" "integration_test" {
     host        = aws_instance.cwagent.public_ip
   }
 
-  # Prepare Integration Test
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
     destination = "${local.instance_temp_directory}/${local.final_validator_config}"
-
-
   }
 
   provisioner "file" {
@@ -94,7 +116,8 @@ resource "null_resource" "integration_test" {
     inline = [
       "cloud-init status --wait",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/amazon-cloudwatch-agent.rpm .",
-      "sudo rpm -U ./amazon-cloudwatch-agent.rpm"
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/linux/${var.arc}/validator .",
+      "sudo rpm -Uvh ./amazon-cloudwatch-agent.rpm"
     ]
   }
 
@@ -102,15 +125,13 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "export AWS_REGION=${var.region}",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "sudo chmod +x ./validator",
+      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "go run ./validator/main.go --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
 
-  depends_on = [aws_instance.cwagent]
 }
 
 data "aws_ami" "latest" {
