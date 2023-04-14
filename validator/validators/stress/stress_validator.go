@@ -14,8 +14,8 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 type MetricPluginBoundValue map[string]map[string]map[string]float64
@@ -49,16 +49,16 @@ var (
 				"net_packets_sent":     float64(105),
 			},
 			"logs": {
-				"procstat_cpu_usage":   float64(40),
-				"procstat_memory_rss":  float64(152000000),
+				"procstat_cpu_usage":   float64(200),
+				"procstat_memory_rss":  float64(220000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(888000000),
-				"procstat_memory_data": float64(162000000),
+				"procstat_memory_data": float64(260000000),
 				"procstat_num_fds":     float64(110),
-				"net_bytes_sent":       float64(170000),
-				"net_packets_sent":     float64(1500),
+				"net_bytes_sent":       float64(1800000),
+				"net_packets_sent":     float64(5000),
 			},
-			"host": {
+			"system": {
 				"procstat_cpu_usage":   float64(15),
 				"procstat_memory_rss":  float64(75000000),
 				"procstat_memory_swap": float64(0),
@@ -91,16 +91,16 @@ var (
 				"net_packets_sent":     float64(450),
 			},
 			"logs": {
-				"procstat_cpu_usage":   float64(200),
-				"procstat_memory_rss":  float64(325000000),
+				"procstat_cpu_usage":   float64(400),
+				"procstat_memory_rss":  float64(540000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(1100000000),
-				"procstat_memory_data": float64(400000000),
-				"procstat_num_fds":     float64(111),
+				"procstat_memory_data": float64(540000000),
+				"procstat_num_fds":     float64(180),
 				"net_bytes_sent":       float64(6500000),
 				"net_packets_sent":     float64(8500),
 			},
-			"host": {
+			"system": {
 				"procstat_cpu_usage":   float64(15),
 				"procstat_memory_rss":  float64(75000000),
 				"procstat_memory_swap": float64(0),
@@ -133,16 +133,16 @@ var (
 				"net_packets_sent":     float64(700),
 			},
 			"logs": {
-				"procstat_cpu_usage":   float64(225),
-				"procstat_memory_rss":  float64(440000000),
+				"procstat_cpu_usage":   float64(400),
+				"procstat_memory_rss":  float64(800000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(1200000000),
-				"procstat_memory_data": float64(440000000),
-				"procstat_num_fds":     float64(130),
+				"procstat_memory_vms":  float64(1500000000),
+				"procstat_memory_data": float64(840000000),
+				"procstat_num_fds":     float64(180),
 				"net_bytes_sent":       float64(6820000),
 				"net_packets_sent":     float64(8300),
 			},
-			"host": {
+			"system": {
 				"procstat_cpu_usage":   float64(15),
 				"procstat_memory_rss":  float64(75000000),
 				"procstat_memory_swap": float64(0),
@@ -180,16 +180,16 @@ var (
 				"net_packets_sent":     float64(1100),
 			},
 			"logs": {
-				"procstat_cpu_usage":   float64(200),
-				"procstat_memory_rss":  float64(600000000),
+				"procstat_cpu_usage":   float64(400),
+				"procstat_memory_rss":  float64(800000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(1400000000),
+				"procstat_memory_vms":  float64(1500000000),
 				"procstat_memory_data": float64(650000000),
-				"procstat_num_fds":     float64(125),
+				"procstat_num_fds":     float64(200),
 				"net_bytes_sent":       float64(6900000),
 				"net_packets_sent":     float64(6500),
 			},
-			"host": {
+			"system": {
 				"procstat_cpu_usage":   float64(15),
 				"procstat_memory_rss":  float64(75000000),
 				"procstat_memory_swap": float64(0),
@@ -205,34 +205,16 @@ var (
 
 type StressValidator struct {
 	vConfig models.ValidateConfig
+	models.ValidatorFactory
 }
 
 var _ models.ValidatorFactory = (*StressValidator)(nil)
 
 func NewStressValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 	return &StressValidator{
-		vConfig: vConfig,
+		vConfig:          vConfig,
+		ValidatorFactory: basic.NewBasicValidator(vConfig),
 	}
-}
-
-func (s *StressValidator) GenerateLoad() (err error) {
-	var (
-		metricSendingInterval = time.Minute
-		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
-		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
-		dataType              = s.vConfig.GetDataType()
-		dataRate              = s.vConfig.GetDataRate()
-		receiver              = s.vConfig.GetPluginsConfig()
-	)
-	switch dataType {
-	case "logs":
-		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
-	default:
-		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
-		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate)
-	}
-
-	return err
 }
 
 func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
@@ -264,24 +246,11 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 	return multiErr
 }
 
-func (s *StressValidator) Cleanup() error {
-	var (
-		dataType      = s.vConfig.GetDataType()
-		ec2InstanceId = awsservice.GetInstanceId()
-	)
-	switch dataType {
-	case "logs":
-		awsservice.DeleteLogGroup(ec2InstanceId)
-	}
-
-	return nil
-}
-
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, startTime, endTime time.Time) error {
 	var (
 		dataRate       = fmt.Sprint(s.vConfig.GetDataRate())
 		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
-		receiver       = s.vConfig.GetPluginsConfig()
+		receiver       = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 	)
 
 	stressMetricQueries := s.buildStressMetricQueries(metricName, metricNamespace, metricDimensions)

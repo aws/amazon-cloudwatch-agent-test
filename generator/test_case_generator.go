@@ -51,17 +51,17 @@ var testTypeToTestDirMap = map[string][]string{
 		"../../../test/feature/mac",
 	},
 	"ec2_windows": {
-		"../../../test/feature/win",
+		"../../../test/feature/windows",
 	},
 	"ec2_performance": {
 		"../../test/performance/logs",
-		"../../test/performance/host",
+		"../../test/performance/system",
 		"../../test/performance/statsd",
 		"../../test/performance/collectd",
 	},
 	"ec2_stress": {
 		"../../test/stress/logs",
-		"../../test/stress/host",
+		"../../test/stress/system",
 		"../../test/stress/statsd",
 		"../../test/stress/collectd",
 	},
@@ -70,6 +70,9 @@ var testTypeToTestDirMap = map[string][]string{
 	},
 	"ecs_ec2_daemon": {
 		"./test/metric_value_benchmark",
+	},
+	"ec2_acceptance": {
+		"./test/acceptance",
 	},
 }
 

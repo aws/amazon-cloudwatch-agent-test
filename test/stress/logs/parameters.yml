@@ -1,4 +1,4 @@
-receivers: "logs"
+receivers: ["logs"]
 
 test_case: "logs_stress"
 validate_type: "stress"

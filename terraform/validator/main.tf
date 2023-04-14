@@ -19,7 +19,7 @@ resource "local_file" "update-validation-config" {
 
 resource "null_resource" "build-validator" {
   provisioner "local-exec" {
-    command     = "make validator-build"
+    command     = var.action == "upload" ? "make validator-build" : "make dockerized-build"
     working_dir = split("test", var.test_dir)[0]
   }
 

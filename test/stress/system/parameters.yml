@@ -1,8 +1,8 @@
 # Receivers that agent needs to tests
-receivers: "host"
+receivers: ["system"]
 
 #Test case name
-test_case: "host_stress"
+test_case: "system_stress"
 validate_type: "stress"
 # Only support metrics/traces/logs
 data_type: "metrics"

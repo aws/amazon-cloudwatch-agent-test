@@ -28,7 +28,6 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 
 // DeleteLogStream cleans up log stream by name
 func DeleteLogStream(logGroupName, logStreamName string) {
-
 	_, err := CwlClient.DeleteLogStream(ctx, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
@@ -97,7 +96,7 @@ func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]string
 		if err != nil {
 			if errors.As(err, &rnf) && attempts <= StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
-				time.Sleep(time.Minute)
+				time.Sleep(30 * time.Second)
 				continue
 			}
 

@@ -14,12 +14,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	backoff "github.com/cenkalti/backoff/v4"
 )
 
 const (
-	StandardRetries = 5
+	StandardRetries = 3
 )
 
 var (
@@ -44,4 +45,5 @@ var (
 	CwmClient      = cloudwatch.NewFromConfig(awsCfg)
 	CwlClient      = cloudwatchlogs.NewFromConfig(awsCfg)
 	DynamodbClient = dynamodb.NewFromConfig(awsCfg)
+	S3Client       = s3.NewFromConfig(awsCfg)
 )
