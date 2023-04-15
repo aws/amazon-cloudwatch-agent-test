@@ -35,8 +35,17 @@ locals {
 #####################################################################
 # Prepare Parameters Tests
 #####################################################################
+
 module "validator" {
-  source = "../validator"
+  source = "../../validator"
+
+  arc            = var.arc
+  family         = "mac"
+  action         = "upload"
+  s3_bucket      = var.s3_bucket
+  test_dir       = var.test_dir
+  temp_directory = "/tmp"
+  cwa_github_sha = var.cwa_github_sha
 }
 
 // Build and uploading the validator to spending less time in 
@@ -89,13 +98,13 @@ resource "null_resource" "integration_test" {
   }
 
   provisioner "file" {
-    source      = "${var.test_dir}/${local.final_validator_config}"
-    destination = "${local.instance_temp_directory}/${local.final_validator_config}"
+    source      = module.validator.agent_config
+    destination = module.validator.instance_agent_config
   }
 
   provisioner "file" {
-    source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
-    destination = "${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
+    source      = module.validator.validator_config
+    destination = module.validator.instance_validator_config
   }
 
   provisioner "remote-exec" {
@@ -123,9 +132,9 @@ resource "null_resource" "integration_test" {
     inline = [
       "sudo chmod +x ./validator",
       "export AWS_REGION=${var.region}",
-      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "./validator --validator-config=${module.validator.instance_agent_config} --preparation-mode=true",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
+      "./validator --validator-config=${module.validator.instance_agent_config} --preparation-mode=false",
     ]
   }
 

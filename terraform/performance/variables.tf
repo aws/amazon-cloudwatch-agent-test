@@ -15,7 +15,11 @@ variable "ssh_key_name" {
 
 variable "ami" {
   type    = string
+<<<<<<< HEAD
   default = "cloudwatch-agent-integration-test-win-2019*"
+=======
+  default = "cloudwatch-agent-integration-test-al2*"
+>>>>>>> resources
 }
 
 variable "ssh_key_value" {
@@ -25,9 +29,17 @@ variable "ssh_key_value" {
 
 variable "user" {
   type    = string
-  default = ""
+  default = "ec2-user"
 }
 
+<<<<<<< HEAD
+=======
+variable "arc" {
+  type    = string
+  default = "amd64"
+}
+
+>>>>>>> resources
 variable "s3_bucket" {
   type    = string
   default = ""

@@ -39,28 +39,25 @@ func NewBasicValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 	}
 }
 
-func (s *BasicValidator) GenerateLoad() error {
+func (s *BasicValidator) GenerateLoad() (err error) {
 	var (
-		multiErr              error
 		metricSendingInterval = time.Minute
 		dataRate              = s.vConfig.GetDataRate()
+		dataType              = s.vConfig.GetDataType()
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
-		receivers             = s.vConfig.GetPluginsConfig()
+		receiver              = s.vConfig.GetPluginsConfig()[0]
 	)
 
-	if err := common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
-		multiErr = multierr.Append(multiErr, err)
+	switch dataType {
+	case "logs":
+		err = common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
+	default:
+		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
+		err = common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate)
 	}
 
-	// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
-	for _, receiver := range receivers {
-		if err := common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
-			multiErr = multierr.Append(multiErr, err)
-		}
-	}
-
-	return multiErr
+	return err
 }
 
 func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {

@@ -11,7 +11,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecsdeploymenttype"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecslaunchtype"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 )
 
 type MetaData struct {
@@ -102,7 +101,6 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 	e.EcsClusterArn = data.EcsClusterArn
 	e.CwagentConfigSsmParamName = data.CwagentConfigSsmParamName
 	e.EcsServiceName = data.EcsServiceName
-	e.EcsClusterName = awsservice.GetClusterName(data.EcsClusterArn)
 
 	return e
 }

@@ -42,23 +42,18 @@ module "validator" {
   cwa_github_sha_date = var.cwa_github_sha_date
   values_per_minute   = var.values_per_minute
 
-  instance_temp_directory = "/tmp"
-}
+module "validator" {
+  source = "../validator"
 
-// Build and uploading the validator to spending less time in 
-// and avoid memory issue in allocating memory 
-resource "null_resource" "upload-validator" {
-  provisioner "local-exec" {
-    command = <<-EOT
-    cd ../..
-    make validator-build
-    aws s3 cp ./build/validator/linux/${var.arc}/validator s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/linux/${var.arc}/validator
-    EOT
-  }
-
-  triggers = {
-    always_run = "${timestamp()}"
-  }
+  arc                 = var.arc
+  family              = "linux"
+  action              = "upload"
+  s3_bucket           = var.s3_bucket
+  test_dir            = var.test_dir
+  temp_directory      = "/tmp"
+  cwa_github_sha      = var.cwa_github_sha
+  cwa_github_sha_date = var.cwa_github_sha_date
+  values_per_minute   = var.values_per_minute
 }
 
 #####################################################################
@@ -84,7 +79,7 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
-  depends_on = [aws_instance.cwagent, null_resource.upload-validator]
+  depends_on = [aws_instance.cwagent, module.validator]
 
   connection {
     type        = "ssh"
@@ -94,8 +89,8 @@ resource "null_resource" "integration_test" {
   }
 
   provisioner "file" {
-    source      = module.validator.cloudwatch_agent_config
-    destination = module.validator.instance_cloudwatch_agent_config
+    source      = module.validator.agent_config
+    destination = module.validator.instance_agent_config
   }
 
   provisioner "file" {
@@ -119,7 +114,7 @@ resource "null_resource" "integration_test" {
       "export AWS_REGION=${var.region}",
       "sudo chmod +x ./validator",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_cloudwatch_agent_config}",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
   }

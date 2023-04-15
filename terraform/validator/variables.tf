@@ -1,7 +1,4 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
-variable "test_dir" {
+variable "s3_bucket" {
   type    = string
   default = ""
 }
@@ -21,8 +18,44 @@ variable "values_per_minute" {
   default = 10
 }
 
-
-variable "instance_temp_directory" {
+variable "test_dir" {
   type    = string
-  default = "/tmp"
+  default = ""
 }
+
+variable "temp_directory" {
+  type    = string
+  default = ""
+}
+
+variable "arc" {
+  type    = string
+  default = "amd64"
+
+  validation {
+    condition     = contains(["amd64", "amd64"], var.arc)
+    error_message = "Valid values for arc are (amd64, amd64)."
+  }
+}
+
+variable "action" {
+  type    = string
+  default = "upload"
+
+  validation {
+    condition     = contains(["upload", "validate"], var.action)
+    error_message = "Valid values for action are (upload, validate)."
+  }
+}
+
+variable "family" {
+  type    = string
+  default = "linux"
+
+  validation {
+    condition     = contains(["windows", "mac", "linux"], var.family)
+    error_message = "Valid values for family are (windows, mac, linux)."
+  }
+}
+
+

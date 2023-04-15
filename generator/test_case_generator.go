@@ -55,11 +55,13 @@ var testTypeToTestDirMap = map[string][]string{
 	},
 	"ec2_performance": {
 		"../../test/performance/logs",
+		"../../test/performance/host",
 		"../../test/performance/statsd",
 		"../../test/performance/collectd",
 	},
 	"ec2_stress": {
 		"../../test/stress/logs",
+		"../../test/stress/host",
 		"../../test/stress/statsd",
 		"../../test/stress/collectd",
 	},
