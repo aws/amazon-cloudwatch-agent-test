@@ -53,8 +53,8 @@ resource "local_file" "update-validation-config" {
   filename = "${var.test_dir}/${local.final_validator_config}"
 }
 
-// Build and uploading the validator to spending less time in 
-// and avoid memory issue in allocating memory 
+// Build and uploading the validator to spending less time in
+// and avoid memory issue in allocating memory
 resource "null_resource" "upload-validator" {
   provisioner "local-exec" {
     command = <<-EOT
@@ -80,6 +80,7 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = module.basic_components.instance_profile
   vpc_security_group_ids      = [module.basic_components.security_group]
   associate_public_ip_address = true
+  instance_initiated_shutdown_behavior = "terminate"
 
   metadata_options {
     http_endpoint = "enabled"
