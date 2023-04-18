@@ -22,13 +22,13 @@ const (
 )
 
 var (
-	fileNum = flag.Int("fileNum", 1, "Identify the file count.")
+	fileNum    = flag.Int("fileNum", 1, "Identify the file count.")
 	eventRatio = flag.Int("eventRatio", 200, "Identify the log event count per second per file.")
-	eventSize = flag.Int("eventSize", 120, "Identify the single log line size, in Byte.")
+	eventSize  = flag.Int("eventSize", 120, "Identify the single log line size, in Byte.")
 	outPutPath = flag.String("path", "", "Identify the path where log files will generate.")
 	filePrefix = flag.String("filePrefix", "tmp", "Identify the log file prefix")
-	pprofPort = flag.String("pprofPort", "", "pprof port to listen on")
-	loopNum = flag.Int64("loopNum", math.MaxInt64, "How many loops to write teh logentry.")
+	pprofPort  = flag.String("pprofPort", "", "pprof port to listen on")
+	loopNum    = flag.Int64("loopNum", math.MaxInt64, "How many loops to write teh logentry.")
 )
 
 func main() {

@@ -10,16 +10,17 @@ import (
 	"strconv"
 	"time"
 )
+
 const (
-	logTruncateSize = 100 * 1024 * 1024
-	structuredLogEvent =`{"Type": "Cluster","Version": "0","TaskCount": 4,"CloudWatchMetrics": [{"Metrics": [{"Unit": "Count","Name": "TaskCount"}, {"Unit": "Count","Name": "ServiceCount"}],"Dimensions": [["ClusterName"]],"Namespace": "IntegrationTest"}],"ClusterName": "cluster-integ-test","Timestamp":%d,"ServiceCount": 2}`
+	logTruncateSize    = 100 * 1024 * 1024
+	structuredLogEvent = `{"Type": "Cluster","Version": "0","TaskCount": 4,"CloudWatchMetrics": [{"Metrics": [{"Unit": "Count","Name": "TaskCount"}, {"Unit": "Count","Name": "ServiceCount"}],"Dimensions": [["ClusterName"]],"Namespace": "IntegrationTest"}],"ClusterName": "cluster-integ-test","Timestamp":%d,"ServiceCount": 2}`
 )
 
 var (
-	fileNum = flag.Int("fileNum", 1, "Identify the structuredLogs file count")
-	eventCnt = flag.Int("eventRatio", 65, "Identify the structuredLogs event count per second per file.")
+	fileNum          = flag.Int("fileNum", 1, "Identify the structuredLogs file count")
+	eventCnt         = flag.Int("eventRatio", 65, "Identify the structuredLogs event count per second per file.")
 	structuredLogDir = flag.String("path", "", "Identify the directory where the structured log files will be generated.")
-	filePrefix = flag.String("filePrefix", "structuredLogFile", "Identify the structured log file prefix")
+	filePrefix       = flag.String("filePrefix", "structuredLogFile", "Identify the structured log file prefix")
 )
 
 func main() {
@@ -40,24 +41,20 @@ func main() {
 }
 
 func writeStructuredLog(fileIndex int) {
-	eventSize := len(structuredLogEvent) + len(strconv.FormatInt(makeTimestamp(), 10))-2
+	eventSize := len(structuredLogEvent) + len(strconv.FormatInt(makeTimestamp(), 10)) - 2
 	curFilePath := path.Join(*structuredLogDir, fmt.Sprintf("%s%d.json", *filePrefix, fileIndex))
 	fmt.Printf("Creating file %s\n", curFilePath)
 
 	os.MkdirAll(*structuredLogDir, 0755)
 	sf, _ := os.Create(curFilePath)
-
 	fileSize := 0
 	// add jitter here to ensure multiple stream will not write at same time.
 	r := time.Duration(rand.Intn(1000))
 	time.Sleep(r * time.Millisecond)
-
 	ticker := time.NewTicker(time.Second)
-	for {
-		<-ticker.C
-
+	for range ticker.C {
 		for i := 0; i < *eventCnt; i++ {
-			sf.WriteString(fmt.Sprintf(structuredLogEvent +"\n", makeTimestamp()))
+			sf.WriteString(fmt.Sprintf(structuredLogEvent+"\n", makeTimestamp()))
 		}
 		sf.Sync()
 		fileSize += (*eventCnt) * (eventSize)
@@ -66,11 +63,10 @@ func writeStructuredLog(fileIndex int) {
 			sf.Seek(0, 0)
 			fileSize = 0
 		}
-
 	}
 }
 
-//returns the timeStamp in millisecond
+// returns the timeStamp in millisecond
 func makeTimestamp() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
