@@ -2,7 +2,7 @@
   {
     "os": "win-11",
     "instanceType":"t3a.medium",
-    "ami": "WINDOWS11-WORKSPACE-COPY"
+    "ami": "cloudwatch-agent-integration-test-win-11*"
   },
   {
     "os": "win-2012",
