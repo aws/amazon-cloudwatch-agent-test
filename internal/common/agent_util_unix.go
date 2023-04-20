@@ -181,13 +181,15 @@ func RunShellScript(path string, args ...string) error {
 }
 
 func RunCommand(cmd string) (string, error) {
+	log.Printf("running cmd, %s", cmd)
 	out, err := exec.Command("bash", "-c", cmd).Output()
+	printOutputAndError(out, err)
+	return string(out), err
+}
 
-	if err != nil {
-		log.Printf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
-		return "", err
-	}
-	return string(out), nil
+func RunAyncCommand(cmd string) error {
+	log.Printf("running async cmd, %s", cmd)
+	return exec.Command("bash", "-c", cmd).Start()
 }
 
 func RunCommands(commands []string) error {
