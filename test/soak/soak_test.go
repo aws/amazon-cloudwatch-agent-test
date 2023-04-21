@@ -106,7 +106,10 @@ func killExisting(name string) error {
 		if strings.Contains(c, name) {
 			n, _ := p.Name()
 			log.Printf("killing process, name %s, cmdline %s", n, c)
-			return p.Kill()
+			err = p.Kill()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
