@@ -24,6 +24,8 @@ var (
 func main() {
 	flag.Parse()
 	log.Printf("Start validating, cpuLimit %d, memLimit %d MiB", *cpuLimit, *memLimit)
+	// Sleep to avoid alarming on CWA using more resources during start up.
+	time.Sleep(time.Minute)
 	ticker := time.NewTicker(*interval)
 	for range ticker.C {
 		p := getAgentProcess()

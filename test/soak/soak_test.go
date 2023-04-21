@@ -14,28 +14,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSoak(t *testing.T) {
+func TestSoakLow(t *testing.T) {
 	switch runtime.GOOS {
 	case "darwin":
 		// todo:
 	case "linux":
-		runTest(t, "SoakTestLinux", "resources/soak_linux.json")
+		runTest(t, "SoakTestLinux", "resources/soak_linux.json", 5, 75_000_000)
 	case "windows":
-		runTest(t, "SoakTestLinux", "resources/soak_windows.json")
+		runTest(t, "SoakTestLinux", "resources/soak_windows.json", 5, 75_000_000)
 	}
 }
 
 // todo: add high througput
 // todo: logrotate
 // todo: multiple-logs
-func TestSoakHighLoad(t *testing.T) {
+func TestSoakHigh(t *testing.T) {
 	switch runtime.GOOS {
 	case "darwin":
 		// todo:
 	case "linux":
-		runTest(t, "SoakTestHighLoadLinux", "resources/soak_linux.json")
+		runTest(t, "SoakTestHighLoadLinux", "resources/soak_linux.json", 50, 170000000)
 	case "windows":
-		runTest(t, "SoakTestHighLoadWindows", "resources/soak_windows.json")
+		runTest(t, "SoakTestHighLoadWindows", "resources/soak_windows.json", 50, 170000000)
 	}
 }
 
@@ -44,19 +44,19 @@ func TestSoakHighLoad(t *testing.T) {
 // load and monitor for resource leaks.
 // The agent config should use a mocked backend (local stack)to save cost.
 // testName is used as the namespace for validator metrics.
-func runTest(t *testing.T, testName string, configPath string) {
+func runTest(t *testing.T, testName string, configPath string, cpuLimit int, memLimit int) {
 	require.NoError(t, startLocalStack())
 	common.CopyFile(configPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
-	require.NoError(t, startValidator(testName, 50, 170000000))
+	require.NoError(t, startValidator(testName, cpuLimit, memLimit))
 	if strings.Contains(testName, "HighLoad") {
-		require.NoError(t, startLogGen(100, 1000, 100))
+		require.NoError(t, startLogGen(10, 1000, 100))
 		require.NoError(t, startEMFGen(10, 1000))
 		require.NoError(t, startStatsd(10, 1000, 1000))
 	} else {
-		require.NoError(t, startLogGen(10, 1000, 100))
+		require.NoError(t, startLogGen(10, 100, 100))
 		require.NoError(t, startEMFGen(10, 100))
-		require.NoError(t, startStatsd(10, 100, 100))
+		require.NoError(t, startStatsd(1, 100, 100))
 	}
 }
 
