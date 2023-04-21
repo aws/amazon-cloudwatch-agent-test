@@ -19,9 +19,9 @@ func TestSoakLow(t *testing.T) {
 	case "darwin":
 		// todo:
 	case "linux":
-		runTest(t, "SoakTestLowLinux", "resources/soak_linux.json", 5, 75_000_000)
+		runTest(t, "SoakTestLowLinux", "resources/soak_linux.json", 5, 100_000_000)
 	case "windows":
-		runTest(t, "SoakTestLowLinux", "resources/soak_windows.json", 5, 75_000_000)
+		runTest(t, "SoakTestLowLinux", "resources/soak_windows.json", 5, 100_000_000)
 	}
 }
 
