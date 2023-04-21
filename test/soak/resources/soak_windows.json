@@ -150,49 +150,49 @@
                     },
                     {
                         "file_path": "C:\\tmp\\soakTest\\structuredLogFile2*.json",
-                        "log_group_name": "WindowsStructuredLogs1",
+                        "log_group_name": "WindowsStructuredLogs2",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "C:\\tmp\\soakTest\\structuredLogFile3*.json",
-                        "log_group_name": "WindowsStructuredLogs1",
+                        "log_group_name": "WindowsStructuredLogs3",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "C:\\tmp\\soakTest\\structuredLogFile4*.json",
-                        "log_group_name": "WindowsStructuredLogs1",
+                        "log_group_name": "WindowsStructuredLogs4",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "C:\\tmp\\soakTest\\structuredLogFile5*.json",
-                        "log_group_name": "WindowsStructuredLogs1",
+                        "log_group_name": "WindowsStructuredLogs5",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "C:\\tmp\\soakTest\\structuredLogFile6*.json",
-                        "log_group_name": "WindowsStructuredLogs1",
+                        "log_group_name": "WindowsStructuredLogs6",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "C:\\tmp\\soakTest\\structuredLogFile7*.json",
-                        "log_group_name": "WindowsStructuredLogs1",
+                        "log_group_name": "WindowsStructuredLogs7",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "C:\\tmp\\soakTest\\structuredLogFile8*.json",
-                        "log_group_name": "WindowsStructuredLogs1",
+                        "log_group_name": "WindowsStructuredLogs8",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "C:\\tmp\\soakTest\\structuredLogFile9*.json",
-                        "log_group_name": "WindowsStructuredLogs1",
+                        "log_group_name": "WindowsStructuredLogs9",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     }

@@ -150,49 +150,49 @@
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile2*.json",
-                        "log_group_name": "linuxStructuredLogSoakTst1",
+                        "log_group_name": "linuxStructuredLogSoakTst2",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile3*.json",
-                        "log_group_name": "linuxStructuredLogSoakTst1",
+                        "log_group_name": "linuxStructuredLogSoakTst3",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile4*.json",
-                        "log_group_name": "linuxStructuredLogSoakTst1",
+                        "log_group_name": "linuxStructuredLogSoakTst4",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile5*.json",
-                        "log_group_name": "linuxStructuredLogSoakTst1",
+                        "log_group_name": "linuxStructuredLogSoakTst5",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile6*.json",
-                        "log_group_name": "linuxStructuredLogSoakTst1",
+                        "log_group_name": "linuxStructuredLogSoakTst6",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile7*.json",
-                        "log_group_name": "linuxStructuredLogSoakTst1",
+                        "log_group_name": "linuxStructuredLogSoakTst7",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile8*.json",
-                        "log_group_name": "linuxStructuredLogSoakTst1",
+                        "log_group_name": "linuxStructuredLogSoakTst8",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile9*.json",
-                        "log_group_name": "linuxStructuredLogSoakTst1",
+                        "log_group_name": "linuxStructuredLogSoakTst9",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     }
