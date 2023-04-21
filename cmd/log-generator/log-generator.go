@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"path"
 	"runtime"
@@ -23,28 +21,20 @@ const (
 
 var (
 	fileNum    = flag.Int("fileNum", 1, "Identify the file count.")
-	eventRatio = flag.Int("eventRatio", 200, "Identify the log event count per second per file.")
+	eventsPerSecond = flag.Int("eventsPerSecond", 200, "Identify the log event count per second per file.")
 	eventSize  = flag.Int("eventSize", 120, "Identify the single log line size, in Byte.")
 	outPutPath = flag.String("path", "", "Identify the path where log files will generate.")
 	filePrefix = flag.String("filePrefix", "tmp", "Identify the log file prefix")
-	pprofPort  = flag.String("pprofPort", "", "pprof port to listen on")
 	loopNum    = flag.Int64("loopNum", math.MaxInt64, "How many loops to write teh logentry.")
 )
 
 func main() {
 	flag.Parse()
 	fmt.Printf("Start writing %d files, and each file has throughput %d Bytes/sec...\n",
-		*fileNum, (*eventRatio)*(*eventSize))
-	if *pprofPort != "" {
-		go func() {
-			fmt.Printf("I! Starting pprof HTTP server at localhost:%s.\n", *pprofPort)
-			if err := http.ListenAndServe("localhost:"+*pprofPort, nil); err != nil {
-				fmt.Println("E! " + err.Error())
-			}
-		}()
-	}
+		*fileNum, (*eventsPerSecond)*(*eventSize))
+
 	if *outPutPath == "" {
-		if "windows" == runtime.GOOS {
+		if runtime.GOOS == "windows" {
 			*outPutPath = "C:\\tmp\\soakTest"
 		} else {
 			*outPutPath = "/tmp/soakTest"
@@ -78,7 +68,7 @@ func writeLog(logEntry string, instanceId int, loopNum int64, waitGroup *sync.Wa
 	for j = 0; j < loopNum; j++ {
 		<-ticker.C
 		fmt.Printf("%s Starting...\n", time.Now().Format(layoutFormat))
-		for i := 0; i < *eventRatio; i++ {
+		for i := 0; i < *eventsPerSecond; i++ {
 			if i%multilineRatio == 0 {
 				// Add timestamp to the begining of the line as multiline starter and append logEntry[0:len(logEntry)-len(layoutFormat)-1], -1 here is because the extra " " after added timestamp.
 				f.WriteString(time.Now().Format(layoutFormat) + " " +
@@ -90,7 +80,7 @@ func writeLog(logEntry string, instanceId int, loopNum int64, waitGroup *sync.Wa
 			}
 		}
 		f.Sync()
-		fileSize += (*eventRatio) * (*eventSize)
+		fileSize += (*eventsPerSecond) * (*eventSize)
 		if fileSize >= logTruncateSize {
 			os.Truncate(curFilePath, 0)
 			f.Seek(0, 0)

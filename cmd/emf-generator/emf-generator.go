@@ -18,7 +18,7 @@ const (
 
 var (
 	fileNum          = flag.Int("fileNum", 1, "Identify the structuredLogs file count")
-	eventCnt         = flag.Int("eventRatio", 65, "Identify the structuredLogs event count per second per file.")
+	eventsPerSecond  = flag.Int("eventsPerSecond", 65, "Identify the structuredLogs event count per second per file.")
 	structuredLogDir = flag.String("path", "", "Identify the directory where the structured log files will be generated.")
 	filePrefix       = flag.String("filePrefix", "structuredLogFile", "Identify the structured log file prefix")
 )
@@ -53,11 +53,11 @@ func writeStructuredLog(fileIndex int) {
 	time.Sleep(r * time.Millisecond)
 	ticker := time.NewTicker(time.Second)
 	for range ticker.C {
-		for i := 0; i < *eventCnt; i++ {
+		for i := 0; i < *eventsPerSecond; i++ {
 			sf.WriteString(fmt.Sprintf(structuredLogEvent+"\n", makeTimestamp()))
 		}
 		sf.Sync()
-		fileSize += (*eventCnt) * (eventSize)
+		fileSize += (*eventsPerSecond) * (eventSize)
 		if fileSize >= logTruncateSize {
 			os.Truncate(curFilePath, 0)
 			sf.Seek(0, 0)

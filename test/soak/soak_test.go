@@ -5,6 +5,7 @@ package soak
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -13,20 +14,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	configInputPath = "resources/soak_config.json"
-)
+func TestSoak(t *testing.T) {
+	switch runtime.GOOS {
+	case "darwin":
+		// todo:
+	case "linux":
+		runTest(t, "SoakTestLinux", "resources/soak_windows.json")
+	case "windows":
+		runTest(t, "SoakTestLinux", "resources/soak_windows.json")
+	}
+}
 
-// TestStartSoak just does setup.
+// todo: add high througput
+// todo: logrotate
+// todo: multiple-logs
+func TestSoakHighLoad(t *testing.T) {
+	switch runtime.GOOS {
+	case "darwin":
+		// todo:
+	case "linux":
+		runTest(t, "SoakTestHighLoadLinux", "resources/soak_windows.json")
+	case "windows":
+		runTest(t, "SoakTestHighLoadWindows", "resources/soak_windows.json")
+	}
+}
+
+
+// runTest just does setup.
 // It starts the agent and starts some background processes which generate
 // load and monitor for resource leaks.
 // The agent config should use a mocked backend (local stack)to save cost.
-func TestStartSoak(t *testing.T) {
+// testName is used as the namespace for validator metrics.
+func runTest(t *testing.T, testName string, configPath string) {
 	require.NoError(t, startLocalStack())
-	common.CopyFile(configInputPath, common.ConfigOutputPath)
+	common.CopyFile(configPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
-	require.NoError(t, startLoadGen(10, 4000, 120))
-	require.NoError(t, startValidator(50, 170000000))
+	if strings.Contains(testName, "HighLoad") {
+		require.NoError(t, startLoadGen(10, 4000, 120))
+	} else {
+		require.NoError(t, startLoadGen(10, 100, 120))
+	}
+	require.NoError(t, startValidator(testName, 50, 170000000))
 }
 
 // Refer to https://github.com/localstack/localstack
@@ -44,30 +72,30 @@ func startLocalStack() error {
 }
 
 // startLoadGen starts a long running process that writes lines to log files.
-func startLoadGen(fileNum int, linesPerSecond int, lineSizeBytes int) error {
+func startLoadGen(fileNum int, eventsPerSecond int, eventSize int) error {
 	err := killExisting("log-generator")
 	if err != nil {
 		return err
 	}
 	// Assume PWD is the .../test/soak/ directory.
-	cmd := fmt.Sprintf("go run ../../cmd/log-generator -fileNum=%d -eventRatio=%d -eventSize=%d -path /tmp/soakTest",
-		fileNum, linesPerSecond, lineSizeBytes)
+	cmd := fmt.Sprintf("go run ../../cmd/log-generator -fileNum=%d -eventsPerSecond=%d -eventSize=%d -path /tmp/soakTest",
+		fileNum, eventsPerSecond, eventSize)
 	return common.RunAyncCommand(cmd)
 }
 
-func startValidator(cpuLimit int, memLimit int) error {
-	err := killExisting("log-generator")
+func startValidator(testName string, cpuLimit int, memLimit int) error {
+	err := killExisting("soak-validator")
 	if err != nil {
 		return err
 	}
 	// Assume PWD is the .../test/soak/ directory.
-	cmd := fmt.Sprintf("go run ../../cmd/validator -cpuLimit=%d, -memLimit=%d",
-		cpuLimit, memLimit)
+	cmd := fmt.Sprintf("go run ../../cmd/soak-validator -testName=%s -cpuLimit=%d, -memLimit=%d",
+		testName, cpuLimit, memLimit)
 	return common.RunAyncCommand(cmd)
 }
 
-// killExisting will search the command line of every process and kill any
-// tyhat match
+// killExisting will search the command line of every process and kill any that match.
+// Return nil if no matches found, or if all matches killed successfuly.
 func killExisting(name string) error {
 	procs, err := process.Processes()
 	if err != nil {

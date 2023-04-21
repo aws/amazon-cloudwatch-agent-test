@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"log"
-	_ "net/http/pprof"
 	"strings"
 	"time"
 
@@ -13,10 +12,10 @@ import (
 )
 
 var (
-	cpuLimit  = flag.Int("fileNum", 1, "agent's upper cpu usage limit in percent")
+	cpuLimit  = flag.Int("cpuLimit", 1, "agent's upper cpu usage limit in percent")
 	memLimit  = flag.Int("memLimit", 200000000, "agent's upper memory usage limit in Bytes")
 	interval  = flag.Duration("interval", 10*time.Second, "how frequently to validate")
-	namespace = flag.String("namespace", "SoakTestLinux", "namespace for metrics")
+	testName = flag.String("testName", "SoakTestLinux", "namespace for metrics")
 )
 
 // main() runs forever.
@@ -30,7 +29,7 @@ func main() {
 		p := getAgentProcess()
 		if p == nil {
 			log.Printf("error: agent process not found")
-			awsservice.ReportMetric(*namespace, "FailCount", 1, types.StandardUnitCount)
+			awsservice.ReportMetric(*testName, "FailCount", 1, types.StandardUnitCount)
 			continue
 		}
 		// todo: check for unexpected crash/restart (createtime change).
@@ -59,14 +58,14 @@ func getAgentProcess() *process.Process {
 func validate(metricName string, value float64, limit float64) {
 	log.Printf("validating, %s, %f, %f", metricName, value, limit)
 	// Report actual usage for easier debugging.
-	awsservice.ReportMetric(*namespace, metricName, value, types.StandardUnitCount)
+	awsservice.ReportMetric(*testName, metricName, value, types.StandardUnitCount)
 	// Report test failures with a common metric name.
 	var fail float64 = 0
 	if value > limit {
 		fail = 1
 	}
 	// Always report the metric even if it isn't failing to avoid sparse metrics.
-	awsservice.ReportMetric(*namespace, "FailCount", fail, types.StandardUnitCount)
+	awsservice.ReportMetric(*testName, "FailCount", fail, types.StandardUnitCount)
 }
 
 func getCpuUsage(p *process.Process) float64 {
