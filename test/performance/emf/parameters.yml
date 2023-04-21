@@ -1,4 +1,4 @@
-receivers: "emf"
+receivers: ["emf"]
 
 test_case: "emf_performance"
 validate_type: "performance"

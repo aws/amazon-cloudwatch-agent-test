@@ -180,13 +180,13 @@ func SendEMFMetrics(metricPerInterval int, metricLogGroup, metricNamespace strin
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
-	for t := 0; t < metricPerInterval; t++ {
+	for t := 1; t <= metricPerInterval; t++ {
 		emf.New(emf.WithWriter(conn), emf.WithLogGroup(metricLogGroup)).
 			Namespace(metricNamespace).
 			DimensionSet(
 				emf.NewDimension("InstanceId", metricLogGroup),
 			).
-			MetricAs("Time", t, emf.Milliseconds).
+			MetricAs(fmt.Sprint("emf_time_", t), t, emf.Milliseconds).
 			Log()
 
 	}
@@ -194,13 +194,13 @@ func SendEMFMetrics(metricPerInterval int, metricLogGroup, metricNamespace strin
 	for {
 		select {
 		case <-ticker.C:
-			for t := 0; t < metricPerInterval; t++ {
+			for t := 1; t <= metricPerInterval; t++ {
 				emf.New(emf.WithWriter(conn), emf.WithLogGroup(metricLogGroup)).
 					Namespace(metricNamespace).
 					DimensionSet(
 						emf.NewDimension("InstanceId", metricLogGroup),
 					).
-					MetricAs("Time", t, emf.Milliseconds).
+					MetricAs(fmt.Sprint("emf_time_", t), t, emf.Milliseconds).
 					Log()
 
 			}
