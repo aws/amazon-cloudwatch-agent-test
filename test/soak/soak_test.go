@@ -19,7 +19,7 @@ func TestSoak(t *testing.T) {
 	case "darwin":
 		// todo:
 	case "linux":
-		runTest(t, "SoakTestLinux", "resources/soak_windows.json")
+		runTest(t, "SoakTestLinux", "resources/soak_linux.json")
 	case "windows":
 		runTest(t, "SoakTestLinux", "resources/soak_windows.json")
 	}
@@ -33,7 +33,7 @@ func TestSoakHighLoad(t *testing.T) {
 	case "darwin":
 		// todo:
 	case "linux":
-		runTest(t, "SoakTestHighLoadLinux", "resources/soak_windows.json")
+		runTest(t, "SoakTestHighLoadLinux", "resources/soak_linux.json")
 	case "windows":
 		runTest(t, "SoakTestHighLoadWindows", "resources/soak_windows.json")
 	}
