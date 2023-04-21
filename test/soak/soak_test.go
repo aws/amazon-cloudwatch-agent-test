@@ -74,7 +74,7 @@ func startLocalStack() error {
 	return err
 }
 
-// startLoadGen starts a long running process that writes lines to log files.
+// startLogGen starts a long running process that writes lines to log files.
 func startLogGen(fileNum int, eventsPerSecond int, eventSize int) error {
 	err := killExisting("log-generator")
 	if err != nil {
@@ -93,7 +93,6 @@ func startEMFGen(fileNum int, eventsPerSecond int) error {
 	if err != nil {
 		return err
 	}
-	// Assume PWD is the .../test/soak/ directory.
 	cmd := fmt.Sprintf("go run ../../cmd/emf-generator -fileNum=%d -eventsPerSecond=%d",
 		fileNum, eventsPerSecond)
 	return common.RunAyncCommand(cmd)
@@ -105,7 +104,6 @@ func startStatsd(clientNum int, tps int, metricNum int) error {
 	if err != nil {
 		return err
 	}
-	// Assume PWD is the .../test/soak/ directory.
 	cmd := fmt.Sprintf("go run ../../cmd/statsd-generator -clientNum=%d -tps=%d -metricNum=%d",
 		clientNum, tps, metricNum)
 	return common.RunAyncCommand(cmd)
