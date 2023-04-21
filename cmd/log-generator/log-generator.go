@@ -20,12 +20,12 @@ const (
 )
 
 var (
-	fileNum    = flag.Int("fileNum", 1, "Identify the file count.")
+	fileNum         = flag.Int("fileNum", 1, "Identify the file count.")
 	eventsPerSecond = flag.Int("eventsPerSecond", 200, "Identify the log event count per second per file.")
-	eventSize  = flag.Int("eventSize", 120, "Identify the single log line size, in Byte.")
-	outPutPath = flag.String("path", "", "Identify the path where log files will generate.")
-	filePrefix = flag.String("filePrefix", "tmp", "Identify the log file prefix")
-	loopNum    = flag.Int64("loopNum", math.MaxInt64, "How many loops to write teh logentry.")
+	eventSize       = flag.Int("eventSize", 120, "Identify the single log line size, in Byte.")
+	outPutPath      = flag.String("path", "", "Identify the path where log files will generate.")
+	filePrefix      = flag.String("filePrefix", "tmp", "Identify the log file prefix")
+	loopNum         = flag.Int64("loopNum", math.MaxInt64, "How many loops to write teh logentry.")
 )
 
 func main() {

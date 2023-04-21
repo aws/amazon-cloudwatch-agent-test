@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	cpuLimit  = flag.Int("cpuLimit", 1, "agent's upper cpu usage limit in percent")
-	memLimit  = flag.Int("memLimit", 200000000, "agent's upper memory usage limit in Bytes")
-	interval  = flag.Duration("interval", 10*time.Second, "how frequently to validate")
+	cpuLimit = flag.Int("cpuLimit", 1, "agent's upper cpu usage limit in percent")
+	memLimit = flag.Int("memLimit", 200000000, "agent's upper memory usage limit in Bytes")
+	interval = flag.Duration("interval", 10*time.Second, "how frequently to validate")
 	testName = flag.String("testName", "SoakTestLinux", "namespace for metrics")
 )
 
@@ -56,7 +56,7 @@ func getAgentProcess() *process.Process {
 }
 
 func validate(metricName string, value float64, limit float64) {
-	log.Printf("validating, %s, %f, %f", metricName, value, limit)
+	log.Printf("validating, %s, %.1f, %.1f", metricName, value, limit)
 	// Report actual usage for easier debugging.
 	awsservice.ReportMetric(*testName, metricName, value, types.StandardUnitCount)
 	// Report test failures with a common metric name.

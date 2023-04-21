@@ -39,7 +39,6 @@ func TestSoakHighLoad(t *testing.T) {
 	}
 }
 
-
 // runTest just does setup.
 // It starts the agent and starts some background processes which generate
 // load and monitor for resource leaks.
@@ -49,12 +48,12 @@ func runTest(t *testing.T, testName string, configPath string) {
 	require.NoError(t, startLocalStack())
 	common.CopyFile(configPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
+	require.NoError(t, startValidator(testName, 50, 170000000))
 	if strings.Contains(testName, "HighLoad") {
 		require.NoError(t, startLoadGen(10, 4000, 120))
 	} else {
 		require.NoError(t, startLoadGen(10, 100, 120))
 	}
-	require.NoError(t, startValidator(testName, 50, 170000000))
 }
 
 // Refer to https://github.com/localstack/localstack
@@ -78,7 +77,7 @@ func startLoadGen(fileNum int, eventsPerSecond int, eventSize int) error {
 		return err
 	}
 	// Assume PWD is the .../test/soak/ directory.
-	cmd := fmt.Sprintf("go run ../../cmd/log-generator -fileNum=%d -eventsPerSecond=%d -eventSize=%d -path /tmp/soakTest",
+	cmd := fmt.Sprintf("go run ../../cmd/log-generator -fileNum=%d -eventsPerSecond=%d -eventSize=%d -path=/tmp/soakTest",
 		fileNum, eventsPerSecond, eventSize)
 	return common.RunAyncCommand(cmd)
 }
@@ -89,7 +88,7 @@ func startValidator(testName string, cpuLimit int, memLimit int) error {
 		return err
 	}
 	// Assume PWD is the .../test/soak/ directory.
-	cmd := fmt.Sprintf("go run ../../cmd/soak-validator -testName=%s -cpuLimit=%d, -memLimit=%d",
+	cmd := fmt.Sprintf("go run ../../cmd/soak-validator -testName=%s -cpuLimit=%d -memLimit=%d",
 		testName, cpuLimit, memLimit)
 	return common.RunAyncCommand(cmd)
 }
