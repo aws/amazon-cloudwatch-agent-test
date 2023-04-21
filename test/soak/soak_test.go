@@ -45,7 +45,7 @@ func TestSoakHigh(t *testing.T) {
 // The agent config should use a mocked backend (local stack)to save cost.
 // testName is used as the namespace for validator metrics.
 func runTest(t *testing.T, testName string, configPath string, cpuLimit int, memLimit int) {
-	require.NoError(t, startLocalStack())
+	require.NoError(t, startMockServer())
 	common.CopyFile(configPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
 	require.NoError(t, startValidator(testName, cpuLimit, memLimit))
@@ -60,18 +60,12 @@ func runTest(t *testing.T, testName string, configPath string, cpuLimit int, mem
 	}
 }
 
-// Refer to https://github.com/localstack/localstack
-func startLocalStack() error {
-	// Kill existing. (Assumes 0 or 1 container ids found)
-	cmd := "docker ps --filter ancestor=localstack/localstack --quiet"
-	id, _ := common.RunCommand(cmd)
-	if id != "" {
-		cmd = "docker kill " + id
-		_, _ = common.RunCommand(cmd)
+func startMockServer() error {
+	err := killExisting("web-server")
+	if err != nil {
+		return err
 	}
-	cmd = "docker run -d -p 4566:4566 -p 4510-4559:4510-4559 localstack/localstack"
-	_, err := common.RunCommand(cmd)
-	return err
+	return common.RunAyncCommand("go run ../../cmd/web-server")
 }
 
 // startLogGen starts a long running process that writes lines to log files.
