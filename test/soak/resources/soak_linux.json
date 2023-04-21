@@ -3,6 +3,7 @@
         "metrics_collection_interval": 10
     },
     "metrics": {
+        "endpoint_override": "http://localhost:4566",
         "append_dimensions": {
             "InstanceType": "${aws:InstanceType}"
         },
@@ -60,80 +61,92 @@
                         "log_group_name": "LinuxSoaking0.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/tmp1.log",
                         "log_group_name": "LinuxSoaking1.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/tmp2.log",
                         "log_group_name": "LinuxSoaking2.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/tmp3.log",
                         "log_group_name": "LinuxSoaking3.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/tmp4.log",
                         "log_group_name": "LinuxSoaking4.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/tmp5.log",
                         "log_group_name": "LinuxSoaking5.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/tmp6.log",
                         "log_group_name": "LinuxSoaking6.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/tmp7.log",
                         "log_group_name": "LinuxSoaking7.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/tmp8.log",
                         "log_group_name": "LinuxSoaking8.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/tmp9.log",
                         "log_group_name": "LinuxSoaking9.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
-                        "timezone": "UTC"
+                        "timezone": "UTC",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile0.json",
                         "log_group_name": "linuxStructuredLogSoakTst0",
-                        "multi_line_start_pattern": "^{"
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
                     },
                     {
                         "file_path": "/tmp/soakTest/structuredLogFile1.json",
                         "log_group_name": "linuxStructuredLogSoakTst1",
-                        "multi_line_start_pattern": "^{"
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
                     }
                 ]
             }
