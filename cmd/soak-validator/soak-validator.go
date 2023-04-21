@@ -37,7 +37,8 @@ func main() {
 		// todo: check for unexpected crash/restart (createtime change).
 		validate("AgentCpu", getCpuUsage(p), float64(*cpuLimit))
 		validate("AgentMemory", getMem(p), float64(*memLimit))
-		validate("AgentNumFD", getNumFDs(p), 100)
+		// todo: permission denied trying to get numFD, may need to with sudo.
+		//validate("AgentNumFD", getNumFDs(p), 100)
 		validate("AgentNumThreads", getNumThreads(p), 100)
 	}
 }
