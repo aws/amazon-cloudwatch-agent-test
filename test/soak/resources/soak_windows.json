@@ -57,7 +57,7 @@
             "files": {
                 "collect_list": [
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp0.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp0*.log",
                         "log_group_name": "WS0.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -65,7 +65,7 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp1.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp1*.log",
                         "log_group_name": "WS1.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -73,7 +73,7 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp2.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp2*.log",
                         "log_group_name": "WS2.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -81,7 +81,7 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp3.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp3*.log",
                         "log_group_name": "WS3.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -89,7 +89,7 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp4.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp4*.log",
                         "log_group_name": "WS4.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -97,7 +97,7 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp5.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp5*.log",
                         "log_group_name": "WS5.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -105,7 +105,7 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp6.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp6*.log",
                         "log_group_name": "WS6.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -113,7 +113,7 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp7.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp7*.log",
                         "log_group_name": "WS7.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -121,7 +121,7 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp8.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp8*.log",
                         "log_group_name": "WS8.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -129,7 +129,7 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\tmp9.log",
+                        "file_path": "C:\\tmp\\soakTest\\tmp9*.log",
                         "log_group_name": "WS9.log",
                         "multi_line_start_pattern": "{timestamp_format}",
                         "timestamp_format": "%d %b %y %H:%M:%S",
@@ -137,13 +137,61 @@
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile0.json",
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile0*.json",
                         "log_group_name": "WindowsStructuredLogs0",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1
                     },
                     {
-                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile1.json",
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile1*.json",
+                        "log_group_name": "WindowsStructuredLogs1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile2*.json",
+                        "log_group_name": "WindowsStructuredLogs1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile3*.json",
+                        "log_group_name": "WindowsStructuredLogs1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile4*.json",
+                        "log_group_name": "WindowsStructuredLogs1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile5*.json",
+                        "log_group_name": "WindowsStructuredLogs1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile6*.json",
+                        "log_group_name": "WindowsStructuredLogs1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile7*.json",
+                        "log_group_name": "WindowsStructuredLogs1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile8*.json",
+                        "log_group_name": "WindowsStructuredLogs1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile9*.json",
                         "log_group_name": "WindowsStructuredLogs1",
                         "multi_line_start_pattern": "^{",
                         "retention_in_days": 1

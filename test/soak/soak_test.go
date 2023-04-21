@@ -50,9 +50,13 @@ func runTest(t *testing.T, testName string, configPath string) {
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
 	require.NoError(t, startValidator(testName, 50, 170000000))
 	if strings.Contains(testName, "HighLoad") {
-		require.NoError(t, startLoadGen(10, 4000, 120))
+		require.NoError(t, startLogGen(100, 1000, 100))
+		require.NoError(t, startEMFGen(10, 1000))
+		require.NoError(t, startStatsd(10, 1000, 1000))
 	} else {
-		require.NoError(t, startLoadGen(10, 100, 120))
+		require.NoError(t, startLogGen(10, 1000, 100))
+		require.NoError(t, startEMFGen(10, 100))
+		require.NoError(t, startStatsd(10, 100, 100))
 	}
 }
 
@@ -71,23 +75,48 @@ func startLocalStack() error {
 }
 
 // startLoadGen starts a long running process that writes lines to log files.
-func startLoadGen(fileNum int, eventsPerSecond int, eventSize int) error {
+func startLogGen(fileNum int, eventsPerSecond int, eventSize int) error {
 	err := killExisting("log-generator")
 	if err != nil {
 		return err
 	}
+
 	// Assume PWD is the .../test/soak/ directory.
-	cmd := fmt.Sprintf("go run ../../cmd/log-generator -fileNum=%d -eventsPerSecond=%d -eventSize=%d -path=/tmp/soakTest",
+	cmd := fmt.Sprintf("go run ../../cmd/log-generator -fileNum=%d -eventsPerSecond=%d -eventSize=%d",
 		fileNum, eventsPerSecond, eventSize)
 	return common.RunAyncCommand(cmd)
 }
+
+// startEMFGen starts a long running process that writes EMF events to log files.
+func startEMFGen(fileNum int, eventsPerSecond int) error {
+	err := killExisting("emf-generator")
+	if err != nil {
+		return err
+	}
+	// Assume PWD is the .../test/soak/ directory.
+	cmd := fmt.Sprintf("go run ../../cmd/emf-generator -fileNum=%d -eventsPerSecond=%d",
+		fileNum, eventsPerSecond)
+	return common.RunAyncCommand(cmd)
+}
+
+// startStatsd starts a long running process that sends statsd metrics to a port.
+func startStatsd(clientNum int, tps int, metricNum int) error {
+	err := killExisting("statsd-generator")
+	if err != nil {
+		return err
+	}
+	// Assume PWD is the .../test/soak/ directory.
+	cmd := fmt.Sprintf("go run ../../cmd/statsd-generator -clientNum=%d -tps=%d -metricNum=%d",
+		clientNum, tps, metricNum)
+	return common.RunAyncCommand(cmd)
+}
+
 
 func startValidator(testName string, cpuLimit int, memLimit int) error {
 	err := killExisting("soak-validator")
 	if err != nil {
 		return err
 	}
-	// Assume PWD is the .../test/soak/ directory.
 	cmd := fmt.Sprintf("go run ../../cmd/soak-validator -testName=%s -cpuLimit=%d -memLimit=%d",
 		testName, cpuLimit, memLimit)
 	return common.RunAyncCommand(cmd)
