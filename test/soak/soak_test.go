@@ -49,14 +49,20 @@ func runTest(t *testing.T, testName string, configPath string, cpuLimit int, mem
 	common.CopyFile(configPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
 	require.NoError(t, startValidator(testName, cpuLimit, memLimit))
-	if strings.Contains(testName, "HighLoad") {
-		require.NoError(t, startLogGen(10, 1000, 100))
-		require.NoError(t, startEMFGen(10, 1000))
-		require.NoError(t, startStatsd(10, 1000, 1000))
-	} else {
+	if strings.Contains(testName, "Low") {
+		require.NoError(t, startLogGen(10, 10, 100))
+		require.NoError(t, startEMFGen(10, 10))
+		require.NoError(t, startStatsd(1, 100, 10))
+	} else if strings.Contains(testName, "Medium") {
 		require.NoError(t, startLogGen(10, 100, 100))
 		require.NoError(t, startEMFGen(10, 100))
-		require.NoError(t, startStatsd(1, 100, 100))
+		require.NoError(t, startStatsd(2, 100, 100))
+	} else if strings.Contains(testName, "High") {
+		require.NoError(t, startLogGen(10, 1000, 100))
+		require.NoError(t, startEMFGen(10, 1000))
+		require.NoError(t, startStatsd(10, 100, 1000))
+	} else {
+		require.Fail(t, "unexpected test name, %s", testName)
 	}
 }
 
