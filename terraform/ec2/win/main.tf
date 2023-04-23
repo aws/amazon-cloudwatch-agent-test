@@ -85,7 +85,8 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-integ-test-ec2-windows-${var.test_name}-${module.common.testing_id}"
+    Name  = "cwagent-integ-test-ec2-windows-${var.test_name}-${module.common.testing_id}",
+    patch = "ssm"
   }
 }
 
