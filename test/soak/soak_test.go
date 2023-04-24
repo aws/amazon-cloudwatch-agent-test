@@ -14,28 +14,85 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type testConfig struct {
+	cpuLimitPercent int
+	memLimitBytes int
+	logFileCount int
+	linesPerSecond int
+	lineSizeBytes int
+	emfFileCount int
+	eventsPerSecond int
+	statsdClientCount int
+	tps int
+	metricCount int
+}
+
 func TestSoakLow(t *testing.T) {
+	tc := testConfig{
+		cpuLimitPercent: 5,
+		memLimitBytes: 100_000_000,
+		logFileCount: 10,
+		linesPerSecond: 10,
+		lineSizeBytes: 100,
+		emfFileCount: 10,
+		eventsPerSecond: 10,
+		statsdClientCount: 5,
+		tps: 100,
+		metricCount: 100,
+	}
 	switch runtime.GOOS {
 	case "darwin":
-		// todo:
+		runTest(t, "SoakTestLowDarwin", "resources/soak_darwin.json", tc)
 	case "linux":
-		runTest(t, "SoakTestLowLinux", "resources/soak_linux.json", 5, 100_000_000)
+		runTest(t, "SoakTestLowLinux", "resources/soak_linux.json", tc)
 	case "windows":
-		runTest(t, "SoakTestLowLinux", "resources/soak_windows.json", 5, 100_000_000)
+		runTest(t, "SoakTestLowWindows", "resources/soak_windows.json",tc)
 	}
 }
 
-// todo: add high througput
-// todo: logrotate
-// todo: multiple-logs
-func TestSoakHigh(t *testing.T) {
+func TestSoakMedium(t *testing.T) {
+	tc := testConfig{
+		cpuLimitPercent: 25,
+		memLimitBytes: 200_000_000,
+		logFileCount: 10,
+		linesPerSecond: 100,
+		lineSizeBytes: 100,
+		emfFileCount: 10,
+		eventsPerSecond: 10,
+		statsdClientCount: 5,
+		tps: 100,
+		metricCount: 100,
+	}
 	switch runtime.GOOS {
 	case "darwin":
-		// todo:
+		runTest(t, "SoakTestMediumDarwin", "resources/soak_darwin.json", tc)
 	case "linux":
-		runTest(t, "SoakTestHighLinux", "resources/soak_linux.json", 50, 200_000_000)
+		runTest(t, "SoakTestMediumLinux", "resources/soak_linux.json", tc)
 	case "windows":
-		runTest(t, "SoakTestHighWindows", "resources/soak_windows.json", 50, 200_000_000)
+		runTest(t, "SoakTestMediumWindows", "resources/soak_windows.json", tc)
+	}
+}
+
+func TestSoakHigh(t *testing.T) {
+	tc := testConfig{
+		cpuLimitPercent: 50,
+		memLimitBytes: 300_000_000,
+		logFileCount: 10,
+		linesPerSecond: 1000,
+		lineSizeBytes: 100,
+		emfFileCount: 10,
+		eventsPerSecond: 10,
+		statsdClientCount: 5,
+		tps: 100,
+		metricCount: 100,
+	}
+	switch runtime.GOOS {
+	case "darwin":
+		runTest(t, "SoakTestHighDarwin", "resources/soak_darwin.json", tc)
+	case "linux":
+		runTest(t, "SoakTestHighLinux", "resources/soak_linux.json", tc)
+	case "windows":
+		runTest(t, "SoakTestHighWindows", "resources/soak_windows.json", tc)
 	}
 }
 
@@ -44,26 +101,14 @@ func TestSoakHigh(t *testing.T) {
 // load and monitor for resource leaks.
 // The agent config should use a mocked backend (local stack)to save cost.
 // testName is used as the namespace for validator metrics.
-func runTest(t *testing.T, testName string, configPath string, cpuLimit int, memLimit int) {
+func runTest(t *testing.T, testName string, configPath string, tc testConfig) {
 	require.NoError(t, startLocalStack())
 	common.CopyFile(configPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
-	require.NoError(t, startValidator(testName, cpuLimit, memLimit))
-	if strings.Contains(testName, "Low") {
-		require.NoError(t, startLogGen(10, 10, 100))
-		require.NoError(t, startEMFGen(10, 10))
-		require.NoError(t, startStatsd(1, 100, 10))
-	} else if strings.Contains(testName, "Medium") {
-		require.NoError(t, startLogGen(10, 100, 100))
-		require.NoError(t, startEMFGen(10, 100))
-		require.NoError(t, startStatsd(2, 100, 100))
-	} else if strings.Contains(testName, "High") {
-		require.NoError(t, startLogGen(10, 1000, 100))
-		require.NoError(t, startEMFGen(10, 1000))
-		require.NoError(t, startStatsd(10, 100, 1000))
-	} else {
-		require.Fail(t, "unexpected test name, %s", testName)
-	}
+	require.NoError(t, startValidator(testName, tc.cpuLimitPercent, tc.memLimitBytes))
+	require.NoError(t, startLogGen(tc.logFileCount, tc.linesPerSecond, tc.lineSizeBytes))
+	require.NoError(t, startEMFGen(tc.emfFileCount, tc.eventsPerSecond))
+	require.NoError(t, startStatsd(tc.statsdClientCount, tc.tps, tc.metricCount))
 }
 
 // Refer to https://github.com/localstack/localstack

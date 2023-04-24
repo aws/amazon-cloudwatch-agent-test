@@ -1,0 +1,203 @@
+{
+    "agent": {
+        "metrics_collection_interval": 10
+    },
+    "metrics": {
+        "endpoint_override": "http://localhost:4566",
+        "append_dimensions": {
+            "InstanceType": "${aws:InstanceType}"
+        },
+        "metrics_collected": {
+            "cpu": {
+                "measurement": [
+                    "cpu_usage_idle",
+                    "cpu_usage_iowait",
+                    "cpu_usage_user",
+                    "cpu_usage_system"
+                ],
+                "totalcpu": false
+            },
+            "disk": {
+                "measurement": [
+                    "used_percent",
+                    "inodes_free"
+                ]
+            },
+            "diskio": {
+                "measurement": [
+                    "io_time"
+                ]
+            },
+            "mem": {
+                "measurement": [
+                    "mem_used_percent"
+                ]
+            },
+            "statsd": {},
+            "swap": {
+                "measurement": [
+                    "swap_used_percent"
+                ]
+            },
+            "procstat": [
+                {
+                    "measurement": [
+                        "cpu_usage",
+                        "memory_rss"
+                    ],
+                    "exe": "amazon-cloudwatch-agent"
+                }
+            ]
+        },
+        "namespace": "CWAgent/DarwinSoakTest"
+    },
+    "logs": {
+        "endpoint_override": "http://localhost:4566",
+        "logs_collected": {
+            "files": {
+                "collect_list": [
+                    {
+                        "file_path": "/tmp/soakTest/tmp0*.log",
+                        "log_group_name": "DarwinSoaking0.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/tmp1*.log",
+                        "log_group_name": "DarwinSoaking1.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/tmp2*.log",
+                        "log_group_name": "DarwinSoaking2.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/tmp3*.log",
+                        "log_group_name": "DarwinSoaking3.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/tmp4*.log",
+                        "log_group_name": "DarwinSoaking4.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/tmp5*.log",
+                        "log_group_name": "DarwinSoaking5.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/tmp6*.log",
+                        "log_group_name": "DarwinSoaking6.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/tmp7*.log",
+                        "log_group_name": "DarwinSoaking7.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/tmp8*.log",
+                        "log_group_name": "DarwinSoaking8.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/tmp9*.log",
+                        "log_group_name": "DarwinSoaking9.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile0*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst0",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile1*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile2*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst2",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile3*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst3",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile4*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst4",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile5*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst5",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile6*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst6",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile7*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst7",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile8*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst8",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "/tmp/soakTest/structuredLogFile9*.json",
+                        "log_group_name": "darwinStructuredLogSoakTst9",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    }
+                ]
+            }
+        }
+    }
+}

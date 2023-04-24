@@ -15,7 +15,7 @@ import (
 
 const (
 	layoutFormat    = "02 Jan 06 15:04:05 MST"
-	logTruncateSize = 100 * 1024 * 1024
+	logTruncateSize = 32 * 1024 * 1024
 	multilineRatio  = 10 //means every 10 lines will have a multilineStarter(timestamp)
 )
 
