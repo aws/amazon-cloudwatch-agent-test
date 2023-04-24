@@ -1,0 +1,51 @@
+{
+	"agent": {
+		"metrics_collection_interval": 1,
+		"run_as_user": "root"
+	},
+	"metrics": {
+		"namespace": "CloudWatchAgentPerformance",
+		"append_dimensions": {
+			"InstanceId": "${aws:InstanceId}"
+		},
+		"metrics_collected": {
+			"mem":{
+				"measurement": [
+				  "total"
+				],
+				"metrics_collection_interval": 1
+			},
+			"net": {
+				"resources": [
+				  "eth0"
+				],
+				"measurement": [
+				  "bytes_sent",
+				  "packets_sent"
+				],
+				"metrics_collection_interval": 1
+			},
+			"procstat": [
+				{
+				  "exe": "cloudwatch-agent",
+				  "measurement": [
+					"cpu_usage",
+					"memory_rss",
+					"memory_swap",
+					"memory_vms",
+					"memory_data",
+					"num_fds",
+					"write_bytes"
+				  ],
+				  "metrics_collection_interval": 1
+				}
+			]
+		}
+	},
+	"logs": {
+	  "metrics_collected": {
+		"emf": { }
+	  },
+	  "force_flush_interval": 5
+	}
+}

@@ -119,12 +119,12 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 				metricValues[i] = val / (1024 * 1024)
 			}
 		}
-		log.Printf("Start calculate metric statictics for metric %s %v", metricName, metricValues)
+		log.Printf("Start calculate metric statictics for metric %s %v \n", metricName, metricValues)
 		if !isAllValuesGreaterThanOrEqualToZero(metricValues) {
-			return nil, fmt.Errorf("values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
+			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
 		}
 		metricStats := CalculateMetricStatisticsBasedOnDataAndPeriod(metricValues, agentCollectionPeriod)
-		log.Printf("Finished calculate metric statictics for metric %s: %v", metricName, metricStats)
+		log.Printf("Finished calculate metric statictics for metric %s: %v \n", metricName, metricStats)
 		performanceMetricResults[metricName] = metricStats
 	}
 

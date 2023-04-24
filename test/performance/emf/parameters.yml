@@ -1,13 +1,12 @@
-receivers: ["logs"]
+receivers: ["emf"]
 
-test_case: "logs_stress"
-validate_type: "stress"
-data_type: "logs"
-# Number of logs being written
-number_monitored_logs: 100
+test_case: "emf_performance"
+validate_type: "performance"
+data_type: "metrics"
+
 # Number of metrics to be sent or number of log lines being written  each minute
 values_per_minute: "<values_per_minute>"
-# Number of seconds the agent should run and collect the metrics. In this case, 5 minutes
+# Number of seconds the agent should run and collect the metrics. In this case, 10 minutes
 agent_collection_period: 300 
 
 commit_hash: <commit_hash>
@@ -15,60 +14,58 @@ commit_date: <commit_date>
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 
-# Metric that the test needs to validate; moreover, the stress validation already has
-# InstanceID dimension; therefore, does not need to validate it
-# https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
-metric_namespace: "CloudWatchAgentStress"
+# Metric that the test needs to validate
+metric_namespace: "CloudWatchAgentPerformance"
 metric_validation: 
   - metric_name: "procstat_cpu_usage"
-    metric_sample_count: 300
     metric_dimension: 
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_memory_rss"
-    metric_sample_count: 300
     metric_dimension: 
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_memory_swap"
-    metric_sample_count: 300
     metric_dimension: 
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_memory_vms"
-    metric_sample_count: 300
     metric_dimension: 
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_memory_data"
-    metric_sample_count: 300
     metric_dimension: 
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_num_fds"
-    metric_sample_count: 300
+    metric_dimension: 
+      - name: "exe"
+        value: "cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"
+  - metric_name: "procstat_write_bytes"
     metric_dimension: 
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "net_bytes_sent"
-    metric_sample_count: 300
     metric_dimension: 
       - name: "interface"
         value: "eth0"
   - metric_name: "net_packets_sent"
-    metric_sample_count: 300
     metric_dimension: 
       - name: "interface"
         value: "eth0"
+  - metric_name: "mem_total"
+    metric_dimension: []

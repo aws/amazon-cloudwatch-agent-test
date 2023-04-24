@@ -1,5 +1,5 @@
 # Receivers that agent needs to tests
-receivers: ["system","statsd"]
+receivers: ["system","statsd","emf"]
 
 #Test case name
 test_case: "win_feature"
@@ -22,6 +22,8 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
 metric_namespace: "CloudWatchAgentWinFeature"
 metric_validation:
+  # Validator generates statsd metrics 
+  # https://github.com/aws/amazon-cloudwatch-agent-test/blob/4365fbdbf979756e7f6db7f795a8a84b2c4f57c1/internal/common/metrics.go#L130-L165
   - metric_name: "statsd_gauge_1"
     metric_value: 1.0
     metric_sample_count: 1
@@ -35,6 +37,16 @@ metric_validation:
     metric_dimension:   
       - name: "metric_type"
         value: "counter"
+
+  # Validator generates emf metrics
+  # https://github.com/aws/amazon-cloudwatch-agent-test/blob/62930a4acf466934b3894658e2060dd5840c49c4/internal/common/metrics.go#L170-L211
+  - metric_name: "emf_time_1"
+    metric_value: 1.0
+    metric_sample_count: 1
+  
+  - metric_name: "emf_time_2"
+    metric_value: 2.0
+    metric_sample_count: 1
 
   - metric_name: "Available_Bytes"
     metric_sample_count: 60

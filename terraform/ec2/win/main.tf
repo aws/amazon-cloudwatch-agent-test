@@ -104,9 +104,9 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      "validator.exe --validator-config=${module.validator.instance_agent_config} --preparation-mode=true",
+      "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
-      "validator.exe --validator-config=${module.validator.instance_agent_config} --preparation-mode=false",
+      "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
   }
 }

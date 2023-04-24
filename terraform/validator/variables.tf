@@ -33,8 +33,8 @@ variable "arc" {
   default = "amd64"
 
   validation {
-    condition     = contains(["amd64", "amd64"], var.arc)
-    error_message = "Valid values for arc are (amd64, amd64)."
+    condition     = contains(["amd64", "arm64"], var.arc)
+    error_message = "Valid values for arc are (amd64, arm64)."
   }
 }
 
@@ -53,8 +53,8 @@ variable "family" {
   default = "linux"
 
   validation {
-    condition     = contains(["windows", "mac", "linux"], var.family)
-    error_message = "Valid values for family are (windows, mac, linux)."
+    condition     = contains(["windows", "darwin", "linux"], var.family)
+    error_message = "Valid values for family are (windows, darwin, linux)."
   }
 }
 
