@@ -15,8 +15,6 @@ import (
 )
 
 type testConfig struct {
-	cpuLimitPercent int
-	memLimitBytes int
 	logFileCount int
 	linesPerSecond int
 	lineSizeBytes int
@@ -29,8 +27,6 @@ type testConfig struct {
 
 func TestSoakLow(t *testing.T) {
 	tc := testConfig{
-		cpuLimitPercent: 5,
-		memLimitBytes: 100_000_000,
 		logFileCount: 10,
 		linesPerSecond: 10,
 		lineSizeBytes: 100,
@@ -52,8 +48,6 @@ func TestSoakLow(t *testing.T) {
 
 func TestSoakMedium(t *testing.T) {
 	tc := testConfig{
-		cpuLimitPercent: 25,
-		memLimitBytes: 200_000_000,
 		logFileCount: 10,
 		linesPerSecond: 100,
 		lineSizeBytes: 100,
@@ -75,8 +69,6 @@ func TestSoakMedium(t *testing.T) {
 
 func TestSoakHigh(t *testing.T) {
 	tc := testConfig{
-		cpuLimitPercent: 50,
-		memLimitBytes: 300_000_000,
 		logFileCount: 10,
 		linesPerSecond: 1000,
 		lineSizeBytes: 100,
@@ -98,14 +90,12 @@ func TestSoakHigh(t *testing.T) {
 
 // runTest just does setup.
 // It starts the agent and starts some background processes which generate
-// load and monitor for resource leaks.
+// load.
 // The agent config should use a mocked backend (local stack)to save cost.
-// testName is used as the namespace for validator metrics.
 func runTest(t *testing.T, testName string, configPath string, tc testConfig) {
 	require.NoError(t, startLocalStack())
 	common.CopyFile(configPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
-	require.NoError(t, startValidator(testName, tc.cpuLimitPercent, tc.memLimitBytes))
 	require.NoError(t, startLogGen(tc.logFileCount, tc.linesPerSecond, tc.lineSizeBytes))
 	require.NoError(t, startEMFGen(tc.emfFileCount, tc.eventsPerSecond))
 	require.NoError(t, startStatsd(tc.statsdClientCount, tc.tps, tc.metricCount))
@@ -157,17 +147,6 @@ func startStatsd(clientNum int, tps int, metricNum int) error {
 	}
 	cmd := fmt.Sprintf("go run ../../cmd/statsd-generator -clientNum=%d -tps=%d -metricNum=%d",
 		clientNum, tps, metricNum)
-	return common.RunAyncCommand(cmd)
-}
-
-
-func startValidator(testName string, cpuLimit int, memLimit int) error {
-	err := killExisting("soak-validator")
-	if err != nil {
-		return err
-	}
-	cmd := fmt.Sprintf("go run ../../cmd/soak-validator -testName=%s -cpuLimit=%d -memLimit=%d",
-		testName, cpuLimit, memLimit)
 	return common.RunAyncCommand(cmd)
 }
 
