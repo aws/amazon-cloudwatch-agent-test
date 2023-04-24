@@ -8,6 +8,7 @@ import (
 
 	"go.uber.org/multierr"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
@@ -31,6 +32,8 @@ func (s *FeatureValidator) GenerateLoad() error {
 	var (
 		multiErr              error
 		metricSendingInterval = time.Minute
+		logGroup              = awsservice.GetInstanceId()
+		metricNamespace       = s.vConfig.GetMetricNamespace()
 		dataRate              = s.vConfig.GetDataRate()
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
@@ -43,7 +46,7 @@ func (s *FeatureValidator) GenerateLoad() error {
 
 	// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
 	for _, receiver := range receivers {
-		if err := common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
+		if err := common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate, logGroup, metricNamespace); err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
 	}

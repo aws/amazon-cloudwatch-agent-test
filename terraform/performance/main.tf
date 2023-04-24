@@ -12,25 +12,15 @@ module "basic_components" {
 }
 
 locals {
-  ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
-  private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  ami_family        = var.ami_family[var.family]
+  login_user        = local.ami_family["login_user"]
+  install_package   = local.ami_family["install_package"]
+  install_validator = local.ami_family["install_validator"]
+  temp_directory    = local.ami_family["temp_folder"]
+  connection_type   = local.ami_family["connection_type"]
+  start_command     = format(local.ami_family["start_command"], "${local.temp_directory}/${local.cloudwatch_agent_config}")
 }
 
-#####################################################################
-# Generate EC2 Key Pair for log in access to EC2
-#####################################################################
-
-resource "tls_private_key" "ssh_key" {
-  count     = var.ssh_key_name == "" ? 1 : 0
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "aws_ssh_key" {
-  count      = var.ssh_key_name == "" ? 1 : 0
-  key_name   = "ec2-key-pair-${module.common.testing_id}"
-  public_key = tls_private_key.ssh_key[0].public_key_openssh
-}
 
 #####################################################################
 # Prepare Parameters Tests
@@ -40,7 +30,6 @@ locals {
   validator_config        = "parameters.yml"
   final_validator_config  = "final_parameters.yml"
   cloudwatch_agent_config = "agent_config.json"
-  instance_temp_directory = "/tmp"
 }
 
 resource "local_file" "update-validation-config" {
@@ -48,7 +37,7 @@ resource "local_file" "update-validation-config" {
     "<values_per_minute>", var.values_per_minute),
     "<commit_hash>", var.cwa_github_sha),
     "<commit_date>", var.cwa_github_sha_date),
-  "<cloudwatch_agent_config>", "${local.instance_temp_directory}/${local.cloudwatch_agent_config}")
+  "<cloudwatch_agent_config>", "${local.temp_directory}/${local.cloudwatch_agent_config}")
 
   filename = "${var.test_dir}/${local.final_validator_config}"
 }
@@ -60,7 +49,7 @@ resource "null_resource" "upload-validator" {
     command = <<-EOT
     cd ../..
     make validator-build
-    aws s3 cp ./build/validator/linux/${var.arc}/validator s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/linux/${var.arc}/validator
+    aws s3 cp ./build/validator/${var.family}/${var.arc}/validator s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/validator
     EOT
   }
 
@@ -91,47 +80,80 @@ resource "aws_instance" "cwagent" {
   }
 }
 
-resource "null_resource" "integration_test" {
+resource "null_resource" "install_binaries" {
   depends_on = [aws_instance.cwagent, null_resource.upload-validator]
 
   connection {
-    type        = "ssh"
-    user        = var.user
-    private_key = local.private_key_content
-    host        = aws_instance.cwagent.public_ip
+    type        = local.connection_type
+    user        = local.login_user
+    private_key = local.connection_type == "ssh" ? local.private_key_content : null
+    password    = local.connection_type == "winrm" ? rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content) : null
+    host        = aws_instance.cwagent.public_dns
   }
 
   provisioner "file" {
     source      = "${var.test_dir}/${local.final_validator_config}"
-    destination = "${local.instance_temp_directory}/${local.final_validator_config}"
+    destination = "${local.temp_directory}/${local.final_validator_config}"
   }
 
   provisioner "file" {
     source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
-    destination = "${local.instance_temp_directory}/${local.cloudwatch_agent_config}"
+    destination = "${local.temp_directory}/${local.cloudwatch_agent_config}"
   }
 
-  # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "cloud-init status --wait",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/amazon-cloudwatch-agent.rpm .",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/linux/${var.arc}/validator .",
-      "sudo rpm -Uvh ./amazon-cloudwatch-agent.rpm"
+      local.ami_family["wait_cloud_init"],
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_package} .",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_validator} .",
+      local.ami_family["install_command"],
     ]
   }
+}
 
-  #Prepare the requirement before validation and validate the metrics/logs/traces
+resource "null_resource" "validator_linux" {
+  count      = var.family != "windows" ? 1 : 0
+  depends_on = [aws_instance.cwagent, null_resource.upload-validator, null_resource.install_binaries]
+
+  connection {
+    type        = local.connection_type
+    user        = local.login_user
+    private_key = local.connection_type == "ssh" ? local.private_key_content : null
+    password    = local.connection_type == "winrm" ? rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content) : null
+    host        = aws_instance.cwagent.public_dns
+  }
   provisioner "remote-exec" {
     inline = [
       "export AWS_REGION=${var.region}",
-      "sudo chmod +x ./validator",
-      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=true",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.instance_temp_directory}/${local.cloudwatch_agent_config}",
-      "./validator --validator-config=${local.instance_temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "sudo chmod +x ./${local.install_validator}",
+      "./${local.install_validator} --validator-config=${local.temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      local.start_command,
+      "./${local.install_validator} --validator-config=${local.temp_directory}/${local.final_validator_config} --preparation-mode=false",
     ]
   }
+}
 
+resource "null_resource" "validator_windows" {
+  count      = var.family == "windows" ? 1 : 0
+  depends_on = [aws_instance.cwagent, null_resource.upload-validator, null_resource.install_binaries]
+
+  connection {
+    type        = local.connection_type
+    user        = local.login_user
+    private_key = local.connection_type == "ssh" ? local.private_key_content : null
+    password    = local.connection_type == "winrm" ? rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content) : null
+    host        = aws_instance.cwagent.public_dns
+    timeout     = "10m"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "set AWS_REGION=${var.region}",
+      "${local.install_validator} --validator-config=${local.temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      local.start_command,
+      "${local.install_validator} --validator-config=${local.temp_directory}/${local.final_validator_config} --preparation-mode=false",
+    ]
+  }
 }
 
 data "aws_ami" "latest" {
