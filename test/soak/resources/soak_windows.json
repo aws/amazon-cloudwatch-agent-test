@@ -1,9 +1,8 @@
 {
     "agent": {
-        "metrics_collection_interval": 10
+        "metrics_collection_interval": 60
     },
     "metrics": {
-        "endpoint_override": "http://localhost:4566",
         "append_dimensions": {
             "InstanceType": "${aws:InstanceType}"
         },
@@ -43,7 +42,8 @@
                 {
                     "measurement": [
                         "cpu_usage",
-                        "memory_rss"
+                        "memory_rss",
+                        "num_threads"
                     ],
                     "exe": "amazon-cloudwatch-agent"
                 }
