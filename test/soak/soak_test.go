@@ -38,11 +38,11 @@ func TestSoakLow(t *testing.T) {
 	}
 	switch runtime.GOOS {
 	case "darwin":
-		runTest(t, "SoakTestLowDarwin", "resources/soak_darwin.json", tc)
+		runTest(t, "resources/soak_low_darwin.json", tc)
 	case "linux":
-		runTest(t, "SoakTestLowLinux", "resources/soak_linux.json", tc)
+		runTest(t, "resources/soak_low_linux.json", tc)
 	case "windows":
-		runTest(t, "SoakTestLowWindows", "resources/soak_windows.json",tc)
+		runTest(t, "resources/soak_low_windows.json",tc)
 	}
 }
 
@@ -59,11 +59,11 @@ func TestSoakMedium(t *testing.T) {
 	}
 	switch runtime.GOOS {
 	case "darwin":
-		runTest(t, "SoakTestMediumDarwin", "resources/soak_darwin.json", tc)
+		runTest(t, "resources/soak_medium_darwin.json", tc)
 	case "linux":
-		runTest(t, "SoakTestMediumLinux", "resources/soak_linux.json", tc)
+		runTest(t, "resources/soak_medium_linux.json", tc)
 	case "windows":
-		runTest(t, "SoakTestMediumWindows", "resources/soak_windows.json", tc)
+		runTest(t, "resources/soak_medium_windows.json", tc)
 	}
 }
 
@@ -80,11 +80,11 @@ func TestSoakHigh(t *testing.T) {
 	}
 	switch runtime.GOOS {
 	case "darwin":
-		runTest(t, "SoakTestHighDarwin", "resources/soak_darwin.json", tc)
+		runTest(t, "resources/soak_high_darwin.json", tc)
 	case "linux":
-		runTest(t, "SoakTestHighLinux", "resources/soak_linux.json", tc)
+		runTest(t, "resources/soak_high_linux.json", tc)
 	case "windows":
-		runTest(t, "SoakTestHighWindows", "resources/soak_windows.json", tc)
+		runTest(t, "resources/soak_high_windows.json", tc)
 	}
 }
 
@@ -92,7 +92,7 @@ func TestSoakHigh(t *testing.T) {
 // It starts the agent and starts some background processes which generate
 // load.
 // The agent config should use a mocked backend (local stack)to save cost.
-func runTest(t *testing.T, testName string, configPath string, tc testConfig) {
+func runTest(t *testing.T, configPath string, tc testConfig) {
 	require.NoError(t, startLocalStack())
 	common.CopyFile(configPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
