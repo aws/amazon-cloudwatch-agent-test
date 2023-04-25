@@ -52,7 +52,6 @@
         "namespace": "CWAgent/SoakTestHighWindows"
     },
     "logs": {
-        "endpoint_override": "http://localhost:4566",
         "logs_collected": {
             "files": {
                 "collect_list": [
