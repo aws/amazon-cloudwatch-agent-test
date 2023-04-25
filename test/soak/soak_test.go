@@ -25,55 +25,13 @@ type testConfig struct {
 	metricCount int
 }
 
-func TestSoakLow(t *testing.T) {
-	tc := testConfig{
-		logFileCount: 10,
-		linesPerSecond: 10,
-		lineSizeBytes: 100,
-		emfFileCount: 10,
-		eventsPerSecond: 10,
-		statsdClientCount: 5,
-		tps: 100,
-		metricCount: 100,
-	}
-	switch runtime.GOOS {
-	case "darwin":
-		runTest(t, "resources/soak_low_darwin.json", tc)
-	case "linux":
-		runTest(t, "resources/soak_low_linux.json", tc)
-	case "windows":
-		runTest(t, "resources/soak_low_windows.json",tc)
-	}
-}
-
-func TestSoakMedium(t *testing.T) {
-	tc := testConfig{
-		logFileCount: 10,
-		linesPerSecond: 100,
-		lineSizeBytes: 100,
-		emfFileCount: 10,
-		eventsPerSecond: 100,
-		statsdClientCount: 5,
-		tps: 100,
-		metricCount: 100,
-	}
-	switch runtime.GOOS {
-	case "darwin":
-		runTest(t, "resources/soak_medium_darwin.json", tc)
-	case "linux":
-		runTest(t, "resources/soak_medium_linux.json", tc)
-	case "windows":
-		runTest(t, "resources/soak_medium_windows.json", tc)
-	}
-}
-
 func TestSoakHigh(t *testing.T) {
 	tc := testConfig{
 		logFileCount: 10,
-		linesPerSecond: 1000,
-		lineSizeBytes: 100,
-		emfFileCount: 10,
-		eventsPerSecond: 1000,
+		linesPerSecond: 4000,
+		lineSizeBytes: 120,
+		emfFileCount: 2,
+		eventsPerSecond: 1600,
 		statsdClientCount: 5,
 		tps: 100,
 		metricCount: 100,
@@ -88,31 +46,12 @@ func TestSoakHigh(t *testing.T) {
 	}
 }
 
-// runTest just does setup.
-// It starts the agent and starts some background processes which generate
-// load.
-// The agent config should use a mocked backend (local stack)to save cost.
 func runTest(t *testing.T, configPath string, tc testConfig) {
-	require.NoError(t, startLocalStack())
 	common.CopyFile(configPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
 	require.NoError(t, startLogGen(tc.logFileCount, tc.linesPerSecond, tc.lineSizeBytes))
 	require.NoError(t, startEMFGen(tc.emfFileCount, tc.eventsPerSecond))
 	require.NoError(t, startStatsd(tc.statsdClientCount, tc.tps, tc.metricCount))
-}
-
-// Refer to https://github.com/localstack/localstack
-func startLocalStack() error {
-	// Kill existing. (Assumes 0 or 1 container ids found)
-	cmd := "docker ps --filter ancestor=localstack/localstack --quiet"
-	id, _ := common.RunCommand(cmd)
-	if id != "" {
-		cmd = "docker kill " + id
-		_, _ = common.RunCommand(cmd)
-	}
-	cmd = "docker run -d -p 4566:4566 -p 4510-4559:4510-4559 localstack/localstack"
-	_, err := common.RunCommand(cmd)
-	return err
 }
 
 // startLogGen starts a long running process that writes lines to log files.
