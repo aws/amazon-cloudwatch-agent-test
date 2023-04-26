@@ -133,7 +133,7 @@ func (s *BasicValidator) ValidateEMFLogs(logStream, emfSchemaName string, startT
 	})
 
 	if !ok || err != nil {
-		return fmt.Errorf("\n Failed to validate emf json schema%s with log group %s, log stream %s, start time %v and end time %v", emfSchemaName, logGroup, logStream, startTime, endTime)
+		return fmt.Errorf("\n Failed to validate emf json schema %s with log group %s, log stream %s, start time %v and end time %v", emfSchemaName, logGroup, logStream, startTime, endTime)
 	}
 
 	return nil
@@ -170,10 +170,13 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 		boundAndPeriod = int32(s.vConfig.GetAgentCollectionPeriod().Seconds())
 	)
 
-	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
+	log.Printf("Start to collect and validate metric %s with the dimensions %v, namespace %s, start time %v and end time %v \n", metricName, util.LogCloudWatchDimension(metricDimensions), metricNamespace, startTime, endTime)
 
 	metrics, err := awsservice.GetMetricStatistics(metricName, metricNamespace, metricDimensions, startTime, endTime, boundAndPeriod, []types.Statistic{types.StatisticAverage})
-	log.Printf("%v", metrics)
+	
+	for _, datapoint := range metrics.Datapoints {
+		log.Printf("metrics %v", datapoint.Average)
+	}
 	if err != nil {
 		return err
 	}
@@ -201,13 +204,15 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 }
 
 func getEMFSchemaAndValidateFunction(emfSchemaName string) (*jsonschema.Schema, func(string) bool) {
-	switch EmfSchema {
-	case "emf_schema":
+	switch emfSchemaName {
+	case "emf_metrics_schema":
 		// The validator will generate EMF metrics with InstanceId as a dimension
 		// https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/internal/common/metrics.go#L183-L210
 		// Therefore, validate if the InstanceId is there. There will be changes for ECS Fargate and EKS Fargate
 		// but focus on EC2 first
 		return jsonschema.Must(EmfSchema), func(s string) bool { return strings.Contains(s, "\"InstanceId\"") }
+	default:
+		log.Printf("Empty metric schema %s and will fail the validation",emfSchemaName)
+		return nil, func(_ string) bool { return false }
 	}
-	return nil, func(_ string) bool { return false }
 }

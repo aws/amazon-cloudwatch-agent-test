@@ -287,7 +287,7 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 		receiver       = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 	)
 
-	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
+	log.Printf("Start to collect and validate metric %s with the dimensions %v, namespace %s, start time %v and end time %v \n", metricName, util.LogCloudWatchDimension(metricDimensions), metricNamespace, startTime, endTime)
 
 	// We are only interesting in the maxium metric values within the time range
 	metrics, err := awsservice.GetMetricStatistics(metricName, metricNamespace, metricDimensions, startTime, endTime, boundAndPeriod, []types.Statistic{types.StatisticMaximum})

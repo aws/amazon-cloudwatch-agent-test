@@ -201,5 +201,7 @@ log_validation:
 # EMF schema that needs to validate (e.g when convert all metrics to embedded metrics format with container insight or prometheus)
 # Currently support emf_metrics_schema
 emf_validation:
-  - log_value: "emf_metrics_schema"
+  # https://github.com/aws/amazon-cloudwatch-agent-test/pull/204/files#diff-ae7b8630c5ea5f3abb9103fd8a4c24664c0921dd1070f4281863e8f7e1900af7
+  # https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/internal/common/metrics.go#L183-L210
+  - emf_schema: "emf_metrics_schema"
     log_stream: "<instance_id>"

@@ -17,7 +17,7 @@ import (
 
 var (
 	supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf"}
-	supportedEMFSchema = []string{"emf_metric_schema"}
+	supportedEMFSchema = []string{"emf_metrics_schema"}
 )
 
 type ValidateConfig interface {
@@ -54,7 +54,7 @@ type validatorConfig struct {
 	MetricNamespace  string             `yaml:"metric_namespace"`
 	MetricValidation []MetricValidation `yaml:"metric_validation"`
 	LogValidation    []LogValidation    `yaml:"log_validation"`
-	EmfValidation    []EmfValidation    `yaml:"emf_validation`
+	EmfValidation    []EmfValidation    `yaml:"emf_validation"`
 
 	CommitHash string `yaml:"commit_hash"`
 	CommitDate string `yaml:"commit_date"`
