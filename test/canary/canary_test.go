@@ -21,7 +21,6 @@ import (
 
 const (
 	configInputPath           = "resources/canary_config.json"
-	InstallAgentVersionPath   = "/opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION"
 )
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
@@ -46,7 +45,7 @@ func TestCanary(t *testing.T) {
 	common.CopyFile(configInputPath, common.ConfigOutputPath)
 	err = common.StartAgent(common.ConfigOutputPath, false)
 	reportMetric(t, "StartFail", err)
-	actualVersion, _ := os.ReadFile(InstallAgentVersionPath)
+	actualVersion, _ := os.ReadFile(common.InstallAgentVersionPath)
 	expectedVersion, _ := getVersionFromS3(e.Bucket)
 	if expectedVersion != string(actualVersion) {
 		err = errors.New("agent version mismatch")

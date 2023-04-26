@@ -68,5 +68,5 @@ func writeStructuredLog(fileIndex int) {
 
 // returns the timeStamp in millisecond
 func makeTimestamp() int64 {
-	return time.Now().UnixNano() / int64(time.Millisecond)
+	return time.Now().UnixMilli()
 }

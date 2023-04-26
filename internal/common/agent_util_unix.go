@@ -21,6 +21,7 @@ const (
 	Namespace        = "CWAgent"
 	Host             = "host"
 	AgentLogFile     = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+	InstallAgentVersionPath   = "/opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION"
 )
 
 type PackageManager int
