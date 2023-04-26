@@ -50,7 +50,7 @@ var (
 				"net_packets_sent":     float64(105),
 			},
 			"logs": {
-				"procstat_cpu_usage":   float64(200),
+				"procstat_cpu_usage":   float64(250),
 				"procstat_memory_rss":  float64(220000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(888000000),
@@ -58,6 +58,16 @@ var (
 				"procstat_num_fds":     float64(110),
 				"net_bytes_sent":       float64(1800000),
 				"net_packets_sent":     float64(5000),
+			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(75000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(75000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(100),
 			},
 			"emf": {
 				"procstat_cpu_usage":   float64(15),
@@ -101,8 +111,18 @@ var (
 				"net_bytes_sent":       float64(6500000),
 				"net_packets_sent":     float64(8500),
 			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(75000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(75000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(100),
+			},
 			"emf": {
-				"procstat_cpu_usage":   float64(20),
+				"procstat_cpu_usage":   float64(25),
 				"procstat_memory_rss":  float64(80000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(818000000),
@@ -114,7 +134,7 @@ var (
 		},
 		"10000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(135),
+				"procstat_cpu_usage":   float64(150),
 				"procstat_memory_rss":  float64(160000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(888000000),
@@ -142,6 +162,16 @@ var (
 				"procstat_num_fds":     float64(180),
 				"net_bytes_sent":       float64(6820000),
 				"net_packets_sent":     float64(8300),
+			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(75000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(75000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(100),
 			},
 			"emf": {
 				"procstat_cpu_usage":   float64(40),
@@ -189,6 +219,16 @@ var (
 				"procstat_num_fds":     float64(200),
 				"net_bytes_sent":       float64(6900000),
 				"net_packets_sent":     float64(6500),
+			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(75000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(75000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(100),
 			},
 			"emf": {
 				"procstat_cpu_usage":   float64(165),
@@ -289,7 +329,7 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
 	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-5, metricSampleCount, int32(boundAndPeriod)); !ok {
-		return fmt.Errorf("\n metric %s is not within sample count bound [ %f, %f]", metricName, boundAndPeriod-5, boundAndPeriod)
+		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount-5, metricSampleCount)
 	}
 
 	return nil

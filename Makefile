@@ -29,3 +29,5 @@ validator-build:
 	$(DARWIN_AMD64_BUILD)/validator github.com/aws/amazon-cloudwatch-agent-test/validator
 	$(DARWIN_ARM64_BUILD)/validator github.com/aws/amazon-cloudwatch-agent-test/validator
 
+dockerized-build: validator-build
+	docker buildx build --platform linux/amd64 --load -f ./validator/Dockerfile .

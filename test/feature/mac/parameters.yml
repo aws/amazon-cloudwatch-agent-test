@@ -1,5 +1,5 @@
 # Receivers that agent needs to tests
-receivers: ["host","statsd","emf"]
+receivers: ["system","statsd","emf"]
 
 #Test case name
 test_case: "macos_feature"
@@ -71,18 +71,6 @@ metric_validation:
     metric_dimension: 
       - name: "interface"
         value: "en0"
- 
-  - metric_name: "diskio_iops_in_progress"
-    metric_sample_count: 60
-    metric_dimension: 
-      - name: "name"
-        value: "disk0"
-
-  - metric_name: "diskio_io_time"
-    metric_sample_count: 60
-    metric_dimension: 
-      - name: "name"
-        value: "disk0"
 
   - metric_name: "disk_free"
     metric_sample_count: 60

@@ -18,7 +18,7 @@ locals {
   install_validator = local.ami_family["install_validator"]
   temp_directory    = local.ami_family["temp_folder"]
   connection_type   = local.ami_family["connection_type"]
-  start_command     = format(local.ami_family["start_command"], "${local.temp_directory}/${local.cloudwatch_agent_config}")
+  start_command     = format(local.ami_family["start_command"], module.validator.instance_agent_config)
 }
 
 
@@ -26,36 +26,18 @@ locals {
 # Prepare Parameters Tests
 #####################################################################
 
-locals {
-  validator_config        = "parameters.yml"
-  final_validator_config  = "final_parameters.yml"
-  cloudwatch_agent_config = "agent_config.json"
-}
+module "validator" {
+  source = "../validator"
 
-resource "local_file" "update-validation-config" {
-  content = replace(replace(replace(replace(file("${var.test_dir}/${local.validator_config}"),
-    "<values_per_minute>", var.values_per_minute),
-    "<commit_hash>", var.cwa_github_sha),
-    "<commit_date>", var.cwa_github_sha_date),
-  "<cloudwatch_agent_config>", "${local.temp_directory}/${local.cloudwatch_agent_config}")
-
-  filename = "${var.test_dir}/${local.final_validator_config}"
-}
-
-// Build and uploading the validator to spending less time in 
-// and avoid memory issue in allocating memory 
-resource "null_resource" "upload-validator" {
-  provisioner "local-exec" {
-    command = <<-EOT
-    cd ../..
-    make validator-build
-    aws s3 cp ./build/validator/${var.family}/${var.arc}/validator s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/validator
-    EOT
-  }
-
-  triggers = {
-    always_run = "${timestamp()}"
-  }
+  arc                 = var.arc
+  family              = var.family
+  action              = "upload"
+  s3_bucket           = var.s3_bucket
+  test_dir            = var.test_dir
+  temp_directory      = local.temp_directory
+  cwa_github_sha      = var.cwa_github_sha
+  cwa_github_sha_date = var.cwa_github_sha_date
+  values_per_minute   = var.values_per_minute
 }
 
 #####################################################################
@@ -68,6 +50,7 @@ resource "aws_instance" "cwagent" {
   key_name                    = local.ssh_key_name
   iam_instance_profile        = module.basic_components.instance_profile
   vpc_security_group_ids      = [module.basic_components.security_group]
+  get_password_data           = local.connection_type == "winrm" ? true : false
   associate_public_ip_address = true
 
   metadata_options {
@@ -81,7 +64,7 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "install_binaries" {
-  depends_on = [aws_instance.cwagent, null_resource.upload-validator]
+  depends_on = [aws_instance.cwagent, module.validator]
 
   connection {
     type        = local.connection_type
@@ -92,13 +75,13 @@ resource "null_resource" "install_binaries" {
   }
 
   provisioner "file" {
-    source      = "${var.test_dir}/${local.final_validator_config}"
-    destination = "${local.temp_directory}/${local.final_validator_config}"
+    source      = module.validator.agent_config
+    destination = module.validator.instance_agent_config
   }
 
   provisioner "file" {
-    source      = "${var.test_dir}/${local.cloudwatch_agent_config}"
-    destination = "${local.temp_directory}/${local.cloudwatch_agent_config}"
+    source      = module.validator.validator_config
+    destination = module.validator.instance_validator_config
   }
 
   provisioner "remote-exec" {
@@ -113,7 +96,7 @@ resource "null_resource" "install_binaries" {
 
 resource "null_resource" "validator_linux" {
   count      = var.family != "windows" ? 1 : 0
-  depends_on = [aws_instance.cwagent, null_resource.upload-validator, null_resource.install_binaries]
+  depends_on = [null_resource.install_binaries]
 
   connection {
     type        = local.connection_type
@@ -126,16 +109,16 @@ resource "null_resource" "validator_linux" {
     inline = [
       "export AWS_REGION=${var.region}",
       "sudo chmod +x ./${local.install_validator}",
-      "./${local.install_validator} --validator-config=${local.temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       local.start_command,
-      "./${local.install_validator} --validator-config=${local.temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
   }
 }
 
 resource "null_resource" "validator_windows" {
   count      = var.family == "windows" ? 1 : 0
-  depends_on = [aws_instance.cwagent, null_resource.upload-validator, null_resource.install_binaries]
+  depends_on = [null_resource.install_binaries]
 
   connection {
     type        = local.connection_type
@@ -149,9 +132,9 @@ resource "null_resource" "validator_windows" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      "${local.install_validator} --validator-config=${local.temp_directory}/${local.final_validator_config} --preparation-mode=true",
+      "${local.install_validator} --validator-config=${module.validator.instance_validator_config}--preparation-mode=true",
       local.start_command,
-      "${local.install_validator} --validator-config=${local.temp_directory}/${local.final_validator_config} --preparation-mode=false",
+      "${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
   }
 }

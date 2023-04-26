@@ -15,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var supportedReceivers = []string{"logs", "statsd", "collectd", "host", "emf"}
+var supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf"}
 
 type ValidateConfig interface {
 	GetPluginsConfig() []string
