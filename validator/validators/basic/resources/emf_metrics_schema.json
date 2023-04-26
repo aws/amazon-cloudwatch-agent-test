@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EMF structured log schema",
+  "description": "JSON schema for the CloudWatch agent structured log",
+  "type": "object",
+  "properties": {
+    "_aws": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "Timestamp": {},
+        "LogGroupName": {
+          "type": "string"
+        },
+        "CloudWatchMetrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "Namespace": {
+                "type": "string"
+              },
+              "Dimensions": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "Metrics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "Name": {
+                      "type": "string"
+                    },
+                    "Unit": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "InstanceId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "_aws",
+    "InstanceId"
+  ],
+  "additionalProperties": true
+}

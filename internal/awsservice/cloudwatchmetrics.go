@@ -104,6 +104,24 @@ func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime
 	return data, nil
 }
 
+// GetMetricStatistics takes the metric name, metric dimension and metric namespace, start time,
+// end time, period in seconds, the statistics and return the metrics statistic for the metrics
+// (e.g if the query period is 30 second but the time range is 1 minute with type statistics SampleCount,
+// GetMetricStatistics will return 2 datapoints - first datapoints will hold all the sample count in the first 30 second
+// and the second datapoint will hold all the sample cound in the second 30 second )
+// https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/get-metric-statistics.html
+func GetMetricStatistics(metricName, namespace string, dimensions []types.Dimension, startTime, endTime time.Time, periodInSeconds int32, statistic []types.Statistic) (*cloudwatch.GetMetricStatisticsOutput, error) {
+	return CwmClient.GetMetricStatistics(ctx, &cloudwatch.GetMetricStatisticsInput{
+		MetricName: aws.String(metricName),
+		Namespace:  aws.String(namespace),
+		StartTime:  aws.Time(startTime),
+		EndTime:    aws.Time(endTime),
+		Period:     aws.Int32(periodInSeconds),
+		Dimensions: dimensions,
+		Statistics: statistic,
+	})
+}
+
 func BuildDimensionFilterList(appendDimension int) []types.DimensionFilter {
 	// we append dimension from 0 to max number - 2
 	// then we add dimension instance id
@@ -135,8 +153,8 @@ func ReportMetric(namespace string,
 		MetricData: []types.MetricDatum{
 			{
 				MetricName: aws.String(name),
-				Value: aws.Float64(value),
-				Unit: units,
+				Value:      aws.Float64(value),
+				Unit:       units,
 			},
 		},
 	})

@@ -38,6 +38,7 @@ module "validator" {
   cwa_github_sha      = var.cwa_github_sha
   cwa_github_sha_date = var.cwa_github_sha_date
   values_per_minute   = var.values_per_minute
+  instance_id         = aws_instance.cwagent.id
 }
 
 #####################################################################

@@ -58,4 +58,8 @@ variable "family" {
   }
 }
 
+variable "instance_id" {
+  type    = string
+  default = ""
+}
 

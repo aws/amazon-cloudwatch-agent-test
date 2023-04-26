@@ -21,6 +21,8 @@ metric_validation:
   - metric_name: "procstat_cpu_usage"
     metric_sample_count: 300
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
@@ -28,6 +30,8 @@ metric_validation:
   - metric_name: "procstat_memory_rss"
     metric_sample_count: 300
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
@@ -35,6 +39,8 @@ metric_validation:
   - metric_name: "procstat_memory_swap"
     metric_sample_count: 300
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
@@ -42,6 +48,8 @@ metric_validation:
   - metric_name: "procstat_memory_vms"
     metric_sample_count: 300
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
@@ -49,6 +57,8 @@ metric_validation:
   - metric_name: "procstat_memory_data"
     metric_sample_count: 300
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
@@ -56,6 +66,8 @@ metric_validation:
   - metric_name: "procstat_num_fds"
     metric_sample_count: 300
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
@@ -63,10 +75,14 @@ metric_validation:
   - metric_name: "net_bytes_sent"
     metric_sample_count: 300
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "interface"
         value: "eth0"
   - metric_name: "net_packets_sent"
     metric_sample_count: 300
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "interface"
         value: "eth0"

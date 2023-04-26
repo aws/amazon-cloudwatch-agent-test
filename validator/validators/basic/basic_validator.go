@@ -4,6 +4,7 @@
 package basic
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/qri-io/jsonschema"
 	"go.uber.org/multierr"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
@@ -18,6 +20,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/util"
 )
+
+//go:embed resources/emf_metrics_schema.json
+var EmfSchema string
 
 const metricErrorBound = 0.1
 
@@ -57,19 +62,14 @@ func (s *BasicValidator) GenerateLoad() error {
 func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 	var (
 		multiErr         error
-		ec2InstanceId    = awsservice.GetInstanceId()
 		metricNamespace  = s.vConfig.GetMetricNamespace()
 		validationMetric = s.vConfig.GetMetricValidation()
 		validationLog    = s.vConfig.GetLogValidation()
+		validationEMFLog = s.vConfig.GetEMFValidation()
 	)
 
 	for _, metric := range validationMetric {
-		metricDimensions := []types.Dimension{
-			{
-				Name:  aws.String("InstanceId"),
-				Value: aws.String(ec2InstanceId),
-			},
-		}
+		var metricDimensions []types.Dimension
 		for _, dimension := range metric.MetricDimension {
 			metricDimensions = append(metricDimensions, types.Dimension{
 				Name:  aws.String(dimension.Name),
@@ -89,6 +89,13 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		}
 	}
 
+	for _, emfLog := range validationEMFLog {
+		err := s.ValidateEMFLogs(emfLog.LogStream, emfLog.EmfSchema, startTime, endTime)
+		if err != nil {
+			multiErr = multierr.Append(multiErr, err)
+		}
+	}
+
 	return multiErr
 }
 
@@ -100,6 +107,33 @@ func (s *BasicValidator) Cleanup() error {
 	switch dataType {
 	case "logs":
 		awsservice.DeleteLogGroup(ec2InstanceId)
+	}
+
+	return nil
+}
+
+func (s *BasicValidator) ValidateEMFLogs(logStream, emfSchemaName string, startTime, endTime time.Time) error {
+	var (
+		logGroup                            = awsservice.GetInstanceId()
+		validateSchema, validateLogContents = getEMFSchemaAndValidateFunction(emfSchemaName)
+	)
+
+	log.Printf("Start to validate emf json schema %s with log group %s, log stream %s, start time %v and end time %v", emfSchemaName, logGroup, logStream, startTime, endTime)
+	ok, err := awsservice.ValidateLogs(logGroup, logStream, &startTime, &endTime, func(logs []string) bool {
+		if len(logs) < 1 {
+			return false
+		}
+
+		for _, l := range logs {
+			if !awsservice.MatchEMFLogWithSchema(l, validateSchema, validateLogContents) {
+				return false
+			}
+		}
+		return true
+	})
+
+	if !ok || err != nil {
+		return fmt.Errorf("\n Failed to validate emf json schema%s with log group %s, log stream %s, start time %v and end time %v", emfSchemaName, logGroup, logStream, startTime, endTime)
 	}
 
 	return nil
@@ -133,58 +167,47 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine string, numberOfLogLine
 
 func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, metricValue float64, metricSampleCount int, startTime, endTime time.Time) error {
 	var (
-		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
+		boundAndPeriod = int32(s.vConfig.GetAgentCollectionPeriod().Seconds())
 	)
-
-	metricQueries := s.buildMetricQueries(metricName, metricNamespace, metricDimensions)
 
 	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
 
-	metrics, err := awsservice.GetMetricData(metricQueries, startTime, endTime)
+	metrics, err := awsservice.GetMetricStatistics(metricName, metricNamespace, metricDimensions, startTime, endTime, boundAndPeriod, []types.Statistic{types.StatisticAverage})
+	log.Printf("%v", metrics)
 	if err != nil {
 		return err
 	}
 
-	if len(metrics.MetricDataResults) == 0 || len(metrics.MetricDataResults[0].Values) == 0 {
+	if len(metrics.Datapoints) == 0 {
 		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
 	}
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount, metricSampleCount, int32(boundAndPeriod)); !ok {
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount, metricSampleCount, boundAndPeriod); !ok {
 		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount, metricSampleCount)
 	}
 
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 10%]
-	actualMetricValue := metrics.MetricDataResults[0].Values[0]
+	actualMetricValue := *metrics.Datapoints[0].Average
 	upperBoundValue := metricValue * (1 + metricErrorBound)
 	lowerBoundValue := metricValue * (1 - metricErrorBound)
 
 	if metricValue != 0.0 && (actualMetricValue < lowerBoundValue || actualMetricValue > upperBoundValue) {
-		return fmt.Errorf("\n metric %s value %f is different from the actual value %f", metricName, metricValue, metrics.MetricDataResults[0].Values[0])
+		return fmt.Errorf("\n metric %s value %f is different from the actual value %f", metricName, metricValue, actualMetricValue)
 	}
 
 	return nil
 }
 
-func (s *BasicValidator) buildMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) []types.MetricDataQuery {
-	var metricQueryPeriod = int32(s.vConfig.GetAgentCollectionPeriod().Seconds())
-
-	metricInformation := types.Metric{
-		Namespace:  aws.String(metricNamespace),
-		MetricName: aws.String(metricName),
-		Dimensions: metricDimensions,
+func getEMFSchemaAndValidateFunction(emfSchemaName string) (*jsonschema.Schema, func(string) bool) {
+	switch EmfSchema {
+	case "emf_schema":
+		// The validator will generate EMF metrics with InstanceId as a dimension
+		// https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/internal/common/metrics.go#L183-L210
+		// Therefore, validate if the InstanceId is there. There will be changes for ECS Fargate and EKS Fargate
+		// but focus on EC2 first
+		return jsonschema.Must(EmfSchema), func(s string) bool { return strings.Contains(s, "\"InstanceId\"") }
 	}
-
-	metricDataQueries := []types.MetricDataQuery{
-		{
-			MetricStat: &types.MetricStat{
-				Metric: &metricInformation,
-				Period: &metricQueryPeriod,
-				Stat:   aws.String(string(models.AVERAGE)),
-			},
-			Id: aws.String(strings.ToLower(metricName)),
-		},
-	}
-	return metricDataQueries
+	return nil, func(_ string) bool { return false }
 }

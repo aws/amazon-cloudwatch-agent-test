@@ -135,17 +135,11 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 	var (
 		metricNamespace              = s.vConfig.GetMetricNamespace()
 		validationMetric             = s.vConfig.GetMetricValidation()
-		ec2InstanceId                = awsservice.GetInstanceId()
 		performanceMetricDataQueries = []types.MetricDataQuery{}
 	)
 	log.Printf("Start getting performance metrics from CloudWatch")
 	for _, metric := range validationMetric {
-		metricDimensions := []types.Dimension{
-			{
-				Name:  aws.String("InstanceId"),
-				Value: aws.String(ec2InstanceId),
-			},
-		}
+		var metricDimensions []types.Dimension
 		for _, dimension := range metric.MetricDimension {
 			metricDimensions = append(metricDimensions, types.Dimension{
 				Name:  aws.String(dimension.Name),

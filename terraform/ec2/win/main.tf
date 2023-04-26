@@ -46,6 +46,7 @@ module "validator" {
   test_dir       = var.test_dir
   temp_directory = "C:/Users/Administrator/AppData/Local/Temp"
   cwa_github_sha = var.cwa_github_sha
+  instance_id    = aws_instance.cwagent.id
 }
 
 #####################################################################

@@ -17,9 +17,7 @@ agent_collection_period: 60
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 
-# Metric that the test needs to validate; moreover, the stress validation already has
-# InstanceID dimension; therefore, does not need to validate it
-# https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
+# Metric that the test needs to validate
 metric_namespace: "CloudWatchAgentWinFeature"
 metric_validation:
   # Validator generates statsd metrics 
@@ -28,6 +26,8 @@ metric_validation:
     metric_value: 1.0
     metric_sample_count: 1
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "metric_type"
         value: "gauge"
 
@@ -35,6 +35,8 @@ metric_validation:
     metric_value: 1.0
     metric_sample_count: 1
     metric_dimension:   
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "metric_type"
         value: "counter"
 
@@ -43,22 +45,52 @@ metric_validation:
   - metric_name: "emf_time_1"
     metric_value: 1.0
     metric_sample_count: 1
-  
+    metric_dimension:   
+      - name: "InstanceId"
+        value: "<instance_id>"
+
   - metric_name: "emf_time_2"
     metric_value: 2.0
     metric_sample_count: 1
+    metric_dimension:   
+      - name: "InstanceId"
+        value: "<instance_id>"
 
   - metric_name: "Available_Bytes"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "objectname"
         value: "Memory"
 
   - metric_name: "Processor_Queue_Length"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "objectname"
         value: "System"
+
+  - metric_name: "procstat cpu_usage"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
+      - name: "exe"
+        value: "amazon-cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent.exe"
+
+  - metric_name: "procstat memory_rss"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
+      - name: "exe"
+        value: "amazon-cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent.exe"
 
 # Logs that the test needs to validate; moreover, the feature validation already has
 # InstanceID as a log group; therefore, does not need to pass it
@@ -85,3 +117,7 @@ log_validation:
   - log_value: "# 1 - This is a log line."
     log_lines: 1
     log_stream: "test1.log"
+
+emf_validation:
+  - log_value: "emf_metrics_schema"
+    log_stream: "<instance_id>"

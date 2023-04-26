@@ -28,6 +28,8 @@ metric_validation:
     metric_value: 1.0
     metric_sample_count: 1
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "metric_type"
         value: "gauge"
 
@@ -35,6 +37,8 @@ metric_validation:
     metric_value: 1.0
     metric_sample_count: 1
     metric_dimension:   
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "metric_type"
         value: "counter"
   
@@ -43,38 +47,54 @@ metric_validation:
   - metric_name: "emf_time_1"
     metric_value: 1.0
     metric_sample_count: 1
-  
+    metric_dimension:   
+      - name: "InstanceId"
+        value: "<instance_id>"
+
   - metric_name: "emf_time_2"
     metric_value: 2.0
     metric_sample_count: 1
+    metric_dimension:   
+      - name: "InstanceId"
+        value: "<instance_id>"
 
   - metric_name: "cpu_time_active"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "cpu"
         value: "cpu-total"
-
+    
   - metric_name: "cpu_time_guest"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "cpu"
         value: "cpu-total"
 
   - metric_name: "net_bytes_sent"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "interface"
         value: "en0"
 
   - metric_name: "net_bytes_recv"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "interface"
         value: "en0"
 
   - metric_name: "disk_free"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "fstype"
         value: "devfs"
       - name: "path"
@@ -83,6 +103,8 @@ metric_validation:
   - metric_name: "disk_used_percent"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "fstype"
         value: "devfs"
       - name: "path"
@@ -91,6 +113,8 @@ metric_validation:
   - metric_name: "procstat_cpu_usage"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "exe"
         value: "amazon-cloudwatch-agent"
       - name: "process_name"
@@ -99,6 +123,8 @@ metric_validation:
   - metric_name: "procstat_memory_rss"
     metric_sample_count: 60
     metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
       - name: "exe"
         value: "amazon-cloudwatch-agent"
       - name: "process_name"
@@ -106,28 +132,51 @@ metric_validation:
 
   - metric_name: "swap_free"
     metric_sample_count: 60
-    metric_dimension: []
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
+
   - metric_name: "swap_used_percent"
     metric_sample_count: 60
-    metric_dimension: []
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
+
   - metric_name: "processes_blocked"
     metric_sample_count: 60
-    metric_dimension: []
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
+
   - metric_name: "processes_running"
     metric_sample_count: 60
-    metric_dimension: []
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
+
   - metric_name: "netstat_tcp_close"
     metric_sample_count: 60
-    metric_dimension: []
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
+
   - metric_name: "netstat_udp_socket"
     metric_sample_count: 60
-    metric_dimension: []
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
+
   - metric_name: "mem_available_percent"
     metric_sample_count: 60
-    metric_dimension: []
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
+
   - metric_name: "mem_used_percent"
     metric_sample_count: 60
-    metric_dimension: []
+    metric_dimension: 
+      - name: "InstanceId"
+        value: "<instance_id>"
 
 # Logs that the test needs to validate; moreover, the feature validation already has
 # InstanceID as a log group; therefore, does not need to pass it
@@ -148,3 +197,9 @@ log_validation:
   - log_value: "# 1 - This is a log line."
     log_lines: 1
     log_stream: "test1.log"
+
+# EMF schema that needs to validate (e.g when convert all metrics to embedded metrics format with container insight or prometheus)
+# Currently support emf_metrics_schema
+emf_validation:
+  - log_value: "emf_metrics_schema"
+    log_stream: "<instance_id>"

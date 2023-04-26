@@ -15,7 +15,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf"}
+var (
+	supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf"}
+	supportedEMFSchema = []string{"emf_metric_schema"}
+)
 
 type ValidateConfig interface {
 	GetPluginsConfig() []string
@@ -29,6 +32,7 @@ type ValidateConfig interface {
 	GetMetricNamespace() string
 	GetMetricValidation() []MetricValidation
 	GetLogValidation() []LogValidation
+	GetEMFValidation() []EmfValidation
 	GetCommitInformation() (string, int64)
 	GetUniqueID() string
 }
@@ -50,6 +54,7 @@ type validatorConfig struct {
 	MetricNamespace  string             `yaml:"metric_namespace"`
 	MetricValidation []MetricValidation `yaml:"metric_validation"`
 	LogValidation    []LogValidation    `yaml:"log_validation"`
+	EmfValidation    []EmfValidation    `yaml:"emf_validation`
 
 	CommitHash string `yaml:"commit_hash"`
 	CommitDate string `yaml:"commit_date"`
@@ -65,6 +70,11 @@ type MetricValidation struct {
 type LogValidation struct {
 	LogValue  string `yaml:"log_value"`
 	LogLines  int    `yaml:"log_lines"`
+	LogStream string `yaml:"log_stream"`
+}
+
+type EmfValidation struct {
+	EmfSchema string `yaml:"emf_schema"`
 	LogStream string `yaml:"log_stream"`
 }
 
@@ -100,6 +110,11 @@ func ValidateValidatorConfig(vConfig validatorConfig) error {
 			return fmt.Errorf("only support %v, the validator does not support %s", supportedReceivers, receiver)
 		}
 	}
+	for _, emfSchema := range vConfig.EmfValidation {
+		if !slices.Contains(supportedEMFSchema, emfSchema.EmfSchema) {
+			return fmt.Errorf("only support %v, the validator does not support %s", supportedEMFSchema, emfSchema.EmfSchema)
+		}
+	}
 	return nil
 }
 
@@ -108,7 +123,7 @@ func (v *validatorConfig) GetTestCase() string {
 	return v.TestCase
 }
 
-// GetTestCase return the validation type (e.g stress https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-36fa5ec31f40a4d9a878623ba1993272853ab2125e64152317da2a66cc7365d6R17-R18)
+// GetValidateType return the validation type (e.g stress https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-36fa5ec31f40a4d9a878623ba1993272853ab2125e64152317da2a66cc7365d6R17-R18)
 func (v *validatorConfig) GetValidateType() string {
 	return v.ValidateType
 }
@@ -118,7 +133,7 @@ func (v *validatorConfig) GetPluginsConfig() []string {
 	return v.Receivers
 }
 
-// GetPluginsConfig returns the type needs to validate or send. Only supports metrics, traces, logs
+// GetDataType returns the type needs to validate or send. Only supports metrics, traces, logs
 func (v *validatorConfig) GetDataType() string {
 	return v.DataType
 }
@@ -159,6 +174,11 @@ func (v *validatorConfig) GetMetricValidation() []MetricValidation {
 // GetLogValidation returns the logs need for validation
 func (v *validatorConfig) GetLogValidation() []LogValidation {
 	return v.LogValidation
+}
+
+// GetLogValidation returns the EMF schema need for validation
+func (v *validatorConfig) GetEMFValidation() []EmfValidation {
+	return v.EmfValidation
 }
 
 func (v *validatorConfig) GetCommitInformation() (string, int64) {

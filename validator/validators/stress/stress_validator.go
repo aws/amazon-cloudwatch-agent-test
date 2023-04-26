@@ -6,7 +6,6 @@ package stress
 import (
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
@@ -261,17 +260,11 @@ func NewStressValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 	var (
 		multiErr         error
-		ec2InstanceId    = awsservice.GetInstanceId()
 		metricNamespace  = s.vConfig.GetMetricNamespace()
 		validationMetric = s.vConfig.GetMetricValidation()
 	)
 	for _, metric := range validationMetric {
-		metricDimensions := []types.Dimension{
-			{
-				Name:  aws.String("InstanceId"),
-				Value: aws.String(ec2InstanceId),
-			},
-		}
+		var metricDimensions []types.Dimension
 		for _, dimension := range metric.MetricDimension {
 			metricDimensions = append(metricDimensions, types.Dimension{
 				Name:  aws.String(dimension.Name),
@@ -290,21 +283,20 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, metricSampleCount int, startTime, endTime time.Time) error {
 	var (
 		dataRate       = fmt.Sprint(s.vConfig.GetDataRate())
-		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
+		boundAndPeriod = int32(s.vConfig.GetAgentCollectionPeriod().Seconds())
 		receiver       = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 	)
-
-	stressMetricQueries := s.buildStressMetricQueries(metricName, metricNamespace, metricDimensions)
 
 	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
 
 	// We are only interesting in the maxium metric values within the time range
-	metrics, err := awsservice.GetMetricData(stressMetricQueries, startTime, endTime)
+	metrics, err := awsservice.GetMetricStatistics(metricName, metricNamespace, metricDimensions, startTime, endTime, boundAndPeriod, []types.Statistic{types.StatisticMaximum})
+
 	if err != nil {
 		return err
 	}
 
-	if len(metrics.MetricDataResults) == 0 || len(metrics.MetricDataResults[0].Values) == 0 {
+	if len(metrics.Datapoints) == 0 {
 		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
 	}
 
@@ -318,7 +310,7 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 
 	// Assuming each plugin are testing one at a time
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
-	metricValue := metrics.MetricDataResults[0].Values[0]
+	metricValue := *metrics.Datapoints[0].Maximum
 	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
 	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f \n", metricName, metricNamespace, metricValue, upperBoundValue)
 
@@ -328,33 +320,9 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-5, metricSampleCount, int32(boundAndPeriod)); !ok {
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-5, metricSampleCount, boundAndPeriod); !ok {
 		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount-5, metricSampleCount)
 	}
 
 	return nil
-}
-
-func (s *StressValidator) buildStressMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) []types.MetricDataQuery {
-	var (
-		metricQueryPeriod = int32(s.vConfig.GetAgentCollectionPeriod().Seconds())
-	)
-
-	metricInformation := types.Metric{
-		Namespace:  aws.String(metricNamespace),
-		MetricName: aws.String(metricName),
-		Dimensions: metricDimensions,
-	}
-
-	metricDataQueries := []types.MetricDataQuery{
-		{
-			MetricStat: &types.MetricStat{
-				Metric: &metricInformation,
-				Period: &metricQueryPeriod,
-				Stat:   aws.String(string(models.MAXIMUM)),
-			},
-			Id: aws.String(strings.ToLower(metricName)),
-		},
-	}
-	return metricDataQueries
 }
