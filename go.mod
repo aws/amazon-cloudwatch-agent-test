@@ -24,7 +24,9 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/prozz/aws-embedded-metrics-golang v1.2.0
 	github.com/qri-io/jsonschema v0.2.1
+	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/stretchr/testify v1.8.2
 	go.uber.org/multierr v1.9.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
@@ -57,7 +59,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/qri-io/jsonpointer v0.1.1 // indirect
-	github.com/shirou/gopsutil/v3 v3.23.3 // indirect
 	github.com/shoenig/go-m1cpu v0.1.4 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect

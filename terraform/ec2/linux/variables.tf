@@ -44,7 +44,12 @@ variable "ca_cert_path" {
 
 variable "arc" {
   type    = string
-  default = ""
+  default = "amd64"
+
+  validation {
+    condition     = contains(["amd64", "arm64"], var.arc)
+    error_message = "Valid values for arc are (amd64, arm64)."
+  }
 }
 
 variable "binary_name" {

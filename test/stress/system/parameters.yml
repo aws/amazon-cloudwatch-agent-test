@@ -1,17 +1,16 @@
-receivers: ["logs"]
+# Receivers that agent needs to tests
+receivers: ["system"]
 
-test_case: "logs_stress"
+#Test case name
+test_case: "system_stress"
 validate_type: "stress"
-data_type: "logs"
-# Number of logs being written
-number_monitored_logs: 100
+# Only support metrics/traces/logs
+data_type: "metrics"
+
 # Number of metrics to be sent or number of log lines being written  each minute
 values_per_minute: "<values_per_minute>"
-# Number of seconds the agent should run and collect the metrics. In this case, 5 minutes
+# Number of seconds the agent should run and collect the metrics. In this case, 10 minutes
 agent_collection_period: 300 
-
-commit_hash: <commit_hash>
-commit_date: <commit_date>
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 

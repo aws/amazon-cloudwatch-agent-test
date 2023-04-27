@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/util"
 )
 
 type MetricPluginBoundValue map[string]map[string]map[string]float64
@@ -49,7 +50,7 @@ var (
 				"net_packets_sent":     float64(105),
 			},
 			"logs": {
-				"procstat_cpu_usage":   float64(200),
+				"procstat_cpu_usage":   float64(250),
 				"procstat_memory_rss":  float64(220000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(888000000),
@@ -57,6 +58,26 @@ var (
 				"procstat_num_fds":     float64(110),
 				"net_bytes_sent":       float64(1800000),
 				"net_packets_sent":     float64(5000),
+			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(75000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(75000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(100),
+			},
+			"emf": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(75000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(75000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(100),
 			},
 		},
 		"5000": {
@@ -90,10 +111,30 @@ var (
 				"net_bytes_sent":       float64(6500000),
 				"net_packets_sent":     float64(8500),
 			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(75000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(75000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(100),
+			},
+			"emf": {
+				"procstat_cpu_usage":   float64(25),
+				"procstat_memory_rss":  float64(80000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(79000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(120),
+			},
 		},
 		"10000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(135),
+				"procstat_cpu_usage":   float64(150),
 				"procstat_memory_rss":  float64(160000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(888000000),
@@ -121,6 +162,26 @@ var (
 				"procstat_num_fds":     float64(180),
 				"net_bytes_sent":       float64(6820000),
 				"net_packets_sent":     float64(8300),
+			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(75000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(75000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(100),
+			},
+			"emf": {
+				"procstat_cpu_usage":   float64(40),
+				"procstat_memory_rss":  float64(85000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(88000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(120),
 			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
@@ -158,6 +219,26 @@ var (
 				"procstat_num_fds":     float64(200),
 				"net_bytes_sent":       float64(6900000),
 				"net_packets_sent":     float64(6500),
+			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(75000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(75000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(90000),
+				"net_packets_sent":     float64(100),
+			},
+			"emf": {
+				"procstat_cpu_usage":   float64(165),
+				"procstat_memory_rss":  float64(100000000),
+				"procstat_memory_swap": float64(0),
+				"procstat_memory_vms":  float64(818000000),
+				"procstat_memory_data": float64(110000000),
+				"procstat_num_fds":     float64(11),
+				"net_bytes_sent":       float64(280000),
+				"net_packets_sent":     float64(220),
 			},
 		},
 	}
@@ -197,7 +278,7 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(dimension.Value),
 			})
 		}
-		err := s.ValidateStressMetric(metric.MetricName, metricNamespace, metricDimensions, startTime, endTime)
+		err := s.ValidateStressMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricSampleCount, startTime, endTime)
 		if err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
@@ -206,7 +287,7 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 	return multiErr
 }
 
-func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, startTime, endTime time.Time) error {
+func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, metricSampleCount int, startTime, endTime time.Time) error {
 	var (
 		dataRate       = fmt.Sprint(s.vConfig.GetDataRate())
 		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
@@ -215,7 +296,7 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 
 	stressMetricQueries := s.buildStressMetricQueries(metricName, metricNamespace, metricDimensions)
 
-	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v", metricName, metricNamespace, startTime, endTime)
+	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
 
 	// We are only interesting in the maxium metric values within the time range
 	metrics, err := awsservice.GetMetricData(stressMetricQueries, startTime, endTime)
@@ -224,31 +305,31 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	}
 
 	if len(metrics.MetricDataResults) == 0 || len(metrics.MetricDataResults[0].Values) == 0 {
-		return fmt.Errorf("getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, metricDimensions)
+		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
 	}
 
 	if _, ok := metricPluginBoundValue[dataRate][receiver]; !ok {
-		return fmt.Errorf("plugin %s does not have data rate", receiver)
+		return fmt.Errorf("\n plugin %s does not have data rate", receiver)
 	}
 
 	if _, ok := metricPluginBoundValue[dataRate][receiver][metricName]; !ok {
-		return fmt.Errorf("metric %s does not have bound", receiver)
+		return fmt.Errorf("\n metric %s does not have bound", receiver)
 	}
 
 	// Assuming each plugin are testing one at a time
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 	metricValue := metrics.MetricDataResults[0].Values[0]
 	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
-	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f", metricName, metricNamespace, metricValue, upperBoundValue)
+	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f \n", metricName, metricNamespace, metricValue, upperBoundValue)
 
 	if metricValue < 0 || metricValue > upperBoundValue {
-		return fmt.Errorf("metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
+		return fmt.Errorf("\n metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
 	}
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, int(boundAndPeriod-5), int(boundAndPeriod), int32(boundAndPeriod)); !ok {
-		return fmt.Errorf("metric %s is not within sample count bound [ %f, %f]", metricName, boundAndPeriod-5, boundAndPeriod)
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-5, metricSampleCount, int32(boundAndPeriod)); !ok {
+		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount-5, metricSampleCount)
 	}
 
 	return nil

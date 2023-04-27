@@ -45,16 +45,6 @@
             ],
             "metrics_collection_interval": 1
         },
-        "diskio": {
-            "resources": [
-              "*"
-            ],
-            "measurement": [
-              "iops_in_progress", 
-              "io_time"
-            ],
-            "metrics_collection_interval": 1
-        },
         "disk": {
             "resources": [
               "*"

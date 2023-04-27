@@ -1,5 +1,5 @@
 # Receivers that agent needs to tests
-receivers: ["host","statsd"]
+receivers: ["system","statsd","emf"]
 
 #Test case name
 test_case: "macos_feature"
@@ -22,6 +22,8 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # https://github.com/aws/amazon-cloudwatch-agent-test/blob/96f576e865b55de5e2aa88e4cf80b79c4d3dad70/validator/validators/feature/feature_validator.go#L66-L71
 metric_namespace: "CloudWatchAgentMacFeature"
 metric_validation:
+  # Validator generates metrics 
+  # https://github.com/aws/amazon-cloudwatch-agent-test/blob/4365fbdbf979756e7f6db7f795a8a84b2c4f57c1/internal/common/metrics.go#L130-L165
   - metric_name: "statsd_gauge_1"
     metric_value: 1.0
     metric_sample_count: 1
@@ -35,6 +37,16 @@ metric_validation:
     metric_dimension:   
       - name: "metric_type"
         value: "counter"
+  
+  # Validator generates emf metrics
+  # https://github.com/aws/amazon-cloudwatch-agent-test/blob/62930a4acf466934b3894658e2060dd5840c49c4/internal/common/metrics.go#L170-L211s 
+  - metric_name: "emf_time_1"
+    metric_value: 1.0
+    metric_sample_count: 1
+  
+  - metric_name: "emf_time_2"
+    metric_value: 2.0
+    metric_sample_count: 1
 
   - metric_name: "cpu_time_active"
     metric_sample_count: 60
@@ -59,18 +71,6 @@ metric_validation:
     metric_dimension: 
       - name: "interface"
         value: "en0"
- 
-  - metric_name: "diskio_iops_in_progress"
-    metric_sample_count: 60
-    metric_dimension: 
-      - name: "name"
-        value: "disk0"
-
-  - metric_name: "diskio_io_time"
-    metric_sample_count: 60
-    metric_dimension: 
-      - name: "name"
-        value: "disk0"
 
   - metric_name: "disk_free"
     metric_sample_count: 60

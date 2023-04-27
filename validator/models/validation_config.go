@@ -15,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var supportedReceivers = []string{"logs", "statsd", "collectd", "host"}
+var supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf"}
 
 type ValidateConfig interface {
 	GetPluginsConfig() []string
@@ -88,13 +88,19 @@ func NewValidateConfig(configPath string) (*validatorConfig, error) {
 	}
 	log.Printf("Parameters validation for %v", vConfig)
 
+	if err := ValidateValidatorConfig(vConfig); err != nil {
+		return nil, err
+	}
+	return &vConfig, nil
+}
+
+func ValidateValidatorConfig(vConfig validatorConfig) error {
 	for _, receiver := range vConfig.Receivers {
 		if !slices.Contains(supportedReceivers, receiver) {
-			return nil, fmt.Errorf("only support %v, the validator does not support %s", supportedReceivers, receiver)
+			return fmt.Errorf("only support %v, the validator does not support %s", supportedReceivers, receiver)
 		}
 	}
-
-	return &vConfig, nil
+	return nil
 }
 
 // GetTestCase return the test case name

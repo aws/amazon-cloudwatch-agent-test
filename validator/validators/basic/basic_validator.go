@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/util"
 )
 
 const metricErrorBound = 0.1
@@ -34,26 +35,23 @@ func NewBasicValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 
 func (s *BasicValidator) GenerateLoad() error {
 	var (
-		multiErr              error
 		metricSendingInterval = time.Minute
+		logGroup              = awsservice.GetInstanceId()
+		metricNamespace       = s.vConfig.GetMetricNamespace()
 		dataRate              = s.vConfig.GetDataRate()
+		dataType              = s.vConfig.GetDataType()
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
-		receivers             = s.vConfig.GetPluginsConfig()
+		receiver              = s.vConfig.GetPluginsConfig()[0]
 	)
 
-	if err := common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
-		multiErr = multierr.Append(multiErr, err)
+	switch dataType {
+	case "logs":
+		return common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
+	default:
+		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
+		return common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate, logGroup, metricNamespace)
 	}
-
-	// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
-	for _, receiver := range receivers {
-		if err := common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
-			multiErr = multierr.Append(multiErr, err)
-		}
-	}
-
-	return multiErr
 }
 
 func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
@@ -127,7 +125,7 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine string, numberOfLogLine
 	})
 
 	if !ok || err != nil {
-		return fmt.Errorf("the number of log line for '%s' is %d which does not match the actual number with log group %s, log stream %s, start time %v and end time %v with err %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime, err)
+		return fmt.Errorf("\n the number of log line for '%s' is %d which does not match the actual number with log group %s, log stream %s, start time %v and end time %v with err %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime, err)
 	}
 
 	return nil
@@ -140,7 +138,7 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 
 	metricQueries := s.buildMetricQueries(metricName, metricNamespace, metricDimensions)
 
-	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v", metricName, metricNamespace, startTime, endTime)
+	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
 
 	metrics, err := awsservice.GetMetricData(metricQueries, startTime, endTime)
 	if err != nil {
@@ -148,13 +146,13 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 	}
 
 	if len(metrics.MetricDataResults) == 0 || len(metrics.MetricDataResults[0].Values) == 0 {
-		return fmt.Errorf("getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, metricDimensions)
+		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
 	}
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
 	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount, metricSampleCount, int32(boundAndPeriod)); !ok {
-		return fmt.Errorf("metric %s is not within sample count bound [ %f, %f]", metricName, boundAndPeriod, boundAndPeriod)
+		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount, metricSampleCount)
 	}
 
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 10%]
@@ -163,7 +161,7 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 	lowerBoundValue := metricValue * (1 - metricErrorBound)
 
 	if metricValue != 0.0 && (actualMetricValue < lowerBoundValue || actualMetricValue > upperBoundValue) {
-		return fmt.Errorf("metric %s value %f is different from the actual value %f", metricName, metricValue, metrics.MetricDataResults[0].Values[0])
+		return fmt.Errorf("\n metric %s value %f is different from the actual value %f", metricName, metricValue, metrics.MetricDataResults[0].Values[0])
 	}
 
 	return nil
