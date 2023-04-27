@@ -1,0 +1,217 @@
+{
+    "agent": {
+        "metrics_collection_interval": 60
+    },
+    "metrics": {
+        "append_dimensions": {
+            "InstanceType": "${aws:InstanceType}"
+        },
+        "metrics_collected": {
+            "LogicalDisk": {
+                "resources": [
+                    "*"
+                ],
+                "measurement": [
+                    "% Free Space",
+                    "% Disk Time"
+                ]
+            },
+            "Memory": {
+                "measurement": [
+                    "% Committed Bytes In Use"
+                ]
+            },
+            "Processor": {
+                "resources": [
+                    "*"
+                ],
+                "measurement": [
+                    "% User Time",
+                    "% Idle Time",
+                    "% Interrupt Time",
+                    "% Processor Time"
+                ]
+            },
+            "statsd": {},
+            "System": {
+                "measurement": [
+                    "Context Switches/sec"
+                ]
+            },
+            "procstat": [
+                {
+                    "measurement": [
+                        "cpu_usage",
+                        "memory_rss",
+                        "num_threads"
+                    ],
+                    "exe": "amazon-cloudwatch-agent"
+                }
+            ]
+        },
+        "namespace": "CWAgent/SoakTestHighWindows"
+    },
+    "logs": {
+        "logs_collected": {
+            "files": {
+                "collect_list": [
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp0*.log",
+                        "log_group_name": "WS0.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp1*.log",
+                        "log_group_name": "WS1.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp2*.log",
+                        "log_group_name": "WS2.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp3*.log",
+                        "log_group_name": "WS3.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp4*.log",
+                        "log_group_name": "WS4.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp5*.log",
+                        "log_group_name": "WS5.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp6*.log",
+                        "log_group_name": "WS6.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp7*.log",
+                        "log_group_name": "WS7.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp8*.log",
+                        "log_group_name": "WS8.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\tmp9*.log",
+                        "log_group_name": "WS9.log",
+                        "multi_line_start_pattern": "{timestamp_format}",
+                        "timestamp_format": "%d %b %y %H:%M:%S",
+                        "timezone": "UTC",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile0*.json",
+                        "log_group_name": "WindowsStructuredLogs0",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile1*.json",
+                        "log_group_name": "WindowsStructuredLogs1",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile2*.json",
+                        "log_group_name": "WindowsStructuredLogs2",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile3*.json",
+                        "log_group_name": "WindowsStructuredLogs3",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile4*.json",
+                        "log_group_name": "WindowsStructuredLogs4",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile5*.json",
+                        "log_group_name": "WindowsStructuredLogs5",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile6*.json",
+                        "log_group_name": "WindowsStructuredLogs6",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile7*.json",
+                        "log_group_name": "WindowsStructuredLogs7",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile8*.json",
+                        "log_group_name": "WindowsStructuredLogs8",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "file_path": "C:\\tmp\\soakTest\\structuredLogFile9*.json",
+                        "log_group_name": "WindowsStructuredLogs9",
+                        "multi_line_start_pattern": "^{",
+                        "retention_in_days": 1
+                    }
+                ]
+            },
+            "windows_events": {
+                "collect_list": [
+                    {
+                        "event_name": "Application",
+                        "event_levels": [
+                            "CRITICAL",
+                            "VERBOSE",
+                            "INFORMATION",
+                            "ERROR",
+                            "WARNING"
+                        ],
+                        "log_group_name": "SoakTest-Application"
+                    }
+                ]
+            }
+        }
+    }
+}

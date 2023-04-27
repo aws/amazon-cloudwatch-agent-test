@@ -38,12 +38,13 @@ locals {
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
-  ami                         = data.aws_ami.latest.id
-  instance_type               = var.ec2_instance_type
-  key_name                    = local.ssh_key_name
-  iam_instance_profile        = module.basic_components.instance_profile
-  vpc_security_group_ids      = [module.basic_components.security_group]
-  associate_public_ip_address = true
+  ami                                  = data.aws_ami.latest.id
+  instance_type                        = var.ec2_instance_type
+  key_name                             = local.ssh_key_name
+  iam_instance_profile                 = module.basic_components.instance_profile
+  vpc_security_group_ids               = [module.basic_components.security_group]
+  associate_public_ip_address          = true
+  instance_initiated_shutdown_behavior = "terminate"
 
   metadata_options {
     http_endpoint = "enabled"

@@ -12,6 +12,11 @@ import (
 	"path/filepath"
 )
 
+const (
+	ConfigOutputPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.json"
+	AgentLogFile     = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+)
+
 func CopyFile(pathIn string, pathOut string) error {
 	ps, err := exec.LookPath("powershell.exe")
 
@@ -97,4 +102,30 @@ func RunShellScript(path string, args ...string) error {
 	}
 
 	return nil
+}
+
+// printOutputAndError does nothing if there was no error.
+// Else it prints stdout and stderr.
+func printOutputAndError(stdout []byte, err error) {
+	if err == nil {
+		return
+	}
+	stderr := ""
+	ee, ok :=  err.(*exec.ExitError)
+	if ok {
+		stderr = string(ee.Stderr)
+	}
+	log.Printf("failed\n\tstdout:\n%s\n\tstderr:\n%s\n", string(stdout), stderr)
+}
+
+func RunCommand(cmd string) (string, error) {
+	log.Printf("running cmd, %s", cmd)
+	out, err := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-NoExit", cmd).Output()
+	printOutputAndError(out, err)
+	return string(out), err
+}
+
+func RunAyncCommand(cmd string) error {
+	log.Printf("running async cmd, %s", cmd)
+	return exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-NoExit", cmd).Start()
 }
