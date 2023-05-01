@@ -10,11 +10,111 @@
           "metrics_collection_interval": 60,
           "service_address": ":8125"
         },
+        "Processor": {
+          "measurement": [
+            {
+              "name":"% Idle Time",
+              "rename": "Idle_Time"
+            },
+            {
+              "name":"% Interrupt Time",
+              "rename": "Interrupt_Time"
+            },
+            {
+              "name":"% User Time",
+              "rename": "User_Time"
+            },
+            {
+              "name":"% Processor Time",
+              "rename": "Processor_Time"
+            }
+          ],
+          "resources": [
+            "*"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "LogicalDisk": {
+          "measurement": [
+            {
+              "name":"% Free Space",
+              "rename":"Free_Space"
+            }
+          ],
+          "resources": [
+            "*"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "PhysicalDisk": {
+          "measurement": [
+            {
+              "name":"% Disk Time",
+              "rename": "Disk_Time"
+            },
+            {
+              "name":"Disk Write Bytes/sec",
+              "rename": "Write_Bytes_Per_Sec"
+            },
+            {
+              "name":"Disk Read Bytes/sec",
+              "rename": "Read_Bytes_Per_Sec"
+            },
+            {
+              "name":"Disk Writes/sec",
+              "rename": "Write_Per_Sec"
+            },
+            {
+              "name":"Disk Reads/sec",
+              "rename": "Disk_Read_Per_Sec"
+            }
+          ],
+          "resources": [
+            "*"
+          ],
+          "metrics_collection_interval": 1
+        },
+        "Network Interface": {
+          "measurement": [
+            {
+              "name":"Bytes Sent/sec",
+              "rename": "Bytes_Sent_Per_Sec"
+            },
+            {
+              "name":"Bytes Received/sec",
+              "rename": "Bytes_Received_Per_Sec"
+            },
+            {
+              "name":"Packets Sent/sec",
+              "rename": "Packets_Sent_Per_Sec"
+            },
+            {
+              "name":"Packets Received/sec",
+              "rename": "Packets_Received_Per_Sec"
+            }
+          ],
+          "resources": [
+            "*"
+          ],
+          "metrics_collection_interval": 1
+        },
         "Memory": {
           "measurement": [
             {
               "name": "Available Bytes",
               "rename": "Available_Bytes"
+            },
+            {
+              "name":"Cache Faults/sec",
+              "rename": "Cache_Faults_Per_Sec"
+            },
+            {
+              "name":"Page Faults/sec",
+              "rename": "Page_Faults_Per_sec"
+            },
+            {
+              "name":"Pages/sec",
+              "rename":"Page_Per_Sec"
             }
           ],
           "metrics_collection_interval": 1
@@ -27,6 +127,24 @@
               }
             ],
             "metrics_collection_interval": 1
+        },
+        "TCPv4": {
+          "measurement": [
+              {
+                "name": "Connections Established",
+                "rename": "Connections_Established"
+              }
+          ],
+          "metrics_collection_interval": 1
+        },
+        "TCPv6": {
+          "measurement": [
+            {
+                "name": "Connections Established",
+                "rename": "Connections_Established"
+            }
+          ],
+          "metrics_collection_interval": 1
         },
         "procstat": [
             {
