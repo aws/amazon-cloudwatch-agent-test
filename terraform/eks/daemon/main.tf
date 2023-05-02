@@ -28,7 +28,6 @@ resource "kubernetes_deployment" "service" {
     namespace = "amazon-cloudwatch"
   }
   spec {
-
     template {
       metadata {
         labels = {

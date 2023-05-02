@@ -3,16 +3,6 @@ variable "region" {
   default = "us-west-2"
 }
 
-variable "ami" {
-  type    = string
-  default = "cloudwatch-agent-integration-test-ubuntu*"
-}
-
-variable "ec2_instance_type" {
-  type    = string
-  default = "t3a.xlarge"
-}
-
 variable "test_dir" {
   type    = string
   default = "./test/metric_value_benchmark"

@@ -76,6 +76,9 @@ var testTypeToTestDirMap = map[string][]string{
 	"ec2_acceptance": {
 		"./test/acceptance",
 	},
+	"eks_daemon": {
+		"./test/metric_value_benchmark",
+	},
 }
 
 func main() {
