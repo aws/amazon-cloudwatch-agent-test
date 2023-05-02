@@ -2,4 +2,6 @@ provider "aws" {
   region = var.region
 }
 
-provider "kubernetes" {}
+provider "kubernetes" {
+  load_config_file = false
+}
