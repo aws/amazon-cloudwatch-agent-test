@@ -95,6 +95,11 @@ resource "aws_iam_role_policy_attachment" "cwagent_server_policy_attachment" {
   policy_arn = aws_iam_policy.cwagent_iam_policy.arn
 }
 
+resource "aws_iam_role_policy_attachment" "cwagent_eks_policy_attachment" {
+  role       = aws_iam_role.cwagent_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
 resource "aws_iam_instance_profile" "cwagent_instance_profile" {
   name = module.common.cwa_iam_instance_profile
   role = aws_iam_role.cwagent_role.name
