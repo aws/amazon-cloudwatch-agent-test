@@ -14,6 +14,14 @@ data "aws_eks_cluster_auth" "this" {
   name = aws_eks_cluster.cluster.name
 }
 
+resource "kubernetes_namespace" "namespace" {
+  depends_on = [aws_eks_cluster.cluster]
+  metadata {
+    name      = "cloudwatch-agent"
+    namespace = "amazon-cloudwatch"
+  }
+}
+
 resource "aws_eks_cluster" "cluster" {
   version                   = "1.23" # TODO: parameterize this
   name                      = "cwagent-integ-test-eks-${module.common.testing_id}"
@@ -25,7 +33,7 @@ resource "aws_eks_cluster" "cluster" {
 }
 
 resource "kubernetes_daemonset" "service" {
-  depends_on = [aws_eks_cluster.cluster]
+  depends_on = [kubernetes_namespace.namespace]
   metadata {
     name      = "cloudwatch-agent"
     namespace = "amazon-cloudwatch"
@@ -164,6 +172,7 @@ resource "kubernetes_daemonset" "service" {
 }
 
 resource "kubernetes_config_map" "cwagentconfig" {
+  depends_on = [kubernetes_namespace.namespace]
   metadata {
     name = "cwagentconfig"
     namespace = "amazon-cloudwatch"
@@ -174,6 +183,7 @@ resource "kubernetes_config_map" "cwagentconfig" {
 }
 
 resource "kubernetes_service_account" "cwagentservice" {
+  depends_on = [kubernetes_namespace.namespace]
   metadata {
     name = "cloudwatch-agent"
     namespace = "amazon-cloudwatch"
@@ -181,6 +191,7 @@ resource "kubernetes_service_account" "cwagentservice" {
 }
 
 resource "kubernetes_cluster_role" "clusterrole" {
+  depends_on = [kubernetes_namespace.namespace]
   metadata {
     name = "cloudwatch-agent-role"
   }
@@ -218,6 +229,7 @@ resource "kubernetes_cluster_role" "clusterrole" {
 }
 
 resource "kubernetes_cluster_role_binding" "rolebinding" {
+  depends_on = [kubernetes_namespace.namespace]
   metadata {
     name = "cloudwatch-agent-role-binding"
   }
