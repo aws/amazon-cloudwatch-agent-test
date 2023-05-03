@@ -11,8 +11,7 @@ module "basic_components" {
 }
 
 resource "aws_eks_cluster" "cluster" {
-  version                   = "1.24" # TODO: parameterize this
-  enabled_cluster_log_types = ["api"]
+  version                   = "1.23" # TODO: parameterize this
   name                      = "cwagent-integ-test-eks-${module.common.testing_id}"
   role_arn                  = module.basic_components.role_arn
   vpc_config {
