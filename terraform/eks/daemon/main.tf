@@ -38,6 +38,11 @@ resource "kubernetes_daemonset" "service" {
     namespace = "amazon-cloudwatch"
   }
   spec {
+    selector {
+      match_labels = {
+        "name": "cloudwatch-agent"
+      }
+    }
     template {
       metadata {
         labels = {
