@@ -10,6 +10,10 @@ module "basic_components" {
   region = var.region
 }
 
+data "aws_eks_cluster_auth" "this" {
+  name = aws_eks_cluster.cluster.name
+}
+
 resource "aws_eks_cluster" "cluster" {
   version                   = "1.23" # TODO: parameterize this
   name                      = "cwagent-integ-test-eks-${module.common.testing_id}"
