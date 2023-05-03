@@ -248,3 +248,13 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
     namespace = "amazon-cloudwatch"
   }
 }
+
+resource "null_resource" "validator" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Validating EKS metrics/logs
+      cd ../../..
+      go test ${var.test_dir} -clusterArn=${aws_eks_cluster.cluster.arn} -computeType=EKS -v
+    EOT
+  }
+}
