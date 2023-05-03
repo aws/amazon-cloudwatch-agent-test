@@ -17,8 +17,7 @@ data "aws_eks_cluster_auth" "this" {
 resource "kubernetes_namespace" "namespace" {
   depends_on = [aws_eks_cluster.cluster]
   metadata {
-    name      = "cloudwatch-agent"
-    namespace = "amazon-cloudwatch"
+    name = "amazon-cloudwatch"
   }
 }
 
