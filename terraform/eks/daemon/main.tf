@@ -14,7 +14,7 @@ locals {
   awsauth_configmap = "./resources/awsauth.tpl"
 }
 
-data "template_file" "aws_auth_config" {
+data "template_file" "awsauthconfig" {
   template = file(local.awsauth_configmap)
   vars = {
     node_role_arn = aws_eks_node_group.nodes.node_role_arn
@@ -244,14 +244,14 @@ resource "kubernetes_config_map" "cwagentconfig" {
   }
 }
 
-resource "kubernetes_config_map" "aws_auth" {
+resource "kubernetes_config_map" "awsauth" {
   depends_on = [kubernetes_namespace.namespace]
   metadata {
     name = "aws_auth_config"
     namespace = "amazon-cloudwatch"
   }
   data = {
-    "configuration": data.template_file.aws_auth_config.rendered
+    "configuration": data.template_file.awsauthconfig.rendered
   }
 }
 
