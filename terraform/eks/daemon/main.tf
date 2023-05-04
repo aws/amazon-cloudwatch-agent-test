@@ -10,6 +10,17 @@ module "basic_components" {
   region = var.region
 }
 
+locals {
+  awsauth_configmap = "./resources/awsauth.tpl"
+}
+
+data "template_file" "aws_auth_config" {
+  template = file(local.awsauth_configmap)
+  vars = {
+    node_role_arn = aws_eks_node_group.nodes.node_role_arn
+  }
+}
+
 data "aws_eks_cluster_auth" "this" {
   name = aws_eks_cluster.cluster.name
 }
@@ -32,6 +43,7 @@ resource "aws_eks_cluster" "cluster" {
 }
 
 resource "aws_eks_node_group" "nodes" {
+  node_group_name_prefix = "cwagent-${module.common.testing_id}"
   depends_on = [aws_eks_cluster.cluster]
   cluster_name  = aws_eks_cluster.cluster.name
   node_role_arn = module.basic_components.role_arn
@@ -45,7 +57,7 @@ resource "aws_eks_node_group" "nodes" {
 }
 
 resource "aws_iam_role" "noderole" {
-  name = "eks-node-group-${module.common.testing_id}"
+  name = "eks-node-group-role-${module.common.testing_id}"
 
   assume_role_policy = jsonencode({
     Statement = [{
@@ -229,6 +241,17 @@ resource "kubernetes_config_map" "cwagentconfig" {
   }
   data = {
     "configuration": file("${path.module}/resources/configmap.yml")
+  }
+}
+
+resource "kubernetes_config_map" "aws_auth" {
+  depends_on = [kubernetes_namespace.namespace]
+  metadata {
+    name = "aws_auth_config"
+    namespace = "amazon-cloudwatch"
+  }
+  data = {
+    "configuration": data.template_file.aws_auth_config.rendered
   }
 }
 
