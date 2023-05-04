@@ -247,7 +247,7 @@ resource "kubernetes_config_map" "cwagentconfig" {
 resource "kubernetes_config_map" "awsauth" {
   depends_on = [kubernetes_namespace.namespace]
   metadata {
-    name = "aws_auth_config"
+    name = "aws-auth-config"
     namespace = "amazon-cloudwatch"
   }
   data = {
