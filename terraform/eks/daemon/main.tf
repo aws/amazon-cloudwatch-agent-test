@@ -31,8 +31,54 @@ resource "aws_eks_cluster" "cluster" {
   }
 }
 
+resource "aws_eks_node_group" "nodes" {
+  depends_on = [aws_eks_cluster.cluster]
+  cluster_name  = aws_eks_cluster.cluster.name
+  node_role_arn = module.basic_components.role_arn
+  subnet_ids    = module.basic_components.public_subnet_ids
+  scaling_config {
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
+  }
+  instance_types = ["t3.medium"]
+}
+
+resource "aws_iam_role" "noderole" {
+  name = "eks-node-group-${module.common.testing_id}"
+
+  assume_role_policy = jsonencode({
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+    Version = "2012-10-17"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "noderole-AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.noderole.name
+}
+
+resource "aws_iam_role_policy_attachment" "noderole-AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.noderole.name
+}
+
+resource "aws_iam_role_policy_attachment" "noderole-AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.noderole.name
+}
+
 resource "kubernetes_daemonset" "service" {
-  depends_on = [kubernetes_namespace.namespace]
+  depends_on = [
+    kubernetes_namespace.namespace,
+    aws_eks_node_group.nodes
+  ]
   metadata {
     name      = "cloudwatch-agent"
     namespace = "amazon-cloudwatch"
