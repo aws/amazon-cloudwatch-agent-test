@@ -18,18 +18,6 @@ data "aws_eks_cluster_auth" "this" {
   name = aws_eks_cluster.this.name
 }
 
-module "common" {
-  source             = "../../common"
-  cwagent_image_repo = var.cwagent_image_repo
-  cwagent_image_tag  = var.cwagent_image_tag
-}
-
-module "basic_components" {
-  source = "../../basic_components"
-
-  region = var.region
-}
-
 resource "aws_eks_cluster" "this" {
   name     = "cwagent-eks-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
