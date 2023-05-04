@@ -24,7 +24,6 @@ resource "aws_security_group" "ec2_security_group" {
     cidr_blocks = ["169.254.169.254/32"]
   }
 
-
   // Default ECS Prometheus
   // https://github.com/aws/amazon-cloudwatch-agent-test/blob/d5105cdc461c6fcb13049cf2d38c287674d94e21/terraform/ecs/linux/default_resources/default_extra_apps.tpl
   egress {
