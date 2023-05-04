@@ -250,9 +250,17 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
 }
 
 resource "null_resource" "validator" {
+  depends_on = [
+    kubernetes_namespace.namespace,
+    kubernetes_daemonset.service,
+    kubernetes_config_map.cwagentconfig,
+    kubernetes_service_account.cwagentservice,
+    kubernetes_cluster_role.clusterrole,
+    kubernetes_cluster_role_binding.rolebinding
+  ]
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating EKS metrics/logs
+      echo "Validating EKS metrics/logs"
       cd ../../..
       go test ${var.test_dir} -clusterArn=${aws_eks_cluster.cluster.arn} -computeType=EKS -v
     EOT
