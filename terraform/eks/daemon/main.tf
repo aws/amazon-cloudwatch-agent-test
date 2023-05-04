@@ -157,6 +157,8 @@ resource "kubernetes_namespace" "namespace" {
 resource "kubernetes_daemonset" "service" {
   depends_on = [
     kubernetes_namespace.namespace,
+    kubernetes_config_map.cwagentconfig,
+    kubernetes_service_account.cwagentservice,
     aws_eks_node_group.this
   ]
   metadata {
@@ -302,13 +304,27 @@ resource "kubernetes_daemonset" "service" {
 }
 
 resource "kubernetes_config_map" "cwagentconfig" {
-  depends_on = [kubernetes_namespace.namespace]
+  depends_on = [
+    kubernetes_namespace.namespace,
+    kubernetes_service_account.cwagentservice
+  ]
   metadata {
     name = "cwagentconfig"
     namespace = "amazon-cloudwatch"
   }
   data = {
-    "configuration": file("${path.module}/resources/configmap.yml")
+    "cwagentconfig.json": <<EOF
+  {
+    "logs": {
+      "metrics_collected": {
+        "kubernetes": {
+          "metrics_collection_interval": 60
+        }
+      },
+      "force_flush_interval": 5
+    }
+  }
+  EOF
   }
 }
 
