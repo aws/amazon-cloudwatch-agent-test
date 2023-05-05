@@ -24,10 +24,10 @@ import (
 
 type EMFTestRunner struct {
 	test_runner.BaseTestRunner
-	env environment.MetaData
+	env *environment.MetaData
 }
 
-func (t *EMFTestRunner) validate(e environment.MetaData) status.TestGroupResult {
+func (t *EMFTestRunner) validate(e *environment.MetaData) status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
