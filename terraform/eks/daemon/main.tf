@@ -92,6 +92,11 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
   role       = aws_iam_role.node.name
 }
 
+resource "aws_iam_role_policy_attachment" "node_IntegrationTestPolicy" {
+  policy_arn = module.common.cwa_iam_policy
+  role       = aws_iam_role.node.name
+}
+
 # EKS Cluster Security Group
 resource "aws_security_group" "eks_cluster" {
   name        = "cwagent-eks-cluster-sg-${module.common.testing_id}"
