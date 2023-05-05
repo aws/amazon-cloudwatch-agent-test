@@ -329,7 +329,7 @@ resource "kubernetes_config_map" "cwagentconfig" {
     "logs": {
       "metrics_collected": {
         "kubernetes": {
-          "metrics_collection_interval": 60
+          "metrics_collection_interval": 30
         }
       },
       "force_flush_interval": 5

@@ -1,3 +1,8 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+//go:build !windows
+
 package metric_value_benchmark
 
 import (
@@ -25,42 +30,3 @@ func (t *EKSTestRunner) Run(s test_runner.ITestSuite, e *environment.MetaData) {
 		log.Printf("%s test group failed", name)
 	}
 }
-
-type EKSDaemonTestRunner struct {
-	test_runner.BaseTestRunner
-}
-
-func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
-	res := status.TestGroupResult{
-		Name:        e.GetTestName(),
-		TestResults: []status.TestResult{},
-	}
-
-	return res
-}
-
-func (e *EKSDaemonTestRunner) GetTestName() string {
-	return "EKSDaemon" // TODO: what value should go here?
-}
-
-func (e *EKSDaemonTestRunner) GetAgentConfigFileName() string {
-	return "" // TODO: maybe not needed?
-}
-
-func (e *EKSDaemonTestRunner) GetAgentRunDuration() time.Duration {
-	return test_runner.MinimumAgentRuntime
-}
-
-func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
-	return []string{}
-}
-
-func (e *EKSDaemonTestRunner) SetupBeforeAgentRun() error {
-	return nil
-}
-
-func (e *EKSDaemonTestRunner) SetupAfterAgentRun() error {
-	return nil
-}
-
-var _ test_runner.ITestRunner = (*EKSDaemonTestRunner)(nil)
