@@ -182,7 +182,7 @@ resource "kubernetes_daemonset" "service" {
   spec {
     selector {
       match_labels = {
-        "name": "cloudwatch-agent"
+        "name" : "cloudwatch-agent"
       }
     }
     template {
@@ -323,11 +323,11 @@ resource "kubernetes_config_map" "cwagentconfig" {
     kubernetes_service_account.cwagentservice
   ]
   metadata {
-    name = "cwagentconfig"
+    name      = "cwagentconfig"
     namespace = "amazon-cloudwatch"
   }
   data = {
-    "cwagentconfig.json": <<EOF
+    "cwagentconfig.json" : <<EOF
   {
     "logs": {
       "metrics_collected": {
@@ -345,7 +345,7 @@ resource "kubernetes_config_map" "cwagentconfig" {
 resource "kubernetes_service_account" "cwagentservice" {
   depends_on = [kubernetes_namespace.namespace]
   metadata {
-    name = "cloudwatch-agent"
+    name      = "cloudwatch-agent"
     namespace = "amazon-cloudwatch"
   }
 }
@@ -356,35 +356,35 @@ resource "kubernetes_cluster_role" "clusterrole" {
     name = "cloudwatch-agent-role"
   }
   rule {
-    verbs = ["list", "watch"]
-    resources = ["pods", "nodes", "endpoints"]
+    verbs      = ["list", "watch"]
+    resources  = ["pods", "nodes", "endpoints"]
     api_groups = [""]
   }
   rule {
-    verbs = ["list", "watch"]
-    resources = ["replicasets"]
+    verbs      = ["list", "watch"]
+    resources  = ["replicasets"]
     api_groups = ["apps"]
   }
   rule {
-    verbs = ["list", "watch"]
-    resources = ["jobs"]
+    verbs      = ["list", "watch"]
+    resources  = ["jobs"]
     api_groups = ["batch"]
   }
   rule {
-    verbs = ["get"]
-    resources = ["nodes/proxy"]
+    verbs      = ["get"]
+    resources  = ["nodes/proxy"]
     api_groups = [""]
   }
   rule {
-    verbs = ["create"]
-    resources = ["nodes/stats", "configmaps", "events"]
+    verbs      = ["create"]
+    resources  = ["nodes/stats", "configmaps", "events"]
     api_groups = [""]
   }
   rule {
-    verbs = ["get", "update"]
+    verbs          = ["get", "update"]
     resource_names = ["cwagent-clusterleader"]
-    resources = ["configmaps"]
-    api_groups = [""]
+    resources      = ["configmaps"]
+    api_groups     = [""]
   }
 }
 
@@ -399,8 +399,8 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
     name      = "cloudwatch-agent-role"
   }
   subject {
-    kind = "ServiceAccount"
-    name = "cloudwatch-agent"
+    kind      = "ServiceAccount"
+    name      = "cloudwatch-agent"
     namespace = "amazon-cloudwatch"
   }
 }
