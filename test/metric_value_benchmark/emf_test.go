@@ -7,6 +7,7 @@ package metric_value_benchmark
 
 import (
 	_ "embed"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"strings"
 	"time"
 
@@ -23,14 +24,10 @@ import (
 
 type EMFTestRunner struct {
 	test_runner.BaseTestRunner
+	env environment.MetaData
 }
 
-//go:embed agent_resources/emf_counter.json
-var emfMetricValueBenchmarkSchema string
-
-var _ test_runner.ITestRunner = (*EMFTestRunner)(nil)
-
-func (t *EMFTestRunner) Validate() status.TestGroupResult {
+func (t *EMFTestRunner) validate(e environment.MetaData) status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -45,12 +42,54 @@ func (t *EMFTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *EMFTestRunner) GetTestName() string {
+func (t *EMFTestRunner) getTestName() string {
 	return "EMF"
+
+}
+
+func (t *EMFTestRunner) getAgentConfigFileName() string {
+	return "emf_config.json"
+}
+
+func (t *EMFTestRunner) getAgentRunDuration() time.Duration {
+	return 3 * time.Minute
+}
+
+func (t *EMFTestRunner) getMeasuredMetrics() []string {
+	return []string{"EMFCounter"}
+}
+
+//go:embed agent_resources/emf_counter.json
+var emfMetricValueBenchmarkSchema string
+
+var _ test_runner.ITestRunner = (*EMFTestRunner)(nil)
+
+//Validate() status.TestGroupResult
+//GetTestName() string
+//GetAgentConfigFileName() string
+//GetAgentRunDuration() time.Duration
+//GetMeasuredMetrics() []string
+//SetupBeforeAgentRun() error
+//SetupAfterAgentRun() error
+
+var _ IECSTestRunner = (*EMFTestRunner)(nil)
+
+//validate(e *environment.MetaData) status.TestGroupResult
+//getTestName() string
+//getAgentConfigFileName() string
+//getAgentRunDuration() time.Duration
+//getMeasuredMetrics() []string
+
+func (t *EMFTestRunner) Validate() status.TestGroupResult {
+	return t.validate(t.env)
+}
+
+func (t *EMFTestRunner) GetTestName() string {
+	return t.getTestName()
 }
 
 func (t *EMFTestRunner) GetAgentConfigFileName() string {
-	return "emf_config.json"
+	return t.getAgentConfigFileName()
 }
 
 func (t *EMFTestRunner) SetupAfterAgentRun() error {
@@ -72,7 +111,11 @@ func (t *EMFTestRunner) SetupAfterAgentRun() error {
 }
 
 func (t *EMFTestRunner) GetMeasuredMetrics() []string {
-	return []string{"EMFCounter"}
+	return t.GetMeasuredMetrics()
+}
+
+func (t *EMFTestRunner) GetAgentRunDuration() time.Duration {
+	return t.getAgentRunDuration()
 }
 
 func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
