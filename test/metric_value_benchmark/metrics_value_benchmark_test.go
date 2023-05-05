@@ -61,6 +61,11 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 				RunStrategy: &test_runner.ECSAgentRunStrategy{},
 				Env:         *env,
 			},
+			{
+				testRunner:       &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, *env},
+				agentRunStrategy: &ECSAgentRunStrategy{},
+				env:              *env,
+			},
 		}
 	}
 	return ecsTestRunners
@@ -97,7 +102,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &DiskIOTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &NetTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &EthtoolTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, *env}},
 			{TestRunner: &SwapTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
