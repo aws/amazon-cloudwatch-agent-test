@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 module "common" {
   source             = "../../common"
   cwagent_image_repo = var.cwagent_image_repo
