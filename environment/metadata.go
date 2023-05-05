@@ -27,6 +27,7 @@ type MetaData struct {
 	S3Key                     string
 	CwaCommitSha              string
 	CaCertPath                string
+	EKSClusterName            string
 }
 
 type MetaDataStrings struct {
@@ -41,6 +42,7 @@ type MetaDataStrings struct {
 	S3Key                     string
 	CwaCommitSha              string
 	CaCertPath                string
+	EKSClusterName            string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -65,6 +67,10 @@ func registerECSData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EcsClusterArn), "clusterArn", "", "Used to restart ecs task to apply new agent config")
 	flag.StringVar(&(dataString.CwagentConfigSsmParamName), "cwagentConfigSsmParamName", "", "Used to set new cwa config")
 	flag.StringVar(&(dataString.EcsServiceName), "cwagentECSServiceName", "", "Used to restart ecs task to apply new agent config")
+}
+
+func registerEKSData(d *MetaDataStrings) {
+	flag.StringVar(&(d.EKSClusterName), "eksClusterName", "", "EKS cluster name")
 }
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
@@ -128,9 +134,19 @@ func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) *MetaData {
 	return e
 }
 
+func fillEKSData(e *MetaData, data *MetaDataStrings) *MetaData {
+	if e.ComputeType != computetype.EKS {
+		return e
+	}
+
+	e.EKSClusterName = data.EKSClusterName
+	return e
+}
+
 func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDataStrings {
 	registerComputeType(metaDataStrings)
 	registerECSData(metaDataStrings)
+	registerEKSData(metaDataStrings)
 	registerBucket(metaDataStrings)
 	registerS3Key(metaDataStrings)
 	registerCwaCommitSha(metaDataStrings)
@@ -143,6 +159,7 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData := &(MetaData{})
 	metaData = fillComputeType(metaData, data)
 	metaData = fillECSData(metaData, data)
+	metaData = fillEKSData(metaData, data)
 	metaData = fillEC2PluginTests(metaData, data)
 	metaData.Bucket = data.Bucket
 	metaData.S3Key = data.S3Key

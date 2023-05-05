@@ -413,7 +413,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating EKS metrics/logs"
       cd ../../..
-      go test ${var.test_dir} -clusterArn=${aws_eks_cluster.this.arn} -computeType=EKS -v
+      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v
     EOT
   }
 }

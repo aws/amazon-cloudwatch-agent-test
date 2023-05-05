@@ -19,11 +19,6 @@ type EKSDaemonTestRunner struct {
 }
 
 func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
-	res := status.TestGroupResult{
-		Name:        e.GetTestName(),
-		TestResults: []status.TestResult{},
-	}
-
 	metrics := e.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, 0)
 	for _, name := range metrics {
@@ -32,7 +27,10 @@ func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 
 	// TODO: validate logs?
 
-	return res
+	return status.TestGroupResult{
+		Name:        e.GetTestName(),
+		TestResults: testResults,
+	}
 }
 
 func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestResult {
@@ -44,14 +42,6 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 	dims, failed := e.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "ClusterName",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "NodeName",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
 	})
