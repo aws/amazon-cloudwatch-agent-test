@@ -106,8 +106,8 @@ resource "null_resource" "integration_test" {
   # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/98c12ac2b1e67d0de7459b76d158c94df643b78f/${var.arc}/amazon-cloudwatch-agent.pkg .",
-      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/98c12ac2b1e67d0de7459b76d158c94df643b78f/darwin/${var.arc}/validator .",
+      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${var.arc}/amazon-cloudwatch-agent.pkg .",
+      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator .",
       "sudo installer -pkg amazon-cloudwatch-agent.pkg -target /",
     ]
   }
