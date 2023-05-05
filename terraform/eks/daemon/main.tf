@@ -92,8 +92,8 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
   role       = aws_iam_role.node.name
 }
 
-resource "aws_iam_role_policy_attachment" "node_IntegrationTestPolicy" {
-  policy_arn = module.common.cwa_iam_policy
+resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
   role       = aws_iam_role.node.name
 }
 
