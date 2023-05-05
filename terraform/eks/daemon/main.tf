@@ -15,7 +15,7 @@ data "aws_eks_cluster_auth" "this" {
 }
 
 resource "aws_eks_cluster" "this" {
-  name     = "cwagent-eks-${module.common.testing_id}"
+  name     = "cwagent-eks-integ-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
   version  = "1.24"
   enabled_cluster_log_types = [
@@ -34,7 +34,7 @@ resource "aws_eks_cluster" "this" {
 # EKS Node Groups
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "cwagent-eks-integ"
+  node_group_name = "cwagent-eks-integ-node"
   node_role_arn   = aws_iam_role.node.arn
   subnet_ids      = module.basic_components.public_subnet_ids
 
