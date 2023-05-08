@@ -118,7 +118,13 @@ required for testing locally but is required for testing on your personal fork.
                 Effect: Allow
                 Action: sts:AssumeRole
                 Principal:
-                  AWS: AccountRoot
+                  AWS: !Ref AccountRoot
+              - Sid: EKS
+                Effect: Allow
+                Action: sts:AssumeRole
+                Principal:
+                  Service:
+                    - eks.amazonaws.com
     
       GithubOidc:
         Type: AWS::IAM::OIDCProvider
@@ -137,7 +143,7 @@ required for testing locally but is required for testing on your personal fork.
 
 4. the UI should ask you for inputs for the parameters. In `GitHubOrg`, type in your github username. In `RepositoryName`, type in your fork repo's name. e.g. amazon-cloudwatch-agent
 5. For the `AccountRoot`, input your root ARN, e.g.: `arn:aws:iam::1234567890:root`
-6. Choose a stackname. Anything. e.g. Terraform-IntegTest-Role
+6. Choose a stack name. Anything. e.g. Terraform-IntegTest-Role
 7. After creating the stack, navigate to the `Resources` tab of the created stack
 8. Click on the role ID that was created by CloudFormation
 9. Click add permission
@@ -279,14 +285,15 @@ required for testing locally but is required for testing on your personal fork.
     }
     ```
 12. Once creation is done, go back to the IAM role and attach the policy you just created by searching for the policy name.
-13. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add TERRAFORM_AWS_ASSUME_ROLE as GitHub repository secret. Name is `TERRAFORM_AWS_ASSUME_ROLE` and Secret is the IAM role's ARN.
+13. For EKS testing, attach the `AmazonEKSClusterPolicy` to the terraform role as well.
+14. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add TERRAFORM_AWS_ASSUME_ROLE as GitHub repository secret. Name is `TERRAFORM_AWS_ASSUME_ROLE` and Secret is the IAM role's ARN.
 
 ### Notes
 [reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
 
-## 7. Setup the integration test resources
+## 7. Set up the integration test resources
 1. Navigate to your fork
-2. Run the following command to setup all the resources being used for integration test (e.g vpc, iam, etc)
+2. Run the following command to set up all the resources being used for integration test (e.g vpc, iam, etc)
 ```shell
 cd terraform/setup # assuming you are still in the ./terraform
 terraform init
