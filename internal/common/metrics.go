@@ -89,6 +89,8 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 		return err
 	}
 
+	time.Sleep(5 * time.Second)
+
 	for {
 		select {
 		case <-ticker.C:
