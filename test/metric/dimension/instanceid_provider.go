@@ -70,15 +70,15 @@ func (p *LocalInstanceIdDimensionProvider) Name() string {
 	return "LocalInstanceIdDimensionProvider"
 }
 
-type EKSInstanceIdDimensionProvider struct {
+type EKSClusterNameProvider struct {
 	Provider
 }
 
-func (p *EKSInstanceIdDimensionProvider) IsApplicable() bool {
+func (p *EKSClusterNameProvider) IsApplicable() bool {
 	return p.env.ComputeType == computetype.EKS
 }
 
-func (p *EKSInstanceIdDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
+func (p *EKSClusterNameProvider) GetDimension(instruction Instruction) types.Dimension {
 	if instruction.Key != "ClusterName" || instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}
@@ -89,8 +89,8 @@ func (p *EKSInstanceIdDimensionProvider) GetDimension(instruction Instruction) t
 	}
 }
 
-func (p *EKSInstanceIdDimensionProvider) Name() string {
-	return "EKSInstanceIdDimensionProvider"
+func (p *EKSClusterNameProvider) Name() string {
+	return "EKSClusterNameProvider"
 }
 
-var _ IProvider = (*EKSInstanceIdDimensionProvider)(nil)
+var _ IProvider = (*EKSClusterNameProvider)(nil)

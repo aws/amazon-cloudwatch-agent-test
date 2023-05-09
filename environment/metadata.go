@@ -77,18 +77,17 @@ func registerPluginTestsToExecute(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EC2PluginTests), "plugins", "", "Comma-delimited list of plugins to test. Default is empty, which tests all")
 }
 
-func fillComputeType(e *MetaData, data *MetaDataStrings) *MetaData {
+func fillComputeType(e *MetaData, data *MetaDataStrings) {
 	computeType, ok := computetype.FromString(data.ComputeType)
 	if !ok {
 		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS. Compute Type is a required flag. :" + data.ComputeType)
 	}
 	e.ComputeType = computeType
-	return e
 }
 
-func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
+func fillECSData(e *MetaData, data *MetaDataStrings) {
 	if e.ComputeType != computetype.ECS {
-		return e
+		return
 	}
 
 	ecsLaunchType, ok := ecslaunchtype.FromString(data.EcsLaunchType)
@@ -109,18 +108,16 @@ func fillECSData(e *MetaData, data *MetaDataStrings) *MetaData {
 	e.CwagentConfigSsmParamName = data.CwagentConfigSsmParamName
 	e.EcsServiceName = data.EcsServiceName
 	e.EcsClusterName = awsservice.GetClusterName(data.EcsClusterArn)
-
-	return e
 }
 
-func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) *MetaData {
+func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) {
 	if e.ComputeType != computetype.EC2 {
-		return e
+		return
 	}
 
 	if len(data.EC2PluginTests) == 0 {
 		log.Println("Testing all EC2 plugins")
-		return e
+		return
 	}
 
 	plugins := strings.Split(strings.ReplaceAll(data.EC2PluginTests, " ", ""), ",")
@@ -130,17 +127,14 @@ func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) *MetaData {
 		m[strings.ToLower(p)] = struct{}{}
 	}
 	e.EC2PluginTests = m
-
-	return e
 }
 
-func fillEKSData(e *MetaData, data *MetaDataStrings) *MetaData {
+func fillEKSData(e *MetaData, data *MetaDataStrings) {
 	if e.ComputeType != computetype.EKS {
-		return e
+		return
 	}
 
 	e.EKSClusterName = data.EKSClusterName
-	return e
 }
 
 func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDataStrings {
@@ -157,10 +151,10 @@ func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDat
 
 func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData := &(MetaData{})
-	metaData = fillComputeType(metaData, data)
-	metaData = fillECSData(metaData, data)
-	metaData = fillEKSData(metaData, data)
-	metaData = fillEC2PluginTests(metaData, data)
+	fillComputeType(metaData, data)
+	fillECSData(metaData, data)
+	fillEKSData(metaData, data)
+	fillEC2PluginTests(metaData, data)
 	metaData.Bucket = data.Bucket
 	metaData.S3Key = data.S3Key
 	metaData.CwaCommitSha = data.CwaCommitSha
