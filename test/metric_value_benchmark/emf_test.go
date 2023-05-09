@@ -46,11 +46,11 @@ func (t *EMFTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *EMFTestRunner) GetTestName() string {
-	return "emf_config.json"
+	return "EMF"
 }
 
 func (t *EMFTestRunner) GetAgentConfigFileName() string {
-	return "emf_config.json"
+	return "./agent_configs/emf_config.json"
 }
 
 func (t *EMFTestRunner) SetupAfterAgentRun() error {
