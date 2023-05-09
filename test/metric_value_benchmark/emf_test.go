@@ -111,7 +111,7 @@ func (t *EMFTestRunner) SetupAfterAgentRun() error {
 }
 
 func (t *EMFTestRunner) GetMeasuredMetrics() []string {
-	return t.GetMeasuredMetrics()
+	return t.getMeasuredMetrics()
 }
 
 func (t *EMFTestRunner) GetAgentRunDuration() time.Duration {
