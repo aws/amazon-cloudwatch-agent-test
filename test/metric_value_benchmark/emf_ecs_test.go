@@ -38,7 +38,7 @@ func (t *EMFECSTestRunner) getTestName() string {
 }
 
 func (t *EMFECSTestRunner) getAgentConfigFileName() string {
-	return "emf_config.json"
+	return "./agent_configs/emf_config.json"
 }
 
 func (t *EMFECSTestRunner) getAgentRunDuration() time.Duration {

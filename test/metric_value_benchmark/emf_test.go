@@ -50,7 +50,7 @@ func (t *EMFTestRunner) GetTestName() string {
 }
 
 func (t *EMFTestRunner) GetAgentConfigFileName() string {
-	return "./agent_configs/emf_config.json"
+	return "emf_config.json"
 }
 
 func (t *EMFTestRunner) SetupAfterAgentRun() error {
