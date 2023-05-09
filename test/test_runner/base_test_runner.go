@@ -63,7 +63,7 @@ func (t *TestRunner) Run(s ITestSuite) {
 	}
 	s.AddToSuiteResult(testGroupResult)
 	if testGroupResult.GetStatus() != status.SUCCESSFUL {
-		log.Printf("%v test group failed", testName)
+		log.Printf("%v test group failed due to %v", testName, err)
 	}
 }
 
