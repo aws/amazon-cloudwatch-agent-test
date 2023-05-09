@@ -85,11 +85,11 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 		}
 	}
 
+	time.Sleep(30 * time.Second)
+
 	if err := client.Flush(); err != nil {
 		return err
 	}
-
-	time.Sleep(5 * time.Second)
 
 	for {
 		select {
