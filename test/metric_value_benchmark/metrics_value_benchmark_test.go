@@ -45,6 +45,7 @@ func init() {
 var (
 	ecsTestRunners []*ECSTestRunner
 	ec2TestRunners []*test_runner.TestRunner
+	eksTestRunners []*EKSTestRunner
 )
 
 func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
@@ -60,6 +61,21 @@ func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
 		}
 	}
 	return ecsTestRunners
+}
+
+func getEksTestRunners(env *environment.MetaData) []*EKSTestRunner {
+	if eksTestRunners == nil {
+		factory := dimension.GetDimensionFactory(*env)
+		eksTestRunners = []*EKSTestRunner{
+			{
+				runner: &EKSDaemonTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
+					DimensionFactory: factory,
+				}},
+				env: *env,
+			},
+		}
+	}
+	return eksTestRunners
 }
 
 func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
@@ -87,12 +103,19 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
-	if env.ComputeType == computetype.ECS {
-		log.Print("Environment compute type is ECS")
+	switch env.ComputeType {
+	case computetype.ECS:
+		log.Println("Environment compute type is ECS")
 		for _, ecsTestRunner := range getEcsTestRunners(env) {
 			ecsTestRunner.Run(suite, env)
 		}
-	} else {
+	case computetype.EKS:
+		log.Println("Environment compute type is EKS")
+		for _, testRunner := range getEksTestRunners(env) {
+			testRunner.Run(suite, env)
+		}
+	default: // EC2 tests
+		log.Println("Environment compute type is EC2")
 		for _, testRunner := range getEc2TestRunners(env) {
 			if shouldRunEC2Test(env, testRunner) {
 				testRunner.Run(suite)

@@ -79,210 +79,221 @@ required for testing locally but is required for testing on your personal fork.
 1. Navigate to CloudFormation from aws console
 2. Choose file upload.
 3. Upload the following as a file
-```
-Parameters:
-  GitHubOrg:
-    Type: String
-  RepositoryName:
-    Type: String
-  OIDCProviderArn:
-    Description: Arn for the GitHub OIDC Provider.
-    Default: ""
-    Type: String
-
-Conditions:
-  CreateOIDCProvider: !Equals 
-    - !Ref OIDCProviderArn
-    - ""
-
-Resources:
-  Role:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Action: sts:AssumeRoleWithWebIdentity
-            Principal:
-              Federated: !If 
-                - CreateOIDCProvider
-                - !Ref GithubOidc
-                - !Ref OIDCProviderArn
-            Condition:
-              StringLike:
-                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${RepositoryName}:*
-
-  GithubOidc:
-    Type: AWS::IAM::OIDCProvider
-    Condition: CreateOIDCProvider
-    Properties:
-      Url: https://token.actions.githubusercontent.com
-      ClientIdList: 
-        - sts.amazonaws.com
-      ThumbprintList:
-        - 6938fd4d98bab03faadb97b34396831e3780aea1
-
-Outputs:
-  Role:
-    Value: !GetAtt Role.Arn 
-```
+    ```
+    Parameters:
+      GitHubOrg:
+        Type: String
+      RepositoryName:
+        Type: String
+      OIDCProviderArn:
+        Description: Arn for the GitHub OIDC Provider.
+        Default: ""
+        Type: String
+      AccountRoot:
+        Description: "This account's ID to allow assume, in the form arn:aws:iam:[account ID]:root"
+        Type: String
+    
+    Conditions:
+      CreateOIDCProvider: !Equals 
+        - !Ref OIDCProviderArn
+        - ""
+    
+    Resources:
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          AssumeRolePolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRoleWithWebIdentity
+                Principal:
+                  Federated: !If 
+                    - CreateOIDCProvider
+                    - !Ref GithubOidc
+                    - !Ref OIDCProviderArn
+                Condition:
+                  StringLike:
+                    token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${RepositoryName}:*
+              - Sid: AssumeFromRoot
+                Effect: Allow
+                Action: sts:AssumeRole
+                Principal:
+                  AWS: !Ref AccountRoot
+              - Sid: EKS
+                Effect: Allow
+                Action: sts:AssumeRole
+                Principal:
+                  Service:
+                    - eks.amazonaws.com
+    
+      GithubOidc:
+        Type: AWS::IAM::OIDCProvider
+        Condition: CreateOIDCProvider
+        Properties:
+          Url: https://token.actions.githubusercontent.com
+          ClientIdList: 
+            - sts.amazonaws.com
+          ThumbprintList:
+            - 6938fd4d98bab03faadb97b34396831e3780aea1
+    
+    Outputs:
+      Role:
+        Value: !GetAtt Role.Arn 
+    ```
 
 4. the UI should ask you for inputs for the parameters. In `GitHubOrg`, type in your github username. In `RepositoryName`, type in your fork repo's name. e.g. amazon-cloudwatch-agent
-5. Choose a stackname. Anything. e.g. Terraform-IntegTest-Role
-6. After creating the stack, navigate to the `Resources` tab of the created stack
-7. Click on the role ID that was created by CloudFormation
-8. Click add permission
-9. Click attach policy, and then click create policy.
-10. Click JSON tab and copy and paste the following
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
+5. For the `AccountRoot`, input your root ARN, e.g.: `arn:aws:iam::1234567890:root`
+6. Choose a stack name. Anything. e.g. Terraform-IntegTest-Role
+7. After creating the stack, navigate to the `Resources` tab of the created stack
+8. Click on the role ID that was created by CloudFormation
+9. Click add permission
+10. Click attach policy, and then click create policy.
+11. Click JSON tab and copy and paste the following
+    ```json
     {
-      "Effect": "Allow",
-      "Action": [
-        "autoscaling:CreateAutoScalingGroup",
-        "autoscaling:CreateLaunchConfiguration",
-        "autoscaling:CreateOrUpdateTags",
-        "autoscaling:DeleteAutoScalingGroup",
-        "autoscaling:DeleteLaunchConfiguration",
-        "autoscaling:DeleteTags",
-        "autoscaling:DescribeAutoScalingGroups",
-        "autoscaling:DescribeLaunchConfigurations",
-        "autoscaling:DescribeScalingActivities",
-        "autoscaling:DescribeTags",
-        "autoscaling:SetInstanceProtection",
-        "autoscaling:UpdateAutoScalingGroup",
-        "cloudwatch:GetMetricData",
-        "dynamodb:*",
-        "ec2:AuthorizeSecurityGroupEgress",
-        "ec2:AuthorizeSecurityGroupIngress",
-        "ec2:CreateNetworkInterface",
-        "ec2:CreateSecurityGroup",
-        "ec2:CreateTags",
-        "ec2:CreateTags",
-        "ec2:DeleteKeyPair",
-        "ec2:DeleteNetworkInterface",
-        "ec2:DeleteSecurityGroup",
-        "ec2:DescribeAccountAttributes",
-        "ec2:DescribeImages",
-        "ec2:DescribeInstanceAttribute",
-        "ec2:DescribeInstanceCreditSpecifications",
-        "ec2:DescribeInstanceTypes",
-        "ec2:DescribeInstances",
-        "ec2:DescribeKeyPairs",
-        "ec2:DescribeNetworkInterfaces",
-        "ec2:DescribeNetworkInterfaces",
-        "ec2:DescribeRouteTables",
-        "ec2:DescribeSecurityGroups",
-        "ec2:DescribeSubnets",
-        "ec2:DescribeTags",
-        "ec2:DescribeVolumes",
-        "ec2:DescribeVpcAttribute",
-        "ec2:DescribeVpcs",
-        "ec2:GetPasswordData",
-        "ec2:ImportKeyPair",
-        "ec2:ModifyInstanceAttribute",
-        "ec2:RevokeSecurityGroupEgress",
-        "ec2:RunInstances",
-        "ec2:RunInstances",
-        "ec2:TerminateInstances",
-        "ecr:BatchCheckLayerAvailability",
-        "ecr:BatchGetImage",
-        "ecr:CompleteLayerUpload",
-        "ecr:DescribeImages",
-        "ecr:DescribeRepositories",
-        "ecr:GetAuthorizationToken",
-        "ecr:InitiateLayerUpload",
-        "ecr:ListImages",
-        "ecr:ListTagsForResource",
-        "ecr:PutImage",
-        "ecr:UploadLayerPart",
-        "ecs:CreateCapacityProvider",
-        "ecs:CreateCluster",
-        "ecs:CreateService",
-        "ecs:CreateTaskSet",
-        "ecs:DeleteCapacityProvider",
-        "ecs:DeleteCluster",
-        "ecs:DeleteService",
-        "ecs:DeleteTaskSet",
-        "ecs:DeregisterTaskDefinition",
-        "ecs:DescribeCapacityProviders",
-        "ecs:DescribeClusters",
-        "ecs:DescribeContainerInstances",
-        "ecs:DescribeServices",
-        "ecs:DescribeTaskDefinition",
-        "ecs:DescribeTasks",
-        "ecs:ListClusters",
-        "ecs:ListContainerInstances",
-        "ecs:ListServices",
-        "ecs:ListTagsForResource",
-        "ecs:ListTaskDefinitions",
-        "ecs:ListTasks",
-        "ecs:PutClusterCapacityProviders",
-        "ecs:RegisterTaskDefinition",
-        "ecs:RunTask",
-        "ecs:StartTask",
-        "ecs:StopTask",
-        "ecs:UpdateService",
-        "iam:AddRoleToInstanceProfile",
-        "iam:AttachRolePolicy",
-        "iam:CreateInstanceProfile",
-        "iam:CreatePolicy",
-        "iam:CreateRole",
-        "iam:CreateServiceLinkedRole",
-        "iam:DeleteInstanceProfile",
-        "iam:DeletePolicy",
-        "iam:DeleteRole",
-        "iam:DetachRolePolicy",
-        "iam:GetInstanceProfile",
-        "iam:GetPolicy",
-        "iam:GetPolicyVersion",
-        "iam:GetRole",
-        "iam:ListAttachedRolePolicies",
-        "iam:ListInstanceProfilesForRole",
-        "iam:ListPolicyVersions",
-        "iam:ListRolePolicies",
-        "iam:PassRole",
-        "iam:RemoveRoleFromInstanceProfile",
-        "logs:CreateLogGroup",
-        "logs:DeleteLogGroup",
-        "logs:DescribeLogGroups",
-        "logs:ListTagsForResource",
-        "logs:ListTagsLogGroup",
-        "s3:DeleteObject",
-        "s3:GetObject",
-        "s3:GetObjectAcl",
-        "s3:ListBucket",
-        "s3:PutObject",
-        "ssm:DeleteParameter",
-        "ssm:DeleteParameters",
-        "ssm:DescribeParameters",
-        "ssm:GetParameter",
-        "ssm:GetParameters",
-        "ssm:ListTagsForResource",
-        "ssm:PutParameter",
-        "sts:GetCallerIdentity"
-      ],
-      "Resource": "*"
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "autoscaling:CreateAutoScalingGroup",
+            "autoscaling:CreateLaunchConfiguration",
+            "autoscaling:CreateOrUpdateTags",
+            "autoscaling:DeleteAutoScalingGroup",
+            "autoscaling:DeleteLaunchConfiguration",
+            "autoscaling:DeleteTags",
+            "autoscaling:DescribeAutoScalingGroups",
+            "autoscaling:DescribeLaunchConfigurations",
+            "autoscaling:DescribeScalingActivities",
+            "autoscaling:DescribeTags",
+            "autoscaling:SetInstanceProtection",
+            "autoscaling:UpdateAutoScalingGroup",
+            "cloudwatch:GetMetricData",
+            "dynamodb:*",
+            "ec2:AuthorizeSecurityGroupEgress",
+            "ec2:AuthorizeSecurityGroupIngress",
+            "ec2:CreateNetworkInterface",
+            "ec2:CreateSecurityGroup",
+            "ec2:CreateTags",
+            "ec2:CreateTags",
+            "ec2:DeleteKeyPair",
+            "ec2:DeleteNetworkInterface",
+            "ec2:DeleteSecurityGroup",
+            "ec2:DescribeAccountAttributes",
+            "ec2:DescribeImages",
+            "ec2:DescribeInstanceAttribute",
+            "ec2:DescribeInstanceCreditSpecifications",
+            "ec2:DescribeInstanceTypes",
+            "ec2:DescribeInstances",
+            "ec2:DescribeKeyPairs",
+            "ec2:DescribeNetworkInterfaces",
+            "ec2:DescribeNetworkInterfaces",
+            "ec2:DescribeRouteTables",
+            "ec2:DescribeSecurityGroups",
+            "ec2:DescribeSubnets",
+            "ec2:DescribeTags",
+            "ec2:DescribeVolumes",
+            "ec2:DescribeVpcAttribute",
+            "ec2:DescribeVpcs",
+            "ec2:GetPasswordData",
+            "ec2:ImportKeyPair",
+            "ec2:ModifyInstanceAttribute",
+            "ec2:RevokeSecurityGroupEgress",
+            "ec2:RunInstances",
+            "ec2:RunInstances",
+            "ec2:TerminateInstances",
+            "ecr:BatchCheckLayerAvailability",
+            "ecr:BatchGetImage",
+            "ecr:CompleteLayerUpload",
+            "ecr:DescribeImages",
+            "ecr:DescribeRepositories",
+            "ecr:GetAuthorizationToken",
+            "ecr:InitiateLayerUpload",
+            "ecr:ListImages",
+            "ecr:ListTagsForResource",
+            "ecr:PutImage",
+            "ecr:UploadLayerPart",
+            "ecs:CreateCapacityProvider",
+            "ecs:CreateCluster",
+            "ecs:CreateService",
+            "ecs:CreateTaskSet",
+            "ecs:DeleteCapacityProvider",
+            "ecs:DeleteCluster",
+            "ecs:DeleteService",
+            "ecs:DeleteTaskSet",
+            "ecs:DeregisterTaskDefinition",
+            "ecs:DescribeCapacityProviders",
+            "ecs:DescribeClusters",
+            "ecs:DescribeContainerInstances",
+            "ecs:DescribeServices",
+            "ecs:DescribeTaskDefinition",
+            "ecs:DescribeTasks",
+            "ecs:ListClusters",
+            "ecs:ListContainerInstances",
+            "ecs:ListServices",
+            "ecs:ListTagsForResource",
+            "ecs:ListTaskDefinitions",
+            "ecs:ListTasks",
+            "ecs:PutClusterCapacityProviders",
+            "ecs:RegisterTaskDefinition",
+            "ecs:RunTask",
+            "ecs:StartTask",
+            "ecs:StopTask",
+            "ecs:UpdateService",
+            "iam:AddRoleToInstanceProfile",
+            "iam:AttachRolePolicy",
+            "iam:CreateInstanceProfile",
+            "iam:CreatePolicy",
+            "iam:CreateRole",
+            "iam:CreateServiceLinkedRole",
+            "iam:DeleteInstanceProfile",
+            "iam:DeletePolicy",
+            "iam:DeleteRole",
+            "iam:DetachRolePolicy",
+            "iam:GetInstanceProfile",
+            "iam:GetPolicy",
+            "iam:GetPolicyVersion",
+            "iam:GetRole",
+            "iam:ListAttachedRolePolicies",
+            "iam:ListInstanceProfilesForRole",
+            "iam:ListPolicyVersions",
+            "iam:ListRolePolicies",
+            "iam:PassRole",
+            "iam:RemoveRoleFromInstanceProfile",
+            "logs:CreateLogGroup",
+            "logs:DeleteLogGroup",
+            "logs:DescribeLogGroups",
+            "logs:ListTagsForResource",
+            "logs:ListTagsLogGroup",
+            "s3:DeleteObject",
+            "s3:GetObject",
+            "s3:GetObjectAcl",
+            "s3:ListBucket",
+            "s3:PutObject",
+            "ssm:DeleteParameter",
+            "ssm:DeleteParameters",
+            "ssm:DescribeParameters",
+            "ssm:GetParameter",
+            "ssm:GetParameters",
+            "ssm:ListTagsForResource",
+            "ssm:PutParameter",
+            "sts:GetCallerIdentity"
+          ],
+          "Resource": "*"
+        }
+      ]
     }
-  ]
-}
-```
-
-11. Once creation is done, go back to the IAM role and attach the policy you just created by searching for the policy name.
-12. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add TERRAFORM_AWS_ASSUME_ROLE as GitHub repository secret. Name is `TERRAFORM_AWS_ASSUME_ROLE` and Secret is the IAM role's ARN.
-
-
-
+    ```
+12. Once creation is done, go back to the IAM role and attach the policy you just created by searching for the policy name.
+13. For EKS testing, attach the `AmazonEKSClusterPolicy` to the terraform role as well.
+14. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add TERRAFORM_AWS_ASSUME_ROLE as GitHub repository secret. Name is `TERRAFORM_AWS_ASSUME_ROLE` and Secret is the IAM role's ARN.
 
 ### Notes
 [reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
 
-## 7. Setup the integration test resources
+## 7. Set up the integration test resources
 1. Navigate to your fork
-2. Run the following command to setup all the resources being used for integration test (e.g vpc, iam, etc)
+2. Run the following command to set up all the resources being used for integration test (e.g vpc, iam, etc)
 ```shell
 cd terraform/setup # assuming you are still in the ./terraform
 terraform init

@@ -69,3 +69,28 @@ func (p *LocalInstanceIdDimensionProvider) GetDimension(instruction Instruction)
 func (p *LocalInstanceIdDimensionProvider) Name() string {
 	return "LocalInstanceIdDimensionProvider"
 }
+
+type EKSClusterNameProvider struct {
+	Provider
+}
+
+func (p *EKSClusterNameProvider) IsApplicable() bool {
+	return p.env.ComputeType == computetype.EKS
+}
+
+func (p *EKSClusterNameProvider) GetDimension(instruction Instruction) types.Dimension {
+	if instruction.Key != "ClusterName" || instruction.Value.IsKnown() {
+		return types.Dimension{}
+	}
+
+	return types.Dimension{
+		Name:  aws.String("ClusterName"),
+		Value: aws.String(p.env.EKSClusterName),
+	}
+}
+
+func (p *EKSClusterNameProvider) Name() string {
+	return "EKSClusterNameProvider"
+}
+
+var _ IProvider = (*EKSClusterNameProvider)(nil)
