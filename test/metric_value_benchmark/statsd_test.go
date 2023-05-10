@@ -49,7 +49,7 @@ func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
-	return common.SendStatsdMetrics(2, []string{"key:value"}, time.Second, t.GetAgentRunDuration())
+	return common.SendStatsdMetrics(3, []string{"key:value"}, time.Second, t.GetAgentRunDuration())
 }
 
 func (t *StatsdTestRunner) GetMeasuredMetrics() []string {
