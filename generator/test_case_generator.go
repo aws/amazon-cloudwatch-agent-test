@@ -76,6 +76,11 @@ var testTypeToTestDirMap = map[string][]string{
 	"ec2_acceptance": {
 		"./test/acceptance",
 	},
+	"ec2_userdata": {
+		"./test/cloudwatchlogs",
+		"./test/metric_value_benchmark",
+		"./test/run_as_user",
+  },
 	"eks_daemon": {
 		"./test/metric_value_benchmark",
 	},

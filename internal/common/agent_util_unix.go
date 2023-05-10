@@ -160,7 +160,7 @@ func ReadAgentOutput(d time.Duration) string {
 }
 
 func RunShellScript(path string, args ...string) error {
-	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
+	out, err := exec.Command("bash", "-c", "sudo chmod +x "+path).Output()
 
 	if err != nil {
 		log.Printf("Error occurred when attempting to chmod %s: %s | %s", path, err.Error(), string(out))
