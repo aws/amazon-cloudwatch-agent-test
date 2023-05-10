@@ -82,6 +82,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ecs_ec2_daemon": {
 		{"./test/metric_value_benchmark", ""},
 		{"./test/statsd", ""},
+		{"./test/emf_ecs", ""},
 	},
 	"ec2_acceptance": {
 		{"./test/acceptance", ""},
