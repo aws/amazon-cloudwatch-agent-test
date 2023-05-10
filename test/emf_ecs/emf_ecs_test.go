@@ -78,7 +78,7 @@ func (t *EMFECSTestRunner) validateEMFOnECSMetrics(metricName string) status.Tes
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("ECS/Logs", metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("EMFNameSpace", metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
