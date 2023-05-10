@@ -60,8 +60,9 @@
             "/bin/sh",
             "-c",
             "cat <<EOF | sudo tee /etc/emf.sh
-            TOKEN=\$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-            INSTANCEID=\$(curl -H "X-aws-ec2-metadata-token: \${TOKEN}" -v http://169.254.169.254/latest/meta-data/instance-id)
+{*            TOKEN=\$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")*}
+{*            INSTANCEID=\$(curl -H "X-aws-ec2-metadata-token: \${TOKEN}" -v http://169.254.169.254/latest/meta-data/instance-id)*}
+            INSTANCEID = \$(curl \${ECS_CONTAINER_METADATA_URI} -H "DockerId")
             while true;
             do
             CURRENT_TIME=\$(date +%s%N | cut -b1-13)
