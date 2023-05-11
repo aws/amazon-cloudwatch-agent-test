@@ -61,7 +61,7 @@
     {
         "name": "emf_container",
         "links":  ["cloudwatch_agent"],
-        "image": "bionic-20230308",
+        "image": "ubuntu:latest",
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
