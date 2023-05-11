@@ -6,29 +6,37 @@
 package metric_value_benchmark
 
 import (
+	"fmt"
+	"log"
+	"strings"
+	"time"
+
+	"github.com/qri-io/jsonschema"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"log"
-	"time"
 )
 
 type EKSDaemonTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
-	metrics := e.GetMeasuredMetrics()
+var _ IEKSTestRunner = (*EKSDaemonTestRunner)(nil)
+
+func (e *EKSDaemonTestRunner) validate(eks *environment.MetaData) status.TestGroupResult {
+	metrics := e.getMeasuredMetrics()
 	testResults := make([]status.TestResult, 0)
 	for _, name := range metrics {
 		testResults = append(testResults, e.validateInstanceMetrics(name))
 	}
 
-	// TODO: validate logs?
-
+	testResults = append(testResults, e.validateLogs(eks))
 	return status.TestGroupResult{
-		Name:        e.GetTestName(),
+		Name:        e.getTestName(),
 		TestResults: testResults,
 	}
 }
@@ -66,19 +74,65 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 	return testResult
 }
 
-func (e *EKSDaemonTestRunner) GetTestName() string {
+func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.TestResult {
+	testResult := status.TestResult{
+		Name:   "emf-logs",
+		Status: status.FAILED,
+	}
+
+	rs := jsonschema.Must(emfContainerInsightsSchema)
+
+	now := time.Now()
+	group := fmt.Sprintf("/aws/eks/containerinsights/%s/performance", eks.EKSClusterName)
+
+	// need to derive the container Instance ID first
+	EKSInstances, err := awsservice.GetEKSInstances(eks.EKSClusterName)
+	if err != nil {
+		return testResult
+	}
+
+	for _, instance := range EKSInstances {
+		validateLogContents := func(s string) bool {
+			return strings.Contains(s, fmt.Sprintf("\"NodeName\":\"%s\"", instance.InstanceName))
+		}
+
+		var ok bool
+		stream := *instance.InstanceName
+		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
+			if len(logs) < 1 {
+				return false
+			}
+
+			for _, l := range logs {
+				if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
+					return false
+				}
+			}
+			return true
+		})
+
+		if err != nil || !ok {
+			return testResult
+		}
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func (e *EKSDaemonTestRunner) getTestName() string {
 	return "EKSContainerInstance"
 }
 
-func (e *EKSDaemonTestRunner) GetAgentConfigFileName() string {
+func (e *EKSDaemonTestRunner) getAgentConfigFileName() string {
 	return "" // TODO: maybe not needed?
 }
 
-func (e *EKSDaemonTestRunner) GetAgentRunDuration() time.Duration {
+func (e *EKSDaemonTestRunner) getAgentRunDuration() time.Duration {
 	return time.Minute * 3
 }
 
-func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
+func (e *EKSDaemonTestRunner) getMeasuredMetrics() []string {
 	return []string{
 		"node_cpu_reserved_capacity",
 		"node_cpu_utilization",
@@ -90,13 +144,3 @@ func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
 		"node_memory_reserved_capacity",
 	}
 }
-
-func (e *EKSDaemonTestRunner) SetupBeforeAgentRun() error {
-	return nil
-}
-
-func (e *EKSDaemonTestRunner) SetupAfterAgentRun() error {
-	return nil
-}
-
-var _ test_runner.ITestRunner = (*EKSDaemonTestRunner)(nil)
