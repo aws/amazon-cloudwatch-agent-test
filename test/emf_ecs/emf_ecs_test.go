@@ -62,7 +62,6 @@ func (t *EMFECSTestRunner) validateEMFOnECSMetrics(metricName string) status.Tes
 		{
 			Key:   "ClusterName",
 			Value: dimension.UnknownDimensionValue(),
-			//Value: dimension.GetDimensionFactory(t.),
 		},
 
 		{
