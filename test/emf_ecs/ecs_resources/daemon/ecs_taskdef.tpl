@@ -11,11 +11,11 @@
         ],
         "logConfiguration": {
             "logDriver": "awslogs",
-        "options": {
-            "awslogs-region": "${region}",
-            "awslogs-stream-prefix": "${testing_id}",
-            "awslogs-group": "${log_group}"
-        }
+            "options": {
+                "awslogs-region": "${region}",
+                "awslogs-stream-prefix": "${testing_id}",
+                "awslogs-group": "${log_group}"
+            }
         },
             "cpu": 1,
             "mountPoints": [
@@ -62,6 +62,14 @@
         "name": "emf_container",
         "links":  ["cloudwatch_agent"],
         "image": "bionic-20230308",
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-region": "${region}",
+                "awslogs-stream-prefix": "emf-test",
+                "awslogs-group": "${log_group}"
+            }
+        },
         "essential": true,
         "entryPoint": [
             "/bin/sh",
