@@ -47,7 +47,7 @@ func (p EFMECSDimensionProvider) GetDimension(instruction Instruction) types.Dim
 		}
 
 		return types.Dimension{
-			Name:  aws.String("ContainerInstanceId"),
+			Name:  aws.String("InstanceId"),
 			Value: aws.String(containerInstances[0].ContainerInstanceArn),
 		}
 	}
