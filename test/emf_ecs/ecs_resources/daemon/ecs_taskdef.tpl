@@ -52,8 +52,15 @@
         ],
             "memory": 2048
         },
+        "portMappings": [
+            {
+                "containerPort": 25888,
+                "protocol": "udp"
+            }
+        ]
         {
-        "name": "cloudwatch_agent",
+        "name": "emf_container",
+        "links":  [ "cloudwatch_agent"],
         "image": "bionic-20230308",
         "essential": true,
         "entryPoint": [
