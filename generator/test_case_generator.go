@@ -34,13 +34,13 @@ var testTypeToTestDirMap = map[string][]string{
 		"./test/nvidia_gpu",
 	},
 	"ec2_linux": {
-		//"./test/ca_bundle",
+		"./test/ca_bundle",
 		"./test/cloudwatchlogs",
-		//"./test/metrics_number_dimension",
+		"./test/metrics_number_dimension",
 		"./test/metric_value_benchmark",
 		"./test/run_as_user",
-		/* "./test/collection_interval",
-		"./test/metric_dimension", */
+		"./test/collection_interval",
+		"./test/metric_dimension",
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
