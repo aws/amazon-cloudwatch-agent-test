@@ -107,7 +107,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 	return testResult
 }
 
-func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult {
+func validateLogsForContainerInsights(e environment.MetaData) status.TestResult {
 	testResult := status.TestResult{
 		Name:   "emf-logs",
 		Status: status.FAILED,
