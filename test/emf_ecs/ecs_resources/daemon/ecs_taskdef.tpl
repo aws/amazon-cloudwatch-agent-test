@@ -84,7 +84,8 @@
             echo '{"_aws":{"Timestamp":'"\${CURRENT_TIME}"',"LogGroupName":"EMFECSLogGroup","CloudWatchMetrics":[{"Namespace":"EMFNameSpace","Dimensions":[["Type","InstanceId"], ["Type","ClusterName"], ["Type", "ContainerInstanceId"]],"Metrics":[{"Name":"EMFCounter","Unit":"Count"}]}]},"Type":"Counter","EMFCounter":5,"InstanceId":'"\${INSTANCEID}"', "ClusterName":'"\${CLUSTER_NAME}"', "ContainerInstanceId":'"\${CONTAINER_ID}"'}' \ > /dev/udp/0.0.0.0/25888
             sleep 60
             done
-            EOF; done"
+            EOF; done",
+            "/etc/emf.sh"
         ],
     }
 ]
