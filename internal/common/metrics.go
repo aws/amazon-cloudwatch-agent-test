@@ -7,6 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"log"
 	"net"
 	"time"
 
@@ -210,4 +216,96 @@ func SendEMFMetrics(metricPerInterval int, metricLogGroup, metricNamespace strin
 			return nil
 		}
 	}
+}
+
+func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, metricName string, runDuration time.Duration) status.TestResult {
+	testResult := status.TestResult{
+		Name:   metricName,
+		Status: status.FAILED,
+	}
+	instructions := []dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "key",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("value")},
+		},
+	}
+	switch metricName {
+	case "statsd_counter_1":
+		instructions = append(instructions, dimension.Instruction{
+			// CWA adds this metric_type dimension.
+			Key:   "metric_type",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("counter")},
+		})
+	case "statsd_gauge_1":
+		instructions = append(instructions, dimension.Instruction{
+			// CWA adds this metric_type dimension.
+			Key:   "metric_type",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("gauge")},
+		})
+	}
+
+	dims, failed := dimFactory.GetDimensions(instructions)
+	if len(failed) > 0 {
+		return testResult
+	}
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	if err != nil {
+		return testResult
+	}
+
+	aggregationInterval := 30 * time.Second
+	upperBound := int(runDuration/aggregationInterval) + 2
+	lowerBound := int(runDuration/aggregationInterval) - 4
+
+	if len(values) < lowerBound || len(values) > upperBound {
+		log.Printf("fail: lowerBound %v, upperBound %v, actual %v",
+			lowerBound, upperBound, len(values))
+		return testResult
+	}
+
+	switch metricName {
+	case "statsd_counter_1":
+		if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 4) {
+			return testResult
+		}
+	case "statsd_gauge_1":
+		if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
+			return testResult
+		}
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func isAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []float64, expectedValue float64) bool {
+	if len(values) == 0 {
+		log.Printf("No values found %v", metricName)
+		return false
+	}
+
+	totalSum := 0.0
+	for _, value := range values {
+		if value < 0 {
+			log.Printf("Values are not all greater than or equal to zero for %s", metricName)
+			return false
+		}
+		totalSum += value
+	}
+	metricErrorBound := 0.2
+	metricAverageValue := totalSum / float64(len(values))
+	upperBoundValue := expectedValue * (1 + metricErrorBound)
+	lowerBoundValue := expectedValue * (1 - metricErrorBound)
+	if expectedValue > 0 && (metricAverageValue > upperBoundValue || metricAverageValue < lowerBoundValue) {
+		log.Printf("The average value %f for metric %s are not within bound [%f, %f]", metricAverageValue, metricName, lowerBoundValue, upperBoundValue)
+		return false
+	}
+
+	log.Printf("The average value %f for metric %s are within bound [%f, %f]", expectedValue, metricName, lowerBoundValue, upperBoundValue)
+	return true
 }
