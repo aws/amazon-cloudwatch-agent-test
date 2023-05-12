@@ -61,7 +61,7 @@
     {
         "name": "emf_container",
         "links":  ["cloudwatch_agent"],
-        "image": "alpine/socat:latest",
+        "image": "busybox",
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
@@ -74,7 +74,18 @@
         "entryPoint": [
             "/bin/sh",
             "-c",
-            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFECSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFNameSpace\",\"Dimensions\":[[\"Type\",\"InstanceId\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"InstanceID\": \"INSTANCEID\"}' | socat -v -t 0 - UDP:cloudwatch_agent:25888; sleep 60; done"
-        ]
+            "cat <<EOF | sudo tee /etc/emf.sh
+            INSTANCEID=\$(curl \${ECS_CONTAINER_METADATA_URI_V4} -H \"ContainerARN\")
+            CLUSTER_NAME=\$(curl \${ECS_CONTAINER_METADATA_URI_V4}/task -H \"Cluster\")
+            CONTAINER_ID=\$(curl \${ECS_CONTAINER_METADATA_URI_V4} -H \"DockerId\")
+            while true;
+            do
+            CURRENT_TIME=\$(date +%s%N | cut -b1-13)
+            echo '{"_aws":{"Timestamp":'"\${CURRENT_TIME}"',"LogGroupName":"EMFECSLogGroup","CloudWatchMetrics":[{"Namespace":"EMFNameSpace","Dimensions":[["Type","InstanceId"], ["Type","ClusterName"], ["Type", "ContainerInstanceId"]],"Metrics":[{"Name":"EMFCounter","Unit":"Count"}]}]},"Type":"Counter","EMFCounter":5,"InstanceId":'"\${INSTANCEID}"', "ClusterName":'"\${CLUSTER_NAME}"', "ContainerInstanceId":'"\${CONTAINER_ID}"'}' \ > /dev/udp/0.0.0.0/25888
+            sleep 60
+            done
+            EOF; done",
+            "/etc/emf.sh"
+        ],
     }
 ]
