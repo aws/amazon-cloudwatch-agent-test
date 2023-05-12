@@ -83,7 +83,7 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 	rs := jsonschema.Must(emfContainerInsightsSchema)
 
 	now := time.Now()
-	group := fmt.Sprintf("/aws/eks/containerinsights/%s/performance", eks.EKSClusterName)
+	group := fmt.Sprintf("/aws/containerinsights/%s/performance", eks.EKSClusterName)
 
 	// need to get the instances used for the EKS cluster
 	EKSInstances, err := awsservice.GetEKSInstances(eks.EKSClusterName)
