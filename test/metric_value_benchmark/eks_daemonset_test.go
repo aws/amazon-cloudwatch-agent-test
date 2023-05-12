@@ -85,9 +85,10 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 	now := time.Now()
 	group := fmt.Sprintf("/aws/eks/containerinsights/%s/performance", eks.EKSClusterName)
 
-	// need to derive the container Instance ID first
+	// need to get the instances used for the EKS cluster
 	EKSInstances, err := awsservice.GetEKSInstances(eks.EKSClusterName)
 	if err != nil {
+		log.Println("failed to get EKS instances")
 		return testResult
 	}
 
@@ -100,11 +101,13 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 		stream := *instance.InstanceName
 		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
 			if len(logs) < 1 {
+				log.Println("failed to get logs")
 				return false
 			}
 
 			for _, l := range logs {
 				if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
+					log.Println("failed to match logs with schema")
 					return false
 				}
 			}
