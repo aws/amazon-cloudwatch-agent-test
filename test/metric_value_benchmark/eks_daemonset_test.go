@@ -101,7 +101,7 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 		stream := *instance.InstanceName
 		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
 			if len(logs) < 1 {
-				log.Println("failed to get logs")
+				log.Println(fmt.Sprintf("failed to get logs for insatnce: %s", stream))
 				return false
 			}
 
