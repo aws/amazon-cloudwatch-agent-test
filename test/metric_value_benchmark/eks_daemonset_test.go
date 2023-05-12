@@ -6,6 +6,7 @@
 package metric_value_benchmark
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"strings"
@@ -20,6 +21,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
+
+//go:embed agent_resources/container_insights_eks_telemetry.json
+var eksContainerInsightsSchema string
 
 type EKSDaemonTestRunner struct {
 	test_runner.BaseTestRunner
@@ -80,7 +84,7 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 		Status: status.FAILED,
 	}
 
-	rs := jsonschema.Must(emfContainerInsightsSchema)
+	rs := jsonschema.Must(eksContainerInsightsSchema)
 
 	now := time.Now()
 	group := fmt.Sprintf("/aws/containerinsights/%s/performance", eks.EKSClusterName)
