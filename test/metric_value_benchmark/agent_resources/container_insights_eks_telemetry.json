@@ -40,7 +40,6 @@
     "ClusterName": {},
     "InstanceId": {},
     "InstanceType": {},
-    "Namespace": {},
     "NodeName": {},
     "PodName": {},
     "Sources": {
@@ -58,10 +57,7 @@
     "ClusterName",
     "InstanceId",
     "InstanceType",
-    "Namespace",
     "NodeName",
-    "PodName",
-    "Service",
     "Sources",
     "Timestamp",
     "Type",
