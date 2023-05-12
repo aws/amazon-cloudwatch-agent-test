@@ -61,7 +61,7 @@
     {
         "name": "emf_container",
         "links":  ["cloudwatch_agent"],
-        "image": "busybox",
+        "image": "public.ecr.aws/amazonlinux/amazonlinux:2023",
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
