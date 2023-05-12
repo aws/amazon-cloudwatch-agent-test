@@ -11,9 +11,9 @@ data_type: "logs"
 # Number of logs being written
 number_monitored_logs: 1
 # Number of metrics to be sent or number of log lines being written  each minute
-values_per_minute: "3"
+values_per_minute: "2"
 # Number of seconds the agent should run and collect the metrics. In this case, 1 minutes
-agent_collection_period: 60
+agent_collection_period: 60 
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 
@@ -22,59 +22,59 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # https://github.com/aws/amazon-cloudwatch-agent-test/blob/96f576e865b55de5e2aa88e4cf80b79c4d3dad70/validator/validators/feature/feature_validator.go#L66-L71
 metric_namespace: "CloudWatchAgentMacFeature"
 metric_validation:
-  # Validator generates metrics
+  # Validator generates metrics 
   # https://github.com/aws/amazon-cloudwatch-agent-test/blob/4365fbdbf979756e7f6db7f795a8a84b2c4f57c1/internal/common/metrics.go#L130-L165
   - metric_name: "statsd_gauge_1"
     metric_value: 1.0
     metric_sample_count: 1
-    metric_dimension:
+    metric_dimension: 
       - name: "metric_type"
         value: "gauge"
 
   - metric_name: "statsd_counter_1"
     metric_value: 1.0
     metric_sample_count: 1
-    metric_dimension:
+    metric_dimension:   
       - name: "metric_type"
         value: "counter"
-
+  
   # Validator generates emf metrics
-  # https://github.com/aws/amazon-cloudwatch-agent-test/blob/62930a4acf466934b3894658e2060dd5840c49c4/internal/common/metrics.go#L170-L211s
+  # https://github.com/aws/amazon-cloudwatch-agent-test/blob/62930a4acf466934b3894658e2060dd5840c49c4/internal/common/metrics.go#L170-L211s 
   - metric_name: "emf_time_1"
     metric_value: 1.0
     metric_sample_count: 1
-
+  
   - metric_name: "emf_time_2"
     metric_value: 2.0
     metric_sample_count: 1
 
   - metric_name: "cpu_time_active"
     metric_sample_count: 60
-    metric_dimension:
+    metric_dimension: 
       - name: "cpu"
         value: "cpu-total"
 
   - metric_name: "cpu_time_guest"
     metric_sample_count: 60
-    metric_dimension:
+    metric_dimension: 
       - name: "cpu"
         value: "cpu-total"
 
   - metric_name: "net_bytes_sent"
     metric_sample_count: 60
-    metric_dimension:
+    metric_dimension: 
       - name: "interface"
         value: "en0"
 
   - metric_name: "net_bytes_recv"
     metric_sample_count: 60
-    metric_dimension:
+    metric_dimension: 
       - name: "interface"
         value: "en0"
 
   - metric_name: "disk_free"
     metric_sample_count: 60
-    metric_dimension:
+    metric_dimension: 
       - name: "fstype"
         value: "devfs"
       - name: "path"
@@ -82,7 +82,7 @@ metric_validation:
 
   - metric_name: "disk_used_percent"
     metric_sample_count: 60
-    metric_dimension:
+    metric_dimension: 
       - name: "fstype"
         value: "devfs"
       - name: "path"
@@ -90,7 +90,7 @@ metric_validation:
 
   - metric_name: "procstat_cpu_usage"
     metric_sample_count: 60
-    metric_dimension:
+    metric_dimension: 
       - name: "exe"
         value: "amazon-cloudwatch-agent"
       - name: "process_name"
@@ -98,7 +98,7 @@ metric_validation:
 
   - metric_name: "procstat_memory_rss"
     metric_sample_count: 60
-    metric_dimension:
+    metric_dimension: 
       - name: "exe"
         value: "amazon-cloudwatch-agent"
       - name: "process_name"
@@ -132,7 +132,7 @@ metric_validation:
 # Logs that the test needs to validate; moreover, the feature validation already has
 # InstanceID as a log group; therefore, does not need to pass it
 # https://github.com/aws/amazon-cloudwatch-agent-test/blob/96f576e865b55de5e2aa88e4cf80b79c4d3dad70/validator/validators/feature/feature_validator.go#L108-L111
-# Moreover, the logs are being generated at with the generator
+# Moreover, the logs are being generated at with the generator 
 # https://github.com/aws/amazon-cloudwatch-agent-test/blob/96f576e865b55de5e2aa88e4cf80b79c4d3dad70/internal/common/logs.go#L41-L64
 # and being generated with 2 logs line per minute
 # https://github.com/aws/amazon-cloudwatch-agent-test/blob/96f576e865b55de5e2aa88e4cf80b79c4d3dad70/test/feature/mac/parameters.yml#L14

@@ -54,7 +54,7 @@ variable "cwa_github_sha_date" {
 }
 variable "values_per_minute" {
   type    = number
-  default = 9
+  default = 10
 }
 
 variable "family" {

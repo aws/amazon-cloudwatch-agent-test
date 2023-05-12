@@ -132,18 +132,9 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 
 }
 
-func SendStatsdMetrics(
-	metricPerInterval int,
-	metricDimension []string,
-	sendingInterval time.Duration,
-	duration time.Duration,
-) error {
+func SendStatsdMetrics(metricPerInterval int, metricDimension []string, sendingInterval, duration time.Duration) error {
 	// https://github.com/DataDog/datadog-go#metrics
-	client, err := statsd.New(
-		"127.0.0.1:8125",
-		statsd.WithMaxMessagesPerPayload(100),
-		statsd.WithNamespace("statsd"),
-		statsd.WithoutTelemetry())
+	client, err := statsd.New("127.0.0.1:8125", statsd.WithMaxMessagesPerPayload(100), statsd.WithNamespace("statsd"), statsd.WithoutTelemetry())
 
 	if err != nil {
 		return err
@@ -154,16 +145,24 @@ func SendStatsdMetrics(
 	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
-	for {
-		// Send first then wait for ticker.
-		for t := 1; t <= metricPerInterval/3; t++ {
-			client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0)
-			client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0)
-			client.Timing(fmt.Sprint("timing_", t), time.Millisecond * time.Duration(t), metricDimension, 1.0)
+
+	// Sending the statsd metric within the first minute before the ticker kicks in the next minute
+	for t := 1; t <= metricPerInterval/2; t++ {
+		if err := client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0); err != nil {
+			return err
 		}
+		if err := client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0); err != nil {
+			return err
+		}
+	}
+
+	for {
 		select {
 		case <-ticker.C:
-			continue
+			for t := 1; t <= metricPerInterval/2; t++ {
+				client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0)
+				client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0)
+			}
 		case <-endTimeout:
 			return nil
 		}
