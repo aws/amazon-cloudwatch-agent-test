@@ -58,7 +58,7 @@
     "Sources",
     "Timestamp",
     "Type",
-    "Version",
+    "Version"
   ],
   "additionalProperties": true
 }
