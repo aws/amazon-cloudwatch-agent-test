@@ -17,7 +17,7 @@
         "awslogs-group": "${log_group}"
       }
     },
-    "cpu": 1,
+    "cpu": 128,
     "mountPoints": [
         {
             "readOnly": true,
@@ -50,7 +50,7 @@
           "sourceVolume": "al1_cgroup"
         }
     ],
-    "memory": 2048,
+    "memory": 512,
     "portMappings": [
       {
           "containerPort": 8125,
@@ -77,7 +77,7 @@
       },
       "cpu": 128,
       "mountPoints": [ ],
-      "memory": 512,
+      "memory": 64,
       "volumesFrom": [ ],
       "links": [
           "cloudwatch_agent"
