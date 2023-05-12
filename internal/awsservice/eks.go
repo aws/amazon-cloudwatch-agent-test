@@ -12,9 +12,7 @@ import (
 )
 
 type EKSInstance struct {
-	InstanceID *string
 	InstanceName *string
-
 }
 
 func GetEKSInstances(clusterName string) ([]EKSInstance, error) {
@@ -27,7 +25,6 @@ func GetEKSInstances(clusterName string) ([]EKSInstance, error) {
 	var results []EKSInstance
 	for _, instance := range describeEksInstancesOutput.Reservations[0].Instances {
 		results = append(results, EKSInstance{
-			InstanceID: instance.InstanceId,
 			InstanceName: instance.PrivateDnsName,
 		})
 	}
