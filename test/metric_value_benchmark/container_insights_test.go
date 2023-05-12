@@ -28,10 +28,10 @@ type ContainerInsightsTestRunner struct {
 //go:embed agent_resources/container_insights_node_telemetry.json
 var emfContainerInsightsSchema string
 
-var _ IECSTestRunner = (*ContainerInsightsTestRunner)(nil)
+var _ test_runner.ITestRunner = (*ContainerInsightsTestRunner)(nil)
 
-func (t *ContainerInsightsTestRunner) validate(e *environment.MetaData) status.TestGroupResult {
-	metricsToFetch := t.getMeasuredMetrics()
+func (t *ContainerInsightsTestRunner) Validate(e *environment.MetaData) status.TestGroupResult {
+	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateContainerInsightsMetrics(metricName)
@@ -40,24 +40,24 @@ func (t *ContainerInsightsTestRunner) validate(e *environment.MetaData) status.T
 	testResults = append(testResults, validateLogsForContainerInsights(e))
 
 	return status.TestGroupResult{
-		Name:        t.getTestName(),
+		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
 }
 
-func (t *ContainerInsightsTestRunner) getTestName() string {
+func (t *ContainerInsightsTestRunner) GetTestName() string {
 	return "ContainerInstance"
 }
 
-func (t *ContainerInsightsTestRunner) getAgentConfigFileName() string {
+func (t *ContainerInsightsTestRunner) GetAgentConfigFileName() string {
 	return "./agent_configs/container_insights.json"
 }
 
-func (t *ContainerInsightsTestRunner) getAgentRunDuration() time.Duration {
+func (t *ContainerInsightsTestRunner) GetAgentRunDuration() time.Duration {
 	return test_runner.MinimumAgentRuntime
 }
 
-func (t *ContainerInsightsTestRunner) getMeasuredMetrics() []string {
+func (t *ContainerInsightsTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"instance_memory_utilization", "instance_number_of_running_tasks", "instance_memory_reserved_capacity",
 		"instance_filesystem_utilization", "instance_network_total_bytes", "instance_cpu_utilization",

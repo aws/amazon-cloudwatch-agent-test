@@ -43,20 +43,20 @@ func init() {
 }
 
 var (
-	ecsTestRunners []*ECSTestRunner
+	ecsTestRunners []*test_runner.ECSTestRunner
 	ec2TestRunners []*test_runner.TestRunner
 	eksTestRunners []*EKSTestRunner
 )
 
-func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
+func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 	if ecsTestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 
-		ecsTestRunners = []*ECSTestRunner{
+		ecsTestRunners = []*test_runner.ECSTestRunner{
 			{
-				testRunner:       &ContainerInsightsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}},
-				agentRunStrategy: &ECSAgentRunStrategy{},
-				env:              *env,
+				Runner:      &ContainerInsightsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
 			},
 		}
 	}

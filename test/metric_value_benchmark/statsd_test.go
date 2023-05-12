@@ -61,7 +61,7 @@ func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *StatsdTestRunner) GetTestName() string {
-	return "Statsd"
+	return "EC2StatsD"
 }
 
 func (t *StatsdTestRunner) GetAgentConfigFileName() string {
