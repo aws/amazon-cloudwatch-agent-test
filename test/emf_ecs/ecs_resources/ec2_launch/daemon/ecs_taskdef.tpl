@@ -61,7 +61,7 @@
     {
         "name": "emf_container",
         "links":  ["cloudwatch_agent"],
-        "image": "public.ecr.aws/amazonlinux/amazonlinux:2023",
+        "image": "alpine/socat:latest",
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
