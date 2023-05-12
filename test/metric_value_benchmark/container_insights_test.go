@@ -38,7 +38,7 @@ func (t *ContainerInsightsTestRunner) Validate() status.TestGroupResult {
 		testResults[i] = t.validateContainerInsightsMetrics(metricName)
 	}
 
-	testResults = append(testResults, validateLogsForContainerInsights(&t.env))
+	testResults = append(testResults, validateLogsForContainerInsights(t.env))
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -107,7 +107,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 	return testResult
 }
 
-func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult {
+func validateLogsForContainerInsights(e environment.MetaData) status.TestResult {
 	testResult := status.TestResult{
 		Name:   "emf-logs",
 		Status: status.FAILED,
