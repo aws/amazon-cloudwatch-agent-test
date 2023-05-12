@@ -93,7 +93,7 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 
 	for _, instance := range EKSInstances {
 		validateLogContents := func(s string) bool {
-			return strings.Contains(s, fmt.Sprintf("\"NodeName\":\"%s\"", instance.InstanceName))
+			return strings.Contains(s, fmt.Sprintf("\"NodeName\":\"%s\"", *instance.InstanceName))
 		}
 
 		var ok bool
