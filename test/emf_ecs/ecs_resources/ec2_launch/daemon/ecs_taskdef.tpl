@@ -75,8 +75,8 @@
             "/bin/sh",
             "-c",
             "cat <<EOF | sudo tee /etc/emf.sh
-            INSTANCEID=\$(curl \$\${ECS_CONTAINER_METADATA_URI_V4} -H \"ContainerARN\")
-            CLUSTER_NAME=\$(curl \$\${ECS_CONTAINER_METADATA_URI_V4}/task -H \"Cluster\")
+            INSTANCEID=\$(curl $${ECS_CONTAINER_METADATA_URI_V4} -H \"ContainerARN\")
+            CLUSTER_NAME=\$(curl $\${ECS_CONTAINER_METADATA_URI_V4}/task -H \"Cluster\")
             CONTAINER_ID=\$(curl \$\${ECS_CONTAINER_METADATA_URI_V4} -H \"DockerId\")
             while true;
             do
