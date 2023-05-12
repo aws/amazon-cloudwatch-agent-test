@@ -40,8 +40,9 @@
     "ClusterName": {},
     "InstanceId": {},
     "InstanceType": {},
+    "Namespace": {},
     "NodeName": {},
-    "PodName": {},
+    "Podname": {},
     "Sources": {
       "type": "array"
     },
@@ -53,16 +54,11 @@
     }
   },
   "required": [
-    "AutoScalingGroupName",
     "ClusterName",
-    "InstanceId",
-    "InstanceType",
-    "NodeName",
     "Sources",
     "Timestamp",
     "Type",
     "Version",
-    "kubernetes"
   ],
   "additionalProperties": true
 }
