@@ -23,6 +23,7 @@ import (
 
 type ContainerInsightsTestRunner struct {
 	test_runner.BaseTestRunner
+	env environment.MetaData
 }
 
 //go:embed agent_resources/container_insights_node_telemetry.json
@@ -30,14 +31,14 @@ var emfContainerInsightsSchema string
 
 var _ test_runner.ITestRunner = (*ContainerInsightsTestRunner)(nil)
 
-func (t *ContainerInsightsTestRunner) Validate(e *environment.MetaData) status.TestGroupResult {
+func (t *ContainerInsightsTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateContainerInsightsMetrics(metricName)
 	}
 
-	testResults = append(testResults, validateLogsForContainerInsights(e))
+	testResults = append(testResults, validateLogsForContainerInsights(&t.env))
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
