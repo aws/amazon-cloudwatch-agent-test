@@ -80,7 +80,9 @@ var testTypeToTestDirMap = map[string][]string{
 		"./test/cloudwatchlogs",
 		"./test/metric_value_benchmark",
 		"./test/run_as_user",
+		"./test/userdata",
   },
+
 	"eks_daemon": {
 		"./test/metric_value_benchmark",
 	},
