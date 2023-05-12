@@ -54,17 +54,28 @@ type ECSTestRunner struct {
 	Env         environment.MetaData
 }
 
-func (t *ECSTestRunner) GetAgentConfigFileName() string {
-	return ""
-}
-
-func (t *ECSTestRunner) SetupAfterAgentRun() error {
-	return nil
-}
-
 func (t *ECSTestRunner) Run(s ITestSuite, e *environment.MetaData) {
 	name := t.Runner.GetTestName()
 	log.Printf("Running %s", name)
+
+	//runs agent restart with given config only when it's available
+	agentConfigFileName := t.Runner.GetAgentConfigFileName()
+	if len(agentConfigFileName) != 0 {
+		err := t.RunStrategy.RunAgentStrategy(e, t.Runner.GetAgentConfigFileName())
+		if err != nil {
+			log.Printf("Failed to run agent with config for the given testm err:%v", err)
+			s.AddToSuiteResult(status.TestGroupResult{
+				Name: t.Runner.GetTestName(),
+				TestResults: []status.TestResult{
+					{
+						Name:   "Starting Agent",
+						Status: status.FAILED,
+					},
+				},
+			})
+			return
+		}
+	}
 
 	testGroupResult := t.Runner.Validate()
 
