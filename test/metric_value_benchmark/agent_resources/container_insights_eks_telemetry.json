@@ -49,7 +49,7 @@
     "Type": {},
     "Version": {},
     "kubernetes": {
-      "type": "array"
+      "type": "object"
     }
   },
   "required": [
