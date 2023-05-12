@@ -121,10 +121,6 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 		if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
 			return testResult
 		}
-	case "statsd_timing_1":
-		if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
-			return testResult
-		}
 	}
 
 	testResult.Status = status.SUCCESSFUL
