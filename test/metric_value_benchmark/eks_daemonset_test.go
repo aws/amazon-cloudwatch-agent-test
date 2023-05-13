@@ -154,7 +154,8 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 					log.Println("failed to unmarshal log file")
 				}
 
-				log.Println(fmt.Sprintf("eksClusterType is: %s", eksClusterType.Type))
+				log.Println(fmt.Sprintf("eksClusterTypes is: %s", eksClusterType.Type))
+				log.Println(fmt.Sprintf("log file is :::: %s", l))
 				jsonSchema, ok := eksClusterValidationMap[eksClusterType.Type]
 				if !ok {
 					log.Println("invalid cluster type provided")
