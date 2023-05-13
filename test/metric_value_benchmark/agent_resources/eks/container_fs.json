@@ -83,7 +83,7 @@
     "Namespace",
     "device",
     "fstype",
-    "kubernetes",
+    "kubernetes"
   ],
   "additionalProperties": false
 }

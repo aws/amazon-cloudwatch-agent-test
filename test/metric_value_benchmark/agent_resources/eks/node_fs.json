@@ -46,7 +46,7 @@
     "NodeName",
     "kubernetes",
     "device",
-    "fstype",
+    "fstype"
   ],
   "additionalProperties": false
 }

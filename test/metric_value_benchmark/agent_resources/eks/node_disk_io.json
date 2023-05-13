@@ -46,7 +46,7 @@
     "InstanceType",
     "NodeName",
     "kubernetes",
-    "device",
+    "device"
   ],
   "additionalProperties": false
 }

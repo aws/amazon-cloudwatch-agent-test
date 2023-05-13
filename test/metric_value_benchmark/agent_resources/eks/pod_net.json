@@ -54,7 +54,7 @@
     "PodName",
     "Namespace",
     "interface",
-    "kubernetes",
+    "kubernetes"
   ],
   "additionalProperties": false
 }
