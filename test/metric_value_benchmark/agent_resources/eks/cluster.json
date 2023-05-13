@@ -20,8 +20,6 @@
     "Sources",
     "Timestamp",
     "Version",
-    "cluster_failed_node_count",
-    "cluster_node_count",
     "CloudWatchMetrics"
   ],
   "additionalProperties": false

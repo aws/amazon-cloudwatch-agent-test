@@ -55,15 +55,6 @@
     "Namespace",
     "interface",
     "kubernetes",
-    "pod_interface_network_rx_bytes",
-    "pod_interface_network_rx_dropped",
-    "pod_interface_network_rx_errors",
-    "pod_interface_network_rx_packets",
-    "pod_interface_network_total_bytes",
-    "pod_interface_network_tx_bytes",
-    "pod_interface_network_tx_dropped",
-    "pod_interface_network_tx_errors",
-    "pod_interface_network_tx_packets"
   ],
   "additionalProperties": false
 }

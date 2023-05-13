@@ -84,10 +84,6 @@
     "device",
     "fstype",
     "kubernetes",
-    "container_filesystem_available",
-    "container_filesystem_capacity",
-    "container_filesystem_usage",
-    "container_filesystem_utilization"
   ],
   "additionalProperties": false
 }

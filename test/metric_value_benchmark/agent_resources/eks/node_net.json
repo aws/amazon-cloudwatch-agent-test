@@ -45,15 +45,6 @@
     "NodeName",
     "kubernetes",
     "interface",
-    "node_interface_network_rx_bytes",
-    "node_interface_network_rx_dropped",
-    "node_interface_network_rx_errors",
-    "node_interface_network_rx_packets",
-    "node_interface_network_total_bytes",
-    "node_interface_network_tx_bytes",
-    "node_interface_network_tx_dropped",
-    "node_interface_network_tx_errors",
-    "node_interface_network_tx_packets"
   ],
   "additionalProperties": false
 }

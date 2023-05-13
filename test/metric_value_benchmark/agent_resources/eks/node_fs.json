@@ -47,10 +47,6 @@
     "kubernetes",
     "device",
     "fstype",
-    "node_filesystem_available",
-    "node_filesystem_capacity",
-    "node_filesystem_usage",
-    "node_filesystem_utilization"
   ],
   "additionalProperties": false
 }

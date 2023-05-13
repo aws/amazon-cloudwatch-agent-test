@@ -32,7 +32,6 @@
     "Version",
     "Service",
     "kubernetes",
-    "service_number_of_running_pods",
     "CloudWatchMetrics"
   ],
   "additionalProperties": false
