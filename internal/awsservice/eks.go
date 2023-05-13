@@ -4,6 +4,7 @@
 package awsservice
 
 import (
+	_ "embed"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
@@ -11,6 +12,10 @@ import (
 
 type EKSInstance struct {
 	InstanceName *string
+}
+
+type EKSClusterType struct {
+	Type string
 }
 
 func GetEKSInstances(clusterName string) ([]EKSInstance, error) {
