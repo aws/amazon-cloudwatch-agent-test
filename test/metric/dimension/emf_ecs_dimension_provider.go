@@ -20,13 +20,13 @@ func (p EFMECSDimensionProvider) GetDimension(instruction Instruction) types.Dim
 	if instruction.Key == "ClusterName" {
 		return types.Dimension{
 			Name:  aws.String("ClusterName"),
-			Value: aws.String(p.Provider.env.EcsClusterName),
+			Value: aws.String( /*p.Provider.env.EcsClusterName +*/ "cluster"),
 		}
 	}
 
 	if instruction.Key == "ContainerInstanceId" {
 		//TODO currently assuming there's only one container
-		containerInstances, err := awsservice.GetContainerInstances(p.Provider.env.EcsClusterArn)
+		//containerInstances, err := awsservice.GetContainerInstances(p.Provider.env.EcsClusterArn)
 		if err != nil {
 			log.Print(err)
 			return types.Dimension{}
@@ -34,7 +34,7 @@ func (p EFMECSDimensionProvider) GetDimension(instruction Instruction) types.Dim
 
 		return types.Dimension{
 			Name:  aws.String("ContainerInstanceId"),
-			Value: aws.String(containerInstances[0].ContainerInstanceId),
+			Value: aws.String( /*containerInstances[0].ContainerInstanceId +*/ "containerID"),
 		}
 	}
 
@@ -48,7 +48,7 @@ func (p EFMECSDimensionProvider) GetDimension(instruction Instruction) types.Dim
 
 		return types.Dimension{
 			Name:  aws.String("InstanceId"),
-			Value: aws.String(containerInstances[0].ContainerInstanceArn),
+			Value: aws.String( /*containerInstances[0].ContainerInstanceArn +*/ "instance"),
 		}
 	}
 
