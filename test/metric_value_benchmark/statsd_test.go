@@ -88,13 +88,20 @@ func (t *StatsdTestRunner) sender() {
 		case <-ticker.C:
 			for i, name := range metricNames {
 				if strings.Contains(name, "counter") {
-					client.Count(name, int64(metricValues[i]), tags, 1.0)
+					v := int64(metricValues[i]) - 77
+					client.Count(name, v, tags, 1.0)
+					v += 77*2
+					client.Count(name, v, tags, 1.0)
 				} else if strings.Contains(name, "gauge") {
+					// The first gauge value should have no effect.
+					client.Gauge(name, metricValues[i] - 100, tags, 1.0)
 					client.Gauge(name, metricValues[i], tags, 1.0)
 				} else {
-					// timing
-					duration := time.Millisecond * time.Duration(metricValues[i])
-					client.Timing(name, duration, tags, 1.0)
+					v := time.Millisecond * time.Duration(metricValues[i])
+					v -= 100 * time.Millisecond
+					client.Timing(name, v, tags, 1.0)
+					v += 200 * time.Millisecond
+					client.Timing(name, v, tags, 1.0)
 				}
 			}
 		}
@@ -141,29 +148,26 @@ func (t *StatsdTestRunner) validateStatsdMetric(
 	if err != nil {
 		return testResult
 	}
-
 	runDuration := t.GetAgentRunDuration()
 	aggregationInterval := 30 * time.Second
 	// If aggregation is not happening there could be a data point every 5 seconds.
 	// So validate the upper bound.
-	upperBound := int(runDuration/aggregationInterval) + 2
+	upperBound := int(runDuration/aggregationInterval)
 	// Allow 2 missing data points in case CW-Metrics-Web-Service has a 1 minute
 	// delay to store.
 	lowerBound := int(runDuration/aggregationInterval) - 2
-
 	if len(values) < lowerBound || len(values) > upperBound {
 		log.Printf("fail: lowerBound %v, upperBound %v, actual %v",
 			lowerBound, upperBound, len(values))
 		return testResult
 	}
-	// Counters get summed up.
+	// Counters get summed up. Multiply by 2x #milliseconds per 5 seconds.
 	if metricType == "counter" {
-		expectedValue *= 2 * float64(metrics_collection_interval)
+		expectedValue *= 2 * 1000 * float64(metrics_collection_interval)
 	}
 	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedValue)) {
 		return testResult
 	}
-
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
