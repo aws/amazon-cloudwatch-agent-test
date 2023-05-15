@@ -41,6 +41,8 @@ type StatsdTestRunner struct {
 }
 
 func (t *StatsdTestRunner) Validate() status.TestGroupResult {
+	// Stop sender.
+	close(done)
 	metricsToFetch := t.GetMeasuredMetrics()
 	results := make([]status.TestResult, len(metricsToFetch))
 	for i := range metricsToFetch {
@@ -76,7 +78,6 @@ func (t *StatsdTestRunner) sender() {
 	client, _ := statsd.New(
 		"127.0.0.1:8125",
 		statsd.WithMaxMessagesPerPayload(100),
-		statsd.WithNamespace("statsd"),
 		statsd.WithoutTelemetry())
 	defer client.Close()
 
@@ -126,9 +127,6 @@ func (t *StatsdTestRunner) validateStatsdMetric(
 	metricName string,
 	expectedValue float64,
 ) status.TestResult {
-	// Stop sender.
-	close(done)
-
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
