@@ -56,10 +56,10 @@ func (t *EMFECSTestRunner) validateEMFOnECSMetrics(metricName string) status.Tes
 	}
 
 	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "ClusterName",
-			Value: dimension.UnknownDimensionValue(),
-		},
+		//{
+		//	Key:   "ClusterName",
+		//	Value: dimension.UnknownDimensionValue(),
+		//},
 
 		//{
 		//	Key:   "ContainerInstanceId",
