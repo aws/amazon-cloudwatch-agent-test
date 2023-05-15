@@ -114,11 +114,11 @@ func (t *StatsdTestRunner) validateStatsdMetric(metricName string) status.TestRe
 
 	switch metricName {
 	case "statsd_counter_1":
-		if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 5) {
+		if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 5) {
 			return testResult
 		}
 	case "statsd_gauge_1":
-		if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
+		if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
 			return testResult
 		}
 	}
