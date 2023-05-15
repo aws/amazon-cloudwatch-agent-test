@@ -6,7 +6,6 @@
 package metric_value_benchmark
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -87,13 +86,13 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 	group := fmt.Sprintf("/aws/containerinsights/%s/performance", eks.EKSClusterName)
 
 	// need to get the instances used for the EKS cluster
-	EKSInstances, err := awsservice.GetEKSInstances(eks.EKSClusterName)
+	eKSInstances, err := awsservice.GetEKSInstances(eks.EKSClusterName)
 	if err != nil {
-		log.Println("failed to get EKS instances")
+		log.Println("failed to get EKS instances", err)
 		return testResult
 	}
 
-	for _, instance := range EKSInstances {
+	for _, instance := range eKSInstances {
 		validateLogContents := func(s string) bool {
 			return strings.Contains(s, fmt.Sprintf("\"ClusterName\":\"%s\"", eks.EKSClusterName))
 		}
