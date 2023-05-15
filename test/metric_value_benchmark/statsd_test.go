@@ -19,9 +19,14 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
+const (
+	// Must match JSON config
+	metrics_aggregation_interval = 30 * time.Second
+	metrics_collection_interval = 5 * time.Second
+	send_interval = 10 * time.Millisecond
+)
+
 var (
-	// metrics_collection_interval must match JSON config.
-	metrics_collection_interval int = 5
 	done = make(chan bool)
 	metricNames = []string{
 		"statsd_counter_1",
@@ -75,10 +80,10 @@ func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 func (t *StatsdTestRunner) sender() {
 	client, _ := statsd.New(
 		"127.0.0.1:8125",
-		statsd.WithMaxMessagesPerPayload(100),
+		statsd.WithMaxMessagesPerPayload(1),
 		statsd.WithoutTelemetry())
 	defer client.Close()
-	ticker := time.NewTicker(time.Millisecond)
+	ticker := time.NewTicker(send_interval)
 	defer ticker.Stop()
 	tags := []string{"key:value"}
 	for {
@@ -88,14 +93,14 @@ func (t *StatsdTestRunner) sender() {
 		case <-ticker.C:
 			for i, name := range metricNames {
 				if strings.Contains(name, "counter") {
-					v := int64(metricValues[i]) - 77
-					client.Count(name, v, tags, 1.0)
-					v += 77*2
-					client.Count(name, v, tags, 1.0)
+					// Submit twice such that the sum is metricValues[i].
+					v := int64(metricValues[i])
+					client.Count(name, v - 500, tags, 1.0)
+					client.Count(name, 500, tags, 1.0)
 				} else if strings.Contains(name, "gauge") {
-					// The first gauge value should have no effect.
-					client.Gauge(name, metricValues[i] - 100, tags, 1.0)
+					// Only the most recent gauge value matters.
 					client.Gauge(name, metricValues[i], tags, 1.0)
+					client.Gauge(name, metricValues[i] - 500, tags, 1.0)
 				} else {
 					v := time.Millisecond * time.Duration(metricValues[i])
 					v -= 100 * time.Millisecond
@@ -149,23 +154,27 @@ func (t *StatsdTestRunner) validateStatsdMetric(
 		return testResult
 	}
 	runDuration := t.GetAgentRunDuration()
-	aggregationInterval := 30 * time.Second
-	// If aggregation is not happening there could be a data point every 5 seconds.
-	// So validate the upper bound.
-	upperBound := int(runDuration/aggregationInterval)
-	// Allow 2 missing data points in case CW-Metrics-Web-Service has a 1 minute
-	// delay to store.
-	lowerBound := int(runDuration/aggregationInterval) - 2
-	if len(values) < lowerBound || len(values) > upperBound {
-		log.Printf("fail: lowerBound %v, upperBound %v, actual %v",
-			lowerBound, upperBound, len(values))
+	lowerBound := int(runDuration / metrics_aggregation_interval) - 2
+	if len(values) < lowerBound {
+		log.Printf("fail: lowerBound %v, actual %v", lowerBound, len(values))
 		return testResult
 	}
-	// Counters get summed up. Multiply by 2x #milliseconds per 5 seconds.
+	// Counters get summed up over the metrics_collection_interval.
 	if metricType == "counter" {
-		expectedValue *= 2 * 1000 * float64(metrics_collection_interval)
+		expectedValue *= float64(metrics_collection_interval / send_interval)
 	}
 	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedValue)) {
+		return testResult
+	}
+	// Check aggregation by checking sample count.
+	// Expect samples to be metrics_aggregation_interval / metrics_collection_interval
+	expectedSampleCount := metrics_aggregation_interval / metrics_collection_interval
+	values, err = fetcher.Fetch(namespace, metricName, dims, metric.SAMPLE_COUNT,
+		test_runner.HighResolutionStatPeriod)
+	if err != nil {
+		return testResult
+	}
+	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedSampleCount)) {
 		return testResult
 	}
 	testResult.Status = status.SUCCESSFUL
