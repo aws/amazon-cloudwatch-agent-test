@@ -7,7 +7,6 @@ package metric_value_benchmark
 
 import (
 	"log"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -72,46 +71,29 @@ func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 	return nil
 }
 
-// sender will send statsd metric values with the specified names and types.
-// It adds +/- variance to the metric values to test min, max, avg.
+// sender will send statsd metric values with the specified names and values.
 func (t *StatsdTestRunner) sender() {
 	client, _ := statsd.New(
 		"127.0.0.1:8125",
 		statsd.WithMaxMessagesPerPayload(100),
 		statsd.WithoutTelemetry())
 	defer client.Close()
-
 	ticker := time.NewTicker(time.Millisecond)
 	defer ticker.Stop()
-
-	source := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(source)
-
 	tags := []string{"key:value"}
-
 	for {
 		select {
 		case <- done:
 			return
 		case <-ticker.C:
-			variance := float64(r.Intn(500))
 			for i, name := range metricNames {
 				if strings.Contains(name, "counter") {
-					// Send it twice with +/- variance so the avg is predictable.
-					v := int64(metricValues[i] + variance)
-					client.Count(name, v, tags, 1.0)
-					v = int64(metricValues[i] - variance)
-					client.Count(name, v, tags, 1.0)
+					client.Count(name, int64(metricValues[i]), tags, 1.0)
 				} else if strings.Contains(name, "gauge") {
-					v := metricValues[i] + variance
-					client.Gauge(name, v, tags, 1.0)
-					// Send once more with expected val
 					client.Gauge(name, metricValues[i], tags, 1.0)
 				} else {
 					// timing
-					duration := time.Millisecond * time.Duration(metricValues[i] + variance)
-					client.Timing(name, duration, tags, 1.0)
-					duration -= time.Duration(2 * variance)
+					duration := time.Millisecond * time.Duration(metricValues[i])
 					client.Timing(name, duration, tags, 1.0)
 				}
 			}
