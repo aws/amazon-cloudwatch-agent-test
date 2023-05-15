@@ -172,7 +172,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(
 	if metricType == "timing" {
 		// Every single timing is counted.
 		// Sent twice per send_interval.
-		expectedValue = float64(2 * metrics_aggregation_interval / send_interval)
+		expectedSampleCount = 2 * metrics_aggregation_interval / send_interval
 	}
 	values, err = fetcher.Fetch(namespace, metricName, dims, metric.SAMPLE_COUNT,
 		test_runner.HighResolutionStatPeriod)
