@@ -13,18 +13,26 @@ import (
 	"time"
 )
 
+type IEKSTestRunner interface {
+	validate(e *environment.MetaData) status.TestGroupResult
+	getTestName() string
+	getAgentConfigFileName() string
+	getAgentRunDuration() time.Duration
+	getMeasuredMetrics() []string
+}
+
 type EKSTestRunner struct {
-	runner test_runner.ITestRunner
+	runner IEKSTestRunner
 	env    environment.MetaData
 }
 
 func (t *EKSTestRunner) Run(s test_runner.ITestSuite, e *environment.MetaData) {
-	name := t.runner.GetTestName()
+	name := t.runner.getTestName()
 	log.Printf("Running %s", name)
-	dur := t.runner.GetAgentRunDuration()
+	dur := t.runner.getAgentRunDuration()
 	time.Sleep(dur)
 
-	res := t.runner.Validate()
+	res := t.runner.validate(e)
 	s.AddToSuiteResult(res)
 	if res.GetStatus() != status.SUCCESSFUL {
 		log.Printf("%s test group failed", name)

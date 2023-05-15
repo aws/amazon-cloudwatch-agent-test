@@ -56,7 +56,7 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy
+    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
   ]
 }
 
