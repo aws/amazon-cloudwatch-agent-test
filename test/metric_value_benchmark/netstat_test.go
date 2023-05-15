@@ -84,7 +84,7 @@ func (t *NetStatTestRunner) validateNetStatMetric(metricName string) status.Test
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 
