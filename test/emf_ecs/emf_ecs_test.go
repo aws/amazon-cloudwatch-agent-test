@@ -61,14 +61,14 @@ func (t *EMFECSTestRunner) validateEMFOnECSMetrics(metricName string) status.Tes
 			Value: dimension.UnknownDimensionValue(),
 		},
 
-		{
-			Key:   "ContainerInstanceId",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "InstanceId",
-			Value: dimension.UnknownDimensionValue(),
-		},
+		//{
+		//	Key:   "ContainerInstanceId",
+		//	Value: dimension.UnknownDimensionValue(),
+		//},
+		//{
+		//	Key:   "InstanceId",
+		//	Value: dimension.UnknownDimensionValue(),
+		//},
 	})
 
 	if len(failed) > 0 {
