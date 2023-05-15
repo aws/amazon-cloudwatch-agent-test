@@ -169,11 +169,18 @@ func (t *StatsdTestRunner) validateStatsdMetric(
 	// Check aggregation by checking sample count.
 	// Expect samples to be metrics_aggregation_interval / metrics_collection_interval
 	expectedSampleCount := metrics_aggregation_interval / metrics_collection_interval
+	if metricType == "timing" {
+		// Every single timing is counted.
+		// Sent twice per send_interval.
+		expectedValue = float64(2 * metrics_aggregation_interval / send_interval)
+	}
 	values, err = fetcher.Fetch(namespace, metricName, dims, metric.SAMPLE_COUNT,
 		test_runner.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
+	// Skip check on the last value.
+	values = values[:len(values)-1]
 	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedSampleCount)) {
 		return testResult
 	}
