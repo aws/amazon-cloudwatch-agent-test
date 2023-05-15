@@ -19,47 +19,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark/eks_resources"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-)
-
-var (
-	//go:embed agent_resources/eks/cluster.json
-	eksClusterSchema string
-	//go:embed agent_resources/eks/cluster_namespace.json
-	eksClusterNamespaceSchema string
-	//go:embed agent_resources/eks/cluster_service.json
-	eksClusterServiceSchema string
-	//go:embed agent_resources/eks/container.json
-	eksContainerSchema string
-	//go:embed agent_resources/eks/container_fs.json
-	eksContainerFSSchema string
-	//go:embed agent_resources/eks/node.json
-	eksNodeSchema string
-	//go:embed agent_resources/eks/node_disk_io.json
-	eksNodeDiskIOSchema string
-	//go:embed agent_resources/eks/node_fs.json
-	eksNodeFSSchema string
-	//go:embed agent_resources/eks/node_net.json
-	eksNodeNetSchema string
-	//go:embed agent_resources/eks/pod.json
-	eksPodSchema string
-	//go:embed agent_resources/eks/pod_net.json
-	eksPodNetSchema string
-
-	eksClusterValidationMap = map[string]string{
-		"Cluster":          eksClusterSchema,
-		"ClusterNamespace": eksClusterNamespaceSchema,
-		"ClusterService":   eksClusterServiceSchema,
-		"Container":        eksContainerSchema,
-		"ContainerFS":      eksContainerFSSchema,
-		"Node":             eksNodeSchema,
-		"NodeDiskIO":       eksNodeDiskIOSchema,
-		"NodeFS":           eksNodeFSSchema,
-		"NodeNet":          eksNodeNetSchema,
-		"Pod":              eksPodSchema,
-		"PodNet":           eksPodNetSchema,
-	}
 )
 
 type EKSDaemonTestRunner struct {
@@ -121,8 +83,6 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 		Status: status.FAILED,
 	}
 
-	//rs := jsonschema.Must(eksContainerInsightsSchema)
-
 	now := time.Now()
 	group := fmt.Sprintf("/aws/containerinsights/%s/performance", eks.EKSClusterName)
 
@@ -140,7 +100,6 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 
 		var ok bool
 		stream := *instance.InstanceName
-		log.Println(fmt.Sprintf("EKS instance is: %s", stream))
 		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
 			if len(logs) < 1 {
 				log.Println(fmt.Sprintf("failed to get logs for instance: %s", stream))
@@ -154,9 +113,8 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 					log.Println("failed to unmarshal log file")
 				}
 
-				log.Println(fmt.Sprintf("eksClusterTypes is: %s", eksClusterType.Type))
-				log.Println(fmt.Sprintf("log file is :::: %s", l))
-				jsonSchema, ok := eksClusterValidationMap[eksClusterType.Type]
+				log.Println(fmt.Sprintf("eksClusterType is: %s", eksClusterType.Type))
+				jsonSchema, ok := eks_resources.EksClusterValidationMap[eksClusterType.Type]
 				if !ok {
 					log.Println("invalid cluster type provided")
 					return false

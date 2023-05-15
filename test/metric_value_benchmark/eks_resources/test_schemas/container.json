@@ -95,8 +95,7 @@
     "NodeName",
     "PodName",
     "Namespace",
-    "kubernetes",
-    "container_status"
+    "kubernetes"
   ],
   "additionalProperties": false
 }
