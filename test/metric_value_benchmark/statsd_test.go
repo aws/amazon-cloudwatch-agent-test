@@ -22,12 +22,13 @@ import (
 const (
 	// Must match JSON config
 	metrics_aggregation_interval = 30 * time.Second
-	metrics_collection_interval = 5 * time.Second
-	send_interval = 10 * time.Millisecond
+	metrics_collection_interval  = 5 * time.Second
+	send_interval                = 10 * time.Millisecond
 )
 
 var (
 	done = make(chan bool)
+	// metric name must use "_"" as a separator and include the metric type.
 	metricNames = []string{
 		"statsd_counter_1",
 		"statsd_gauge_2",
@@ -40,6 +41,7 @@ var (
 )
 
 var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
+
 type StatsdTestRunner struct {
 	test_runner.BaseTestRunner
 }
@@ -88,19 +90,19 @@ func (t *StatsdTestRunner) sender() {
 	tags := []string{"key:value"}
 	for {
 		select {
-		case <- done:
+		case <-done:
 			return
 		case <-ticker.C:
 			for i, name := range metricNames {
 				if strings.Contains(name, "counter") {
 					// Submit twice such that the sum is metricValues[i].
 					v := int64(metricValues[i])
-					client.Count(name, v - 500, tags, 1.0)
+					client.Count(name, v-500, tags, 1.0)
 					client.Count(name, 500, tags, 1.0)
 				} else if strings.Contains(name, "gauge") {
 					// Only the most recent gauge value matters.
 					client.Gauge(name, metricValues[i], tags, 1.0)
-					client.Gauge(name, metricValues[i] - 500, tags, 1.0)
+					client.Gauge(name, metricValues[i]-500, tags, 1.0)
 				} else {
 					v := time.Millisecond * time.Duration(metricValues[i])
 					v -= 100 * time.Millisecond
@@ -136,6 +138,9 @@ func (t *StatsdTestRunner) validateStatsdMetric(
 		},
 	}
 	split := strings.Split(metricName, "_")
+	if len(split) != 3 {
+		log.Printf("unexpected metric name format, %s", metricName)
+	}
 	metricType := split[1]
 	instructions = append(instructions, dimension.Instruction{
 		// CWA adds this metric_type dimension.
@@ -154,7 +159,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(
 		return testResult
 	}
 	runDuration := t.GetAgentRunDuration()
-	lowerBound := int(runDuration / metrics_aggregation_interval) - 2
+	lowerBound := int(runDuration/metrics_aggregation_interval) - 2
 	if len(values) < lowerBound {
 		log.Printf("fail: lowerBound %v, actual %v", lowerBound, len(values))
 		return testResult
