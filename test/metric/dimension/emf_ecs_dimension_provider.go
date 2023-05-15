@@ -2,10 +2,8 @@ package dimension
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"log"
 )
 
 type EFMECSDimensionProvider struct {
@@ -27,10 +25,10 @@ func (p EFMECSDimensionProvider) GetDimension(instruction Instruction) types.Dim
 	if instruction.Key == "ContainerInstanceId" {
 		//TODO currently assuming there's only one container
 		//containerInstances, err := awsservice.GetContainerInstances(p.Provider.env.EcsClusterArn)
-		if err != nil {
-			log.Print(err)
-			return types.Dimension{}
-		}
+		//if err != nil {
+		//	log.Print(err)
+		//	return types.Dimension{}
+		//}
 
 		return types.Dimension{
 			Name:  aws.String("ContainerInstanceId"),
@@ -40,11 +38,11 @@ func (p EFMECSDimensionProvider) GetDimension(instruction Instruction) types.Dim
 
 	if instruction.Key == "InstanceId" {
 		//TODO currently assuming there's only one container
-		containerInstances, err := awsservice.GetContainerInstances(p.Provider.env.EcsClusterArn)
-		if err != nil {
-			log.Print(err)
-			return types.Dimension{}
-		}
+		//containerInstances, err := awsservice.GetContainerInstances(p.Provider.env.EcsClusterArn)
+		//if err != nil {
+		//	log.Print(err)
+		//	return types.Dimension{}
+		//}
 
 		return types.Dimension{
 			Name:  aws.String("InstanceId"),
