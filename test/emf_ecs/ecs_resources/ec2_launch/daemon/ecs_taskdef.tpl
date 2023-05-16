@@ -61,7 +61,7 @@
     {
         "name": "emf_container",
         "links":  ["cloudwatch_agent"],
-        "image": "ubuntu:20.04",
+        "image": "alpine/socat:latest",
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
