@@ -74,7 +74,7 @@
         "entryPoint": [
             "/bin/sh",
             "-c",
-            "INSTANCEID=\"$(curl $${ECS_CONTAINER_METADATA_URI_V4} | sed -n 's|.*\"ContainerARN\": *\"\\([^\"]*\\)\".*|\\1|p')instance\"; CLUSTER_NAME=\"$(curl $${ECS_CONTAINER_METADATA_URI_V4}/task | sed -n 's|.*\"Cluster\": *\"\\([^\"]*\\)\".*|\\1|p')cluster\"; CONTAINER_ID=\"$(curl $${ECS_CONTAINER_METADATA_URI_V4} | sed -n 's|.*\"DockerId\": *\"\\([^\"]*\\)\".*|\\1|p')containerID\"; while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFECSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFNameSpace\",\"Dimensions\":[[\"Type\",\"InstanceId\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5}' | socat -v -t 0 - UDP:cloudwatch_agent:25888; sleep 60; done"
+            "INSTANCEID=\"$(curl $${ECS_CONTAINER_METADATA_URI_V4} | sed -n 's|.*\"ContainerARN\": *\"\\([^\"]*\\)\".*|\\1|p')instance\"; CLUSTER_NAME=\"$(curl $${ECS_CONTAINER_METADATA_URI_V4}/task | sed -n 's|.*\"Cluster\": *\"\\([^\"]*\\)\".*|\\1|p')cluster\"; CONTAINER_ID=\"$(curl $${ECS_CONTAINER_METADATA_URI_V4} | sed -n 's|.*\"DockerId\": *\"\\([^\"]*\\)\".*|\\1|p')containerID\"; while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFECSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFNameSpace\",\"Dimensions\":[[\"Type\",\"InstanceId\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"InstanceID\": \"INSTANCEID\"}' | socat -v -t 0 - UDP:cloudwatch_agent:25888; sleep 60; done"
         ]
     }
 ]
