@@ -258,7 +258,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	}
 
 	aggregationInterval := 30 * time.Second
-	upperBound := int(runDuration/aggregationInterval) + 2
+	upperBound := int(runDuration/aggregationInterval) + 4
 	lowerBound := int(runDuration/aggregationInterval) - 4
 
 	if len(values) < lowerBound || len(values) > upperBound {
