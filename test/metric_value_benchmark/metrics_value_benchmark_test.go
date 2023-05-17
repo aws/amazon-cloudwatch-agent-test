@@ -56,7 +56,7 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 			{
 				Runner: &ContainerInsightsTestRunner{
 					BaseTestRunner: test_runner.BaseTestRunner{DimensionFactory: factory},
-					env:            *env,
+					env:            env,
 				},
 				RunStrategy: &test_runner.ECSAgentRunStrategy{},
 				Env:         *env,
