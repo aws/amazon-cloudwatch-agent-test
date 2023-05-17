@@ -25,20 +25,19 @@ import (
 
 type EKSDaemonTestRunner struct {
 	test_runner.BaseTestRunner
+	env *environment.MetaData
 }
 
-var _ IEKSTestRunner = (*EKSDaemonTestRunner)(nil)
-
-func (e *EKSDaemonTestRunner) validate(eks *environment.MetaData) status.TestGroupResult {
-	metrics := e.getMeasuredMetrics()
+func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
+	metrics := e.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, 0)
 	for _, name := range metrics {
 		testResults = append(testResults, e.validateInstanceMetrics(name))
 	}
 
-	testResults = append(testResults, e.validateLogs(eks))
+	testResults = append(testResults, e.validateLogs(e.env))
 	return status.TestGroupResult{
-		Name:        e.getTestName(),
+		Name:        e.GetTestName(),
 		TestResults: testResults,
 	}
 }
@@ -137,19 +136,19 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 	return testResult
 }
 
-func (e *EKSDaemonTestRunner) getTestName() string {
+func (e *EKSDaemonTestRunner) GetTestName() string {
 	return "EKSContainerInstance"
 }
 
-func (e *EKSDaemonTestRunner) getAgentConfigFileName() string {
+func (e *EKSDaemonTestRunner) GetAgentConfigFileName() string {
 	return "" // TODO: maybe not needed?
 }
 
-func (e *EKSDaemonTestRunner) getAgentRunDuration() time.Duration {
+func (e *EKSDaemonTestRunner) GetAgentRunDuration() time.Duration {
 	return time.Minute * 3
 }
 
-func (e *EKSDaemonTestRunner) getMeasuredMetrics() []string {
+func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"node_cpu_reserved_capacity",
 		"node_cpu_utilization",
@@ -161,3 +160,13 @@ func (e *EKSDaemonTestRunner) getMeasuredMetrics() []string {
 		"node_memory_reserved_capacity",
 	}
 }
+
+func (e *EKSDaemonTestRunner) SetupBeforeAgentRun() error {
+	return nil
+}
+
+func (e *EKSDaemonTestRunner) SetupAfterAgentRun() error {
+	return nil
+}
+
+var _ test_runner.ITestRunner = (*EKSDaemonTestRunner)(nil)
