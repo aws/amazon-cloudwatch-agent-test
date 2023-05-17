@@ -27,7 +27,7 @@ func (t *ECSRunner) Validate() status.TestGroupResult {
 		// there seems to be some delay before the runner is able to fetch metrics from CW
 		for j := 0; j < testRetryCount; j++ {
 			time.Sleep(15 * time.Second)
-			testResult = common.ValidateStatsdMetric(t.DimensionFactory, namespace, metricName, t.GetAgentRunDuration())
+			testResult = common.ValidateStatsdMetric(t.DimensionFactory, namespace, "InstanceId", metricName, t.GetAgentRunDuration())
 			if testResult.Status == status.SUCCESSFUL {
 				break
 			}
