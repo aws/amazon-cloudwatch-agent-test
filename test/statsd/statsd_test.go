@@ -7,6 +7,8 @@ package statsd
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -58,10 +60,39 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 	return ecsTestRunners
 }
 
+func getEksTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
+	if ecsTestRunners == nil {
+		factory := dimension.GetDimensionFactory(*env)
+
+		ecsTestRunners = []*test_runner.ECSTestRunner{
+			{
+				Runner:      &ECSRunner{test_runner.BaseTestRunner{DimensionFactory: factory}},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
+			},
+		}
+	}
+	return ecsTestRunners
+}
+
 func (suite *StatsDTestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	for _, ecsTestRunner := range getEcsTestRunners(env) {
 		ecsTestRunner.Run(suite, env)
+	}
+	switch env.ComputeType {
+	case computetype.ECS:
+		log.Println("Environment compute type is ECS")
+		for _, ecsTestRunner := range getEcsTestRunners(env) {
+			ecsTestRunner.Run(suite, env)
+		}
+	case computetype.EKS:
+		log.Println("Environment compute type is EKS")
+		for _, testRunner := range getEksTestRunners(env) {
+			testRunner.Run(suite, env)
+		}
+	default:
+		return
 	}
 
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Statsd Test Suite Failed")
