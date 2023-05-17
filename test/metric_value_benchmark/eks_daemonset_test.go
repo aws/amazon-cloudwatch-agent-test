@@ -75,17 +75,17 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 	return testResult
 }
 
-func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.TestResult {
+func (e *EKSDaemonTestRunner) validateLogs(env *environment.MetaData) status.TestResult {
 	testResult := status.TestResult{
 		Name:   "emf-logs",
 		Status: status.FAILED,
 	}
 
 	now := time.Now()
-	group := fmt.Sprintf("/aws/containerinsights/%s/performance", eks.EKSClusterName)
+	group := fmt.Sprintf("/aws/containerinsights/%s/performance", env.EKSClusterName)
 
 	// need to get the instances used for the EKS cluster
-	eKSInstances, err := awsservice.GetEKSInstances(eks.EKSClusterName)
+	eKSInstances, err := awsservice.GetEKSInstances(env.EKSClusterName)
 	if err != nil {
 		log.Println("failed to get EKS instances", err)
 		return testResult
@@ -93,7 +93,7 @@ func (e *EKSDaemonTestRunner) validateLogs(eks *environment.MetaData) status.Tes
 
 	for _, instance := range eKSInstances {
 		validateLogContents := func(s string) bool {
-			return strings.Contains(s, fmt.Sprintf("\"ClusterName\":\"%s\"", eks.EKSClusterName))
+			return strings.Contains(s, fmt.Sprintf("\"ClusterName\":\"%s\"", env.EKSClusterName))
 		}
 
 		var ok bool
