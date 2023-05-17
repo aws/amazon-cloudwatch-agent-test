@@ -24,8 +24,6 @@ func (t *EMFECSTestRunner) Validate(e *environment.MetaData) status.TestGroupRes
 		testResults[i] = t.validateEMFOnECSMetrics(metricName)
 	}
 
-	//testResults = append(testResults, validateEMFLogs("EMFNameSpace"))
-
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
 		TestResults: testResults,
