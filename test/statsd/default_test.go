@@ -12,11 +12,15 @@ import (
 	"time"
 )
 
-type EKSRunner struct {
+const testRetryCount = 3
+
+type StatsDRunner struct {
 	test_runner.BaseTestRunner
+	testName     string
+	dimensionKey string
 }
 
-func (t *EKSRunner) Validate() status.TestGroupResult {
+func (t *StatsDRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 
@@ -25,7 +29,7 @@ func (t *EKSRunner) Validate() status.TestGroupResult {
 		// there seems to be some delay before the runner is able to fetch metrics from CW
 		for j := 0; j < testRetryCount; j++ {
 			time.Sleep(15 * time.Second)
-			testResult = common.ValidateStatsdMetric(t.DimensionFactory, namespace, "ClusterName", metricName, t.GetAgentRunDuration())
+			testResult = common.ValidateStatsdMetric(t.DimensionFactory, namespace, t.dimensionKey, metricName, t.GetAgentRunDuration())
 			if testResult.Status == status.SUCCESSFUL {
 				break
 			}
@@ -39,20 +43,20 @@ func (t *EKSRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *EKSRunner) GetTestName() string {
-	return "EKSStatsD"
+func (t *StatsDRunner) GetTestName() string {
+	return t.testName
 }
 
-func (t *EKSRunner) GetAgentRunDuration() time.Duration {
+func (t *StatsDRunner) GetAgentRunDuration() time.Duration {
 	return 3 * time.Minute
 }
 
-func (t *EKSRunner) GetMeasuredMetrics() []string {
+func (t *StatsDRunner) GetMeasuredMetrics() []string {
 	return []string{"statsd_counter_1", "statsd_gauge_1"}
 }
 
-func (e *EKSRunner) GetAgentConfigFileName() string {
+func (e *StatsDRunner) GetAgentConfigFileName() string {
 	return ""
 }
 
-var _ test_runner.ITestRunner = (*EKSRunner)(nil)
+var _ test_runner.ITestRunner = (*StatsDRunner)(nil)

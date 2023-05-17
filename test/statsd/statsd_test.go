@@ -43,6 +43,7 @@ func init() {
 
 var (
 	ecsTestRunners []*test_runner.ECSTestRunner
+	eksTestRunners []*test_runner.EKSTestRunner
 )
 
 func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
@@ -51,7 +52,7 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 
 		ecsTestRunners = []*test_runner.ECSTestRunner{
 			{
-				Runner:      &ECSRunner{test_runner.BaseTestRunner{DimensionFactory: factory}},
+				Runner:      &StatsDRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, "ECSStatsD", "InstanceId"},
 				RunStrategy: &test_runner.ECSAgentRunStrategy{},
 				Env:         *env,
 			},
@@ -60,19 +61,18 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 	return ecsTestRunners
 }
 
-func getEksTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
-	if ecsTestRunners == nil {
+func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
+	if eksTestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 
-		ecsTestRunners = []*test_runner.ECSTestRunner{
+		eksTestRunners = []*test_runner.EKSTestRunner{
 			{
-				Runner:      &ECSRunner{test_runner.BaseTestRunner{DimensionFactory: factory}},
-				RunStrategy: &test_runner.ECSAgentRunStrategy{},
-				Env:         *env,
+				Runner: &StatsDRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, "EKSStatsD", "ClusterName"},
+				Env:    *env,
 			},
 		}
 	}
-	return ecsTestRunners
+	return eksTestRunners
 }
 
 func (suite *StatsDTestSuite) TestAllInSuite() {
