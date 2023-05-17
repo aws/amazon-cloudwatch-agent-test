@@ -23,7 +23,7 @@ func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = common.ValidateStatsdMetric(t.DimensionFactory, namespace, metricName, t.GetAgentRunDuration())
+		testResults[i] = common.ValidateStatsdMetric(t.DimensionFactory, namespace, "InstanceId", metricName, t.GetAgentRunDuration())
 	}
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
