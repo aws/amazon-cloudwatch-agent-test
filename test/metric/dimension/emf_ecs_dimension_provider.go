@@ -2,23 +2,30 @@ package dimension
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-type EFMECSDimensionProvider struct {
+type EMFECSDimensionProvider struct {
 	Provider
 }
 
-func (p EFMECSDimensionProvider) IsApplicable() bool {
+func (p EMFECSDimensionProvider) IsApplicable() bool {
 	return p.env.ComputeType == computetype.ECS
 }
 
-func (p EFMECSDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
+func (p EMFECSDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
+	if instruction.Key == "InstanceID" {
+		return types.Dimension{
+			Name:  aws.String("InstanceID"),
+			Value: aws.String("INSTANCEID"),
+		}
+	}
 	return types.Dimension{}
 }
 
-func (p EFMECSDimensionProvider) Name() string {
+func (p EMFECSDimensionProvider) Name() string {
 	return "EMFECSProvider"
 }
 
-var _ IProvider = (*EFMECSDimensionProvider)(nil)
+var _ IProvider = (*EMFECSDimensionProvider)(nil)
