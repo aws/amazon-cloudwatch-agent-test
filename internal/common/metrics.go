@@ -217,14 +217,14 @@ func SendEMFMetrics(metricPerInterval int, metricLogGroup, metricNamespace strin
 	}
 }
 
-func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, metricName string, runDuration time.Duration) status.TestResult {
+func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimensionKey string, metricName string, runDuration time.Duration) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
 	instructions := []dimension.Instruction{
 		{
-			Key:   "InstanceId",
+			Key:   dimensionKey,
 			Value: dimension.UnknownDimensionValue(),
 		},
 		{
