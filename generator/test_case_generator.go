@@ -31,6 +31,8 @@ type matrixRow struct {
 }
 
 type testConfig struct {
+	// this gives more flexibility to define terraform dir when there should be a different set of terraform files
+	// e.g. statsd can have a multiple terraform module sets for difference test scenarios (ecs, eks or ec2)
 	testDir      string
 	terraformDir string
 }
