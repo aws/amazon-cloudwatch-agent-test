@@ -373,13 +373,12 @@ resource "kubernetes_daemonset" "service" {
 # Template Files
 ##########################################
 locals {
-  cwagent_config = fileexists("../../../../${var.test_dir}/resources/config.json") ? "../../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
+  cwagent_config = fileexists("../../../../${var.test_dir}/resources/config.json") ? "../../../../${var.test_dir}/resources/config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
 }
 
 data "template_file" "cwagent_config" {
   template = file(local.cwagent_config)
   vars = {
-    cluster_name = aws_eks_cluster.this.name
   }
 }
 
@@ -470,7 +469,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating EKS metrics/logs"
-      cd ../../..
+      cd ../../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v
     EOT
   }
