@@ -55,21 +55,7 @@ func (t *EMFECSTestRunner) validateEMFOnECSMetrics(metricName string) status.Tes
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		//{
-		//	Key:   "ClusterName",
-		//	Value: dimension.UnknownDimensionValue(),
-		//},
-
-		//{
-		//	Key:   "ContainerInstanceId",
-		//	Value: dimension.UnknownDimensionValue(),
-		//},
-		//{
-		//	Key:   "InstanceId",
-		//	Value: dimension.UnknownDimensionValue(),
-		//},
-	})
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{})
 
 	if len(failed) > 0 {
 		return testResult
@@ -91,47 +77,6 @@ func (t *EMFECSTestRunner) validateEMFOnECSMetrics(metricName string) status.Tes
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
-
-//func validateEMFLogs(group string) status.TestResult {
-//	testResult := status.TestResult{
-//		Name:   "emf-logs",
-//		Status: status.FAILED,
-//	}
-//
-//	rs := jsonschema.Must(emfMetricValueBenchmarkSchema)
-//
-//	containers, err := awsservice.GetContainerInstances(e.EcsClusterArn)
-//	if err != nil {
-//		return testResult
-//	}
-//
-//	for _, container := range containers {
-//		validateLogContents := func(s string) bool {
-//			return strings.Contains(s, "\"EMFCounter\":5")
-//		}
-//		stream := fmt.Sprintf("NodeTelemetry-%s", container.ContainerInstanceId)
-//		now := time.Now()
-//		ok, err := awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
-//			if len(logs) < 1 {
-//				return false
-//			}
-//
-//			for _, l := range logs {
-//				if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
-//					return false
-//				}
-//			}
-//			return true
-//		})
-//
-//		if err != nil || !ok {
-//			return testResult
-//		}
-//	}
-//
-//	testResult.Status = status.SUCCESSFUL
-//	return testResult
-//}
 
 // isAllValuesGreaterThanOrEqualToExpectedValue will compare if the given array is larger than 0
 // and check if the average value for the array is not la
