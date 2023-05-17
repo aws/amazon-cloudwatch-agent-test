@@ -28,6 +28,7 @@ type matrixRow struct {
 	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
 	K8sVersion          string `json:"k8s_version"`
 	TerraformDir        string `json:"terraform_dir"`
+	UseSSM              bool   `json:"useSSM"`
 }
 
 type testConfig struct {

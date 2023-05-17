@@ -55,3 +55,8 @@ variable "test_dir" {
   type    = string
   default = "../../../test/feature/windows"
 }
+
+variable "use_ssm" {
+  type    = bool
+  default = false
+}

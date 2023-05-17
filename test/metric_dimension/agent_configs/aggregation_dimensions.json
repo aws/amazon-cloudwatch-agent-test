@@ -3,7 +3,7 @@
         "metrics_collection_interval": 10
     },
     "metrics": {
-        "force_flush_interval": 10,
+        "force_flush_interval": 5,
         "namespace": "TestAggregationDimensions",
         "append_dimensions": {
             "InstanceId": "${aws:InstanceId}",
@@ -39,7 +39,7 @@
                 "measurement": [
                     "usage_user"
                 ],
-                "metrics_collection_interval": 15
+                "metrics_collection_interval": 10
             }
         }
     }

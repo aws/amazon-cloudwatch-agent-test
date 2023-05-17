@@ -77,7 +77,7 @@ func TestBundle(t *testing.T) {
 			t.Logf("config file after localstack host replace %s", string(readFile(parameter.dataInput+configJSON)))
 			common.CopyFile(parameter.dataInput+configJSON, configOutputPath)
 			common.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
-			common.StartAgent(configOutputPath, true)
+			common.StartAgent(configOutputPath, true, false)
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
 			common.StopAgent()

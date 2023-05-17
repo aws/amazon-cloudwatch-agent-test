@@ -45,7 +45,9 @@ func CopyFile(pathIn string, pathOut string) error {
 
 }
 
-func StartAgent(configOutputPath string, fatalOnFailure bool) error {
+func StartAgent(configOutputPath string, fatalOnFailure bool, ssm bool) error {
+	// @TODO add ssm functionality
+
 	ps, err := exec.LookPath("powershell.exe")
 
 	if err != nil {
@@ -111,7 +113,7 @@ func printOutputAndError(stdout []byte, err error) {
 		return
 	}
 	stderr := ""
-	ee, ok :=  err.(*exec.ExitError)
+	ee, ok := err.(*exec.ExitError)
 	if ok {
 		stderr = string(ee.Stderr)
 	}

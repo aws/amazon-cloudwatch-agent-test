@@ -67,7 +67,7 @@ Resources:
                         "measurement": [
                           "mem_used_percent"
                         ],
-                        "metrics_collection_interval": 15
+                        "metrics_collection_interval": 10
                       },
                       "swap": {
                         "measurement": [

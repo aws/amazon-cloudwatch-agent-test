@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	configInputPath           = "resources/canary_config.json"
+	configInputPath = "resources/canary_config.json"
 )
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
@@ -43,7 +43,7 @@ func TestCanary(t *testing.T) {
 	err = common.InstallAgent(installerFilePath)
 	reportMetric(t, "InstallFail", err)
 	common.CopyFile(configInputPath, common.ConfigOutputPath)
-	err = common.StartAgent(common.ConfigOutputPath, false)
+	err = common.StartAgent(common.ConfigOutputPath, false, false)
 	reportMetric(t, "StartFail", err)
 	actualVersion, _ := os.ReadFile(common.InstallAgentVersionPath)
 	expectedVersion, _ := getVersionFromS3(e.Bucket)
@@ -81,7 +81,7 @@ func getVersionFromS3(bucket string) (string, error) {
 func setupCron(bucket, key string) {
 	// default to us-west-2
 	region := os.Getenv("AWS_REGION")
-	if  region == "" {
+	if region == "" {
 		region = "us-west-2"
 	}
 

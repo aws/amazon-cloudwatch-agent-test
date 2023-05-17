@@ -1,24 +1,26 @@
 {
   "agent": {
-    "metrics_collection_interval": 10,
-    "run_as_user": "root",
     "debug": true,
-    "logfile": ""
+    "metrics_collection_interval": 10
   },
   "metrics": {
     "namespace": "MetricValueBenchmarkTest",
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
     "metrics_collected": {
-      "diskio": {
+      "cpu": {
         "resources": [
           "*"
         ],
         "measurement": [
-          "iops_in_progress", "io_time", "reads", "read_bytes", "read_time", "writes", "write_bytes", "write_time"
-        ],
-        "metrics_collection_interval": 10
+          {"name": "cpu_usage_nice", "rename": "ssm_cpu_utilization", "unit": "Percent"}
+        ]
       }
     },
     "force_flush_interval": 5

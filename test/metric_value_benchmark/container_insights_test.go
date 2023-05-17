@@ -54,8 +54,8 @@ func (t *ContainerInsightsTestRunner) GetAgentConfigFileName() string {
 	return "./agent_configs/container_insights.json"
 }
 
-func (t *ContainerInsightsTestRunner) GetAgentRunDuration() time.Duration {
-	return test_runner.MinimumAgentRuntime
+func (t *ContainerInsightsTestRunner) getAgentRunDuration() time.Duration {
+	return time.Minute
 }
 
 func (t *ContainerInsightsTestRunner) GetMeasuredMetrics() []string {
