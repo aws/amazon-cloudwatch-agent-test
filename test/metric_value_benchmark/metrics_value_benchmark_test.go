@@ -170,12 +170,10 @@ func isAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []fl
 	upperBoundValue := expectedValue * (1 + metricErrorBound)
 	lowerBoundValue := expectedValue * (1 - metricErrorBound)
 	if expectedValue > 0 && (metricAverageValue > upperBoundValue || metricAverageValue < lowerBoundValue) {
-		log.Printf("The average value %f for metric %s are not within bound [%f, %f]",
-			metricAverageValue, metricName, lowerBoundValue, upperBoundValue)
+		log.Printf("The average value %f for metric %s are not within bound [%f, %f]", metricAverageValue, metricName, lowerBoundValue, upperBoundValue)
 		return false
 	}
 
-	log.Printf("The average value %f for metric %s are within bound [%f, %f]",
-		metricAverageValue, metricName, lowerBoundValue, upperBoundValue)
+	log.Printf("The average value %f for metric %s are within bound [%f, %f]", expectedValue, metricName, lowerBoundValue, upperBoundValue)
 	return true
 }
