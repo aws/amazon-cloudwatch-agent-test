@@ -28,11 +28,11 @@ func (t *StatsDRunner) Validate() status.TestGroupResult {
 		var testResult status.TestResult
 		// there seems to be some delay before the runner is able to fetch metrics from CW
 		for j := 0; j < testRetryCount; j++ {
-			time.Sleep(15 * time.Second)
 			testResult = common.ValidateStatsdMetric(t.DimensionFactory, namespace, t.dimensionKey, metricName, t.GetAgentRunDuration())
 			if testResult.Status == status.SUCCESSFUL {
 				break
 			}
+			time.Sleep(15 * time.Second)
 		}
 		testResults[i] = testResult
 	}
