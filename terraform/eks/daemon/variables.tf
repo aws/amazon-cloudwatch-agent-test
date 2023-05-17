@@ -20,3 +20,8 @@ variable "cwagent_image_tag" {
   type    = string
   default = "latest"
 }
+
+variable "k8s_version" {
+  type    = string
+  default = "1.24"
+}
