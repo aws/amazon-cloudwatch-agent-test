@@ -23,7 +23,7 @@ import (
 
 type ContainerInsightsTestRunner struct {
 	test_runner.BaseTestRunner
-	env environment.MetaData
+	env *environment.MetaData
 }
 
 //go:embed agent_resources/container_insights_node_telemetry.json
@@ -107,7 +107,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 	return testResult
 }
 
-func validateLogsForContainerInsights(e environment.MetaData) status.TestResult {
+func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult {
 	testResult := status.TestResult{
 		Name:   "emf-logs",
 		Status: status.FAILED,
