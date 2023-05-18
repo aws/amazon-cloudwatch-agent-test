@@ -6,7 +6,7 @@
 package statsd
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"strings"
@@ -33,7 +33,7 @@ func (t *StatsDRunner) Validate() status.TestGroupResult {
 	for i, metricName := range metricsToFetch {
 		var testResult status.TestResult
 		for j := 0; j < testRetryCount; j++ {
-			testResult = common.ValidateStatsdMetric(t.DimensionFactory, namespace, t.dimensionKey, metricName, common.StatsdMetricValues[i], t.GetAgentRunDuration(), 1*time.Second)
+			testResult = metric.ValidateStatsdMetric(t.DimensionFactory, namespace, t.dimensionKey, metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), 1*time.Second)
 			if testResult.Status == status.SUCCESSFUL {
 				break
 			}
@@ -57,7 +57,7 @@ func (t *StatsDRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *StatsDRunner) GetMeasuredMetrics() []string {
-	return common.StatsdMetricNames[:2]
+	return metric.StatsdMetricNames[:2]
 }
 
 func (e *StatsDRunner) GetAgentConfigFileName() string {

@@ -6,11 +6,11 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"strings"
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
@@ -33,7 +33,7 @@ func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	results := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		results[i] = common.ValidateStatsdMetric(t.DimensionFactory, namespace, "InstanceId", metricName, common.StatsdMetricValues[i], t.GetAgentRunDuration(), send_interval)
+		results[i] = metric.ValidateStatsdMetric(t.DimensionFactory, namespace, "InstanceId", metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), send_interval)
 	}
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -74,18 +74,18 @@ func (t *StatsdTestRunner) sender() {
 		case <-done:
 			return
 		case <-ticker.C:
-			for i, name := range common.StatsdMetricNames {
+			for i, name := range metric.StatsdMetricNames {
 				if strings.Contains(name, "counter") {
 					// Submit twice such that the sum is metricValues[i].
-					v := int64(common.StatsdMetricValues[i])
+					v := int64(metric.StatsdMetricValues[i])
 					client.Count(name, v-500, tags, 1.0)
 					client.Count(name, 500, tags, 1.0)
 				} else if strings.Contains(name, "gauge") {
 					// Only the most recent gauge value matters.
-					client.Gauge(name, common.StatsdMetricValues[i], tags, 1.0)
-					client.Gauge(name, common.StatsdMetricValues[i]-500, tags, 1.0)
+					client.Gauge(name, metric.StatsdMetricValues[i], tags, 1.0)
+					client.Gauge(name, metric.StatsdMetricValues[i]-500, tags, 1.0)
 				} else {
-					v := time.Millisecond * time.Duration(common.StatsdMetricValues[i])
+					v := time.Millisecond * time.Duration(metric.StatsdMetricValues[i])
 					v -= 100 * time.Millisecond
 					client.Timing(name, v, tags, 1.0)
 					v += 200 * time.Millisecond
@@ -97,5 +97,5 @@ func (t *StatsdTestRunner) sender() {
 }
 
 func (t *StatsdTestRunner) GetMeasuredMetrics() []string {
-	return common.StatsdMetricNames
+	return metric.StatsdMetricNames
 }
