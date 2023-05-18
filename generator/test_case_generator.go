@@ -79,6 +79,9 @@ var testTypeToTestDirMap = map[string][]string{
 	"eks_daemon": {
 		"./test/metric_value_benchmark",
 	},
+	"eks_deployment": {
+		"./test/metric_value_benchmark",
+	},
 }
 
 func main() {
