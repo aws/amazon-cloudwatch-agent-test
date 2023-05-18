@@ -14,6 +14,8 @@ type EMFECSTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
+var _ test_runner.ITestRunner = (*EMFECSTestRunner)(nil)
+
 func (t *EMFECSTestRunner) Validate(e *environment.MetaData) status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
