@@ -10,7 +10,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
 	"net"
@@ -28,6 +27,8 @@ const (
 	// Must match JSON config
 	statsdMetricsAggregationInterval = 30 * time.Second
 	statsdMetricsCollectionInterval  = 5 * time.Second
+
+	HighResolutionStatPeriod = 30
 )
 
 var (
@@ -269,8 +270,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	}
 	fetcher := metric.MetricValueFetcher{}
 	// Check average.
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE,
-		test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
@@ -284,7 +284,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	if metricType == "counter" {
 		expectedValue *= float64(statsdMetricsCollectionInterval / sendInterval)
 	}
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedValue)) {
+	if !IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedValue)) {
 		return testResult
 	}
 	// Check aggregation by checking sample count.
@@ -295,21 +295,20 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 		// Sent twice per send_interval.
 		expectedSampleCount = 2 * statsdMetricsAggregationInterval / sendInterval
 	}
-	values, err = fetcher.Fetch(namespace, metricName, dims, metric.SAMPLE_COUNT,
-		test_runner.HighResolutionStatPeriod)
+	values, err = fetcher.Fetch(namespace, metricName, dims, metric.SAMPLE_COUNT, HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
 	// Skip check on the last value.
 	values = values[:len(values)-1]
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedSampleCount)) {
+	if !IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedSampleCount)) {
 		return testResult
 	}
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
 
-func isAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []float64, expectedValue float64) bool {
+func IsAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []float64, expectedValue float64) bool {
 	if len(values) == 0 {
 		log.Printf("No values found %v", metricName)
 		return false

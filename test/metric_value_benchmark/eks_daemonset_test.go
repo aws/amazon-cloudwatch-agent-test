@@ -61,13 +61,13 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("ContainerInsights", name, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("ContainerInsights", name, dims, metric.AVERAGE, common.HighResolutionStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(name, values, 0) {
+	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(name, values, 0) {
 		return testResult
 	}
 

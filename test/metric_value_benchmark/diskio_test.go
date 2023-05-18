@@ -69,12 +69,12 @@ func (m *DiskIOTestRunner) validateDiskMetric(metricName string) status.TestResu
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, common.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

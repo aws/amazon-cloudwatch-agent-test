@@ -6,6 +6,7 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"log"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -71,14 +72,14 @@ func (t *DiskTestRunner) ValidateDiskMetric(metricName string) status.TestResult
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, common.HighResolutionStatPeriod)
 
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

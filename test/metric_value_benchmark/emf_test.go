@@ -97,12 +97,12 @@ func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, common.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 5) {
+	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 5) {
 		return testResult
 	}
 

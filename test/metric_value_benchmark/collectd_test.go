@@ -85,7 +85,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, common.HighResolutionStatPeriod)
 
 	if err != nil {
 		return testResult
@@ -106,7 +106,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
+	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
 		return testResult
 	}
 
