@@ -8,12 +8,12 @@ package metric_value_benchmark
 import (
 	_ "embed"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"strings"
 	"time"
 
 	"github.com/qri-io/jsonschema"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -97,7 +97,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 		return testResult
 	}
 
-	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

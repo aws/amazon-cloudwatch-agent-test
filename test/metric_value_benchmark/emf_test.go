@@ -102,7 +102,7 @@ func (t *EMFTestRunner) validateEMFMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 5) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 5) {
 		return testResult
 	}
 

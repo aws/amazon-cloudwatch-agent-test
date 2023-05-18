@@ -6,9 +6,9 @@
 package metric_value_benchmark
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/aws-sdk-go-v2/aws"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -75,7 +75,7 @@ func (m *DiskIOTestRunner) validateDiskMetric(metricName string) status.TestResu
 		return testResult
 	}
 
-	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

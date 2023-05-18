@@ -8,13 +8,13 @@ package metric_value_benchmark
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/qri-io/jsonschema"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -68,7 +68,7 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 		return testResult
 	}
 
-	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(name, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(name, values, 0) {
 		return testResult
 	}
 
