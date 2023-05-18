@@ -1,3 +1,9 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+// TODO: we need to revisit this
+//go:build !windows
+
 package cloudformation
 
 import (
@@ -6,7 +12,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
 	"log"
@@ -86,7 +91,7 @@ func TestCloudformation(t *testing.T) {
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, *metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, *metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil {
 		t.Fatalf("Failed to find metric %s namespace %s dimension %v", *metricName, namespace, dims)
 	}

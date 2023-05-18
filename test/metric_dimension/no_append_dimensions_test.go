@@ -69,7 +69,7 @@ func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult

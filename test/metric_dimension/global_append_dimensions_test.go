@@ -75,7 +75,7 @@ func (t *GlobalAppendDimensionsTestRunner) validateGlobalAppendDimensionMetric(m
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, expDims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, expDims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
@@ -102,7 +102,7 @@ func (t *GlobalAppendDimensionsTestRunner) validateGlobalAppendDimensionMetric(m
 		return testResult
 	}
 
-	values, err = fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, dropDims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err = fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, dropDims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil || len(values) != 0 {
 		return testResult
 	}

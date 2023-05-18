@@ -43,35 +43,40 @@ func init() {
 }
 
 var (
-	ecsTestRunners []*ECSTestRunner
+	ecsTestRunners []*test_runner.ECSTestRunner
 	ec2TestRunners []*test_runner.TestRunner
-	eksTestRunners []*EKSTestRunner
+	eksTestRunners []*test_runner.EKSTestRunner
 )
 
-func getEcsTestRunners(env *environment.MetaData) []*ECSTestRunner {
+func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 	if ecsTestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 
-		ecsTestRunners = []*ECSTestRunner{
+		ecsTestRunners = []*test_runner.ECSTestRunner{
 			{
-				testRunner:       &ContainerInsightsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}},
-				agentRunStrategy: &ECSAgentRunStrategy{},
-				env:              *env,
+				Runner: &ContainerInsightsTestRunner{
+					BaseTestRunner: test_runner.BaseTestRunner{DimensionFactory: factory},
+					env:            env,
+				},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
 			},
 		}
 	}
 	return ecsTestRunners
 }
 
-func getEksTestRunners(env *environment.MetaData) []*EKSTestRunner {
+func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 	if eksTestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
-		eksTestRunners = []*EKSTestRunner{
+		eksTestRunners = []*test_runner.EKSTestRunner{
 			{
-				runner: &EKSDaemonTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
+				Runner: &EKSDaemonTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
 					DimensionFactory: factory,
-				}},
-				env: *env,
+				},
+					env: env,
+				},
+				Env: *env,
 			},
 		}
 	}

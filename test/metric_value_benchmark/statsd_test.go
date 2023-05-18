@@ -6,39 +6,20 @@
 package metric_value_benchmark
 
 import (
-	"log"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
 const (
-	// Must match JSON config
-	metrics_aggregation_interval = 30 * time.Second
-	metrics_collection_interval  = 5 * time.Second
-	send_interval                = 10 * time.Millisecond
+	send_interval = 10 * time.Millisecond
 )
 
-var (
-	done = make(chan bool)
-	// metric name must use "_"" as a separator and include the metric type.
-	metricNames = []string{
-		"statsd_counter_1",
-		"statsd_gauge_2",
-		"statsd_timing_3",
-		"statsd_counter_4",
-		"statsd_gauge_5",
-		"statsd_timing_6",
-	}
-	metricValues = []float64{1000, 2000, 3000, 4000, 5000, 6000}
-)
+var done = make(chan bool)
 
 var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
 
@@ -51,8 +32,8 @@ func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 	close(done)
 	metricsToFetch := t.GetMeasuredMetrics()
 	results := make([]status.TestResult, len(metricsToFetch))
-	for i := range metricsToFetch {
-		results[i] = t.validateStatsdMetric(metricNames[i], metricValues[i])
+	for i, metricName := range metricsToFetch {
+		results[i] = metric.ValidateStatsdMetric(t.DimensionFactory, namespace, "InstanceId", metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), send_interval)
 	}
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -61,7 +42,7 @@ func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *StatsdTestRunner) GetTestName() string {
-	return "Statsd"
+	return "EC2StatsD"
 }
 
 func (t *StatsdTestRunner) GetAgentConfigFileName() string {
@@ -93,18 +74,18 @@ func (t *StatsdTestRunner) sender() {
 		case <-done:
 			return
 		case <-ticker.C:
-			for i, name := range metricNames {
+			for i, name := range metric.StatsdMetricNames {
 				if strings.Contains(name, "counter") {
 					// Submit twice such that the sum is metricValues[i].
-					v := int64(metricValues[i])
+					v := int64(metric.StatsdMetricValues[i])
 					client.Count(name, v-500, tags, 1.0)
 					client.Count(name, 500, tags, 1.0)
 				} else if strings.Contains(name, "gauge") {
 					// Only the most recent gauge value matters.
-					client.Gauge(name, metricValues[i], tags, 1.0)
-					client.Gauge(name, metricValues[i]-500, tags, 1.0)
+					client.Gauge(name, metric.StatsdMetricValues[i], tags, 1.0)
+					client.Gauge(name, metric.StatsdMetricValues[i]-500, tags, 1.0)
 				} else {
-					v := time.Millisecond * time.Duration(metricValues[i])
+					v := time.Millisecond * time.Duration(metric.StatsdMetricValues[i])
 					v -= 100 * time.Millisecond
 					client.Timing(name, v, tags, 1.0)
 					v += 200 * time.Millisecond
@@ -116,79 +97,5 @@ func (t *StatsdTestRunner) sender() {
 }
 
 func (t *StatsdTestRunner) GetMeasuredMetrics() []string {
-	return metricNames
-}
-
-func (t *StatsdTestRunner) validateStatsdMetric(
-	metricName string,
-	expectedValue float64,
-) status.TestResult {
-	testResult := status.TestResult{
-		Name:   metricName,
-		Status: status.FAILED,
-	}
-	instructions := []dimension.Instruction{
-		{
-			Key:   "InstanceId",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "key",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("value")},
-		},
-	}
-	split := strings.Split(metricName, "_")
-	if len(split) != 3 {
-		log.Printf("unexpected metric name format, %s", metricName)
-	}
-	metricType := split[1]
-	instructions = append(instructions, dimension.Instruction{
-		// CWA adds this metric_type dimension.
-		Key:   "metric_type",
-		Value: dimension.ExpectedDimensionValue{Value: aws.String(metricType)},
-	})
-	dims, failed := t.DimensionFactory.GetDimensions(instructions)
-	if len(failed) > 0 {
-		return testResult
-	}
-	fetcher := metric.MetricValueFetcher{}
-	// Check average.
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE,
-		test_runner.HighResolutionStatPeriod)
-	if err != nil {
-		return testResult
-	}
-	runDuration := t.GetAgentRunDuration()
-	lowerBound := int(runDuration/metrics_aggregation_interval) - 2
-	if len(values) < lowerBound {
-		log.Printf("fail: lowerBound %v, actual %v", lowerBound, len(values))
-		return testResult
-	}
-	// Counters get summed up over the metrics_collection_interval.
-	if metricType == "counter" {
-		expectedValue *= float64(metrics_collection_interval / send_interval)
-	}
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedValue)) {
-		return testResult
-	}
-	// Check aggregation by checking sample count.
-	// Expect samples to be metrics_aggregation_interval / metrics_collection_interval
-	expectedSampleCount := metrics_aggregation_interval / metrics_collection_interval
-	if metricType == "timing" {
-		// Every single timing is counted.
-		// Sent twice per send_interval.
-		expectedSampleCount = 2 * metrics_aggregation_interval / send_interval
-	}
-	values, err = fetcher.Fetch(namespace, metricName, dims, metric.SAMPLE_COUNT,
-		test_runner.HighResolutionStatPeriod)
-	if err != nil {
-		return testResult
-	}
-	// Skip check on the last value.
-	values = values[:len(values)-1]
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedSampleCount)) {
-		return testResult
-	}
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+	return metric.StatsdMetricNames
 }
