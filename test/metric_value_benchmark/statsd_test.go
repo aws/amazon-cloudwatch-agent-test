@@ -6,7 +6,6 @@
 package metric_value_benchmark
 
 import (
-	"log"
 	"strings"
 	"time"
 
