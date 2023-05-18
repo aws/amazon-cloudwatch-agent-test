@@ -324,7 +324,7 @@ resource "kubernetes_daemonset" "service" {
 # Template Files
 ##########################################
 locals {
-  cwagent_config = "../../../${var.test_dir}/resources/config.json"
+  cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
 }
 
 data "template_file" "cwagent_config" {
