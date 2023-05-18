@@ -6,7 +6,6 @@
 package metric_dimension
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -57,7 +56,7 @@ func (t *OneAggregateDimensionTestRunner) validateNoAppendDimensionMetric(metric
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricAggregateDimensionTest", metricName, dims, metric.AVERAGE, common.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("MetricAggregateDimensionTest", metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}

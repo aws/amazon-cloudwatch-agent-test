@@ -13,7 +13,6 @@ import (
 
 	"github.com/qri-io/jsonschema"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -92,7 +91,7 @@ func (t *ContainerInsightsTestRunner) validateContainerInsightsMetrics(metricNam
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, dims, metric.AVERAGE, common.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("ECS/ContainerInsights", metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
