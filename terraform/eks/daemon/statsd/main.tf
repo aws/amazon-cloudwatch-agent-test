@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source             = "../../common"
+  source             = "../../../common"
   cwagent_image_repo = var.cwagent_image_repo
   cwagent_image_tag  = var.cwagent_image_tag
 }
 
 module "basic_components" {
-  source = "../../basic_components"
+  source = "../../../basic_components"
 
   region = var.region
 }
@@ -56,7 +56,7 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
+    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy
   ]
 }
 
@@ -313,6 +313,55 @@ resource "kubernetes_daemonset" "service" {
             path = "/dev/disk"
           }
         }
+
+        container {
+          name              = "statsd-client"
+          image             = "alpine/socat:latest"
+          image_pull_policy = "Always"
+          resources {
+            limits = {
+              "cpu" : "50m",
+              "memory" : "50Mi"
+            }
+            requests = {
+              "cpu" : "50m",
+              "memory" : "50Mi"
+            }
+          }
+          command = [
+            "/bin/sh",
+            "-c",
+            "while true; do echo 'statsd_counter_1:1000.0|c|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; echo 'statsd_gauge_2:2000.0|g|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; sleep 1; done"
+          ]
+          env {
+            name = "HOST_IP"
+            value_from {
+              field_ref {
+                field_path = "status.hostIP"
+              }
+            }
+          }
+          env {
+            name = "HOST_NAME"
+            value_from {
+              field_ref {
+                field_path = "spec.nodeName"
+              }
+            }
+          }
+          env {
+            name = "K8S_NAMESPACE"
+            value_from {
+              field_ref {
+                field_path = "metadata.namespace"
+              }
+            }
+          }
+          volume_mount {
+            mount_path = "/etc/cwagentconfig"
+            name       = "cwagentconfig"
+          }
+        }
         service_account_name             = "cloudwatch-agent"
         termination_grace_period_seconds = 60
       }
@@ -324,7 +373,7 @@ resource "kubernetes_daemonset" "service" {
 # Template Files
 ##########################################
 locals {
-  cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
+  cwagent_config = fileexists("../../../../${var.test_dir}/resources/eks_config.json") ? "../../../../${var.test_dir}/resources/eks_config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
 }
 
 data "template_file" "cwagent_config" {
@@ -420,7 +469,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating EKS metrics/logs"
-      cd ../../..
+      cd ../../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v
     EOT
   }

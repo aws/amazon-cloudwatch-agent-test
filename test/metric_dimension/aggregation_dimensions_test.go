@@ -40,7 +40,7 @@ func (t *AggregationDimensionsTestRunner) Validate() status.TestGroupResult {
 		dd, _ := t.DimensionFactory.GetDimensions(instructions)
 		values, err := f.Fetch("TestAggregationDimensions",
 			testCase.metricName, dd, metric.AVERAGE,
-			test_runner.HighResolutionStatPeriod)
+			metric.HighResolutionStatPeriod)
 		if err != nil {
 			r.Status = status.FAILED
 		} else if testCase.shouldExist && len(values) == 0 {

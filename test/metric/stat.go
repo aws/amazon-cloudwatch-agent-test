@@ -7,8 +7,9 @@ type Statistics string
 type MetricValues []float64
 
 const (
-	AVERAGE      Statistics = "Average"
-	SAMPLE_COUNT Statistics = "SampleCount"
-	MINIMUM      Statistics = "Minimum"
-	MAXUMUM      Statistics = "Maxmimum"
+	AVERAGE                  Statistics = "Average"
+	SAMPLE_COUNT             Statistics = "SampleCount"
+	MINIMUM                  Statistics = "Minimum"
+	MAXUMUM                  Statistics = "Maxmimum"
+	HighResolutionStatPeriod            = 30
 )

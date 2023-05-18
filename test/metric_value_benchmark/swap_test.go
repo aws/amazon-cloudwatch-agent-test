@@ -67,7 +67,7 @@ func (t *SwapTestRunner) validateSwapMetric(metricName string) status.TestResult
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		return testResult
