@@ -18,8 +18,6 @@ const (
 	// Must match JSON config
 	statsdMetricsAggregationInterval = 30 * time.Second
 	statsdMetricsCollectionInterval  = 5 * time.Second
-
-	HighResolutionStatPeriod = 30
 )
 
 var (
