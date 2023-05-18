@@ -8,7 +8,7 @@ module "common" {
 }
 
 module "basic_components" {
-  source = "../../../basic_components"
+  source = "../../basic_components"
 
   region = var.region
 }
@@ -330,7 +330,7 @@ resource "kubernetes_service" "redis_service" {
 ##########################################
 locals {
   cwagent_config = "../../../../${var.test_dir}/eks_resources/amazon_cloudwatch_agent_prometheus_config.json"
-  prometheus_config = "../../../${var.test_dir}/eks_resources/prometheus_config.tpl")
+  prometheus_config = "../../../${var.test_dir}/eks_resources/prometheus_config.tpl"
 }
 
 data "template_file" "cwagent_config" {
