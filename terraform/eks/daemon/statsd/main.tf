@@ -331,7 +331,7 @@ resource "kubernetes_daemonset" "service" {
           command = [
             "/bin/sh",
             "-c",
-            "while true; do echo 'statsd_counter_1:1.0|c|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; echo 'statsd_gauge_1:1.0|g|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; sleep 1; done"
+            "while true; do echo 'statsd_counter_1:1000.0|c|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; echo 'statsd_gauge_2:1500.0|g|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; sleep 1; done"
           ]
           env {
             name = "HOST_IP"

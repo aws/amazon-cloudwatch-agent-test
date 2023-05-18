@@ -28,7 +28,7 @@ func (t *StatsDRunner) Validate() status.TestGroupResult {
 		var testResult status.TestResult
 		// there seems to be some delay before the runner is able to fetch metrics from CW
 		for j := 0; j < testRetryCount; j++ {
-			testResult = common.ValidateStatsdMetric(t.DimensionFactory, namespace, t.dimensionKey, metricName, t.GetAgentRunDuration())
+			testResult = common.ValidateStatsdMetric(t.DimensionFactory, namespace, t.dimensionKey, metricName, common.StatsdMetricValues[i], t.GetAgentRunDuration(), 1*time.Second)
 			if testResult.Status == status.SUCCESSFUL {
 				break
 			}
@@ -52,7 +52,7 @@ func (t *StatsDRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *StatsDRunner) GetMeasuredMetrics() []string {
-	return []string{"statsd_counter_1", "statsd_gauge_1"}
+	return common.StatsdMetricNames[:2]
 }
 
 func (e *StatsDRunner) GetAgentConfigFileName() string {

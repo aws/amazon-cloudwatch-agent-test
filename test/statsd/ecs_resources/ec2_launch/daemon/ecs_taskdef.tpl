@@ -65,7 +65,7 @@
       "entryPoint": [
           "/bin/sh",
           "-c",
-          "while true; do echo 'statsd_counter_1:1.0|c|#key:value' | socat -v -t 0 - UDP:cloudwatch_agent:8125; echo 'statsd_gauge_1:1.0|g|#key:value' | socat -v -t 0 - UDP:cloudwatch_agent:8125; sleep 1; done"
+          "while true; do echo 'statsd_counter_1:1000.0|c|#key:value' | socat -v -t 0 - UDP:cloudwatch_agent:8125; echo 'statsd_gauge_2:1500.0|g|#key:value' | socat -v -t 0 - UDP:cloudwatch_agent:8125; sleep 1; done"
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
