@@ -11,11 +11,8 @@ import (
 )
 
 type EMFECSTestRunner struct {
-	test_runner.ECSBaseTestRunner
+	test_runner.BaseTestRunner
 }
-
-var emfMetricValueBenchmarkSchema string
-var _ test_runner.IECSTestRunner = (*EMFECSTestRunner)(nil)
 
 func (t *EMFECSTestRunner) Validate(e *environment.MetaData) status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
@@ -60,7 +57,7 @@ func (t *EMFECSTestRunner) validateEMFOnECSMetrics(metricName string) status.Tes
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("EMFNameSpace", metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("EMFNameSpace", metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
