@@ -1,3 +1,8 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+//go:build !windows
+
 package dimension
 
 import (
@@ -9,6 +14,8 @@ import (
 type EMFECSDimensionProvider struct {
 	Provider
 }
+
+var _ IProvider = (*EMFECSDimensionProvider)(nil)
 
 func (p EMFECSDimensionProvider) IsApplicable() bool {
 	return p.env.ComputeType == computetype.ECS
@@ -27,5 +34,3 @@ func (p EMFECSDimensionProvider) GetDimension(instruction Instruction) types.Dim
 func (p EMFECSDimensionProvider) Name() string {
 	return "EMFECSProvider"
 }
-
-var _ IProvider = (*EMFECSDimensionProvider)(nil)
