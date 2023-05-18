@@ -1,6 +1,6 @@
 //go:build !windows
 
-package emf_ecs
+package emf
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -10,13 +10,14 @@ import (
 	"time"
 )
 
-type EMFECSTestRunner struct {
+type EMFTestRunner struct {
 	test_runner.BaseTestRunner
+	testName string
 }
 
-var _ test_runner.ITestRunner = (*EMFECSTestRunner)(nil)
+var _ test_runner.ITestRunner = (*EMFTestRunner)(nil)
 
-func (t *EMFECSTestRunner) Validate() status.TestGroupResult {
+func (t *EMFTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -29,24 +30,24 @@ func (t *EMFECSTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *EMFECSTestRunner) GetTestName() string {
+func (t *EMFTestRunner) GetTestName() string {
 	return "EMFOnECS"
 
 }
 
-func (t *EMFECSTestRunner) GetAgentConfigFileName() string {
+func (t *EMFTestRunner) GetAgentConfigFileName() string {
 	return "./resources/config.json"
 }
 
-func (t *EMFECSTestRunner) GetAgentRunDuration() time.Duration {
+func (t *EMFTestRunner) GetAgentRunDuration() time.Duration {
 	return 3 * time.Minute
 }
 
-func (t *EMFECSTestRunner) GetMeasuredMetrics() []string {
+func (t *EMFTestRunner) GetMeasuredMetrics() []string {
 	return []string{"EMFCounter"}
 }
 
-func (t *EMFECSTestRunner) validateEMFOnECSMetrics(metricName string) status.TestResult {
+func (t *EMFTestRunner) validateEMFOnECSMetrics(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
