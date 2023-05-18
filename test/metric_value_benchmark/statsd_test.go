@@ -168,7 +168,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(
 	if metricType == "counter" {
 		expectedValue *= float64(metrics_collection_interval / send_interval)
 	}
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedValue)) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedValue)) {
 		return testResult
 	}
 	// Check aggregation by checking sample count.
@@ -186,7 +186,7 @@ func (t *StatsdTestRunner) validateStatsdMetric(
 	}
 	// Skip check on the last value.
 	values = values[:len(values)-1]
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedSampleCount)) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedSampleCount)) {
 		return testResult
 	}
 	testResult.Status = status.SUCCESSFUL

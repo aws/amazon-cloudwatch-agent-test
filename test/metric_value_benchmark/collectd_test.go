@@ -106,7 +106,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
 		return testResult
 	}
 
