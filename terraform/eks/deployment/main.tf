@@ -262,7 +262,7 @@ resource "kubernetes_deployment" "redis" {
   spec {
     replicas = 1
 
-    selector = {
+    selector {
       match_labels = {
         app = "redis"
       }
@@ -305,13 +305,13 @@ resource "kubernetes_service" "redis_service" {
   metadata {
     name = "redis-metrics"
     namespace = "redis"
-    annotations = {
+    annotations {
       prometheus.io/port = "9121"
       prometheus.io/scrape = "true"
     }
   }
   spec {
-    selector = {
+    selector {
       app = "redis"
     }
     cluster_ip = "None"
@@ -319,7 +319,7 @@ resource "kubernetes_service" "redis_service" {
       name        = "metrics"
       port        = 9121
       protocol    = "TCP"
-      target_port = metrics
+      target_port = "metrics"
     }
   }
 }
