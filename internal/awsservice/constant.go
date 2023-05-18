@@ -5,6 +5,7 @@ package awsservice
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -36,14 +37,15 @@ var (
 )
 
 var (
-	ctx            = context.Background()
-	awsCfg, _      = config.LoadDefaultConfig(ctx)
-	Ec2Client      = ec2.NewFromConfig(awsCfg)
-	EcsClient      = ecs.NewFromConfig(awsCfg)
-	SsmClient      = ssm.NewFromConfig(awsCfg)
-	ImdsClient     = imds.NewFromConfig(awsCfg)
-	CwmClient      = cloudwatch.NewFromConfig(awsCfg)
-	CwlClient      = cloudwatchlogs.NewFromConfig(awsCfg)
-	DynamodbClient = dynamodb.NewFromConfig(awsCfg)
-	S3Client       = s3.NewFromConfig(awsCfg)
+	ctx                  = context.Background()
+	awsCfg, _            = config.LoadDefaultConfig(ctx)
+	Ec2Client            = ec2.NewFromConfig(awsCfg)
+	EcsClient            = ecs.NewFromConfig(awsCfg)
+	SsmClient            = ssm.NewFromConfig(awsCfg)
+	ImdsClient           = imds.NewFromConfig(awsCfg)
+	CwmClient            = cloudwatch.NewFromConfig(awsCfg)
+	CwlClient            = cloudwatchlogs.NewFromConfig(awsCfg)
+	DynamodbClient       = dynamodb.NewFromConfig(awsCfg)
+	S3Client             = s3.NewFromConfig(awsCfg)
+	CloudformationClient = cloudformation.NewFromConfig(awsCfg)
 )

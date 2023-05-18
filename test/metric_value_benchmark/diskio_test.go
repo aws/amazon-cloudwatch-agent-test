@@ -74,7 +74,7 @@ func (m *DiskIOTestRunner) validateDiskMetric(metricName string) status.TestResu
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

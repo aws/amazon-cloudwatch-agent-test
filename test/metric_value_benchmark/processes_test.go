@@ -68,7 +68,7 @@ func (m *ProcessesTestRunner) validateProcessesMetric(metricName string) status.
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

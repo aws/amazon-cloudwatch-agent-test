@@ -68,7 +68,7 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(name, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(name, values, 0) {
 		return testResult
 	}
 
