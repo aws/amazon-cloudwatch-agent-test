@@ -8,6 +8,7 @@ package metric_value_benchmark
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"log"
 	"strings"
 	"time"
