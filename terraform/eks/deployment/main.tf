@@ -305,9 +305,9 @@ resource "kubernetes_service" "redis_service" {
   metadata {
     name = "redis-metrics"
     namespace = "redis"
-    annotations {
-      prometheus.io/port = 9121
-      prometheus.io/scrape = true
+    annotations = {
+      "prometheus.io/port" = "9121"
+      "prometheus.io/scrape" = "true"
     }
   }
   spec {
