@@ -9,6 +9,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"strings"
 	"time"
 )
 
@@ -24,9 +25,13 @@ func (t *StatsDRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 
+	// ECS taskdef with portMappings has some delays before getting metrics from statsd container
+	if strings.Contains(t.testName, "ECS") {
+		time.Sleep(30 * time.Second)
+	}
+
 	for i, metricName := range metricsToFetch {
 		var testResult status.TestResult
-		// there seems to be some delay before the runner is able to fetch metrics from CW
 		for j := 0; j < testRetryCount; j++ {
 			testResult = common.ValidateStatsdMetric(t.DimensionFactory, namespace, t.dimensionKey, metricName, common.StatsdMetricValues[i], t.GetAgentRunDuration(), 1*time.Second)
 			if testResult.Status == status.SUCCESSFUL {
