@@ -450,7 +450,7 @@ resource "null_resource" "validator" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating EKS metrics/logs"
+      echo "Validating EKS metrics"
       cd ../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v
     EOT

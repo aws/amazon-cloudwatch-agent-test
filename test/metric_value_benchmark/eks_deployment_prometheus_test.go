@@ -18,19 +18,18 @@ import (
 
 type EKSDeploymentTestRunner struct {
 	test_runner.BaseTestRunner
+	env *environment.MetaData
 }
 
-var _ IEKSTestRunner = (*EKSDeploymentTestRunner)(nil)
-
-func (e *EKSDeploymentTestRunner) validate(*environment.MetaData) status.TestGroupResult {
-	metrics := e.getMeasuredMetrics()
+func (e *EKSDeploymentTestRunner) Validate() status.TestGroupResult {
+	metrics := e.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metrics))
 	for _, name := range metrics {
 		testResults = append(testResults, e.validateInstanceMetrics(name))
 	}
 
 	return status.TestGroupResult{
-		Name:        e.getTestName(),
+		Name:        e.GetTestName(),
 		TestResults: testResults,
 	}
 }
@@ -54,13 +53,13 @@ func (e *EKSDeploymentTestRunner) validateInstanceMetrics(name string) status.Te
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricValueBenchmarkTest", name, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("MetricValueBenchmarkTest", name, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(name, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(name, values, 0) {
 		return testResult
 	}
 
@@ -68,19 +67,19 @@ func (e *EKSDeploymentTestRunner) validateInstanceMetrics(name string) status.Te
 	return testResult
 }
 
-func (e *EKSDeploymentTestRunner) getTestName() string {
+func (e *EKSDeploymentTestRunner) GetTestName() string {
 	return "EKSPrometheus"
 }
 
-func (e *EKSDeploymentTestRunner) getAgentConfigFileName() string {
+func (e *EKSDeploymentTestRunner) GetAgentConfigFileName() string {
 	return "" // TODO: maybe not needed?
 }
 
-func (e *EKSDeploymentTestRunner) getAgentRunDuration() time.Duration {
+func (e *EKSDeploymentTestRunner) GetAgentRunDuration() time.Duration {
 	return time.Minute * 3
 }
 
-func (e *EKSDeploymentTestRunner) getMeasuredMetrics() []string {
+func (e *EKSDeploymentTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"redis_net_(in|out)put_bytes_total",
 		"redis_(expired|evicted)_keys_total",
