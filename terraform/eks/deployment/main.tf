@@ -311,7 +311,7 @@ resource "kubernetes_service" "redis_service" {
     }
   }
   spec {
-    selector {
+    selector = {
       app = "redis"
     }
     cluster_ip = "None"
