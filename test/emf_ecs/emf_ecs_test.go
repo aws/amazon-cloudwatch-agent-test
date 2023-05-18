@@ -1,7 +1,6 @@
 package emf_ecs
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -16,7 +15,7 @@ type EMFECSTestRunner struct {
 
 var _ test_runner.ITestRunner = (*EMFECSTestRunner)(nil)
 
-func (t *EMFECSTestRunner) Validate(e *environment.MetaData) status.TestGroupResult {
+func (t *EMFECSTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
