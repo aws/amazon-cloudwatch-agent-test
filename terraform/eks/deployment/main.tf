@@ -329,7 +329,7 @@ resource "kubernetes_service" "redis_service" {
 # Template Files
 ##########################################
 locals {
-  cwagent_config = "../../../../${var.test_dir}/eks_resources/amazon_cloudwatch_agent_prometheus_config.json"
+  cwagent_config = "../../../${var.test_dir}/eks_resources/amazon_cloudwatch_agent_prometheus_config.json"
   prometheus_config = "../../../${var.test_dir}/eks_resources/prometheus_config.tpl"
 }
 

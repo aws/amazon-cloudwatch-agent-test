@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "./test/statsd"
+  default = "./test/metric_value_benchmark"
 }
 
 variable "cwagent_image_repo" {
