@@ -1,8 +1,7 @@
 [
   {
     "k8s_version": "1.24",
-    "test_dir": "./test/metric_value_benchmark",
-
+    "test_dir": "./test/metric_value_benchmark"
   },
   {
     "k8s_version": "1.24",
