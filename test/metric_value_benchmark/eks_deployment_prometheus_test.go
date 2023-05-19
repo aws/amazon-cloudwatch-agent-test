@@ -48,7 +48,7 @@ func (e *EKSDeploymentTestRunner) validateInstanceMetrics(name string) status.Te
 		},
 		{
 			Key:   "Namespace",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("ContainerInsights/Prometheus")},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("redis-test")},
 		},
 	})
 
