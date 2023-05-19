@@ -97,6 +97,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 			eksTestRunners = append(eksTestRunners, &eksDeploymentTestRunner)
 		}
 	}
+	log.Println(fmt.Sprintln("eksTestRunners are ::: %v", eksTestRunners))
 	return eksTestRunners
 }
 
