@@ -78,13 +78,6 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 				},
 				Env: *env,
 			},
-			{
-				Runner: &EMFTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
-					DimensionFactory: factory,
-				},
-				},
-				Env: *env,
-			},
 		}
 	}
 	return eksTestRunners
