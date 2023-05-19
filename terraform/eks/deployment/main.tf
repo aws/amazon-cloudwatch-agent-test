@@ -369,7 +369,7 @@ resource "kubernetes_config_map" "prometheus_config" {
     namespace = "amazon-cloudwatch"
   }
   data = {
-    "prometheus-config.yml": data.template_file.prometheus_config.rendered
+    "prometheus_config.yaml": data.template_file.prometheus_config.rendered
   }
 }
 
@@ -387,8 +387,8 @@ resource "kubernetes_cluster_role" "clusterrole" {
     name = "cloudwatch-agent-role"
   }
   rule {
-    verbs      = ["list", "watch"]
-    resources  = ["nodes", "nodes", "endpoints"]
+    verbs      = ["get", "list", "watch"]
+    resources  = ["nodes", "endpoints"]
     api_groups = [""]
   }
   rule {
@@ -452,7 +452,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating EKS metrics"
       cd ../../..
-      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v
+      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=REPLICA
     EOT
   }
 }

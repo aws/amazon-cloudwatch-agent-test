@@ -69,23 +69,29 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 	if eksTestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
-		eksTestRunners = []*test_runner.EKSTestRunner{
-			{
+		var eksTestRunners []*test_runner.EKSTestRunner
+
+		switch env.EksDeploymentStrategy {
+		case "DAEMON":
+			eksDaemonTestRunner := test_runner.EKSTestRunner{
 				Runner: &EKSDaemonTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
 					DimensionFactory: factory,
 				},
 					env: env,
 				},
 				Env: *env,
-			},
-			{
+			}
+			eksTestRunners = append(eksTestRunners, &eksDaemonTestRunner)
+		case "REPLICA":
+			eksDeploymentTestRunner := test_runner.EKSTestRunner{
 				Runner: &EKSDeploymentTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
 					DimensionFactory: factory,
 				},
 					env: env,
 				},
 				Env: *env,
-			},
+			}
+			eksTestRunners = append(eksTestRunners, &eksDeploymentTestRunner)
 		}
 	}
 	return eksTestRunners
