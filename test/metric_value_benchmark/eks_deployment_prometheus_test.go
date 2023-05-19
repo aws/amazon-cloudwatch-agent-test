@@ -6,6 +6,7 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
 	"time"
 
@@ -43,11 +44,11 @@ func (e *EKSDeploymentTestRunner) validateInstanceMetrics(name string) status.Te
 	dims, failed := e.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "ClusterName",
-			Value: dimension.UnknownDimensionValue(),
+			Value: dimension.ExpectedDimensionValue{Value: aws.String(e.env.EKSClusterName)},
 		},
 		{
 			Key:   "Namespace",
-			Value: dimension.UnknownDimensionValue(),
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("ContainerInsights/Prometheus")},
 		},
 	})
 
@@ -57,7 +58,7 @@ func (e *EKSDeploymentTestRunner) validateInstanceMetrics(name string) status.Te
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricValueBenchmarkTest", name, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("ContainerInsights/Prometheus", name, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
