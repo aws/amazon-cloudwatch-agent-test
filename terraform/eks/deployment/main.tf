@@ -281,6 +281,7 @@ resource "kubernetes_pod" "redis_pod" {
         protocol = "TCP"
       }
     }
+  }
 }
 
 resource "kubernetes_service" "redis_service" {
