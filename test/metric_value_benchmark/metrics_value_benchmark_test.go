@@ -71,6 +71,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 		factory := dimension.GetDimensionFactory(*env)
 		var eksTestRunners []*test_runner.EKSTestRunner
 
+		log.Println(fmt.Sprintf("eksDeploymentStrategy is ::: %s", env.EksDeploymentStrategy))
 		switch env.EksDeploymentStrategy {
 		case "DAEMON":
 			eksDaemonTestRunner := test_runner.EKSTestRunner{
