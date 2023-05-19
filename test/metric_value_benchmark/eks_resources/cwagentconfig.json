@@ -2,7 +2,7 @@
   "logs": {
     "metrics_collected": {
       "prometheus": {
-        "prometheus_config_path": "/etc/prometheusconfig/prometheus_config.yaml",
+        "prometheus_config_path": "/etc/prometheusconfig/prometheus.yaml",
         "emf_processor": {
           "metric_declaration": [
             {

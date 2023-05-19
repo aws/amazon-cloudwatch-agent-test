@@ -166,6 +166,9 @@ resource "aws_security_group_rule" "nodes_cluster_inbound" {
 resource "kubernetes_namespace" "namespace" {
   metadata {
     name = "amazon-cloudwatch"
+    labels = {
+      name = "amazon-cloudwatch"
+    }
   }
 }
 
@@ -177,6 +180,7 @@ resource "kubernetes_deployment" "service" {
     kubernetes_config_map.cwagentconfig,
     kubernetes_config_map.prometheus_config,
     kubernetes_service_account.cwagentservice,
+    kubernetes_service.redis_service,
     aws_eks_node_group.this
   ]
   metadata {
@@ -242,72 +246,55 @@ resource "kubernetes_deployment" "service" {
 
 resource "kubernetes_namespace" "redis" {
   metadata {
-    name = "redis"
+    name = "redis-test"
+    labels = {
+      name = "redis-test"
+    }
   }
 }
 
-resource "kubernetes_deployment" "redis" {
-  depends_on = [
-    kubernetes_namespace.redis,
-    aws_eks_node_group.this
-  ]
+resource "kubernetes_pod" "redis_pod" {
   metadata {
-    name        = "redis-deployment"
-    namespace   = "redis"
+    name = "redis-instance"
+    namespace = "redis-test"
     labels = {
       app = "redis"
     }
   }
-
   spec {
-    replicas = 1
-
-    selector {
-      match_labels = {
-        app = "redis"
+    container {
+      name              = "redis-0"
+      image             = "redis:6.0.8-alpine3.12"
+      image_pull_policy = "Always"
+      port {
+        container_port = 6379
       }
     }
 
-    template {
-      metadata {
-        name = "redis-instance"
-        namespace = "redis"
-        labels = {
-          app = "redis"
-        }
-      }
-      spec {
-        container {
-          name              = "redis-0"
-          image             = "redis:6.0.8-alpine3.12"
-          image_pull_policy = "Always"
-          port {
-            container_port = 6379
-          }
-        }
-
-        container {
-          name              = "redis-exporter-0"
-          image             = "oliver006/redis_exporter:v1.11.1-alpine"
-          image_pull_policy = "Always"
-          port {
-            container_port = 9121
-            name = "metrics"
-            protocol = "TCP"
-          }
-        }
+    container {
+      name              = "redis-exporter-0"
+      image             = "oliver006/redis_exporter:v1.11.1-alpine"
+      image_pull_policy = "Always"
+      port {
+        container_port = 9121
+        name = "metrics"
+        protocol = "TCP"
       }
     }
-  }
 }
 
 resource "kubernetes_service" "redis_service" {
+  depends_on = [
+      kubernetes_namespace.redis,
+      kubernetes_pod.redis_pod,
+      aws_eks_node_group.this
+  ]
   metadata {
-    name = "redis-metrics"
-    namespace = "redis"
+    name = "my-redis-metrics"
+    namespace = "redis-test"
     annotations = {
-      "prometheus.io/port" = "9121"
-      "prometheus.io/scrape" = "true"
+      prometheus.io/port = "9121"
+      prometheus.io/scrape = "true"
     }
   }
   spec {
@@ -319,7 +306,7 @@ resource "kubernetes_service" "redis_service" {
       name        = "metrics"
       port        = 9121
       protocol    = "TCP"
-      target_port = 9121
+      target_port = "metrics"
     }
   }
 }
@@ -329,8 +316,8 @@ resource "kubernetes_service" "redis_service" {
 # Template Files
 ##########################################
 locals {
-  cwagent_config = "../../../${var.test_dir}/eks_resources/amazon_cloudwatch_agent_prometheus_config.json"
-  prometheus_config = "../../../${var.test_dir}/eks_resources/prometheus_config.yaml"
+  cwagent_config = "../../../${var.test_dir}/eks_resources/cwagentconfig.json"
+  prometheus_config = "../../../${var.test_dir}/eks_resources/prometheus.yaml"
 }
 
 data "template_file" "cwagent_config" {
@@ -369,7 +356,7 @@ resource "kubernetes_config_map" "prometheus_config" {
     namespace = "amazon-cloudwatch"
   }
   data = {
-    "prometheus_config.yaml": data.template_file.prometheus_config.rendered
+    "prometheus.yaml": data.template_file.prometheus_config.rendered
   }
 }
 
@@ -390,27 +377,6 @@ resource "kubernetes_cluster_role" "clusterrole" {
     verbs      = ["get", "list", "watch"]
     resources  = ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
     api_groups = [""]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["replicasets"]
-    api_groups = ["apps"]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["jobs"]
-    api_groups = ["batch"]
-  }
-  rule {
-    verbs      = ["create"]
-    resources  = ["nodes/stats", "configmaps", "events"]
-    api_groups = [""]
-  }
-  rule {
-    verbs          = ["get", "update"]
-    resource_names = ["cwagent-clusterleader"]
-    resources      = ["configmaps"]
-    api_groups     = [""]
   }
   rule {
     verbs             = ["get"]
@@ -439,7 +405,6 @@ resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
     kubernetes_deployment.service,
-    kubernetes_deployment.redis,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
   ]
