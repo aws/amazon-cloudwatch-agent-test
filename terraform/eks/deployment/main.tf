@@ -282,7 +282,7 @@ resource "kubernetes_deployment" "redis" {
           image             = "redis:6.0.8-alpine3.12"
           image_pull_policy = "Always"
           port {
-            container_port = "6379"
+            container_port = 6379
           }
         }
 
@@ -291,7 +291,7 @@ resource "kubernetes_deployment" "redis" {
           image             = "oliver006/redis_exporter:v1.11.1-alpine"
           image_pull_policy = "Always"
           port {
-            container_port = "9121"
+            container_port = 9121
             name = "metrics"
             protocol = "TCP"
           }
@@ -319,7 +319,7 @@ resource "kubernetes_service" "redis_service" {
       name        = "metrics"
       port        = 9121
       protocol    = "TCP"
-      target_port = "metrics"
+      target_port = 9121
     }
   }
 }
@@ -388,7 +388,7 @@ resource "kubernetes_cluster_role" "clusterrole" {
   }
   rule {
     verbs      = ["get", "list", "watch"]
-    resources  = ["nodes", "endpoints"]
+    resources  = ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
     api_groups = [""]
   }
   rule {
@@ -400,11 +400,6 @@ resource "kubernetes_cluster_role" "clusterrole" {
     verbs      = ["list", "watch"]
     resources  = ["jobs"]
     api_groups = ["batch"]
-  }
-  rule {
-    verbs      = ["get"]
-    resources  = ["nodes/proxy"]
-    api_groups = [""]
   }
   rule {
     verbs      = ["create"]
