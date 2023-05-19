@@ -70,7 +70,6 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 	if eksTestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
-		log.Println(fmt.Sprintf("eksDeploymentStrategy is ::: %v", env.EksDeploymentStrategy))
 		switch env.EksDeploymentStrategy {
 		case eksdeploymenttype.DAEMON:
 			eksDaemonTestRunner := test_runner.EKSTestRunner{
@@ -83,7 +82,6 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 			}
 			eksTestRunners = append(eksTestRunners, &eksDaemonTestRunner)
 		case eksdeploymenttype.REPLICA:
-			log.Println("CREATING EKS TEST RUNNER")
 			eksDeploymentTestRunner := test_runner.EKSTestRunner{
 				Runner: &EKSDeploymentTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
 					DimensionFactory: factory,
@@ -95,7 +93,6 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 			eksTestRunners = append(eksTestRunners, &eksDeploymentTestRunner)
 		}
 	}
-	log.Println(fmt.Sprintf("eksTestRunners are ::: %v\n", eksTestRunners))
 	return eksTestRunners
 }
 
