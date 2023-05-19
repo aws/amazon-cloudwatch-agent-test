@@ -21,7 +21,7 @@ func (t *EMFTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateEMFOnECSMetrics(metricName)
+		testResults[i] = t.validateEMFMetrics(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -31,7 +31,7 @@ func (t *EMFTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *EMFTestRunner) GetTestName() string {
-	return "EMFOnECS"
+	return "EMF Container Tests"
 
 }
 
@@ -47,7 +47,7 @@ func (t *EMFTestRunner) GetMeasuredMetrics() []string {
 	return []string{"EMFCounter"}
 }
 
-func (t *EMFTestRunner) validateEMFOnECSMetrics(metricName string) status.TestResult {
+func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
