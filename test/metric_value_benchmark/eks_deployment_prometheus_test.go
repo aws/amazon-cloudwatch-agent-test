@@ -45,6 +45,10 @@ func (e *EKSDeploymentTestRunner) validateInstanceMetrics(name string) status.Te
 			Key:   "ClusterName",
 			Value: dimension.UnknownDimensionValue(),
 		},
+		{
+			Key:   "Namespace",
+			Value: dimension.UnknownDimensionValue(),
+		},
 	})
 
 	if len(failed) > 0 {
@@ -81,9 +85,12 @@ func (e *EKSDeploymentTestRunner) GetAgentRunDuration() time.Duration {
 
 func (e *EKSDeploymentTestRunner) GetMeasuredMetrics() []string {
 	return []string{
-		"redis_net_(in|out)put_bytes_total",
-		"redis_(expired|evicted)_keys_total",
-		"redis_keyspace_(hits|misses)_total",
+		"redis_net_input_bytes_total",
+		"redis_net_output_bytes_total",
+		"redis_expired_keys_total",
+		"redis_evicted_keys_total",
+		"redis_keyspace_hits_total",
+		"redis_keyspace_misses_total",
 		"redis_memory_used_bytes",
 		"redis_connected_clients",
 	}
