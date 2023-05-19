@@ -48,6 +48,13 @@ func (t *EMFTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult {
+	namespace := ""
+	if t.testName == "EMF_ECS" {
+		namespace = "EMFNameSpace"
+	}
+	if t.testName == "EMF_EKS" {
+		namespace = "EMF_EKSNameSpace"
+	}
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -60,7 +67,7 @@ func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult 
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("EMFNameSpace", metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
