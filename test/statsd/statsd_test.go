@@ -52,7 +52,7 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 
 		ecsTestRunners = []*test_runner.ECSTestRunner{
 			{
-				Runner:      &StatsDRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, "ECSStatsD", "InstanceId"},
+				Runner:      &StatsDRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, fmt.Sprintf("%s/%s", namespace, env.ComputeType), "InstanceId"},
 				RunStrategy: &test_runner.ECSAgentRunStrategy{},
 				Env:         *env,
 			},
@@ -67,7 +67,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 
 		eksTestRunners = []*test_runner.EKSTestRunner{
 			{
-				Runner: &StatsDRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, "EKSStatsD", "ClusterName"},
+				Runner: &StatsDRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, fmt.Sprintf("%s/%s", namespace, env.ComputeType), "ClusterName"},
 				Env:    *env,
 			},
 		}
