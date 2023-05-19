@@ -213,9 +213,9 @@ resource "kubernetes_daemonset" "service" {
             }
           }
           port {
-            container_port = 25888,
-            host_port = 25888,
-            protocol : "udp"
+            container_port = 25888
+            host_port = 25888
+            protocol = "udp"
           }
           env {
             name = "HOST_IP"
