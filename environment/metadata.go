@@ -108,13 +108,6 @@ func fillECSData(e *MetaData, data *MetaDataStrings) {
 		e.EcsDeploymentStrategy = ecsDeploymentStrategy
 	}
 
-	eksDeploymentStrategy, ok := eksdeploymenttype.FromString(data.EksDeploymentStrategy)
-	if !ok {
-		log.Printf("Invalid deployment strategy %s. This might be because it wasn't provided for non-ECS tests", data.ComputeType)
-	} else {
-		e.EksDeploymentStrategy = eksDeploymentStrategy
-	}
-
 	e.EcsClusterArn = data.EcsClusterArn
 	e.CwagentConfigSsmParamName = data.CwagentConfigSsmParamName
 	e.EcsServiceName = data.EcsServiceName
@@ -143,6 +136,13 @@ func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) {
 func fillEKSData(e *MetaData, data *MetaDataStrings) {
 	if e.ComputeType != computetype.EKS {
 		return
+	}
+
+	eksDeploymentStrategy, ok := eksdeploymenttype.FromString(data.EksDeploymentStrategy)
+	if !ok {
+		log.Printf("Invalid deployment strategy %s. This might be because it wasn't provided for non-ECS tests", data.ComputeType)
+	} else {
+		e.EksDeploymentStrategy = eksDeploymentStrategy
 	}
 
 	e.EKSClusterName = data.EKSClusterName

@@ -7,6 +7,7 @@ package metric_value_benchmark
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksdeploymenttype"
 	"log"
 	"strings"
 	"testing"
@@ -71,9 +72,9 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 		factory := dimension.GetDimensionFactory(*env)
 		var eksTestRunners []*test_runner.EKSTestRunner
 
-		log.Println(fmt.Sprintf("eksDeploymentStrategy is ::: %s", env.EksDeploymentStrategy))
+		log.Println(fmt.Sprintf("eksDeploymentStrategy is ::: %v", env.EksDeploymentStrategy))
 		switch env.EksDeploymentStrategy {
-		case "DAEMON":
+		case eksdeploymenttype.DAEMON:
 			eksDaemonTestRunner := test_runner.EKSTestRunner{
 				Runner: &EKSDaemonTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
 					DimensionFactory: factory,
@@ -83,7 +84,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 				Env: *env,
 			}
 			eksTestRunners = append(eksTestRunners, &eksDaemonTestRunner)
-		case "REPLICA":
+		case eksdeploymenttype.REPLICA:
 			eksDeploymentTestRunner := test_runner.EKSTestRunner{
 				Runner: &EKSDeploymentTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
 					DimensionFactory: factory,
