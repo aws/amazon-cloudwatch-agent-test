@@ -1,14 +1,18 @@
 [
   {
     "k8s_version": "1.24",
-    "test_dir": "./test/metric_value_benchmark"
+    "test_dir": "./test/metric_value_benchmark",
+
   },
   {
     "k8s_version": "1.24",
-    "test_dir": "./test/emf"
+    "test_dir": "./test/emf",
+    "terraform_dir": "terraform/eks/daemon/emf"
   },
   {
     "k8s_version": "1.24",
-    "test_dir": "./test/statsd"
+    "test_dir": "./test/statsd",
+    "terraform_dir":"terraform/eks/daemon/statsd"
+
   }
 ]
