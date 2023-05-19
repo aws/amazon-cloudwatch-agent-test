@@ -85,6 +85,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 			}
 			eksTestRunners = append(eksTestRunners, &eksDaemonTestRunner)
 		case eksdeploymenttype.REPLICA:
+			log.Println("CREATING EKS TEST RUNNER")
 			eksDeploymentTestRunner := test_runner.EKSTestRunner{
 				Runner: &EKSDeploymentTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
 					DimensionFactory: factory,
