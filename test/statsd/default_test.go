@@ -27,7 +27,7 @@ func (t *StatsDRunner) Validate() status.TestGroupResult {
 
 	// ECS taskdef with portMappings has some delays before getting metrics from statsd container
 	if strings.Contains(t.testName, "ECS") {
-		time.Sleep(30 * time.Second)
+		time.Sleep(60 * time.Second)
 	}
 
 	for i, metricName := range metricsToFetch {
