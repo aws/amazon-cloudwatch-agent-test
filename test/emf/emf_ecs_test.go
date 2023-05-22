@@ -7,6 +7,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"time"
 )
 
@@ -49,23 +50,30 @@ func (t *EMFTestRunner) GetMeasuredMetrics() []string {
 
 func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult {
 	namespace := ""
+	var dims []types.Dimension
+	var failed []dimension.Instruction
 	if t.testName == "EMF_ECS" {
 		namespace = "EMFNameSpace"
+		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
+			{
+				Key:   "InstanceName",
+				Value: dimension.UnknownDimensionValue(),
+			},
+		})
 	}
 	if t.testName == "EMF_EKS" {
 		namespace = "EMFEKSNameSpace"
+		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
+			{
+				Key:   "ClusterName",
+				Value: dimension.UnknownDimensionValue(),
+			},
+		})
 	}
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
-
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "InstanceId",
-			Value: dimension.UnknownDimensionValue(),
-		},
-	})
 
 	if len(failed) > 0 {
 		return testResult
