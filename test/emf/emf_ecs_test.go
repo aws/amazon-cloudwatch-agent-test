@@ -53,7 +53,7 @@ func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult 
 		namespace = "EMFNameSpace"
 	}
 	if t.testName == "EMF_EKS" {
-		namespace = "EMF_EKSNameSpace"
+		namespace = "EMFEKSNameSpace"
 	}
 	testResult := status.TestResult{
 		Name:   metricName,
