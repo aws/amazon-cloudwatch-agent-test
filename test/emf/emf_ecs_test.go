@@ -63,12 +63,7 @@ func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult 
 	}
 	if t.testName == "EMF_EKS" {
 		namespace = "EMFEKSNameSpace"
-		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
-			{
-				Key:   "ClusterName",
-				Value: dimension.UnknownDimensionValue(),
-			},
-		})
+		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{})
 	}
 	testResult := status.TestResult{
 		Name:   metricName,
