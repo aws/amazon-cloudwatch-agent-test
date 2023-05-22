@@ -140,7 +140,7 @@ func fillEKSData(e *MetaData, data *MetaDataStrings) {
 
 	eksDeploymentStrategy, ok := eksdeploymenttype.FromString(data.EksDeploymentStrategy)
 	if !ok {
-		log.Printf("Invalid deployment strategy %s. This might be because it wasn't provided for non-ECS tests", data.ComputeType)
+		log.Printf("Invalid deployment strategy %s. This might be because it wasn't provided for non-EKS tests", data.ComputeType)
 	} else {
 		e.EksDeploymentStrategy = eksDeploymentStrategy
 	}
