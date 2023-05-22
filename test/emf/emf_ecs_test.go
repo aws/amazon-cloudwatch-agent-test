@@ -60,7 +60,12 @@ func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult 
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{})
+	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
 
 	if len(failed) > 0 {
 		return testResult
