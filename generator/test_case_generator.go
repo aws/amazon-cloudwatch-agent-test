@@ -90,6 +90,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{"./test/metric_value_benchmark", ""},
 		{"./test/statsd", "terraform/eks/daemon/statsd"},
 	},
+	"eks_deployment": {
+		{"./test/metric_value_benchmark", ""},
+	},
 }
 
 func main() {

@@ -5,6 +5,7 @@ package environment
 
 import (
 	"flag"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksdeploymenttype"
 	"log"
 	"strings"
 
@@ -18,6 +19,7 @@ type MetaData struct {
 	ComputeType               computetype.ComputeType
 	EcsLaunchType             ecslaunchtype.ECSLaunchType
 	EcsDeploymentStrategy     ecsdeploymenttype.ECSDeploymentType
+	EksDeploymentStrategy     eksdeploymenttype.EKSDeploymentType
 	EcsClusterArn             string
 	EcsClusterName            string
 	CwagentConfigSsmParamName string
@@ -34,6 +36,7 @@ type MetaDataStrings struct {
 	ComputeType               string
 	EcsLaunchType             string
 	EcsDeploymentStrategy     string
+	EksDeploymentStrategy     string
 	EcsClusterArn             string
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
@@ -71,6 +74,7 @@ func registerECSData(dataString *MetaDataStrings) {
 
 func registerEKSData(d *MetaDataStrings) {
 	flag.StringVar(&(d.EKSClusterName), "eksClusterName", "", "EKS cluster name")
+	flag.StringVar(&(d.EksDeploymentStrategy), "eksDeploymentStrategy", "", "Daemon/Replica/Sidecar")
 }
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
@@ -132,6 +136,13 @@ func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) {
 func fillEKSData(e *MetaData, data *MetaDataStrings) {
 	if e.ComputeType != computetype.EKS {
 		return
+	}
+
+	eksDeploymentStrategy, ok := eksdeploymenttype.FromString(data.EksDeploymentStrategy)
+	if !ok {
+		log.Printf("Invalid deployment strategy %s. This might be because it wasn't provided for non-ECS tests", data.ComputeType)
+	} else {
+		e.EksDeploymentStrategy = eksDeploymentStrategy
 	}
 
 	e.EKSClusterName = data.EKSClusterName
