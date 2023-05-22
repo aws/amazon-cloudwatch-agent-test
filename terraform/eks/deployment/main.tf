@@ -208,11 +208,11 @@ resource "kubernetes_deployment" "service" {
           image_pull_policy = "Always"
           resources {
             limits = {
-              cpu = "1000m",
+              cpu    = "1000m",
               memory = "1000Mi"
             }
             requests = {
-              cpu = "200m",
+              cpu    = "200m",
               memory = "200Mi"
             }
           }
@@ -255,7 +255,7 @@ resource "kubernetes_namespace" "redis" {
 
 resource "kubernetes_pod" "redis_pod" {
   metadata {
-    name = "redis-instance"
+    name      = "redis-instance"
     namespace = "redis-test"
     labels = {
       app = "redis"
@@ -277,8 +277,8 @@ resource "kubernetes_pod" "redis_pod" {
       image_pull_policy = "Always"
       port {
         container_port = 9121
-        name = "metrics"
-        protocol = "TCP"
+        name           = "metrics"
+        protocol       = "TCP"
       }
     }
   }
@@ -286,15 +286,15 @@ resource "kubernetes_pod" "redis_pod" {
 
 resource "kubernetes_service" "redis_service" {
   depends_on = [
-      kubernetes_namespace.redis,
-      kubernetes_pod.redis_pod,
-      aws_eks_node_group.this
+    kubernetes_namespace.redis,
+    kubernetes_pod.redis_pod,
+    aws_eks_node_group.this
   ]
   metadata {
-    name = "my-redis-metrics"
+    name      = "my-redis-metrics"
     namespace = "redis-test"
     annotations = {
-      "prometheus.io/port" = "9121"
+      "prometheus.io/port"   = "9121"
       "prometheus.io/scrape" = "true"
     }
   }
@@ -317,7 +317,7 @@ resource "kubernetes_service" "redis_service" {
 # Template Files
 ##########################################
 locals {
-  cwagent_config = "../../../${var.test_dir}/eks_resources/cwagentconfig.json"
+  cwagent_config    = "../../../${var.test_dir}/eks_resources/cwagentconfig.json"
   prometheus_config = "../../../${var.test_dir}/eks_resources/prometheus.yaml"
 }
 
@@ -357,7 +357,7 @@ resource "kubernetes_config_map" "prometheus_config" {
     namespace = "amazon-cloudwatch"
   }
   data = {
-    "prometheus.yaml": data.template_file.prometheus_config.rendered
+    "prometheus.yaml" : data.template_file.prometheus_config.rendered
   }
 }
 
