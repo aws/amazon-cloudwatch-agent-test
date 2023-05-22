@@ -26,6 +26,7 @@ func UnknownDimensionValue() ExpectedDimensionValue {
 
 func GetDimensionFactory(env environment.MetaData) Factory {
 	allDimensionProviders := []IProvider{
+		&EMFECSDimensionProvider{Provider: Provider{env: env}},
 		&EKSClusterNameProvider{Provider: Provider{env: env}},
 		&ContainerInsightsDimensionProvider{Provider: Provider{env: env}},
 		&HostDimensionProvider{Provider: Provider{env: env}},
