@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source             = "../../../common"
+  source             = "../../common"
   cwagent_image_repo = var.cwagent_image_repo
   cwagent_image_tag  = var.cwagent_image_tag
 }
 
 module "basic_components" {
-  source = "../../../basic_components"
+  source = "../../basic_components"
 
   region = var.region
 }
@@ -166,16 +166,21 @@ resource "aws_security_group_rule" "nodes_cluster_inbound" {
 resource "kubernetes_namespace" "namespace" {
   metadata {
     name = "amazon-cloudwatch"
+    labels = {
+      name = "amazon-cloudwatch"
+    }
   }
 }
 
 # TODO: how do we support different deployment types? Should they be in separate terraform
 #       files, and spawn separate tests?
-resource "kubernetes_daemonset" "service" {
+resource "kubernetes_deployment" "service" {
   depends_on = [
     kubernetes_namespace.namespace,
     kubernetes_config_map.cwagentconfig,
+    kubernetes_config_map.prometheus_config,
     kubernetes_service_account.cwagentservice,
+    kubernetes_service.redis_service,
     aws_eks_node_group.this
   ]
   metadata {
@@ -183,183 +188,53 @@ resource "kubernetes_daemonset" "service" {
     namespace = "amazon-cloudwatch"
   }
   spec {
+    replicas = 1
+
     selector {
       match_labels = {
-        "name" : "cloudwatch-agent"
+        app = "cloudwatch-agent"
       }
     }
     template {
       metadata {
         labels = {
-          "name" : "cloudwatch-agent"
+          app = "cloudwatch-agent"
         }
       }
       spec {
-        node_selector = {
-          "kubernetes.io/os" : "linux"
-        }
         container {
           name              = "cwagent"
           image             = "${var.cwagent_image_repo}:${var.cwagent_image_tag}"
           image_pull_policy = "Always"
           resources {
             limits = {
-              "cpu" : "200m",
-              "memory" : "200Mi"
+              cpu    = "1000m",
+              memory = "1000Mi"
             }
             requests = {
-              "cpu" : "200m",
-              "memory" : "200Mi"
-            }
-          }
-          env {
-            name = "HOST_IP"
-            value_from {
-              field_ref {
-                field_path = "status.hostIP"
-              }
-            }
-          }
-          env {
-            name = "HOST_NAME"
-            value_from {
-              field_ref {
-                field_path = "spec.nodeName"
-              }
-            }
-          }
-          env {
-            name = "K8S_NAMESPACE"
-            value_from {
-              field_ref {
-                field_path = "metadata.namespace"
-              }
+              cpu    = "200m",
+              memory = "200Mi"
             }
           }
           volume_mount {
             mount_path = "/etc/cwagentconfig"
-            name       = "cwagentconfig"
+            name       = "prometheus-cwagentconfig"
           }
           volume_mount {
-            mount_path = "/rootfs"
-            name       = "rootfs"
-            read_only  = true
-          }
-          volume_mount {
-            mount_path = "/var/run/docker.sock"
-            name       = "dockersock"
-            read_only  = true
-          }
-          volume_mount {
-            mount_path = "/var/lib/docker"
-            name       = "varlibdocker"
-            read_only  = true
-          }
-          volume_mount {
-            mount_path = "/run/containerd/containerd.sock"
-            name       = "containerdsock"
-            read_only  = true
-          }
-          volume_mount {
-            mount_path = "/sys"
-            name       = "sys"
-            read_only  = true
-          }
-          volume_mount {
-            mount_path = "/dev/disk"
-            name       = "devdisk"
-            read_only  = true
+            mount_path = "/etc/prometheusconfig"
+            name       = "prometheus-config"
           }
         }
         volume {
-          name = "cwagentconfig"
+          name = "prometheus-cwagentconfig"
           config_map {
-            name = "cwagentconfig"
+            name = "prometheus-cwagentconfig"
           }
         }
         volume {
-          name = "rootfs"
-          host_path {
-            path = "/"
-          }
-        }
-        volume {
-          name = "dockersock"
-          host_path {
-            path = "/var/run/docker.sock"
-          }
-        }
-        volume {
-          name = "varlibdocker"
-          host_path {
-            path = "/var/lib/docker"
-          }
-        }
-        volume {
-          name = "containerdsock"
-          host_path {
-            path = "/run/containerd/containerd.sock"
-          }
-        }
-        volume {
-          name = "sys"
-          host_path {
-            path = "/sys"
-          }
-        }
-        volume {
-          name = "devdisk"
-          host_path {
-            path = "/dev/disk"
-          }
-        }
-
-        container {
-          name              = "statsd-client"
-          image             = "alpine/socat:latest"
-          image_pull_policy = "Always"
-          resources {
-            limits = {
-              "cpu" : "50m",
-              "memory" : "50Mi"
-            }
-            requests = {
-              "cpu" : "50m",
-              "memory" : "50Mi"
-            }
-          }
-          command = [
-            "/bin/sh",
-            "-c",
-            "while true; do echo 'statsd_counter_1:1000.0|c|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; echo 'statsd_gauge_2:2000.0|g|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; sleep 1; done"
-          ]
-          env {
-            name = "HOST_IP"
-            value_from {
-              field_ref {
-                field_path = "status.hostIP"
-              }
-            }
-          }
-          env {
-            name = "HOST_NAME"
-            value_from {
-              field_ref {
-                field_path = "spec.nodeName"
-              }
-            }
-          }
-          env {
-            name = "K8S_NAMESPACE"
-            value_from {
-              field_ref {
-                field_path = "metadata.namespace"
-              }
-            }
-          }
-          volume_mount {
-            mount_path = "/etc/cwagentconfig"
-            name       = "cwagentconfig"
+          name = "prometheus-config"
+          config_map {
+            name = "prometheus-config"
           }
         }
         service_account_name             = "cloudwatch-agent"
@@ -369,15 +244,91 @@ resource "kubernetes_daemonset" "service" {
   }
 }
 
+resource "kubernetes_namespace" "redis" {
+  metadata {
+    name = "redis-test"
+    labels = {
+      name = "redis-test"
+    }
+  }
+}
+
+resource "kubernetes_pod" "redis_pod" {
+  metadata {
+    name      = "redis-instance"
+    namespace = "redis-test"
+    labels = {
+      app = "redis"
+    }
+  }
+  spec {
+    container {
+      name              = "redis-0"
+      image             = "redis:6.0.8-alpine3.12"
+      image_pull_policy = "Always"
+      port {
+        container_port = 6379
+      }
+    }
+
+    container {
+      name              = "redis-exporter-0"
+      image             = "oliver006/redis_exporter:v1.11.1-alpine"
+      image_pull_policy = "Always"
+      port {
+        container_port = 9121
+        name           = "metrics"
+        protocol       = "TCP"
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "redis_service" {
+  depends_on = [
+    kubernetes_namespace.redis,
+    kubernetes_pod.redis_pod,
+    aws_eks_node_group.this
+  ]
+  metadata {
+    name      = "my-redis-metrics"
+    namespace = "redis-test"
+    annotations = {
+      "prometheus.io/port"   = "9121"
+      "prometheus.io/scrape" = "true"
+    }
+  }
+  spec {
+    selector = {
+      app = "redis"
+    }
+    cluster_ip = "None"
+    port {
+      name        = "metrics"
+      port        = 9121
+      protocol    = "TCP"
+      target_port = "metrics"
+    }
+  }
+}
+
+
 ##########################################
 # Template Files
 ##########################################
 locals {
-  cwagent_config = fileexists("../../../../${var.test_dir}/resources/eks_config.json") ? "../../../../${var.test_dir}/resources/eks_config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
+  cwagent_config    = "../../../${var.test_dir}/eks_resources/cwagentconfig.json"
+  prometheus_config = "../../../${var.test_dir}/eks_resources/prometheus.yaml"
 }
 
 data "template_file" "cwagent_config" {
   template = file(local.cwagent_config)
+  vars = {
+  }
+}
+
+data "template_file" "prometheus_config" {
+  template = file(local.prometheus_config)
   vars = {
   }
 }
@@ -388,11 +339,25 @@ resource "kubernetes_config_map" "cwagentconfig" {
     kubernetes_service_account.cwagentservice
   ]
   metadata {
-    name      = "cwagentconfig"
+    name      = "prometheus-cwagentconfig"
     namespace = "amazon-cloudwatch"
   }
   data = {
-    "cwagentconfig.json" : data.template_file.cwagent_config.rendered
+    "cwagentconfig.json" : data.template_file.cwagent_config.rendered,
+  }
+}
+
+resource "kubernetes_config_map" "prometheus_config" {
+  depends_on = [
+    kubernetes_namespace.namespace,
+    kubernetes_service_account.cwagentservice
+  ]
+  metadata {
+    name      = "prometheus-config"
+    namespace = "amazon-cloudwatch"
+  }
+  data = {
+    "prometheus.yaml" : data.template_file.prometheus_config.rendered
   }
 }
 
@@ -410,35 +375,13 @@ resource "kubernetes_cluster_role" "clusterrole" {
     name = "cloudwatch-agent-role"
   }
   rule {
-    verbs      = ["list", "watch"]
-    resources  = ["pods", "nodes", "endpoints"]
+    verbs      = ["get", "list", "watch"]
+    resources  = ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
     api_groups = [""]
   }
   rule {
-    verbs      = ["list", "watch"]
-    resources  = ["replicasets"]
-    api_groups = ["apps"]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["jobs"]
-    api_groups = ["batch"]
-  }
-  rule {
-    verbs      = ["get"]
-    resources  = ["nodes/proxy"]
-    api_groups = [""]
-  }
-  rule {
-    verbs      = ["create"]
-    resources  = ["nodes/stats", "configmaps", "events"]
-    api_groups = [""]
-  }
-  rule {
-    verbs          = ["get", "update"]
-    resource_names = ["cwagent-clusterleader"]
-    resources      = ["configmaps"]
-    api_groups     = [""]
+    verbs             = ["get"]
+    non_resource_urls = ["/metrics"]
   }
 }
 
@@ -462,15 +405,15 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
-    kubernetes_daemonset.service,
+    kubernetes_deployment.service,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
   ]
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating EKS metrics/logs"
-      cd ../../../..
-      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
+      echo "Validating EKS metrics"
+      cd ../../..
+      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=REPLICA
     EOT
   }
 }
