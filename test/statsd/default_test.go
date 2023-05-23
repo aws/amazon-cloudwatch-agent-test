@@ -27,13 +27,13 @@ func (t *StatsDRunner) Validate() status.TestGroupResult {
 
 	// ECS taskdef with portMappings has some delays before getting metrics from statsd container
 	if strings.Contains(t.testName, "ECS") {
-		time.Sleep(30 * time.Second)
+		time.Sleep(60 * time.Second)
 	}
 
 	for i, metricName := range metricsToFetch {
 		var testResult status.TestResult
 		for j := 0; j < testRetryCount; j++ {
-			testResult = metric.ValidateStatsdMetric(t.DimensionFactory, namespace, t.dimensionKey, metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), 1*time.Second)
+			testResult = metric.ValidateStatsdMetric(t.DimensionFactory, t.GetTestName(), t.dimensionKey, metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), 1*time.Second)
 			if testResult.Status == status.SUCCESSFUL {
 				break
 			}
