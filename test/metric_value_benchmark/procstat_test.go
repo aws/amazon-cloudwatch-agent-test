@@ -6,7 +6,6 @@
 package metric_value_benchmark
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
