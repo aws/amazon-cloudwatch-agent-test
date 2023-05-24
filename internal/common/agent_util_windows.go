@@ -86,7 +86,7 @@ func StopAgent() error {
 	return nil
 }
 
-func RunShellScript(path string, args ...string) error {
+func RunShellScript(path string, args ...string) (string, error) {
 	ps, err := exec.LookPath("powershell.exe")
 
 	if err != nil {
@@ -98,10 +98,10 @@ func RunShellScript(path string, args ...string) error {
 
 	if err != nil {
 		log.Printf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
-		return err
+		return "", err
 	}
 
-	return nil
+	return string(out), nil
 }
 
 // printOutputAndError does nothing if there was no error.
@@ -111,7 +111,7 @@ func printOutputAndError(stdout []byte, err error) {
 		return
 	}
 	stderr := ""
-	ee, ok :=  err.(*exec.ExitError)
+	ee, ok := err.(*exec.ExitError)
 	if ok {
 		stderr = string(ee.Stderr)
 	}
