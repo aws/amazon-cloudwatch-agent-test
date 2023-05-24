@@ -32,6 +32,7 @@ type ITestRunner interface {
 	GetMeasuredMetrics() []string
 	SetupBeforeAgentRun() error
 	SetupAfterAgentRun() error
+	RunAgent(T *TestRunner) (status.TestGroupResult, error)
 }
 
 type TestRunner struct {
@@ -40,6 +41,13 @@ type TestRunner struct {
 
 type BaseTestRunner struct {
 	DimensionFactory dimension.Factory
+}
+
+func (t *BaseTestRunner) GetTestName() string {
+	return "BaseTestRunner"
+}
+func (t *BaseTestRunner) GetAgentConfigFileName() string {
+	return "cpu_config.json"
 }
 
 func (t *BaseTestRunner) SetupBeforeAgentRun() error {
@@ -54,41 +62,9 @@ func (t *BaseTestRunner) GetAgentRunDuration() time.Duration {
 	return MinimumAgentRuntime
 }
 
-func (t *TestRunner) Run(s ITestSuite) {
-	testName := t.TestRunner.GetTestName()
-	log.Printf("Running %v", testName)
-	/* 	This block is used to prevent userdata from running the agent
-		post-launch since it should've been done on launch already in
-		order to imitate customer behavior
-	*/
+func (t *BaseTestRunner) RunAgent(T *TestRunner) (status.TestGroupResult, error) {
 	testGroupResult := status.TestGroupResult{
-		Name: t.TestRunner.GetTestName(),
-		TestResults: []status.TestResult{
-			{
-				Name:   "Agent Started",
-				Status: status.SUCCESSFUL,
-			},
-		},
-	}
-	err := error(nil)
-	if testName == "Userdata" {
-		testGroupResult = t.TestRunner.Validate()
-	} else{
-		testGroupResult, err = t.runAgent()
-		if err == nil {
-			testGroupResult = t.TestRunner.Validate()
-		}
-	}
-
-	s.AddToSuiteResult(testGroupResult)
-	if testGroupResult.GetStatus() != status.SUCCESSFUL {
-		log.Printf("%v test group failed due to %v", testName, err)
-	}
-}
-
-func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
-	testGroupResult := status.TestGroupResult{
-		Name: t.TestRunner.GetTestName(),
+		Name: T.TestRunner.GetTestName(),
 		TestResults: []status.TestResult{
 			{
 				Name:   "Starting Agent",
@@ -97,13 +73,13 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		},
 	}
 
-	err := t.TestRunner.SetupBeforeAgentRun()
+	err := T.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
 
-	agentConfigPath := filepath.Join(agentConfigDirectory, t.TestRunner.GetAgentConfigFileName())
+	agentConfigPath := filepath.Join(agentConfigDirectory, T.TestRunner.GetAgentConfigFileName())
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
 	common.CopyFile(agentConfigPath, configOutputPath)
 	err = common.StartAgent(configOutputPath, false)
@@ -113,13 +89,13 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
-	err = t.TestRunner.SetupAfterAgentRun()
+	err = T.TestRunner.SetupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
 	}
 
-	runningDuration := t.TestRunner.GetAgentRunDuration()
+	runningDuration := T.TestRunner.GetAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
 	common.StopAgent()
@@ -131,4 +107,18 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	}
 
 	return testGroupResult, nil
+}
+
+func (t *TestRunner) Run(s ITestSuite) {
+	testName := t.TestRunner.GetTestName()
+	log.Printf("Running %v", testName)
+	testGroupResult, err := t.TestRunner.RunAgent(t)
+	if err == nil {
+		testGroupResult = t.TestRunner.Validate()
+	}
+
+	s.AddToSuiteResult(testGroupResult)
+	if testGroupResult.GetStatus() != status.SUCCESSFUL {
+		log.Printf("%v test group failed due to %v", testName, err)
+	}
 }

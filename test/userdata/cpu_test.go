@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 type CPUTestRunner struct {
@@ -36,7 +37,7 @@ func (t *CPUTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *CPUTestRunner) GetTestName() string {
-	return "Userdata"
+	return "UserdataTest"
 }
 
 func (t *CPUTestRunner) GetAgentConfigFileName() string {
@@ -45,10 +46,22 @@ func (t *CPUTestRunner) GetAgentConfigFileName() string {
 
 func (t *CPUTestRunner) GetMeasuredMetrics() []string {
 	return []string{
-		"cpu_time_active_renamed", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-		"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
+		"cpu_time_active_userdata"}
+}
+
+func (t *CPUTestRunner) RunAgent(T *test_runner.TestRunner) (status.TestGroupResult, error) {
+	log.Printf("Running test for runAgent in userdata mode")
+	testGroupResult := status.TestGroupResult{
+		Name: t.GetTestName(),
+		TestResults: []status.TestResult{
+			{
+				Name:   "Starting Agent",
+				Status: status.SUCCESSFUL,
+			},
+		},
+	}
+
+	return testGroupResult, nil
 }
 
 func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
@@ -80,7 +93,7 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

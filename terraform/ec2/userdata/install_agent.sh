@@ -13,8 +13,4 @@ ${install_agent}
 cd /home/ec2-user/amazon-cloudwatch-agent-test/test/userdata/agent_configs/
 echo Starting agent now
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:cpu_config.json
-echo Let agent run for 60 seconds
-sleep 60
-echo Agent finished run for 60 seconds
-
 cloud-init status --wait
