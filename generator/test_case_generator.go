@@ -62,7 +62,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{"../../../test/feature/mac", ""},
 	},
 	"ec2_windows": {
-		{"../../../test/feature/windows", ""},
+		//{"../../../test/feature/windows", ""},
+		{"./test/restart", ""},
 	},
 	"ec2_performance": {
 		{"../../test/performance/emf", ""},
