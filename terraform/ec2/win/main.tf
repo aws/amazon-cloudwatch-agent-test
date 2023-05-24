@@ -37,6 +37,7 @@ locals {
 #####################################################################
 
 module "validator" {
+  count = var.test_dir == "../../../test/feature/windows" ? 1 : 0
   source = "../../validator"
 
   arc            = var.arc
@@ -73,7 +74,7 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test_setup" {
-  depends_on = [aws_instance.cwagent, module.validator]
+  depends_on = [aws_instance.cwagent]
 
   # Install software
   connection {
@@ -143,6 +144,7 @@ resource "null_resource" "integration_test_run_validator" {
   # run validator only when test_dir is not passed e.g. the default from variable.tf
   count = var.test_dir == "../../../test/feature/windows" ? 1 : 0
   depends_on = [
+    module.validator,
     null_resource.integration_test_reboot,
   ]
 
