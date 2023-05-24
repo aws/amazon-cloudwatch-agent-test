@@ -56,7 +56,7 @@ resource "aws_instance" "cwagent" {
   }
 }
 
-resource "null_resource" "integration_test" {
+resource "null_resource" "integration_test_setup" {
   connection {
     type        = "ssh"
     user        = var.user
@@ -78,6 +78,43 @@ resource "null_resource" "integration_test" {
     ]
   }
 
+  depends_on = [
+    aws_instance.cwagent,
+  ]
+}
+
+## reboot when only needed
+resource "null_resource" "integration_test_reboot" {
+  count = var.test_dir == "./test/restart" ? 1 : 0
+
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
+
+  # Prepare Integration Test
+  provisioner "remote-exec" {
+    inline = [
+      "echo reboot instance",
+      "sudo reboot",
+    ]
+  }
+
+  depends_on = [
+    null_resource.integration_test_setup,
+  ]
+}
+
+resource "null_resource" "integration_test_run" {
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
+
   #Run sanity check and integration test
   provisioner "remote-exec" {
     inline = [
@@ -93,7 +130,8 @@ resource "null_resource" "integration_test" {
   }
 
   depends_on = [
-    aws_instance.cwagent,
+    null_resource.integration_test_reboot,
+    null_resource.integration_test_setup,
   ]
 }
 
