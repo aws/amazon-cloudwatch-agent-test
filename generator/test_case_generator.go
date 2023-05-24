@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -126,11 +125,7 @@ func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
-			testDir := testConfig.testDir
-			if strings.Contains(testType, "windows") {
-				testDir = strings.ReplaceAll(testDir, "/", "\\")
-			}
-			row := matrixRow{TestDir: testDir, TestType: testType, TerraformDir: testConfig.terraformDir}
+			row := matrixRow{TestDir: testConfig.testDir, TestType: testType, TerraformDir: testConfig.terraformDir}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
 				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
