@@ -148,7 +148,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC"
+      "go test ${replace(var.test_dir, "/", "\\")} -p 1 -timeout 1h -computeType=EC"
     ]
   }
 }
