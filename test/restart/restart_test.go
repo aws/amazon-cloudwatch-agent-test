@@ -5,8 +5,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
+
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+}
 
 func TestAgentStatusAfterRestart(t *testing.T) {
 	var before, after string
