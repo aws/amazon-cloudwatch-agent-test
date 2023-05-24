@@ -92,7 +92,7 @@ func RunShellScript(path string, args ...string) (string, error) {
 	ps, err := exec.LookPath("powershell.exe")
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", path}, args...)
