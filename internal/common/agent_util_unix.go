@@ -15,16 +15,17 @@ import (
 )
 
 const (
-	CatCommand       = "cat "
-	AppOwnerCommand  = "ps -u -p "
-	ConfigOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	Namespace        = "CWAgent"
-	Host             = "host"
-	AgentLogFile     = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
-	InstallAgentVersionPath   = "/opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION"
+	CatCommand              = "cat "
+	AppOwnerCommand         = "ps -u -p "
+	ConfigOutputPath        = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	Namespace               = "CWAgent"
+	Host                    = "host"
+	AgentLogFile            = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+	InstallAgentVersionPath = "/opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION"
 )
 
 type PackageManager int
+
 const (
 	RPM PackageManager = iota
 	DEB
@@ -81,7 +82,7 @@ func printOutputAndError(stdout []byte, err error) {
 		return
 	}
 	stderr := ""
-	ee, ok :=  err.(*exec.ExitError)
+	ee, ok := err.(*exec.ExitError)
 	if ok {
 		stderr = string(ee.Stderr)
 	}
@@ -110,9 +111,9 @@ func InstallAgent(installerFilePath string) error {
 	var c *exec.Cmd
 	// Assuming lower case
 	if strings.HasSuffix(installerFilePath, ".rpm") {
-		c = exec.Command("bash", "-c", "sudo rpm -Uvh " + installerFilePath)
+		c = exec.Command("bash", "-c", "sudo rpm -Uvh "+installerFilePath)
 	} else {
-		c = exec.Command("bash", "-c", "sudo dpkg -i -E " + installerFilePath)
+		c = exec.Command("bash", "-c", "sudo dpkg -i -E "+installerFilePath)
 	}
 	out, err := c.Output()
 	printOutputAndError(out, err)
@@ -159,12 +160,12 @@ func ReadAgentOutput(d time.Duration) string {
 	return string(out)
 }
 
-func RunShellScript(path string, args ...string) error {
+func RunShellScript(path string, args ...string) (string, error) {
 	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
 
 	if err != nil {
 		log.Printf("Error occurred when attempting to chmod %s: %s | %s", path, err.Error(), string(out))
-		return err
+		return "", err
 	}
 
 	bashArgs := []string{"-c", "sudo ./" + path}
@@ -175,10 +176,10 @@ func RunShellScript(path string, args ...string) error {
 
 	if err != nil {
 		log.Printf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
-		return err
+		return "", err
 	}
 
-	return nil
+	return string(out), nil
 }
 
 func RunCommand(cmd string) (string, error) {
@@ -211,4 +212,3 @@ func ReplaceLocalStackHostName(pathIn string) {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
 }
-
