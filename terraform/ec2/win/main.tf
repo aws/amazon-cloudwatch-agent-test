@@ -72,10 +72,58 @@ resource "aws_instance" "cwagent" {
   }
 }
 
-resource "null_resource" "integration_test" {
+resource "null_resource" "integration_test_setup" {
   depends_on = [aws_instance.cwagent, module.validator]
 
   # Install software
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+  }
+
+  # Install agent binaries
+  provisioner "remote-exec" {
+    inline = [
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
+      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "cd amazon-cloudwatch-agent-test",
+    ]
+  }
+}
+
+## reboot when only needed
+resource "null_resource" "integration_test_reboot" {
+  count = var.test_dir == "./test/restart" ? 1 : 0
+
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+  }
+
+  # Prepare Integration Test
+  provisioner "remote-exec" {
+    inline = [
+      "shutdown /r",
+    ]
+  }
+
+  depends_on = [
+    null_resource.integration_test_setup,
+  ]
+}
+
+resource "null_resource" "integration_test_run" {
+  # run validator only when test_dir is not passed
+  count = var.test_dir == "" ? 1 : 0
+  depends_on = [
+    null_resource.integration_test_reboot,
+  ]
+
   connection {
     type     = "winrm"
     user     = "Administrator"
@@ -93,18 +141,42 @@ resource "null_resource" "integration_test" {
     destination = module.validator.instance_validator_config
   }
 
-  # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
+      "set AWS_REGION=${var.region}",
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC"
     ]
+  }
+}
+
+resource "null_resource" "integration_test_run_validator" {
+  # run validator only when test_dir is not passed e.g. the default from variable.tf
+  count = var.test_dir == "../../../test/feature/windows" ? 1 : 0
+  depends_on = [
+    null_resource.integration_test_reboot,
+  ]
+
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+  }
+
+  provisioner "file" {
+    source      = module.validator.agent_config
+    destination = module.validator.instance_agent_config
+  }
+
+  provisioner "file" {
+    source      = module.validator.validator_config
+    destination = module.validator.instance_validator_config
   }
 
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
