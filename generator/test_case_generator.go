@@ -54,6 +54,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
+		{testDir: "./test/restart"},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
