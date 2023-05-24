@@ -73,14 +73,14 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		log.Printf("err: %v\n", err)
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

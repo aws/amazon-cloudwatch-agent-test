@@ -26,21 +26,30 @@ type matrixRow struct {
 	InstallAgentCommand string `json:"installAgentCommand"`
 	CaCertPath          string `json:"caCertPath"`
 	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
+	K8sVersion          string `json:"k8s_version"`
+	TerraformDir        string `json:"terraform_dir"`
+}
+
+type testConfig struct {
+	// this gives more flexibility to define terraform dir when there should be a different set of terraform files
+	// e.g. statsd can have a multiple terraform module sets for difference test scenarios (ecs, eks or ec2)
+	testDir      string
+	terraformDir string
 }
 
 // you can't have a const map in golang
-var testTypeToTestDirMap = map[string][]string{
+var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
-		"./test/nvidia_gpu",
+		{"./test/nvidia_gpu", ""},
 	},
 	"ec2_linux": {
-		"./test/ca_bundle",
-		"./test/cloudwatchlogs",
-		"./test/metrics_number_dimension",
-		"./test/metric_value_benchmark",
-		"./test/run_as_user",
-		"./test/collection_interval",
-		"./test/metric_dimension",
+		{"./test/ca_bundle", ""},
+		{"./test/cloudwatchlogs", ""},
+		{"./test/metrics_number_dimension", ""},
+		{"./test/metric_value_benchmark", ""},
+		{"./test/run_as_user", ""},
+		{"./test/collection_interval", ""},
+		{"./test/metric_dimension", ""},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
@@ -48,33 +57,35 @@ var testTypeToTestDirMap = map[string][]string{
 		and Mac under the hood share similar plugins with Linux
 	*/
 	"ec2_mac": {
-		"../../../test/feature/mac",
+		{"../../../test/feature/mac", ""},
 	},
 	"ec2_windows": {
-		"../../../test/feature/windows",
+		{"../../../test/feature/windows", ""},
 	},
 	"ec2_performance": {
-		"../../test/performance/emf",
-		"../../test/performance/logs",
-		"../../test/performance/system",
-		"../../test/performance/statsd",
-		"../../test/performance/collectd",
+		{"../../test/performance/emf", ""},
+		{"../../test/performance/logs", ""},
+		{"../../test/performance/system", ""},
+		{"../../test/performance/statsd", ""},
+		{"../../test/performance/collectd", ""},
 	},
 	"ec2_stress": {
-		"../../test/stress/emf",
-		"../../test/stress/logs",
-		"../../test/stress/system",
-		"../../test/stress/statsd",
-		"../../test/stress/collectd",
+		{"../../test/stress/emf", ""},
+		{"../../test/stress/logs", ""},
+		{"../../test/stress/system", ""},
+		{"../../test/stress/statsd", ""},
+		{"../../test/stress/collectd", ""},
 	},
 	"ecs_fargate": {
-		"./test/ecs/ecs_metadata",
+		{"./test/ecs/ecs_metadata", ""},
 	},
 	"ecs_ec2_daemon": {
-		"./test/metric_value_benchmark",
+		{"./test/metric_value_benchmark", ""},
+		{"./test/statsd", ""},
+		{"./test/emf_ecs", ""},
 	},
 	"ec2_acceptance": {
-		"./test/acceptance",
+		{"./test/acceptance", ""},
 	},
 	"ec2_userdata": {
 		"./test/cloudwatchlogs",
@@ -84,18 +95,22 @@ var testTypeToTestDirMap = map[string][]string{
   },
 
 	"eks_daemon": {
-		"./test/metric_value_benchmark",
+		{"./test/metric_value_benchmark", ""},
+		{"./test/statsd", "terraform/eks/daemon/statsd"},
+	},
+	"eks_deployment": {
+		{"./test/metric_value_benchmark", ""},
 	},
 }
 
 func main() {
-	for testType, testDir := range testTypeToTestDirMap {
-		testMatrix := genMatrix(testType, testDir)
+	for testType, testConfigs := range testTypeToTestConfig {
+		testMatrix := genMatrix(testType, testConfigs)
 		writeTestMatrixFile(testType, testMatrix)
 	}
 }
 
-func genMatrix(testType string, testDirList []string) []matrixRow {
+func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
 	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
 
 	if err != nil {
@@ -114,11 +129,11 @@ func genMatrix(testType string, testDirList []string) []matrixRow {
 
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
-		for _, testDirectory := range testDirList {
-			row := matrixRow{TestDir: testDirectory, TestType: testType}
+		for _, testConfig := range testConfigs {
+			row := matrixRow{TestDir: testConfig.testDir, TestType: testType, TerraformDir: testConfig.terraformDir}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
-				log.Panicf("can't decode map test %v to metric line struct with error %v", testDirectory, err)
+				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
 			}
 			testMatrixComplete = append(testMatrixComplete, row)
 		}

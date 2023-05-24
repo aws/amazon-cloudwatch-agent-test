@@ -1,0 +1,42 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "/etc/prometheusconfig/prometheus.yaml",
+        "emf_processor": {
+          "metric_declaration": [
+            {
+              "source_labels": ["pod_name"],
+              "label_matcher": "^redis-instance$",
+              "dimensions": [["Namespace","ClusterName"]],
+              "metric_selectors": [
+                "^redis_net_(in|out)put_bytes_total$",
+                "^redis_(expired|evicted)_keys_total$",
+                "^redis_keyspace_(hits|misses)_total$",
+                "^redis_memory_used_bytes$",
+                "^redis_connected_clients$"
+              ]
+            },
+            {
+              "source_labels": ["pod_name"],
+              "label_matcher": "^redis-instance$",
+              "dimensions": [["Namespace","ClusterName","cmd"]],
+              "metric_selectors": [
+                "^redis_commands_total$"
+              ]
+            },
+            {
+              "source_labels": ["pod_name"],
+              "label_matcher": "^redis-instance$",
+              "dimensions": [["Namespace","ClusterName","db"]],
+              "metric_selectors": [
+                "^redis_db_keys$"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

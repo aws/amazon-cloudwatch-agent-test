@@ -26,6 +26,7 @@ func UnknownDimensionValue() ExpectedDimensionValue {
 
 func GetDimensionFactory(env environment.MetaData) Factory {
 	allDimensionProviders := []IProvider{
+		&EMFECSDimensionProvider{Provider: Provider{env: env}},
 		&EKSClusterNameProvider{Provider: Provider{env: env}},
 		&ContainerInsightsDimensionProvider{Provider: Provider{env: env}},
 		&HostDimensionProvider{Provider: Provider{env: env}},
@@ -53,7 +54,7 @@ type Instruction struct {
 }
 
 type Factory struct {
-	providers []IProvider
+	Providers []IProvider
 }
 
 func (f *Factory) GetDimensions(instructions []Instruction) ([]types.Dimension, []Instruction) {
@@ -76,7 +77,7 @@ func (f *Factory) GetDimensions(instructions []Instruction) ([]types.Dimension, 
 }
 
 func (f *Factory) executeInstruction(instruction Instruction) types.Dimension {
-	for _, provider := range f.providers {
+	for _, provider := range f.Providers {
 		dim := provider.GetDimension(instruction)
 		log.Printf("instruction %v provider %s returned dimension %v", instruction, provider.Name(), dim)
 		if (dim != types.Dimension{}) {
