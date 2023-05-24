@@ -8,7 +8,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
-func TestAgentStatus(t *testing.T) {
+func TestAgentStatusAfterRestart(t *testing.T) {
 	var before, after string
 	var err error
 	before, err = common.RunCommand(fmt.Sprintf("%s %s 2>/dev/null | wc -l", common.CatCommand, common.AgentLogFile))

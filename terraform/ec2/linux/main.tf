@@ -98,7 +98,7 @@ resource "null_resource" "integration_test_reboot" {
   provisioner "remote-exec" {
     inline = [
       "echo reboot instance",
-      "sudo reboot",
+      "sudo reboot &",
     ]
   }
 
@@ -131,7 +131,6 @@ resource "null_resource" "integration_test_run" {
 
   depends_on = [
     null_resource.integration_test_reboot,
-    null_resource.integration_test_setup,
   ]
 }
 
