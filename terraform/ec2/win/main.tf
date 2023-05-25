@@ -118,8 +118,8 @@ resource "null_resource" "integration_test_reboot" {
 }
 
 resource "null_resource" "integration_test_run" {
-  # run validator only when test_dir is not passed
-  count = var.test_dir == "" ? 1 : 0
+  # run go test when it's not feature test
+  count = length(split(var.test_dir, "/feature/windows")) == 1 ? 1 : 0
   depends_on = [
     null_resource.integration_test_reboot,
   ]
@@ -141,7 +141,7 @@ resource "null_resource" "integration_test_run" {
 
 resource "null_resource" "integration_test_run_validator" {
   # run validator only when test_dir is not passed e.g. the default from variable.tf
-  count = var.test_dir == "../../../test/feature/windows" ? 1 : 0
+  count = length(split(var.test_dir, "/feature/windows")) > 1 ? 1 : 0
   depends_on = [
     module.validator,
     null_resource.integration_test_reboot,
