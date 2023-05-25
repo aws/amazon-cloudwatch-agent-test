@@ -109,7 +109,7 @@ resource "null_resource" "integration_test_setup" {
 
 ## reboot when only needed
 resource "null_resource" "integration_test_reboot" {
-  count = var.test_dir == "./test/restart" ? 1 : 0
+  count = length(split(var.test_dir, "restart")) > 1 ? 1 : 0
 
   connection {
     type     = "winrm"
