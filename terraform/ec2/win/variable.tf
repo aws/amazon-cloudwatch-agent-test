@@ -53,7 +53,7 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
-  default = "../../../test/feature/windows"
+  default = "./test/feature/windows"
 }
 
 variable "github_test_repo" {
