@@ -163,7 +163,7 @@ resource "null_resource" "integration_test_run" {
     inline = [
       "set AWS_REGION=${var.region}",
       "cd amazon-cloudwatch-agent-test",
-      "go test ${replace(var.test_dir, "/", "\\")} -p 1 -timeout 1h -computeType=EC2"
+      "powershell \"go test ${replace(var.test_dir, "/", "\\")} -p 1 -timeout 1h -computeType=EC2\""
     ]
   }
 }
