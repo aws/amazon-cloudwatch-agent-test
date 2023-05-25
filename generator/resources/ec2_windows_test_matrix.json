@@ -1,7 +1,7 @@
 [
   {
     "os": "win-2022",
-    "instanceType":"t3a.medium",
+    "instanceType":"t3a.large",
     "ami": "cloudwatch-agent-integration-test-win-2022*"
   }
 ]
