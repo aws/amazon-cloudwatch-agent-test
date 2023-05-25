@@ -82,7 +82,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ecs_ec2_daemon": {
 		{"./test/metric_value_benchmark", ""},
 		{"./test/statsd", ""},
-		{"./test/emf_ecs", ""},
+		{"./test/emf", ""},
 	},
 	"ec2_acceptance": {
 		{"./test/acceptance", ""},
@@ -97,6 +97,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"eks_daemon": {
 		{"./test/metric_value_benchmark", ""},
 		{"./test/statsd", "terraform/eks/daemon/statsd"},
+		{"./test/emf", "terraform/eks/daemon/emf"},
 	},
 	"eks_deployment": {
 		{"./test/metric_value_benchmark", ""},
