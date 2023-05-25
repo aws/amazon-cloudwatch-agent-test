@@ -73,7 +73,10 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test_setup" {
-  depends_on = [aws_instance.cwagent]
+  depends_on = [
+    aws_instance.cwagent,
+    module.validator,
+  ]
 
   # Install software
   connection {
@@ -147,7 +150,6 @@ resource "null_resource" "integration_test_run" {
 
   provisioner "remote-exec" {
     inline = [
-      "set AWS_REGION=${var.region}",
       "cd amazon-cloudwatch-agent-test",
       "powershell \"go test ${replace(var.test_dir, "/", "\\")} -p 1 -timeout 1h -computeType=EC2\""
     ]
@@ -158,7 +160,6 @@ resource "null_resource" "integration_test_run_validator" {
   # run validator only when test_dir is not passed e.g. the default from variable.tf
   count = length(regexall("/feature/windows", var.test_dir)) > 0 ? 1 : 0
   depends_on = [
-    module.validator,
     null_resource.integration_test_setup,
     null_resource.integration_test_reboot,
   ]
