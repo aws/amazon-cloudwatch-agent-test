@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 type CPUTestRunner struct {
@@ -49,7 +48,7 @@ func (t *CPUTestRunner) GetMeasuredMetrics() []string {
 		"cpu_time_active_userdata"}
 }
 
-func (t *CPUTestRunner) RunAgent(T *test_runner.TestRunner) (status.TestGroupResult, error) {
+func (t *CPUTestRunner) RunAgent(runner *test_runner.TestRunner) (status.TestGroupResult, error) {
 	log.Printf("Running test for runAgent in userdata mode")
 	testGroupResult := status.TestGroupResult{
 		Name: t.GetTestName(),
@@ -86,14 +85,14 @@ func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, test_runner.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		log.Printf("err: %v\n", err)
 		return testResult
 	}
 
-	if !common.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 

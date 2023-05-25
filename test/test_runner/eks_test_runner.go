@@ -3,28 +3,27 @@
 
 //go:build !windows
 
-package metric_value_benchmark
+package test_runner
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"log"
 	"time"
 )
 
 type EKSTestRunner struct {
-	runner test_runner.ITestRunner
-	env    environment.MetaData
+	Runner ITestRunner
+	Env    environment.MetaData
 }
 
-func (t *EKSTestRunner) Run(s test_runner.ITestSuite, e *environment.MetaData) {
-	name := t.runner.GetTestName()
+func (t *EKSTestRunner) Run(s ITestSuite, e *environment.MetaData) {
+	name := t.Runner.GetTestName()
 	log.Printf("Running %s", name)
-	dur := t.runner.GetAgentRunDuration()
+	dur := t.Runner.GetAgentRunDuration()
 	time.Sleep(dur)
 
-	res := t.runner.Validate()
+	res := t.Runner.Validate()
 	s.AddToSuiteResult(res)
 	if res.GetStatus() != status.SUCCESSFUL {
 		log.Printf("%s test group failed", name)

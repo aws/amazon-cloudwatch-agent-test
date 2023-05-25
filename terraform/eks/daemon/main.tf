@@ -20,7 +20,7 @@ data "aws_eks_cluster_auth" "this" {
 resource "aws_eks_cluster" "this" {
   name     = "cwagent-eks-integ-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
-  version  = "1.24" # TODO: parameterize the EKS version
+  version  = var.k8s_version
   enabled_cluster_log_types = [
     "api",
     "audit",
@@ -56,7 +56,7 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy
+    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
   ]
 }
 
@@ -320,7 +320,19 @@ resource "kubernetes_daemonset" "service" {
   }
 }
 
-# TODO: parameterize agent configuration to support different use cases
+##########################################
+# Template Files
+##########################################
+locals {
+  cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
+}
+
+data "template_file" "cwagent_config" {
+  template = file(local.cwagent_config)
+  vars = {
+  }
+}
+
 resource "kubernetes_config_map" "cwagentconfig" {
   depends_on = [
     kubernetes_namespace.namespace,
@@ -331,18 +343,7 @@ resource "kubernetes_config_map" "cwagentconfig" {
     namespace = "amazon-cloudwatch"
   }
   data = {
-    "cwagentconfig.json" : <<EOF
-  {
-    "logs": {
-      "metrics_collected": {
-        "kubernetes": {
-          "metrics_collection_interval": 30
-        }
-      },
-      "force_flush_interval": 5
-    }
-  }
-  EOF
+    "cwagentconfig.json" : data.template_file.cwagent_config.rendered
   }
 }
 
@@ -420,7 +421,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating EKS metrics/logs"
       cd ../../..
-      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v
+      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
   }
 }
