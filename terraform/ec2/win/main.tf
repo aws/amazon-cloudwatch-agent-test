@@ -134,6 +134,7 @@ resource "null_resource" "integration_test_run" {
   # run go test when it's not feature test
   count = length(split(var.test_dir, "/feature/windows")) == 1 ? 1 : 0
   depends_on = [
+    null_resource.integration_test_setup,
     null_resource.integration_test_reboot,
   ]
 
@@ -158,6 +159,7 @@ resource "null_resource" "integration_test_run_validator" {
   count = length(split(var.test_dir, "/feature/windows")) > 1 ? 1 : 0
   depends_on = [
     module.validator,
+    null_resource.integration_test_setup,
     null_resource.integration_test_reboot,
   ]
 
