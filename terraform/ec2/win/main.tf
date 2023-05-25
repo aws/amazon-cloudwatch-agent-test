@@ -120,9 +120,8 @@ resource "null_resource" "integration_test_reboot" {
 
   # Prepare Integration Test
   provisioner "remote-exec" {
-    interpreter = ["PowerShell"]
     inline = [
-      "Restart-Computer",
+      "powershell \"Restart-Computer -Force\"",
     ]
   }
 
