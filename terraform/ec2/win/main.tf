@@ -130,12 +130,22 @@ resource "null_resource" "integration_test_reboot" {
   ]
 }
 
+resource "null_resource" "integration_test_wait" {
+  provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
+    command = "sleep 180"
+  }
+  depends_on = [
+    null_resource.integration_test_reboot,
+  ]
+}
+
 resource "null_resource" "integration_test_run" {
   # run go test when it's not feature test
   count = length(regexall("/feature/windows", var.test_dir)) < 1 ? 1 : 0
   depends_on = [
     null_resource.integration_test_setup,
-    null_resource.integration_test_reboot,
+    null_resource.integration_test_wait,
   ]
 
   connection {
