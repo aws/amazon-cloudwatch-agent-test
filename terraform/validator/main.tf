@@ -41,7 +41,7 @@ resource "null_resource" "upload-validator" {
       "aws s3 cp ./build/validator/${var.family}/${var.arc}/validator.exe s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/validator.exe" :
       "aws s3 cp ./build/validator/${var.family}/${var.arc}/validator s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/validator"
     )
-    working_dir = split("test", var.test_dir)[0]
+    working_dir = split("test", "../../../${var.test_dir}")[0]
   }
 
   triggers = {
