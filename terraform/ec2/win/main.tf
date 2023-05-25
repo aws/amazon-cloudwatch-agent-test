@@ -120,8 +120,9 @@ resource "null_resource" "integration_test_reboot" {
 
   # Prepare Integration Test
   provisioner "remote-exec" {
+    interpreter = ["PowerShell"]
     inline = [
-      "shutdown /r",
+      "Restart-Computer",
     ]
   }
 
@@ -131,10 +132,11 @@ resource "null_resource" "integration_test_reboot" {
 }
 
 resource "null_resource" "integration_test_wait" {
-  provisioner "local-exec" {
-    interpreter = ["bash", "-c"]
-    command = "sleep 180"
-  }
+  count = length(regexall("restart", var.test_dir)) > 0 ? 1 : 0
+  command = <<-EOT
+    echo "Sleeping after initiating instance restart"
+    sleep 180
+  EOT
   depends_on = [
     null_resource.integration_test_reboot,
   ]
