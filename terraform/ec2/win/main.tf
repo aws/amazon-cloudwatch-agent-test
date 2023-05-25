@@ -118,10 +118,12 @@ resource "null_resource" "integration_test_reboot" {
 
 resource "null_resource" "integration_test_wait" {
   count = length(regexall("restart", var.test_dir)) > 0 ? 1 : 0
-  command = <<-EOT
-    echo "Sleeping after initiating instance restart"
-    sleep 180
-  EOT
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Sleeping after initiating instance restart"
+      sleep 180
+    EOT
+  }
   depends_on = [
     null_resource.integration_test_reboot,
   ]
