@@ -89,7 +89,6 @@ resource "null_resource" "integration_test_setup" {
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd amazon-cloudwatch-agent-test",
     ]
   }
 }
@@ -134,7 +133,8 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      "go test ${replace(var.test_dir, "/", "\\")} -p 1 -timeout 1h -computeType=EC"
+      "cd amazon-cloudwatch-agent-test",
+      "go test ${replace(var.test_dir, "/", "\\")} -p 1 -timeout 1h -computeType=EC2"
     ]
   }
 }
