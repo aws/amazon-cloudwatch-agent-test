@@ -113,7 +113,6 @@ resource "null_resource" "integration_test_run" {
     user        = var.user
     private_key = local.private_key_content
     host        = aws_instance.cwagent.public_ip
-    timoue      = "10m"
   }
 
   #Run sanity check and integration test
