@@ -95,7 +95,7 @@ resource "null_resource" "integration_test_setup" {
 
 ## reboot when only needed
 resource "null_resource" "integration_test_reboot" {
-  count = length(split(var.test_dir, "restart")) > 1 ? 1 : 0
+  count = length(regexall("restart", var.test_dir)) > 0 ? 1 : 0
 
   connection {
     type     = "winrm"
@@ -118,7 +118,7 @@ resource "null_resource" "integration_test_reboot" {
 
 resource "null_resource" "integration_test_run" {
   # run go test when it's not feature test
-  count = length(split(var.test_dir, "/feature/windows")) == 1 ? 1 : 0
+  count = length(regexall("/feature/windows", var.test_dir)) < 1 ? 1 : 0
   depends_on = [
     null_resource.integration_test_setup,
     null_resource.integration_test_reboot,
@@ -142,7 +142,7 @@ resource "null_resource" "integration_test_run" {
 
 resource "null_resource" "integration_test_run_validator" {
   # run validator only when test_dir is not passed e.g. the default from variable.tf
-  count = length(split(var.test_dir, "/feature/windows")) > 1 ? 1 : 0
+  count = length(regexall("/feature/windows", var.test_dir)) > 0 ? 1 : 0
   depends_on = [
     module.validator,
     null_resource.integration_test_setup,
