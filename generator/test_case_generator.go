@@ -44,13 +44,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{"./test/nvidia_gpu", ""},
 	},
 	"ec2_linux": {
-		//{"./test/ca_bundle", ""},
-		//{"./test/cloudwatchlogs", ""},
-		//{"./test/metrics_number_dimension", ""},
-		//{"./test/metric_value_benchmark", ""},
-		//{"./test/run_as_user", ""},
-		//{"./test/collection_interval", ""},
-		//{"./test/metric_dimension", ""},
+		{"./test/ca_bundle", ""},
+		{"./test/cloudwatchlogs", ""},
+		{"./test/metrics_number_dimension", ""},
+		{"./test/metric_value_benchmark", ""},
+		{"./test/run_as_user", ""},
+		{"./test/collection_interval", ""},
+		{"./test/metric_dimension", ""},
 		{"./test/restart", ""},
 	},
 	/*
@@ -62,7 +62,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{"../../../test/feature/mac", ""},
 	},
 	"ec2_windows": {
-		//{"../../../test/feature/windows", ""},
+		{"../../../test/feature/windows", ""},
 		{"./test/restart", ""},
 	},
 	"ec2_performance": {
