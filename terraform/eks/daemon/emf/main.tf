@@ -65,19 +65,19 @@ resource "aws_iam_role" "node_role" {
   name = "cwagent-eks-Worker-Role-${module.common.testing_id}"
 
   assume_role_policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
     {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "ec2.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "ec2.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
     }
-  ]
-}
-POLICY
+    POLICY
 }
 
 resource "aws_iam_role_policy_attachment" "node_AmazonEKSWorkerNodePolicy" {
@@ -212,6 +212,11 @@ resource "kubernetes_daemonset" "service" {
               "memory" : "200Mi"
             }
           }
+          port {
+            container_port = 25888
+            host_port      = 25888
+            protocol       = "UDP"
+          }
           env {
             name = "HOST_IP"
             value_from {
@@ -315,7 +320,7 @@ resource "kubernetes_daemonset" "service" {
         }
 
         container {
-          name              = "statsd-client"
+          name              = "emf-eks-testing"
           image             = "alpine/socat:latest"
           image_pull_policy = "Always"
           resources {
@@ -328,10 +333,11 @@ resource "kubernetes_daemonset" "service" {
               "memory" : "50Mi"
             }
           }
+
           command = [
             "/bin/sh",
             "-c",
-            "while true; do echo 'statsd_counter_1:1000.0|c|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; echo 'statsd_gauge_2:2000.0|g|#key:value|#ClusterName:${aws_eks_cluster.this.name}' | socat -v -t 0 - UDP:127.0.0.1:8125; sleep 1; done"
+            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFEKSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFEKSNameSpace\",\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5}' | socat -v -t 0 - UDP:0.0.0.0:25888; sleep 60; done"
           ]
           env {
             name = "HOST_IP"
@@ -468,9 +474,9 @@ resource "null_resource" "validator" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating EKS metrics/logs for Statsd"
+      echo "Validating EKS metrics/logs for EMF"
       cd ../../../..
-      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
+      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v
     EOT
   }
 }

@@ -31,7 +31,7 @@ type ITestRunner interface {
 	GetMeasuredMetrics() []string
 	SetupBeforeAgentRun() error
 	SetupAfterAgentRun() error
-	RunAgent(T *TestRunner) (status.TestGroupResult, error)
+	RunAgent(runner *TestRunner) (status.TestGroupResult, error)
 }
 
 type TestRunner struct {
@@ -61,9 +61,9 @@ func (t *BaseTestRunner) GetAgentRunDuration() time.Duration {
 	return MinimumAgentRuntime
 }
 
-func (t *BaseTestRunner) RunAgent(T *TestRunner) (status.TestGroupResult, error) {
+func (t *BaseTestRunner) RunAgent(runner *TestRunner) (status.TestGroupResult, error) {
 	testGroupResult := status.TestGroupResult{
-		Name: T.TestRunner.GetTestName(),
+		Name: runner.TestRunner.GetTestName(),
 		TestResults: []status.TestResult{
 			{
 				Name:   "Starting Agent",
@@ -72,13 +72,13 @@ func (t *BaseTestRunner) RunAgent(T *TestRunner) (status.TestGroupResult, error)
 		},
 	}
 
-	err := T.TestRunner.SetupBeforeAgentRun()
+	err := runner.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
 
-	agentConfigPath := filepath.Join(agentConfigDirectory, T.TestRunner.GetAgentConfigFileName())
+	agentConfigPath := filepath.Join(agentConfigDirectory, runner.TestRunner.GetAgentConfigFileName())
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
 	common.CopyFile(agentConfigPath, configOutputPath)
 	err = common.StartAgent(configOutputPath, false)
@@ -88,13 +88,13 @@ func (t *BaseTestRunner) RunAgent(T *TestRunner) (status.TestGroupResult, error)
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
-	err = T.TestRunner.SetupAfterAgentRun()
+	err = runner.TestRunner.SetupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
 	}
 
-	runningDuration := T.TestRunner.GetAgentRunDuration()
+	runningDuration := runner.TestRunner.GetAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
 	common.StopAgent()
