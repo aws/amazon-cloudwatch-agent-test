@@ -241,8 +241,8 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
 # Template Files
 ##########################################
 locals {
-  cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
-  fluentd_config = fileexists("../../../${var.test_dir}/resources/fluentd_config.conf") ? "../../../${var.test_dir}/resources/fluentd_config.conf" : "./default_resources/fluentd.conf"
+  cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
+  fluentd_config = fileexists("../../../${var.test_dir}/resources/fluentd_config.conf") ? "../../../${var.test_dir}/resources/fluentd_config.conf" : "../default_resources/fluentd.conf"
 }
 
 data "template_file" "cwagent_config" {
