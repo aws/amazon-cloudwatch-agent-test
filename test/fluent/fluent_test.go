@@ -7,9 +7,10 @@ package statsd
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"log"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 
 	"github.com/stretchr/testify/suite"
 
@@ -19,20 +20,20 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
-const namespace = "StatsD"
+const namespace = "Fluent"
 
-type StatsDTestSuite struct {
+type FluentTestSuite struct {
 	suite.Suite
 	test_runner.TestSuite
 }
 
-func (suite *StatsDTestSuite) SetupSuite() {
-	fmt.Println(">>>> Starting StatsDTestSuite")
+func (suite *FluentTestSuite) SetupSuite() {
+	fmt.Println(">>>> Starting FluentTestSuite")
 }
 
-func (suite *StatsDTestSuite) TearDownSuite() {
+func (suite *FluentTestSuite) TearDownSuite() {
 	suite.Result.Print()
-	fmt.Println(">>>> Finished StatsDTestSuite")
+	fmt.Println(">>>> Finished FluentTestSuite")
 }
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
@@ -42,24 +43,8 @@ func init() {
 }
 
 var (
-	ecsTestRunners []*test_runner.ECSTestRunner
 	eksTestRunners []*test_runner.EKSTestRunner
 )
-
-func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
-	if ecsTestRunners == nil {
-		factory := dimension.GetDimensionFactory(*env)
-
-		ecsTestRunners = []*test_runner.ECSTestRunner{
-			{
-				Runner:      &StatsDRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, fmt.Sprintf("%s/%s", namespace, env.ComputeType), "InstanceId"},
-				RunStrategy: &test_runner.ECSAgentRunStrategy{},
-				Env:         *env,
-			},
-		}
-	}
-	return ecsTestRunners
-}
 
 func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 	if eksTestRunners == nil {
@@ -67,7 +52,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 
 		eksTestRunners = []*test_runner.EKSTestRunner{
 			{
-				Runner: &StatsDRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, fmt.Sprintf("%s/%s", namespace, env.ComputeType), "ClusterName"},
+				Runner: &FluentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, fmt.Sprintf("%s/%s", namespace, env.ComputeType)},
 				Env:    *env,
 			},
 		}
@@ -75,14 +60,9 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 	return eksTestRunners
 }
 
-func (suite *StatsDTestSuite) TestAllInSuite() {
+func (suite *FluentTestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	switch env.ComputeType {
-	case computetype.ECS:
-		log.Println("Environment compute type is ECS")
-		for _, ecsTestRunner := range getEcsTestRunners(env) {
-			ecsTestRunner.Run(suite, env)
-		}
 	case computetype.EKS:
 		log.Println("Environment compute type is EKS")
 		for _, testRunner := range getEksTestRunners(env) {
@@ -92,13 +72,13 @@ func (suite *StatsDTestSuite) TestAllInSuite() {
 		return
 	}
 
-	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Statsd Test Suite Failed")
+	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Fluent Test Suite Failed")
 }
 
-func (suite *StatsDTestSuite) AddToSuiteResult(r status.TestGroupResult) {
+func (suite *FluentTestSuite) AddToSuiteResult(r status.TestGroupResult) {
 	suite.Result.TestGroupResults = append(suite.Result.TestGroupResults, r)
 }
 
-func TestStatsdSuite(t *testing.T) {
-	suite.Run(t, new(StatsDTestSuite))
+func TestFluentSuite(t *testing.T) {
+	suite.Run(t, new(FluentTestSuite))
 }
