@@ -268,6 +268,10 @@ resource "kubernetes_config_map" "cwagentconfig" {
 data "template_file" "fluentd_config" {
   template = file(local.fluentd_config)
   vars = {
+    region       = var.REGION
+    cluster_name = aws_eks_cluster.this.name
+    stream_name  = EKS-fluentd
+    testing_id   = module.common.testing_id
   }
 }
 
