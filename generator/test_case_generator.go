@@ -58,10 +58,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		and Mac under the hood share similar plugins with Linux
 	*/
 	"ec2_mac": {
-		{"../../../test/feature/mac", ""},
+		{".test/feature/mac", ""},
 	},
 	"ec2_windows": {
-		{"../../../test/feature/windows", ""},
+		{"./test/feature/windows", ""},
 		{"./test/restart", ""},
 	},
 	"ec2_performance": {
