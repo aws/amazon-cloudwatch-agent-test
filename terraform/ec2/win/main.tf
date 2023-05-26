@@ -151,7 +151,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "cd amazon-cloudwatch-agent-test",
-      "powershell \"go test ${replace(var.test_dir, "/", "\\")} -p 1 -timeout 1h -computeType=EC2\""
+      "powershell \"GOOS=windows GOARCH=amd64 go test ${replace(var.test_dir, "/", "\\")} -p 1 -timeout 1h -computeType=EC2\" -v"
     ]
   }
 }
