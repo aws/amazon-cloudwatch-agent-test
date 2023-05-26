@@ -10,6 +10,7 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -88,13 +89,18 @@ func StopAgent() error {
 
 func RunShellScript(path string, args ...string) (string, error) {
 	ps, err := exec.LookPath("powershell.exe")
-
 	if err != nil {
 		return "", err
 	}
 
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", path}, args...)
-	out, err := exec.Command(ps, bashArgs...).Output()
+	shellArgs := []string{"-NoProfile", "-NonInteractive", "-NoExit"}
+	if !strings.HasSuffix(path, ".ps1") {
+		shellArgs = append(shellArgs, "-Command")
+	}
+	shellArgs = append(shellArgs, path)
+	shellArgs = append(shellArgs, args...)
+
+	out, err := exec.Command(ps, shellArgs...).Output()
 
 	if err != nil {
 		log.Printf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))

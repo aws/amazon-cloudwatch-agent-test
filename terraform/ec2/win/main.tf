@@ -150,10 +150,8 @@ resource "null_resource" "integration_test_run" {
 
   provisioner "remote-exec" {
     inline = [
-      "set GOOS=windows",
-      "set GOARCH=amd64",
-      "cd amazon-cloudwatch-agent-test",
-      "powershell \"go test ${replace(var.test_dir, "/", "\\")} -p 1 -timeout 1h -computeType=EC2\" -v"
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
+      "validator.exe --test-name=restart",
     ]
   }
 }

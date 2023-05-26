@@ -12,14 +12,14 @@ func LogCheck(cmd string) string {
 	var err error
 	before, err = common.RunShellScript(cmd)
 	if err != nil {
-		return "Running log check script for restart test failed"
+		return fmt.Sprintf("Running log check script for restart test failed: %v", err)
 	}
 
 	time.Sleep(30 * time.Second)
 
 	after, err = common.RunShellScript(cmd)
 	if err != nil {
-		return "Running log check script for restart test failed"
+		return fmt.Sprintf("Running log check script for restart test failed: %v", err)
 	}
 
 	if before != after {
