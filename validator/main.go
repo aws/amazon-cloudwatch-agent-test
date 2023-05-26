@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators"
 )
@@ -19,27 +21,40 @@ import (
 var (
 	configPath      = flag.String("validator-config", "", "A yaml depicts test information")
 	preparationMode = flag.Bool("preparation-mode", false, "Prepare all the resources for the validation (e.g set up config) ")
+	runTest         = flag.String("test-name", "", "Test name to execute")
 )
 
 func main() {
 	flag.Parse()
 
 	startTime := time.Now()
-	vConfig, err := models.NewValidateConfig(*configPath)
-	if err != nil {
-		log.Fatalf("Failed to create validation config : %v \n", err)
-	}
 
-	if *preparationMode {
-		if err = prepare(vConfig); err != nil {
-			log.Fatalf("Prepare for validation failed: %v \n", err)
+	// validator calls test code to get around OOM issue on windows hosts while running go test
+	if len(*configPath) == 0 && len(*runTest) > 0 {
+		// execute test without parsing or processing configuration yaml
+		if strings.Contains(*runTest, "restart") {
+			err := restart.LogCheck("\"{& Function countLogLines { Param ( [Parameter(Mandatory = $true)] [string]$log_path ) if (Test-Path -LiteralPath '$log_path') { return (Get-Content $log_path).Length } else { return '0' } } $cwa_log=countLoglines('$Env:ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log') Write-Output 'cwa_log:$cwa_log' }\"")
+			if len(err) > 0 {
+				log.Fatalf("Failed to validate restart: %v", err)
+			}
+		}
+	} else {
+		vConfig, err := models.NewValidateConfig(*configPath)
+		if err != nil {
+			log.Fatalf("Failed to create validation config : %v \n", err)
 		}
 
-		os.Exit(0)
-	}
-	err = validate(vConfig)
-	if err != nil {
-		log.Fatalf("Failed to validate: %v", err)
+		if *preparationMode {
+			if err = prepare(vConfig); err != nil {
+				log.Fatalf("Prepare for validation failed: %v \n", err)
+			}
+
+			os.Exit(0)
+		}
+		err = validate(vConfig)
+		if err != nil {
+			log.Fatalf("Failed to validate: %v", err)
+		}
 	}
 
 	endTime := time.Now()
