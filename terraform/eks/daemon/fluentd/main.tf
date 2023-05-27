@@ -184,12 +184,12 @@ resource "kubernetes_cluster_role" "clusterrole" {
   }
   rule {
     verbs      = ["list", "watch"]
-    resources  = ["pods", "nodes", "endpoints"]
+    resources  = ["nodes", "endpoints"]
     api_groups = [""]
   }
   rule {
     verbs      = ["get", "list", "watch"]
-    resources  = ["namespaces", "pods/logs"]
+    resources  = ["pods", "namespaces", "pods/logs"]
     api_groups = [""]
   }
   rule {
@@ -587,19 +587,19 @@ resource "kubernetes_daemonset" "service" {
     aws_eks_node_group.this
   ]
   metadata {
-    name      = "cloudwatch-agent"
+    name      = "fluentd-cloudwatch"
     namespace = "amazon-cloudwatch"
   }
   spec {
     selector {
       match_labels = {
-        "name" : "cloudwatch-agent"
+        "k8s-app" : "fluentd-cloudwatch"
       }
     }
     template {
       metadata {
         labels = {
-          "name" : "cloudwatch-agent"
+          "k8s-app" : "fluentd-cloudwatch"
         }
       }
       spec {
@@ -625,7 +625,7 @@ resource "kubernetes_daemonset" "service" {
           command = ["sh", "-c", ""]
         }
         container {
-          name              = "cwagent"
+          name              = "fluentd-cloudwatch"
           image             = "fluent/fluentd-kubernetes-daemonset:v1.7.3-debian-cloudwatch-1.0"
           image_pull_policy = "Always"
           resources {
@@ -663,7 +663,7 @@ resource "kubernetes_daemonset" "service" {
             }
           }
           env {
-            name = "REGION"
+            name = "AWS_REGION"
             value = var.region
           }
           env {
