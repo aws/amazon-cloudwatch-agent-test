@@ -262,7 +262,7 @@ resource "kubernetes_config_map" "fluentdconfig" {
   metadata {
     name      = "fluentd-config"
     namespace = "amazon-cloudwatch"
-    labels {
+    labels = {
       k8s-app = "fluentd-cloudwatch"
     }
   }
