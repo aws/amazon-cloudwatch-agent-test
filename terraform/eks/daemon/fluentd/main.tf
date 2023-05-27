@@ -262,6 +262,9 @@ resource "kubernetes_config_map" "fluentdconfig" {
   metadata {
     name      = "fluentd-config"
     namespace = "amazon-cloudwatch"
+    labels {
+      k8s-app = "fluentd-cloudwatch"
+    }
   }
   data = {
     "fluent.conf" = <<EOF
@@ -702,7 +705,7 @@ resource "kubernetes_daemonset" "service" {
         volume {
           name = "config-volume"
           config_map {
-            name = "fluentdconfig"
+            name = "fluentd-config"
           }
         }
         volume {
