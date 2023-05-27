@@ -240,7 +240,7 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
 ##########################################
 # Template Files
 ##########################################
-locals {r}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
+locals {
   fluentd_config = fileexists("../../../${var.test_dir}/resources/fluentd_config.conf") ? "../../../${var.test_dir}/resources/fluentd_config.conf" : "../default_resources/fluentd.conf"
 }
 
