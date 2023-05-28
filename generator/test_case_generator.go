@@ -96,7 +96,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{"./test/metric_value_benchmark", ""},
 		//{"./test/statsd", "terraform/eks/daemon/statsd"},
 		//{"./test/emf", "terraform/eks/daemon/emf"},
-		{"./test/fluent", "terraform/eks/daemon/fluentd"},
+		{"./test/fluent", "terraform/eks/daemon/fluent/d"},
+		{"./test/fluent", "terraform/eks/daemon/fluent/bit"},
 	},
 	"eks_deployment": {
 		{"./test/metric_value_benchmark", ""},

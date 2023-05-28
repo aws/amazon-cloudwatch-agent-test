@@ -135,6 +135,19 @@ func IsLogGroupExists(logGroupName string) bool {
 	return len(describeLogGroupOutput.LogGroups) > 0
 }
 
+func GetLogStreams(logGroupName string) []types.LogStream {
+	describeLogStreamsOutput, err := CwlClient.DescribeLogStreams(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
+		LogGroupName: aws.String(logGroupName),
+	})
+
+	if err != nil {
+		log.Printf("failed to get log streams for log group: %s - err: %s", logGroupName, err)
+		return []types.LogStream{}
+	}
+
+	return describeLogStreamsOutput.LogStreams
+}
+
 func MatchEMFLogWithSchema(logEntry string, s *jsonschema.Schema, logValidator func(string) bool) bool {
 	keyErrors, e := s.ValidateBytes(context.Background(), []byte(logEntry))
 	if e != nil {
