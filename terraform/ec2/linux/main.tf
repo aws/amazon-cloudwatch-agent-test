@@ -98,8 +98,8 @@ resource "null_resource" "integration_test_fips_setup" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo fips-mode-setup --enable &",
-      "sleep 60",
+      "echo enabling fips"
+      "sudo fips-mode-setup --enable",
     ]
   }
 
