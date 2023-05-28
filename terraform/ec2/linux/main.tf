@@ -32,6 +32,8 @@ locals {
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
   // Canary downloads latest binary. Integration test downloads binary connect to git hash.
   binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
+  // list of test that require instance reboot
+  reboot_required_tests = tolist("./test/restart", "./test/fips")
 }
 
 #####################################################################
@@ -83,9 +85,32 @@ resource "null_resource" "integration_test_setup" {
   ]
 }
 
+resource "null_resource" "integration_test_fips_setup" {
+  # run go test when it's not feature test
+  count = length(regexall("fips", var.test_dir)) > 0 ? 1 : 0
+
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo fips-mode-setup --enable &",
+      "sleep 60",
+    ]
+  }
+
+  depends_on = [
+    null_resource.integration_test_setup,
+  ]
+}
+
 ## reboot when only needed
 resource "null_resource" "integration_test_reboot" {
-  count = var.test_dir == "./test/restart" ? 1 : 0
+  count = contains(local.reboot_required_tests, var.test_dir) ? 1 : 0
 
   connection {
     type        = "ssh"
@@ -103,7 +128,39 @@ resource "null_resource" "integration_test_reboot" {
   }
 
   depends_on = [
-    null_resource.integration_test_setup,
+    null_resource.integration_test_fips_setup,
+  ]
+}
+
+resource "null_resource" "integration_test_wait" {
+  count = contains(local.reboot_required_tests, var.test_dir) ? 1 : 0
+  provisioner "local-exec" {
+    command = "echo Sleeping for 3m after initiating instance restart && sleep 180"
+  }
+  depends_on = [
+    null_resource.integration_test_reboot,
+  ]
+}
+
+resource "null_resource" "integration_test_fips_check" {
+  # run go test when it's not feature test
+  count = length(regexall("fips", var.test_dir)) > 0 ? 1 : 0
+
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "if [ `cat /proc/sys/crypto/fips_enabled` -ne \"1\" ];then echo \"FIPS is not enabled, please check file /proc/sys/crypto/fips_enabled.\";exit 1; fi",
+    ]
+  }
+
+  depends_on = [
+    null_resource.integration_test_wait,
   ]
 }
 
@@ -131,7 +188,7 @@ resource "null_resource" "integration_test_run" {
 
   depends_on = [
     null_resource.integration_test_setup,
-    null_resource.integration_test_reboot,
+    null_resource.integration_test_fips_check,
   ]
 }
 

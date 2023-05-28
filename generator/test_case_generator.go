@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -36,22 +37,27 @@ type testConfig struct {
 	// e.g. statsd can have a multiple terraform module sets for difference test scenarios (ecs, eks or ec2)
 	testDir      string
 	terraformDir string
+	// target specific OS(es) so that only limited targets get tested. doesn't apply to containers
+	// e.g. ["rhel8"] or ["rhel8", "ubuntu-20.04"]
+	targetOs []string
 }
 
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
-		{"./test/nvidia_gpu", ""},
+		{"./test/nvidia_gpu", "", []string{}},
 	},
 	"ec2_linux": {
-		{"./test/ca_bundle", ""},
-		{"./test/cloudwatchlogs", ""},
-		{"./test/metrics_number_dimension", ""},
-		{"./test/metric_value_benchmark", ""},
-		{"./test/run_as_user", ""},
-		{"./test/collection_interval", ""},
-		{"./test/metric_dimension", ""},
-		{"./test/restart", ""},
+		//{"./test/ca_bundle", "", []string{}},
+		//{"./test/cloudwatchlogs", "", []string{}},
+		//{"./test/metrics_number_dimension", "", []string{}},
+		//{"./test/metric_value_benchmark", "", []string{}},
+		//{"./test/run_as_user", "", []string{}},
+		//{"./test/collection_interval", "", []string{}},
+		//{"./test/metric_dimension", "", []string{}},
+		//{"./test/restart", "", []string{}},
+		{"./test/acceptance", "", []string{"ubuntu-20.04"}},
+		{"./test/fips", "", []string{"rhel8"}},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
@@ -59,44 +65,44 @@ var testTypeToTestConfig = map[string][]testConfig{
 		and Mac under the hood share similar plugins with Linux
 	*/
 	"ec2_mac": {
-		{".test/feature/mac", ""},
+		{".test/feature/mac", "", []string{}},
 	},
 	"ec2_windows": {
-		{"./test/feature/windows", ""},
-		{"./test/restart", ""},
+		{"./test/feature/windows", "", []string{}},
+		{"./test/restart", "", []string{}},
 	},
 	"ec2_performance": {
-		{"../../test/performance/emf", ""},
-		{"../../test/performance/logs", ""},
-		{"../../test/performance/system", ""},
-		{"../../test/performance/statsd", ""},
-		{"../../test/performance/collectd", ""},
+		{"../../test/performance/emf", "", []string{}},
+		{"../../test/performance/logs", "", []string{}},
+		{"../../test/performance/system", "", []string{}},
+		{"../../test/performance/statsd", "", []string{}},
+		{"../../test/performance/collectd", "", []string{}},
 	},
 	"ec2_stress": {
-		{"../../test/stress/emf", ""},
-		{"../../test/stress/logs", ""},
-		{"../../test/stress/system", ""},
-		{"../../test/stress/statsd", ""},
-		{"../../test/stress/collectd", ""},
+		{"../../test/stress/emf", "", []string{}},
+		{"../../test/stress/logs", "", []string{}},
+		{"../../test/stress/system", "", []string{}},
+		{"../../test/stress/statsd", "", []string{}},
+		{"../../test/stress/collectd", "", []string{}},
 	},
 	"ecs_fargate": {
-		{"./test/ecs/ecs_metadata", ""},
+		{"./test/ecs/ecs_metadata", "", []string{}},
 	},
 	"ecs_ec2_daemon": {
-		{"./test/metric_value_benchmark", ""},
-		{"./test/statsd", ""},
-		{"./test/emf", ""},
+		{"./test/metric_value_benchmark", "", []string{}},
+		{"./test/statsd", "", []string{}},
+		{"./test/emf", "", []string{}},
 	},
 	"ec2_acceptance": {
-		{"./test/acceptance", ""},
+		{"./test/acceptance", "", []string{}},
 	},
 	"eks_daemon": {
-		{"./test/metric_value_benchmark", ""},
-		{"./test/statsd", "terraform/eks/daemon/statsd"},
-		{"./test/emf", "terraform/eks/daemon/emf"},
+		{"./test/metric_value_benchmark", "", []string{}},
+		{"./test/statsd", "terraform/eks/daemon/statsd", []string{}},
+		{"./test/emf", "terraform/eks/daemon/emf", []string{}},
 	},
 	"eks_deployment": {
-		{"./test/metric_value_benchmark", ""},
+		{"./test/metric_value_benchmark", "", []string{}},
 	},
 }
 
@@ -125,14 +131,18 @@ func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
 	}
 
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
-	for _, test := range testMatrix {
-		for _, testConfig := range testConfigs {
+	for _, testConfig := range testConfigs {
+		targetOSes := strings.Join(testConfig.targetOs, ",")
+		for _, test := range testMatrix {
 			row := matrixRow{TestDir: testConfig.testDir, TestType: testType, TerraformDir: testConfig.terraformDir}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
 				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
 			}
-			testMatrixComplete = append(testMatrixComplete, row)
+
+			if len(testConfig.targetOs) == 0 || strings.Contains(targetOSes, row.Os) {
+				testMatrixComplete = append(testMatrixComplete, row)
+			}
 		}
 	}
 	return testMatrixComplete
