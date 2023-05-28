@@ -229,7 +229,7 @@ resource "kubernetes_daemonset" "service" {
     labels = {
       k8s-app = "fluentbit-cloudwatch"
       version = "v1"
-      kubernetes.io/cluster-service = "true"
+      "kubernetes.io/cluster-service" = "true"
     }
   }
   spec {
@@ -243,7 +243,7 @@ resource "kubernetes_daemonset" "service" {
         labels = {
           k8s-app = "fluentbit-cloudwatch"
           version = "v1"
-          kubernetes.io/cluster-service = "true"
+          "kubernetes.io/cluster-service" = "true"
         }
       }
       spec {
@@ -381,7 +381,7 @@ resource "kubernetes_daemonset" "service" {
         toleration {
           key = "node-role.kubernetes.io/master"
           operator = "Exists"
-          effect = NoSchedule
+          effect = "NoSchedule"
         }
         toleration {
           operator = "Exists"
