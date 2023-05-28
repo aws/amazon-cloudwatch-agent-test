@@ -55,6 +55,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
+		{
+			testDir: "./test/acceptance",
+			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
+		},
+		{
+			testDir: "./test/fips",
+			targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
