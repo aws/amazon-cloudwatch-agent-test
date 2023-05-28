@@ -155,6 +155,8 @@ resource "null_resource" "integration_test_fips_check" {
 
   provisioner "remote-exec" {
     inline = [
+      "echo `cat /proc/sys/crypto/fips_enabled`",
+      "echo `sysctl crypto.fips_enabled`"
       "for i in `seq 1 5`; do if [ `cat /proc/sys/crypto/fips_enabled` -eq \"1\" ]; then break; fi; echo FIPS not enabled yet; sleep 60; done",
       "if [ `cat /proc/sys/crypto/fips_enabled` -ne \"1\" ];then echo \"FIPS is not enabled, please check file /proc/sys/crypto/fips_enabled.\";exit 1; fi",
     ]
