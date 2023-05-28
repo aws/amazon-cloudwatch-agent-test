@@ -74,7 +74,7 @@ resource "null_resource" "integration_test_fips_setup" {
       "echo enabling fips",
       "sudo yum install -y dracut-fips",
       "sudo dracut -f",
-      "sudo /sbin/grubby --update-kernel=ALL --args=\"fips=1\""
+      "sudo /sbin/grubby --update-kernel=ALL --args=\"fips=1\"",
       "sudo reboot &",
     ]
   }
