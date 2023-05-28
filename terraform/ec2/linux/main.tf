@@ -33,7 +33,7 @@ locals {
   // Canary downloads latest binary. Integration test downloads binary connect to git hash.
   binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
   // list of test that require instance reboot
-  reboot_required_tests = tolist(["./test/restart", "./test/fips"])
+  reboot_required_tests = tolist(["./test/restart"])
 }
 
 #####################################################################
@@ -56,6 +56,55 @@ resource "aws_instance" "cwagent" {
   tags = {
     Name = var.is_canary ? "cwagent-canary-test-ec2-${var.test_name}-${module.common.testing_id}" : "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
   }
+}
+
+resource "null_resource" "integration_test_fips_setup" {
+  # run go test when it's not feature test
+  count = length(regexall("fips", var.test_dir)) > 0 ? 1 : 0
+
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo enabling fips",
+      "sudo fips-mode-setup --enable",
+      "sudo shutdown -r now &",
+    ]
+  }
+
+  depends_on = [
+    aws_instance.cwagent,
+  ]
+}
+
+resource "null_resource" "integration_test_fips_check" {
+  # run go test when it's not feature test
+  count = length(regexall("fips", var.test_dir)) > 0 ? 1 : 0
+
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo `cat /proc/sys/crypto/fips_enabled`",
+      "echo `sysctl crypto.fips_enabled`",
+      "for i in `seq 1 5`; do if [ `cat /proc/sys/crypto/fips_enabled` -eq \"1\" ]; then break; fi; echo FIPS not enabled yet; sleep 60; done",
+      "if [ `cat /proc/sys/crypto/fips_enabled` -ne \"1\" ];then echo \"FIPS is not enabled, please check file /proc/sys/crypto/fips_enabled.\";exit 1; fi",
+    ]
+  }
+
+  depends_on = [
+    null_resource.integration_test_fips_setup,
+  ]
 }
 
 resource "null_resource" "integration_test_setup" {
@@ -81,30 +130,7 @@ resource "null_resource" "integration_test_setup" {
   }
 
   depends_on = [
-    aws_instance.cwagent,
-  ]
-}
-
-resource "null_resource" "integration_test_fips_setup" {
-  # run go test when it's not feature test
-  count = length(regexall("fips", var.test_dir)) > 0 ? 1 : 0
-
-  connection {
-    type        = "ssh"
-    user        = var.user
-    private_key = local.private_key_content
-    host        = aws_instance.cwagent.public_ip
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "echo enabling fips",
-      "sudo fips-mode-setup --enable",
-    ]
-  }
-
-  depends_on = [
-    null_resource.integration_test_setup,
+    null_resource.integration_test_fips_check,
   ]
 }
 
@@ -128,7 +154,7 @@ resource "null_resource" "integration_test_reboot" {
   }
 
   depends_on = [
-    null_resource.integration_test_fips_setup,
+    null_resource.integration_test_setup,
   ]
 }
 
@@ -139,31 +165,6 @@ resource "null_resource" "integration_test_wait" {
   }
   depends_on = [
     null_resource.integration_test_reboot,
-  ]
-}
-
-resource "null_resource" "integration_test_fips_check" {
-  # run go test when it's not feature test
-  count = length(regexall("fips", var.test_dir)) > 0 ? 1 : 0
-
-  connection {
-    type        = "ssh"
-    user        = var.user
-    private_key = local.private_key_content
-    host        = aws_instance.cwagent.public_ip
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "echo `cat /proc/sys/crypto/fips_enabled`",
-      "echo `sysctl crypto.fips_enabled`",
-      "for i in `seq 1 5`; do if [ `cat /proc/sys/crypto/fips_enabled` -eq \"1\" ]; then break; fi; echo FIPS not enabled yet; sleep 60; done",
-      "if [ `cat /proc/sys/crypto/fips_enabled` -ne \"1\" ];then echo \"FIPS is not enabled, please check file /proc/sys/crypto/fips_enabled.\";exit 1; fi",
-    ]
-  }
-
-  depends_on = [
-    null_resource.integration_test_wait,
   ]
 }
 
@@ -191,7 +192,7 @@ resource "null_resource" "integration_test_run" {
 
   depends_on = [
     null_resource.integration_test_setup,
-    null_resource.integration_test_fips_check,
+    null_resource.integration_test_wait,
   ]
 }
 
