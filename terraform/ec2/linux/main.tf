@@ -72,8 +72,10 @@ resource "null_resource" "integration_test_fips_setup" {
   provisioner "remote-exec" {
     inline = [
       "echo enabling fips",
-      "sudo fips-mode-setup --enable",
-      "sudo shutdown -r now &",
+      "sudo yum install -y dracut-fips"
+      "sudo dracut -f"
+      "sudo /sbin/grubby --update-kernel=ALL --args=\"fips=1\""
+      "sudo reboot &",
     ]
   }
 
