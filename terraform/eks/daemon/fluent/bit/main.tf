@@ -372,12 +372,7 @@ resource "kubernetes_daemonset" "service" {
             path = "/var/log/dmesg"
           }
         }
-        service_account_name             = "cloudwatch-agent"
-        toleration {
-          key = "node-role.kubernetes.io/master"
-          operator = "Exists"
-          effect = "NoSchedule"
-        }
+        service_account_name = "cloudwatch-agent"
         toleration {
           key = "node-role.kubernetes.io/master"
           operator = "Exists"
