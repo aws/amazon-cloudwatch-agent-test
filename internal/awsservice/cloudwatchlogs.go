@@ -138,6 +138,9 @@ func IsLogGroupExists(logGroupName string) bool {
 func GetLogStreams(logGroupName string) []types.LogStream {
 	describeLogStreamsOutput, err := CwlClient.DescribeLogStreams(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: aws.String(logGroupName),
+		OrderBy:      types.OrderByLastEventTime,
+		Descending:   aws.Bool(true),
+		Limit:        aws.Int32(10),
 	})
 
 	if err != nil {

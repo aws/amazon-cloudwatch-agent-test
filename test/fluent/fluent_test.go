@@ -8,18 +8,28 @@ package fluent
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 const (
 	namespace      = "Fluent"
-	logGroupPrefix = "/aws/containerinsights"
+	logStreamRetry = 20
+	logEventCount  = 20
 )
 
-var logGroups = []string{"dataplane", "host", "application"}
+var (
+	logGroups           = []string{"dataplane", "host", "application"}
+	hostLogFields       = []string{"host", "ident", "message"}
+	journalLogFields    = []string{"message", "hostname", "systemd_unit"}
+	kubernetesLogFields = []string{"container_name", "namespace_name", "pod_name", "container_image", "pod_id", "host"}
+	containerLogFields  = []string{"log", "stream"}
+)
+
 var envMetaDataStrings = &(environment.MetaDataStrings{})
 
 func init() {
@@ -33,17 +43,36 @@ func TestFluentLogs(t *testing.T) {
 	var logGroupExist bool
 	var logGroupName string
 	for _, logGroup := range logGroups {
-		logGroupName = fmt.Sprintf("%s/%s/%s", logGroupPrefix, env.EKSClusterName, logGroup)
+		logGroupName = fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, logGroup)
 		logGroupExist = awsservice.IsLogGroupExists(logGroupName)
 		if !logGroupExist {
 			t.Fatalf("fluent log group doesn't exsit: %s", logGroupName)
 		}
 
-		logStreams := awsservice.GetLogStreams(logGroupName)
+		logStreams := getLogStreams(logGroupName)
 		if len(logStreams) < 1 {
 			t.Fatalf("fluent log streams are empty for log group: %s", logGroupName)
 		}
+
 	}
 
 	t.Log("finishing EKS fluent log validation...")
+}
+
+func getLogStreams(logGroupName string) []types.LogStream {
+	logStreams := make([]types.LogStream, 0)
+	for i := 0; i < logStreamRetry; i++ {
+		logStreams = awsservice.GetLogStreams(logGroupName)
+
+		if len(logStreams) > 0 {
+			break
+		}
+		time.Sleep(10 * time.Second)
+	}
+
+	return logStreams
+}
+
+func isLogValid() bool {
+	return len(hostLogFields) == len(journalLogFields) || len(kubernetesLogFields) == len(containerLogFields)
 }

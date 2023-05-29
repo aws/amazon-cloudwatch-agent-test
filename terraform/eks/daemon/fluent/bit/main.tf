@@ -93,7 +93,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
     [OUTPUT]
         Name                cloudwatch_logs
         Match               application.*
-        region              "${var.region}"
+        region              ${var.region}
         log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/application
         log_stream_prefix   $${HOST_NAME}-
         auto_create_group   true
@@ -139,7 +139,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
     [OUTPUT]
         Name                cloudwatch_logs
         Match               dataplane.*
-        region              "${var.region}"
+        region              ${var.region}
         log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/dataplane
         log_stream_prefix   $${HOST_NAME}-
         auto_create_group   true
@@ -187,7 +187,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
     [OUTPUT]
         Name                cloudwatch_logs
         Match               host.*
-        region              "${var.region}"
+        region              ${var.region}
         log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/host
         log_stream_prefix   $${HOST_NAME}.
         auto_create_group   true

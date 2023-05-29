@@ -203,11 +203,6 @@ resource "kubernetes_cluster_role" "clusterrole" {
     api_groups = ["batch"]
   }
   rule {
-    verbs      = ["get"]
-    resources  = ["nodes/proxy"]
-    api_groups = [""]
-  }
-  rule {
     verbs      = ["create"]
     resources  = ["nodes/stats", "configmaps", "events"]
     api_groups = [""]

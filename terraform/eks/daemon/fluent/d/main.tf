@@ -18,6 +18,9 @@ resource "kubernetes_config_map" "fluentd_config" {
     }
   }
   data = {
+    "kubernetes.conf" = <<EOF
+    kubernetes.conf
+    EOF
     "fluent.conf" = <<EOF
     @include containers.conf
     @include systemd.conf
@@ -39,7 +42,7 @@ resource "kubernetes_config_map" "fluentd_config" {
       read_from_head true
       <parse>
         @type json
-        time_format %Y-%m-%dT%H:%M:%S.%NZ
+        time_format %Y-%m-%dT%H:%M:%S.%N%:z
       </parse>
     </source>
     
@@ -75,13 +78,14 @@ resource "kubernetes_config_map" "fluentd_config" {
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_fluentd
+        watch false
       </filter>
     
       <filter **>
         @type record_transformer
         @id filter_fluentd_stream_transformer
         <record>
-          stream_name fluentdlogs-stream
+          stream_name $${tag_parts[3]}
         </record>
       </filter>
     
@@ -95,13 +99,14 @@ resource "kubernetes_config_map" "fluentd_config" {
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata
+        watch false
       </filter>
     
       <filter **>
         @type record_transformer
         @id filter_containers_stream_transformer
         <record>
-          stream_name containers-stream
+          stream_name $${tag_parts[3]}
         </record>
       </filter>
     
@@ -124,13 +129,14 @@ resource "kubernetes_config_map" "fluentd_config" {
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_cwagent
+        watch false
       </filter>
     
       <filter **>
         @type record_transformer
         @id filter_cwagent_stream_transformer
         <record>
-          stream_name cwagentlogs-stream
+          stream_name $${tag_parts[3]}
         </record>
       </filter>
     
@@ -229,6 +235,7 @@ resource "kubernetes_config_map" "fluentd_config" {
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_systemd
+        watch false
       </filter>
     
       <filter **>
@@ -300,6 +307,7 @@ resource "kubernetes_config_map" "fluentd_config" {
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_host
+        watch false
       </filter>
     
       <filter **>
@@ -421,7 +429,11 @@ resource "kubernetes_daemonset" "service" {
           }
           env {
             name = "CI_VERSION"
-            value= "k8s/1.2.3"
+            value= "k8s/1.3.15"
+          }
+          env {
+            name = "FLUENT_CONTAINER_TAIL_PARSER_TYPE"
+            value= "/^(?<time>.+) (?<stream>stdout|stderr) (?<logtag>[FP]) (?<log>.*)$/"
           }
           volume_mount {
             mount_path = "/config-volume"
