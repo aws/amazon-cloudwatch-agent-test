@@ -100,17 +100,17 @@ func (t *BaseTestRunner) SetAgentConfig(agentConfig AgentConfig) {
 	t.AgentConfig = agentConfig
 }
 
-func (t *TestRunner) Run(s ITestSuite) {
+func (t *TestRunner) Run() status.TestGroupResult {
 	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)
 	testGroupResult, err := t.runAgent()
 	if err == nil {
 		testGroupResult = t.TestRunner.Validate()
 	}
-	s.AddToSuiteResult(testGroupResult)
 	if testGroupResult.GetStatus() != status.SUCCESSFUL {
 		log.Printf("%v test group failed due to %v", testName, err)
 	}
+	return testGroupResult
 }
 
 func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
