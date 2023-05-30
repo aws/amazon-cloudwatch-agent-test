@@ -103,7 +103,7 @@ func TestProxy(t *testing.T) {
 	}}
 	result := runner.Run()
 	if result.GetStatus() != status.SUCCESSFUL {
-		t.Fatal("LVM test failed")
+		t.Fatal("Proxy test failed")
 		result.Print()
 	}
 }
