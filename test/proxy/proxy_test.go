@@ -34,7 +34,7 @@ func (t ProxyTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateDiskMetric(metricName)
+		testResults[i] = t.validateMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -43,7 +43,7 @@ func (t ProxyTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *ProxyTestRunner) validateDiskMetric(metricName string) status.TestResult {
+func (t *ProxyTestRunner) validateMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,

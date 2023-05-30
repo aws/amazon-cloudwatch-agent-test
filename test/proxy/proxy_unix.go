@@ -11,6 +11,6 @@ import (
 
 func GetCommandToCreateProxyConfig(proxyUrl string) []string {
 	return []string{
-		fmt.Sprintf("(\ncat<<EOF\n[proxy]\n  http_proxy = \"%s\"\n  no_proxy = \"169.254.169.254\"\nEOF\n) > /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml", proxyUrl),
+		fmt.Sprintf("(\nsudo cat<<EOF\n[proxy]\n  http_proxy = \"%s\"\n  no_proxy = \"169.254.169.254\"\nEOF\n) > /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml", proxyUrl),
 	}
 }
