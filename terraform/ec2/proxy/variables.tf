@@ -8,12 +8,12 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "t2.micro"
+  default = "t3a.micro"
 }
 
 variable "ami" {
   type    = string
-  default = "al2023-ami-2023*"
+  default = "amzn2-ami-kernel-5.10-hvm*"
 }
 
 variable "create" {
