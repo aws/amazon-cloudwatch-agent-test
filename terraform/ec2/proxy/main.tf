@@ -10,23 +10,6 @@ module "basic_components" {
   region = var.region
 }
 
-#####################################################################
-# Generate EC2 Key Pair for log in access to EC2
-#####################################################################
-
-resource "tls_private_key" "ssh_key" {
-  count     = var.ssh_key_name == "" ? 1 : 0
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "aws_ssh_key" {
-  count      = var.ssh_key_name == "" ? 1 : 0
-  key_name   = "ec2-key-pair-${module.common.testing_id}"
-  public_key = tls_private_key.ssh_key[0].public_key_openssh
-}
-
-
 resource "aws_security_group" "proxy_sg" {
   count = var.create > 0 ? 1 : 0
   name        = "cwagent-proxy-${module.common.testing_id}"
