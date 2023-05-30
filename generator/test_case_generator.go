@@ -63,6 +63,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/fips",
 			targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
 		},
+		{
+			testDir: "./test/proxy",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
