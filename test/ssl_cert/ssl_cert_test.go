@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	namespace     = "SSLCertTest"
-	linuxCertPath = "/etc/pki/tls/certs/ca-bundle.crt"
+	namespace = "SSLCertTest"
 )
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
@@ -30,6 +29,7 @@ func init() {
 
 type SslCertTestRunner struct {
 	test_runner.BaseTestRunner
+	caCertPath string
 }
 
 func (t SslCertTestRunner) Validate() status.TestGroupResult {
@@ -87,13 +87,13 @@ func (t SslCertTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t SslCertTestRunner) GetMeasuredMetrics() []string {
-	return []string{"disk_free", "disk_used", "disk_total"}
+	return metric.CpuMetrics
 }
 
 func (t *SslCertTestRunner) SetupBeforeAgentRun() error {
-	backupCertPath := linuxCertPath + ".bak"
+	backupCertPath := t.caCertPath + ".bak"
 	commands := []string{
-		fmt.Sprintf("sudo mv %s, %s", linuxCertPath, backupCertPath),
+		fmt.Sprintf("sudo mv %s, %s", t.caCertPath, backupCertPath),
 		"echo [ssl] | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
 		"echo ca_bundle_path = \\\"" + backupCertPath+ "\\\" | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
 	}
@@ -106,7 +106,10 @@ var _ test_runner.ITestRunner = (*SslCertTestRunner)(nil)
 func TestSSLCert(t *testing.T) {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	factory := dimension.GetDimensionFactory(*env)
-	runner := test_runner.TestRunner{TestRunner: &SslCertTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}}
+	runner := test_runner.TestRunner{TestRunner: &SslCertTestRunner{
+		test_runner.BaseTestRunner{DimensionFactory: factory},
+		env.CaCertPath,
+	}}
 	result := runner.Run()
 	if result.GetStatus() != status.SUCCESSFUL {
 		t.Fatal("SSL Cert test failed")
