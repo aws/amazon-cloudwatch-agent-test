@@ -25,10 +25,6 @@ const (
 )
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
-var metrics = []string{"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-	"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-	"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-	"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
 
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
@@ -46,7 +42,7 @@ func TestFIPS(t *testing.T) {
 	time.Sleep(agentRuntime)
 	common.StopAgent()
 
-	for _, metric := range metrics {
+	for _, metric := range metric.CpuMetrics {
 		result := validateCpuMetric(metric, factory)
 		if result.Status != status.SUCCESSFUL {
 			t.Fatalf("FIPS metric validation failed with %s", metric)

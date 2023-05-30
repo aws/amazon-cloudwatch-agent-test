@@ -36,6 +36,23 @@ locals {
   reboot_required_tests = tolist(["./test/restart"])
 }
 
+# create a proxy instance for tests using proxy instsance
+module "proxy_instance" {
+  source = "../proxy"
+  create = length(regexall("proxy", var.test_dir)) > 0 ? 1 : 0
+  ssh_key_name = local.ssh_key_name
+  private_key_content = local.private_key_content
+  test_dir = var.test_dir
+  test_name = var.test_name
+  region = var.region
+  user = var.user
+
+  depends_on = [
+    local.private_key_content,
+    local.ssh_key_name
+  ]
+}
+
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
@@ -187,7 +204,7 @@ resource "null_resource" "integration_test_run" {
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.proxy_instance.proxy_ip} -v"
     ]
   }
 

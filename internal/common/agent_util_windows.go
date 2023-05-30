@@ -133,6 +133,17 @@ func RunCommand(cmd string) (string, error) {
 	return string(out), err
 }
 
+func RunCommands(commands []string) error {
+	for _, cmd := range commands {
+		_, err := RunCommand(cmd)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func RunAyncCommand(cmd string) error {
 	log.Printf("running async cmd, %s", cmd)
 	return exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-NoExit", cmd).Start()

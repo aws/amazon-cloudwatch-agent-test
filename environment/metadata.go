@@ -5,9 +5,10 @@ package environment
 
 import (
 	"flag"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksdeploymenttype"
 	"log"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksdeploymenttype"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecsdeploymenttype"
@@ -30,6 +31,7 @@ type MetaData struct {
 	CwaCommitSha              string
 	CaCertPath                string
 	EKSClusterName            string
+	ProxyUrl                  string
 }
 
 type MetaDataStrings struct {
@@ -46,6 +48,7 @@ type MetaDataStrings struct {
 	CwaCommitSha              string
 	CaCertPath                string
 	EKSClusterName            string
+	ProxyUrl                  string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -79,6 +82,10 @@ func registerEKSData(d *MetaDataStrings) {
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EC2PluginTests), "plugins", "", "Comma-delimited list of plugins to test. Default is empty, which tests all")
+}
+
+func registerProxyUrl(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.ProxyUrl), "proxyUrl", "", "Public IP address of a proxy instance. Default is empty with no proxy instance being used")
 }
 
 func fillComputeType(e *MetaData, data *MetaDataStrings) {
@@ -157,6 +164,7 @@ func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDat
 	registerCwaCommitSha(metaDataStrings)
 	registerCaCertPath(metaDataStrings)
 	registerPluginTestsToExecute(metaDataStrings)
+	registerProxyUrl(metaDataStrings)
 	return metaDataStrings
 }
 
@@ -170,6 +178,6 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData.S3Key = data.S3Key
 	metaData.CwaCommitSha = data.CwaCommitSha
 	metaData.CaCertPath = data.CaCertPath
-
+	metaData.ProxyUrl = data.ProxyUrl
 	return metaData
 }

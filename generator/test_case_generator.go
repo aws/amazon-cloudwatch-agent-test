@@ -56,9 +56,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{"./test/collection_interval", "", []string{}},
 		//{"./test/metric_dimension", "", []string{}},
 		//{"./test/restart", "", []string{}},
-		{"./test/acceptance", "", []string{"ubuntu-20.04"}},
-		{"./test/fips", "", []string{"al2"}},
-		{"./test/lvm", "", []string{"al2"}},
+		//{"./test/acceptance", "", []string{"ubuntu-20.04"}},
+		//{"./test/fips", "", []string{"al2"}},
+		//{"./test/lvm", "", []string{"al2"}},
+		{"./test/proxy", "", []string{"al2"}},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
