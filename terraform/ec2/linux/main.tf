@@ -46,11 +46,6 @@ module "proxy_instance" {
   test_name = var.test_name
   region = var.region
   user = var.user
-
-  depends_on = [
-    local.private_key_content,
-    local.ssh_key_name
-  ]
 }
 
 #####################################################################
