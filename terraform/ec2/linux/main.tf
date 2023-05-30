@@ -132,7 +132,7 @@ resource "null_resource" "integration_test_setup" {
   provisioner "remote-exec" {
     inline = [
       "echo sha ${var.cwa_github_sha}",
-      "cloud-init status --wait",
+      "sudo cloud-init status --wait",
       "echo clone and install agent",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",

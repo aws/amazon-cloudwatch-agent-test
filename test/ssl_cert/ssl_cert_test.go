@@ -1,9 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
+//go:build !windows
 
-package proxy
+package acceptance
 
 import (
+	"fmt"
 	"log"
 	"testing"
 
@@ -16,7 +18,8 @@ import (
 )
 
 const (
-	namespace = "ProxyTest"
+	namespace     = "SSLCertTest"
+	linuxCertPath = "/etc/pki/tls/certs/ca-bundle.crt"
 )
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
@@ -25,12 +28,11 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-type ProxyTestRunner struct {
+type SslCertTestRunner struct {
 	test_runner.BaseTestRunner
-	proxyUrl string
 }
 
-func (t ProxyTestRunner) Validate() status.TestGroupResult {
+func (t SslCertTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -43,7 +45,7 @@ func (t ProxyTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *ProxyTestRunner) validateMetric(metricName string) status.TestResult {
+func (t *SslCertTestRunner) validateMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -76,34 +78,37 @@ func (t *ProxyTestRunner) validateMetric(metricName string) status.TestResult {
 	return testResult
 }
 
-func (t ProxyTestRunner) GetTestName() string {
+func (t SslCertTestRunner) GetTestName() string {
 	return namespace
 }
 
-func (t ProxyTestRunner) GetAgentConfigFileName() string {
+func (t SslCertTestRunner) GetAgentConfigFileName() string {
 	return "config.json"
 }
 
-func (t ProxyTestRunner) GetMeasuredMetrics() []string {
-	return metric.CpuMetrics
+func (t SslCertTestRunner) GetMeasuredMetrics() []string {
+	return []string{"disk_free", "disk_used", "disk_total"}
 }
 
-func (t *ProxyTestRunner) SetupBeforeAgentRun() error {
-	return common.RunCommands(GetCommandToCreateProxyConfig(t.proxyUrl))
+func (t *SslCertTestRunner) SetupBeforeAgentRun() error {
+	backupCertPath := linuxCertPath + ".bak"
+	commands := []string{
+		fmt.Sprintf("sudo mv %s, %s", linuxCertPath, backupCertPath),
+		fmt.Sprintf("(\ncat<<EOF\n[ssl]\n ca_bundle_path = \"%s\"\n EOF\n) > sudo tee /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml", backupCertPath),
+	}
+
+	return common.RunCommands(commands)
 }
 
-var _ test_runner.ITestRunner = (*ProxyTestRunner)(nil)
+var _ test_runner.ITestRunner = (*SslCertTestRunner)(nil)
 
-func TestProxy(t *testing.T) {
+func TestSSLCert(t *testing.T) {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	factory := dimension.GetDimensionFactory(*env)
-	runner := test_runner.TestRunner{TestRunner: &ProxyTestRunner{
-		test_runner.BaseTestRunner{DimensionFactory: factory},
-		env.ProxyUrl,
-	}}
+	runner := test_runner.TestRunner{TestRunner: &SslCertTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}}
 	result := runner.Run()
 	if result.GetStatus() != status.SUCCESSFUL {
-		t.Fatal("LVM test failed")
+		t.Fatal("SSL Cert test failed")
 		result.Print()
 	}
 }

@@ -80,12 +80,12 @@ resource "null_resource" "integration_test_proxy_setup" {
 
   provisioner "remote-exec" {
     inline = [
-      "yum install squid -y",
-      "sed -i 's/net.ipv4.ip_forward.*/net.ipv4.ip_forward = 1/g' /etc/sysctl.conf",
-      "setenforce 0",
-      "sed -i 's/http_port.*/http_port 3128/g' /etc/squid/squid.conf",
-      "squid –k parse",
-      "service squid start"
+      "sudo yum install squid -y",
+      "sudo sed -i 's/net.ipv4.ip_forward.*/net.ipv4.ip_forward = 1/g' /etc/sysctl.conf",
+      "sudo setenforce 0",
+      "sudo sed -i 's/http_port.*/http_port 3128/g' /etc/squid/squid.conf",
+      "sudo squid –k parse",
+      "sudo service squid start"
     ]
   }
 

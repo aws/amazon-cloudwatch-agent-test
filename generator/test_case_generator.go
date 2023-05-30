@@ -37,7 +37,7 @@ type testConfig struct {
 	// e.g. statsd can have a multiple terraform module sets for difference test scenarios (ecs, eks or ec2)
 	testDir      string
 	terraformDir string
-	// target specific OS(es) so that only limited targets get tested. doesn't apply to containers
+	// target specific OS(es) so that only limited targets are tested. doesn't apply to containers
 	// e.g. ["rhel8"] or ["rhel8", "ubuntu-20.04"]
 	targetOs []string
 }
@@ -60,6 +60,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{"./test/fips", "", []string{"al2"}},
 		//{"./test/lvm", "", []string{"al2"}},
 		{"./test/proxy", "", []string{"al2"}},
+		{"./test/ssl_cert", "", []string{"al2"}},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.

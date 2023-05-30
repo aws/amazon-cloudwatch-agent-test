@@ -8,6 +8,6 @@ package proxy
 
 func GetCommandToCreateProxyConfig(proxyUrl string) []string {
 	return []string{
-		fmt.Sprintf("echo '\\n[proxy]\\n  http_proxy = \"%s\"\\n  no_proxy = \"169.254.169.254\"' | Set-Content -Path \"%s\"", t.proxyUrl, "${Env:ProgramData}\\Amazon\\AmazonCloudWatchAgent\\common-config.toml"),
+		fmt.Sprintf("echo '\n[proxy]\n  http_proxy = \"%s\"\n  no_proxy = \"169.254.169.254\"' | Set-Content -Path \"%s\"", t.proxyUrl, "${Env:ProgramData}\\Amazon\\AmazonCloudWatchAgent\\common-config.toml"),
 	}
 }
