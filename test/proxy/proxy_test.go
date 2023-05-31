@@ -78,6 +78,10 @@ func (t *ProxyTestRunner) validateMetric(metricName string) status.TestResult {
 	return testResult
 }
 
+func (t ProxyTestRunner) GetAgentRunDuration() time.Duration {
+	return 3 * time.Minute
+}
+
 func (t ProxyTestRunner) GetTestName() string {
 	return namespace
 }
