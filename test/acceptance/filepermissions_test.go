@@ -32,7 +32,7 @@ const (
 
 func TestFilePermissions(t *testing.T) {
 	common.CopyFile(agentConfigLocalPath, agentConfigPath)
-	err := common.StartAgent(agentConfigPath, false)
+	err := common.StartAgent(agentConfigPath, false, false)
 	if err != nil {
 		log.Printf("Agent failed to start due to err=%v\n", err)
 	}

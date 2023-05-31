@@ -8,7 +8,6 @@ package metric_value_benchmark
 import (
 	_ "embed"
 	"fmt"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
@@ -73,6 +72,16 @@ func (t *PrometheusTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *PrometheusTestRunner) SetupBeforeAgentRun() error {
+	agentConfig := test_runner.AgentConfig{
+		ConfigFileName:   t.GetAgentConfigFileName(),
+		SSMParameterName: t.SSMParameterName(),
+		UseSSM:           t.UseSSM(),
+	}
+	t.SetAgentConfig(agentConfig)
+	err := t.SetUpConfig()
+	if err != nil {
+		return err
+	}
 	startPrometheusCommands := []string{
 		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus_config.yaml\n%s\nEOF", prometheusConfig),
 		fmt.Sprintf("cat <<EOF | sudo tee /tmp/metrics\n%s\nEOF", prometheusMetrics),

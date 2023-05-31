@@ -83,7 +83,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			common.CopyFile(param.configPath, configOutputPath)
 
-			common.StartAgent(configOutputPath, true)
+			common.StartAgent(configOutputPath, true, false)
 
 			// ensure that there is enough time from the "start" time and the first log line,
 			// so we don't miss it in the GetLogEvents call
@@ -129,7 +129,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	start := time.Now()
 	common.CopyFile(cfgFilePath, configOutputPath)
 
-	common.StartAgent(configOutputPath, true)
+	common.StartAgent(configOutputPath, true, false)
 
 	// ensure that there is enough time from the "start" time and the first log line,
 	// so we don't miss it in the GetLogEvents call

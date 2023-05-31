@@ -113,3 +113,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
+
+func (t *CollectDTestRunner) GetAgentRunDuration() time.Duration {
+	return time.Minute
+}

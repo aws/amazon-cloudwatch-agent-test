@@ -28,6 +28,7 @@ type matrixRow struct {
 	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
 	K8sVersion          string `json:"k8s_version"`
 	TerraformDir        string `json:"terraform_dir"`
+	UseSSM              bool   `json:"useSSM"`
 }
 
 type testConfig struct {
@@ -82,6 +83,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ecs_ec2_daemon": {
 		{"./test/metric_value_benchmark", ""},
 		{"./test/statsd", ""},
+		{"./test/emf", ""},
 	},
 	"ec2_acceptance": {
 		{"./test/acceptance", ""},
@@ -89,6 +91,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"eks_daemon": {
 		{"./test/metric_value_benchmark", ""},
 		{"./test/statsd", "terraform/eks/daemon/statsd"},
+		{"./test/emf", "terraform/eks/daemon/emf"},
+	},
+	"eks_deployment": {
+		{"./test/metric_value_benchmark", ""},
 	},
 }
 

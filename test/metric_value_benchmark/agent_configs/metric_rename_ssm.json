@@ -1,0 +1,28 @@
+{
+  "agent": {
+    "debug": true,
+    "metrics_collection_interval": 10
+  },
+  "metrics": {
+    "namespace": "MetricValueBenchmarkTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
+    "metrics_collected": {
+      "cpu": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          {"name": "cpu_usage_nice", "rename": "ssm_cpu_utilization", "unit": "Percent"}
+        ]
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

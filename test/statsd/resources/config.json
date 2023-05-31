@@ -1,6 +1,6 @@
 {
   "metrics": {
-    "namespace": "StatsD",
+    "namespace": "StatsD/ECS",
     "append_dimensions": {
       "InstanceId": "$${aws:InstanceId}"
     },

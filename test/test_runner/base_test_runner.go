@@ -6,8 +6,11 @@
 package test_runner
 
 import (
+	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -20,7 +23,6 @@ const (
 	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentConfigDirectory = "agent_configs"
 	extraConfigDirectory = "extra_configs"
-	MinimumAgentRuntime  = 1 * time.Minute
 )
 
 type ITestRunner interface {
@@ -31,6 +33,10 @@ type ITestRunner interface {
 	GetMeasuredMetrics() []string
 	SetupBeforeAgentRun() error
 	SetupAfterAgentRun() error
+	UseSSM() bool
+	SSMParameterName() string
+	SetUpConfig() error
+	SetAgentConfig(config AgentConfig)
 }
 
 type TestRunner struct {
@@ -39,9 +45,38 @@ type TestRunner struct {
 
 type BaseTestRunner struct {
 	DimensionFactory dimension.Factory
+	AgentConfig      AgentConfig
+}
+
+type AgentConfig struct {
+	ConfigFileName   string
+	SSMParameterName string
+	UseSSM           bool
 }
 
 func (t *BaseTestRunner) SetupBeforeAgentRun() error {
+	return t.SetUpConfig()
+}
+
+func (t *BaseTestRunner) SetUpConfig() error {
+	agentConfigPath := filepath.Join(agentConfigDirectory, t.AgentConfig.ConfigFileName)
+	log.Printf("Starting agent using agent config file %s", agentConfigPath)
+	common.CopyFile(agentConfigPath, configOutputPath)
+	if t.AgentConfig.UseSSM {
+		log.Printf("Starting agent from ssm parameter %s", agentConfigPath)
+		agentConfigByteArray, err := os.ReadFile(agentConfigPath)
+		if err != nil {
+			return errors.New("failed while reading config file")
+		}
+		agentConfig := string(agentConfigByteArray)
+		if agentConfig != awsservice.GetStringParameter(t.AgentConfig.SSMParameterName) {
+			log.Printf("ssm agent config %s canged upload new config", t.AgentConfig.SSMParameterName)
+			err = awsservice.PutStringParameter(t.AgentConfig.SSMParameterName, agentConfig)
+			if err != nil {
+				return fmt.Errorf("failed to upload ssm parameter err %v", err)
+			}
+		}
+	}
 	return nil
 }
 
@@ -50,7 +85,19 @@ func (t *BaseTestRunner) SetupAfterAgentRun() error {
 }
 
 func (t *BaseTestRunner) GetAgentRunDuration() time.Duration {
-	return MinimumAgentRuntime
+	return 30 * time.Second
+}
+
+func (t *BaseTestRunner) UseSSM() bool {
+	return false
+}
+
+func (t *BaseTestRunner) SSMParameterName() string {
+	return ""
+}
+
+func (t *BaseTestRunner) SetAgentConfig(agentConfig AgentConfig) {
+	t.AgentConfig = agentConfig
 }
 
 func (t *TestRunner) Run(s ITestSuite) {
@@ -77,16 +124,23 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		},
 	}
 
+	agentConfig := AgentConfig{
+		ConfigFileName:   t.TestRunner.GetAgentConfigFileName(),
+		SSMParameterName: t.TestRunner.SSMParameterName(),
+		UseSSM:           t.TestRunner.UseSSM(),
+	}
+	t.TestRunner.SetAgentConfig(agentConfig)
 	err := t.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
 
-	agentConfigPath := filepath.Join(agentConfigDirectory, t.TestRunner.GetAgentConfigFileName())
-	log.Printf("Starting agent using agent config file %s", agentConfigPath)
-	common.CopyFile(agentConfigPath, configOutputPath)
-	err = common.StartAgent(configOutputPath, false)
+	if t.TestRunner.UseSSM() {
+		err = common.StartAgent(t.TestRunner.SSMParameterName(), false, true)
+	} else {
+		err = common.StartAgent(configOutputPath, false, false)
+	}
 
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED

@@ -6,6 +6,7 @@
   },
   "logs": {
     "metrics_collected": {
+      "emf": { },
       "prometheus": {
         "prometheus_config_path": "env:PROMETHEUS_CONFIG_CONTENT",
         "ecs_service_discovery": {

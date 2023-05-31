@@ -15,6 +15,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksdeploymenttype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
@@ -69,15 +70,27 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 	if eksTestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
-		eksTestRunners = []*test_runner.EKSTestRunner{
-			{
+		switch env.EksDeploymentStrategy {
+		case eksdeploymenttype.DAEMON:
+			eksDaemonTestRunner := test_runner.EKSTestRunner{
 				Runner: &EKSDaemonTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
 					DimensionFactory: factory,
 				},
 					env: env,
 				},
 				Env: *env,
-			},
+			}
+			eksTestRunners = append(eksTestRunners, &eksDaemonTestRunner)
+		case eksdeploymenttype.REPLICA:
+			eksDeploymentTestRunner := test_runner.EKSTestRunner{
+				Runner: &EKSDeploymentTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
+					DimensionFactory: factory,
+				},
+					env: env,
+				},
+				Env: *env,
+			}
+			eksTestRunners = append(eksTestRunners, &eksDeploymentTestRunner)
 		}
 	}
 	return eksTestRunners
@@ -101,6 +114,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &SwapTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &RenameSSMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return ec2TestRunners

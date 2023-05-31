@@ -37,7 +37,7 @@ func init() {
 func TestNvidiaGPU(t *testing.T) {
 	t.Run("Basic configuration testing for both metrics and logs", func(t *testing.T) {
 		common.CopyFile(configLinuxJSON, configLinuxOutputPath)
-		common.StartAgent(configLinuxOutputPath, true)
+		common.StartAgent(configLinuxOutputPath, true, false)
 
 		time.Sleep(agentLinuxRuntime)
 		t.Logf("Agent has been running for : %s", agentLinuxRuntime.String())

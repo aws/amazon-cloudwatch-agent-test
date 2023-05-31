@@ -15,26 +15,26 @@ import (
 )
 
 type testConfig struct {
-	logFileCount int
-	linesPerSecond int
-	lineSizeBytes int
-	emfFileCount int
-	eventsPerSecond int
+	logFileCount      int
+	linesPerSecond    int
+	lineSizeBytes     int
+	emfFileCount      int
+	eventsPerSecond   int
 	statsdClientCount int
-	tps int
-	metricCount int
+	tps               int
+	metricCount       int
 }
 
 func TestSoakHigh(t *testing.T) {
 	tc := testConfig{
-		logFileCount: 10,
-		linesPerSecond: 4000,
-		lineSizeBytes: 120,
-		emfFileCount: 2,
-		eventsPerSecond: 1600,
+		logFileCount:      10,
+		linesPerSecond:    4000,
+		lineSizeBytes:     120,
+		emfFileCount:      2,
+		eventsPerSecond:   1600,
 		statsdClientCount: 5,
-		tps: 100,
-		metricCount: 100,
+		tps:               100,
+		metricCount:       100,
 	}
 	switch runtime.GOOS {
 	case "darwin":
@@ -48,7 +48,7 @@ func TestSoakHigh(t *testing.T) {
 
 func runTest(t *testing.T, configPath string, tc testConfig) {
 	common.CopyFile(configPath, common.ConfigOutputPath)
-	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false))
+	require.NoError(t, common.StartAgent(common.ConfigOutputPath, false, false))
 	require.NoError(t, startLogGen(tc.logFileCount, tc.linesPerSecond, tc.lineSizeBytes))
 	require.NoError(t, startEMFGen(tc.emfFileCount, tc.eventsPerSecond))
 	require.NoError(t, startStatsd(tc.statsdClientCount, tc.tps, tc.metricCount))
