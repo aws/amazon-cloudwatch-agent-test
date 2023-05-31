@@ -33,6 +33,7 @@ type ProxyTestRunner struct {
 func (t ProxyTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
+	time.Sleep(60 * time.Second)
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateMetric(metricName)
 	}

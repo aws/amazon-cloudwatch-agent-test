@@ -93,7 +93,7 @@ func (t SslCertTestRunner) GetMeasuredMetrics() []string {
 func (t *SslCertTestRunner) SetupBeforeAgentRun() error {
 	backupCertPath := t.caCertPath + ".bak"
 	commands := []string{
-		fmt.Sprintf("sudo mv %s, %s", t.caCertPath, backupCertPath),
+		fmt.Sprintf("sudo mv %s %s", t.caCertPath, backupCertPath),
 		"echo [ssl] | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
 		"echo ca_bundle_path = \\\"" + backupCertPath+ "\\\" | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
 	}
