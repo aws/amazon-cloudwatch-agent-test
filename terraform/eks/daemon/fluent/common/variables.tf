@@ -25,3 +25,8 @@ variable "k8s_version" {
   type    = string
   default = "1.24"
 }
+
+variable "cluster_name_suffix" {
+  type = string
+  default = "fluent"
+}

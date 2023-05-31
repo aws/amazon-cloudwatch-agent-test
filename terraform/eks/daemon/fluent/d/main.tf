@@ -3,6 +3,7 @@
 
 module "fluent_common" {
   source = "../common"
+  cluster_name_suffix = "fluentd"
 }
 
 # TODO could use template file
