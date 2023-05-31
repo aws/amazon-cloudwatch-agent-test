@@ -64,6 +64,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
 		},
 		{
+			testDir: "./test/lvm",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
 			testDir: "./test/proxy",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
