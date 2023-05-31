@@ -94,7 +94,7 @@ func TestCollectionInterval(t *testing.T) {
 				startTime := currentTime.Truncate(time.Minute).Add(time.Minute)
 				duration := startTime.Sub(currentTime)
 				time.Sleep(duration)
-				common.StartAgent(common.ConfigOutputPath, true)
+				common.StartAgent(common.ConfigOutputPath, true, false)
 				time.Sleep(agentRuntime)
 				common.StopAgent()
 				endTime := time.Now()

@@ -1,6 +1,6 @@
 {
   "agent": {
-    "metrics_collection_interval": 15,
+    "metrics_collection_interval": 10,
     "run_as_user": "root",
     "debug": true,
     "logfile": ""
@@ -25,7 +25,7 @@
             "memory_swap",
             "memory_vms"
           ],
-          "metrics_collection_interval": 15
+          "metrics_collection_interval": 10
         }
       ]
     },

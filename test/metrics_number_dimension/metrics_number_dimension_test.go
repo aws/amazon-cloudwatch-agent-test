@@ -81,7 +81,7 @@ func TestNumberMetricDimension(t *testing.T) {
 
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.resourcePath, parameter.failToStart), func(t *testing.T) {
 			common.CopyFile(parameter.resourcePath+configJSON, configOutputPath)
-			err := common.StartAgent(configOutputPath, false)
+			err := common.StartAgent(configOutputPath, false, false)
 
 			// for append dimension we auto fail over 30 for custom metrics (statsd we collect remove dimension and continue)
 			// Go output starts at the time of failure so the failure message gets chopped off. Thus have to use if there is an error and just assume reason.

@@ -42,12 +42,16 @@ func StartStack(ctx context.Context, stackName string, client *cloudformation.Cl
 }
 
 func DeleteStack(ctx context.Context, stackName string, client *cloudformation.Client) {
+	r := recover()
 	deleteStackInput := cloudformation.DeleteStackInput{
 		StackName: aws.String(stackName),
 	}
 	_, err := client.DeleteStack(ctx, &deleteStackInput)
 	if err != nil {
-		log.Fatalf("Could not delete stack %v", stackName)
+		log.Fatalf("Could not delete stack %s", stackName)
+	}
+	if r != nil {
+		log.Fatalf("Delete stack %s is called on panic thus delete stack then continue panic", stackName)
 	}
 }
 
@@ -59,12 +63,12 @@ func FindStackInstanceId(ctx context.Context, stackName string, client *cloudfor
 		stacks, err := client.DescribeStacks(ctx, &cfStackInput)
 		if err != nil || len(stacks.Stacks) != 1 || stacks.Stacks[0].StackStatus != types.StackStatusCreateComplete {
 			log.Printf("Stack %s not ready in minute %d continue to next minute", stackName, i)
-			continue
-		}
-		for output := range stacks.Stacks[0].Outputs {
-			if *stacks.Stacks[0].Outputs[output].OutputKey == instanceIdKey {
-				log.Printf("Found instance id %s from stack %s", *stacks.Stacks[0].Outputs[output].OutputValue, stackName)
-				return *stacks.Stacks[0].Outputs[output].OutputValue
+		} else {
+			for output := range stacks.Stacks[0].Outputs {
+				if *stacks.Stacks[0].Outputs[output].OutputKey == instanceIdKey {
+					log.Printf("Found instance id %s from stack %s", *stacks.Stacks[0].Outputs[output].OutputValue, stackName)
+					return *stacks.Stacks[0].Outputs[output].OutputValue
+				}
 			}
 		}
 		log.Printf("Sleep for one minute to wait for stack to start")

@@ -2,26 +2,37 @@
   {
     "os": "win-11",
     "instanceType":"t3a.medium",
-    "ami": "cloudwatch-agent-integration-test-win-11*"
+    "ami": "cloudwatch-agent-integration-test-win-11*",
+    "useSSM": false
   },
   {
     "os": "win-2012",
     "instanceType":"t3a.medium",
-    "ami": "cloudwatch-agent-integration-test-win-2012*"
+    "ami": "cloudwatch-agent-integration-test-win-2012*",
+    "useSSM": false
   },
   {
     "os": "win-2016",
     "instanceType":"t3a.medium",
-    "ami": "cloudwatch-agent-integration-test-win-2016*"
+    "ami": "cloudwatch-agent-integration-test-win-2016*",
+    "useSSM": false
   },
   {
     "os": "win-2019",
     "instanceType":"t3a.medium",
-    "ami": "cloudwatch-agent-integration-test-win-2019*"
+    "ami": "cloudwatch-agent-integration-test-win-2019*",
+    "useSSM": false
   },
   {
     "os": "win-2022",
     "instanceType":"t3a.medium",
-    "ami": "cloudwatch-agent-integration-test-win-2022*"
+    "ami": "cloudwatch-agent-integration-test-win-2022*",
+    "useSSM": false
+  },
+  {
+    "os": "win-2022",
+    "instanceType":"t3a.medium",
+    "ami": "cloudwatch-agent-integration-test-win-2022*",
+    "useSSM": true
   }
 ]

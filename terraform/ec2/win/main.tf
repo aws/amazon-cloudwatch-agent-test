@@ -30,6 +30,7 @@ resource "aws_key_pair" "aws_ssh_key" {
 locals {
   ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  ssm_parameter_name  = "WindowsAgentConfigSSMTest"
 }
 
 #####################################################################
@@ -72,8 +73,21 @@ resource "aws_instance" "cwagent" {
   }
 }
 
+data "local_file" "input" {
+  filename = module.validator.agent_config
+}
+
+# Size of windows json is too large thus can't use standard tier
+resource "aws_ssm_parameter" "upload_ssm" {
+  count = var.use_ssm == true ? 1 : 0
+  name  = local.ssm_parameter_name
+  type  = "String"
+  tier  = "Advanced"
+  value = data.local_file.input.content
+}
+
 resource "null_resource" "integration_test" {
-  depends_on = [aws_instance.cwagent, module.validator]
+  depends_on = [aws_instance.cwagent, module.validator, aws_ssm_parameter.upload_ssm]
 
   # Install software
   connection {
@@ -106,7 +120,7 @@ resource "null_resource" "integration_test" {
     inline = [
       "set AWS_REGION=${var.region}",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
-      "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
+      var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
   }
