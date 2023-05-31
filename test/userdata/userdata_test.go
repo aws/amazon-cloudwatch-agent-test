@@ -16,13 +16,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
-type CPUTestRunner struct {
+type UserdataTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-var _ test_runner.ITestRunner = (*CPUTestRunner)(nil)
+var _ test_runner.ITestRunner = (*UserdataTestRunner)(nil)
 
-func (t *CPUTestRunner) Validate() status.TestGroupResult {
+func (t *UserdataTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -35,20 +35,20 @@ func (t *CPUTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *CPUTestRunner) GetTestName() string {
+func (t *UserdataTestRunner) GetTestName() string {
 	return "UserdataTest"
 }
 
-func (t *CPUTestRunner) GetAgentConfigFileName() string {
+func (t *UserdataTestRunner) GetAgentConfigFileName() string {
 	return "cpu_config.json"
 }
 
-func (t *CPUTestRunner) GetMeasuredMetrics() []string {
+func (t *UserdataTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"cpu_time_active_userdata"}
 }
 
-func (t *CPUTestRunner) RunAgent(runner *test_runner.TestRunner) (status.TestGroupResult, error) {
+func (t *UserdataTestRunner) RunAgent(runner *test_runner.TestRunner) (status.TestGroupResult, error) {
 	log.Printf("Running test for runAgent in userdata mode")
 	testGroupResult := status.TestGroupResult{
 		Name: t.GetTestName(),
@@ -63,7 +63,7 @@ func (t *CPUTestRunner) RunAgent(runner *test_runner.TestRunner) (status.TestGro
 	return testGroupResult, nil
 }
 
-func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {
+func (t *UserdataTestRunner) validateCpuMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,

@@ -49,7 +49,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
-			{TestRunner: &CPUTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &UserdataTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return ec2TestRunners

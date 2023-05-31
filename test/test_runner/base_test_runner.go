@@ -55,13 +55,6 @@ type AgentConfig struct {
 	UseSSM           bool
 }
 
-func (t *BaseTestRunner) GetTestName() string {
-	return "BaseTestRunner"
-}
-func (t *BaseTestRunner) GetAgentConfigFileName() string {
-	return "cpu_config.json"
-}
-
 func (t *BaseTestRunner) SetupBeforeAgentRun() error {
 	return t.SetUpConfig()
 }
@@ -121,11 +114,11 @@ func (t *BaseTestRunner) RunAgent(runner *TestRunner) (status.TestGroupResult, e
 
 
 	agentConfig := AgentConfig{
-		ConfigFileName:   t.TestRunner.GetAgentConfigFileName(),
-		SSMParameterName: t.TestRunner.SSMParameterName(),
-		UseSSM:           t.TestRunner.UseSSM(),
+		ConfigFileName:   runner.TestRunner.GetAgentConfigFileName(),
+		SSMParameterName: runner.TestRunner.SSMParameterName(),
+		UseSSM:           runner.TestRunner.UseSSM(),
 	}
-	t.TestRunner.SetAgentConfig(agentConfig)
+	runner.TestRunner.SetAgentConfig(agentConfig)
 	err := runner.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
@@ -133,8 +126,8 @@ func (t *BaseTestRunner) RunAgent(runner *TestRunner) (status.TestGroupResult, e
 	}
 
 
-	if t.TestRunner.UseSSM() {
-		err = common.StartAgent(t.TestRunner.SSMParameterName(), false, true)
+	if runner.TestRunner.UseSSM() {
+		err = common.StartAgent(runner.TestRunner.SSMParameterName(), false, true)
 	} else {
 		err = common.StartAgent(configOutputPath, false, false)
 	}

@@ -100,7 +100,7 @@ data "aws_ami" "latest" {
 # Generate template file for EC2 userdata script
 #####################################################################
 data "template_file" "init" {
-  template = file("install_agent.sh")
+  template = file("install_and_start_agent.sh")
 
   vars = {
     cwa_github_sha = var.cwa_github_sha
