@@ -58,6 +58,10 @@ func (t *SslCertTestRunner) validateMetric(metricName string) status.TestResult 
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
+		{
+			Key:   "cpu",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")},
+		},
 	})
 
 	if len(failed) > 0 {
@@ -102,7 +106,6 @@ func (t *SslCertTestRunner) SetupBeforeAgentRun() error {
 		fmt.Sprintf("sudo mv %s %s", t.caCertPath, backupCertPath),
 		"echo [ssl] | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
 		"echo ca_bundle_path = \\\"" + backupCertPath+ "\\\" | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
-		"cat /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
 	}
 
 	return common.RunCommands(commands)

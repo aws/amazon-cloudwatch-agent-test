@@ -56,6 +56,10 @@ func (t *ProxyTestRunner) validateMetric(metricName string) status.TestResult {
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
+		{
+			Key:   "cpu",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")},
+		},
 	})
 
 	if len(failed) > 0 {
