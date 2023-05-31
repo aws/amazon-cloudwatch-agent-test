@@ -17,7 +17,7 @@ variable "ami" {
 }
 
 variable "create" {
-  type = number
+  type    = number
   default = 0
 }
 

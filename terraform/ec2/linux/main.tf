@@ -38,14 +38,14 @@ locals {
 
 # create a proxy instance for tests using proxy instsance
 module "proxy_instance" {
-  source = "../proxy"
-  create = length(regexall("proxy", var.test_dir)) > 0 ? 1 : 0
-  ssh_key_name = local.ssh_key_name
+  source              = "../proxy"
+  create              = length(regexall("proxy", var.test_dir)) > 0 ? 1 : 0
+  ssh_key_name        = local.ssh_key_name
   private_key_content = local.private_key_content
-  test_dir = var.test_dir
-  test_name = var.test_name
-  region = var.region
-  user = var.user
+  test_dir            = var.test_dir
+  test_name           = var.test_name
+  region              = var.region
+  user                = var.user
 }
 
 #####################################################################

@@ -11,41 +11,41 @@ module "basic_components" {
 }
 
 resource "aws_security_group" "proxy_sg" {
-  count = var.create > 0 ? 1 : 0
+  count       = var.create > 0 ? 1 : 0
   name        = "cwagent-proxy-${module.common.testing_id}"
   description = "communication with proxy instance"
   vpc_id      = module.basic_components.vpc_id
 }
 
 resource "aws_security_group_rule" "proxy_inbound" {
-  count = var.create > 0 ? 1 : 0
-  description              = "Allow proxy port"
-  from_port                = 3128
-  to_port                  = 3128
-  protocol                 = "tcp"
-  cidr_blocks              = ["0.0.0.0/0"]
-  ipv6_cidr_blocks         = ["::/0"]
-  security_group_id        = aws_security_group.proxy_sg[count.index].id
-  type                     = "ingress"
+  count             = var.create > 0 ? 1 : 0
+  description       = "Allow proxy port"
+  from_port         = 3128
+  to_port           = 3128
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  ipv6_cidr_blocks  = ["::/0"]
+  security_group_id = aws_security_group.proxy_sg[count.index].id
+  type              = "ingress"
 }
 
 resource "aws_security_group_rule" "proxy_outbound" {
-  count = var.create > 0 ? 1 : 0
-  description              = "Allow cluster API Server to communicate with the worker nodes"
-  from_port                = 1024
-  protocol                 = "tcp"
-  cidr_blocks              = ["0.0.0.0/0"]
-  ipv6_cidr_blocks         = ["::/0"]
-  security_group_id        = aws_security_group.proxy_sg[count.index].id
-  to_port                  = 65535
-  type                     = "egress"
+  count             = var.create > 0 ? 1 : 0
+  description       = "Allow cluster API Server to communicate with the worker nodes"
+  from_port         = 1024
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  ipv6_cidr_blocks  = ["::/0"]
+  security_group_id = aws_security_group.proxy_sg[count.index].id
+  to_port           = 65535
+  type              = "egress"
 }
 
 #####################################################################
 # Generate proxy EC2 Instance
 #####################################################################
 resource "aws_instance" "cwintegproxy" {
-  count = var.create > 0 ? 1 : 0
+  count                                = var.create > 0 ? 1 : 0
   ami                                  = data.aws_ami.latest.id
   instance_type                        = var.ec2_instance_type
   key_name                             = var.ssh_key_name
