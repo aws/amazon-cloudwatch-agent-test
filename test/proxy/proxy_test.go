@@ -6,6 +6,7 @@ package proxy
 import (
 	"log"
 	"testing"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
