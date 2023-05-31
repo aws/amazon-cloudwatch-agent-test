@@ -45,7 +45,7 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids               = [module.basic_components.security_group]
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
-  user_data = data.template_file.init.rendered
+  user_data                            = data.template_file.init.rendered
 
   metadata_options {
     http_endpoint = "enabled"
@@ -103,10 +103,10 @@ data "template_file" "init" {
   template = file("install_and_start_agent.sh")
 
   vars = {
-    cwa_github_sha = var.cwa_github_sha
+    cwa_github_sha          = var.cwa_github_sha
     github_test_repo_branch = var.github_test_repo_branch
-    github_test_repo = var.github_test_repo
-    binary_uri = local.binary_uri
-    install_agent = var.install_agent
+    github_test_repo        = var.github_test_repo
+    binary_uri              = local.binary_uri
+    install_agent           = var.install_agent
   }
 }
