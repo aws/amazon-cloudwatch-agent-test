@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -35,6 +36,7 @@ type SslCertTestRunner struct {
 func (t SslCertTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
+	time.Sleep(60 * time.Second)
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateMetric(metricName)
 	}
@@ -96,6 +98,7 @@ func (t *SslCertTestRunner) SetupBeforeAgentRun() error {
 		fmt.Sprintf("sudo mv %s %s", t.caCertPath, backupCertPath),
 		"echo [ssl] | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
 		"echo ca_bundle_path = \\\"" + backupCertPath+ "\\\" | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
+		"cat /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml"
 	}
 
 	return common.RunCommands(commands)
