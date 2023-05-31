@@ -86,6 +86,10 @@ func (t *SslCertTestRunner) validateMetric(metricName string) status.TestResult 
 	return testResult
 }
 
+func (t SslCertTestRunner) GetAgentRunDuration() time.Duration {
+	return 3 * time.Minute
+}
+
 func (t SslCertTestRunner) GetTestName() string {
 	return namespace
 }
