@@ -11,5 +11,5 @@ const (
 	SAMPLE_COUNT             Statistics = "SampleCount"
 	MINIMUM                  Statistics = "Minimum"
 	MAXUMUM                  Statistics = "Maxmimum"
-	HighResolutionStatPeriod            = 30
+	HighResolutionStatPeriod            = 10
 )

@@ -13,6 +13,17 @@ func PutStringParameter(name, value string) error {
 	return putParameter(name, value, types.ParameterTypeString)
 }
 
+func GetStringParameter(name string) string {
+	parameter, err := SsmClient.GetParameter(ctx, &ssm.GetParameterInput{
+		Name: aws.String(name),
+	})
+	if err != nil {
+		return "Parameter not found"
+	}
+
+	return *parameter.Parameter.Value
+}
+
 func putParameter(name, value string, paramType types.ParameterType) error {
 	isOverwriteAllowed := true
 

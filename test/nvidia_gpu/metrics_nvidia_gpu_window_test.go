@@ -41,7 +41,7 @@ func TestNvidiaGPUWindows(t *testing.T) {
 			t.Fatalf(err.Error())
 		}
 
-		err = common.StartAgent(configWindowsOutputPath, true)
+		err = common.StartAgent(configWindowsOutputPath, true, false)
 
 		if err != nil {
 			t.Fatalf(err.Error())
