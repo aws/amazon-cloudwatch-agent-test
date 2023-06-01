@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -39,28 +38,28 @@ type testConfig struct {
 	terraformDir string
 	// target specific OS(es) so that only limited targets are tested. doesn't apply to containers
 	// e.g. ["rhel8"] or ["rhel8", "ubuntu-20.04"]
-	targetOs []string
+	targetOs map[string]struct{}
 }
 
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
-		{"./test/nvidia_gpu", "", []string{}},
+		{"./test/nvidia_gpu", "", nil},
 	},
 	"ec2_linux": {
-		{"./test/ca_bundle", "", []string{}},
-		{"./test/cloudwatchlogs", "", []string{}},
-		{"./test/metrics_number_dimension", "", []string{}},
-		{"./test/metric_value_benchmark", "", []string{}},
-		{"./test/run_as_user", "", []string{}},
-		{"./test/collection_interval", "", []string{}},
-		{"./test/metric_dimension", "", []string{}},
-		{"./test/restart", "", []string{}},
-		{"./test/acceptance", "", []string{"ubuntu-20.04"}},
-		{"./test/fips", "", []string{"al2"}},
-		{"./test/lvm", "", []string{"al2"}},
-		{"./test/proxy", "", []string{"al2"}},
-		{"./test/ssl_cert", "", []string{"al2"}},
+		{"./test/ca_bundle", "", nil},
+		{"./test/cloudwatchlogs", "", nil},
+		{"./test/metrics_number_dimension", "", nil},
+		{"./test/metric_value_benchmark", "", nil},
+		{"./test/run_as_user", "", nil},
+		{"./test/collection_interval", "", nil},
+		{"./test/metric_dimension", "", nil},
+		{"./test/restart", "", nil},
+		{"./test/acceptance", "", map[string]struct{}{"ubuntu-20.04": {}}},
+		{"./test/fips", "", map[string]struct{}{"al2": {}}},
+		{"./test/lvm", "", map[string]struct{}{"al2": {}}},
+		{"./test/proxy", "", map[string]struct{}{"al2": {}}},
+		{"./test/ssl_cert", "", map[string]struct{}{"al2": {}}},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
@@ -68,41 +67,41 @@ var testTypeToTestConfig = map[string][]testConfig{
 		and Mac under the hood share similar plugins with Linux
 	*/
 	"ec2_mac": {
-		{"./test/feature/mac", "", []string{}},
+		{"./test/feature/mac", "", nil},
 	},
 	"ec2_windows": {
-		{"./test/feature/windows", "", []string{}},
-		{"./test/restart", "", []string{}},
+		{"./test/feature/windows", "", nil},
+		{"./test/restart", "", nil},
 	},
 	"ec2_performance": {
-		{"../../test/performance/emf", "", []string{}},
-		{"../../test/performance/logs", "", []string{}},
-		{"../../test/performance/system", "", []string{}},
-		{"../../test/performance/statsd", "", []string{}},
-		{"../../test/performance/collectd", "", []string{}},
+		{"../../test/performance/emf", "", nil},
+		{"../../test/performance/logs", "", nil},
+		{"../../test/performance/system", "", nil},
+		{"../../test/performance/statsd", "", nil},
+		{"../../test/performance/collectd", "", nil},
 	},
 	"ec2_stress": {
-		{"../../test/stress/emf", "", []string{}},
-		{"../../test/stress/logs", "", []string{}},
-		{"../../test/stress/system", "", []string{}},
-		{"../../test/stress/statsd", "", []string{}},
-		{"../../test/stress/collectd", "", []string{}},
+		{"../../test/stress/emf", "", nil},
+		{"../../test/stress/logs", "", nil},
+		{"../../test/stress/system", "", nil},
+		{"../../test/stress/statsd", "", nil},
+		{"../../test/stress/collectd", "", nil},
 	},
 	"ecs_fargate": {
-		{"./test/ecs/ecs_metadata", "", []string{}},
+		{"./test/ecs/ecs_metadata", "", nil},
 	},
 	"ecs_ec2_daemon": {
-		{"./test/metric_value_benchmark", "", []string{}},
-		{"./test/statsd", "", []string{}},
-		{"./test/emf", "", []string{}},
+		{"./test/metric_value_benchmark", "", nil},
+		{"./test/statsd", "", nil},
+		{"./test/emf", "", nil},
 	},
 	"eks_daemon": {
-		{"./test/metric_value_benchmark", "", []string{}},
-		{"./test/statsd", "terraform/eks/daemon/statsd", []string{}},
-		{"./test/emf", "terraform/eks/daemon/emf", []string{}},
+		{"./test/metric_value_benchmark", "", nil},
+		{"./test/statsd", "terraform/eks/daemon/statsd", nil},
+		{"./test/emf", "terraform/eks/daemon/emf", nil},
 	},
 	"eks_deployment": {
-		{"./test/metric_value_benchmark", "", []string{}},
+		{"./test/metric_value_benchmark", "", nil},
 	},
 }
 
@@ -132,7 +131,6 @@ func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
 
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, testConfig := range testConfigs {
-		targetOSes := strings.Join(testConfig.targetOs, ",")
 		for _, test := range testMatrix {
 			row := matrixRow{TestDir: testConfig.testDir, TestType: testType, TerraformDir: testConfig.terraformDir}
 			err = mapstructure.Decode(test, &row)
@@ -140,13 +138,25 @@ func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
 				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
 			}
 
-			if len(testConfig.targetOs) == 0 || strings.Contains(targetOSes, row.Os) {
+			if shouldAddTest(row.Os, testConfig.targetOs) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}
 		}
 	}
 	return testMatrixComplete
 }
+
+func shouldAddTest(os string, targets map[string]struct{}) bool {
+	if targets == nil {
+		return true
+	}
+	if _, ok := targets[os]; ok {
+		return true
+	}
+
+	return false
+}
+
 func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
 	bytes, err := json.MarshalIndent(testMatrix, "", " ")
 	if err != nil {
