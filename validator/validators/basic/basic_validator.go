@@ -46,7 +46,6 @@ func (s *BasicValidator) GenerateLoad() error {
 		validationLog         = s.vConfig.GetLogValidation()
 	)
 
-	log.Printf("Geneating load in Base validator")
 	switch dataType {
 	case "logs":
 		return common.GenerateLogs(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate, validationLog)
