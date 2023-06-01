@@ -16,5 +16,8 @@ func init() {
 }
 
 func TestAgentStatusAfterRestart(t *testing.T) {
-	RestartCheck(t)
+	err := Validate()
+	if err != nil {
+		t.Fatalf("restart validation failed: %s", err)
+	}
 }

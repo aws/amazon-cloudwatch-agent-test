@@ -21,7 +21,7 @@ import (
 var (
 	configPath      = flag.String("validator-config", "", "A yaml depicts test information")
 	preparationMode = flag.Bool("preparation-mode", false, "Prepare all the resources for the validation (e.g set up config) ")
-	runTest         = flag.String("test-name", "", "Test name to execute")
+	testName        = flag.String("test-name", "", "Test name to execute")
 )
 
 func main() {
@@ -30,13 +30,17 @@ func main() {
 	startTime := time.Now()
 
 	// validator calls test code to get around OOM issue on windows hosts while running go test
-	if len(*configPath) == 0 && len(*runTest) > 0 {
+	if len(*configPath) == 0 && len(*testName) > 0 {
 		// execute test without parsing or processing configuration yaml
-		if strings.Contains(*runTest, "restart") {
-			err := restart.LogCheck("\"{& Function countLogLines { Param ( [Parameter(Mandatory = $true)] [string]$log_path ) if (Test-Path -LiteralPath '$log_path') { return (Get-Content $log_path).Length } else { return '0' } } $cwa_log=countLoglines('$Env:ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log') Write-Output 'cwa_log:$cwa_log' }\"")
-			if len(err) > 0 {
-				log.Fatalf("Failed to validate restart: %v", err)
-			}
+
+		var err error
+		// probably better to use switch if test cases grow or come up with a better structure as it grows
+		if strings.Contains(*testName, "restart") {
+			err = restart.Validate()
+		}
+
+		if err != nil {
+			log.Fatalf("Validator failed with %s: %v", *testName, err)
 		}
 	} else {
 		vConfig, err := models.NewValidateConfig(*configPath)

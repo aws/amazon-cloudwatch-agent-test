@@ -5,13 +5,6 @@
 
 package restart
 
-import (
-	"testing"
-)
-
-func RestartCheck(t *testing.T) {
-	err := LogCheck("resources/verifyRestartScript.sh")
-	if err != "" {
-		t.Fatalf(err)
-	}
+func Validate() error {
+	return LogCheck("resources/verifyRestartScript.sh")
 }
