@@ -37,8 +37,7 @@ func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval
 }
 
 func CreateWindowsEvents(eventLogName string, eventLogLevel string, msg string) error {
-	command := "EVENTCREATE /ID 1 /L " + eventLogName + " /T " + eventLogLevel + " /SO MYEVENTSOURCE" + eventLogName + " /D \"" + msg + "\""
-	out, err := exec.Command(command).Output()
+	out, err := exec.Command("eventcreate", "/ID", "1", "/L", eventLogName, "/T", eventLogLevel, "/SO", "MYEVENTSOURCE"+eventLogName, "/D", msg).Output()
 
 	if err != nil {
 		log.Printf("Windows event creation failed: %v; the output is: %s", err, string(out))
