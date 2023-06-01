@@ -43,11 +43,13 @@ func (s *BasicValidator) GenerateLoad() error {
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
 		receiver              = s.vConfig.GetPluginsConfig()[0]
+		validationLog         = s.vConfig.GetLogValidation()
 	)
 
+	log.Printf("Geneating load in Base validator")
 	switch dataType {
 	case "logs":
-		return common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
+		return common.GenerateLogs(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate, validationLog)
 	default:
 		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
 		return common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate, logGroup, metricNamespace)

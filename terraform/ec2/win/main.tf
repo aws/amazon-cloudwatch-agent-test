@@ -121,6 +121,7 @@ resource "null_resource" "integration_test" {
       "set AWS_REGION=${var.region}",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
+      "EVENTCREATE /ID 1 /L System /T Warning /SO MYEVENTSOURCESystem /D \"System warning log\"",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
   }

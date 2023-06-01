@@ -10,13 +10,44 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"runtime"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"go.uber.org/multierr"
 )
 
 const logLine = "# %d - This is a log line. \n"
+
+func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval time.Duration, logLinesPerMinute int, validationLog []models.LogValidation) error {
+	var multiErr error
+	if err := StartLogWrite(configFilePath, duration, sendingInterval, logLinesPerMinute); err != nil {
+		multiErr = multierr.Append(multiErr, err)
+	}
+	for _, log := range validationLog {
+		if log.LogLevel != "" {
+			err := CreateWindowsEvents(log.LogStream, log.LogLevel, log.LogValue)
+			if err != nil {
+				multiErr = multierr.Append(multiErr, err)
+			}
+		}
+	}
+	return multiErr
+}
+
+func CreateWindowsEvents(eventLogName string, eventLogLevel string, msg string) error {
+	command := "EVENTCREATE /ID 1 /L " + eventLogName + " /T " + eventLogLevel + " /SO MYEVENTSOURCE" + eventLogName + " /D \"" + msg + "\""
+	out, err := exec.Command(command).Output()
+
+	if err != nil {
+		log.Printf("Windows event creation failed: %v; the output is: %s", err, string(out))
+		return err
+	}
+
+	log.Printf("Windows Event is successfully created for logname: %s, loglevel: %s, logmsg: %s", eventLogName, eventLogLevel, msg)
+	return nil
+}
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided

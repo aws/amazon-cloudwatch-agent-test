@@ -4,6 +4,7 @@
 package feature
 
 import (
+	"log"
 	"time"
 
 	"go.uber.org/multierr"
@@ -38,9 +39,12 @@ func (s *FeatureValidator) GenerateLoad() error {
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
 		receivers             = s.vConfig.GetPluginsConfig()
+		validationLog         = s.vConfig.GetLogValidation()
 	)
 
-	if err := common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
+	log.Printf("Geneating load in feature validator")
+
+	if err := common.GenerateLogs(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate, validationLog); err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}
 
