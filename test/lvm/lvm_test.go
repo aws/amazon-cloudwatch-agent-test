@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 //go:build !windows
 
-package acceptance
+package lvm
 
 import (
 	"log"
