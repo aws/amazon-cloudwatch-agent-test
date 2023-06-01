@@ -26,7 +26,7 @@ func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval
 		multiErr = multierr.Append(multiErr, err)
 	}
 	for _, log := range validationLog {
-		if log.LogLevel != "" {
+		if log.LogSource == "WindowsEvents" && log.LogLevel != "" {
 			err := CreateWindowsEvents(log.LogStream, log.LogLevel, log.LogValue)
 			if err != nil {
 				multiErr = multierr.Append(multiErr, err)
