@@ -12,6 +12,5 @@
     "k8s_version": "1.24",
     "test_dir": "./test/statsd",
     "terraform_dir":"terraform/eks/daemon/statsd"
-
   }
 ]

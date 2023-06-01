@@ -88,6 +88,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_acceptance": {
 		{"./test/acceptance", ""},
 	},
+	"ec2_userdata": {
+		{"./test/userdata", ""},
+  },
+
 	"eks_daemon": {
 		{"./test/metric_value_benchmark", ""},
 		{"./test/statsd", "terraform/eks/daemon/statsd"},
