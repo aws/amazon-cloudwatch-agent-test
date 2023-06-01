@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/qri-io/jsonschema"
+	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
@@ -22,6 +24,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
+
+const containerInsightsNamespace = "ContainerInsights"
+
+// list of metrics with more dimensions e.g. PodName and Namespace
+var metricsWithMoreDimensions = []string{"pod_number_of_container_restarts"}
 
 type EKSDaemonTestRunner struct {
 	test_runner.BaseTestRunner
@@ -54,14 +61,41 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 			Value: dimension.UnknownDimensionValue(),
 		},
 	})
-
 	if len(failed) > 0 {
 		log.Println("failed to get dimensions")
 		return testResult
 	}
 
-	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("ContainerInsights", name, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+	// get list of metrics that has more dimensions for container insights
+	// this is to avoid adding more dimension provider for non-trivial dimensions e.g. PodName
+	listFetcher := metric.MetricListFetcher{}
+	if slices.Contains(metricsWithMoreDimensions, name) {
+		metrics, err := listFetcher.Fetch(containerInsightsNamespace, name, dims)
+		if err != nil {
+			log.Println("failed to fetch metric list", err)
+			return testResult
+		}
+
+		if len(metrics) < 1 {
+			return testResult
+		}
+
+		// just verify 1 of returned metrics for values
+		for _, dim := range metrics[0].Dimensions {
+			// skip since it's provided by dimension provider
+			if *dim.Name == "CLusterName" {
+				continue
+			}
+
+			dims = append(dims, types.Dimension{
+				Name:  dim.Name,
+				Value: dim.Value,
+			})
+		}
+	}
+
+	valueFetcher := metric.MetricValueFetcher{}
+	values, err := valueFetcher.Fetch(containerInsightsNamespace, name, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
@@ -178,8 +212,7 @@ func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
 	}
 }
 
-func (t *EKSDaemonTestRunner) SetAgentConfig(config test_runner.AgentConfig) {
-}
+func (t *EKSDaemonTestRunner) SetAgentConfig(config test_runner.AgentConfig) {}
 
 func (e *EKSDaemonTestRunner) SetupBeforeAgentRun() error {
 	return nil
