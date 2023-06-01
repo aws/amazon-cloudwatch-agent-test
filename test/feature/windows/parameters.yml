@@ -213,7 +213,27 @@ log_validation:
   - log_value: "# 1 - This is a log line."
     log_lines: 1
     log_stream: "test1.log"
+  - log_value: "System information log"
+    log_level: "Information"
+    log_lines: 1
+    log_stream: "System"
   - log_value: "System warning log"
     log_level: "Warning"
     log_lines: 1
     log_stream: "System"
+  - log_value: "System error log"
+    log_level: "Error"
+    log_lines: 1
+    log_stream: "System"
+  - log_value: "Application information log"
+    log_level: "Information"
+    log_lines: 1
+    log_stream: "Application"
+  - log_value: "Application warning log"
+    log_level: "Warning"
+    log_lines: 1
+    log_stream: "Application"
+  - log_value: "Application error log"
+    log_level: "Error"
+    log_lines: 1
+    log_stream: "Application"
