@@ -77,6 +77,7 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 		}
 
 		if len(metrics) < 1 {
+			log.Println("metric list is empty")
 			return testResult
 		}
 
