@@ -84,7 +84,7 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 		// just verify 1 of returned metrics for values
 		for _, dim := range metrics[0].Dimensions {
 			// skip since it's provided by dimension provider
-			if *dim.Name == "CLusterName" {
+			if *dim.Name == "ClusterName" {
 				continue
 			}
 
