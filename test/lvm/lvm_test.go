@@ -97,8 +97,11 @@ func (t *LVMTestRunner) SetupBeforeAgentRun() error {
 		"sudo mkdir /mnt/lvm",
 		"sudo mount /dev/mapper/vg0-lv0 /mnt/lvm/",
 	}
-
-	return common.RunCommands(commands)
+	err := common.RunCommands(commands)
+	if err != nil {
+		return err
+	}
+	return t.SetUpConfig()
 }
 
 var _ test_runner.ITestRunner = (*LVMTestRunner)(nil)

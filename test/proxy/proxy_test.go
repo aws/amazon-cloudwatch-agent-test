@@ -97,7 +97,11 @@ func (t ProxyTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *ProxyTestRunner) SetupBeforeAgentRun() error {
-	return common.RunCommands(GetCommandToCreateProxyConfig(t.proxyUrl))
+	err := common.RunCommands(GetCommandToCreateProxyConfig(t.proxyUrl))
+	if err != nil {
+		return err
+	}
+	return t.SetUpConfig()
 }
 
 var _ test_runner.ITestRunner = (*ProxyTestRunner)(nil)

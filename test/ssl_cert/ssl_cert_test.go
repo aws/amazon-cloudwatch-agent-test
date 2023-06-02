@@ -103,10 +103,13 @@ func (t *SslCertTestRunner) SetupBeforeAgentRun() error {
 	commands := []string{
 		fmt.Sprintf("sudo mv %s %s", t.caCertPath, backupCertPath),
 		"echo [ssl] | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
-		"echo ca_bundle_path = \\\"" + backupCertPath+ "\\\" | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
+		"echo ca_bundle_path = \\\"" + backupCertPath + "\\\" | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
 	}
-
-	return common.RunCommands(commands)
+	err := common.RunCommands(commands)
+	if err != nil {
+		return err
+	}
+	return t.SetUpConfig()
 }
 
 var _ test_runner.ITestRunner = (*SslCertTestRunner)(nil)
