@@ -1,7 +1,6 @@
 {
   "agent": {
     "metrics_collection_interval": 15,
-    "run_as_user": "root",
     "debug": true,
     "logfile": ""
   },
@@ -11,9 +10,11 @@
       "InstanceId": "${aws:InstanceId}"
     },
     "metrics_collected": {
-      "collectd": {
-        "metrics_aggregation_interval": 30,
-        "collectd_security_level": "none"
+      "cpu": {
+        "measurement": [
+          {"name": "time_active", "rename":"cpu_time_active_userdata"}
+        ],
+        "metrics_collection_interval": 15
       }
     },
     "force_flush_interval": 5

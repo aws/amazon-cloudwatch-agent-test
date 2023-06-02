@@ -95,6 +95,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{"./test/statsd", "", nil},
 		{"./test/emf", "", nil},
 	},
+	"ec2_userdata": {
+		{"./test/userdata", ""},
+  },
+
 	"eks_daemon": {
 		{"./test/metric_value_benchmark", "", nil},
 		{"./test/statsd", "terraform/eks/daemon/statsd", nil},

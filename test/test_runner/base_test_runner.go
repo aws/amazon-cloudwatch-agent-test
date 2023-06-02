@@ -33,6 +33,7 @@ type ITestRunner interface {
 	GetMeasuredMetrics() []string
 	SetupBeforeAgentRun() error
 	SetupAfterAgentRun() error
+	RunAgent(runner *TestRunner) (status.TestGroupResult, error)
 	UseSSM() bool
 	SSMParameterName() string
 	SetUpConfig() error
@@ -100,22 +101,9 @@ func (t *BaseTestRunner) SetAgentConfig(agentConfig AgentConfig) {
 	t.AgentConfig = agentConfig
 }
 
-func (t *TestRunner) Run() status.TestGroupResult {
-	testName := t.TestRunner.GetTestName()
-	log.Printf("Running %v", testName)
-	testGroupResult, err := t.runAgent()
-	if err == nil {
-		testGroupResult = t.TestRunner.Validate()
-	}
-	if testGroupResult.GetStatus() != status.SUCCESSFUL {
-		log.Printf("%v test group failed due to %v", testName, err)
-	}
-	return testGroupResult
-}
-
-func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
+func (t *BaseTestRunner) RunAgent(runner *TestRunner) (status.TestGroupResult, error) {
 	testGroupResult := status.TestGroupResult{
-		Name: t.TestRunner.GetTestName(),
+		Name: runner.TestRunner.GetTestName(),
 		TestResults: []status.TestResult{
 			{
 				Name:   "Starting Agent",
@@ -124,20 +112,22 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		},
 	}
 
+
 	agentConfig := AgentConfig{
-		ConfigFileName:   t.TestRunner.GetAgentConfigFileName(),
-		SSMParameterName: t.TestRunner.SSMParameterName(),
-		UseSSM:           t.TestRunner.UseSSM(),
+		ConfigFileName:   runner.TestRunner.GetAgentConfigFileName(),
+		SSMParameterName: runner.TestRunner.SSMParameterName(),
+		UseSSM:           runner.TestRunner.UseSSM(),
 	}
-	t.TestRunner.SetAgentConfig(agentConfig)
-	err := t.TestRunner.SetupBeforeAgentRun()
+	runner.TestRunner.SetAgentConfig(agentConfig)
+	err := runner.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
 
-	if t.TestRunner.UseSSM() {
-		err = common.StartAgent(t.TestRunner.SSMParameterName(), false, true)
+
+	if runner.TestRunner.UseSSM() {
+		err = common.StartAgent(runner.TestRunner.SSMParameterName(), false, true)
 	} else {
 		err = common.StartAgent(configOutputPath, false, false)
 	}
@@ -147,13 +137,13 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
-	err = t.TestRunner.SetupAfterAgentRun()
+	err = runner.TestRunner.SetupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
 	}
 
-	runningDuration := t.TestRunner.GetAgentRunDuration()
+	runningDuration := runner.TestRunner.GetAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
 	common.StopAgent()
@@ -165,4 +155,18 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	}
 
 	return testGroupResult, nil
+}
+
+func (t *TestRunner) Run(s ITestSuite) {
+	testName := t.TestRunner.GetTestName()
+	log.Printf("Running %v", testName)
+	testGroupResult, err := t.TestRunner.RunAgent(t)
+	if err == nil {
+		testGroupResult = t.TestRunner.Validate()
+	}
+
+	s.AddToSuiteResult(testGroupResult)
+	if testGroupResult.GetStatus() != status.SUCCESSFUL {
+		log.Printf("%v test group failed due to %v", testName, err)
+	}
 }
