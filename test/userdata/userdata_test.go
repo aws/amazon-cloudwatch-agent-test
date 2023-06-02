@@ -6,6 +6,7 @@ package userdata
 
 import (
 	"log"
+	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -105,6 +106,19 @@ func (t UserdataTestRunner) RunAgent() (status.TestGroupResult, error) {
 	}
 
 	return testGroupResult, nil
+}
+
+func TestUserdata(t *testing.T) {
+	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	factory := dimension.GetDimensionFactory(*env)
+	runner := test_runner.TestRunner{TestRunner: &UserdataTestRunner{
+		test_runner.BaseTestRunner{DimensionFactory: factory},
+	}}
+	result := runner.Run()
+	if result.GetStatus() != status.SUCCESSFUL {
+		t.Fatal("SSL Cert test failed")
+		result.Print()
+	}
 }
 
 var _ test_runner.ITestRunner = (*UserdataTestRunner)(nil)
