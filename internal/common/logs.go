@@ -25,9 +25,17 @@ func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval
 	if err := StartLogWrite(configFilePath, duration, sendingInterval, logLinesPerMinute); err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}
-	for _, log := range validationLog {
-		if log.LogSource == "WindowsEvents" && log.LogLevel != "" {
-			err := CreateWindowsEvents(log.LogStream, log.LogLevel, log.LogValue)
+	if err := GenerateWindowsEvents(validationLog); err != nil {
+		multiErr = multierr.Append(multiErr, err)
+	}
+	return multiErr
+}
+
+func GenerateWindowsEvents(validationLog []models.LogValidation) error {
+	var multiErr error
+	for _, vLog := range validationLog {
+		if vLog.LogSource == "WindowsEvents" && vLog.LogLevel != "" {
+			err := CreateWindowsEvent(vLog.LogStream, vLog.LogLevel, vLog.LogValue)
 			if err != nil {
 				multiErr = multierr.Append(multiErr, err)
 			}
@@ -36,7 +44,7 @@ func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval
 	return multiErr
 }
 
-func CreateWindowsEvents(eventLogName string, eventLogLevel string, msg string) error {
+func CreateWindowsEvent(eventLogName string, eventLogLevel string, msg string) error {
 	out, err := exec.Command("eventcreate", "/ID", "1", "/L", eventLogName, "/T", eventLogLevel, "/SO", "MYEVENTSOURCE"+eventLogName, "/D", msg).Output()
 
 	if err != nil {

@@ -43,12 +43,11 @@ func (s *BasicValidator) GenerateLoad() error {
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
 		receiver              = s.vConfig.GetPluginsConfig()[0]
-		validationLog         = s.vConfig.GetLogValidation()
 	)
 
 	switch dataType {
 	case "logs":
-		return common.GenerateLogs(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate, validationLog)
+		return common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
 	default:
 		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
 		return common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate, logGroup, metricNamespace)
@@ -117,10 +116,15 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource st
 		}
 		actualNumberOfLogLines := 0
 		for _, l := range logs {
-			if logSource == "WindowsEvents" && logLevel != "" && strings.Contains(l, logLine) && strings.Contains(l, logLevel) {
-				actualNumberOfLogLines += 1
-			} else if strings.Contains(l, logLine) {
-				actualNumberOfLogLines += 1
+			switch logSource {
+			case "WindowsEvents":
+				if logLevel != "" && strings.Contains(l, logLine) && strings.Contains(l, logLevel) {
+					actualNumberOfLogLines += 1
+				}
+			default:
+				if strings.Contains(l, logLine) {
+					actualNumberOfLogLines += 1
+				}
 			}
 		}
 
