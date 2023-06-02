@@ -44,7 +44,8 @@ func (t *CPUTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *CPUTestRunner) GetMeasuredMetrics() []string {
-	return metric.CpuMetrics
+	// time_active gets renamed with agent_config/cpu_config.json
+	return append(metric.CpuMetrics[1:], "cpu_time_active_renamed")
 }
 
 func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {

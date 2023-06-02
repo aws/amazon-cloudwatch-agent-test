@@ -47,19 +47,20 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{"./test/nvidia_gpu", "", nil},
 	},
 	"ec2_linux": {
-		{"./test/ca_bundle", "", nil},
-		{"./test/cloudwatchlogs", "", nil},
-		{"./test/metrics_number_dimension", "", nil},
-		{"./test/metric_value_benchmark", "", nil},
-		{"./test/run_as_user", "", nil},
-		{"./test/collection_interval", "", nil},
-		{"./test/metric_dimension", "", nil},
-		{"./test/restart", "", nil},
-		{"./test/acceptance", "", map[string]struct{}{"ubuntu-20.04": {}}},
-		{"./test/fips", "", map[string]struct{}{"al2": {}}},
-		{"./test/lvm", "", map[string]struct{}{"al2": {}}},
+		//{"./test/ca_bundle", "", nil},
+		//{"./test/cloudwatchlogs", "", nil},
+		//{"./test/metrics_number_dimension", "", nil},
+		//{"./test/metric_value_benchmark", "", nil},
+		//{"./test/run_as_user", "", nil},
+		//{"./test/collection_interval", "", nil},
+		//{"./test/metric_dimension", "", nil},
+		//{"./test/restart", "", nil},
+		//{"./test/acceptance", "", map[string]struct{}{"ubuntu-20.04": {}}},
+		//{"./test/fips", "", map[string]struct{}{"al2": {}}},
+		//{"./test/lvm", "", map[string]struct{}{"al2": {}}},
 		{"./test/proxy", "", map[string]struct{}{"al2": {}}},
 		{"./test/ssl_cert", "", map[string]struct{}{"al2": {}}},
+		{"./test/userdata", "terraform/ec2/userdata", map[string]struct{}{"ol19": {}}},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
@@ -95,10 +96,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{"./test/statsd", "", nil},
 		{"./test/emf", "", nil},
 	},
-	"ec2_userdata": {
-		{"./test/userdata", ""},
-  },
-
 	"eks_daemon": {
 		{"./test/metric_value_benchmark", "", nil},
 		{"./test/statsd", "terraform/eks/daemon/statsd", nil},

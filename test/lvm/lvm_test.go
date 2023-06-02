@@ -7,7 +7,6 @@ package lvm
 import (
 	"log"
 	"testing"
-	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -17,10 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
-const (
-	namespace    = "LVMTest"
-	agentRuntime = 3 * time.Minute
-)
+const namespace = "LVMTest"
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
 
