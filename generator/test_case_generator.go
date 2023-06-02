@@ -47,16 +47,16 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{"./test/nvidia_gpu", "", nil},
 	},
 	"ec2_linux": {
-		//{"./test/ca_bundle", "", nil},
-		//{"./test/cloudwatchlogs", "", nil},
-		//{"./test/metrics_number_dimension", "", nil},
+		{"./test/ca_bundle", "", nil},
+		{"./test/cloudwatchlogs", "", nil},
+		{"./test/metrics_number_dimension", "", nil},
 		{"./test/metric_value_benchmark", "", nil},
-		//{"./test/run_as_user", "", nil},
-		//{"./test/collection_interval", "", nil},
-		//{"./test/metric_dimension", "", nil},
-		//{"./test/restart", "", nil},
-		//{"./test/acceptance", "", map[string]struct{}{"ubuntu-20.04": {}}},
-		//{"./test/fips", "", map[string]struct{}{"al2": {}}},
+		{"./test/run_as_user", "", nil},
+		{"./test/collection_interval", "", nil},
+		{"./test/metric_dimension", "", nil},
+		{"./test/restart", "", nil},
+		{"./test/acceptance", "", map[string]struct{}{"ubuntu-20.04": {}}},
+		{"./test/fips", "", map[string]struct{}{"al2": {}}},
 		{"./test/lvm", "", map[string]struct{}{"al2": {}}},
 		{"./test/proxy", "", map[string]struct{}{"al2": {}}},
 		{"./test/ssl_cert", "", map[string]struct{}{"al2": {}}},
@@ -151,11 +151,8 @@ func shouldAddTest(os string, targets map[string]struct{}) bool {
 	if targets == nil {
 		return true
 	}
-	if _, ok := targets[os]; ok {
-		return true
-	}
-
-	return false
+	_, ok := targets[os]
+	return ok
 }
 
 func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
