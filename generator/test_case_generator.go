@@ -60,7 +60,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{"./test/lvm", "", map[string]struct{}{"al2": {}}},
 		{"./test/proxy", "", map[string]struct{}{"al2": {}}},
 		{"./test/ssl_cert", "", map[string]struct{}{"al2": {}}},
-		{"./test/userdata", "terraform/ec2/userdata", map[string]struct{}{"ol19": {}}},
+		{"./test/userdata", "terraform/ec2/userdata", map[string]struct{}{"ol9": {}}},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
