@@ -192,6 +192,8 @@ func shouldAddTest(row *matrixRow, targets map[string]map[string]struct{}) bool 
 		var rowVal string
 		if key == "arc" {
 			rowVal = row.Arc
+		} else if key == "os" {
+			rowVal = row.Os
 		}
 
 		if rowVal == "" {
