@@ -41,11 +41,14 @@ resource "kubernetes_config_map" "fluentbit_config" {
 
     "application-log.conf" = <<EOF
     [INPUT]
-    Name                tail
-    Tag                 application.*
-    Exclude_Path        /var/log/containers/cloudwatch-agent*, /var/log/containers/fluent-bit*, /var/log/containers/aws-node*, /var/log/containers/kube-proxy*
-    Path                /var/log/containers/*.log
-        multiline.parser    docker, cri
+        Name                tail
+        Tag                 application.*
+        Exclude_Path        /var/log/containers/cloudwatch-agent*, /var/log/containers/fluent-bit*
+        Path                /var/log/containers/*.log
+        Docker_Mode         On
+        Docker_Mode_Flush   5
+        Docker_Mode_Parser  container_firstline
+        Parser              docker
         DB                  /var/fluent-bit/state/flb_container.db
         Mem_Buf_Limit       50MB
         Skip_Long_Lines     On
@@ -58,7 +61,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
         Name                tail
         Tag                 application.*
         Path                /var/log/containers/fluent-bit*
-        multiline.parser    docker, cri
+        Parser              docker
         DB                  /var/fluent-bit/state/flb_log.db
         Mem_Buf_Limit       5MB
         Skip_Long_Lines     On
@@ -69,7 +72,10 @@ resource "kubernetes_config_map" "fluentbit_config" {
         Name                tail
         Tag                 application.*
         Path                /var/log/containers/cloudwatch-agent*
-        multiline.parser    docker, cri
+        Docker_Mode         On
+        Docker_Mode_Flush   5
+        Docker_Mode_Parser  cwagent_firstline
+        Parser              docker
         DB                  /var/fluent-bit/state/flb_cwagent.db
         Mem_Buf_Limit       5MB
         Skip_Long_Lines     On
@@ -85,18 +91,42 @@ resource "kubernetes_config_map" "fluentbit_config" {
         Merge_Log_Key       log_processed
         K8S-Logging.Parser  On
         K8S-Logging.Exclude Off
-        Labels              Off
         Annotations         Off
-        Use_Kubelet         On
-        Kubelet_Port        10250
-        Buffer_Size         0
+
+    [FILTER]
+        Name                nest
+        Match               application.*
+        Operation           lift
+        Nested_under        kubernetes
+        Add_prefix          Nested.
+
+    [FILTER]
+        Name                modify
+        Match               application.*
+        Rename              Nested.docker_id            Docker.container_id
+
+    [FILTER]
+        Name                nest
+        Match               application.*
+        Operation           nest
+        Wildcard            Nested.*
+        Nested_under        kubernetes
+        Remove_prefix       Nested.
+
+    [FILTER]
+        Name                nest
+        Match               application.*
+        Operation           nest
+        Wildcard            Docker.*
+        Nested_under        docker
+        Remove_prefix       Docker.
 
     [OUTPUT]
-        Name                cloudwatch_logs
+        Name                cloudwatch
         Match               application.*
         region              ${var.region}
         log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/application
-        log_stream_prefix   $${HOST_NAME}-
+        log_stream_name     $$(tag[4])
         auto_create_group   true
         extra_user_agent    container-insights
     EOF
@@ -110,19 +140,6 @@ resource "kubernetes_config_map" "fluentbit_config" {
         DB                  /var/fluent-bit/state/systemd.db
         Path                /var/log/journal
         Read_From_Tail      $${READ_FROM_TAIL}
-
-    [INPUT]
-        Name                tail
-        Tag                 dataplane.tail.*
-        Path                /var/log/containers/aws-node*, /var/log/containers/kube-proxy*
-        multiline.parser    docker, cri
-        DB                  /var/fluent-bit/state/flb_dataplane_tail.db
-        Mem_Buf_Limit       50MB
-        Skip_Long_Lines     On
-        Refresh_Interval    10
-        Rotate_Wait         30
-        storage.type        filesystem
-        Read_from_Head      $${READ_FROM_HEAD}
 
     [FILTER]
         Name                modify
@@ -138,20 +155,20 @@ resource "kubernetes_config_map" "fluentbit_config" {
         imds_version        v1
 
     [OUTPUT]
-        Name                cloudwatch_logs
-        Match               dataplane.*
+        Name                cloudwatch
+        Match               dataplane.systemd.*
         region              ${var.region}
         log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/dataplane
-        log_stream_prefix   $${HOST_NAME}-
+        log_stream_name     $$(tag[2]).$$(tag[3])-$$(hostname)
         auto_create_group   true
-        extra_user_agent    container-insights
+        extra_user_agent    container-insight
     EOF
     "host-log.conf" = <<EOF
     [INPUT]
         Name                tail
         Tag                 host.dmesg
         Path                /var/log/dmesg
-        Key                 message
+        Parser              syslog
         DB                  /var/fluent-bit/state/flb_dmesg.db
         Mem_Buf_Limit       5MB
         Skip_Long_Lines     On
@@ -186,19 +203,25 @@ resource "kubernetes_config_map" "fluentbit_config" {
         imds_version        v1
 
     [OUTPUT]
-        Name                cloudwatch_logs
+        Name                cloudwatch
         Match               host.*
         region              ${var.region}
         log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/host
-        log_stream_prefix   $${HOST_NAME}.
+        log_stream_name     $$(tag)-$$(host)
         auto_create_group   true
         extra_user_agent    container-insights
     EOF
     "parsers.conf" = <<EOF
     [PARSER]
+        Name                docker
+        Format              json
+        Time_Key            time
+        Time_Format         %Y-%m-%dT%H:%M:%S.%LZ
+
+    [PARSER]
         Name                syslog
         Format              regex
-        Regex               ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
+        Regex               ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$$
         Time_Key            time
         Time_Format         %b %d %H:%M:%S
 
@@ -335,8 +358,6 @@ resource "kubernetes_daemonset" "service" {
           }
         }
         termination_grace_period_seconds = 10
-        host_network = true
-        dns_policy = "ClusterFirstWithHostNet"
         volume {
           name = "fluentbitstate"
           host_path {

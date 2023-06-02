@@ -221,7 +221,10 @@ resource "kubernetes_cluster_role" "clusterrole" {
 }
 
 resource "kubernetes_cluster_role_binding" "rolebinding" {
-  depends_on = [kubernetes_namespace.namespace]
+  depends_on = [
+    kubernetes_service_account.cwagentservice,
+    kubernetes_cluster_role.clusterrole
+  ]
   metadata {
     name = "cloudwatch-agent-role-binding"
   }

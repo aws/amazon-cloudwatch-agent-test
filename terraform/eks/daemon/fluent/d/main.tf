@@ -46,7 +46,7 @@ resource "kubernetes_config_map" "fluentd_config" {
         time_format %Y-%m-%dT%H:%M:%S.%N%:z
       </parse>
     </source>
-    
+
     <source>
       @type tail
       @id in_tail_cwagent_logs
@@ -60,7 +60,7 @@ resource "kubernetes_config_map" "fluentd_config" {
         time_format %Y-%m-%dT%H:%M:%S.%NZ
       </parse>
     </source>
-    
+
     <source>
       @type tail
       @id in_tail_fluentd_logs
@@ -74,14 +74,14 @@ resource "kubernetes_config_map" "fluentd_config" {
         time_format %Y-%m-%dT%H:%M:%S.%NZ
       </parse>
     </source>
-    
+
     <label @fluentdlogs>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_fluentd
         watch false
       </filter>
-    
+
       <filter **>
         @type record_transformer
         @id filter_fluentd_stream_transformer
@@ -89,20 +89,20 @@ resource "kubernetes_config_map" "fluentd_config" {
           stream_name $${tag_parts[3]}
         </record>
       </filter>
-    
+
       <match **>
         @type relabel
         @label @NORMAL
       </match>
     </label>
-    
+
     <label @containers>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata
         watch false
       </filter>
-    
+
       <filter **>
         @type record_transformer
         @id filter_containers_stream_transformer
@@ -110,7 +110,7 @@ resource "kubernetes_config_map" "fluentd_config" {
           stream_name $${tag_parts[3]}
         </record>
       </filter>
-    
+
       <filter **>
         @type concat
         key log
@@ -119,20 +119,20 @@ resource "kubernetes_config_map" "fluentd_config" {
         flush_interval 5
         timeout_label @NORMAL
       </filter>
-    
+
       <match **>
         @type relabel
         @label @NORMAL
       </match>
     </label>
-    
+
     <label @cwagentlogs>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_cwagent
         watch false
       </filter>
-    
+
       <filter **>
         @type record_transformer
         @id filter_cwagent_stream_transformer
@@ -140,7 +140,7 @@ resource "kubernetes_config_map" "fluentd_config" {
           stream_name $${tag_parts[3]}
         </record>
       </filter>
-    
+
       <filter **>
         @type concat
         key log
@@ -149,13 +149,13 @@ resource "kubernetes_config_map" "fluentd_config" {
         flush_interval 5
         timeout_label @NORMAL
       </filter>
-    
+
       <match **>
         @type relabel
         @label @NORMAL
       </match>
     </label>
-    
+
     <label @NORMAL>
       <match **>
         @type cloudwatch_logs
@@ -193,7 +193,7 @@ resource "kubernetes_config_map" "fluentd_config" {
       read_from_head true
       tag kubelet.service
     </source>
-    
+
     <source>
       @type systemd
       @id in_systemd_kubeproxy
@@ -212,7 +212,7 @@ resource "kubernetes_config_map" "fluentd_config" {
       read_from_head true
       tag kubeproxy.service
     </source>
-    
+
     <source>
       @type systemd
       @id in_systemd_docker
@@ -231,14 +231,14 @@ resource "kubernetes_config_map" "fluentd_config" {
       read_from_head true
       tag docker.service
     </source>
-    
+
     <label @systemd>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_systemd
         watch false
       </filter>
-    
+
       <filter **>
         @type record_transformer
         @id filter_systemd_stream_transformer
@@ -246,7 +246,7 @@ resource "kubernetes_config_map" "fluentd_config" {
           stream_name $${tag}-$${record["hostname"]}
         </record>
       </filter>
-    
+
       <match **>
         @type cloudwatch_logs
         @id out_cloudwatch_logs_systemd
@@ -277,7 +277,7 @@ resource "kubernetes_config_map" "fluentd_config" {
         @type syslog
       </parse>
     </source>
-    
+
     <source>
       @type tail
       @id in_tail_secure
@@ -290,7 +290,7 @@ resource "kubernetes_config_map" "fluentd_config" {
         @type syslog
       </parse>
     </source>
-    
+
     <source>
       @type tail
       @id in_tail_messages
@@ -303,14 +303,14 @@ resource "kubernetes_config_map" "fluentd_config" {
         @type syslog
       </parse>
     </source>
-    
+
     <label @hostlogs>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_host
         watch false
       </filter>
-    
+
       <filter **>
         @type record_transformer
         @id filter_containers_stream_transformer_host
@@ -318,7 +318,7 @@ resource "kubernetes_config_map" "fluentd_config" {
           stream_name $${tag}-$${record["host"]}
         </record>
       </filter>
-    
+
       <match host.**>
         @type cloudwatch_logs
         @id out_cloudwatch_logs_host_logs
@@ -434,7 +434,7 @@ resource "kubernetes_daemonset" "service" {
           }
           env {
             name = "FLUENT_CONTAINER_TAIL_PARSER_TYPE"
-            value= "/^(?<time>.+) (?<stream>stdout|stderr) (?<logtag>[FP]) (?<log>.*)$/"
+            value= "/^(?<time>.+) (?<stream>stdout|stderr) (?<logtag>[FP]) (?<log>.*)$$/"
           }
           volume_mount {
             mount_path = "/config-volume"
@@ -443,6 +443,11 @@ resource "kubernetes_daemonset" "service" {
           volume_mount {
             mount_path = "/fluentd/etc"
             name       = "fluentdconf"
+          }
+          volume_mount {
+            mount_path = "/fluentd/etc/kubernetes.conf"
+            name       = "fluentd-config"
+            sub_path = "kubernetes.conf"
           }
           volume_mount {
             mount_path = "/var/log"
@@ -475,6 +480,16 @@ resource "kubernetes_daemonset" "service" {
           empty_dir {}
         }
         volume {
+          name = "fluentd-config"
+          config_map {
+            name = "fluentd-config"
+            items {
+              key = "kubernetes.conf"
+              path = "kubernetes.conf"
+            }
+          }
+        }
+        volume {
           name = "varlog"
           host_path {
             path = "/var/log"
@@ -505,7 +520,7 @@ resource "kubernetes_daemonset" "service" {
           }
         }
         service_account_name             = "cloudwatch-agent"
-        termination_grace_period_seconds = 60
+        termination_grace_period_seconds = 30
       }
     }
   }
