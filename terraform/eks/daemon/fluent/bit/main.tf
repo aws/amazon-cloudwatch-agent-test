@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 module "fluent_common" {
-  source = "../common"
+  source              = "../common"
   cluster_name_suffix = "fluentbit"
 }
 
@@ -21,18 +21,18 @@ resource "kubernetes_config_map" "fluentbit_config" {
   data = {
     "fluent-bit.conf" = <<EOF
     [SERVICE]
-    Flush                     5
-    Grace                     30
-    Log_Level                 info
-    Daemon                    off
-    Parsers_File              parsers.conf
-    HTTP_Server               $${HTTP_SERVER}
-    HTTP_Listen               0.0.0.0
-    HTTP_Port                 $${HTTP_PORT}
-    storage.path              /var/fluent-bit/state/flb-storage/
-    storage.sync              normal
-    storage.checksum          off
-    storage.backlog.mem_limit 5M
+        Flush                     5
+        Grace                     30
+        Log_Level                 info
+        Daemon                    off
+        Parsers_File              parsers.conf
+        HTTP_Server               $${HTTP_SERVER}
+        HTTP_Listen               0.0.0.0
+        HTTP_Port                 $${HTTP_PORT}
+        storage.path              /var/fluent-bit/state/flb-storage/
+        storage.sync              normal
+        storage.checksum          off
+        storage.backlog.mem_limit 5M
 
     @INCLUDE application-log.conf
     @INCLUDE dataplane-log.conf
@@ -130,7 +130,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
         auto_create_group   true
         extra_user_agent    container-insights
     EOF
-    "dataplane-log.conf" = <<EOF
+    "dataplane-log.conf"   = <<EOF
     [INPUT]
         Name                systemd
         Tag                 dataplane.systemd.*
@@ -163,7 +163,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
         auto_create_group   true
         extra_user_agent    container-insight
     EOF
-    "host-log.conf" = <<EOF
+    "host-log.conf"        = <<EOF
     [INPUT]
         Name                tail
         Tag                 host.dmesg
@@ -211,7 +211,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
         auto_create_group   true
         extra_user_agent    container-insights
     EOF
-    "parsers.conf" = <<EOF
+    "parsers.conf"         = <<EOF
     [PARSER]
         Name                docker
         Format              json
@@ -251,8 +251,8 @@ resource "kubernetes_daemonset" "service" {
     name      = "fluentbit-cloudwatch"
     namespace = "amazon-cloudwatch"
     labels = {
-      k8s-app = "fluentbit-cloudwatch"
-      version = "v1"
+      k8s-app                         = "fluentbit-cloudwatch"
+      version                         = "v1"
       "kubernetes.io/cluster-service" = "true"
     }
   }
@@ -265,8 +265,8 @@ resource "kubernetes_daemonset" "service" {
     template {
       metadata {
         labels = {
-          k8s-app = "fluentbit-cloudwatch"
-          version = "v1"
+          k8s-app                         = "fluentbit-cloudwatch"
+          version                         = "v1"
           "kubernetes.io/cluster-service" = "true"
         }
       }
@@ -280,32 +280,32 @@ resource "kubernetes_daemonset" "service" {
               "memory" = "200Mi"
             }
             requests = {
-              "cpu" = "500m",
+              "cpu"    = "500m",
               "memory" = "200Mi"
             }
           }
           env {
-            name = "AWS_REGION"
+            name  = "AWS_REGION"
             value = var.region
           }
           env {
-            name = "CLUSTER_NAME"
+            name  = "CLUSTER_NAME"
             value = module.fluent_common.cluster_name
           }
           env {
-            name = "HTTP_SERVER"
+            name  = "HTTP_SERVER"
             value = "On"
           }
           env {
-            name = "HTTP_PORT"
+            name  = "HTTP_PORT"
             value = "2020"
           }
           env {
-            name = "READ_FROM_HEAD"
+            name  = "READ_FROM_HEAD"
             value = "Off"
           }
           env {
-            name = "READ_FROM_TAIL"
+            name  = "READ_FROM_TAIL"
             value = "On"
           }
           env {
@@ -325,8 +325,8 @@ resource "kubernetes_daemonset" "service" {
             }
           }
           env {
-            name = "CI_VERSION"
-            value= "k8s/1.3.15"
+            name  = "CI_VERSION"
+            value = "k8s/1.3.15"
           }
           volume_mount {
             mount_path = "/var/fluent-bit/state"
@@ -335,7 +335,7 @@ resource "kubernetes_daemonset" "service" {
           volume_mount {
             mount_path = "/var/log"
             name       = "varlog"
-            read_only = true
+            read_only  = true
           }
           volume_mount {
             mount_path = "/var/lib/docker/containers"
@@ -396,17 +396,17 @@ resource "kubernetes_daemonset" "service" {
         }
         service_account_name = "cloudwatch-agent"
         toleration {
-          key = "node-role.kubernetes.io/master"
+          key      = "node-role.kubernetes.io/master"
           operator = "Exists"
-          effect = "NoSchedule"
+          effect   = "NoSchedule"
         }
         toleration {
           operator = "Exists"
-          effect = "NoExecute"
+          effect   = "NoExecute"
         }
         toleration {
           operator = "Exists"
-          effect = "NoSchedule"
+          effect   = "NoSchedule"
         }
       }
     }

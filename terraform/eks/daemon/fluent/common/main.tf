@@ -216,7 +216,7 @@ resource "kubernetes_cluster_role" "clusterrole" {
   }
   rule {
     non_resource_urls = ["/metrics"]
-    verbs = ["get"]
+    verbs             = ["get"]
   }
 }
 

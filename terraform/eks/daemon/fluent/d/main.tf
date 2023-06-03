@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 module "fluent_common" {
-  source = "../common"
+  source              = "../common"
   cluster_name_suffix = "fluentd"
 }
 
@@ -22,7 +22,7 @@ resource "kubernetes_config_map" "fluentd_config" {
     "kubernetes.conf" = <<EOF
     kubernetes.conf
     EOF
-    "fluent.conf" = <<EOF
+    "fluent.conf"     = <<EOF
     @include containers.conf
     @include systemd.conf
     @include host.conf
@@ -174,7 +174,7 @@ resource "kubernetes_config_map" "fluentd_config" {
       </match>
     </label>
   EOF
-  "systemd.conf" = <<EOF
+    "systemd.conf"    = <<EOF
     <source>
       @type systemd
       @id in_systemd_kubelet
@@ -264,7 +264,7 @@ resource "kubernetes_config_map" "fluentd_config" {
       </match>
     </label>
     EOF
-  "host.conf" = <<EOF
+    "host.conf"       = <<EOF
     <source>
       @type tail
       @id in_tail_dmesg
@@ -361,12 +361,11 @@ resource "kubernetes_daemonset" "service" {
         }
       }
       spec {
-        node_selector = {
-          "kubernetes.io/os" : "linux"
-        }
+        service_account_name             = "cloudwatch-agent"
+        termination_grace_period_seconds = 30
         init_container {
-          name = "copy-fluentd-config"
-          image = "busybox"
+          name    = "copy-fluentd-config"
+          image   = "busybox"
           command = ["sh", "-c", "cp /config-volume/..data/* /fluentd/etc"]
           volume_mount {
             mount_path = "/config-volume"
@@ -378,63 +377,37 @@ resource "kubernetes_daemonset" "service" {
           }
         }
         init_container {
-          name = "update-log-driver"
-          image = "busybox"
+          name    = "update-log-driver"
+          image   = "busybox"
           command = ["sh", "-c", ""]
         }
         container {
-          name              = "fluentd-cloudwatch"
-          image             = "fluent/fluentd-kubernetes-daemonset:v1.7.3-debian-cloudwatch-1.0"
-          image_pull_policy = "Always"
-          resources {
-            limits = {
-              "cpu" : "200m",
-              "memory" : "400Mi"
-            }
-            requests = {
-              "cpu" : "200m",
-              "memory" : "200Mi"
-            }
-          }
+          name  = "fluentd-cloudwatch"
+          image = "fluent/fluentd-kubernetes-daemonset:v1.7.3-debian-cloudwatch-1.0"
           env {
-            name = "HOST_IP"
-            value_from {
-              field_ref {
-                field_path = "status.hostIP"
-              }
-            }
-          }
-          env {
-            name = "HOST_NAME"
-            value_from {
-              field_ref {
-                field_path = "spec.nodeName"
-              }
-            }
-          }
-          env {
-            name = "K8S_NAMESPACE"
-            value_from {
-              field_ref {
-                field_path = "metadata.namespace"
-              }
-            }
-          }
-          env {
-            name = "AWS_REGION"
+            name  = "AWS_REGION"
             value = var.region
           }
           env {
-            name = "CLUSTER_NAME"
+            name  = "CLUSTER_NAME"
             value = module.fluent_common.cluster_name
           }
           env {
-            name = "CI_VERSION"
-            value= "k8s/1.3.15"
+            name  = "CI_VERSION"
+            value = "k8s/1.3.15"
           }
           env {
-            name = "FLUENT_CONTAINER_TAIL_PARSER_TYPE"
-            value= "/^(?<time>.+) (?<stream>stdout|stderr) (?<logtag>[FP]) (?<log>.*)$$/"
+            name  = "FLUENT_CONTAINER_TAIL_PARSER_TYPE"
+            value = "/^(?<time>.+) (?<stream>stdout|stderr) (?<logtag>[FP]) (?<log>.*)$$/"
+          }
+          resources {
+            limits = {
+              "memory" : "400Mi"
+            }
+            requests = {
+              "cpu" : "100m",
+              "memory" : "200Mi"
+            }
           }
           volume_mount {
             mount_path = "/config-volume"
@@ -447,7 +420,7 @@ resource "kubernetes_daemonset" "service" {
           volume_mount {
             mount_path = "/fluentd/etc/kubernetes.conf"
             name       = "fluentd-config"
-            sub_path = "kubernetes.conf"
+            sub_path   = "kubernetes.conf"
           }
           volume_mount {
             mount_path = "/var/log"
@@ -484,7 +457,7 @@ resource "kubernetes_daemonset" "service" {
           config_map {
             name = "fluentd-config"
             items {
-              key = "kubernetes.conf"
+              key  = "kubernetes.conf"
               path = "kubernetes.conf"
             }
           }
@@ -519,8 +492,6 @@ resource "kubernetes_daemonset" "service" {
             path = "/var/log/dmesg"
           }
         }
-        service_account_name             = "cloudwatch-agent"
-        termination_grace_period_seconds = 30
       }
     }
   }
