@@ -506,6 +506,10 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating EKS fluentd logs"
       cd ../../../../..
+      echo "${module.fluent_common.cluster_name}"
+      echo "${module.fluent_common.cluster_endpoint}"
+      echo "${module.fluent_common.cluster_cert}"
+      echo "${module.fluent_common.cluster_auth_token}"
       go test ${var.test_dir} -eksClusterName=${module.fluent_common.cluster_name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
   }
