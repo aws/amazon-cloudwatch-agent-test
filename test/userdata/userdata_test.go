@@ -29,8 +29,6 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-var _ test_runner.ITestRunner = (*UserdataTestRunner)(nil)
-
 func (t UserdataTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
@@ -93,6 +91,29 @@ func (t UserdataTestRunner) GetMeasuredMetrics() []string {
 	return []string{"cpu_time_active_userdata"}
 }
 
+func (t UserdataTestRunner) Run() status.TestGroupResult {
+	testName := t.GetTestName()
+	log.Printf("Running %v", testName)
+
+	log.Printf("Running test for runAgent in userdata mode")
+	testGroupResult := status.TestGroupResult{
+		Name: t.GetTestName(),
+		TestResults: []status.TestResult{
+			{
+				Name:   "Starting Agent",
+				Status: status.SUCCESSFUL,
+			},
+		},
+	}
+
+	testGroupResult = t.Validate()
+	if testGroupResult.GetStatus() != status.SUCCESSFUL {
+		log.Printf("%v test run failed", testName)
+	}
+
+	return testGroupResult
+}
+
 func (t UserdataTestRunner) RunAgent() (status.TestGroupResult, error) {
 	log.Printf("Running test for runAgent in userdata mode")
 	testGroupResult := status.TestGroupResult{
@@ -111,12 +132,11 @@ func (t UserdataTestRunner) RunAgent() (status.TestGroupResult, error) {
 func TestUserdata(t *testing.T) {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	factory := dimension.GetDimensionFactory(*env)
-	runner := test_runner.TestRunner{TestRunner: &UserdataTestRunner{
-		test_runner.BaseTestRunner{DimensionFactory: factory},
-	}}
-	result := runner.Run()
+	// userdata doesn't use Run() from base_test_runner since agent has already been started with userdata script
+	userdataRunner := &UserdataTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}
+	result := userdataRunner.Run()
 	if result.GetStatus() != status.SUCCESSFUL {
-		t.Fatal("SSL Cert test failed")
+		t.Fatal("Userdata test failed")
 		result.Print()
 	}
 }
