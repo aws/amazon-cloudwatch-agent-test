@@ -185,12 +185,7 @@ resource "kubernetes_cluster_role" "clusterrole" {
   }
   rule {
     verbs      = ["list", "watch"]
-    resources  = ["endpoints"]
-    api_groups = [""]
-  }
-  rule {
-    verbs      = ["get", "list", "watch"]
-    resources  = ["namespaces", "pods", "pods/logs", "nodes", "nodes/proxy"]
+    resources  = ["pods", "nodes", "endpoints"]
     api_groups = [""]
   }
   rule {
@@ -204,6 +199,11 @@ resource "kubernetes_cluster_role" "clusterrole" {
     api_groups = ["batch"]
   }
   rule {
+    verbs      = ["get"]
+    resources  = ["nodes/proxy"]
+    api_groups = ["get"]
+  }
+  rule {
     verbs      = ["create"]
     resources  = ["nodes/stats", "configmaps", "events"]
     api_groups = [""]
@@ -213,10 +213,6 @@ resource "kubernetes_cluster_role" "clusterrole" {
     resource_names = ["cwagent-clusterleader"]
     resources      = ["configmaps"]
     api_groups     = [""]
-  }
-  rule {
-    non_resource_urls = ["/metrics"]
-    verbs             = ["get"]
   }
 }
 
@@ -237,6 +233,180 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
     kind      = "ServiceAccount"
     name      = "cloudwatch-agent"
     namespace = "amazon-cloudwatch"
+  }
+}
+
+resource "kubernetes_config_map" "cwagentconfig" {
+  metadata {
+    name      = "cwagentconfig"
+    namespace = "amazon-cloudwatch"
+  }
+  data = {
+    "cwagentconfig.json" = <<EOF
+    {
+      "agent": {
+        "region": "${var.region}"
+      },
+      "logs": {
+        "metrics_collected": {
+          "kubernetes": {
+            "cluster_name": "${aws_eks_cluster.cluster.name}",
+            "metrics_collection_interval": 60
+          }
+        },
+        "force_flush_interval": 5
+      }
+    }
+    EOF
+  }
+}
+
+resource "kubernetes_daemonset" "agent_daemon" {
+  depends_on = [
+    kubernetes_config_map.cwagentconfig
+  ]
+  metadata {
+    name      = "cloudwatch-agent"
+    namespace = "amazon-cloudwatch"
+  }
+  spec {
+    selector {
+      match_labels = {
+        "name" : "cloudwatch-agent"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          "name" : "cloudwatch-agent"
+        }
+      }
+      spec {
+        container {
+          name  = "cloudwatch-agent"
+          image = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:1.247359.1b252618"
+          resources {
+            limits = {
+              "cpu" : "200m",
+              "memory" : "200Mi"
+            }
+            requests = {
+              "cpu" : "200m",
+              "memory" : "200Mi"
+            }
+          }
+          env {
+            name = "HOST_IP"
+            value_from {
+              field_ref {
+                field_path = "status.hostIP"
+              }
+            }
+          }
+          env {
+            name = "HOST_NAME"
+            value_from {
+              field_ref {
+                field_path = "spec.nodeName"
+              }
+            }
+          }
+          env {
+            name = "K8S_NAMESPACE"
+            value_from {
+              field_ref {
+                field_path = "metadata.namespace"
+              }
+            }
+          }
+          env {
+            name  = "CI_VERSION"
+            value = "k8s/1.3.15"
+          }
+          volume_mount {
+            mount_path = "/etc/cwagentconfig"
+            name       = "cwagentconfig"
+          }
+          volume_mount {
+            mount_path = "/rootfs"
+            name       = "rootfs"
+            read_only  = true
+          }
+          volume_mount {
+            mount_path = "/var/run/docker.sock"
+            name       = "dockersock"
+            read_only  = true
+          }
+          volume_mount {
+            mount_path = "/var/lib/docker"
+            name       = "varlibdocker"
+            read_only  = true
+          }
+          volume_mount {
+            mount_path = "/run/containerd/containerd.sock"
+            name       = "containerdsock"
+            read_only  = true
+          }
+          volume_mount {
+            mount_path = "/sys"
+            name       = "sys"
+            read_only  = true
+          }
+          volume_mount {
+            mount_path = "/dev/disk"
+            name       = "devdisk"
+            read_only  = true
+          }
+        }
+        node_selector = {
+          "kubernetes.io/os" : "linux"
+        }
+        volume {
+          name = "cwagentconfig"
+          config_map {
+            name = "cwagentconfig"
+          }
+        }
+        volume {
+          name = "rootfs"
+          host_path {
+            path = "/"
+          }
+        }
+        volume {
+          name = "dockersock"
+          host_path {
+            path = "/var/run/docker.sock"
+          }
+        }
+        volume {
+          name = "varlibdocker"
+          host_path {
+            path = "/var/lib/docker"
+          }
+        }
+        volume {
+          name = "containerdsock"
+          host_path {
+            path = "/run/containerd/containerd.sock"
+          }
+        }
+        volume {
+          name = "sys"
+          host_path {
+            path = "/sys"
+          }
+        }
+        volume {
+          name = "devdisk"
+          host_path {
+            path = "/dev/disk/"
+          }
+        }
+        termination_grace_period_seconds = 60
+        service_account_name             = "cloudwatch-agent"
+      }
+    }
   }
 }
 

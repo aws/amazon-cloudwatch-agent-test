@@ -6,16 +6,76 @@ module "fluent_common" {
   cluster_name_suffix = "fluentbit"
 }
 
+resource "kubernetes_config_map" "cluster_info" {
+  depends_on = [
+    module.fluent_common
+  ]
+  metadata {
+    name      = "fluent-bit-cluster-info"
+    namespace = "amazon-cloudwatch"
+  }
+  data = {
+    "cluster.name" = module.fluent_common.cluster_name
+    "logs.region"  = var.region
+    "http.server"  = "On"
+    "http.port"    = "2020"
+    "read.head"    = "Off"
+    "read.tail"    = "On"
+  }
+}
+
+resource "kubernetes_service_account" "fluentbit_service" {
+  metadata {
+    name      = "fluent-bit"
+    namespace = "amazon-cloudwatch"
+  }
+}
+
+resource "kubernetes_cluster_role" "fluentbit_clusterrole" {
+  metadata {
+    name = "fluent-bit-role"
+  }
+  rule {
+    non_resource_urls = ["/metrics"]
+    verbs             = ["get"]
+  }
+  rule {
+    verbs      = ["get", "list", "watch"]
+    resources  = ["namespaces", "pods", "pods/logs", "nodes", "nodes/proxy"]
+    api_groups = [""]
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "fluentbit_rolebinding" {
+  depends_on = [
+    kubernetes_service_account.fluentbit_service,
+    kubernetes_cluster_role.fluentbit_clusterrole,
+  ]
+  metadata {
+    name = "fluent-bit-role-binding"
+  }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "fluent-bit-role"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = "fluent-bit"
+    namespace = "amazon-cloudwatch"
+  }
+}
+
 # TODO could use template file
 resource "kubernetes_config_map" "fluentbit_config" {
   depends_on = [
     module.fluent_common
   ]
   metadata {
-    name      = "fluentbit-config"
+    name      = "fluent-bit-config"
     namespace = "amazon-cloudwatch"
     labels = {
-      k8s-app = "fluentbit-cloudwatch"
+      k8s-app = "fluent-bit"
     }
   }
   data = {
@@ -242,16 +302,17 @@ resource "kubernetes_config_map" "fluentbit_config" {
   }
 }
 
-resource "kubernetes_daemonset" "service" {
+resource "kubernetes_daemonset" "fluentbit-daemon" {
   depends_on = [
     module.fluent_common,
-    kubernetes_config_map.fluentbit_config,
+    kubernetes_cluster_role_binding.fluentbit_rolebinding,
+    kubernetes_config_map.fluentbit_config
   ]
   metadata {
-    name      = "fluentbit-cloudwatch"
+    name      = "fluent-bit"
     namespace = "amazon-cloudwatch"
     labels = {
-      k8s-app                         = "fluentbit-cloudwatch"
+      k8s-app                         = "fluent-bit"
       version                         = "v1"
       "kubernetes.io/cluster-service" = "true"
     }
@@ -259,54 +320,75 @@ resource "kubernetes_daemonset" "service" {
   spec {
     selector {
       match_labels = {
-        k8s-app = "fluentbit-cloudwatch"
+        k8s-app = "fluent-bit"
       }
     }
     template {
       metadata {
         labels = {
-          k8s-app                         = "fluentbit-cloudwatch"
+          k8s-app                         = "fluent-bit"
           version                         = "v1"
           "kubernetes.io/cluster-service" = "true"
         }
       }
       spec {
         container {
-          name              = "fluentbit-cloudwatch"
+          name              = "fluent-bit"
           image             = "public.ecr.aws/aws-observability/aws-for-fluent-bit:stable"
           image_pull_policy = "Always"
-          resources {
-            limits = {
-              "memory" = "200Mi"
+          env {
+            name = "AWS_REGION"
+            value_from {
+              config_map_key_ref {
+                name = "fluent-bit-cluster-info"
+                key  = "logs.region"
+              }
             }
-            requests = {
-              "cpu"    = "500m",
-              "memory" = "200Mi"
+          }
+          env {
+            name = "CLUSTER_NAME"
+            value_from {
+              config_map_key_ref {
+                name = "fluent-bit-cluster-info"
+                key  = "cluster.name"
+              }
             }
           }
           env {
-            name  = "AWS_REGION"
-            value = var.region
+            name = "HTTP_SERVER"
+            value_from {
+              config_map_key_ref {
+                name = "fluent-bit-cluster-info"
+                key  = "http.server"
+              }
+            }
           }
           env {
-            name  = "CLUSTER_NAME"
-            value = module.fluent_common.cluster_name
+            name = "HTTP_PORT"
+            value_from {
+              config_map_key_ref {
+                name = "fluent-bit-cluster-info"
+                key  = "http.port"
+              }
+            }
           }
           env {
-            name  = "HTTP_SERVER"
-            value = "On"
+            name = "READ_FROM_HEAD"
+            value_from {
+              config_map_key_ref {
+                name = "fluent-bit-cluster-info"
+                key  = "read.head"
+              }
+            }
           }
           env {
-            name  = "HTTP_PORT"
-            value = "2020"
-          }
-          env {
-            name  = "READ_FROM_HEAD"
-            value = "Off"
-          }
-          env {
-            name  = "READ_FROM_TAIL"
-            value = "On"
+            name = "READ_FROM_TAIL"
+            value_from {
+              config_map_key_ref {
+                name = "fluent-bit-cluster-info"
+                key  = "read.tail"
+              }
+            }
           }
           env {
             name = "HOST_NAME"
@@ -327,6 +409,15 @@ resource "kubernetes_daemonset" "service" {
           env {
             name  = "CI_VERSION"
             value = "k8s/1.3.15"
+          }
+          resources {
+            limits = {
+              "memory" = "200Mi"
+            }
+            requests = {
+              "cpu"    = "500m",
+              "memory" = "100Mi"
+            }
           }
           volume_mount {
             mount_path = "/var/fluent-bit/state"
@@ -358,6 +449,8 @@ resource "kubernetes_daemonset" "service" {
           }
         }
         termination_grace_period_seconds = 10
+        host_network                     = true
+        dns_policy                       = "ClusterFirstWithHostNet"
         volume {
           name = "fluentbitstate"
           host_path {
@@ -394,7 +487,7 @@ resource "kubernetes_daemonset" "service" {
             path = "/var/log/dmesg"
           }
         }
-        service_account_name = "cloudwatch-agent"
+        service_account_name = "fluent-bit"
         toleration {
           key      = "node-role.kubernetes.io/master"
           operator = "Exists"
@@ -416,7 +509,7 @@ resource "kubernetes_daemonset" "service" {
 resource "null_resource" "validator" {
   depends_on = [
     module.fluent_common,
-    kubernetes_daemonset.service,
+    kubernetes_daemonset.fluentbit-daemon,
   ]
   provisioner "local-exec" {
     command = <<-EOT

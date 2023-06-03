@@ -6,7 +6,58 @@ module "fluent_common" {
   cluster_name_suffix = "fluentd"
 }
 
-# TODO could use template file
+resource "kubernetes_config_map" "cluster_info" {
+  depends_on = [
+    module.fluent_common
+  ]
+  metadata {
+    name      = "cluster-info"
+    namespace = "amazon-cloudwatch"
+  }
+  data = {
+    "cluster.name" = module.fluent_common.cluster_name
+    "logs.region"  = var.region
+  }
+}
+
+resource "kubernetes_service_account" "fluentd_service" {
+  metadata {
+    name      = "fluentd"
+    namespace = "amazon-cloudwatch"
+  }
+}
+
+resource "kubernetes_cluster_role" "fluentd_clusterrole" {
+  metadata {
+    name = "fluentd-role"
+  }
+  rule {
+    verbs      = ["get", "list", "watch"]
+    resources  = ["namespaces", "pods", "pods/logs"]
+    api_groups = [""]
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "fluentd_rolebinding" {
+  depends_on = [
+    kubernetes_service_account.fluentd_service,
+    kubernetes_cluster_role.fluentd_clusterrole
+  ]
+  metadata {
+    name = "fluentd-role-binding"
+  }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "fluentd-role"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = "fluentd"
+    namespace = "amazon-cloudwatch"
+  }
+}
+
 resource "kubernetes_config_map" "fluentd_config" {
   depends_on = [
     module.fluent_common
@@ -339,9 +390,10 @@ resource "kubernetes_config_map" "fluentd_config" {
   }
 }
 
-resource "kubernetes_daemonset" "service" {
+resource "kubernetes_daemonset" "fluentd_daemon" {
   depends_on = [
     module.fluent_common,
+    kubernetes_service_account.fluentd_service,
     kubernetes_config_map.fluentd_config,
   ]
   metadata {
@@ -361,7 +413,7 @@ resource "kubernetes_daemonset" "service" {
         }
       }
       spec {
-        service_account_name             = "cloudwatch-agent"
+        service_account_name             = "fluentd"
         termination_grace_period_seconds = 30
         init_container {
           name    = "copy-fluentd-config"
@@ -385,12 +437,22 @@ resource "kubernetes_daemonset" "service" {
           name  = "fluentd-cloudwatch"
           image = "fluent/fluentd-kubernetes-daemonset:v1.7.3-debian-cloudwatch-1.0"
           env {
-            name  = "AWS_REGION"
-            value = var.region
+            name = "AWS_REGION"
+            value_from {
+              config_map_key_ref {
+                name = "cluster-info"
+                key  = "logs.region"
+              }
+            }
           }
           env {
-            name  = "CLUSTER_NAME"
-            value = module.fluent_common.cluster_name
+            name = "CLUSTER_NAME"
+            value_from {
+              config_map_key_ref {
+                name = "cluster-info"
+                key  = "cluster.name"
+              }
+            }
           }
           env {
             name  = "CI_VERSION"
@@ -500,7 +562,7 @@ resource "kubernetes_daemonset" "service" {
 resource "null_resource" "validator" {
   depends_on = [
     module.fluent_common,
-    kubernetes_daemonset.service,
+    kubernetes_daemonset.fluentd_daemon,
   ]
   provisioner "local-exec" {
     command = <<-EOT

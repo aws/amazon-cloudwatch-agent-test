@@ -23,11 +23,11 @@ const (
 )
 
 var (
-	logGroups           = []string{"dataplane", "host", "application"}
-	hostLogFields       = []string{"host", "ident", "message"}
-	journalLogFields    = []string{"message", "hostname", "systemd_unit"}
-	kubernetesLogFields = []string{"container_name", "namespace_name", "pod_name", "container_image", "pod_id", "host"}
-	containerLogFields  = []string{"log", "stream"}
+	logGroups                      = []string{"dataplane", "host", "application"}
+	hostLogFields                  = []string{"host", "ident", "message"}
+	dataplaneLogFields             = []string{"message", "hostname", "systemd_unit"}
+	applicationKubernetesLogFields = []string{"container_name", "namespace_name", "pod_name", "container_image", "pod_id", "host"}
+	applicationLogFields           = []string{"log", "stream"}
 )
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
@@ -74,5 +74,5 @@ func getLogStreams(logGroupName string) []types.LogStream {
 }
 
 func isLogValid() bool {
-	return len(hostLogFields) == len(journalLogFields) || len(kubernetesLogFields) == len(containerLogFields)
+	return true
 }
