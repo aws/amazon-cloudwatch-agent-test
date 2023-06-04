@@ -186,7 +186,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
         Match               application.*
         region              ${var.region}
         log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/application
-        log_stream_name     $$(tag[4])
+        log_stream_name     $(tag[4])
         auto_create_group   true
         extra_user_agent    container-insights
     EOF
@@ -219,7 +219,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
         Match               dataplane.systemd.*
         region              ${var.region}
         log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/dataplane
-        log_stream_name     $$(tag[2]).$$(tag[3])-$$(hostname)
+        log_stream_name     $(tag[2]).$(tag[3])-$(hostname)
         auto_create_group   true
         extra_user_agent    container-insight
     EOF
@@ -267,7 +267,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
         Match               host.*
         region              ${var.region}
         log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/host
-        log_stream_name     $$(tag)-$$(host)
+        log_stream_name     $(tag)-$(host)
         auto_create_group   true
         extra_user_agent    container-insights
     EOF
@@ -281,7 +281,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
     [PARSER]
         Name                syslog
         Format              regex
-        Regex               ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$$
+        Regex               ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
         Time_Key            time
         Time_Format         %b %d %H:%M:%S
 
@@ -472,7 +472,7 @@ resource "kubernetes_daemonset" "fluentbit-daemon" {
         volume {
           name = "fluent-bit-config"
           config_map {
-            name = "fluentbit-config"
+            name = "fluent-bit-config"
           }
         }
         volume {

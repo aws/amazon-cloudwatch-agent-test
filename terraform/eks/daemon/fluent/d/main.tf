@@ -460,7 +460,7 @@ resource "kubernetes_daemonset" "fluentd_daemon" {
           }
           env {
             name  = "FLUENT_CONTAINER_TAIL_PARSER_TYPE"
-            value = "/^(?<time>.+) (?<stream>stdout|stderr) (?<logtag>[FP]) (?<log>.*)$$/"
+            value = "/^(?<time>.+) (?<stream>stdout|stderr) (?<logtag>[FP]) (?<log>.*)$/"
           }
           resources {
             limits = {
@@ -540,12 +540,6 @@ resource "kubernetes_daemonset" "fluentd_daemon" {
           name = "runlogjournal"
           host_path {
             path = "/run/log/journal"
-          }
-        }
-        volume {
-          name = "varlibdocker"
-          host_path {
-            path = "/var/lib/docker"
           }
         }
         volume {
