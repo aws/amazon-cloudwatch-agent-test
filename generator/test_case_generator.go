@@ -36,21 +36,24 @@ type testConfig struct {
 	// e.g. statsd can have a multiple terraform module sets for difference test scenarios (ecs, eks or ec2)
 	testDir      string
 	terraformDir string
+	// define target matrix field as set(s)
+	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
+	targets map[string]map[string]struct{}
 }
 
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
-		{"./test/nvidia_gpu", ""},
+		{testDir: "./test/nvidia_gpu"},
 	},
 	"ec2_linux": {
-		{"./test/ca_bundle", ""},
-		{"./test/cloudwatchlogs", ""},
-		{"./test/metrics_number_dimension", ""},
-		{"./test/metric_value_benchmark", ""},
-		{"./test/run_as_user", ""},
-		{"./test/collection_interval", ""},
-		{"./test/metric_dimension", ""},
+		{testDir: "./test/ca_bundle"},
+		{testDir: "./test/cloudwatchlogs"},
+		{testDir: "./test/metrics_number_dimension"},
+		{testDir: "./test/metric_value_benchmark"},
+		{testDir: "./test/run_as_user"},
+		{testDir: "./test/collection_interval"},
+		{testDir: "./test/metric_dimension"},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
@@ -58,49 +61,61 @@ var testTypeToTestConfig = map[string][]testConfig{
 		and Mac under the hood share similar plugins with Linux
 	*/
 	"ec2_mac": {
-		{"../../../test/feature/mac", ""},
+		{testDir: "../../../test/feature/mac"},
 	},
 	"ec2_windows": {
-		{"../../../test/feature/windows", ""},
+		{testDir: "../../../test/feature/windows"},
 	},
 	"ec2_performance": {
-		{"../../test/performance/emf", ""},
-		{"../../test/performance/logs", ""},
-		{"../../test/performance/system", ""},
-		{"../../test/performance/statsd", ""},
-		{"../../test/performance/collectd", ""},
+		{testDir: "../../test/performance/emf"},
+		{testDir: "../../test/performance/logs"},
+		{testDir: "../../test/performance/system"},
+		{testDir: "../../test/performance/statsd"},
+		{testDir: "../../test/performance/collectd"},
 	},
 	"ec2_stress": {
-		{"../../test/stress/emf", ""},
-		{"../../test/stress/logs", ""},
-		{"../../test/stress/system", ""},
-		{"../../test/stress/statsd", ""},
-		{"../../test/stress/collectd", ""},
+		{testDir: "../../test/stress/emf"},
+		{testDir: "../../test/stress/logs"},
+		{testDir: "../../test/stress/system"},
+		{testDir: "../../test/stress/statsd"},
+		{testDir: "../../test/stress/collectd"},
 	},
 	"ecs_fargate": {
-		{"./test/ecs/ecs_metadata", ""},
+		{testDir: "./test/ecs/ecs_metadata"},
 	},
 	"ecs_ec2_daemon": {
-		{"./test/metric_value_benchmark", ""},
-		{"./test/statsd", ""},
-		{"./test/emf", ""},
+		{testDir: "./test/metric_value_benchmark"},
+		{testDir: "./test/statsd"},
+		{testDir: "./test/emf"},
 	},
 	"ec2_acceptance": {
-		{"./test/acceptance", ""},
+		{testDir: "./test/acceptance"},
 	},
 	"ec2_userdata": {
 		{"./test/userdata", ""},
   },
 
 	"eks_daemon": {
-		{"./test/metric_value_benchmark", ""},
-		{"./test/statsd", "terraform/eks/daemon/statsd"},
-		{"./test/emf", "terraform/eks/daemon/emf"},
-		{"./test/fluent", "terraform/eks/daemon/fluent/d"},
-		{"./test/fluent", "terraform/eks/daemon/fluent/bit"},
+		{
+			testDir: "./test/metric_value_benchmark",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/statsd", terraformDir: "terraform/eks/daemon/statsd",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/emf", terraformDir: "terraform/eks/daemon/emf",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/d",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
 	},
 	"eks_deployment": {
-		{"./test/metric_value_benchmark", ""},
+		{testDir: "./test/metric_value_benchmark"},
 	},
 }
 
@@ -136,11 +151,35 @@ func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
 			if err != nil {
 				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
 			}
-			testMatrixComplete = append(testMatrixComplete, row)
+
+			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
+				testMatrixComplete = append(testMatrixComplete, row)
+			}
 		}
 	}
 	return testMatrixComplete
 }
+
+// not so robust way to determine a matrix entry should be included to complete test matrix, but it serves the purpose
+// struct (matrixRow) field should be added as elif to support more. could use reflection with some tradeoffs
+func shouldAddTest(row *matrixRow, targets map[string]map[string]struct{}) bool {
+	for key, set := range targets {
+		var rowVal string
+		if key == "arc" {
+			rowVal = row.Arc
+		}
+
+		if rowVal == "" {
+			return true
+		}
+		_, ok := set[rowVal]
+		if !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
 	bytes, err := json.MarshalIndent(testMatrix, "", " ")
 	if err != nil {
