@@ -3,6 +3,8 @@
 
 module "fluent_common" {
   source = "../common"
+  ami_type = var.ami_type
+  instance_type = var.instance_type
 }
 
 resource "kubernetes_config_map" "cluster_info" {

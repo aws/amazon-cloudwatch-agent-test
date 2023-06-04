@@ -17,10 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
-const (
-	namespace      = "Fluent"
-	logStreamRetry = 20
-)
+const logStreamRetry = 20
 
 // fluent log group with expected log message fields
 var logGroupToKey = map[string][][]string{
@@ -103,8 +100,4 @@ func getLogStreams(logGroupName string) []types.LogStream {
 	}
 
 	return logStreams
-}
-
-func isLogValid() bool {
-	return true
 }

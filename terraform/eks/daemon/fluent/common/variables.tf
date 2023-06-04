@@ -25,3 +25,14 @@ variable "k8s_version" {
   type    = string
   default = "1.24"
 }
+
+// ami_type and instance_type can be used to test ARM node group
+variable "ami_type" {
+  type    = string
+  default = "AL2_x86_64"
+}
+
+variable "instance_type" {
+  type    = string
+  default = "t3a.medium"
+}

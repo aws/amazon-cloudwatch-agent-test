@@ -47,10 +47,10 @@ resource "aws_eks_node_group" "node_group" {
     min_size     = 1
   }
 
-  ami_type       = "AL2_x86_64"
+  ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
-  instance_types = ["t3.medium"]
+  instance_types = [var.instance_type]
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
