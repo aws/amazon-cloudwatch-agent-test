@@ -7,6 +7,7 @@ package fluent
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,16 +20,21 @@ import (
 const (
 	namespace      = "Fluent"
 	logStreamRetry = 20
-	logEventCount  = 20
 )
 
-var (
-	logGroups                      = []string{"dataplane", "host", "application"}
-	hostLogFields                  = []string{"host", "ident", "message"}
-	dataplaneLogFields             = []string{"message", "hostname", "systemd_unit"}
-	applicationKubernetesLogFields = []string{"container_name", "namespace_name", "pod_name", "container_image", "pod_id", "host"}
-	applicationLogFields           = []string{"log", "stream"}
-)
+// fluent log group with expected log message fields
+var logGroupToKey = map[string][][]string{
+	"dataplane": {
+		{"dataplane", "host", "application"},
+	},
+	"host": {
+		{"host", "ident", "message"},
+	},
+	"application": {
+		{"container_name", "namespace_name", "pod_name", "container_image", "pod_id", "host"},
+		{"log", "stream"},
+	},
+}
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
 
@@ -40,20 +46,44 @@ func TestFluentLogs(t *testing.T) {
 	t.Log("starting EKS fluent log validation...")
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 
-	var logGroupExist bool
-	var logGroupName string
-	for _, logGroup := range logGroups {
-		logGroupName = fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, logGroup)
-		logGroupExist = awsservice.IsLogGroupExists(logGroupName)
-		if !logGroupExist {
-			t.Fatalf("fluent log group doesn't exsit: %s", logGroupName)
+	now := time.Now()
+	for group, filedsArr := range logGroupToKey {
+		group := fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, group)
+		if !awsservice.IsLogGroupExists(group) {
+			t.Fatalf("fluent log group doesn't exsit: %s", group)
 		}
 
-		logStreams := getLogStreams(logGroupName)
-		if len(logStreams) < 1 {
-			t.Fatalf("fluent log streams are empty for log group: %s", logGroupName)
+		streams := getLogStreams(group)
+		if len(streams) < 1 {
+			t.Fatalf("fluent log streams are empty for log group: %s", group)
 		}
 
+		ok, err := awsservice.ValidateLogs(group, *(streams[0].LogStreamName), nil, &now, func(logs []string) bool {
+			if len(logs) < 1 {
+				return false
+			}
+
+			// only 1 log message gets validate
+			// log message must include expected fields, and there could be more than 1 set of expected fields  per log group
+			var found = false
+			for _, fields := range filedsArr {
+				match := 0
+				for _, field := range fields {
+					if strings.Contains(logs[0], "\""+field+"\"") {
+						match += 1
+					}
+				}
+				if match == len(fields) {
+					found = true
+					break
+				}
+			}
+			return found
+		})
+
+		if err != nil || !ok {
+			t.Fatalf("fluent log entry doesn't include expected message fields for logGroup: %s", group)
+		}
 	}
 
 	t.Log("finishing EKS fluent log validation...")
