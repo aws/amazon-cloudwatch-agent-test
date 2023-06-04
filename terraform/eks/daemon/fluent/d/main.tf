@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 module "fluent_common" {
-  source              = "../common"
-  cluster_name_suffix = "fluentd"
+  source = "../common"
 }
 
 resource "kubernetes_config_map" "cluster_info" {
