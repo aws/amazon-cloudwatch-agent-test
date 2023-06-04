@@ -202,7 +202,7 @@ resource "kubernetes_config_map" "fluentbit_config" {
     Match               dataplane.*
     region              ${var.region}
     log_group_name      /aws/containerinsights/${module.fluent_common.cluster_name}/application
-    log_stream_prefix   ${HOST_NAME}-
+    log_stream_prefix   $${HOST_NAME}-
     auto_create_group   true
     extra_user_agent    container-insights
 
