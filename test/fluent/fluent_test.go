@@ -26,6 +26,8 @@ const (
 var logGroupToKey = map[string][][]string{
 	"dataplane": {
 		{"dataplane", "host", "application"},
+		{"message", "hostname", "systemd_unit"},
+		{"log", "stream"},
 	},
 	"host": {
 		{"host", "ident", "message"},
