@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -131,6 +132,8 @@ func killExisting(name string) error {
 
 // processExists will search the command line of every process and return true if the substring is found.
 func processExists(name string) bool {
+	// Allow 1 second for an async process to begin.
+	time.Sleep(time.Second)
 	procs, err := process.Processes()
 	if err != nil {
 		return false
