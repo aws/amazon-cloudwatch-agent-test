@@ -92,9 +92,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/acceptance"},
 	},
 	"ec2_userdata": {
-		{"./test/userdata", ""},
-  },
-
+		{testDir: "./test/userdata"},
+	},
 	"eks_daemon": {
 		{
 			testDir: "./test/metric_value_benchmark",
