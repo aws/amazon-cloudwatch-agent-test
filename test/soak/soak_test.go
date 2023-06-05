@@ -9,10 +9,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/stretchr/testify/require"
 )
+
+var envMetaDataStrings = &(environment.MetaDataStrings{})
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+}
 
 type testConfig struct {
 	logFileCount      int
