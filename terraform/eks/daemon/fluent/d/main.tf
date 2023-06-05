@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 module "fluent_common" {
-  source = "../common"
-  ami_type = var.ami_type
+  source        = "../common"
+  ami_type      = var.ami_type
   instance_type = var.instance_type
 }
 
