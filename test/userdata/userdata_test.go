@@ -114,21 +114,6 @@ func (t UserdataTestRunner) Run() status.TestGroupResult {
 	return testGroupResult
 }
 
-func (t UserdataTestRunner) RunAgent() (status.TestGroupResult, error) {
-	log.Printf("Running test for runAgent in userdata mode")
-	testGroupResult := status.TestGroupResult{
-		Name: t.GetTestName(),
-		TestResults: []status.TestResult{
-			{
-				Name:   "Starting Agent",
-				Status: status.SUCCESSFUL,
-			},
-		},
-	}
-
-	return testGroupResult, nil
-}
-
 func TestUserdata(t *testing.T) {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	factory := dimension.GetDimensionFactory(*env)
