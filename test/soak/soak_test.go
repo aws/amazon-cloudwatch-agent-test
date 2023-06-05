@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -52,8 +51,6 @@ func TestSoakHigh(t *testing.T) {
 	case "windows":
 		runTest(t, "resources/soak_high_windows.json", tc)
 	}
-
-	time.Sleep(time.Hour)
 }
 
 func runTest(t *testing.T, configPath string, tc testConfig) {
@@ -74,7 +71,11 @@ func startLogGen(fileNum int, eventsPerSecond int, eventSize int) error {
 	// Assume PWD is the .../test/soak/ directory.
 	cmd := fmt.Sprintf("go run ../../cmd/log-generator -fileNum=%d -eventsPerSecond=%d -eventSize=%d",
 		fileNum, eventsPerSecond, eventSize)
-	return common.RunAyncCommand(cmd)
+	err = common.RunAyncCommand(cmd)
+	if err == nil && processExists("log-generator") {
+		err = fmt.Errorf("process does not exist")
+	}
+	return err
 }
 
 // startEMFGen starts a long running process that writes EMF events to log files.
@@ -85,7 +86,11 @@ func startEMFGen(fileNum int, eventsPerSecond int) error {
 	}
 	cmd := fmt.Sprintf("go run ../../cmd/emf-generator -fileNum=%d -eventsPerSecond=%d",
 		fileNum, eventsPerSecond)
-	return common.RunAyncCommand(cmd)
+	err = common.RunAyncCommand(cmd)
+	if err == nil && processExists("emf-generator") {
+		err = fmt.Errorf("process does not exist")
+	}
+	return err
 }
 
 // startStatsd starts a long running process that sends statsd metrics to a port.
@@ -96,7 +101,11 @@ func startStatsd(clientNum int, tps int, metricNum int) error {
 	}
 	cmd := fmt.Sprintf("go run ../../cmd/statsd-generator -clientNum=%d -tps=%d -metricNum=%d",
 		clientNum, tps, metricNum)
-	return common.RunAyncCommand(cmd)
+	err = common.RunAyncCommand(cmd)
+	if err == nil && processExists("statsd-generator") {
+		err = fmt.Errorf("process does not exist")
+	}
+	return err
 }
 
 // killExisting will search the command line of every process and kill any that match.
@@ -118,4 +127,21 @@ func killExisting(name string) error {
 		}
 	}
 	return nil
+}
+
+// processExists will search the command line of every process and return true if the substring is found.
+func processExists(name string) bool {
+	procs, err := process.Processes()
+	if err != nil {
+		return false
+	}
+	for _, p := range procs {
+		c, _ := p.Cmdline()
+		if strings.Contains(c, name) {
+			n, _ := p.Name()
+			log.Printf("found existing process, %v, %v", c, n)
+			return true
+		}
+	}
+	return false
 }
