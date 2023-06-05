@@ -72,7 +72,7 @@ func startLogGen(fileNum int, eventsPerSecond int, eventSize int) error {
 	cmd := fmt.Sprintf("go run ../../cmd/log-generator -fileNum=%d -eventsPerSecond=%d -eventSize=%d",
 		fileNum, eventsPerSecond, eventSize)
 	err = common.RunAyncCommand(cmd)
-	if err == nil && processExists("log-generator") {
+	if err == nil && !processExists("log-generator") {
 		err = fmt.Errorf("process does not exist")
 	}
 	return err
@@ -87,7 +87,7 @@ func startEMFGen(fileNum int, eventsPerSecond int) error {
 	cmd := fmt.Sprintf("go run ../../cmd/emf-generator -fileNum=%d -eventsPerSecond=%d",
 		fileNum, eventsPerSecond)
 	err = common.RunAyncCommand(cmd)
-	if err == nil && processExists("emf-generator") {
+	if err == nil && !processExists("emf-generator") {
 		err = fmt.Errorf("process does not exist")
 	}
 	return err
@@ -102,7 +102,7 @@ func startStatsd(clientNum int, tps int, metricNum int) error {
 	cmd := fmt.Sprintf("go run ../../cmd/statsd-generator -clientNum=%d -tps=%d -metricNum=%d",
 		clientNum, tps, metricNum)
 	err = common.RunAyncCommand(cmd)
-	if err == nil && processExists("statsd-generator") {
+	if err == nil && !processExists("statsd-generator") {
 		err = fmt.Errorf("process does not exist")
 	}
 	return err
