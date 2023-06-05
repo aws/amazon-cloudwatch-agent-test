@@ -21,7 +21,7 @@ var (
 	eventsPerSecond  = flag.Int("eventsPerSecond", 65, "Identify the structuredLogs event count per second per file.")
 	structuredLogDir = flag.String("path", "", "Identify the directory where the structured log files will be generated.")
 	filePrefix       = flag.String("filePrefix", "structuredLogFile", "Identify the structured log file prefix")
-	runTime   = flag.Duration("runTime", 48*time.Hour, "Run time duration.")
+	runTime          = flag.Duration("runTime", 48*time.Hour, "Run time duration.")
 )
 
 func main() {
