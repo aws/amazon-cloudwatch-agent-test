@@ -10,13 +10,51 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"runtime"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"go.uber.org/multierr"
 )
 
 const logLine = "# %d - This is a log line. \n"
+
+func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval time.Duration, logLinesPerMinute int, validationLog []models.LogValidation) error {
+	var multiErr error
+	if err := StartLogWrite(configFilePath, duration, sendingInterval, logLinesPerMinute); err != nil {
+		multiErr = multierr.Append(multiErr, err)
+	}
+	if err := GenerateWindowsEvents(validationLog); err != nil {
+		multiErr = multierr.Append(multiErr, err)
+	}
+	return multiErr
+}
+
+func GenerateWindowsEvents(validationLog []models.LogValidation) error {
+	var multiErr error
+	for _, vLog := range validationLog {
+		if vLog.LogSource == "WindowsEvents" && vLog.LogLevel != "" {
+			err := CreateWindowsEvent(vLog.LogStream, vLog.LogLevel, vLog.LogValue)
+			if err != nil {
+				multiErr = multierr.Append(multiErr, err)
+			}
+		}
+	}
+	return multiErr
+}
+
+func CreateWindowsEvent(eventLogName string, eventLogLevel string, msg string) error {
+	out, err := exec.Command("eventcreate", "/ID", "1", "/L", eventLogName, "/T", eventLogLevel, "/SO", "MYEVENTSOURCE"+eventLogName, "/D", msg).Output()
+
+	if err != nil {
+		log.Printf("Windows event creation failed: %v; the output is: %s", err, string(out))
+		return err
+	}
+
+	log.Printf("Windows Event is successfully created for logname: %s, loglevel: %s, logmsg: %s", eventLogName, eventLogLevel, msg)
+	return nil
+}
 
 // StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 // the config provided

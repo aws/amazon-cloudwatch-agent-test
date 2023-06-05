@@ -83,7 +83,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 	}
 
 	for _, log := range validationLog {
-		err := s.ValidateLogs(log.LogStream, log.LogValue, log.LogLines, startTime, endTime)
+		err := s.ValidateLogs(log.LogStream, log.LogValue, log.LogLevel, log.LogSource, log.LogLines, startTime, endTime)
 		if err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
@@ -105,7 +105,7 @@ func (s *BasicValidator) Cleanup() error {
 	return nil
 }
 
-func (s *BasicValidator) ValidateLogs(logStream, logLine string, numberOfLogLine int, startTime, endTime time.Time) error {
+func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource string, numberOfLogLine int, startTime, endTime time.Time) error {
 	var (
 		logGroup = awsservice.GetInstanceId()
 	)
@@ -116,8 +116,15 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine string, numberOfLogLine
 		}
 		actualNumberOfLogLines := 0
 		for _, l := range logs {
-			if strings.Contains(l, logLine) {
-				actualNumberOfLogLines += 1
+			switch logSource {
+			case "WindowsEvents":
+				if logLevel != "" && strings.Contains(l, logLine) && strings.Contains(l, logLevel) {
+					actualNumberOfLogLines += 1
+				}
+			default:
+				if strings.Contains(l, logLine) {
+					actualNumberOfLogLines += 1
+				}
 			}
 		}
 
