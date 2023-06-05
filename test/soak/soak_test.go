@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
@@ -51,6 +52,8 @@ func TestSoakHigh(t *testing.T) {
 	case "windows":
 		runTest(t, "resources/soak_high_windows.json", tc)
 	}
+
+	time.Sleep(time.Hour)
 }
 
 func runTest(t *testing.T, configPath string, tc testConfig) {
