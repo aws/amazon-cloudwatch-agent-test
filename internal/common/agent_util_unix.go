@@ -195,7 +195,7 @@ func RunCommand(cmd string) (string, error) {
 
 func RunAsyncCommand(cmd string) error {
 	log.Printf("running async cmd, %s", cmd)
-	return exec.Command("bash", "-c", cmd + " & disown").Start()
+	return exec.Command("nohup bash", "-c", cmd).Start()
 }
 
 func RunCommands(commands []string) error {
