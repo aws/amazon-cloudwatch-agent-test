@@ -38,16 +38,25 @@ locals {
 # Generate IAM Assume Role for Credentials
 #####################################################################
 resource "aws_iam_role" "assume_role" {
-  name = "cwa-iam-test-assume-role"
-  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
-  inline_policy {
-    name = "cwa-iam-test-assume-role-inline"
+  name = "test-cwa-iam-test-assume-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role_trust_policy.json
+}
 
-    policy = jsonencode({
-      Version   = "2012-10-17"
-      Statement = [
-        {
-          Action   = [
+data "aws_iam_policy_document" "assume_role_trust_policy" {
+  statement {
+    effect    = "Allow"
+    actions   = ["sts:AssumeRole"]
+    principals {
+      identifiers = [module.basic_components.role_arn]
+      type        = "AWS"
+    }
+  }
+}
+
+data "aws_iam_policy_document" "assume_role_policy_doc" {
+  statement {
+    effect    = "Allow"
+    actions   = [
             "cloudwatch:PutMetricData",
             "cloudwatch:ListMetrics",
             "cloudwatch:GetMetricStatistics",
@@ -69,20 +78,18 @@ resource "aws_iam_role" "assume_role" {
             "s3:GetObjectAcl",
             "s3:GetObject",
           ]
-          Effect   = "Allow"
-          Resource = "*"
-        },
-      ]
-    })
+    resources = ["*"]
   }
 }
 
-data "aws_iam_policy_document" "assume_role_policy" {
-  statement {
-    effect    = "Allow"
-    actions   = ["sts:AssumeRole"]
-    resources = [module.basic_components.role_arn]
+resource "aws_iam_policy" "assume_role_policy" {
+  name   = "test-cwa-iam-test-assume-role-policy"
+  policy = data.aws_iam_policy_document.assume_role_policy_doc.json
   }
+
+resource "aws_iam_role_policy_attachment" "assume_role_policy_attachment" {
+  role       = aws_iam_role.assume_role.name
+  policy_arn = aws_iam_policy.assume_role_policy.arn
 }
 
 #####################################################################
