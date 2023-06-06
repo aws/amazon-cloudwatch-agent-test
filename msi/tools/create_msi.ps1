@@ -8,7 +8,7 @@ light.exe -ext WixUtilExtension.dll ./amazon-cloudwatch-agent.wixobj
 
 # upload to s3
 $bucketPath = "s3://$bucket/integration-test/packaging/$version/amazon-cloudwatch-agent.msi"
-if ($version -eq "") {
+if ($version -eq "nosha") {
     # This is a prod, nonprod, or nightly build.
     $bucketPath = "s3://$bucket/amazon-cloudwatch-agent.msi"
 }

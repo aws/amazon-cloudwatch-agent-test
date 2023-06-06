@@ -25,7 +25,7 @@ rm -rf artifact
 mkdir artifact
 sudo pkgbuild --root /tmp/AmazonCWAgentPackage/ --install-location "/" --scripts /tmp/AmazonAgentScripts --identifier com.amazon.cloudwatch.agent --version=$AGENT_VERSION artifact/amazon-cloudwatch-agent.pkg
 bucketPath="s3://$1/integration-test/packaging/$2/$3/amazon-cloudwatch-agent.pkg"
-if [[ $2 = "" ]]; then
+if [[ $2 = "nosha" ]]; then
     # SHA parameter is empty, this must be a prod, nonprod, or nightly build.
     bucketPath="s3://$1/$3/amazon-cloudwatch-agent.pkg"
 fi
