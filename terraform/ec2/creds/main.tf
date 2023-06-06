@@ -81,7 +81,10 @@ data "aws_iam_policy_document" "assume_role_policy" {
   statement {
     effect    = "Allow"
     actions   = ["sts:AssumeRole"]
-    resources = [module.basic_components.role_arn]
+    principals {
+      identifiers = [module.basic_components.role_arn]
+      type        = "AWS"
+    }
   }
   statement {
     effect    = "Allow"
