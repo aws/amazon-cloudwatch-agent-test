@@ -127,7 +127,7 @@ func RunCommand(cmd string) (string, error) {
 	return string(out), err
 }
 
-func RunAyncCommand(cmd string) error {
+func RunAsyncCommand(cmd string) error {
 	log.Printf("running async cmd, %s", cmd)
 	return exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-NoExit", cmd).Start()
 }
