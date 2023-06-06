@@ -40,10 +40,6 @@ locals {
 resource "aws_iam_role" "assume_role" {
   name = "cwa-iam-test-assume-role"
   assume_role_policy = data.aws_iam_policy_document.assume_role_trust_policy.json
-  inline_policy {
-    name = "cwa-iam-test-assume-role-inline"
-    policy = data.aws_iam_policy_document.assume_role_policy.json
-  }
 }
 
 data "aws_iam_policy_document" "assume_role_trust_policy" {
@@ -67,7 +63,7 @@ data "aws_iam_policy_document" "assume_role_trust_policy" {
   }
 }
 
-data "aws_iam_policy_document" "assume_role_policy" {
+data "aws_iam_policy_document" "assume_role_policy_doc" {
   statement {
     effect    = "Allow"
     actions   = [
@@ -94,6 +90,16 @@ data "aws_iam_policy_document" "assume_role_policy" {
     ]
     resources = ["*"]
   }
+}
+
+resource "aws_iam_policy" "assume_role_policy" {
+  name   = "cwa-iam-test-assume-role-policy"
+  policy = data.aws_iam_policy_document.assume_role_policy_doc.json
+}
+
+resource "aws_iam_role_policy_attachment" "assume_role_policy_attachment" {
+  role       = aws_iam_role.assume_role.name
+  policy_arn = aws_iam_policy.assume_role_policy.arn
 }
 
 #####################################################################
