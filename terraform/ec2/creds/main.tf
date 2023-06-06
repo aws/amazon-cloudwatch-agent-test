@@ -39,45 +39,14 @@ locals {
 #####################################################################
 resource "aws_iam_role" "assume_role" {
   name = "cwa-iam-test-assume-role"
-  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
+  assume_role_policy = data.aws_iam_policy_document.assume_role_trust_policy.json
   inline_policy {
     name = "cwa-iam-test-assume-role-inline"
-
-    policy = jsonencode({
-      Version   = "2012-10-17"
-      Statement = [
-        {
-          Action   = [
-            "cloudwatch:PutMetricData",
-            "cloudwatch:ListMetrics",
-            "cloudwatch:GetMetricStatistics",
-            "cloudwatch:GetMetricData",
-            "logs:PutRetentionPolicy",
-            "logs:PutLogEvents",
-            "logs:GetLogEvents",
-            "logs:DescribeLogStreams",
-            "logs:DescribeLogGroups",
-            "logs:DeleteLogStream",
-            "logs:DeleteLogGroup",
-            "logs:CreateLogStream",
-            "logs:CreateLogGroup",
-            "ssm:List*",
-            "ssm:Get*",
-            "ssm:Describe*",
-            "s3:PutObject",
-            "s3:ListBucket",
-            "s3:GetObjectAcl",
-            "s3:GetObject",
-          ]
-          Effect   = "Allow"
-          Resource = "*"
-        },
-      ]
-    })
+    policy = data.aws_iam_policy_document.assume_role_policy.json
   }
 }
 
-data "aws_iam_policy_document" "assume_role_policy" {
+data "aws_iam_policy_document" "assume_role_trust_policy" {
   statement {
     effect    = "Allow"
     actions   = ["sts:AssumeRole"]
@@ -94,6 +63,35 @@ data "aws_iam_policy_document" "assume_role_policy" {
   statement {
     effect    = "Allow"
     actions   = ["ec2:Describe*"]
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "assume_role_policy" {
+  statement {
+    effect    = "Allow"
+    actions   = [
+      "cloudwatch:PutMetricData",
+      "cloudwatch:ListMetrics",
+      "cloudwatch:GetMetricStatistics",
+      "cloudwatch:GetMetricData",
+      "logs:PutRetentionPolicy",
+      "logs:PutLogEvents",
+      "logs:GetLogEvents",
+      "logs:DescribeLogStreams",
+      "logs:DescribeLogGroups",
+      "logs:DeleteLogStream",
+      "logs:DeleteLogGroup",
+      "logs:CreateLogStream",
+      "logs:CreateLogGroup",
+      "ssm:List*",
+      "ssm:Get*",
+      "ssm:Describe*",
+      "s3:PutObject",
+      "s3:ListBucket",
+      "s3:GetObjectAcl",
+      "s3:GetObject",
+    ]
     resources = ["*"]
   }
 }
