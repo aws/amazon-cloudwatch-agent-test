@@ -115,6 +115,8 @@ resource "aws_instance" "cwagent" {
   tags = {
     Name = "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
   }
+
+  depends_on = [aws_iam_role.assume_role]
 }
 
 resource "null_resource" "integration_test_setup" {
