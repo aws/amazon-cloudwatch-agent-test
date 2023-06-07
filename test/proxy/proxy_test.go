@@ -52,7 +52,7 @@ func (t *ProxyTestRunner) validateMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	dims := getDimensions(t, envMetaDataStrings.InstanceId)
+	dims := getDimensions(envMetaDataStrings.InstanceId)
 	if len(dims) == 0 {
 		return testResult
 	}

@@ -22,7 +22,7 @@ func GetCommandToCreateProxyConfig(proxyUrl string) []string {
 	}
 }
 
-func getDimensions(t *ProxyTestRunner, instanceId string) []types.Dimension {
+func getDimensions(instanceId string) []types.Dimension {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	factory := dimension.GetDimensionFactory(*env)
 	dims, failed := factory.GetDimensions([]dimension.Instruction{
