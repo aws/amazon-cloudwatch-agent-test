@@ -32,6 +32,7 @@ type MetaData struct {
 	CaCertPath                string
 	EKSClusterName            string
 	ProxyUrl                  string
+	InstanceId                string
 }
 
 type MetaDataStrings struct {
@@ -49,6 +50,7 @@ type MetaDataStrings struct {
 	CaCertPath                string
 	EKSClusterName            string
 	ProxyUrl                  string
+	InstanceId                string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -94,6 +96,10 @@ func fillComputeType(e *MetaData, data *MetaDataStrings) {
 		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS. Compute Type is a required flag. :" + data.ComputeType)
 	}
 	e.ComputeType = computeType
+}
+
+func registerInstanceId(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.InstanceId), "instanceId", "", "ec2 instance ID that is being used by a test")
 }
 
 func fillECSData(e *MetaData, data *MetaDataStrings) {
@@ -165,6 +171,7 @@ func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDat
 	registerCaCertPath(metaDataStrings)
 	registerPluginTestsToExecute(metaDataStrings)
 	registerProxyUrl(metaDataStrings)
+	registerInstanceId(metaDataStrings)
 	return metaDataStrings
 }
 
@@ -179,5 +186,6 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData.CwaCommitSha = data.CwaCommitSha
 	metaData.CaCertPath = data.CaCertPath
 	metaData.ProxyUrl = data.ProxyUrl
+	metaData.InstanceId = data.InstanceId
 	return metaData
 }

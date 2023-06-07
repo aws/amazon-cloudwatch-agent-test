@@ -8,12 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
@@ -53,18 +50,8 @@ func (t *ProxyTestRunner) validateMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "InstanceId",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "cpu",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")},
-		},
-	})
-
-	if len(failed) > 0 {
+	dims := getDimensions(t, envMetaDataStrings.InstanceId)
+	if len(dims) == 0 {
 		return testResult
 	}
 
@@ -108,9 +95,8 @@ var _ test_runner.ITestRunner = (*ProxyTestRunner)(nil)
 
 func TestProxy(t *testing.T) {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
-	factory := dimension.GetDimensionFactory(*env)
 	runner := test_runner.TestRunner{TestRunner: &ProxyTestRunner{
-		test_runner.BaseTestRunner{DimensionFactory: factory},
+		test_runner.BaseTestRunner{},
 		env.ProxyUrl,
 	}}
 	result := runner.Run()
