@@ -169,7 +169,7 @@ func shouldAddTest(row *matrixRow, targets map[string]map[string]struct{}) bool 
 		}
 
 		if rowVal == "" {
-			return true
+			continue
 		}
 		_, ok := set[rowVal]
 		if !ok {

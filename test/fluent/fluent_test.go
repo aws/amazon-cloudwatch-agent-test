@@ -46,13 +46,13 @@ func TestFluentLogs(t *testing.T) {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 
 	now := time.Now()
-	for group, filedsArr := range logGroupToKey {
+	for group, fieldsArr := range logGroupToKey {
 		group := fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, group)
 		if !awsservice.IsLogGroupExists(group) {
 			t.Fatalf("fluent log group doesn't exsit: %s", group)
 		}
 
-		streams := getLogStreams(group)
+		streams := awsservice.GetLogStreams(group)
 		if len(streams) < 1 {
 			t.Fatalf("fluent log streams are empty for log group: %s", group)
 		}
@@ -65,7 +65,7 @@ func TestFluentLogs(t *testing.T) {
 			// only 1 log message gets validate
 			// log message must include expected fields, and there could be more than 1 set of expected fields  per log group
 			var found = false
-			for _, fields := range filedsArr {
+			for _, fields := range fieldsArr {
 				match := 0
 				for _, field := range fields {
 					if strings.Contains(logs[0], "\""+field+"\"") {
@@ -86,18 +86,4 @@ func TestFluentLogs(t *testing.T) {
 	}
 
 	t.Log("finishing EKS fluent log validation...")
-}
-
-func getLogStreams(logGroupName string) []types.LogStream {
-	logStreams := make([]types.LogStream, 0)
-	for i := 0; i < logStreamRetry; i++ {
-		logStreams = awsservice.GetLogStreams(logGroupName)
-
-		if len(logStreams) > 0 {
-			break
-		}
-		time.Sleep(10 * time.Second)
-	}
-
-	return logStreams
 }
