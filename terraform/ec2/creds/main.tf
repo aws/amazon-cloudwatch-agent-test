@@ -38,7 +38,7 @@ locals {
 # Generate IAM Assume Role for Credentials
 #####################################################################
 resource "aws_iam_role" "assume_role" {
-  name = "test-cwa-iam-test-assume-role"
+  name = "cwa-integ-assume-role-${module.common.testing_id}"
   assume_role_policy = data.aws_iam_policy_document.assume_role_trust_policy.json
 }
 
@@ -83,7 +83,7 @@ data "aws_iam_policy_document" "assume_role_policy_doc" {
 }
 
 resource "aws_iam_policy" "assume_role_policy" {
-  name   = "test-cwa-iam-test-assume-role-policy"
+  name   = "cwa-integ-assume-role-policy-${module.common.testing_id}"
   policy = data.aws_iam_policy_document.assume_role_policy_doc.json
   }
 
@@ -161,7 +161,7 @@ resource "null_resource" "integration_test_run" {
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} instanceId=${aws_instance.cwagent.id}-v"
     ]
   }
 

@@ -32,6 +32,7 @@ type MetaData struct {
 	CaCertPath                string
 	EKSClusterName            string
 	ProxyUrl                  string
+	AssumeRoleArn             string
 	InstanceId                string
 }
 
@@ -50,6 +51,7 @@ type MetaDataStrings struct {
 	CaCertPath                string
 	EKSClusterName            string
 	ProxyUrl                  string
+	AssumeRoleArn             string
 	InstanceId                string
 }
 
@@ -96,6 +98,10 @@ func fillComputeType(e *MetaData, data *MetaDataStrings) {
 		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS. Compute Type is a required flag. :" + data.ComputeType)
 	}
 	e.ComputeType = computeType
+}
+
+func registerAssumeRoleArn(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.AssumeRoleArn), "assumeRoleArn", "", "Arn for assume role to be used")
 }
 
 func registerInstanceId(dataString *MetaDataStrings) {
@@ -171,6 +177,7 @@ func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDat
 	registerCaCertPath(metaDataStrings)
 	registerPluginTestsToExecute(metaDataStrings)
 	registerProxyUrl(metaDataStrings)
+	registerAssumeRoleArn(metaDataStrings)
 	registerInstanceId(metaDataStrings)
 	return metaDataStrings
 }
@@ -186,6 +193,7 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData.CwaCommitSha = data.CwaCommitSha
 	metaData.CaCertPath = data.CaCertPath
 	metaData.ProxyUrl = data.ProxyUrl
+	metaData.AssumeRoleArn = data.AssumeRoleArn
 	metaData.InstanceId = data.InstanceId
 	return metaData
 }
