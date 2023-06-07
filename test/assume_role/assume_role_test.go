@@ -10,7 +10,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
@@ -91,7 +90,6 @@ var _ test_runner.ITestRunner = (*RoleTestRunner)(nil)
 
 func TestAssumeRole(t *testing.T) {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
-	factory := dimension.GetDimensionFactory(*env)
 	runner := test_runner.TestRunner{TestRunner: &RoleTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}}
 	result := runner.Run()
 	if result.GetStatus() != status.SUCCESSFUL {
