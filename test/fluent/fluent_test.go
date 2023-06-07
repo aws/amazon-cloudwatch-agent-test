@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
