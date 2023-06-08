@@ -30,9 +30,9 @@ func getCommands(roleArn string) []string {
 	}
 }
 
-func getDimensions(t *RoleTestRunner, instanceId string) {
+func getDimensions(instanceId string) {
 	return []types.Dimension{
-		types.Dimension{Name: "InstanceId", Value: instanceId},
-		types.Dimension{Name: "cpu", Value: aws.String("cpu-total")},
+		types.Dimension{Name: aws.String("InstanceId"), Value: aws.String(instanceId)},
+		types.Dimension{Name: aws.String("cpu"), Value: aws.String("cpu-total")},
 	}
 }

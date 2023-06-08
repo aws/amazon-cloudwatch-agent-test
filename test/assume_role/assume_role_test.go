@@ -1,6 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build !windows
+
 package assume_role
 
 import (
@@ -45,7 +47,7 @@ func (t *RoleTestRunner) validateMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	dims := getDimensions(t, envMetaDataStrings.InstanceId)
+	dims := getDimensions(envMetaDataStrings.InstanceId)
 	if len(dims) == 0 {
 		return testResult
 	}

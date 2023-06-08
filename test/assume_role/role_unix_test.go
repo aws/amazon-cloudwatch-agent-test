@@ -25,10 +25,10 @@ func getCommands(roleArn string) []string {
 	}
 }
 
-func getDimensions(t *RoleTestRunner, instanceId string) []types.Dimension {
+func getDimensions(instanceId string) []types.Dimension {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	factory := dimension.GetDimensionFactory(*env)
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
+	dims, failed := factory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
