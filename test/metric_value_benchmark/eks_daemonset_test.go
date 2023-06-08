@@ -215,10 +215,6 @@ func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
 
 func (t *EKSDaemonTestRunner) SetAgentConfig(config test_runner.AgentConfig) {}
 
-func (e *EKSDaemonTestRunner) SetupBeforeAgentRun() error {
-	return nil
-}
-
 func (e *EKSDaemonTestRunner) SetupAfterAgentRun() error {
 	return nil
 }

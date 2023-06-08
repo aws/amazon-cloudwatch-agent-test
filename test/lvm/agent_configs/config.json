@@ -1,0 +1,33 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "LVMTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
+    "metrics_collected": {
+      "disk": {
+        "resources": [ "/mnt/lvm" ],
+        "measurement": [
+          "free",
+          "total",
+          "used"
+        ],
+        "ignore_file_system_types": [
+          "sysfs", "devtmpfs"
+        ]
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

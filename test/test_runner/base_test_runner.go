@@ -8,11 +8,12 @@ package test_runner
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
@@ -33,7 +34,6 @@ type ITestRunner interface {
 	GetMeasuredMetrics() []string
 	SetupBeforeAgentRun() error
 	SetupAfterAgentRun() error
-	RunAgent(runner *TestRunner) (status.TestGroupResult, error)
 	UseSSM() bool
 	SSMParameterName() string
 	SetUpConfig() error
@@ -101,9 +101,23 @@ func (t *BaseTestRunner) SetAgentConfig(agentConfig AgentConfig) {
 	t.AgentConfig = agentConfig
 }
 
-func (t *BaseTestRunner) RunAgent(runner *TestRunner) (status.TestGroupResult, error) {
+func (t *TestRunner) Run() status.TestGroupResult {
+	testName := t.TestRunner.GetTestName()
+	log.Printf("Running %v", testName)
+	testGroupResult, err := t.RunAgent()
+	if err == nil {
+		testGroupResult = t.TestRunner.Validate()
+	}
+	if testGroupResult.GetStatus() != status.SUCCESSFUL {
+		log.Printf("%v test group failed due to %v", testName, err)
+	}
+
+	return testGroupResult
+}
+
+func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	testGroupResult := status.TestGroupResult{
-		Name: runner.TestRunner.GetTestName(),
+		Name: t.TestRunner.GetTestName(),
 		TestResults: []status.TestResult{
 			{
 				Name:   "Starting Agent",
@@ -112,22 +126,20 @@ func (t *BaseTestRunner) RunAgent(runner *TestRunner) (status.TestGroupResult, e
 		},
 	}
 
-
 	agentConfig := AgentConfig{
-		ConfigFileName:   runner.TestRunner.GetAgentConfigFileName(),
-		SSMParameterName: runner.TestRunner.SSMParameterName(),
-		UseSSM:           runner.TestRunner.UseSSM(),
+		ConfigFileName:   t.TestRunner.GetAgentConfigFileName(),
+		SSMParameterName: t.TestRunner.SSMParameterName(),
+		UseSSM:           t.TestRunner.UseSSM(),
 	}
-	runner.TestRunner.SetAgentConfig(agentConfig)
-	err := runner.TestRunner.SetupBeforeAgentRun()
+	t.TestRunner.SetAgentConfig(agentConfig)
+	err := t.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
 
-
-	if runner.TestRunner.UseSSM() {
-		err = common.StartAgent(runner.TestRunner.SSMParameterName(), false, true)
+	if t.TestRunner.UseSSM() {
+		err = common.StartAgent(t.TestRunner.SSMParameterName(), false, true)
 	} else {
 		err = common.StartAgent(configOutputPath, false, false)
 	}
@@ -137,13 +149,13 @@ func (t *BaseTestRunner) RunAgent(runner *TestRunner) (status.TestGroupResult, e
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
-	err = runner.TestRunner.SetupAfterAgentRun()
+	err = t.TestRunner.SetupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
 	}
 
-	runningDuration := runner.TestRunner.GetAgentRunDuration()
+	runningDuration := t.TestRunner.GetAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
 	common.StopAgent()
@@ -155,18 +167,4 @@ func (t *BaseTestRunner) RunAgent(runner *TestRunner) (status.TestGroupResult, e
 	}
 
 	return testGroupResult, nil
-}
-
-func (t *TestRunner) Run(s ITestSuite) {
-	testName := t.TestRunner.GetTestName()
-	log.Printf("Running %v", testName)
-	testGroupResult, err := t.TestRunner.RunAgent(t)
-	if err == nil {
-		testGroupResult = t.TestRunner.Validate()
-	}
-
-	s.AddToSuiteResult(testGroupResult)
-	if testGroupResult.GetStatus() != status.SUCCESSFUL {
-		log.Printf("%v test group failed due to %v", testName, err)
-	}
 }
