@@ -126,17 +126,4 @@ func TestUserdata(t *testing.T) {
 	}
 }
 
-func TestUserdata(t *testing.T) {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
-	factory := dimension.GetDimensionFactory(*env)
-	runner := test_runner.TestRunner{TestRunner: &UserdataTestRunner{
-		test_runner.BaseTestRunner{DimensionFactory: factory},
-	}}
-	result := runner.Run()
-	if result.GetStatus() != status.SUCCESSFUL {
-		t.Fatal("SSL Cert test failed")
-		result.Print()
-	}
-}
-
 var _ test_runner.ITestRunner = (*UserdataTestRunner)(nil)

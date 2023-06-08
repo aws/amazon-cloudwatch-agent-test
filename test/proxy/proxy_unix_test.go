@@ -17,8 +17,8 @@ const commonConfigPath = "/opt/aws/amazon-cloudwatch-agent/etc/common-config.tom
 func GetCommandToCreateProxyConfig(proxyUrl string) []string {
 	return []string{
 		"echo [proxy] | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
-		"echo http_proxy = \\\"" + proxyUrl + "\\\" | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
-		"echo no_proxy = \\\"169.254.169.254\\\" | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
+		"echo http_proxy = \\\"" + proxyUrl + "\\\" | sudo tee -a " + commonConfigPath,
+		"echo no_proxy = \\\"169.254.169.254\\\" | sudo tee -a " + commonConfigPath,
 	}
 }
 
