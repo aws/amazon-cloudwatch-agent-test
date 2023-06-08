@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source             = "../../../common"
+  source             = "../../../../common"
   cwagent_image_repo = var.cwagent_image_repo
   cwagent_image_tag  = var.cwagent_image_tag
 }
 
 module "basic_components" {
-  source = "../../../basic_components"
+  source = "../../../../basic_components"
 
   region = var.region
 }
 
-data "aws_eks_cluster_auth" "this" {
-  name = aws_eks_cluster.this.name
+data "aws_eks_cluster_auth" "cluster_auth" {
+  name = aws_eks_cluster.cluster.name
 }
 
-resource "aws_eks_cluster" "this" {
+resource "aws_eks_cluster" "cluster" {
   name     = "cwagent-eks-integ-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
@@ -35,8 +35,8 @@ resource "aws_eks_cluster" "this" {
 }
 
 # EKS Node Groups
-resource "aws_eks_node_group" "this" {
-  cluster_name    = aws_eks_cluster.this.name
+resource "aws_eks_node_group" "node_group" {
+  cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "cwagent-eks-integ-node"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
@@ -47,16 +47,16 @@ resource "aws_eks_node_group" "this" {
     min_size     = 1
   }
 
-  ami_type       = "AL2_x86_64"
+  ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
-  instance_types = ["t3.medium"]
+  instance_types = [var.instance_type]
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy
+    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
   ]
 }
 
@@ -65,19 +65,19 @@ resource "aws_iam_role" "node_role" {
   name = "cwagent-eks-Worker-Role-${module.common.testing_id}"
 
   assume_role_policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
     {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Principal": {
-            "Service": "ec2.amazonaws.com"
-          },
-          "Action": "sts:AssumeRole"
-        }
-      ]
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
     }
-    POLICY
+  ]
+}
+POLICY
 }
 
 resource "aws_iam_role_policy_attachment" "node_AmazonEKSWorkerNodePolicy" {
@@ -169,14 +169,100 @@ resource "kubernetes_namespace" "namespace" {
   }
 }
 
-# TODO: how do we support different deployment types? Should they be in separate terraform
-#       files, and spawn separate tests?
-resource "kubernetes_daemonset" "service" {
+resource "kubernetes_service_account" "cwagentservice" {
+  depends_on = [kubernetes_namespace.namespace]
+  metadata {
+    name      = "cloudwatch-agent"
+    namespace = "amazon-cloudwatch"
+  }
+}
+
+resource "kubernetes_cluster_role" "clusterrole" {
+  depends_on = [kubernetes_namespace.namespace]
+  metadata {
+    name = "cloudwatch-agent-role"
+  }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["pods", "nodes", "endpoints"]
+    api_groups = [""]
+  }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["replicasets"]
+    api_groups = ["apps"]
+  }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["jobs"]
+    api_groups = ["batch"]
+  }
+  rule {
+    verbs      = ["get"]
+    resources  = ["nodes/proxy"]
+    api_groups = ["get"]
+  }
+  rule {
+    verbs      = ["create"]
+    resources  = ["nodes/stats", "configmaps", "events"]
+    api_groups = [""]
+  }
+  rule {
+    verbs          = ["get", "update"]
+    resource_names = ["cwagent-clusterleader"]
+    resources      = ["configmaps"]
+    api_groups     = [""]
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "rolebinding" {
   depends_on = [
-    kubernetes_namespace.namespace,
-    kubernetes_config_map.cwagentconfig,
     kubernetes_service_account.cwagentservice,
-    aws_eks_node_group.this
+    kubernetes_cluster_role.clusterrole
+  ]
+  metadata {
+    name = "cloudwatch-agent-role-binding"
+  }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cloudwatch-agent-role"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = "cloudwatch-agent"
+    namespace = "amazon-cloudwatch"
+  }
+}
+
+resource "kubernetes_config_map" "cwagentconfig" {
+  metadata {
+    name      = "cwagentconfig"
+    namespace = "amazon-cloudwatch"
+  }
+  data = {
+    "cwagentconfig.json" = <<EOF
+    {
+      "agent": {
+        "region": "${var.region}"
+      },
+      "logs": {
+        "metrics_collected": {
+          "kubernetes": {
+            "cluster_name": "${aws_eks_cluster.cluster.name}",
+            "metrics_collection_interval": 60
+          }
+        },
+        "force_flush_interval": 5
+      }
+    }
+    EOF
+  }
+}
+
+resource "kubernetes_daemonset" "agent_daemon" {
+  depends_on = [
+    kubernetes_config_map.cwagentconfig
   ]
   metadata {
     name      = "cloudwatch-agent"
@@ -195,13 +281,9 @@ resource "kubernetes_daemonset" "service" {
         }
       }
       spec {
-        node_selector = {
-          "kubernetes.io/os" : "linux"
-        }
         container {
-          name              = "cwagent"
-          image             = "${var.cwagent_image_repo}:${var.cwagent_image_tag}"
-          image_pull_policy = "Always"
+          name  = "cloudwatch-agent"
+          image = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:1.247359.1b252618"
           resources {
             limits = {
               "cpu" : "200m",
@@ -211,11 +293,6 @@ resource "kubernetes_daemonset" "service" {
               "cpu" : "200m",
               "memory" : "200Mi"
             }
-          }
-          port {
-            container_port = 25888
-            host_port      = 25888
-            protocol       = "UDP"
           }
           env {
             name = "HOST_IP"
@@ -240,6 +317,10 @@ resource "kubernetes_daemonset" "service" {
                 field_path = "metadata.namespace"
               }
             }
+          }
+          env {
+            name  = "CI_VERSION"
+            value = "k8s/1.3.15"
           }
           volume_mount {
             mount_path = "/etc/cwagentconfig"
@@ -275,6 +356,9 @@ resource "kubernetes_daemonset" "service" {
             name       = "devdisk"
             read_only  = true
           }
+        }
+        node_selector = {
+          "kubernetes.io/os" : "linux"
         }
         volume {
           name = "cwagentconfig"
@@ -315,168 +399,28 @@ resource "kubernetes_daemonset" "service" {
         volume {
           name = "devdisk"
           host_path {
-            path = "/dev/disk"
+            path = "/dev/disk/"
           }
         }
-
-        container {
-          name              = "emf-eks-testing"
-          image             = "alpine/socat:latest"
-          image_pull_policy = "Always"
-          resources {
-            limits = {
-              "cpu" : "50m",
-              "memory" : "50Mi"
-            }
-            requests = {
-              "cpu" : "50m",
-              "memory" : "50Mi"
-            }
-          }
-
-          command = [
-            "/bin/sh",
-            "-c",
-            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFEKSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFEKSNameSpace\",\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5}' | socat -v -t 0 - UDP:0.0.0.0:25888; sleep 60; done"
-          ]
-          env {
-            name = "HOST_IP"
-            value_from {
-              field_ref {
-                field_path = "status.hostIP"
-              }
-            }
-          }
-          env {
-            name = "HOST_NAME"
-            value_from {
-              field_ref {
-                field_path = "spec.nodeName"
-              }
-            }
-          }
-          env {
-            name = "K8S_NAMESPACE"
-            value_from {
-              field_ref {
-                field_path = "metadata.namespace"
-              }
-            }
-          }
-          volume_mount {
-            mount_path = "/etc/cwagentconfig"
-            name       = "cwagentconfig"
-          }
-        }
-        service_account_name             = "cloudwatch-agent"
         termination_grace_period_seconds = 60
+        service_account_name             = "cloudwatch-agent"
       }
     }
   }
 }
 
-##########################################
-# Template Files
-##########################################
-locals {
-  cwagent_config = fileexists("../../../../${var.test_dir}/resources/eks_config.json") ? "../../../../${var.test_dir}/resources/eks_config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
+output "cluster_name" {
+  value = aws_eks_cluster.cluster.name
 }
 
-data "template_file" "cwagent_config" {
-  template = file(local.cwagent_config)
-  vars = {
-  }
+output "cluster_auth_token" {
+  value = data.aws_eks_cluster_auth.cluster_auth.token
 }
 
-resource "kubernetes_config_map" "cwagentconfig" {
-  depends_on = [
-    kubernetes_namespace.namespace,
-    kubernetes_service_account.cwagentservice
-  ]
-  metadata {
-    name      = "cwagentconfig"
-    namespace = "amazon-cloudwatch"
-  }
-  data = {
-    "cwagentconfig.json" : data.template_file.cwagent_config.rendered
-  }
+output "cluster_endpoint" {
+  value = aws_eks_cluster.cluster.endpoint
 }
 
-resource "kubernetes_service_account" "cwagentservice" {
-  depends_on = [kubernetes_namespace.namespace]
-  metadata {
-    name      = "cloudwatch-agent"
-    namespace = "amazon-cloudwatch"
-  }
-}
-
-resource "kubernetes_cluster_role" "clusterrole" {
-  depends_on = [kubernetes_namespace.namespace]
-  metadata {
-    name = "cloudwatch-agent-role"
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["pods", "nodes", "endpoints"]
-    api_groups = [""]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["replicasets"]
-    api_groups = ["apps"]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["jobs"]
-    api_groups = ["batch"]
-  }
-  rule {
-    verbs      = ["get"]
-    resources  = ["nodes/proxy"]
-    api_groups = [""]
-  }
-  rule {
-    verbs      = ["create"]
-    resources  = ["nodes/stats", "configmaps", "events"]
-    api_groups = [""]
-  }
-  rule {
-    verbs          = ["get", "update"]
-    resource_names = ["cwagent-clusterleader"]
-    resources      = ["configmaps"]
-    api_groups     = [""]
-  }
-}
-
-resource "kubernetes_cluster_role_binding" "rolebinding" {
-  depends_on = [kubernetes_namespace.namespace]
-  metadata {
-    name = "cloudwatch-agent-role-binding"
-  }
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cloudwatch-agent-role"
-  }
-  subject {
-    kind      = "ServiceAccount"
-    name      = "cloudwatch-agent"
-    namespace = "amazon-cloudwatch"
-  }
-}
-
-resource "null_resource" "validator" {
-  depends_on = [
-    aws_eks_node_group.this,
-    kubernetes_daemonset.service,
-    kubernetes_cluster_role_binding.rolebinding,
-    kubernetes_service_account.cwagentservice,
-  ]
-  provisioner "local-exec" {
-    command = <<-EOT
-      echo "Validating EKS metrics/logs for EMF"
-      cd ../../../..
-      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
-    EOT
-  }
+output "cluster_cert" {
+  value = aws_eks_cluster.cluster.certificate_authority.0.data
 }

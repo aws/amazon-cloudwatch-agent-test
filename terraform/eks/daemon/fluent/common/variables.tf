@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "./test/emf"
+  default = "./test/metric_value_benchmark"
 }
 
 variable "cwagent_image_repo" {
@@ -26,6 +26,7 @@ variable "k8s_version" {
   default = "1.24"
 }
 
+// ami_type and instance_type can be used to test ARM node group
 variable "ami_type" {
   type    = string
   default = "AL2_x86_64"

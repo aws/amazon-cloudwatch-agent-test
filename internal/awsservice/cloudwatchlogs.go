@@ -15,6 +15,8 @@ import (
 	"github.com/qri-io/jsonschema"
 )
 
+const logStreamRetry = 20
+
 // catch ResourceNotFoundException when deleting the log group and log stream, as these
 // are not useful exceptions to log errors on during cleanup
 var rnf *types.ResourceNotFoundException
@@ -133,6 +135,30 @@ func IsLogGroupExists(logGroupName string) bool {
 	}
 
 	return len(describeLogGroupOutput.LogGroups) > 0
+}
+
+func GetLogStreams(logGroupName string) []types.LogStream {
+	for i := 0; i < logStreamRetry; i++ {
+		describeLogStreamsOutput, err := CwlClient.DescribeLogStreams(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
+			LogGroupName: aws.String(logGroupName),
+			OrderBy:      types.OrderByLastEventTime,
+			Descending:   aws.Bool(true),
+			Limit:        aws.Int32(10),
+		})
+	
+		if err != nil {
+			log.Printf("failed to get log streams for log group: %v - err: %v", logGroupName, err)
+			continue
+		}
+		
+		if len(describeLogStreamsOutput.LogStreams) > 0 {
+			return describeLogStreamsOutput.LogStreams 
+		}
+
+		time.Sleep(10 * time.Second)
+	}
+	
+	return []types.LogStream{}
 }
 
 func MatchEMFLogWithSchema(logEntry string, s *jsonschema.Schema, logValidator func(string) bool) bool {
