@@ -38,14 +38,14 @@ locals {
 # Generate IAM Assume Role for Credentials
 #####################################################################
 resource "aws_iam_role" "assume_role" {
-  name = "cwa-integ-assume-role-${module.common.testing_id}"
+  name               = "cwa-integ-assume-role-${module.common.testing_id}"
   assume_role_policy = data.aws_iam_policy_document.assume_role_trust_policy.json
 }
 
 data "aws_iam_policy_document" "assume_role_trust_policy" {
   statement {
-    effect    = "Allow"
-    actions   = ["sts:AssumeRole"]
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
     principals {
       identifiers = [module.basic_components.role_arn]
       type        = "AWS"
@@ -55,29 +55,29 @@ data "aws_iam_policy_document" "assume_role_trust_policy" {
 
 data "aws_iam_policy_document" "assume_role_policy_doc" {
   statement {
-    effect    = "Allow"
-    actions   = [
-            "cloudwatch:PutMetricData",
-            "cloudwatch:ListMetrics",
-            "cloudwatch:GetMetricStatistics",
-            "cloudwatch:GetMetricData",
-            "logs:PutRetentionPolicy",
-            "logs:PutLogEvents",
-            "logs:GetLogEvents",
-            "logs:DescribeLogStreams",
-            "logs:DescribeLogGroups",
-            "logs:DeleteLogStream",
-            "logs:DeleteLogGroup",
-            "logs:CreateLogStream",
-            "logs:CreateLogGroup",
-            "ssm:List*",
-            "ssm:Get*",
-            "ssm:Describe*",
-            "s3:PutObject",
-            "s3:ListBucket",
-            "s3:GetObjectAcl",
-            "s3:GetObject",
-          ]
+    effect = "Allow"
+    actions = [
+      "cloudwatch:PutMetricData",
+      "cloudwatch:ListMetrics",
+      "cloudwatch:GetMetricStatistics",
+      "cloudwatch:GetMetricData",
+      "logs:PutRetentionPolicy",
+      "logs:PutLogEvents",
+      "logs:GetLogEvents",
+      "logs:DescribeLogStreams",
+      "logs:DescribeLogGroups",
+      "logs:DeleteLogStream",
+      "logs:DeleteLogGroup",
+      "logs:CreateLogStream",
+      "logs:CreateLogGroup",
+      "ssm:List*",
+      "ssm:Get*",
+      "ssm:Describe*",
+      "s3:PutObject",
+      "s3:ListBucket",
+      "s3:GetObjectAcl",
+      "s3:GetObject",
+    ]
     resources = ["*"]
   }
 }
@@ -85,7 +85,7 @@ data "aws_iam_policy_document" "assume_role_policy_doc" {
 resource "aws_iam_policy" "assume_role_policy" {
   name   = "cwa-integ-assume-role-policy-${module.common.testing_id}"
   policy = data.aws_iam_policy_document.assume_role_policy_doc.json
-  }
+}
 
 resource "aws_iam_role_policy_attachment" "assume_role_policy_attachment" {
   role       = aws_iam_role.assume_role.name
