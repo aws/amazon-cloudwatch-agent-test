@@ -2,26 +2,21 @@
 // SPDX-License-Identifier: MIT
 //go:build !windows
 
-package userdata
+package lvm
 
 import (
 	"log"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/aws-sdk-go-v2/aws"
-
+	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
-const namespace = "UserdataTest"
-
-type UserdataTestRunner struct {
-	test_runner.BaseTestRunner
-}
+const namespace = "LVMTest"
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
 
@@ -29,11 +24,15 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-func (t UserdataTestRunner) Validate() status.TestGroupResult {
+type LVMTestRunner struct {
+	test_runner.BaseTestRunner
+}
+
+func (t LVMTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateCpuMetric(metricName)
+		testResults[i] = t.validateDiskMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -42,7 +41,7 @@ func (t UserdataTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *UserdataTestRunner) validateCpuMetric(metricName string) status.TestResult {
+func (t *LVMTestRunner) validateDiskMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -53,10 +52,6 @@ func (t *UserdataTestRunner) validateCpuMetric(metricName string) status.TestRes
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
-		{
-			Key:   "cpu",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")},
-		},
 	})
 
 	if len(failed) > 0 {
@@ -65,9 +60,9 @@ func (t *UserdataTestRunner) validateCpuMetric(metricName string) status.TestRes
 
 	fetcher := metric.MetricValueFetcher{}
 	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+
 	log.Printf("metric values are %v", values)
 	if err != nil {
-		log.Printf("err: %v\n", err)
 		return testResult
 	}
 
@@ -79,51 +74,45 @@ func (t *UserdataTestRunner) validateCpuMetric(metricName string) status.TestRes
 	return testResult
 }
 
-func (t UserdataTestRunner) GetTestName() string {
+func (t LVMTestRunner) GetTestName() string {
 	return namespace
 }
 
-func (t UserdataTestRunner) GetAgentConfigFileName() string {
+func (t LVMTestRunner) GetAgentConfigFileName() string {
 	return "config.json"
 }
 
-func (t UserdataTestRunner) GetMeasuredMetrics() []string {
-	return []string{"cpu_time_active_userdata"}
+func (t LVMTestRunner) GetMeasuredMetrics() []string {
+	return []string{"disk_free", "disk_used", "disk_total"}
 }
 
-func (t UserdataTestRunner) Run() status.TestGroupResult {
-	testName := t.GetTestName()
-	log.Printf("Running %v", testName)
-
-	log.Printf("Running test for runAgent in userdata mode")
-	testGroupResult := status.TestGroupResult{
-		Name: t.GetTestName(),
-		TestResults: []status.TestResult{
-			{
-				Name:   "Starting Agent",
-				Status: status.SUCCESSFUL,
-			},
-		},
+func (t *LVMTestRunner) SetupBeforeAgentRun() error {
+	commands := []string{
+		"sudo dd if=/dev/zero of=/tmp/lvm0.img bs=50 count=1M",
+		"sudo losetup /dev/loop0 /tmp/lvm0.img",
+		"sudo pvcreate /dev/loop0",
+		"sudo vgcreate vg0 /dev/loop0",
+		"sudo lvcreate -l 100%VG --name lv0 vg0",
+		"sudo mkfs.ext2 /dev/mapper/vg0-lv0",
+		"sudo mkdir /mnt/lvm",
+		"sudo mount /dev/mapper/vg0-lv0 /mnt/lvm/",
 	}
-
-	testGroupResult = t.Validate()
-	if testGroupResult.GetStatus() != status.SUCCESSFUL {
-		log.Printf("%v test run failed", testName)
+	err := common.RunCommands(commands)
+	if err != nil {
+		return err
 	}
-
-	return testGroupResult
+	return t.SetUpConfig()
 }
 
-func TestUserdata(t *testing.T) {
+var _ test_runner.ITestRunner = (*LVMTestRunner)(nil)
+
+func TestLVM(t *testing.T) {
 	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
 	factory := dimension.GetDimensionFactory(*env)
-	// userdata doesn't use Run() from base_test_runner since agent has already been started with userdata script
-	userdataRunner := &UserdataTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}
-	result := userdataRunner.Run()
+	runner := test_runner.TestRunner{TestRunner: &LVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}}
+	result := runner.Run()
 	if result.GetStatus() != status.SUCCESSFUL {
-		t.Fatal("Userdata test failed")
+		t.Fatal("LVM test failed")
 		result.Print()
 	}
 }
-
-var _ test_runner.ITestRunner = (*UserdataTestRunner)(nil)
