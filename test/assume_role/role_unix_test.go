@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package proxy
+package assume_role
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -12,13 +12,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-const commonConfigPath = "/opt/aws/amazon-cloudwatch-agent/etc/common-config.toml"
+const (
+	credsDir = "/tmp/.aws"
+)
 
-func GetCommandToCreateProxyConfig(proxyUrl string) []string {
+func getCommands(roleArn string) []string {
 	return []string{
-		"echo [proxy] | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
-		"echo http_proxy = \\\"" + proxyUrl + "\\\" | sudo tee -a " + commonConfigPath,
-		"echo no_proxy = \\\"169.254.169.254\\\" | sudo tee -a " + commonConfigPath,
+		"mkdir -p " + credsDir,
+		"printf '[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s' $(aws sts assume-role --role-arn " + roleArn + " --role-session-name test --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text) | tee " + credsDir + "/credentials>/dev/null",
+		"printf '[default]\nregion = us-west-2' > " + credsDir + "/config",
+		"printf '[credentials]\n  shared_credential_profile = \"default\"\n  shared_credential_file = \"" + credsDir + "/credentials\"' | sudo tee /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml>/dev/null",
 	}
 }
 
