@@ -54,6 +54,37 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
+		{testDir: "./test/restart"},
+		{
+			testDir: "./test/acceptance",
+			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
+		},
+		{
+			testDir: "./test/fips",
+			targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		},
+		{
+			testDir: "./test/lvm",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/proxy",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/ssl_cert",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir:      "./test/userdata",
+			terraformDir: "terraform/ec2/userdata",
+			targets:      map[string]map[string]struct{}{"os": {"ol9": {}}},
+		},
+		{
+			testDir:      "./test/assume_role",
+			terraformDir: "terraform/ec2/creds",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
@@ -61,10 +92,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		and Mac under the hood share similar plugins with Linux
 	*/
 	"ec2_mac": {
-		{testDir: "../../../test/feature/mac"},
+		{testDir: "./test/feature/mac"},
 	},
 	"ec2_windows": {
-		{testDir: "../../../test/feature/windows"},
+		{testDir: "./test/feature/windows"},
 	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},
@@ -87,12 +118,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/metric_value_benchmark"},
 		{testDir: "./test/statsd"},
 		{testDir: "./test/emf"},
-	},
-	"ec2_acceptance": {
-		{testDir: "./test/acceptance"},
-	},
-	"ec2_userdata": {
-		{testDir: "./test/userdata"},
 	},
 	"eks_daemon": {
 		{
@@ -166,6 +191,8 @@ func shouldAddTest(row *matrixRow, targets map[string]map[string]struct{}) bool 
 		var rowVal string
 		if key == "arc" {
 			rowVal = row.Arc
+		} else if key == "os" {
+			rowVal = row.Os
 		}
 
 		if rowVal == "" {
