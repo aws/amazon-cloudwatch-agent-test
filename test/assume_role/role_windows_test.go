@@ -6,7 +6,10 @@
 
 package assume_role
 
-import "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+import (
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+)
 
 const (
 	credsDir = "C:\\Users\\Admin\\.aws"
@@ -30,7 +33,7 @@ func getCommands(roleArn string) []string {
 	}
 }
 
-func getDimensions(instanceId string) {
+func getDimensions(instanceId string) []types.Dimension {
 	return []types.Dimension{
 		types.Dimension{Name: aws.String("InstanceId"), Value: aws.String(instanceId)},
 		types.Dimension{Name: aws.String("cpu"), Value: aws.String("cpu-total")},
