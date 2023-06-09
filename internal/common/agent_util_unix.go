@@ -164,12 +164,12 @@ func ReadAgentOutput(d time.Duration) string {
 	return string(out)
 }
 
-func RunShellScript(path string, args ...string) error {
+func RunShellScript(path string, args ...string) (string, error) {
 	out, err := exec.Command("bash", "-c", "sudo chmod +x "+path).Output()
 
 	if err != nil {
 		log.Printf("Error occurred when attempting to chmod %s: %s | %s", path, err.Error(), string(out))
-		return err
+		return "", err
 	}
 
 	bashArgs := []string{"-c", "sudo ./" + path}
@@ -180,10 +180,10 @@ func RunShellScript(path string, args ...string) error {
 
 	if err != nil {
 		log.Printf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
-		return err
+		return "", err
 	}
 
-	return nil
+	return string(out), nil
 }
 
 func RunCommand(cmd string) (string, error) {
@@ -193,9 +193,9 @@ func RunCommand(cmd string) (string, error) {
 	return string(out), err
 }
 
-func RunAyncCommand(cmd string) error {
+func RunAsyncCommand(cmd string) error {
 	log.Printf("running async cmd, %s", cmd)
-	return exec.Command("bash", "-c", cmd).Start()
+	return exec.Command("nohup", "bash", "-c", cmd).Start()
 }
 
 func RunCommands(commands []string) error {

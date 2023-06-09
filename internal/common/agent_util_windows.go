@@ -10,6 +10,7 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -88,22 +89,27 @@ func StopAgent() error {
 	return nil
 }
 
-func RunShellScript(path string, args ...string) error {
+func RunShellScript(path string, args ...string) (string, error) {
 	ps, err := exec.LookPath("powershell.exe")
-
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", path}, args...)
-	out, err := exec.Command(ps, bashArgs...).Output()
+	shellArgs := []string{"-NoProfile", "-NonInteractive", "-NoExit"}
+	if !strings.HasSuffix(path, ".ps1") {
+		shellArgs = append(shellArgs, "-Command")
+	}
+	shellArgs = append(shellArgs, path)
+	shellArgs = append(shellArgs, args...)
+
+	out, err := exec.Command(ps, shellArgs...).Output()
 
 	if err != nil {
 		log.Printf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
-		return err
+		return "", err
 	}
 
-	return nil
+	return string(out), nil
 }
 
 // printOutputAndError does nothing if there was no error.
@@ -127,7 +133,18 @@ func RunCommand(cmd string) (string, error) {
 	return string(out), err
 }
 
-func RunAyncCommand(cmd string) error {
+func RunCommands(commands []string) error {
+	for _, cmd := range commands {
+		_, err := RunCommand(cmd)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func RunAsyncCommand(cmd string) error {
 	log.Printf("running async cmd, %s", cmd)
 	return exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-NoExit", cmd).Start()
 }

@@ -86,10 +86,93 @@ resource "aws_ssm_parameter" "upload_ssm" {
   value = data.local_file.input.content
 }
 
-resource "null_resource" "integration_test" {
+resource "null_resource" "integration_test_setup" {
   depends_on = [aws_instance.cwagent, module.validator, aws_ssm_parameter.upload_ssm]
 
   # Install software
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+  }
+
+  # Install agent binaries
+  provisioner "remote-exec" {
+    inline = [
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
+      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
+    ]
+  }
+}
+
+## reboot when only needed
+resource "null_resource" "integration_test_reboot" {
+  count = length(regexall("restart", var.test_dir)) > 0 ? 1 : 0
+
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+  }
+
+  # Prepare Integration Test
+  provisioner "remote-exec" {
+    inline = [
+      "powershell \"Restart-Computer -Force\"",
+    ]
+  }
+
+  depends_on = [
+    null_resource.integration_test_setup,
+  ]
+}
+
+resource "null_resource" "integration_test_wait" {
+  count = length(regexall("restart", var.test_dir)) > 0 ? 1 : 0
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Sleeping after initiating instance restart"
+      sleep 180
+    EOT
+  }
+  depends_on = [
+    null_resource.integration_test_reboot,
+  ]
+}
+
+resource "null_resource" "integration_test_run" {
+  # run go test when it's not feature test
+  count = length(regexall("/feature/windows", var.test_dir)) < 1 ? 1 : 0
+  depends_on = [
+    null_resource.integration_test_setup,
+    null_resource.integration_test_wait,
+  ]
+
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "validator.exe --test-name=${var.test_dir}",
+    ]
+  }
+}
+
+resource "null_resource" "integration_test_run_validator" {
+  # run validator only when test_dir is not passed e.g. the default from variable.tf
+  count = length(regexall("/feature/windows", var.test_dir)) > 0 ? 1 : 0
+  depends_on = [
+    null_resource.integration_test_setup,
+    null_resource.integration_test_reboot,
+  ]
+
   connection {
     type     = "winrm"
     user     = "Administrator"
@@ -105,15 +188,6 @@ resource "null_resource" "integration_test" {
   provisioner "file" {
     source      = module.validator.validator_config
     destination = module.validator.instance_validator_config
-  }
-
-  # Install agent binaries
-  provisioner "remote-exec" {
-    inline = [
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
-    ]
   }
 
   provisioner "remote-exec" {

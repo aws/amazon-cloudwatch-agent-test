@@ -169,6 +169,7 @@ required for testing locally but is required for testing on your personal fork.
             "autoscaling:SetInstanceProtection",
             "autoscaling:UpdateAutoScalingGroup",
             "cloudwatch:GetMetricData",
+            "cloudwatch:ListMetrics",
             "dynamodb:*",
             "ec2:AuthorizeSecurityGroupEgress",
             "ec2:AuthorizeSecurityGroupIngress",
