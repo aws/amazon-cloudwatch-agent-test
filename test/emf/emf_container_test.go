@@ -62,7 +62,7 @@ func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult 
 			},
 			{
 				Key:   "Type",
-				Value: aws.String("Counter"),
+				Value: dimension.ExpectedDimensionValue{Value: aws.String("Counter")},
 			},
 		})
 	}
