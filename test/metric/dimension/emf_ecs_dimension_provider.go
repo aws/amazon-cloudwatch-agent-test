@@ -22,9 +22,9 @@ func (p EMFECSDimensionProvider) IsApplicable() bool {
 }
 
 func (p EMFECSDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
-	if instruction.Key == "InstanceID" {
+	if instruction.Key == "InstanceId" {
 		return types.Dimension{
-			Name:  aws.String("InstanceID"),
+			Name:  aws.String("InstanceId"),
 			Value: aws.String("INSTANCEID"),
 		}
 	}

@@ -74,7 +74,7 @@
         "entryPoint": [
             "/bin/sh",
             "-c",
-            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFECSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFECSNameSpace\",\"Dimensions\":[[\"Type\",\"InstanceID\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"InstanceID\": \"INSTANCEID\"}' | socat -v -t 0 - UDP:cloudwatch_agent:25888; sleep 60; done"
+            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFECSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFECSNameSpace\",\"Dimensions\":[[\"Type\",\"InstanceId\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"InstanceId\": \"INSTANCEID\"}' | socat -v -t 0 - UDP:cloudwatch_agent:25888; sleep 60; done"
         ]
     }
 ]
