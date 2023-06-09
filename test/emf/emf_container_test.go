@@ -56,7 +56,7 @@ func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult 
 		namespace = "EMFECSNameSpace"
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
-				Key:   "InstanceName",
+				Key:   "InstanceID",
 				Value: dimension.UnknownDimensionValue(),
 			},
 		})

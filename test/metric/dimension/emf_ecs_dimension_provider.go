@@ -28,6 +28,13 @@ func (p EMFECSDimensionProvider) GetDimension(instruction Instruction) types.Dim
 			Value: aws.String("INSTANCEID"),
 		}
 	}
+	if instruction.Key == "Type" {
+		return types.Dimension{
+			Name:  aws.String("Type"),
+			Value: aws.String("Counter"),
+		}
+	}
+
 	return types.Dimension{}
 }
 
