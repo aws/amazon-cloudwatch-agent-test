@@ -96,6 +96,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"ec2_windows": {
 		{testDir: "./test/feature/windows"},
+		{testDir: "./test/restart"},
 	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},
