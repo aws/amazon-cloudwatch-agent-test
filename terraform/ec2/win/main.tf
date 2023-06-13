@@ -92,7 +92,8 @@ EOF
   }
 }
 
-data "local_file" "input" {
+data "local_file" "agent_config" {
+  count = var.use_ssm == true ? 1 : 0
   filename = module.validator.agent_config
 }
 
@@ -102,7 +103,7 @@ resource "aws_ssm_parameter" "upload_ssm" {
   name  = local.ssm_parameter_name
   type  = "String"
   tier  = "Advanced"
-  value = data.local_file.input.content
+  value = data.local_file.agent_config.content
 }
 
 resource "null_resource" "integration_test_setup" {
