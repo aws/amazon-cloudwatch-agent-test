@@ -45,6 +45,7 @@ type testConfig struct {
 var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_linux": {
 		{testDir: "./test/restart"},
+	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},
 		{testDir: "../../test/performance/logs"},
