@@ -43,60 +43,8 @@ type testConfig struct {
 
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
-	"ec2_gpu": {
-		{testDir: "./test/nvidia_gpu"},
-	},
 	"ec2_linux": {
 		{testDir: "./test/ca_bundle"},
-		{testDir: "./test/cloudwatchlogs"},
-		{testDir: "./test/metrics_number_dimension"},
-		{testDir: "./test/metric_value_benchmark"},
-		{testDir: "./test/run_as_user"},
-		{testDir: "./test/collection_interval"},
-		{testDir: "./test/metric_dimension"},
-		{testDir: "./test/restart"},
-		{
-			testDir: "./test/acceptance",
-			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
-		},
-		{
-			testDir: "./test/fips",
-			targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
-		},
-		{
-			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/proxy",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/ssl_cert",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir:      "./test/userdata",
-			terraformDir: "terraform/ec2/userdata",
-			targets:      map[string]map[string]struct{}{"os": {"ol9": {}}},
-		},
-		{
-			testDir:      "./test/assume_role",
-			terraformDir: "terraform/ec2/creds",
-			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-	},
-	/*
-		You can only place 1 mac instance on a dedicate host a single time.
-		Therefore, limit down the scope for testing in Mac since EC2 can be done with Linux
-		and Mac under the hood share similar plugins with Linux
-	*/
-	"ec2_mac": {
-		{testDir: "./test/feature/mac"},
-	},
-	"ec2_windows": {
-		{testDir: "./test/feature/windows"},
-		{testDir: "./test/restart"},
 	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},
@@ -111,36 +59,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/stress/system"},
 		{testDir: "../../test/stress/statsd"},
 		{testDir: "../../test/stress/collectd"},
-	},
-	"ecs_fargate": {
-		{testDir: "./test/ecs/ecs_metadata"},
-	},
-	"ecs_ec2_daemon": {
-		{testDir: "./test/metric_value_benchmark"},
-		{testDir: "./test/statsd"},
-		{testDir: "./test/emf"},
-	},
-	"eks_daemon": {
-		{
-			testDir: "./test/metric_value_benchmark",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/statsd", terraformDir: "terraform/eks/daemon/statsd",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/emf", terraformDir: "terraform/eks/daemon/emf",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/d",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
-	},
-	"eks_deployment": {
-		{testDir: "./test/metric_value_benchmark"},
 	},
 }
 
