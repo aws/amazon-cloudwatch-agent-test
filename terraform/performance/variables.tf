@@ -18,6 +18,11 @@ variable "ssh_key_value" {
   default = ""
 }
 
+variable "user" {
+  type    = string
+  default = ""
+}
+
 variable "ami" {
   type    = string
   default = "cloudwatch-agent-integration-test-al2*"
