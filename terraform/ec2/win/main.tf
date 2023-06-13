@@ -62,6 +62,25 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   get_password_data                    = true
+  user_data = length(regexall("/feature/windows", var.test_dir)) < 1 ? "" : <<EOF
+<powershell>
+Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+
+Start-Service sshd
+Set-Service -Name sshd -StartupType 'Automatic'
+
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+choco install git --confirm
+choco install go --confirm
+msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
+
+[Environment]::SetEnvironmentVariable("PATH", "C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\Go\bin;C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0\", [System.EnvironmentVariableTarget]::Machine)
+</powershell>
+EOF
 
   metadata_options {
     http_endpoint = "enabled"
@@ -100,6 +119,8 @@ resource "null_resource" "integration_test_setup" {
   # Install agent binaries
   provisioner "remote-exec" {
     inline = [
+      "start /wait timeout 120", //Wait some time to ensure all binaries have been downloaded
+      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
@@ -152,15 +173,25 @@ resource "null_resource" "integration_test_run" {
   ]
 
   connection {
-    type     = "winrm"
-    user     = "Administrator"
-    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host     = aws_instance.cwagent.public_dns
+    type            = "ssh"
+    user            = "Administrator"
+    password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host            = aws_instance.cwagent.public_dns
+    target_platform = "windows"
+    timeout         = "6m"
   }
 
   provisioner "remote-exec" {
     inline = [
-      "validator.exe --test-name=${var.test_dir}",
+#      "validator.exe --test-name=${var.test_dir}",
+      "start /wait timeout 120", //Wait some time to ensure all binaries have been downloaded
+      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
+      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
+      "echo clone and install agent",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "cd amazon-cloudwatch-agent-test",
+      "echo running tests",
+      "go test ${var.test_dir} -p 1 -timeout 30m -v "
     ]
   }
 }
