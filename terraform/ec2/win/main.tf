@@ -109,7 +109,7 @@ resource "null_resource" "integration_test_setup" {
     type            = "ssh"
     user            = "Administrator"
     password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host            = aws_instance.cwagent.public_dns
+    host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
   }
@@ -134,7 +134,7 @@ resource "null_resource" "integration_test_reboot" {
     type            = "ssh"
     user            = "Administrator"
     password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host            = aws_instance.cwagent.public_dns
+    host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
   }
@@ -176,7 +176,7 @@ resource "null_resource" "integration_test_run" {
     type            = "ssh"
     user            = "Administrator"
     password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host            = aws_instance.cwagent.public_dns
+    host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
   }
@@ -208,7 +208,7 @@ resource "null_resource" "integration_test_run_validator" {
     type            = "ssh"
     user            = "Administrator"
     password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host            = aws_instance.cwagent.public_dns
+    host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
   }
