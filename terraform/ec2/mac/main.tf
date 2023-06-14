@@ -36,7 +36,7 @@ locals {
 # Prepare Parameters Tests
 #####################################################################
 
-/* module "validator" {
+module "validator" {
   source = "../../validator"
 
   arc            = var.arc
@@ -46,7 +46,7 @@ locals {
   test_dir       = var.test_dir
   temp_directory = "/tmp"
   cwa_github_sha = var.cwa_github_sha
-} */
+}
 
 #####################################################################
 # Generate EC2 Instance and execute test commands
