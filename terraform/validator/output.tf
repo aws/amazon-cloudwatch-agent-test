@@ -6,7 +6,7 @@ output "agent_config" {
 }
 
 output "validator_config" {
-  value = "../../${var.test_dir}/${local.final_validator_config}"
+  value = "../../${var.test_dir}/${local.validator_config}"
 }
 
 output "instance_agent_config" {
