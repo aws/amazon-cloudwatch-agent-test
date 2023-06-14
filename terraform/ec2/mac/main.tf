@@ -36,7 +36,7 @@ locals {
 # Prepare Parameters Tests
 #####################################################################
 
-module "validator" {
+/* module "validator" {
   source = "../../validator"
 
   arc            = var.arc
@@ -46,7 +46,7 @@ module "validator" {
   test_dir       = var.test_dir
   temp_directory = "/tmp"
   cwa_github_sha = var.cwa_github_sha
-}
+} */
 
 #####################################################################
 # Generate EC2 Instance and execute test commands
@@ -83,12 +83,12 @@ resource "null_resource" "integration_test" {
   }
 
   provisioner "file" {
-    source      = module.validator.agent_config
+    source      = "../../../${module.validator.agent_config}"
     destination = module.validator.instance_agent_config
   }
 
   provisioner "file" {
-    source      = module.validator.validator_config
+    source      = "../../../${module.validator.validator_config}"
     destination = module.validator.instance_validator_config
   }
 
