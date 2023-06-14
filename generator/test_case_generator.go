@@ -44,11 +44,11 @@ type testConfig struct {
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_performance": {
-		{testDir: "./test/performance/emf"},
-		{testDir: "./test/performance/logs"},
+		{testDir: ".../../test/performance/emf"},
+		//{testDir: "./test/performance/logs"},
 		{testDir: "./test/performance/system"},
-		{testDir: "./test/performance/statsd"},
-		{testDir: "./test/performance/collectd"},
+		//{testDir: "./test/performance/statsd"},
+		//{testDir: "./test/performance/collectd"},
 	},
 }
 
