@@ -88,7 +88,19 @@ resource "null_resource" "install_binaries" {
   }
 
   provisioner "local-exec" {
-    command = "echo $(ls ../..)"
+    command = "echo $(ls -l ../..)"
+  }
+
+  provisioner "local-exec" {
+    command = "echo $(ls -l ../../test)"
+  }
+
+  provisioner "local-exec" {
+    command = "echo $(ls -l ../../test/performance)"
+  }
+
+  provisioner "local-exec" {
+    command = "echo $(ls -l ../../test/performance/system)"
   }
 
   provisioner "file" {
