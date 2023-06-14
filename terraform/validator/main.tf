@@ -12,7 +12,7 @@ resource "local_file" "update-validation-config" {
     "<values_per_minute>", var.values_per_minute),
     "<commit_hash>", var.cwa_github_sha),
     "<commit_date>", var.cwa_github_sha_date),
-  "<cloudwatch_agent_config>", "../../${var.test_dir}/${local.cloudwatch_agent_config}")
+  "<cloudwatch_agent_config>", "${var.temp_directory}/${local.cloudwatch_agent_config}")
 
   filename = "${var.test_dir}/${local.final_validator_config}"
 }

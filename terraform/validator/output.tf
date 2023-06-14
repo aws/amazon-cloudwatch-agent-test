@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 output "agent_config" {
-  value = "${var.test_dir}/${local.cloudwatch_agent_config}"
+  value = "../../${var.test_dir}/${local.cloudwatch_agent_config}"
 }
 
 output "validator_config" {
-  value = "${var.test_dir}/${local.final_validator_config}"
+  value = "../../${var.test_dir}/${local.final_validator_config}"
 }
 
 output "instance_agent_config" {
