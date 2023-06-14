@@ -75,9 +75,21 @@ resource "null_resource" "install_binaries" {
     host        = aws_instance.cwagent.public_dns
   }
 
-  command = "echo 'CHAD!'"
-  command = "echo $(pwd)"
-  command = "echo $(ls)"
+  provisioner "local-exec" {
+    command = "echo 'CHAD!'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo $(pwd)"
+  }
+
+  provisioner "local-exec" {
+    command = "echo $(ls)"
+  }
+
+  provisioner "local-exec" {
+    command = "echo $(ls ../..)"
+  }
 
   provisioner "file" {
     source      = module.validator.agent_config
