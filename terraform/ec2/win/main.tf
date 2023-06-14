@@ -106,10 +106,12 @@ resource "null_resource" "integration_test_setup" {
 
   # Install software
   connection {
-    type     = "winrm"
-    user     = "Administrator"
-    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host     = aws_instance.cwagent.public_dns
+    type            = "ssh"
+    user            = "Administrator"
+    password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host            = aws_instance.cwagent.public_dns
+    target_platform = "windows"
+    timeout         = "6m"
   }
 
   # Install agent binaries
@@ -129,10 +131,12 @@ resource "null_resource" "integration_test_reboot" {
   count = length(regexall("restart", var.test_dir)) > 0 ? 1 : 0
 
   connection {
-    type     = "winrm"
-    user     = "Administrator"
-    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host     = aws_instance.cwagent.public_dns
+    type            = "ssh"
+    user            = "Administrator"
+    password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host            = aws_instance.cwagent.public_dns
+    target_platform = "windows"
+    timeout         = "6m"
   }
 
   # Prepare Integration Test
@@ -201,10 +205,12 @@ resource "null_resource" "integration_test_run_validator" {
   ]
 
   connection {
-    type     = "winrm"
-    user     = "Administrator"
-    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host     = aws_instance.cwagent.public_dns
+    type            = "ssh"
+    user            = "Administrator"
+    password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host            = aws_instance.cwagent.public_dns
+    target_platform = "windows"
+    timeout         = "6m"
   }
 
   provisioner "file" {
