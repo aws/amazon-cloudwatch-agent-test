@@ -1,8 +1,8 @@
 [
       {
-        "os": "macOS Big Sur Amd64",
-        "instanceType":"mac1.metal",
+        "os": "macOS Big Sur Arm64",
+        "instanceType":"mac2.metal",
         "ami": "amzn-ec2-macos-11.*",
-        "arc": "amd64"
+        "arc": "arm64"
       }
 ]
