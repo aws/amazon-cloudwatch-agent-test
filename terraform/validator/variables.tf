@@ -20,7 +20,7 @@ variable "values_per_minute" {
 
 variable "test_dir" {
   type    = string
-  default = "../../../test/feature/windows"
+  default = ""
 }
 
 variable "temp_directory" {
