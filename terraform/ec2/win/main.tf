@@ -98,15 +98,11 @@ resource "null_resource" "integration_test_setup" {
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
-    agent = false
-    script_path = "c:/windows/temp/terraform_%RAND%.ps1"
   }
 
   # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "start /wait timeout 120", //Wait some time to ensure all binaries have been downloaded
-      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
@@ -125,8 +121,6 @@ resource "null_resource" "integration_test_reboot" {
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
-    agent = false
-    script_path = "c:/windows/temp/terraform_%RAND%.ps1"
   }
 
   # Prepare Integration Test
@@ -169,17 +163,12 @@ resource "null_resource" "integration_test_run" {
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
-    agent = false
-    script_path = "c:/windows/temp/terraform_%RAND%.ps1"
   }
 
   provisioner "remote-exec" {
     inline = [
 #      "validator.exe --test-name=${var.test_dir}",
-      "start /wait timeout 120", //Wait some time to ensure all binaries have been downloaded
-      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
-      "echo clone and install agent",
+      "echo clone test repo",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "echo running tests",
@@ -203,8 +192,6 @@ resource "null_resource" "integration_test_run_validator" {
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
-    agent = false
-    script_path = "c:/windows/temp/terraform_%RAND%.ps1"
   }
 
   provisioner "file" {
