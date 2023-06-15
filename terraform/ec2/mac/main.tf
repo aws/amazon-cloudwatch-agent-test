@@ -99,9 +99,9 @@ resource "null_resource" "integration_test" {
       "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
       "sudo installer -pkg AWSCLIV2.pkg -target /",
       #Install Golang
-      "mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew",
-      "NONINTERACTIVE=1 homebrew/bin/brew install go",
-      "NONINTERACTIVE=1 homebrew/bin/brew install git",
+      "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
+      "NONINTERACTIVE=1 brew install go",
+      "NONINTERACTIVE=1 brew install git",
       "echo clone and install agent",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
     ]
