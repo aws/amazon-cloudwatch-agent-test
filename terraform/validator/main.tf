@@ -10,7 +10,7 @@ locals {
 }
 
 resource "local_file" "update-validation-config" {
-  content = replace(replace(replace(replace(file("${local.test_dir}/${local.validator_config}"),
+  content = replace(replace(replace(replace(file("../../../test/feature/windows/agent_config.json"),
     "<values_per_minute>", var.values_per_minute),
     "<commit_hash>", var.cwa_github_sha),
     "<commit_date>", var.cwa_github_sha_date),
