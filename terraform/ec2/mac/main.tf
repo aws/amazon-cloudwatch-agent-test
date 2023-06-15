@@ -83,12 +83,12 @@ resource "null_resource" "integration_test" {
   }
 
   provisioner "file" {
-    source      = "../../.${module.validator.agent_config}"
+    source      = module.validator.agent_config
     destination = module.validator.instance_agent_config
   }
 
   provisioner "file" {
-    source      = "../../.${module.validator.validator_config}"
+    source      = module.validator.validator_config
     destination = module.validator.instance_validator_config
   }
 
