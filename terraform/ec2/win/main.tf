@@ -167,6 +167,7 @@ resource "null_resource" "integration_test_run" {
 
   provisioner "remote-exec" {
     inline = [
+      "export AWS_REGION=${var.region}",
 #      "validator.exe --test-name=${var.test_dir}",
       "echo clone test repo",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
