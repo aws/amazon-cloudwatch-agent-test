@@ -73,17 +73,13 @@ resource "aws_instance" "cwagent" {
   }
 }
 
-data "local_file" "input" {
-  filename = module.validator.agent_config
-}
-
 # Size of windows json is too large thus can't use standard tier
 resource "aws_ssm_parameter" "upload_ssm" {
-  count = var.use_ssm == true ? 1 : 0
+  count = var.use_ssm == true && fileexists(module.validator.agent_config) == true ? 1 : 0
   name  = local.ssm_parameter_name
   type  = "String"
   tier  = "Advanced"
-  value = data.local_file.input.content
+  value = file(module.validator.agent_config)
 }
 
 resource "null_resource" "integration_test_setup" {
