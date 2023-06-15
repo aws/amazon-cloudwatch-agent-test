@@ -117,6 +117,8 @@ resource "null_resource" "integration_test_setup" {
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
+    agent = false
+    script_path = "c:/windows/temp/terraform_%RAND%.ps1"
   }
 
   # Install agent binaries
@@ -142,6 +144,8 @@ resource "null_resource" "integration_test_reboot" {
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
+    agent = false
+    script_path = "c:/windows/temp/terraform_%RAND%.ps1"
   }
 
   # Prepare Integration Test
@@ -184,6 +188,8 @@ resource "null_resource" "integration_test_run" {
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
+    agent = false
+    script_path = "c:/windows/temp/terraform_%RAND%.ps1"
   }
 
   provisioner "remote-exec" {
@@ -216,6 +222,8 @@ resource "null_resource" "integration_test_run_validator" {
     host            = aws_instance.cwagent.public_ip
     target_platform = "windows"
     timeout         = "6m"
+    agent = false
+    script_path = "c:/windows/temp/terraform_%RAND%.ps1"
   }
 
   provisioner "file" {
