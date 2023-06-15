@@ -101,6 +101,9 @@ resource "null_resource" "integration_test" {
       #Install Golang
       "mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew",
       "NONINTERACTIVE=1 homebrew/bin/brew install go",
+      "NONINTERACTIVE=1 homebrew/bin/brew install git",
+      "echo clone and install agent",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
     ]
   }
   # Install agent binaries
@@ -120,6 +123,8 @@ resource "null_resource" "integration_test" {
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
+      "cd ~/amazon-cloudwatch-agent-test",
+      "go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v"
     ]
   }
 
