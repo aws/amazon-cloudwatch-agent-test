@@ -37,7 +37,7 @@ locals {
 #####################################################################
 
 module "validator" {
-  source = "../../validator"
+  source = "~/amazon-cloudwatch-agent-test/terraform/validator"
 
   arc            = var.arc
   family         = "darwin"
