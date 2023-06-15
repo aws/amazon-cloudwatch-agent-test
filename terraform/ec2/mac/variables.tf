@@ -48,7 +48,7 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
-  default = "~/amazon-cloudwatch-agent-test/test/feature/mac"
+  default = "./test/feature/mac"
 }
 
 variable "cwa_github_sha" {
