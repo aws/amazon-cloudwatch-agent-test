@@ -100,7 +100,11 @@ resource "null_resource" "integration_test" {
       "sudo installer -pkg AWSCLIV2.pkg -target /",
       #Install Golang
       "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
+      "(echo; echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile",
+      "eval \"$(/opt/homebrew/bin/brew shellenv)\"",
+      #Install Golang
       "NONINTERACTIVE=1 brew install go",
+      #Download test repo
       "NONINTERACTIVE=1 brew install git",
       "echo clone and install agent",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
