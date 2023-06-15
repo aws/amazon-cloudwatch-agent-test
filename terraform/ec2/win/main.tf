@@ -64,25 +64,6 @@ resource "aws_instance" "cwagent" {
   get_password_data                    = true
   user_data = <<EOF
 <powershell>
-Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
-Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
-Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
-
-Set-Service -Name sshd -StartupType 'Automatic'
-Start-Service sshd
-
-Set-Service -Name ssh-agent -StartupType 'Automatic'
-Start-Service ssh-agent
-
-New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value (Get-Command powershell.exe).Path -PropertyType String -Force;
-
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-
-choco install git --confirm
-choco install go --confirm
-msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
-
 [Environment]::SetEnvironmentVariable("PATH", "C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\Go\bin;C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0\", [System.EnvironmentVariableTarget]::Machine)
 </powershell>
 EOF
