@@ -62,14 +62,19 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   get_password_data                    = true
-  user_data = length(regexall("/feature/windows", var.test_dir)) < 1 ? "" : <<EOF
+  user_data = <<EOF
 <powershell>
 Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
 Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
 Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
 
-Start-Service sshd
 Set-Service -Name sshd -StartupType 'Automatic'
+Start-Service sshd
+
+Set-Service -Name ssh-agent -StartupType 'Automatic'
+Start-Service ssh-agent
+
+New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value (Get-Command powershell.exe).Path -PropertyType String -Force;
 
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
