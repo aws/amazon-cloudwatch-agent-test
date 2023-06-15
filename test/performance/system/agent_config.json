@@ -70,7 +70,6 @@
           "metrics_include": [
             "queue_0_tx_cnt","queue_0_rx_cnt"
           ],
-          "metrics_collection_interval": 1
         },
         "net": {
           "resources": [
