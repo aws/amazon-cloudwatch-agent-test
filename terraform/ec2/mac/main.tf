@@ -99,22 +99,23 @@ resource "null_resource" "integration_test" {
       "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
       "sudo installer -pkg AWSCLIV2.pkg -target /",
       #Install Golang
-      "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
+      "NONINTERACTIVE=1 sudo /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
       "(echo; echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile",
       "eval \"$(/opt/homebrew/bin/brew shellenv)\"",
       #Install Golang
-      "NONINTERACTIVE=1 brew install go",
+      "echo Install golang",
+      "NONINTERACTIVE=1 sudo brew install go",
+      "go --version",
       #Download test repo
-      "NONINTERACTIVE=1 brew install git",
-      "echo clone and install agent",
+      "NONINTERACTIVE=1 sudo brew install git",
+      "echo clone test repo",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v"
     ]
   }
   # Install agent binaries
   provisioner "remote-exec" {
     inline = [
+      "echo Install agent binary",
       "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${var.arc}/amazon-cloudwatch-agent.pkg .",
       "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator .",
       "sudo installer -pkg amazon-cloudwatch-agent.pkg -target /",
@@ -124,8 +125,14 @@ resource "null_resource" "integration_test" {
   #Prepare the requirement before validation and validate the metrics/logs/traces
   provisioner "remote-exec" {
     inline = [
+      "echo Execute integration tests",
       "sudo chmod +x ./validator",
       "export AWS_REGION=${var.region}",
+      "export GOPATH=/Users/ec2-user/go",
+      "export GOROOT=/opt/homebrew/opt/go/libexec",
+      "export PATH=\"$PATH:${GOPATH}/bin:${GOROOT}/bin\"",
+      "cd ~/amazon-cloudwatch-agent-test",
+      "go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
