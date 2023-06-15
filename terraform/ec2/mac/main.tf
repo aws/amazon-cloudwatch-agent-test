@@ -98,9 +98,9 @@ resource "null_resource" "integration_test" {
       "sudo softwareupdate --install-rosetta --agree-to-license",
       "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
       "sudo installer -pkg AWSCLIV2.pkg -target /",
-      #Install Golang
+      /* #Install Golang
       "mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew",
-      "homebrew/bin/brew install go",
+      "homebrew/bin/brew install go", */
     ]
   }
   # Install agent binaries
