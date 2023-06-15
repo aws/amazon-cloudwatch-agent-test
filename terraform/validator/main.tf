@@ -8,7 +8,8 @@ locals {
 }
 
 resource "local_file" "update-validation-config" {
-  content = replace(replace(replace(replace(file("${var.test_dir}/${local.validator_config}"),
+  test_dir = var.test_dir == "../../test/feature/windows" ? "../../../test/feature/windows" : var.test_dir
+  content = replace(replace(replace(replace(file("${test_dir}/${local.validator_config}"),
     "<values_per_minute>", var.values_per_minute),
     "<commit_hash>", var.cwa_github_sha),
     "<commit_date>", var.cwa_github_sha_date),
