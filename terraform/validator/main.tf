@@ -5,11 +5,12 @@ locals {
   validator_config        = "parameters.yml"
   final_validator_config  = "final_parameters.yml"
   cloudwatch_agent_config = "agent_config.json"
+  test_dir = var.test_dir == "../../test/feature/windows" ? "../../../test/feature/windows" : var.test_dir
+
 }
 
 resource "local_file" "update-validation-config" {
-  test_dir = var.test_dir == "../../test/feature/windows" ? "../../../test/feature/windows" : var.test_dir
-  content = replace(replace(replace(replace(file("${test_dir}/${local.validator_config}"),
+  content = replace(replace(replace(replace(file("${local.test_dir}/${local.validator_config}"),
     "<values_per_minute>", var.values_per_minute),
     "<commit_hash>", var.cwa_github_sha),
     "<commit_date>", var.cwa_github_sha_date),
