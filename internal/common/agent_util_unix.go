@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"runtime"
 )
 
 const (
