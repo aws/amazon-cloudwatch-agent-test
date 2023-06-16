@@ -62,7 +62,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   get_password_data                    = true
-  user_data = ""
+  user_data                            = ""
 
   metadata_options {
     http_endpoint = "enabled"
@@ -164,7 +164,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-#      "validator.exe --test-name=${var.test_dir}",
+      # "validator.exe --test-name=${var.test_dir}",
       "echo clone test repo",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
