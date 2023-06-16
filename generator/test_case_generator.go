@@ -47,10 +47,43 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/nvidia_gpu"},
 	},
 	"ec2_linux": {
+		// {testDir: "./test/ca_bundle"},
+		// {testDir: "./test/cloudwatchlogs"},
+		// {testDir: "./test/metrics_number_dimension"},
+		// {testDir: "./test/metric_value_benchmark"},
+		// {testDir: "./test/run_as_user"},
+		// {testDir: "./test/collection_interval"},
+		// {testDir: "./test/metric_dimension"},
+		{testDir: "./test/restart"},
 		{
-			testDir:      "./test/userdata",
-			terraformDir: "terraform/ec2/userdata",
-			targets:      map[string]map[string]struct{}{"os": {"ol9": {}}},
+			testDir: "./test/acceptance",
+			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
+		},
+		{
+			testDir: "./test/fips",
+			targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		},
+		{
+			testDir: "./test/lvm",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/proxy",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/ssl_cert",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		// {
+		// 	testDir:      "./test/userdata",
+		// 	terraformDir: "terraform/ec2/userdata",
+		// 	targets:      map[string]map[string]struct{}{"os": {"ol9": {}}},
+		// },
+		{
+			testDir:      "./test/assume_role",
+			terraformDir: "terraform/ec2/creds",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 	},
 	/*
