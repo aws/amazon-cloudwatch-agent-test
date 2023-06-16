@@ -74,7 +74,7 @@ resource "aws_instance" "cwagent" {
 }
 
 data "local_file" "input" {
-  filename = module.validator.agent_config
+  filename = "../${module.validator.agent_config}"
 }
 
 # Size of windows json is too large thus can't use standard tier
