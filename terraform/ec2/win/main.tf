@@ -62,11 +62,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   get_password_data                    = true
-  user_data = <<EOF
-<powershell>
-[Environment]::SetEnvironmentVariable("PATH", "C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\Go\bin;C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0\", [System.EnvironmentVariableTarget]::Machine)
-</powershell>
-EOF
+  user_data = ""
 
   metadata_options {
     http_endpoint = "enabled"
