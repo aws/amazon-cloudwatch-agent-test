@@ -48,12 +48,12 @@ variable "test_name" {
 
 variable "github_test_repo" {
   type    = string
-  default = "https://github.com/zhihonl/amazon-cloudwatch-agent-test.git"
+  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
 }
 
 variable "github_test_repo_branch" {
   type    = string
-  default = "macos-test"
+  default = "main"
 }
 
 variable "test_dir" {
