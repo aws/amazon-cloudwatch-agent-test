@@ -58,7 +58,7 @@ variable "github_test_repo_branch" {
 
 variable "test_dir" {
   type    = string
-  default = "./test/feature/mac"
+  default = "../../../test/feature/mac"
 }
 
 variable "cwa_github_sha" {
