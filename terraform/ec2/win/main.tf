@@ -164,7 +164,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      # "validator.exe --test-name=${var.test_dir}",
+      # there is another way to run test using "validator.exe --test-name=${var.test_dir}",
       "echo clone test repo",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
