@@ -103,17 +103,17 @@ resource "null_resource" "integration_test_setup" {
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
       "mkdir C:\\jmx_workload",
-      "powershell.exe -Command \"'---', 'rules:', '- pattern: \".*\"' | Set-Content -Path \"C:\\jmx_workload\\exporter_config.yaml\"\"",
-      "powershell.exe -Command \"'global:', '  scrape_interval: 1m', '  scrape_timeout: 10s', 'scrape_configs:', '  - job_name: jmx-exporter', '    sample_limit: 10000', '    file_sd_configs:', '      - files: [ \"C:\\\\jmx_workload\\\\prometheus_file_sd.yaml\" ]' | Set-Content -Path \"C:\\jmx_workload\\prometheus.yaml\"\"",
-      "'- targets:', '  - 127.0.0.1:9404', '  labels:', '    application: test-app', '    InstanceId: ${var.ec2_instance_type} | Set-Content -Path \"C:\\jmx_workload\\prometheus_file_sd.yaml\"",
-      "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12",
-      "(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/jmx_prometheus_javaagent-0.12.0.jar', 'C:\\\\jmx_workload\\\\jmx_prometheus_javaagent-0.12.0.jar')",
-      "(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/SampleJavaApplication-1.0-SNAPSHOT.jar', 'C:\\\\jmx_workload\\\\SampleJavaApplication-1.0-SNAPSHOT.jar')",
-      "Read-S3Object -BucketName cwagent-soaktest-tool -key jdk/jdk-15.0.2_windows-x64_bin.exe -File \"C:\\jmx_workload\\jdk-15.0.2_windows-x64_bin.exe\" ",
-      "Start-Sleep -s 60",
-      "C:\\jmx_workload\\jdk-15.0.2_windows-x64_bin.exe /s",
-      "Start-Process powershell {&'C:\\Program Files\\Java\\jdk-15.0.2\\bin\\java.exe' -javaagent:C:\\jmx_workload\\jmx_prometheus_javaagent-0.12.0.jar=9404:C:\\jmx_workload\\exporter_config.yaml -cp C:\\jmx_workload\\SampleJavaApplication-1.0-SNAPSHOT.jar com.gubupt.sample.app.App}",
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-"
+      "powershell.exe -Command \"'---', 'rules:', '- pattern: \\\".*\\\"' | Set-Content -Path \\\"C:\\jmx_workload\\exporter_config.yaml\\\"",
+      "powershell.exe -Command \"'global:', '  scrape_interval: 1m', '  scrape_timeout: 10s', 'scrape_configs:', '  - job_name: jmx-exporter', '    sample_limit: 10000', '    file_sd_configs:', '      - files: [ \\\"C:\\\\jmx_workload\\\\prometheus_file_sd.yaml\" ]' | Set-Content -Path \"C:\\jmx_workload\\prometheus.yaml\"\"",
+      "powershell.exe -Command \"'- targets:', '  - 127.0.0.1:9404', '  labels:', '    application: test-app', '    InstanceId: ${var.ec2_instance_type} | Set-Content -Path \\\"C:\\jmx_workload\\prometheus_file_sd.yaml\\\"\\\"",
+      "powershell.exe -Command \"[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12\"",
+      "powershell.exe -Command \"(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/jmx_prometheus_javaagent-0.12.0.jar', 'C:\\\\jmx_workload\\\\jmx_prometheus_javaagent-0.12.0.jar')\\\"",
+      "powershell.exe -Command \"(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/SampleJavaApplication-1.0-SNAPSHOT.jar', 'C:\\\\jmx_workload\\\\SampleJavaApplication-1.0-SNAPSHOT.jar')\\\"",
+      "powershell.exe -Command \"Read-S3Object -BucketName cwagent-soaktest-tool -key jdk/jdk-15.0.2_windows-x64_bin.exe -File \\\"C:\\jmx_workload\\jdk-15.0.2_windows-x64_bin.exe\\\" \\\"",
+      "powershell.exe -Command \"Start-Sleep -s 60\"",
+      "powershell.exe -Command \"C:\\jmx_workload\\jdk-15.0.2_windows-x64_bin.exe /s\"",
+      "powershell.exe -Command \"Start-Process powershell {&'C:\\Program Files\\Java\\jdk-15.0.2\\bin\\java.exe' -javaagent:C:\\jmx_workload\\jmx_prometheus_javaagent-0.12.0.jar=9404:C:\\jmx_workload\\exporter_config.yaml -cp C:\\jmx_workload\\SampleJavaApplication-1.0-SNAPSHOT.jar com.gubupt.sample.app.App}\"",
+      "powershell.exe -Command \"start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-"
     ]
   }
 }
