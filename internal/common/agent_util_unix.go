@@ -16,7 +16,7 @@ import (
 
 const (
 	CatCommand              = "cat "
-	AppOwnerCommand         = runtime.GOOS == "linux" : "ps -u -p " ? "ps -j -p "
+	AppOwnerCommand         = "ps -u -p "
 	ConfigOutputPath        = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	Namespace               = "CWAgent"
 	Host                    = "host"
