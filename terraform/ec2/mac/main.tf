@@ -36,7 +36,7 @@ locals {
 # Prepare Parameters Tests
 #####################################################################
 
-/* module "validator" {
+module "validator" {
   source = "../../validator"
 
   arc            = var.arc
@@ -46,7 +46,7 @@ locals {
   test_dir       = var.test_dir
   temp_directory = "/tmp"
   cwa_github_sha = var.cwa_github_sha
-} */
+}
 
 #####################################################################
 # Generate EC2 Instance and execute test commands
@@ -82,7 +82,7 @@ resource "null_resource" "integration_test" {
     timeout     = "10m"
   }
 
-/*   provisioner "file" {
+  provisioner "file" {
     source      = "../../.${module.validator.agent_config}"
     destination = module.validator.instance_agent_config
   }
@@ -90,7 +90,7 @@ resource "null_resource" "integration_test" {
   provisioner "file" {
     source      = "../../.${module.validator.validator_config}"
     destination = module.validator.instance_validator_config
-  } */
+  }
 
   provisioner "remote-exec" {
     inline = [
@@ -114,7 +114,7 @@ resource "null_resource" "integration_test" {
       # Install agent binaries
       "echo Install agent binary",
       "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${var.arc}/amazon-cloudwatch-agent.pkg .",
-      #"/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator .",
+      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator .",
       "sudo installer -pkg amazon-cloudwatch-agent.pkg -target /",
 
       # Run Integration test
@@ -126,10 +126,10 @@ resource "null_resource" "integration_test" {
       "go --version",
       "cd ~/amazon-cloudwatch-agent-test",
       "sudo go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v",
-      #"sudo chmod +x ./validator",
-      #"./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
-      #"sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
-      #"./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
+      "sudo chmod +x ./validator",
+      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
+      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
   }
   /* # Install agent binaries
