@@ -5,8 +5,6 @@ locals {
   validator_config        = "parameters.yml"
   final_validator_config  = "final_parameters.yml"
   cloudwatch_agent_config = "agent_config.json"
-  test_dir = var.test_dir != "../../../test/feature/windows" ? "../../../test/feature/windows" : var.test_dir
-
 }
 
 resource "local_file" "update-validation-config" {
