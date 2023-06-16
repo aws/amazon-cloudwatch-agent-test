@@ -57,7 +57,7 @@ func TestRunAsUser(t *testing.T) {
 				t.Fatalf("Error: %v", err)
 			}
 			processOwnerCommand := common.AppOwnerCommand
-			currentOS = runtime.GOOS
+			currentOS := runtime.GOOS
 			switch currentOS {
 			case "darwin":
 				processOwnerCommand = "ps -j -p "
