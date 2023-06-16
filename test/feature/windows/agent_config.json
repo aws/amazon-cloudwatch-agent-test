@@ -5,6 +5,35 @@
     "metrics": {
       "namespace": "CloudWatchAgentWinFeature",
       "metrics_collected": {
+        "prometheus": {
+          "prometheus_config_path": "C:\\\\ProgramData\\\\Amazon\\\\AmazonCloudWatchAgent\\\\prometheus.yaml",
+          "log_group_name": "prometheus_test_windows",
+          "emf_processor": {
+            "metric_namespace": "PrometheusWindowsTest",
+            "metric_declaration": [
+              {
+                "source_labels": [
+                  "include"
+                ],
+                "label_matcher": "^yes$",
+                "dimensions": [
+                  [
+                    "prom_type"
+                  ],
+                  [
+                    "prom_type",
+                    "quantile"
+                  ]
+                ],
+                "metric_selectors": [
+                  "^jvm_threads_current$",
+                  "^jvm_gc_collection_seconds_sum$",
+                  "^jvm_memory_bytes_used$"
+                ]
+              }
+            ]
+          }
+        },
         "statsd": {
           "metrics_aggregation_interval": 60,
           "metrics_collection_interval": 60,
