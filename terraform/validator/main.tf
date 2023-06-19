@@ -8,7 +8,6 @@ locals {
 }
 
 resource "local_file" "update-validation-config" {
-  count = fileexists("${var.test_dir}/${local.validator_config}") == true ? 1 : 0
   content = replace(replace(replace(replace(file("${var.test_dir}/${local.validator_config}"),
     "<values_per_minute>", var.values_per_minute),
     "<commit_hash>", var.cwa_github_sha),
