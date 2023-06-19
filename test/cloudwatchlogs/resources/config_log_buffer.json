@@ -1,0 +1,641 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true,
+    "max_cloudwatch_logs_buffer": 1000000
+  },
+  "metrics": {
+    "namespace": "LogBufferTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "procstat": [
+        {
+          "exe": "cloudwatch-agent",
+          "measurement": [
+            "cpu_time_system",
+            "cpu_time_user",
+            "cpu_usage",
+            "memory_data",
+            "memory_locked",
+            "memory_rss",
+            "memory_stack",
+            "memory_swap",
+            "memory_vms"
+          ],
+          "metrics_collection_interval": 10
+        }
+      ]
+    },
+    "force_flush_interval": 5
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/logs_buffer/test.log.0",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.0",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.1",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.1",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.2",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.2",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.3",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.3",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.4",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.4",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.5",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.5",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.6",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.6",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.7",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.7",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.8",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.8",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.9",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.9",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.10",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.10",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.11",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.11",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.12",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.12",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.13",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.13",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.14",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.14",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.15",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.15",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.16",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.16",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.17",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.17",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.18",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.18",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.19",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.19",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.20",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.20",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.21",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.21",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.22",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.22",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.23",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.23",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.24",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.24",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.25",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.25",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.26",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.26",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.27",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.27",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.28",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.28",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.29",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.29",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.30",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.30",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.31",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.31",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.32",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.32",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.33",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.33",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.34",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.34",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.35",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.35",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.36",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.36",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.37",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.37",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.38",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.38",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.39",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.39",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.40",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.40",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.41",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.41",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.42",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.42",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.43",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.43",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.44",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.44",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.45",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.45",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.46",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.46",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.47",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.47",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.48",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.48",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.49",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.49",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.50",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.50",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.51",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.51",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.52",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.52",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.53",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.53",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.54",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.54",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.55",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.55",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.56",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.56",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.57",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.57",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.58",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.58",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.59",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.59",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.60",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.60",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.61",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.61",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.62",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.62",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.63",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.63",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.64",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.64",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.65",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.65",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.66",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.66",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.67",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.67",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.68",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.68",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.69",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.69",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.70",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.70",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.71",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.71",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.72",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.72",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.73",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.73",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.74",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.74",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.75",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.75",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.76",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.76",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.77",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.77",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.78",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.78",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.79",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.79",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.80",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.80",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.81",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.81",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.82",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.82",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.83",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.83",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.84",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.84",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.85",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.85",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.86",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.86",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.87",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.87",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.88",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.88",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.89",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.89",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.90",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.90",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.91",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.91",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.92",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.92",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.93",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.93",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.94",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.94",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.95",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.95",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.96",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.96",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.97",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.97",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.98",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.98",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/tmp/logs_buffer/test.log.99",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "/tmp/logs_buffer/test.log.99",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    }
+  }
+}

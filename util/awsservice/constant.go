@@ -5,6 +5,8 @@ package awsservice
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"time"
 
@@ -37,8 +39,14 @@ var (
 )
 
 var (
+	retryer = func() aws.Retryer {
+		return retry.NewStandard(func(options *retry.StandardOptions) {
+			options.MaxAttempts = 5
+			options.MaxBackoff = time.Minute
+		})
+	}
 	ctx                  = context.Background()
-	awsCfg, _            = config.LoadDefaultConfig(ctx)
+	awsCfg, _            = config.LoadDefaultConfig(ctx, config.WithRetryer(retryer))
 	Ec2Client            = ec2.NewFromConfig(awsCfg)
 	EcsClient            = ecs.NewFromConfig(awsCfg)
 	SsmClient            = ssm.NewFromConfig(awsCfg)

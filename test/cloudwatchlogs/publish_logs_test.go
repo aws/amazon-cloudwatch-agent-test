@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -170,6 +171,85 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.True(t, ok)
+}
+
+// TestCloudWatchLogsBuffer writes N number of logs, and then validates that N logs
+// are queryable from CloudWatch Logs
+// and buffer size works
+// buffer size is 1mb
+func TestCloudWatchLogsBuffer(t *testing.T) {
+	// this uses the {instance_id} placeholder in the agent configuration,
+	// so we need to determine the host's instance ID for validation
+	instanceId := awsservice.GetInstanceId()
+	log.Printf("Found instance id %s", instanceId)
+	common.DeleteFile(common.AgentLogFile)
+	common.TouchFile(common.AgentLogFile)
+	start := time.Now()
+
+	numberOfLogsPerFile := 1000
+	numberOfLogFiles := 100
+	filePathFormat := "/tmp/logs_buffer/"
+	fileName := filePathFormat + "test.log"
+
+	for i := 0; i < numberOfLogFiles; i++ {
+		fileDir := filePathFormat
+		filePath := fileName + "." + strconv.Itoa(i)
+		defer awsservice.DeleteLogGroupAndStream(instanceId, filePath)
+		err := os.MkdirAll(fileDir, os.ModePerm)
+		if err != nil {
+			t.Fatalf("Error occurred creating log dir for writing: %v", err)
+		}
+		f, err := os.Create(filePath)
+		if err != nil {
+			t.Fatalf("Error occurred creating log file for writing: %v", err)
+		}
+		defer f.Close()
+		defer os.Remove(filePath)
+		go writeLogs(t, f, numberOfLogsPerFile)
+	}
+
+	common.CopyFile("resources/config_log_buffer.json", configOutputPath)
+	common.StartAgent(configOutputPath, true, false)
+	time.Sleep(time.Minute * 2)
+	common.StopAgent()
+
+	agentLog, err := common.RunCommand(common.CatCommand + common.AgentLogFile)
+	if err != nil {
+		return
+	}
+	t.Logf("Agent logs %s", agentLog)
+	// confirm buffer is hit
+	// confirm blocking of next log search tick
+	// confirm blocking of reading next line
+	// confirm buffer is cleared at the end
+	assert.True(t, strings.Contains(agentLog, "blocking adding new files for one second"))
+	assert.True(t, strings.Contains(agentLog, "max buffer of logs size sending to cloudwatch blocking reading for one second"))
+	agentLogLines := strings.Split(agentLog, "\n")
+	found := false
+	for i := len(agentLogLines) - 1; i >= 0; i-- {
+		if strings.Contains(agentLogLines[i], "D! [logagent] total buffer size to cloudwatch") {
+			found = true
+			lineSplit := strings.Split(agentLogLines[i], " ")
+			endingBuffer := lineSplit[len(lineSplit)-1]
+			endingBufferValue, err := strconv.Atoi(endingBuffer)
+			assert.Nil(t, err)
+			assert.Equal(t, 0, endingBufferValue)
+			break
+		}
+	}
+	assert.True(t, found)
+
+	end := time.Now()
+
+	for i := 0; i < numberOfLogFiles; i++ {
+		filePath := fileName + "." + strconv.Itoa(i)
+		// check CWL to ensure we got the expected number of logs in the log stream
+		ok, err := awsservice.ValidateLogs(instanceId, filePath, &start, &end, func(logs []string) bool {
+			return numberOfLogsPerFile*len(logLineIds) == len(logs)
+		})
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	}
 }
 
 func writeLogs(t *testing.T, f *os.File, iterations int) {
