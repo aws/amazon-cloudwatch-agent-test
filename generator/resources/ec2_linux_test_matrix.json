@@ -79,7 +79,7 @@
   {
     "os": "ol7",
     "username": "ec2-user",
-    "instanceType":"t3a.medium",
+    "instanceType":"t3.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-ol7*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -90,7 +90,7 @@
   {
     "os": "ol8",
     "username": "ec2-user",
-    "instanceType":"t3a.medium",
+    "instanceType":"t3.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-ol8*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -101,7 +101,7 @@
   {
     "os": "ol9",
     "username": "ec2-user",
-    "instanceType":"t3a.medium",
+    "instanceType":"t3.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-ol9*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -112,7 +112,7 @@
   {
     "os": "centos-7",
     "username": "centos",
-    "instanceType":"t3a.medium",
+    "instanceType":"t3.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-centos-7*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -123,7 +123,7 @@
   {
     "os": "centos-stream-8",
     "username": "cloud-user",
-    "instanceType":"t3a.medium",
+    "instanceType":"t3.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-centos-stream-8*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -134,7 +134,7 @@
   {
     "os": "sles-12",
     "username": "ec2-user",
-    "instanceType":"t3a.medium",
+    "instanceType":"t3.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-sles-12*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -145,7 +145,7 @@
   {
     "os": "sles-15",
     "username": "ec2-user",
-    "instanceType":"t3a.medium",
+    "instanceType":"t3.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-sles-15*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",

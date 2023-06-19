@@ -8,7 +8,7 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "t3a.medium"
+  default = "t3a.small"
 }
 
 variable "ssh_key_name" {
