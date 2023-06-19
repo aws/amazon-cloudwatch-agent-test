@@ -109,7 +109,7 @@ resource "null_resource" "integration_test_setup" {
       "powershell.exe -Command \"[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12\"",
       "powershell.exe -Command \"(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/jmx_prometheus_javaagent-0.12.0.jar', 'C:\\\\jmx_workload\\\\jmx_prometheus_javaagent-0.12.0.jar')\"",
       "powershell.exe -Command \"(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/SampleJavaApplication-1.0-SNAPSHOT.jar', 'C:\\\\jmx_workload\\\\SampleJavaApplication-1.0-SNAPSHOT.jar')\"",
-      "powershell.exe -Command \"powershell.exe -Command \\\"Invoke-WebRequest -Uri \\\"https://download.oracle.com/otn/java/jdk/15.0.2%2B7/0d1cfde4252546c6931946de8db48ee2/jdk-15.0.2_windows-x64_bin.exe\\\" -OutFile \\\"C:\\\\jmx_workload\\\\jdk-15.0.2_windows-x64_bin.exe\\\"",
+      "powershell.exe -Command \"choco install -y openjdk15\"",
       "powershell.exe -Command \"Start-Sleep -s 60\"",
       "powershell.exe -Command \" C:\\jmx_workload\\jdk-15.0.2_windows-x64_bin.exe /s\"",
       "powershell.exe -Command \"Start-Process powershell {'C:\\Program Files\\Java\\jdk-15.0.2\\bin\\java.exe' -javaagent:C:\\jmx_workload\\jmx_prometheus_javaagent-0.12.0.jar=9404:C:\\jmx_workload\\exporter_config.yaml -cp C:\\jmx_workload\\SampleJavaApplication-1.0-SNAPSHOT.jar com.gubupt.sample.app.App}\"",
