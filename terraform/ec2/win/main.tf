@@ -111,7 +111,6 @@ resource "null_resource" "integration_test_setup" {
       "powershell.exe -Command \"(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/SampleJavaApplication-1.0-SNAPSHOT.jar', 'C:\\\\jmx_workload\\\\SampleJavaApplication-1.0-SNAPSHOT.jar')\"",
       "powershell.exe -Command \"choco install -y openjdk15\"",
       "powershell.exe -Command \"Start-Sleep -s 60\"",
-      "powershell.exe -Command \" C:\\jmx_workload\\jdk-15.0.2_windows-x64_bin.exe /s\"",
       "powershell.exe -Command \"Start-Process powershell {'C:\\Program Files\\Java\\jdk-15.0.2\\bin\\java.exe' -javaagent:C:\\jmx_workload\\jmx_prometheus_javaagent-0.12.0.jar=9404:C:\\jmx_workload\\exporter_config.yaml -cp C:\\jmx_workload\\SampleJavaApplication-1.0-SNAPSHOT.jar com.gubupt.sample.app.App}\"",
       "powershell.exe -Command \"start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-"
     ]
