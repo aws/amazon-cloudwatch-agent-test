@@ -92,15 +92,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 		and Mac under the hood share similar plugins with Linux
 	*/
 	"ec2_mac": {
-		{testDir: "./test/feature/mac"},
+		{testDir: "../../../test/feature/mac"},
 	},
 	"ec2_windows": {
-		{testDir: "./test/feature/windows"},
-		{testDir: "./test/restart"},
-		{
-			testDir: "./test/acceptance",
-			targets: map[string]map[string]struct{}{"os": {"win-2022": {}}},
-		},
+		{testDir: "../../../test/feature/windows"},
+		{testDir: "../../../test/restart"},
+		{testDir: "../../../test/acceptance"},
 	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},
