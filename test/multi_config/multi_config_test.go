@@ -34,11 +34,16 @@ func init() {
 
 func TestMultipleConfig(t *testing.T) {
 
-	agentConfigurations := []string{"LinuxMemoryOnlyConfig", "LinuxLogOnlyConfig"}
+	agentConfigurations := []string{"resources/LinuxMemoryOnlyConfig.json", "resources/LinuxLogOnlyConfig.json"}
 
-	for _, agentConfig := range agentConfigurations {
+	for index, agentConfig := range agentConfigurations {
 		common.CopyFile(agentConfig, configOutputPath)
-		common.StartAgentWithMultiConfig(configOutputPath, true, false)
+		log.Printf(configOutputPath)
+		if index == 0{
+			common.StartAgent(configOutputPath, true, false)
+		} else	{
+			common.StartAgentWithMultiConfig(configOutputPath, true, false)
+		}
 	}
 
 	time.Sleep(agentRuntime)
@@ -54,7 +59,8 @@ func TestMultipleConfig(t *testing.T) {
 		},
 	}
 
-	expectedMetrics := []string{"mem_used_percent", "cpu_used"}
+	expectedMetrics := []string{"mem_used_percent"}
 	for _, expectedMetric := range expectedMetrics {
 		awsservice.ValidateMetrics(t, expectedMetric, namespace, expectedDimensions)
+	}
 }

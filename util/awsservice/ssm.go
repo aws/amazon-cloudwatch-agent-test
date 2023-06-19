@@ -36,3 +36,16 @@ func putParameter(name, value string, paramType types.ParameterType) error {
 
 	return err
 }
+
+func sendCommand(DocumentName *string, params map[string][]string) (error) {
+	instanceId := GetInstanceId()
+
+	SsmClient.SendCommand(ctx, &ssm.SendCommandInput {
+		DocumentName: DocumentName,
+		InstanceIds: strings[string]{instanceId},
+		TimeoutSeconds: 180,
+		Parameters: params,
+
+	} )
+	return err
+}
