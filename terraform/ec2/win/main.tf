@@ -38,6 +38,7 @@ locals {
 #####################################################################
 
 module "validator" {
+  count = length(regexall("/feature/windows", var.test_dir)) > 0 ? 1 : 0
   source = "../../validator"
 
   arc            = var.arc
@@ -75,11 +76,11 @@ resource "aws_instance" "cwagent" {
 
 # Size of windows json is too large thus can't use standard tier
 resource "aws_ssm_parameter" "upload_ssm" {
-  count = var.use_ssm == true && fileexists(module.validator.agent_config) == true ? 1 : 0
+  count = var.use_ssm == true && length(regexall("/feature/windows", var.test_dir)) > 0 ? 1 : 0
   name  = local.ssm_parameter_name
   type  = "String"
   tier  = "Advanced"
-  value = file(module.validator.agent_config)
+  value = file(module.validator[count.index].agent_config)
 }
 
 resource "null_resource" "integration_test_setup" {
@@ -177,21 +178,21 @@ resource "null_resource" "integration_test_run_validator" {
   }
 
   provisioner "file" {
-    source      = module.validator.agent_config
-    destination = module.validator.instance_agent_config
+    source      = module.validator[count.index].agent_config
+    destination = module.validator[count.index].instance_agent_config
   }
 
   provisioner "file" {
-    source      = module.validator.validator_config
-    destination = module.validator.instance_validator_config
+    source      = module.validator[count.index].validator_config
+    destination = module.validator[count.index].instance_validator_config
   }
 
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
+      "validator.exe --validator-config=${module.validator[count.index].instance_validator_config} --preparation-mode=true",
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
-      "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
+      "validator.exe --validator-config=${module.validator[count.index].instance_validator_config} --preparation-mode=false",
     ]
   }
 }
