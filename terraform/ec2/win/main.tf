@@ -38,7 +38,6 @@ locals {
 #####################################################################
 
 module "validator" {
-  count = length(regexall("/feature/windows", var.test_dir)) > 0 ? 1 : 0
   source = "../../validator"
 
   arc            = var.arc
