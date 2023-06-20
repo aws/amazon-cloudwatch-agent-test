@@ -98,8 +98,7 @@ resource "null_resource" "integration_test_setup" {
   provisioner "remote-exec" {
     inline = [
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
+      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-"
     ]
   }
 }
@@ -190,6 +189,7 @@ resource "null_resource" "integration_test_run_validator" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
       "validator.exe --validator-config=${module.validator[count.index].instance_validator_config} --preparation-mode=true",
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
       "validator.exe --validator-config=${module.validator[count.index].instance_validator_config} --preparation-mode=false",
