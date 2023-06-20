@@ -217,7 +217,7 @@
           }
       },
       "prometheus": {
-        "prometheus_config_path": "C:\\\\jmx_workload\\\\prometheus.yaml",
+        "prometheus_config_path": "C:/jmx_workload/prometheus.yaml",
         "log_group_name": "prometheus_test_windows",
         "emf_processor": {
           "metric_declaration_dedup": true,
