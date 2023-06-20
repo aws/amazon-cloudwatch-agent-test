@@ -156,7 +156,8 @@ resource "null_resource" "integration_test_run" {
 
   provisioner "remote-exec" {
     inline = [
-      "validator.exe --test-name=${var.test_dir}",
+      "set AWS_REGION=${var.region}",
+      "validator.exe --test-name=${var.test_dir}"
     ]
   }
 }
@@ -166,7 +167,7 @@ resource "null_resource" "integration_test_run_validator" {
   count = length(regexall("/feature/windows", var.test_dir)) > 0 ? 1 : 0
   depends_on = [
     null_resource.integration_test_setup,
-    null_resource.integration_test_reboot,
+    null_resource.integration_test_wait,
   ]
 
   connection {
