@@ -62,7 +62,6 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   get_password_data                    = true
-  user_data                            = ""
 
   metadata_options {
     http_endpoint = "enabled"
@@ -74,13 +73,17 @@ resource "aws_instance" "cwagent" {
   }
 }
 
+data "local_file" "input" {
+  filename = module.validator.agent_config
+}
+
 # Size of windows json is too large thus can't use standard tier
 resource "aws_ssm_parameter" "upload_ssm" {
-  count = var.use_ssm == true && fileexists(module.validator.agent_config) == true ? 1 : 0
+  count = var.use_ssm == true ? 1 : 0
   name  = local.ssm_parameter_name
   type  = "String"
   tier  = "Advanced"
-  value = file(module.validator.agent_config)
+  value = data.local_file.input.content
 }
 
 resource "null_resource" "integration_test_setup" {
@@ -88,12 +91,10 @@ resource "null_resource" "integration_test_setup" {
 
   # Install software
   connection {
-    type            = "ssh"
-    user            = "Administrator"
-    password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host            = aws_instance.cwagent.public_ip
-    target_platform = "windows"
-    timeout         = "6m"
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
   }
 
   # Install agent binaries
@@ -111,12 +112,10 @@ resource "null_resource" "integration_test_reboot" {
   count = length(regexall("restart", var.test_dir)) > 0 ? 1 : 0
 
   connection {
-    type            = "ssh"
-    user            = "Administrator"
-    password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host            = aws_instance.cwagent.public_ip
-    target_platform = "windows"
-    timeout         = "6m"
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
   }
 
   # Prepare Integration Test
@@ -153,23 +152,15 @@ resource "null_resource" "integration_test_run" {
   ]
 
   connection {
-    type            = "ssh"
-    user            = "Administrator"
-    password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host            = aws_instance.cwagent.public_ip
-    target_platform = "windows"
-    timeout         = "6m"
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
   }
 
   provisioner "remote-exec" {
     inline = [
-      "set AWS_REGION=${var.region}",
-      # there is another way to run test using "validator.exe --test-name=${var.test_dir}",
-      "echo clone test repo",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd amazon-cloudwatch-agent-test",
-      "echo running tests",
-      "go test ${var.test_dir} -p 1 -timeout 30m -v "
+      "validator.exe --test-name=${var.test_dir}",
     ]
   }
 }
@@ -183,12 +174,10 @@ resource "null_resource" "integration_test_run_validator" {
   ]
 
   connection {
-    type            = "ssh"
-    user            = "Administrator"
-    password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
-    host            = aws_instance.cwagent.public_ip
-    target_platform = "windows"
-    timeout         = "6m"
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
   }
 
   provisioner "file" {
