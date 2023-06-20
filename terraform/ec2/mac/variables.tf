@@ -48,7 +48,7 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
-  default = "../../../test/feature/mac"
+  default = "../../../test/feature/mac" # This is really only used during tf destroy. See https://github.com/hashicorp/terraform/issues/23552
 }
 
 variable "cwa_github_sha" {
