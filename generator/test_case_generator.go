@@ -95,7 +95,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/mac"},
 	},
 	"ec2_windows": {
-		{testDir: "../../../test/acceptance", targets: map[string]map[string]struct{}{"os": {"win-2022": {}}}},
+		{testDir: "../../../test/acceptance"},
 	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},
