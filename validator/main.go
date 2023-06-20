@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/acceptance"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators"
@@ -32,11 +33,15 @@ func main() {
 	// validator calls test code to get around OOM issue on windows hosts while running go test
 	if len(*configPath) == 0 && len(*testName) > 0 {
 		// execute test without parsing or processing configuration yaml
+		log.Printf("Testname: %s", *testName)
 
 		var err error
 		// probably better to use switch if test cases grow or come up with a better structure as it grows
 		if strings.Contains(*testName, "restart") {
 			err = restart.Validate()
+		}
+		if strings.Contains(*testName, "acceptance") {
+			err = acceptance.TestFilePermissions()
 		}
 
 		if err != nil {

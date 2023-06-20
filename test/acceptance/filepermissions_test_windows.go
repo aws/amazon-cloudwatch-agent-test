@@ -5,15 +5,13 @@
 package acceptance
 
 import (
+	"go.uber.org/multierr"
 	"log"
-	"testing"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-	"github.com/stretchr/testify/assert"
 )
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
@@ -29,47 +27,40 @@ const (
 	translatedTomlPath   = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
 )
 
-func TestFilePermissions(t *testing.T) {
+func TestFilePermissions() error {
+	log.Printf("Testing file permissions for windows")
+	var multiErr error
 	common.CopyFile(agentConfigLocalPath, agentConfigPath)
 	err := common.StartAgent(agentConfigPath, false, false)
 	if err != nil {
 		log.Printf("Agent failed to start due to err=%v\n", err)
+		return err
 	}
 	time.Sleep(agentRuntime)
 	common.StopAgent()
-	groupResult := createGroupResult()
-	for _, testResult := range groupResult.TestResults {
-		assert.Equal(t, testResult.Status, status.SUCCESSFUL)
+	err = checkFilePermissionsForFilePath(agentConfigPath)
+	if err != nil {
+		multiErr = multierr.Append(multiErr, err)
+	}
+	err = checkFilePermissionsForFilePath(translatedTomlPath)
+	if err != nil {
+		multiErr = multierr.Append(multiErr, err)
 	}
 	err = common.DeleteFile(agentConfigPath)
 	if err != nil {
 		log.Printf("Failed to delete config file; err=%v\n", err)
+		multiErr = multierr.Append(multiErr, err)
 	}
+	return multiErr
 }
 
-func createGroupResult() status.TestGroupResult {
-	testResults := make([]status.TestResult, 2)
-	testGroupResult := status.TestGroupResult{
-		Name:        "FilePermissions",
-		TestResults: testResults,
-	}
-	testResults[0] = checkFilePermissionsForFilePath(agentConfigPath)
-	testResults[1] = checkFilePermissionsForFilePath(translatedTomlPath)
-	return testGroupResult
-}
-
-func checkFilePermissionsForFilePath(filepath string) status.TestResult {
+func checkFilePermissionsForFilePath(filepath string) error {
 	log.Printf("validating file permissions for filepath=%v", filepath)
-	testResult := status.TestResult{
-		Name:   filepath,
-		Status: status.FAILED,
-	}
 
 	err := filesystem.CheckFileRights(filepath)
 	if err != nil {
-		return testResult
+		return err
 	}
 	log.Printf("SUCCESS: file %s have permission to Local system and administrator", filepath)
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+	return nil
 }
