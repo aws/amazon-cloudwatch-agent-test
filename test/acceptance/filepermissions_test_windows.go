@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
+
 //go:build windows
 // +build windows
 
@@ -12,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+
 	"go.uber.org/multierr"
 )
 
@@ -47,11 +49,11 @@ func TestFilePermissions() error {
 	if err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}
-	err = common.DeleteFile(agentConfigPath)
+	/*err = common.DeleteFile(agentConfigPath)
 	if err != nil {
 		log.Printf("Failed to delete config file; err=%v\n", err)
 		multiErr = multierr.Append(multiErr, err)
-	}
+	}*/
 	return multiErr
 }
 

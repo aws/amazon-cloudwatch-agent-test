@@ -6,14 +6,15 @@ package acceptance
 
 import (
 	"fmt"
+	"log"
+	"testing"
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/stretchr/testify/assert"
-	"log"
-	"testing"
-	"time"
 )
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
