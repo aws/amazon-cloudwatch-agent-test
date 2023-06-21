@@ -5,6 +5,6 @@
 
 package assume_role
 
-func Validate() error {
+func Validate(assumeRoleArn string) error {
 	return nil
 }

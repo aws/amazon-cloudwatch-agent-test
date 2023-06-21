@@ -38,14 +38,18 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(environmentMetaDataStrings)
 }
 
-func Validate() error {
+func Validate(assumeRoleArn string) error {
 	err := common.CopyFile(configWindowsJSON, configWindowsOutputPath)
 	if err != nil {
 		log.Printf("Copying agent config file failed: %v", err)
 		return err
 	}
 
-	common.RunCommands(getCommandsWindows())
+	err = common.RunCommands(getCommandsWindows(assumeRoleArn))
+	if err != nil {
+		log.Printf("Creating credentials file failed: %v", err)
+		return err
+	}
 
 	err = common.StartAgent(configWindowsOutputPath, true, false)
 	if err != nil {
