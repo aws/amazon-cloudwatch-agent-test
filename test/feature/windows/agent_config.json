@@ -235,9 +235,9 @@
                 "label_matcher": "^jmx-exporter$",
                 "dimensions": [["instance"]],
                 "metric_selectors": [
-                  "^jvm_threads_current$",
-                  "^jvm_gc_collection_seconds_sum$",
-                  "^jvm_memory_bytes_used$"
+                  "jvm_threads_current",
+                  "jvm_gc_collection_seconds_sum",
+                  "jvm_memory_bytes_used"
                 ]
               }
             ]

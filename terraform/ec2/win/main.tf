@@ -101,8 +101,8 @@ resource "null_resource" "integration_test_setup" {
   provisioner "remote-exec" {
     inline = [
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-"
+      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe ."
     ]
   }
 }
