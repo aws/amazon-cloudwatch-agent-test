@@ -114,8 +114,8 @@ resource "null_resource" "integration_test_setup" {
       "powershell.exe -Command \"Start-Sleep -s 60\"",
       "powershell.exe -Command \"Invoke-WebRequest -Uri http://localhost:9404 -UseBasicParsing\"",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
-      "powershell.exe -Command \"Start-Sleep -s 120\"",
-      "type C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+#      "powershell.exe -Command \"Start-Sleep -s 120\"",
+#      "type C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
     ]
   }
 }
