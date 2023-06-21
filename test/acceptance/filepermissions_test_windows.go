@@ -25,24 +25,18 @@ const (
 	translatedTomlPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
 )
 
+var filePaths = []string{agentConfigPath, translatedTomlPath}
+
 func Validate() error {
 	log.Printf("Testing file permissions for windows")
 	var multiErr error
-	err := checkFilePermissionsForFilePath(agentConfigPath)
-	if err != nil {
-		multiErr = multierr.Append(multiErr, err)
-		log.Printf("CloudWatchAgent's config path does not have protection from local system and admin: %v", err)
+	for _, path := range filePaths {
+		err := checkFilePermissionsForFilePath(path)
+		if err != nil {
+			multiErr = multierr.Append(multiErr, err)
+			log.Printf("CloudWatchAgent's %s path does not have protection from local system and admin: %v", path, err)
+		}
 	}
-	err = checkFilePermissionsForFilePath(translatedTomlPath)
-	if err != nil {
-		multiErr = multierr.Append(multiErr, err)
-		log.Printf("CloudWatchAgent's toml path does not have protection from local system and admin: %v", err)
-	}
-	/*err = common.DeleteFile(agentConfigPath)
-	if err != nil {
-		log.Printf("Failed to delete config file; err=%v\n", err)
-		multiErr = multierr.Append(multiErr, err)
-	}*/
 	return multiErr
 }
 
