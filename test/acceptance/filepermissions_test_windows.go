@@ -1,17 +1,18 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 //go:build windows
+// +build windows
 
 package acceptance
 
 import (
-	"go.uber.org/multierr"
 	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"go.uber.org/multierr"
 )
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
