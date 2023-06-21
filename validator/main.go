@@ -41,7 +41,7 @@ func main() {
 			err = restart.Validate()
 		}
 		if strings.Contains(*testName, "acceptance") {
-			err = acceptance.TestFilePermissions()
+			err = acceptance.Validate()
 		}
 
 		if err != nil {

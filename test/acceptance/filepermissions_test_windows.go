@@ -30,7 +30,7 @@ const (
 	translatedTomlPath   = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
 )
 
-func TestFilePermissions() error {
+func Validate() error {
 	log.Printf("Testing file permissions for windows")
 	var multiErr error
 	common.CopyFile(agentConfigLocalPath, agentConfigPath)
