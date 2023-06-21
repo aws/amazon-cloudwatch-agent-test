@@ -137,7 +137,7 @@
     "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-sles-12*",
-    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "caCertPath": "/etc/ssl/ca-bundle.pem",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
     "family": "linux"
@@ -148,7 +148,7 @@
     "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-sles-15*",
-    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "caCertPath": "/etc/ssl/ca-bundle.pem",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
     "family": "linux"
