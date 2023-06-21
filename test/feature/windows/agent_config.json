@@ -232,7 +232,7 @@
             "metric_declaration": [
               {
                 "source_labels": ["job"],
-                "label_matcher": "^jmx$",
+                "label_matcher": "^jmx-exporter$",
                 "dimensions": [["instance"]],
                 "metric_selectors": [
                   "^jvm_threads_current$",
