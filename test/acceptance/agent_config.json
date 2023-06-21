@@ -1,5 +1,19 @@
 {
     "agent": {
         "debug": true
+    },
+    "metrics": {
+        "namespace": "WindowsFilePermissionsTest",
+        "append_dimensions": {
+            "InstanceId": "${aws:InstanceId}"
+        },
+        "metrics_collected": {
+            "Memory": {
+                "measurement": [
+                    "% Committed Bytes In Use"
+                ],
+                "metrics_collection_interval": 1
+            }
+        }
     }
 }

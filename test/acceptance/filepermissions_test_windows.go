@@ -8,12 +8,9 @@ package acceptance
 
 import (
 	"log"
-	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-
 	"go.uber.org/multierr"
 )
 
@@ -24,30 +21,37 @@ func init() {
 }
 
 const (
-	agentRuntime         = 1 * time.Second
-	agentConfigLocalPath = "agent_configs/minimum_config.json"
-	agentConfigPath      = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Configs\\file_amazon-cloudwatch-agent.json"
-	translatedTomlPath   = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
+	//agentRuntime         = 1 * time.Minute
+	//agentConfigLocalPath = "agent_configs/minimum_config.json"
+	agentConfigPath    = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Configs\\file_amazon-cloudwatch-agent.json"
+	translatedTomlPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
 )
 
 func Validate() error {
 	log.Printf("Testing file permissions for windows")
 	var multiErr error
-	common.CopyFile(agentConfigLocalPath, agentConfigPath)
-	err := common.StartAgent(agentConfigPath, false, false)
+	/*err := common.CopyFile(agentConfigLocalPath, common.ConfigOutputPath)
+	if err != nil {
+		log.Printf("Copying agent config file failed: %v", err)
+		return err
+	}
+	err = common.StartAgent(agentConfigPath, true, false)
 	if err != nil {
 		log.Printf("Agent failed to start due to err=%v\n", err)
 		return err
 	}
 	time.Sleep(agentRuntime)
-	common.StopAgent()
-	err = checkFilePermissionsForFilePath(agentConfigPath)
+	log.Printf("Agent has been running for : %s", agentRuntime.String())
+	common.StopAgent()*/
+	err := checkFilePermissionsForFilePath(agentConfigPath)
 	if err != nil {
 		multiErr = multierr.Append(multiErr, err)
+		log.Printf("CloudWatchAgent's config path does not have protection from local system and admin: %v", err)
 	}
 	err = checkFilePermissionsForFilePath(translatedTomlPath)
 	if err != nil {
 		multiErr = multierr.Append(multiErr, err)
+		log.Printf("CloudWatchAgent's toml path does not have protection from local system and admin: %v", err)
 	}
 	/*err = common.DeleteFile(agentConfigPath)
 	if err != nil {
