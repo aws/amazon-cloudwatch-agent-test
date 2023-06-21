@@ -23,7 +23,7 @@ func init() {
 const (
 	//agentRuntime         = 1 * time.Minute
 	//agentConfigLocalPath = "agent_configs/minimum_config.json"
-	agentConfigPath    = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Configs\\file_amazon-cloudwatch-agent.json"
+	agentConfigPath    = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Configs\\file_config.json"
 	translatedTomlPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
 )
 
