@@ -171,7 +171,6 @@ resource "null_resource" "integration_test_run_acceptance" {
   count = length(regexall("acceptance", var.test_dir)) > 0 ? 1 : 0
   depends_on = [
     null_resource.integration_test_setup,
-    null_resource.integration_test_wait,
   ]
 
   connection {
@@ -179,17 +178,11 @@ resource "null_resource" "integration_test_run_acceptance" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
-    timeout = "10m"
   }
 
   provisioner "file" {
     source      = module.validator.agent_config
     destination = module.validator.instance_agent_config
-  }
-
-  provisioner "file" {
-    source      = module.validator.validator_config
-    destination = module.validator.instance_validator_config
   }
 
   provisioner "remote-exec" {

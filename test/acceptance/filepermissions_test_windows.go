@@ -21,8 +21,6 @@ func init() {
 }
 
 const (
-	//agentRuntime         = 1 * time.Minute
-	//agentConfigLocalPath = "agent_configs/minimum_config.json"
 	agentConfigPath    = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Configs\\file_agent_config.json"
 	translatedTomlPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
 )
@@ -30,19 +28,6 @@ const (
 func Validate() error {
 	log.Printf("Testing file permissions for windows")
 	var multiErr error
-	/*err := common.CopyFile(agentConfigLocalPath, common.ConfigOutputPath)
-	if err != nil {
-		log.Printf("Copying agent config file failed: %v", err)
-		return err
-	}
-	err = common.StartAgent(agentConfigPath, true, false)
-	if err != nil {
-		log.Printf("Agent failed to start due to err=%v\n", err)
-		return err
-	}
-	time.Sleep(agentRuntime)
-	log.Printf("Agent has been running for : %s", agentRuntime.String())
-	common.StopAgent()*/
 	err := checkFilePermissionsForFilePath(agentConfigPath)
 	if err != nil {
 		multiErr = multierr.Append(multiErr, err)
