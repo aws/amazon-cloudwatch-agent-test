@@ -229,9 +229,7 @@
           },
           "metric_declaration": [
             {
-              "source_labels": [
-                "job"
-              ],
+              "source_labels": ["job"],
               "label_matcher": "^jmx$",
               "dimensions": [["instance"]],
               "metric_selectors": [
@@ -239,27 +237,10 @@
                 "^jvm_gc_collection_seconds_sum$",
                 "^jvm_memory_bytes_used$"
               ]
-            },
-            {
-              "source_labels": ["job"],
-              "label_matcher": "^jmx$",
-              "dimensions": [["area"]],
-              "metric_selectors": [
-                "^jvm_memory_bytes_used$"
-              ]
-            },
-            {
-              "source_labels": ["job"],
-              "label_matcher": "^jmx$",
-              "dimensions": [["pool"]],
-              "metric_selectors": [
-                "^jvm_memory_pool_bytes_used$"
-              ]
             }
           ]
         }
       },
-
       "metrics_collected": {
         "emf": { }
       },

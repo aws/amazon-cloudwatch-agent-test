@@ -111,10 +111,10 @@ resource "null_resource" "integration_test_setup" {
       "powershell.exe -Command \"(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/SampleJavaApplication-1.0-SNAPSHOT.jar', 'C:\\\\jmx_workload\\\\SampleJavaApplication-1.0-SNAPSHOT.jar')\"",
       "powershell.exe -Command \"Start-Sleep -s 60\"",
       "powershell.exe -Command \"Start-Process -FilePath \\\"C:\\Program Files\\OpenJDK\\jdk-15.0.2\\bin\\java.exe\\\" -ArgumentList \\\"-javaagent:C:\\jmx_workload\\jmx_prometheus_javaagent-0.12.0.jar=9404:C:\\jmx_workload\\exporter_config.yaml -cp C:\\jmx_workload\\SampleJavaApplication-1.0-SNAPSHOT.jar com.gubupt.sample.app.App\\\"\"",
-      "powershell.exe -Command \"Start-Sleep -s 60\"",
       "powershell.exe -Command \"Invoke-WebRequest -Uri http://localhost:9404 -UseBasicParsing\"",
-      "type $Env:ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-"
+      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
+      "powershell.exe -Command \"Start-Sleep -s 120\"",
+      "type $Env:ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
     ]
   }
 }
