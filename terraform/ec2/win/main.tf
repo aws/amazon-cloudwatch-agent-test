@@ -206,8 +206,8 @@ resource "null_resource" "integration_test_run_validator" {
       "set AWS_REGION=${var.region}",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
-      "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
-      "type C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+      "type C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
+      "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
     ]
   }
 }
