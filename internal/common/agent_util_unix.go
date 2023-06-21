@@ -154,7 +154,7 @@ func StopAgent() {
 
 func ReadAgentOutput(d time.Duration) string {
 	out, err := exec.Command("bash", "-c",
-		fmt.Sprintf("journalctl -u amazon-cloudwatch-agent.service --since \"%s ago\" --no-pager", d.String())).
+		fmt.Sprintf("sudo journalctl -u amazon-cloudwatch-agent.service --since \"%s ago\" --no-pager -q", d.String())).
 		Output()
 
 	if err != nil {
