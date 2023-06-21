@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	configWindowsJSON               = "resources/config_windows.json"
+	// agent config json file in Temp dir gets written by terraform
+	configWindowsJSON               = "C:\\Users\\Administrator\\AppData\\Local\\Temp\\agent_config.json"
 	metricWindowsnamespace          = "NvidiaGPUWindowsTest"
 	configWindowsOutputPath         = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\config.json"
 	agentWindowsLogPath             = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"

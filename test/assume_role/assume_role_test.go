@@ -12,11 +12,17 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
-const namespace = "AssumeRoleTest"
+const (
+	namespace = "AssumeRoleTest"
+	credsDir  = "/tmp/.aws"
+)
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
 
@@ -97,4 +103,34 @@ func TestAssumeRole(t *testing.T) {
 		t.Fatal("Assume Role Test failed")
 		result.Print()
 	}
+}
+
+func getCommands(roleArn string) []string {
+	return []string{
+		"mkdir -p " + credsDir,
+		"printf '[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s' $(aws sts assume-role --role-arn " + roleArn + " --role-session-name test --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text) | tee " + credsDir + "/credentials>/dev/null",
+		"printf '[default]\nregion = us-west-2' > " + credsDir + "/config",
+		"printf '[credentials]\n  shared_credential_profile = \"default\"\n  shared_credential_file = \"" + credsDir + "/credentials\"' | sudo tee /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml>/dev/null",
+	}
+}
+
+func getDimensions(instanceId string) []types.Dimension {
+	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	factory := dimension.GetDimensionFactory(*env)
+	dims, failed := factory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "cpu",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")},
+		},
+	})
+
+	if len(failed) > 0 {
+		return []types.Dimension{}
+	}
+
+	return dims
 }

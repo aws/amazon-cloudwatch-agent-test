@@ -3,9 +3,8 @@
 
 //go:build !windows
 
-package nvidia_gpu
+package assume_role
 
 func Validate() error {
-	// this is a placeholder as validator looks for it
 	return nil
 }

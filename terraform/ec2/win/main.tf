@@ -154,6 +154,11 @@ resource "null_resource" "integration_test_run" {
     host     = aws_instance.cwagent.public_dns
   }
 
+  provisioner "file" {
+    source      = module.validator.agent_config
+    destination = module.validator.instance_agent_config
+  }
+
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
