@@ -56,7 +56,6 @@ func Validate() error {
 		return err
 	}
 
-	var err error
 	dimensionFilter := awsservice.BuildDimensionFilterList(numberofWindowsAppendDimensions)
 	for _, metricName := range expectedNvidiaGPUWindowsMetrics {
 		err = awsservice.ValidateMetric(metricName, metricWindowsnamespace, dimensionFilter)
@@ -71,4 +70,6 @@ func Validate() error {
 		log.Printf("CloudWatchAgent's log does not have protection from local system and admin: %v", err)
 		return err
 	}
+
+	return nil
 }
