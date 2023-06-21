@@ -4,15 +4,16 @@
 //go:build windows
 // +build windows
 
-package metrics_nvidia_gpu
+package nvidia_gpu
 
 import (
+	"log"
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
-	"testing"
-	"time"
 )
 
 const (
@@ -33,37 +34,41 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-func TestNvidiaGPUWindows(t *testing.T) {
-	t.Run("Run CloudWatchAgent with Nvidia-smi on Windows", func(t *testing.T) {
-		err := common.CopyFile(configWindowsJSON, configWindowsOutputPath)
+func Validate() error {
+	err := common.CopyFile(configWindowsJSON, configWindowsOutputPath)
+	if err != nil {
+		log.Printf("Copying agent config file failed: %v", err)
+		return err
+	}
 
+	err = common.StartAgent(configWindowsOutputPath, true, false)
+	if err != nil {
+		log.Printf("Starting agent failed: %v", err)
+		return err
+	}
+
+	time.Sleep(agentWindowsRuntime)
+	log.Printf("Agent has been running for : %s", agentWindowsRuntime.String())
+
+	err = common.StopAgent()
+	if err != nil {
+		log.Printf("Stopping agent failed: %v", err)
+		return err
+	}
+
+	var err error
+	dimensionFilter := awsservice.BuildDimensionFilterList(numberofWindowsAppendDimensions)
+	for _, metricName := range expectedNvidiaGPUWindowsMetrics {
+		err = awsservice.ValidateMetric(metricName, metricWindowsnamespace, dimensionFilter)
 		if err != nil {
-			t.Fatalf(err.Error())
+			log.Printf("CloudWatchAgent's log does not have protection from local system and admin: %v", err)
+			return err
 		}
+	}
 
-		err = common.StartAgent(configWindowsOutputPath, true, false)
-
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-
-		time.Sleep(agentWindowsRuntime)
-		t.Logf("Agent has been running for : %s", agentWindowsRuntime.String())
-		err = common.StopAgent()
-
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-
-		dimensionFilter := awsservice.BuildDimensionFilterList(numberofWindowsAppendDimensions)
-		for _, metricName := range expectedNvidiaGPUWindowsMetrics {
-			awsservice.ValidateMetrics(t, metricName, metricWindowsnamespace, dimensionFilter)
-		}
-
-		err = filesystem.CheckFileRights(agentWindowsLogPath)
-		if err != nil {
-			t.Fatalf("CloudWatchAgent's log does not have protection from local system and admin: %v", err)
-		}
-
-	})
+	err = filesystem.CheckFileRights(agentWindowsLogPath)
+	if err != nil {
+		log.Printf("CloudWatchAgent's log does not have protection from local system and admin: %v", err)
+		return err
+	}
 }

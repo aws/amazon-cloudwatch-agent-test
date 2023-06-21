@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package metrics_nvidia_gpu
+package nvidia_gpu
 
 import (
 	"testing"
@@ -45,7 +45,7 @@ func TestNvidiaGPU(t *testing.T) {
 
 		dimensionFilter := awsservice.BuildDimensionFilterList(numberofLinuxAppendDimensions)
 		for _, metricName := range expectedNvidiaGPULinuxMetrics {
-			awsservice.ValidateMetrics(t, metricName, metricLinuxNamespace, dimensionFilter)
+			awsservice.ValidateMetricWithTest(t, metricName, metricLinuxNamespace, dimensionFilter)
 		}
 
 		if err := filesystem.CheckFileRights(agentLinuxLogPath); err != nil {
