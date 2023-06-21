@@ -22,5 +22,17 @@
         "instanceType":"mac1.metal",
         "ami": "amzn-ec2-macos-13.*",
         "arc": "amd64"
+      },
+      {
+        "os": "macOS Monterey Arm64",
+        "instanceType":"mac2.metal",
+        "ami": "amzn-ec2-macos-12.*",
+        "arc": "arm64"
+      },
+      {
+        "os": "macOS Monterey Amd64",
+        "instanceType":"mac1.metal",
+        "ami": "amzn-ec2-macos-12.*",
+        "arc": "amd64"
       }
 ]
