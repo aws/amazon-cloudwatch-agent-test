@@ -56,7 +56,7 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "interface",
-			Value: dimension.ExpectedDimensionValue{aws.String("docker0")},
+			Value: dimension.UnknownDimensionValue()},
 		},
 		{
 			Key:   "InstanceId",
