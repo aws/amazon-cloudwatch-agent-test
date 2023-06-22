@@ -61,7 +61,7 @@
     {
         "name": "emf_container",
         "links":  ["cloudwatch_agent"],
-        "image": "alpine/socat:latest",
+        "image": "506463145083.dkr.ecr.us-west-2.amazonaws.com/v2/cwagent-integration-test/manifests/ubuntu-socat-2.0.0-2",
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
@@ -74,7 +74,7 @@
         "entryPoint": [
             "/bin/sh",
             "-c",
-            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFECSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFECSNameSpace\",\"Dimensions\":[[\"Type\",\"InstanceId\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"InstanceId\": \"INSTANCEID\"}' | socat -v -t 0 - UDP:cloudwatch_agent:25888; sleep 60; done"
+            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; CLUSTER_NAME=\"$(curl $${ECS_CONTAINER_METADATA_URI_V4}/task | sed -n 's|.*\"Cluster\": *\"\\([^\"]*\\)\".*|\\1|p')cluster\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFECSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFECSNameSpace\",\"Dimensions\":[[\"Type\",\"ClusterName\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"ClusterName\": \"CLUSTER_NAME\"}' | socat -v -t 0 - UDP:cloudwatch_agent:25888; sleep 60; done"
         ]
     }
 ]
