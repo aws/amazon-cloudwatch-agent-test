@@ -30,7 +30,7 @@ resource "aws_key_pair" "aws_ssh_key" {
 locals {
   ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
-  ssm_parameter_name  = "WindowsAgentConfigSSMTest"
+  ssm_parameter_name  = "WindowsAgentConfigSSMTest-${module.common.testing_id}"
 }
 
 #####################################################################
