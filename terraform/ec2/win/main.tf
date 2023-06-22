@@ -40,11 +40,11 @@ locals {
 module "validator" {
   source = "../../validator"
 
-  arc            = var.arc
-  family         = "windows"
-  action         = "upload"
-  s3_bucket      = var.s3_bucket
-  # hacky but gpu test dir is shared with linux (./*)
+  arc       = var.arc
+  family    = "windows"
+  action    = "upload"
+  s3_bucket = var.s3_bucket
+  # hacky but gpu test dir is shared with linux which follows the pattern of ./*
   test_dir       = length(regexall("nvidia_gpu", var.test_dir)) > 0 ? "../../.${var.test_dir}" : var.test_dir
   temp_directory = "C:/Users/Administrator/AppData/Local/Temp"
   cwa_github_sha = var.cwa_github_sha
