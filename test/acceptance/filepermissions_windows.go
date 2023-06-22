@@ -59,6 +59,11 @@ func Validate() error {
 			multiErr = multierr.Append(multiErr, err)
 		}
 	}
+
+	err = common.DeleteFile(configWindowsOutputPath)
+	if err != nil {
+		log.Printf("Failed to delete config file; err=%v\n", err)
+	}
 	return multiErr
 }
 
