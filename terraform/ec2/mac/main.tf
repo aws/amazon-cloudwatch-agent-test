@@ -51,18 +51,23 @@ locals {
 #####################################################################
 # Filter dedicated mac hosts based on availability
 #####################################################################
-data "aws_ec2_host" "test" {
-  most_recent = true
+#data "aws_ec2_host" "test" {
+#  most_recent = true
+#
+#  filter {
+#    name   = "state"
+#    values = ["available"]
+#  }
+#
+#  filter {
+#    name   = "instance-type"
+#    values = [var.ec2_instance_type]
+#  }
+#}
 
-  filter {
-    name   = "state"
-    values = ["available"]
-  }
-
-  filter {
-    name   = "instance-type"
-    values = [var.ec2_instance_type]
-  }
+resource "aws_ec2_host" "test" {
+  instance_type     = var.ec2_instance_type
+  availability_zone = var.ec2_instance_type == "mac2.metal" ? "us-west-2d" : "us-west-2a"
 }
 
 #####################################################################
@@ -77,7 +82,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   tenancy                              = "dedicated"
-  host_id                              = data.aws_ec2_host.test.id
+  host_id                              = aws_ec2_host.test.id
 
   metadata_options {
     http_endpoint = "enabled"
