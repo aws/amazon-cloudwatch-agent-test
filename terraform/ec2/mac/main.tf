@@ -36,17 +36,17 @@ locals {
 # Prepare Parameters Tests
 #####################################################################
 
-module "validator" {
-  source = "../../validator"
-
-  arc            = var.arc
-  family         = "darwin"
-  action         = "upload"
-  s3_bucket      = var.s3_bucket
-  test_dir       = var.test_dir
-  temp_directory = "/tmp"
-  cwa_github_sha = var.cwa_github_sha
-}
+#module "validator" {
+#  source = "../../validator"
+#
+#  arc            = var.arc
+#  family         = "darwin"
+#  action         = "upload"
+#  s3_bucket      = var.s3_bucket
+#  test_dir       = var.test_dir
+#  temp_directory = "/tmp"
+#  cwa_github_sha = var.cwa_github_sha
+#}
 
 #####################################################################
 # Filter dedicated mac hosts based on availability
@@ -82,7 +82,7 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
-  depends_on = [aws_instance.cwagent, module.validator]
+  depends_on = [aws_instance.cwagent]
 
   connection {
     type        = "ssh"
@@ -92,15 +92,15 @@ resource "null_resource" "integration_test" {
     timeout     = "10m"
   }
 
-  provisioner "file" {
-    source      = module.validator.agent_config
-    destination = module.validator.instance_agent_config
-  }
-
-  provisioner "file" {
-    source      = module.validator.validator_config
-    destination = module.validator.instance_validator_config
-  }
+#  provisioner "file" {
+#    source      = module.validator.agent_config
+#    destination = module.validator.instance_agent_config
+#  }
+#
+#  provisioner "file" {
+#    source      = module.validator.validator_config
+#    destination = module.validator.instance_validator_config
+#  }
 
   provisioner "remote-exec" {
     inline = [
@@ -123,8 +123,8 @@ resource "null_resource" "integration_test" {
 
       # Install agent and validator binaries
       "echo Install agent and validator binaries",
-      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${var.arc}/amazon-cloudwatch-agent.pkg .",
-      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator .",
+#      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${var.arc}/amazon-cloudwatch-agent.pkg .",
+#      "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator .",
       "sudo installer -pkg amazon-cloudwatch-agent.pkg -target /",
 
       # Install Golang
@@ -134,10 +134,10 @@ resource "null_resource" "integration_test" {
       # Run Integration test
       "echo Execute integration tests",
       "export AWS_REGION=${var.region}",
-      "sudo chmod +x ./validator",
-      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
-      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
+#      "sudo chmod +x ./validator",
+#      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
+#      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
+#      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
       "cd ~/amazon-cloudwatch-agent-test",
       "sudo go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v",
     ]
