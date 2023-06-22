@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"go.uber.org/multierr"
 )
 
