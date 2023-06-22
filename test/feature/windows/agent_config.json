@@ -223,7 +223,7 @@
           "log_group_name": "prometheus_test_windows",
           "emf_processor": {
             "metric_declaration_dedup": true,
-            "metric_namespace": "PrometheusWindowsTest",
+            "metric_namespace": "CloudWatchAgentWinFeature",
             "metric_unit":{
               "jvm_threads_current": "Count",
               "jvm_gc_collection_seconds_sum": "Seconds",
