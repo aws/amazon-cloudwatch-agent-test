@@ -46,34 +46,6 @@ func CopyFile(pathIn string, pathOut string) error {
 
 }
 
-func DeleteFile(filePathAbsolute string) error {
-
-	ps, err := exec.LookPath("powershell.exe")
-
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Delete file %s", filePathAbsolute)
-	pathInAbs, err := filepath.Abs(filePathAbsolute)
-
-	if err != nil {
-		return err
-	}
-
-	log.Printf("File %s abs path %s", filePathAbsolute, pathInAbs)
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", "del /f " + pathInAbs})
-	out, err := exec.Command(ps, bashArgs...).Output()
-
-	if err != nil {
-		log.Printf("delete file failed: %v; the output is: %s", err, string(out))
-		return err
-	}
-
-	log.Printf("Removed file: %s", filePathAbsolute)
-	return nil
-}
-
 func StartAgent(configOutputPath string, fatalOnFailure bool, ssm bool) error {
 	// @TODO add ssm functionality
 

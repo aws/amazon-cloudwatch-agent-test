@@ -23,7 +23,7 @@ const (
 	agentCopiedConfigPath   = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Configs\\file_config.json"
 	translatedTomlPath      = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
 
-	agentWindowsRuntime = 3 * time.Minute
+	agentWindowsRuntime = 1 * time.Minute
 )
 
 var filePermissionsPath = []string{agentWindowsLogPath, agentCopiedConfigPath, translatedTomlPath}
@@ -58,11 +58,6 @@ func Validate() error {
 			log.Printf("CloudWatchAgent's %s does not have protection from local system and admin: %v", path, err)
 			multiErr = multierr.Append(multiErr, err)
 		}
-	}
-
-	err = common.DeleteFile(configWindowsOutputPath)
-	if err != nil {
-		log.Printf("Failed to delete config file; err=%v\n", err)
 	}
 	return multiErr
 }
