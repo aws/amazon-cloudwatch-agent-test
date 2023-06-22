@@ -8,13 +8,13 @@ package run_as_user
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
-	"runtime"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
