@@ -23,13 +23,10 @@ const (
 	agentWindowsRuntime     = 3 * time.Minute
 )
 
-var (
-	envMetaDataStringsWindows = &(environment.MetaDataStrings{})
-	//expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use", "nvidia_smi utilization_gpu", "nvidia_smi utilization_memory", "nvidia_smi power_draw", "nvidia_smi temperature_gpu"}
-)
+var envMetaDataStrings = &(environment.MetaDataStrings{})
 
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStringsWindows)
+	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
 func Validate() error {
