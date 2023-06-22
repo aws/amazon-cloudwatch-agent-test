@@ -42,15 +42,15 @@ func ValidateMetric(metricName, namespace string, dimensionsFilter []types.Dimen
 	// Only validate if certain metrics are published by CloudWatchAgent in corresponding namespace
 	// Since the metric value can be unpredictive.
 	if len(data.Metrics) == 0 {
-		metrics := make([]metric, len(dimensionsFilter))
+		dims := make([]metric, len(dimensionsFilter))
 		for i, filter := range dimensionsFilter {
-			metrics[i] = metric{
+			dims[i] = metric{
 				name:  *filter.Name,
 				value: *filter.Value,
 			}
 		}
 		return errors.New(fmt.Sprintf("No metrics found for dimension %v metric name %v namespace %v",
-			metrics, metricName, namespace))
+			dims, metricName, namespace))
 	}
 
 	return nil
