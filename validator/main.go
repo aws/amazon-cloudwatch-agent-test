@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/test/acceptance"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/nvidia_gpu"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -43,6 +44,8 @@ func main() {
 			err = restart.Validate()
 		case "nvidia_gpu":
 			err = nvidia_gpu.Validate()
+		case "acceptance":
+			err = acceptance.Validate()
 		}
 
 		if err != nil {
