@@ -49,6 +49,16 @@ module "validator" {
 }
 
 #####################################################################
+# Filter dedicated mac hosts based on availability
+#####################################################################
+data "aws_ec2_host" "test" {
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+}
+
+#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
@@ -59,7 +69,7 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids               = [module.basic_components.security_group]
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
-  tenancy                              = "host"
+  tenancy                              = "dedicated"
 
   metadata_options {
     http_endpoint = "enabled"
