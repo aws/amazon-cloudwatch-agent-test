@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/nvidia_gpu"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators"
@@ -22,6 +23,7 @@ var (
 	configPath      = flag.String("validator-config", "", "A yaml depicts test information")
 	preparationMode = flag.Bool("preparation-mode", false, "Prepare all the resources for the validation (e.g set up config) ")
 	testName        = flag.String("test-name", "", "Test name to execute")
+	assumeRoleArn   = flag.String("role-arn", "", "Arn for assume IAM role if any")
 )
 
 func main() {
@@ -34,9 +36,13 @@ func main() {
 		// execute test without parsing or processing configuration yaml
 
 		var err error
-		// probably better to use switch if test cases grow or come up with a better structure as it grows
-		if strings.Contains(*testName, "restart") {
+
+		splitNames := strings.Split(*testName, "/")
+		switch splitNames[len(splitNames)-1] {
+		case "restart":
 			err = restart.Validate()
+		case "nvidia_gpu":
+			err = nvidia_gpu.Validate()
 		}
 
 		if err != nil {

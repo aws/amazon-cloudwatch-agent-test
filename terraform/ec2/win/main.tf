@@ -40,11 +40,12 @@ locals {
 module "validator" {
   source = "../../validator"
 
-  arc            = var.arc
-  family         = "windows"
-  action         = "upload"
-  s3_bucket      = var.s3_bucket
-  test_dir       = var.test_dir
+  arc       = var.arc
+  family    = "windows"
+  action    = "upload"
+  s3_bucket = var.s3_bucket
+  # hacky but gpu test dir is shared with linux which follows the pattern of ./*
+  test_dir       = length(regexall("nvidia_gpu", var.test_dir)) > 0 ? "../../.${var.test_dir}" : var.test_dir
   temp_directory = "C:/Users/Administrator/AppData/Local/Temp"
   cwa_github_sha = var.cwa_github_sha
 }
@@ -73,17 +74,13 @@ resource "aws_instance" "cwagent" {
   }
 }
 
-data "local_file" "input" {
-  filename = module.validator.agent_config
-}
-
 # Size of windows json is too large thus can't use standard tier
 resource "aws_ssm_parameter" "upload_ssm" {
-  count = var.use_ssm == true ? 1 : 0
+  count = var.use_ssm == true && length(regexall("/feature/windows", var.test_dir)) > 0 ? 1 : 0
   name  = local.ssm_parameter_name
   type  = "String"
   tier  = "Advanced"
-  value = data.local_file.input.content
+  value = file(module.validator.agent_config)
 }
 
 resource "null_resource" "integration_test_setup" {
@@ -158,9 +155,15 @@ resource "null_resource" "integration_test_run" {
     host     = aws_instance.cwagent.public_dns
   }
 
+  provisioner "file" {
+    source      = module.validator.agent_config
+    destination = module.validator.instance_agent_config
+  }
+
   provisioner "remote-exec" {
     inline = [
-      "validator.exe --test-name=${var.test_dir}",
+      "set AWS_REGION=${var.region}",
+      "validator.exe --test-name=${var.test_dir}"
     ]
   }
 }
@@ -170,7 +173,7 @@ resource "null_resource" "integration_test_run_validator" {
   count = length(regexall("/feature/windows", var.test_dir)) > 0 ? 1 : 0
   depends_on = [
     null_resource.integration_test_setup,
-    null_resource.integration_test_reboot,
+    null_resource.integration_test_wait,
   ]
 
   connection {
