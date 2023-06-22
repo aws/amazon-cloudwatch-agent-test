@@ -102,7 +102,7 @@ resource "null_resource" "integration_test_setup" {
     inline = [
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe ."
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/windows/${var.arc}/validator.exe .",
     ]
   }
 }
@@ -190,6 +190,7 @@ resource "null_resource" "integration_test_run_validator" {
     destination = module.validator.instance_validator_config
   }
 
+  //runs validator and sets up prometheus java agent
   provisioner "remote-exec" {
     inline = [
       "mkdir C:\\jmx_workload",
@@ -206,7 +207,6 @@ resource "null_resource" "integration_test_run_validator" {
       "set AWS_REGION=${var.region}",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
-      "type C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
     ]
   }
