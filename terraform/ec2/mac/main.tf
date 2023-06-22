@@ -56,6 +56,11 @@ data "aws_ec2_host" "test" {
     name   = "state"
     values = ["available"]
   }
+
+  filter {
+    name   = "instance-type"
+    values = [var.ec2_instance_type]
+  }
 }
 
 #####################################################################
@@ -70,6 +75,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   tenancy                              = "dedicated"
+  host_id                              = data.aws_ec2_host.test.id
 
   metadata_options {
     http_endpoint = "enabled"
