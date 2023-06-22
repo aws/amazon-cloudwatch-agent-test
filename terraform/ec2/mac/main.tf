@@ -52,6 +52,8 @@ locals {
 # Filter dedicated mac hosts based on availability
 #####################################################################
 data "aws_ec2_host" "test" {
+  most_recent = true
+
   filter {
     name   = "state"
     values = ["available"]
