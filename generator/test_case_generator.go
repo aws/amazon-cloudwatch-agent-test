@@ -97,9 +97,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/mac"},
 	},
 	"ec2_windows": {
-		//{testDir: "../../../test/feature/windows"},
-		//{testDir: "../../../test/restart"},
-		{testDir: "../../../test/acceptance", targets: map[string]map[string]struct{}{"os": {"win-2016": {}}}},
+		{testDir: "../../../test/feature/windows"},
+		{testDir: "../../../test/restart"},
+		{testDir: "../../../test/acceptance"},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
