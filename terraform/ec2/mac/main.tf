@@ -49,28 +49,6 @@ locals {
 #}
 
 #####################################################################
-# Filter dedicated mac hosts based on availability
-#####################################################################
-#data "aws_ec2_host" "test" {
-#  most_recent = true
-#
-#  filter {
-#    name   = "state"
-#    values = ["available"]
-#  }
-#
-#  filter {
-#    name   = "instance-type"
-#    values = [var.ec2_instance_type]
-#  }
-#}
-
-resource "aws_ec2_host" "test" {
-  instance_type     = var.ec2_instance_type
-  availability_zone = var.ec2_instance_type == "mac2.metal" ? "us-west-2d" : "us-west-2a"
-}
-
-#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
@@ -81,8 +59,8 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids               = [module.basic_components.security_group]
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
-  tenancy                              = "dedicated"
-  host_id                              = aws_ec2_host.test.id
+  tenancy                              = "host"
+  host_resource_group_arn              = "arn:aws:resource-groups:us-west-2:506463145083:group/macOS-integ-test-group"
 
   metadata_options {
     http_endpoint = "enabled"
