@@ -15,7 +15,7 @@ import (
 func LogCheck(cmd string) error {
 	var before, after string
 	var err error
-	before, err = common.RunShellScript(cmd)
+	before, err = common.RunCommand(cmd)
 	if err != nil {
 		log.Printf("Running log check script for restart test failed: %v", err)
 		return err
@@ -23,7 +23,7 @@ func LogCheck(cmd string) error {
 
 	time.Sleep(30 * time.Second)
 
-	after, err = common.RunShellScript(cmd)
+	after, err = common.RunCommand(cmd)
 	if err != nil {
 		log.Printf("Running log check script for restart test failed: %v", err)
 		return err
