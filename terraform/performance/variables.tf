@@ -40,7 +40,7 @@ variable "s3_bucket" {
 
 variable "test_dir" {
   type    = string
-  default = "../../test/stress/statsd"
+  default = "../../test/performance/system" # This is really only used during tf destroy. See https://github.com/hashicorp/terraform/issues/23552
 }
 
 variable "cwa_github_sha" {

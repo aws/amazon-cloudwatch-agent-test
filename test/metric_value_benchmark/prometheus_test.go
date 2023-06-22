@@ -8,6 +8,7 @@ package metric_value_benchmark
 import (
 	_ "embed"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
@@ -72,13 +73,7 @@ func (t *PrometheusTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *PrometheusTestRunner) SetupBeforeAgentRun() error {
-	agentConfig := test_runner.AgentConfig{
-		ConfigFileName:   t.GetAgentConfigFileName(),
-		SSMParameterName: t.SSMParameterName(),
-		UseSSM:           t.UseSSM(),
-	}
-	t.SetAgentConfig(agentConfig)
-	err := t.SetUpConfig()
+	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
 	}
@@ -88,16 +83,20 @@ func (t *PrometheusTestRunner) SetupBeforeAgentRun() error {
 		"sudo python3 -m http.server 8101 --directory /tmp &> /dev/null &",
 	}
 
-	return common.RunCommands(startPrometheusCommands)
+	err = common.RunCommands(startPrometheusCommands)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *PrometheusTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"prometheus_test_counter",
 		"prometheus_test_gauge",
-		//"prometheus_test_summary_count",
-		//"prometheus_test_summary_sum",
-		//"prometheus_test_summary",
+		"prometheus_test_summary_count",
+		"prometheus_test_summary_sum",
+		"prometheus_test_summary",
 	}
 }
 

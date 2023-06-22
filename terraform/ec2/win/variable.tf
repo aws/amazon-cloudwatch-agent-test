@@ -53,7 +53,7 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
-  default = "../../../test/feature/windows"
+  default = "../../../test/feature/windows" # This is really only used during tf destroy. See https://github.com/hashicorp/terraform/issues/23552
 }
 
 variable "use_ssm" {

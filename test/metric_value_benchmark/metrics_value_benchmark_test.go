@@ -137,7 +137,7 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 		log.Println("Environment compute type is EC2")
 		for _, testRunner := range getEc2TestRunners(env) {
 			if shouldRunEC2Test(env, testRunner) {
-				testRunner.Run(suite)
+				suite.AddToSuiteResult(testRunner.Run())
 			}
 		}
 	}

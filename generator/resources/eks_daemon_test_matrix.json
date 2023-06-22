@@ -1,16 +1,14 @@
 [
   {
     "k8s_version": "1.24",
-    "test_dir": "./test/metric_value_benchmark"
+    "ami": "AL2_x86_64",
+    "instanceType":"t3a.medium",
+    "arc": "amd64"
   },
   {
     "k8s_version": "1.24",
-    "test_dir": "./test/emf",
-    "terraform_dir": "terraform/eks/daemon/emf"
-  },
-  {
-    "k8s_version": "1.24",
-    "test_dir": "./test/statsd",
-    "terraform_dir":"terraform/eks/daemon/statsd"
+    "ami": "AL2_ARM_64",
+    "instanceType":"m6g.large",
+    "arc": "arm64"
   }
 ]

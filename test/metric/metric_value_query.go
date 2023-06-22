@@ -1,8 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build !windows
-
 package metric
 
 import (
@@ -26,7 +24,7 @@ func logDimensions(dims []types.Dimension) {
 	log.Printf("\tDimensions:\n")
 	for _, d := range dims {
 		if d.Name != nil && d.Value != nil {
-			log.Printf("\t\tDim(name=%q, val=%q\n", *d.Name, *d.Value)
+			log.Printf("\t\tDim(name=%q, val=%q)\n", *d.Name, *d.Value)
 		}
 	}
 }

@@ -38,9 +38,10 @@ func (s *FeatureValidator) GenerateLoad() error {
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
 		receivers             = s.vConfig.GetPluginsConfig()
+		validationLog         = s.vConfig.GetLogValidation()
 	)
 
-	if err := common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
+	if err := common.GenerateLogs(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate, validationLog); err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}
 
