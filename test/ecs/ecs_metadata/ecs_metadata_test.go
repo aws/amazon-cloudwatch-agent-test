@@ -15,7 +15,7 @@ import (
 	"github.com/qri-io/jsonschema"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 // Purpose: Detect the changes in metadata endpoint for ECS Container Agent https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/util/ecsutil/ecsutil.go#L67-L75

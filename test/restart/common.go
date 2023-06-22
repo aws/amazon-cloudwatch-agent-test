@@ -9,7 +9,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 func LogCheck(cmd string) error {
