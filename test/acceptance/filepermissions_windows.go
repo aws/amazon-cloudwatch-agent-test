@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"go.uber.org/multierr"
 )
 
 const (
@@ -19,8 +20,13 @@ const (
 	configWindowsJSON       = "C:\\Users\\Administrator\\AppData\\Local\\Temp\\agent_config.json"
 	configWindowsOutputPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\config.json"
 	agentWindowsLogPath     = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
-	agentWindowsRuntime     = 3 * time.Minute
+	agentCopiedConfigPath   = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Configs\\file_config.json"
+	translatedTomlPath      = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
+
+	agentWindowsRuntime = 3 * time.Minute
 )
+
+var filePermissionsPath = []string{agentWindowsLogPath, agentCopiedConfigPath, translatedTomlPath}
 
 func Validate() error {
 	log.Printf("testing windows filepermissions")
@@ -44,11 +50,25 @@ func Validate() error {
 		log.Printf("Stopping agent failed: %v", err)
 		return err
 	}
-	err = filesystem.CheckFileRights(agentWindowsLogPath)
+
+	var multiErr error
+	for _, path := range filePermissionsPath {
+		err = checkFilePermissionsForFilePath(path)
+		if err != nil {
+			log.Printf("CloudWatchAgent's %s does not have protection from local system and admin: %v", path, err)
+			multiErr = multierr.Append(multiErr, err)
+		}
+	}
+	return multiErr
+}
+
+func checkFilePermissionsForFilePath(filepath string) error {
+	log.Printf("validating file permissions for filepath=%v", filepath)
+
+	err := filesystem.CheckFileRights(filepath)
 	if err != nil {
-		log.Printf("CloudWatchAgent's log does not have protection from local system and admin: %v", err)
 		return err
 	}
-
+	log.Printf("SUCCESS: file %s have permission to Local system and administrator", filepath)
 	return nil
 }
