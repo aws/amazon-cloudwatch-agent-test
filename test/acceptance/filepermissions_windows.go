@@ -10,7 +10,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
@@ -22,12 +21,6 @@ const (
 	agentWindowsLogPath     = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
 	agentWindowsRuntime     = 3 * time.Minute
 )
-
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
-func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
-}
 
 func Validate() error {
 	log.Printf("testing windows filepermissions")
