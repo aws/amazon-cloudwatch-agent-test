@@ -3,7 +3,7 @@
         "debug": true
     },
     "metrics": {
-        "namespace": "NvidiaGPUWindowsTest",
+        "namespace": "WindowsTest",
         "append_dimensions": {
             "InstanceId": "${aws:InstanceId}"
         },
@@ -11,15 +11,6 @@
             "Memory": {
                 "measurement": [
                     "% Committed Bytes In Use"
-                ],
-                "metrics_collection_interval": 1
-            },
-            "nvidia_gpu": {
-                "measurement": [
-                    "utilization_gpu",
-                    "utilization_memory",
-                    "power_draw",
-                    "temperature_gpu"
                 ],
                 "metrics_collection_interval": 1
             }
