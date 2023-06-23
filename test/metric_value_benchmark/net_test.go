@@ -6,9 +6,11 @@
 package metric_value_benchmark
 
 import (
+	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"log"
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -61,6 +63,7 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		dims   []types.Dimension
 		failed []dimension.Instruction
 	)
+	log.Println(fmt.Sprintf("OS VERSION IS %s", m.env.OS))
 	if strings.Contains(m.env.OS, "sles") {
 		dims, failed = m.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
