@@ -34,6 +34,7 @@ type MetaData struct {
 	ProxyUrl                  string
 	AssumeRoleArn             string
 	InstanceId                string
+	AgentStartCommand         string
 }
 
 type MetaDataStrings struct {
@@ -53,6 +54,7 @@ type MetaDataStrings struct {
 	ProxyUrl                  string
 	AssumeRoleArn             string
 	InstanceId                string
+	AgentStartCommand         string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -179,6 +181,7 @@ func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDat
 	registerProxyUrl(metaDataStrings)
 	registerAssumeRoleArn(metaDataStrings)
 	registerInstanceId(metaDataStrings)
+	registerAgentStartCommand(metaDataStrings)
 	return metaDataStrings
 }
 
@@ -195,5 +198,7 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData.ProxyUrl = data.ProxyUrl
 	metaData.AssumeRoleArn = data.AssumeRoleArn
 	metaData.InstanceId = data.InstanceId
+	metaData.AgentStartCommand = data.AgentStartCommand
+
 	return metaData
 }
