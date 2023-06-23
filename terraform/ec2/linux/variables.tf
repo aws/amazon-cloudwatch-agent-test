@@ -104,5 +104,5 @@ variable "plugin_tests" {
 
 variable "pre_test_setup" {
   type    = string
-  default = ""
+  default = "echo no pre-test setup"
 }
