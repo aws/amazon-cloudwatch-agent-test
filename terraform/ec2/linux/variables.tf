@@ -101,3 +101,8 @@ variable "plugin_tests" {
   type    = string
   default = ""
 }
+
+variable "exclude_tests" {
+  type    = string
+  default = ""
+}
