@@ -102,7 +102,7 @@ variable "plugin_tests" {
   default = ""
 }
 
-variable "exclude_tests" {
+variable "excluded_tests" {
   type    = string
   default = ""
 }
