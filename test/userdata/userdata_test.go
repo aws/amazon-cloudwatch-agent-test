@@ -113,7 +113,7 @@ func (t UserdataTestRunner) Run() status.TestGroupResult {
 }
 
 func TestUserdata(t *testing.T) {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 	// userdata doesn't use Run() from base_test_runner since agent has already been started with userdata script
 	userdataRunner := &UserdataTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}

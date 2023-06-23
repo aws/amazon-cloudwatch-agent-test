@@ -26,7 +26,7 @@ func getCommands(roleArn string) []string {
 }
 
 func getDimensions(instanceId string) []types.Dimension {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 	dims, failed := factory.GetDimensions([]dimension.Instruction{
 		{

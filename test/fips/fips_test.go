@@ -29,7 +29,7 @@ func init() {
 }
 
 func TestFIPS(t *testing.T) {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 
 	common.CopyFile(agentConfigLocalPath, agentConfigPath)

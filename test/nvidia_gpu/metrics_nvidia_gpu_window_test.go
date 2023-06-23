@@ -25,7 +25,6 @@ const (
 )
 
 var (
-	envMetaDataStrings              = &(environment.MetaDataStrings{})
 	expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use", "nvidia_smi utilization_gpu", "nvidia_smi utilization_memory", "nvidia_smi power_draw", "nvidia_smi temperature_gpu"}
 )
 

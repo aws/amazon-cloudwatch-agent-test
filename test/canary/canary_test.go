@@ -30,7 +30,7 @@ func init() {
 // TestCanary verifies downloading, installing, and starting the agent.
 // Reports metrics for each failure type.
 func TestCanary(t *testing.T) {
-	e := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	e := environment.GetEnvironmentMetaData()
 	defer setupCron(e.Bucket, e.S3Key)
 	// Don't care if uninstall fails. Agent might not be installed anyways.
 	_ = common.UninstallAgent(common.RPM)

@@ -50,7 +50,7 @@ func (t *ProxyTestRunner) validateMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	dims := getDimensions(envMetaDataStrings.InstanceId)
+	dims := getDimensions(environment.GetEnvironmentMetaData().InstanceId)
 	if len(dims) == 0 {
 		return testResult
 	}
@@ -94,7 +94,7 @@ func (t *ProxyTestRunner) SetupBeforeAgentRun() error {
 var _ test_runner.ITestRunner = (*ProxyTestRunner)(nil)
 
 func TestProxy(t *testing.T) {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	runner := test_runner.TestRunner{TestRunner: &ProxyTestRunner{
 		test_runner.BaseTestRunner{},
 		env.ProxyUrl,

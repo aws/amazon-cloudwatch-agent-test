@@ -45,7 +45,7 @@ func (t *RoleTestRunner) validateMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	dims := getDimensions(envMetaDataStrings.InstanceId)
+	dims := getDimensions(environment.GetEnvironmentMetaData().InstanceId)
 	if len(dims) == 0 {
 		return testResult
 	}
@@ -79,7 +79,7 @@ func (t RoleTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *RoleTestRunner) SetupBeforeAgentRun() error {
-	err := common.RunCommands(getCommands(envMetaDataStrings.AssumeRoleArn))
+	err := common.RunCommands(getCommands(environment.GetEnvironmentMetaData().AssumeRoleArn))
 	if err != nil {
 		return err
 	}

@@ -40,7 +40,7 @@ func init() {
 
 func TestFluentLogs(t *testing.T) {
 	t.Log("starting EKS fluent log validation...")
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 
 	now := time.Now()
 	for group, fieldsArr := range logGroupToKey {

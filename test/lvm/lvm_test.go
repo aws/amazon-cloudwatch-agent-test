@@ -113,7 +113,7 @@ func (t *LVMTestRunner) SetupBeforeAgentRun() error {
 var _ test_runner.ITestRunner = (*LVMTestRunner)(nil)
 
 func TestLVM(t *testing.T) {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 	runner := test_runner.TestRunner{TestRunner: &LVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}}
 	result := runner.Run()

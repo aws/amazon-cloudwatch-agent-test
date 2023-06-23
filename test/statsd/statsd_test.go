@@ -74,7 +74,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 }
 
 func (suite *StatsDTestSuite) TestAllInSuite() {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	switch env.ComputeType {
 	case computetype.ECS:
 		log.Println("Environment compute type is ECS")
