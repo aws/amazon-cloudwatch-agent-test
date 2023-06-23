@@ -15,6 +15,9 @@
             "measurement": [
              "bytes_sent", "bytes_recv", "drop_in", "drop_out", "err_in", "err_out", "packets_sent", "packets_recv"
             ],
+            "append_dimensions": {
+              "testing": "testing"
+            },
             "resources": [
               "*"
             ],

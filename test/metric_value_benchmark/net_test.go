@@ -6,6 +6,8 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/aws-sdk-go-v2/aws"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -59,6 +61,10 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "testing",
+			Value: dimension.ExpectedDimensionValue{aws.String("testing")},
 		},
 	})
 
