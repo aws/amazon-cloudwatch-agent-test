@@ -101,3 +101,8 @@ variable "plugin_tests" {
   type    = string
   default = ""
 }
+
+variable "pre_test_setup" {
+  type    = string
+  default = ""
+}
