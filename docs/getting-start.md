@@ -318,6 +318,9 @@ click the `...` and then select `Disable workflow`.
 See [GitHub docs](https://docs.github.com/en/actions/managing-workflow-runs/disabling-and-enabling-a-workflow)
 regarding how to turn workflows on and off.
 
+## macOS Test
+To learn more about how we generate and assign resources for integration tests, refer to the doc for [License Manager Setup](https://github.com/zhihonl/amazon-cloudwatch-agent-test/blob/macos-fix/docs/learning-testing-workflow.md)
+
 # Local setup (Not recommended)
 
 ### Install terraform
