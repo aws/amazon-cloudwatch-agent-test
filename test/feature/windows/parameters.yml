@@ -24,13 +24,13 @@ metric_namespace: "CloudWatchAgentWinFeature"
 metric_validation:
   # For checking against metrics created by prometheus java agent
   - metric_name: "jvm_threads_current"
-    metric_value: 1.0
+    metric_sample_count: 1
 
   - metric_name: "jvm_gc_collection_seconds_sum"
-    metric_value: 1.0
+    metric_sample_count: 1
 
   - metric_name: "jvm_memory_bytes_used"
-    metric_value: 1.0
+    metric_sample_count: 1
 
   # Validator generates statsd metrics
   # https://github.com/aws/amazon-cloudwatch-agent-test/blob/4365fbdbf979756e7f6db7f795a8a84b2c4f57c1/internal/common/metrics.go#L130-L165
