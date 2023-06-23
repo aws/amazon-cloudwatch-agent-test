@@ -63,7 +63,8 @@
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
+    "family": "linux",
+    "excludedTests": ""
   },
   {
     "os": "rhel8",
@@ -74,7 +75,8 @@
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
+    "family": "linux",
+    "excludedTests": ""
   },
   {
     "os": "ol7",
@@ -85,7 +87,8 @@
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
+    "family": "linux",
+    "excludedTests": ""
   },
   {
     "os": "ol8",
@@ -96,7 +99,8 @@
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
+    "family": "linux",
+    "excludedTests": ""
   },
   {
     "os": "ol9",
@@ -107,7 +111,8 @@
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
+    "family": "linux",
+    "excludedTests": ""
   },
   {
     "os": "centos-7",
@@ -118,7 +123,8 @@
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
+    "family": "linux",
+    "excludedTests": ""
   },
   {
     "os": "centos-stream-8",
@@ -129,7 +135,8 @@
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
+    "family": "linux",
+    "excludedTests": ""
   },
   {
     "os": "sles-12",
@@ -152,6 +159,7 @@
     "caCertPath": "/etc/ssl/ca-bundle.pem",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
+    "family": "linux",
+    "excludedTests": ""
   }
 ]
