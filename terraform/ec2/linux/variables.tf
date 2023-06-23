@@ -101,3 +101,8 @@ variable "plugin_tests" {
   type    = string
   default = ""
 }
+
+variable "os" {
+  type    = string
+  default = ""
+}

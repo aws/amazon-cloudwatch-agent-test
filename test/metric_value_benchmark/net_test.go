@@ -6,7 +6,10 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
@@ -16,6 +19,7 @@ import (
 
 type NetTestRunner struct {
 	test_runner.BaseTestRunner
+	env *environment.MetaData
 }
 
 var _ test_runner.ITestRunner = (*NetTestRunner)(nil)
@@ -53,20 +57,33 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "interface",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "InstanceId",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "testing",
-			Value: dimension.ExpectedDimensionValue{aws.String("testing")},
-		},
-	})
+	var (
+		dims   []types.Dimension
+		failed []dimension.Instruction
+	)
+	if strings.Contains(m.env.OS, "sles") {
+		dims, failed = m.DimensionFactory.GetDimensions([]dimension.Instruction{
+			{
+				Key:   "interface",
+				Value: dimension.ExpectedDimensionValue{aws.String("eth0")},
+			},
+			{
+				Key:   "InstanceId",
+				Value: dimension.UnknownDimensionValue(),
+			},
+		})
+	} else {
+		dims, failed = m.DimensionFactory.GetDimensions([]dimension.Instruction{
+			{
+				Key:   "interface",
+				Value: dimension.ExpectedDimensionValue{aws.String("docker0")},
+			},
+			{
+				Key:   "InstanceId",
+				Value: dimension.UnknownDimensionValue(),
+			},
+		})
+	}
 
 	if len(failed) > 0 {
 		return testResult
