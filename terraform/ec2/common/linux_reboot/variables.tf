@@ -7,7 +7,7 @@ variable "test_dir" {
 }
 
 variable "reboot_required_tests" {
-  type    = list
+  type    = list(any)
   default = []
 }
 

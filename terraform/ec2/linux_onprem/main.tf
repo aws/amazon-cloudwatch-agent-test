@@ -4,29 +4,29 @@
 module "linux_common" {
   source = "../common/linux"
 
-  region = var.region
+  region            = var.region
   ec2_instance_type = var.ec2_instance_type
-  ssh_key_name = var.ssh_key_name
-  ami = var.ami
-  ssh_key_value = var.ssh_key_value
-  user = var.user
-  arc = var.arc
-  test_name = var.test_name
-  test_dir = var.test_dir
-  is_canary = var.is_canary
+  ssh_key_name      = var.ssh_key_name
+  ami               = var.ami
+  ssh_key_value     = var.ssh_key_value
+  user              = var.user
+  arc               = var.arc
+  test_name         = var.test_name
+  test_dir          = var.test_dir
+  is_canary         = var.is_canary
 }
 
 module "reboot_common" {
   source = "../common/linux_reboot"
 
-  test_dir = var.test_dir
+  test_dir              = var.test_dir
   reboot_required_tests = local.reboot_required_tests
-  private_key_content = module.linux_common.private_key_content
-  cwagent_public_ip = module.linux_common.cwagent_public_ip
-  user = var.user
+  private_key_content   = module.linux_common.private_key_content
+  cwagent_public_ip     = module.linux_common.cwagent_public_ip
+  user                  = var.user
 
   depends_on = [
-      null_resource.integration_test_setup,
+    null_resource.integration_test_setup,
   ]
 }
 
