@@ -159,5 +159,5 @@ func shouldRunEC2Test(env *environment.MetaData, t *test_runner.TestRunner) bool
 	}
 	_, shouldRun := env.EC2PluginTests[strings.ToLower(t.TestRunner.GetTestName())]
 	_, shouldExclude := env.ExcludedTests[strings.ToLower(t.TestRunner.GetTestName())]
-	return shouldRun && !shouldExclude
+	return shouldRun || !shouldExclude
 }
