@@ -2,37 +2,37 @@
       {
         "os": "macOS Big Sur Arm64",
         "instanceType":"mac2.metal",
-        "ami": "amzn-ec2-macos-11.*",
+        "ami": "cloudwatch-agent-integration-test-mac-bigsur-arm64",
         "arc": "arm64"
       },
       {
         "os": "macOS Big Sur Amd64",
         "instanceType":"mac1.metal",
-        "ami": "amzn-ec2-macos-11.*",
+        "ami": "cloudwatch-agent-integration-test-mac-bigsur-x86",
         "arc": "amd64"
       },
       {
         "os": "macOS Ventura Arm64",
         "instanceType":"mac2.metal",
-        "ami": "amzn-ec2-macos-13.*",
+        "ami": "cloudwatch-agent-integration-test-mac-ventura-arm64",
         "arc": "arm64"
       },
       {
         "os": "macOS Ventura Amd64",
         "instanceType":"mac1.metal",
-        "ami": "amzn-ec2-macos-13.*",
+        "ami": "cloudwatch-agent-integration-test-mac-ventura-x86",
         "arc": "amd64"
       },
       {
         "os": "macOS Monterey Arm64",
         "instanceType":"mac2.metal",
-        "ami": "amzn-ec2-macos-12.*",
+        "ami": "cloudwatch-agent-integration-test-mac-monterey-arm64",
         "arc": "arm64"
       },
       {
         "os": "macOS Monterey Amd64",
         "instanceType":"mac1.metal",
-        "ami": "amzn-ec2-macos-12.*",
+        "ami": "cloudwatch-agent-integration-test-mac-monterey-x86",
         "arc": "amd64"
       }
 ]
