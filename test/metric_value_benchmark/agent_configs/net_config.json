@@ -1,6 +1,6 @@
 {
     "agent": {
-      "metrics_collection_interval": 10,
+      "metrics_collection_interval": 1,
       "run_as_user": "root",
       "debug": true,
       "logfile": ""
