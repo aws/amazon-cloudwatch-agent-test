@@ -66,3 +66,8 @@ variable "cwa_github_sha" {
   default = ""
 }
 
+variable "license_manager_arn" {
+  type    = string
+  default = ""
+}
+
