@@ -60,8 +60,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
 		},
-		//// skipping FIPS test as the test cannot be verified
-		//// neither ssh nor SSM works after a reboot once FIPS is enabled
+		// skipping FIPS test as the test cannot be verified
+		// neither ssh nor SSM works after a reboot once FIPS is enabled
 		//{
 		//	testDir: "./test/fips",
 		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
