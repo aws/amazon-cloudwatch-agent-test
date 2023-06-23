@@ -2,7 +2,7 @@
       {
         "os": "macOS Ventura Amd64",
         "instanceType":"mac1.metal",
-        "ami": "cloudwatch-agent-integration-test-mac-ventura-amd64",
+        "ami": "cloudwatch-agent-integration-test-mac-ventura-x86",
         "arc": "amd64"
       },
       {
@@ -14,7 +14,7 @@
       {
         "os": "macOS Monterey Amd64",
         "instanceType":"mac1.metal",
-        "ami": "cloudwatch-agent-integration-test-mac-monterey-amd64",
+        "ami": "cloudwatch-agent-integration-test-mac-monterey-x86",
         "arc": "amd64"
       }
 ]
