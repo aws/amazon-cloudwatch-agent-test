@@ -24,10 +24,10 @@ const (
 	namespace = "SSLCertTest"
 )
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
+""
 
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 type SslCertTestRunner struct {

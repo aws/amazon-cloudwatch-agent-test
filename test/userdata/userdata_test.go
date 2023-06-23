@@ -23,10 +23,8 @@ type UserdataTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func (t UserdataTestRunner) Validate() status.TestGroupResult {

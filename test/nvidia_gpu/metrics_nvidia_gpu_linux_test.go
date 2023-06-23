@@ -31,7 +31,7 @@ var (
 )
 
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestNvidiaGPU(t *testing.T) {

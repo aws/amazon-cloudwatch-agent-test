@@ -34,10 +34,8 @@ var logGroupToKey = map[string][][]string{
 	},
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestFluentLogs(t *testing.T) {

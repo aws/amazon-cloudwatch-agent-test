@@ -9,10 +9,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestAgentStatusAfterRestart(t *testing.T) {

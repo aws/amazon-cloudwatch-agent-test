@@ -35,10 +35,8 @@ func (suite *StatsDTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished StatsDTestSuite")
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 var (

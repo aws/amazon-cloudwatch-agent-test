@@ -31,10 +31,8 @@ func (suite *MetricsAppendDimensionTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished MetricAppendDimensionTestSuite")
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 var (

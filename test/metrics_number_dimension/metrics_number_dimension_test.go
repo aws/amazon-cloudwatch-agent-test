@@ -44,10 +44,8 @@ type metric struct {
 	value string
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 // Must run this test with parallel 1 since this will fail if more than one test is running at the same time

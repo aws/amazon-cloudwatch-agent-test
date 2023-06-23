@@ -18,10 +18,8 @@ import (
 
 const namespace = "AssumeRoleTest"
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 type RoleTestRunner struct {
