@@ -24,6 +24,7 @@
     "node_cpu_utilization":{},
     "node_memory_cache":{},
     "node_memory_failcnt":{},
+    "node_memory_failures_total":{},
     "node_memory_hierarchical_pgfault":{},
     "node_memory_hierarchical_pgmajfault":{},
     "node_memory_limit":{},
@@ -49,6 +50,12 @@
     "node_network_tx_packets":{},
     "node_number_of_running_containers":{},
     "node_number_of_running_pods": {},
+    "node_status_allocatable_pods": {},
+    "node_status_capacity_pods": {},
+    "node_status_condition_disk_pressure": {},
+    "node_status_condition_memory_pressure": {},
+    "node_status_condition_pid_pressure": {},
+    "node_status_condition_ready": {},
     "kubernetes": {
       "type": "object",
       "properties": {
