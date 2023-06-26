@@ -10,6 +10,7 @@
     "Sources": {},
     "Timestamp": {},
     "Version": {},
+    "NodeName": {},
     "cluster_failed_node_count": {},
     "cluster_node_count": {},
     "CloudWatchMetrics": {}

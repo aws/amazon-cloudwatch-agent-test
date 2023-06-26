@@ -69,6 +69,15 @@
     "pod_memory_request":{},
     "pod_memory_reserved_capacity":{},
     "pod_memory_utilization_over_pod_limit":{},
+    "pod_memory_failures_total": {},
+    "pod_status_failed": {},
+    "pod_status_initialized": {},
+    "pod_status_pending": {},
+    "pod_status_ready": {},
+    "pod_status_running": {},
+    "pod_status_scheduled": {},
+    "pod_status_succeeded": {},
+    "pod_status_unknown": {},
     "CloudWatchMetrics": {}
   },
   "required": [
