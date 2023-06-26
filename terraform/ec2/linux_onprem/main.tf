@@ -67,11 +67,11 @@ resource "null_resource" "integration_test_setup" {
       "sudo mkdir -p /.aws",
       "echo creating credentials file that the agent uses by default for onprem",
       "printf '\n[profile AmazonCloudWatchAgent]\nregion = us-west-2' | sudo tee -a /.aws/config",
-      "printf '\n[AmazonCloudWatchAgent]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s' $(aws sts assume-role --role-arn ${module.common.cwa_onprem_assumed_iam_role_arm} --role-session-name onpremtest --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text) | sudo tee -a /.aws/credentials>/dev/null",
+      "printf '\n[AmazonCloudWatchAgent]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s' $(aws sts assume-role --role-arn ${module.linux_common.cwa_onprem_assumed_iam_role_arm} --role-session-name onpremtest --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text) | sudo tee -a /.aws/credentials>/dev/null",
       "printf '[credentials]\n  shared_credential_profile = \"AmazonCloudWatchAgent\"\n  shared_credential_file = \"/.aws/credentials\"' | sudo tee /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml>/dev/null",
       "echo write the same credentials as default profile as well. AWS SDK clients used for testing looks for default. Without this, would have needed to specify profile name in the test code",
       "printf '\n[default]\nregion = us-west-2' | sudo tee -a ~/.aws/config",
-      "printf '\n[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s' $(aws sts assume-role --role-arn ${module.common.cwa_onprem_assumed_iam_role_arm} --role-session-name test --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text) | sudo tee -a ~/.aws/credentials>/dev/null",
+      "printf '\n[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s' $(aws sts assume-role --role-arn ${module.linux_common.cwa_onprem_assumed_iam_role_arm} --role-session-name test --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text) | sudo tee -a ~/.aws/credentials>/dev/null",
       "echo turning off imds access in order to make agent start with onprem mode",
       "aws ec2 modify-instance-metadata-options --instance-id ${module.linux_common.cwagent_id} --http-endpoint disabled",
     ]

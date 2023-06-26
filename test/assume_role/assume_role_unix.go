@@ -23,10 +23,8 @@ const (
 	credsDir  = "/tmp/.aws"
 )
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 type RoleTestRunner struct {
@@ -52,7 +50,7 @@ func (t *RoleTestRunner) validateMetric(metricName string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	dims := getDimensions(envMetaDataStrings.InstanceId)
+	dims := getDimensions(environment.GetEnvironmentMetaData().InstanceId)
 	if len(dims) == 0 {
 		return testResult
 	}
@@ -86,7 +84,7 @@ func (t RoleTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *RoleTestRunner) SetupBeforeAgentRun() error {
-	err := common.RunCommands(getCommands(envMetaDataStrings.AssumeRoleArn))
+	err := common.RunCommands(getCommands(environment.GetEnvironmentMetaData().AssumeRoleArn))
 	if err != nil {
 		return err
 	}
@@ -105,7 +103,7 @@ func getCommands(roleArn string) []string {
 }
 
 func getDimensions(instanceId string) []types.Dimension {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 	dims, failed := factory.GetDimensions([]dimension.Instruction{
 		{

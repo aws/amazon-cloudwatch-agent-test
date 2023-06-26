@@ -24,14 +24,12 @@ const (
 	agentConfigPath      = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 )
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestFIPS(t *testing.T) {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 
 	common.CopyFile(agentConfigLocalPath, agentConfigPath)

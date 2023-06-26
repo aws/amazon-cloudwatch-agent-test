@@ -24,6 +24,7 @@ type matrixRow struct {
 	BinaryName          string `json:"binaryName"`
 	Username            string `json:"username"`
 	InstallAgentCommand string `json:"installAgentCommand"`
+	AgentStartCommand   string `json:"agentStartCommand"`
 	CaCertPath          string `json:"caCertPath"`
 	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
 	K8sVersion          string `json:"k8s_version"`
@@ -41,12 +42,16 @@ type testConfig struct {
 	targets map[string]map[string]struct{}
 }
 
+const (
+	testTypeKeyEc2Linux = "ec2_linux"
+)
+
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
 	},
-	"ec2_linux": {
+	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{testDir: "./test/metrics_number_dimension"},
@@ -149,7 +154,21 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 }
 
+func copyAllEC2LinuxTestForOnpremTesting() {
+	/* Some tests need to be fixed in order to run in both environment, so for now for PoC, run one that works.
+	testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
+	*/
+	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
+		{
+			testDir: "./test/lvm",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+	}
+}
+
 func main() {
+	copyAllEC2LinuxTestForOnpremTesting()
+
 	for testType, testConfigs := range testTypeToTestConfig {
 		testMatrix := genMatrix(testType, testConfigs)
 		writeTestMatrixFile(testType, testMatrix)

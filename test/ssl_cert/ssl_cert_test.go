@@ -24,10 +24,8 @@ const (
 	namespace = "SSLCertTest"
 )
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 type SslCertTestRunner struct {
@@ -115,7 +113,7 @@ func (t *SslCertTestRunner) SetupBeforeAgentRun() error {
 var _ test_runner.ITestRunner = (*SslCertTestRunner)(nil)
 
 func TestSSLCert(t *testing.T) {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 	runner := test_runner.TestRunner{TestRunner: &SslCertTestRunner{
 		test_runner.BaseTestRunner{DimensionFactory: factory},
