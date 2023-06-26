@@ -233,7 +233,7 @@
               {
                 "source_labels": ["job"],
                 "label_matcher": "^jmx-exporter$",
-                "dimensions": [["instance"]],
+                "dimensions": [["InstanceId"]],
                 "metric_selectors": [
                   "jvm_threads_current",
                   "jvm_gc_collection_seconds_sum",
