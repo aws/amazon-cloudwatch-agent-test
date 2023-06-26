@@ -15,10 +15,13 @@
     "NodeName":{},
     "PodName":{},
     "Namespace":{},
+    "container_cpu_limit": {},
+    "container_cpu_request": {},
     "container_cpu_usage_system":{},
     "container_cpu_usage_total":{},
     "container_cpu_usage_user":{},
     "container_cpu_utilization":{},
+    "container_cpu_utilization_over_container_limit":{},
     "container_memory_cache":{},
     "container_memory_failcnt":{},
     "container_memory_hierarchical_pgfault":{},
@@ -32,6 +35,15 @@
     "container_memory_usage":{},
     "container_memory_working_set":{},
     "container_memory_utilization":{},
+    "container_memory_failures_total": {},
+    "container_memory_limit": {},
+    "container_memory_request": {},
+    "container_memory_utilization_over_container_limit":{},
+    "container_status_running":{},
+    "container_status_terminated":{},
+    "container_status_waiting":{},
+    "container_status_waiting_reason_crashed":{},
+    "container_last_termination_reason":{},
     "number_of_container_restarts":{},
     "container_status":{},
     "kubernetes":{
@@ -76,12 +88,7 @@
       ],
       "additionalProperties": false
     },
-    "Service":{},
-    "container_cpu_limit":{},
-    "container_cpu_request":{},
-    "container_memory_limit":{},
-    "container_memory_request":{},
-    "container_last_termination_reason":{}
+    "Service":{}
   },
   "required": [
     "ClusterName",
