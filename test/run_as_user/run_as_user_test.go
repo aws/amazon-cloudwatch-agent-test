@@ -8,12 +8,13 @@ package run_as_user
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
@@ -53,8 +54,13 @@ func TestRunAsUser(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}
-
-			agentOwnerOutput, err := common.RunCommand(common.AppOwnerCommand + pidOutput)
+			processOwnerCommand := common.AppOwnerCommand
+			currentOS := runtime.GOOS
+			switch currentOS {
+			case "darwin":
+				processOwnerCommand = "ps -j -p "
+			}
+			agentOwnerOutput, err := common.RunCommand(processOwnerCommand + pidOutput)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}

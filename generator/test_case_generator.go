@@ -64,10 +64,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
 		},
-		{
-			testDir: "./test/fips",
-			targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
-		},
+		// skipping FIPS test as the test cannot be verified
+		// neither ssh nor SSM works after a reboot once FIPS is enabled
+		//{
+		//	testDir: "./test/fips",
+		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		//},
 		{
 			testDir: "./test/lvm",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -97,11 +99,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 		and Mac under the hood share similar plugins with Linux
 	*/
 	"ec2_mac": {
-		{testDir: "./test/feature/mac"},
+		{testDir: "../../../test/feature/mac"},
 	},
 	"ec2_windows": {
-		{testDir: "./test/feature/windows"},
-		{testDir: "./test/restart"},
+		{testDir: "../../../test/feature/windows"},
+		{testDir: "../../../test/restart"},
+		{testDir: "../../../test/acceptance"},
+		// assume role test doesn't add much value, and it already being tested with linux
+		//{testDir: "../../../test/assume_role"},
 	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},

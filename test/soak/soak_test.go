@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/stretchr/testify/require"
 )

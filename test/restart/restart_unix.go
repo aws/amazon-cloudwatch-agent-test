@@ -6,5 +6,5 @@
 package restart
 
 func Validate() error {
-	return LogCheck("resources/verifyRestartScript.sh")
+	return LogCheck("cwa_log=$(if [ -f \"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log\" ]; then cat \"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log\" | wc -l; else echo 0; fi) && echo \"cwa_log:${cwa_log}\"")
 }

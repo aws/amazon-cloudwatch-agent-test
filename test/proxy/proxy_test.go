@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (

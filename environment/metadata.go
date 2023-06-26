@@ -8,12 +8,11 @@ import (
 	"log"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksdeploymenttype"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecsdeploymenttype"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecslaunchtype"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksdeploymenttype"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 const (
