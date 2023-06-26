@@ -78,6 +78,7 @@ resource "null_resource" "integration_test_setup" {
   }
 
   depends_on = [
+    module.common,
     module.linux_common,
   ]
 }
