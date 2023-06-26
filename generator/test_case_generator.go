@@ -30,6 +30,7 @@ type matrixRow struct {
 	K8sVersion          string `json:"k8s_version"`
 	TerraformDir        string `json:"terraform_dir"`
 	UseSSM              bool   `json:"useSSM"`
+	ExcludedTests       string `json:"excludedTests"`
 }
 
 type testConfig struct {

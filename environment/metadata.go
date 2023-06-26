@@ -32,6 +32,7 @@ type MetaData struct {
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
 	EC2PluginTests            map[string]struct{} // set of EC2 plugin names
+	ExcludedTests             map[string]struct{} // set of excluded names
 	Bucket                    string
 	S3Key                     string
 	CwaCommitSha              string
@@ -52,6 +53,7 @@ type MetaDataStrings struct {
 	CwagentConfigSsmParamName string
 	EcsServiceName            string
 	EC2PluginTests            string // input comma delimited list of plugin names
+	ExcludedTests             string // Exclude specific tests from OS
 	Bucket                    string
 	S3Key                     string
 	CwaCommitSha              string
@@ -94,6 +96,10 @@ func registerEKSData(d *MetaDataStrings) {
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EC2PluginTests), "plugins", "", "Comma-delimited list of plugins to test. Default is empty, which tests all")
+}
+
+func registerExcludedTests(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.ExcludedTests), "excludedTests", "", "Comma-delimited list of test to exclude. Default is empty, which tests all")
 }
 
 func registerProxyUrl(dataString *MetaDataStrings) {
@@ -166,6 +172,25 @@ func fillEC2PluginTests(e *MetaData, data *MetaDataStrings) {
 	e.EC2PluginTests = m
 }
 
+func fillExcludedTests(e *MetaData, data *MetaDataStrings) {
+	if e.ComputeType != computetype.EC2 {
+		return
+	}
+
+	if len(data.ExcludedTests) == 0 {
+		log.Println("Testing all EC2 plugins")
+		return
+	}
+
+	plugins := strings.Split(strings.ReplaceAll(data.ExcludedTests, " ", ""), ",")
+	log.Printf("Excluding subset of tests: %v", plugins)
+	m := make(map[string]struct{}, len(plugins))
+	for _, p := range plugins {
+		m[strings.ToLower(p)] = struct{}{}
+	}
+	e.ExcludedTests = m
+}
+
 func fillEKSData(e *MetaData, data *MetaDataStrings) {
 	if e.ComputeType != computetype.EKS {
 		return
@@ -180,7 +205,6 @@ func fillEKSData(e *MetaData, data *MetaDataStrings) {
 
 	e.EKSClusterName = data.EKSClusterName
 }
-
 func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerComputeType(registeredMetaDataStrings)
 	registerECSData(registeredMetaDataStrings)
@@ -190,6 +214,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerCwaCommitSha(registeredMetaDataStrings)
 	registerCaCertPath(registeredMetaDataStrings)
 	registerPluginTestsToExecute(registeredMetaDataStrings)
+	registerExcludedTests(registeredMetaDataStrings)
 	registerProxyUrl(registeredMetaDataStrings)
 	registerAssumeRoleArn(registeredMetaDataStrings)
 	registerInstanceId(registeredMetaDataStrings)
@@ -208,6 +233,7 @@ func GetEnvironmentMetaData() *MetaData {
 	fillECSData(metaDataStorage, registeredMetaDataStrings)
 	fillEKSData(metaDataStorage, registeredMetaDataStrings)
 	fillEC2PluginTests(metaDataStorage, registeredMetaDataStrings)
+	fillExcludedTests(metaDataStorage, registeredMetaDataStrings)
 	metaDataStorage.Bucket = registeredMetaDataStrings.Bucket
 	metaDataStorage.S3Key = registeredMetaDataStrings.S3Key
 	metaDataStorage.CwaCommitSha = registeredMetaDataStrings.CwaCommitSha
