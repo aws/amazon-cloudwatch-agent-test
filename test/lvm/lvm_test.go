@@ -6,6 +6,7 @@ package lvm
 
 import (
 	"log"
+	"os"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -14,14 +15,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 const namespace = "LVMTest"
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 type LVMTestRunner struct {
@@ -47,10 +47,16 @@ func (t *LVMTestRunner) validateDiskMetric(metricName string) status.TestResult 
 		Status: status.FAILED,
 	}
 
+	hostName, err := os.Hostname()
+	if err != nil {
+		log.Printf("Hostname was not found")
+	}
+	log.Printf("Hostname found %s", hostName)
+
 	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
-			Key:   "InstanceId",
-			Value: dimension.UnknownDimensionValue(),
+			Key:   common.Host,
+			Value: dimension.ExpectedDimensionValue{Value: aws.String(hostName)},
 		},
 	})
 
@@ -107,7 +113,7 @@ func (t *LVMTestRunner) SetupBeforeAgentRun() error {
 var _ test_runner.ITestRunner = (*LVMTestRunner)(nil)
 
 func TestLVM(t *testing.T) {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 	runner := test_runner.TestRunner{TestRunner: &LVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}}
 	result := runner.Run()

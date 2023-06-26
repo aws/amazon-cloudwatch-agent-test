@@ -193,12 +193,24 @@ resource "null_resource" "integration_test_run_validator" {
     destination = module.validator.instance_validator_config
   }
 
+  //runs validator and sets up prometheus java agent
   provisioner "remote-exec" {
     inline = [
+      "mkdir C:\\jmx_workload",
+      "powershell.exe -Command \"'---', 'rules:', '- pattern: \\\".*\\\"' | Set-Content -Path \\\"C:\\jmx_workload\\exporter_config.yaml\\\"\"",
+      "powershell.exe -Command \"'global:', '  scrape_interval: 1m', '  scrape_timeout: 10s', 'scrape_configs:', '  - job_name: jmx-exporter', '    sample_limit: 10000', '    file_sd_configs:', '      - files: [ \\\"C:\\\\jmx_workload\\\\prometheus_file_sd.yaml\\\" ]' | Set-Content -Path \\\"C:\\jmx_workload\\prometheus.yaml\\\"\"",
+      "powershell.exe -Command \"$env:AWS_IMDSV2_TOKEN = (Invoke-RestMethod -Uri 'http://169.254.169.254/latest/api/token' -Method 'PUT' -Headers @{ 'X-aws-ec2-metadata-token-ttl-seconds' = '300' }).trim(); $InstanceId = Invoke-RestMethod -Uri 'http://169.254.169.254/latest/meta-data/instance-id' -Headers @{ 'X-aws-ec2-metadata-token' = $env:AWS_IMDSV2_TOKEN };; Add-Content -Path 'C:\\jmx_workload\\prometheus_file_sd.yaml' '- targets:'; Add-Content -Path 'C:\\jmx_workload\\prometheus_file_sd.yaml' '  - 127.0.0.1:9404'; Add-Content -Path 'C:\\jmx_workload\\prometheus_file_sd.yaml' '  labels:'; Add-Content -Path 'C:\\jmx_workload\\prometheus_file_sd.yaml' '    application: test-app'; Add-Content -Path 'C:\\jmx_workload\\prometheus_file_sd.yaml' ('    InstanceId: ' + $InstanceId)\"",
+      "powershell.exe -Command \"[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12\"",
+      "powershell.exe -Command \"(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/jmx_prometheus_javaagent-0.12.0.jar', 'C:\\\\jmx_workload\\\\jmx_prometheus_javaagent-0.12.0.jar')\"",
+      "powershell.exe -Command \"(New-Object Net.WebClient).DownloadFile('https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/SampleJavaApplication-1.0-SNAPSHOT.jar', 'C:\\\\jmx_workload\\\\SampleJavaApplication-1.0-SNAPSHOT.jar')\"",
+      "powershell.exe -Command \"Start-Sleep -s 60\"",
+      "powershell.exe -Command \"Start-Process -FilePath \\\"C:\\Program Files\\OpenJDK\\jdk-15.0.2\\bin\\java.exe\\\" -ArgumentList \\\"-javaagent:C:\\jmx_workload\\jmx_prometheus_javaagent-0.12.0.jar=9404:C:\\jmx_workload\\exporter_config.yaml -cp C:\\jmx_workload\\SampleJavaApplication-1.0-SNAPSHOT.jar com.gubupt.sample.app.App\\\"\"",
+      "powershell.exe -Command \"Start-Sleep -s 60\"",
+      "powershell.exe -Command \"Invoke-WebRequest -Uri http://localhost:9404 -UseBasicParsing\"",
       "set AWS_REGION=${var.region}",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
-      "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
+      "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
     ]
   }
 }

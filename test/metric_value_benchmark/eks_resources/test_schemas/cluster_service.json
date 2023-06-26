@@ -12,6 +12,7 @@
     "Version": {},
     "Service": {},
     "Namespace":{},
+    "NodeName": {},
     "kubernetes":{
       "type": "object",
       "properties": {

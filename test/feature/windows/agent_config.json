@@ -217,7 +217,32 @@
           }
       },
       "metrics_collected": {
-        "emf": { }
+        "emf": { },
+        "prometheus": {
+          "prometheus_config_path": "C:/jmx_workload/prometheus.yaml",
+          "log_group_name": "prometheus_test_windows",
+          "emf_processor": {
+            "metric_declaration_dedup": true,
+            "metric_namespace": "CloudWatchAgentWinFeature",
+            "metric_unit":{
+              "jvm_threads_current": "Count",
+              "jvm_gc_collection_seconds_sum": "Seconds",
+              "jvm_memory_bytes_used": "Bytes"
+            },
+            "metric_declaration": [
+              {
+                "source_labels": ["job"],
+                "label_matcher": "^jmx-exporter$",
+                "dimensions": [["InstanceId"]],
+                "metric_selectors": [
+                  "jvm_threads_current",
+                  "jvm_gc_collection_seconds_sum",
+                  "jvm_memory_bytes_used"
+                ]
+              }
+            ]
+          }
+        }
       },
       "force_flush_interval": 5
     }

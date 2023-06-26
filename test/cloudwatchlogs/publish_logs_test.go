@@ -52,10 +52,8 @@ var testParameters = []input{
 	},
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 // TestWriteLogsToCloudWatch writes N number of logs, and then validates that N logs

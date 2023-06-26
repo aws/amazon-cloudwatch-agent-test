@@ -8,7 +8,7 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "mac2.metal"
+  default = "t3a.medium"
 }
 
 variable "ssh_key_name" {
@@ -18,7 +18,7 @@ variable "ssh_key_name" {
 
 variable "ami" {
   type    = string
-  default = "amzn-ec2-macos-13.*"
+  default = "cloudwatch-agent-integration-test-ubuntu*"
 }
 
 variable "ssh_key_value" {
@@ -26,9 +26,14 @@ variable "ssh_key_value" {
   default = ""
 }
 
+variable "user" {
+  type    = string
+  default = ""
+}
+
 variable "arc" {
   type    = string
-  default = "arm64"
+  default = "amd64"
 
   validation {
     condition     = contains(["amd64", "arm64"], var.arc)
@@ -36,38 +41,17 @@ variable "arc" {
   }
 }
 
-variable "s3_bucket" {
-  type    = string
-  default = ""
-}
-
 variable "test_name" {
   type    = string
   default = ""
 }
 
-variable "github_test_repo" {
-  type    = string
-  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-}
-
-variable "github_test_repo_branch" {
-  type    = string
-  default = "main"
-}
-
 variable "test_dir" {
   type    = string
-  default = "../../../test/feature/mac" # This is really only used during tf destroy. See https://github.com/hashicorp/terraform/issues/23552
-}
-
-variable "cwa_github_sha" {
-  type    = string
   default = ""
 }
 
-variable "license_manager_arn" {
-  type    = string
-  default = ""
+variable "is_canary" {
+  type    = bool
+  default = false
 }
-

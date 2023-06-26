@@ -34,10 +34,8 @@ type input struct {
 	testDescription     string
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 // Sets the collection interval and makes sure we get the numbers of expected metrics

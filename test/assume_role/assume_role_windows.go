@@ -30,12 +30,11 @@ const (
 )
 
 var (
-	environmentMetaDataStrings      = &(environment.MetaDataStrings{})
 	expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use", "nvidia_smi utilization_gpu", "nvidia_smi utilization_memory", "nvidia_smi power_draw", "nvidia_smi temperature_gpu"}
 )
 
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(environmentMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func Validate(assumeRoleArn string) error {

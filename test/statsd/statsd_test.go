@@ -35,10 +35,8 @@ func (suite *StatsDTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished StatsDTestSuite")
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 var (
@@ -76,7 +74,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 }
 
 func (suite *StatsDTestSuite) TestAllInSuite() {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	switch env.ComputeType {
 	case computetype.ECS:
 		log.Println("Environment compute type is ECS")

@@ -15,10 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 type testConfig struct {

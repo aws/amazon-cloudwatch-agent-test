@@ -15,6 +15,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
+const (
+	DefaultEC2AgentStartCommand = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c "
+)
+
+var metaDataStorage *MetaData = nil
+var registeredMetaDataStrings = &(MetaDataStrings{})
+
 type MetaData struct {
 	ComputeType               computetype.ComputeType
 	EcsLaunchType             ecslaunchtype.ECSLaunchType
@@ -34,6 +41,7 @@ type MetaData struct {
 	ProxyUrl                  string
 	AssumeRoleArn             string
 	InstanceId                string
+	AgentStartCommand         string
 }
 
 type MetaDataStrings struct {
@@ -54,6 +62,7 @@ type MetaDataStrings struct {
 	ProxyUrl                  string
 	AssumeRoleArn             string
 	InstanceId                string
+	AgentStartCommand         string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -111,6 +120,12 @@ func registerAssumeRoleArn(dataString *MetaDataStrings) {
 
 func registerInstanceId(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.InstanceId), "instanceId", "", "ec2 instance ID that is being used by a test")
+}
+
+func registerAgentStartCommand(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.AgentStartCommand), "agentStartCommand",
+		DefaultEC2AgentStartCommand,
+		"Start command is different ec2 vs onprem, linux vs windows. Default set above is for EC2 with Linux")
 }
 
 func fillECSData(e *MetaData, data *MetaDataStrings) {
@@ -190,36 +205,43 @@ func fillEKSData(e *MetaData, data *MetaDataStrings) {
 
 	e.EKSClusterName = data.EKSClusterName
 }
+func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
+	registerComputeType(registeredMetaDataStrings)
+	registerECSData(registeredMetaDataStrings)
+	registerEKSData(registeredMetaDataStrings)
+	registerBucket(registeredMetaDataStrings)
+	registerS3Key(registeredMetaDataStrings)
+	registerCwaCommitSha(registeredMetaDataStrings)
+	registerCaCertPath(registeredMetaDataStrings)
+	registerPluginTestsToExecute(registeredMetaDataStrings)
+	registerExcludedTests(registeredMetaDataStrings)
+	registerProxyUrl(registeredMetaDataStrings)
+	registerAssumeRoleArn(registeredMetaDataStrings)
+	registerInstanceId(registeredMetaDataStrings)
+	registerAgentStartCommand(registeredMetaDataStrings)
 
-func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDataStrings {
-	registerComputeType(metaDataStrings)
-	registerECSData(metaDataStrings)
-	registerEKSData(metaDataStrings)
-	registerBucket(metaDataStrings)
-	registerS3Key(metaDataStrings)
-	registerCwaCommitSha(metaDataStrings)
-	registerCaCertPath(metaDataStrings)
-	registerPluginTestsToExecute(metaDataStrings)
-	registerExcludedTests(metaDataStrings)
-	registerProxyUrl(metaDataStrings)
-	registerAssumeRoleArn(metaDataStrings)
-	registerInstanceId(metaDataStrings)
-	return metaDataStrings
+	return registeredMetaDataStrings
 }
 
-func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
-	metaData := &(MetaData{})
-	fillComputeType(metaData, data)
-	fillECSData(metaData, data)
-	fillEKSData(metaData, data)
-	fillEC2PluginTests(metaData, data)
-	fillExcludedTests(metaData, data)
-	metaData.Bucket = data.Bucket
-	metaData.S3Key = data.S3Key
-	metaData.CwaCommitSha = data.CwaCommitSha
-	metaData.CaCertPath = data.CaCertPath
-	metaData.ProxyUrl = data.ProxyUrl
-	metaData.AssumeRoleArn = data.AssumeRoleArn
-	metaData.InstanceId = data.InstanceId
-	return metaData
+func GetEnvironmentMetaData() *MetaData {
+	if metaDataStorage != nil {
+		return metaDataStorage
+	}
+
+	metaDataStorage := &(MetaData{})
+	fillComputeType(metaDataStorage, registeredMetaDataStrings)
+	fillECSData(metaDataStorage, registeredMetaDataStrings)
+	fillEKSData(metaDataStorage, registeredMetaDataStrings)
+	fillEC2PluginTests(metaDataStorage, registeredMetaDataStrings)
+	fillExcludedTests(metaDataStorage, registeredMetaDataStrings)
+	metaDataStorage.Bucket = registeredMetaDataStrings.Bucket
+	metaDataStorage.S3Key = registeredMetaDataStrings.S3Key
+	metaDataStorage.CwaCommitSha = registeredMetaDataStrings.CwaCommitSha
+	metaDataStorage.CaCertPath = registeredMetaDataStrings.CaCertPath
+	metaDataStorage.ProxyUrl = registeredMetaDataStrings.ProxyUrl
+	metaDataStorage.AssumeRoleArn = registeredMetaDataStrings.AssumeRoleArn
+	metaDataStorage.InstanceId = registeredMetaDataStrings.InstanceId
+	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
+
+	return metaDataStorage
 }

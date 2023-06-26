@@ -31,10 +31,8 @@ type input struct {
 	dataInput string
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestRunAsUser(t *testing.T) {

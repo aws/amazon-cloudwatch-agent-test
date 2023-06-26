@@ -60,6 +60,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   tenancy                              = "host"
+  host_resource_group_arn              = var.license_manager_arn
 
   metadata_options {
     http_endpoint = "enabled"
