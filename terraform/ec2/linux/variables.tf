@@ -106,3 +106,8 @@ variable "pre_test_setup" {
   type    = string
   default = "echo no pre-test setup"
 }
+
+variable "os" {
+  type    = string
+  default = ""
+}

@@ -33,6 +33,7 @@ type MetaData struct {
 	ProxyUrl                  string
 	AssumeRoleArn             string
 	InstanceId                string
+	OS                        string
 }
 
 type MetaDataStrings struct {
@@ -52,6 +53,7 @@ type MetaDataStrings struct {
 	ProxyUrl                  string
 	AssumeRoleArn             string
 	InstanceId                string
+	OS                        string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -69,6 +71,10 @@ func registerCwaCommitSha(dataString *MetaDataStrings) {
 }
 func registerCaCertPath(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.CaCertPath), "caCertPath", "", "ec2 path to crts ex /etc/ssl/certs/ca-certificates.crt")
+}
+
+func registerOS(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.OS), "OS", "", "OS of ec2 instance")
 }
 func registerECSData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EcsLaunchType), "ecsLaunchType", "", "EC2 or Fargate")
@@ -178,6 +184,7 @@ func RegisterEnvironmentMetaDataFlags(metaDataStrings *MetaDataStrings) *MetaDat
 	registerProxyUrl(metaDataStrings)
 	registerAssumeRoleArn(metaDataStrings)
 	registerInstanceId(metaDataStrings)
+	registerOS(metaDataStrings)
 	return metaDataStrings
 }
 
@@ -191,6 +198,7 @@ func GetEnvironmentMetaData(data *MetaDataStrings) *MetaData {
 	metaData.S3Key = data.S3Key
 	metaData.CwaCommitSha = data.CwaCommitSha
 	metaData.CaCertPath = data.CaCertPath
+	metaData.OS = data.OS
 	metaData.ProxyUrl = data.ProxyUrl
 	metaData.AssumeRoleArn = data.AssumeRoleArn
 	metaData.InstanceId = data.InstanceId
