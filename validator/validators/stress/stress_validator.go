@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"go.uber.org/multierr"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/util"

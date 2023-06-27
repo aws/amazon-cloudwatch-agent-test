@@ -7,7 +7,7 @@ package test_runner
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"os"
 	"time"

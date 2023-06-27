@@ -44,11 +44,8 @@ func (t *CPUTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *CPUTestRunner) GetMeasuredMetrics() []string {
-	return []string{
-		"cpu_time_active_renamed", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-		"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
+	// time_active gets renamed with agent_config/cpu_config.json
+	return append(metric.CpuMetrics[1:], "cpu_time_active_renamed")
 }
 
 func (t *CPUTestRunner) validateCpuMetric(metricName string) status.TestResult {

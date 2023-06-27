@@ -9,11 +9,11 @@ package sanity
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 func SanityCheck(t *testing.T) {
-	err := common.RunShellScript("resources/verifyWindowsCtlScript.ps1")
+	_, err := common.RunShellScript("resources/verifyWindowsCtlScript.ps1")
 	if err != nil {
 		t.Fatalf("Running sanity check failed")
 	}

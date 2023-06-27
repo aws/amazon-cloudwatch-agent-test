@@ -60,6 +60,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   tenancy                              = "host"
+  host_resource_group_arn              = var.license_manager_arn
 
   metadata_options {
     http_endpoint = "enabled"
@@ -98,28 +99,38 @@ resource "null_resource" "integration_test" {
       "sudo softwareupdate --install-rosetta --agree-to-license",
       "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
       "sudo installer -pkg AWSCLIV2.pkg -target /",
-      #Install Golang
-      "mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew",
-      "homebrew/bin/brew install go",
-    ]
-  }
-  # Install agent binaries
-  provisioner "remote-exec" {
-    inline = [
+
+      #Install Brew and set path for mac1 and mac2 instances
+      "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
+      "(echo; echo 'eval \"$(/usr/local/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile",
+      "eval \"$(/usr/local/bin/brew shellenv)\"",
+      "(echo; echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile",
+      "eval \"$(/opt/homebrew/bin/brew shellenv)\"",
+
+      #Download test repo
+      "NONINTERACTIVE=1 brew install git",
+      "echo clone test repo",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+
+      # Install agent and validator binaries
+      "echo Install agent and validator binaries",
       "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${var.arc}/amazon-cloudwatch-agent.pkg .",
       "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator .",
       "sudo installer -pkg amazon-cloudwatch-agent.pkg -target /",
-    ]
-  }
 
-  #Prepare the requirement before validation and validate the metrics/logs/traces
-  provisioner "remote-exec" {
-    inline = [
-      "sudo chmod +x ./validator",
+      # Install Golang
+      "echo Install golang",
+      "NONINTERACTIVE=1 brew install go",
+
+      # Run Integration test
+      "echo Execute integration tests",
       "export AWS_REGION=${var.region}",
+      "sudo chmod +x ./validator",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
+      "cd ~/amazon-cloudwatch-agent-test",
+      "sudo go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v",
     ]
   }
 

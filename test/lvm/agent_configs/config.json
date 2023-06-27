@@ -1,0 +1,30 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "LVMTest",
+    "aggregation_dimensions": [
+      [
+        "host"
+      ]
+    ],
+    "metrics_collected": {
+      "disk": {
+        "resources": [ "/mnt/lvm" ],
+        "measurement": [
+          "free",
+          "total",
+          "used"
+        ],
+        "ignore_file_system_types": [
+          "sysfs", "devtmpfs"
+        ]
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

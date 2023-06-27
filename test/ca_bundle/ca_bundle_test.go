@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
@@ -45,16 +45,14 @@ type input struct {
 	dataInput  string
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 // Must run this test with parallel 1 since this will fail if more than one test is running at the same time
 // This test uses a pem file created for the local stack endpoint to be able to connect via ssl
 func TestBundle(t *testing.T) {
-	metadata := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	metadata := environment.GetEnvironmentMetaData()
 	t.Logf("metadata required for test cwa sha %s bucket %s ca cert path %s", metadata.CwaCommitSha, metadata.Bucket, metadata.CaCertPath)
 	setUpLocalstackConfig(metadata)
 

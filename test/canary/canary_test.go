@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/require"
 )
@@ -23,16 +23,14 @@ const (
 	configInputPath = "resources/canary_config.json"
 )
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 // TestCanary verifies downloading, installing, and starting the agent.
 // Reports metrics for each failure type.
 func TestCanary(t *testing.T) {
-	e := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	e := environment.GetEnvironmentMetaData()
 	defer setupCron(e.Bucket, e.S3Key)
 	// Don't care if uninstall fails. Agent might not be installed anyways.
 	_ = common.UninstallAgent(common.RPM)
