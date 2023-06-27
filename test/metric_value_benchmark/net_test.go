@@ -33,6 +33,23 @@ func (m *NetTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
+func (m *NetTestRunner) SetupBeforeAgentRun() string {
+	err := common.RunCommands([]string{"sudo systemctl restart docker",})
+	if err != nil {
+		return err
+	}
+	return t.SetUpConfig()
+}
+
+func getCommands(roleArn string) []string {
+	return []string{
+		"mkdir -p " + credsDir,
+		"printf '[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s' $(aws sts assume-role --role-arn " + roleArn + " --role-session-name test --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text) | tee " + credsDir + "/credentials>/dev/null",
+		"printf '[default]\nregion = us-west-2' > " + credsDir + "/config",
+		"printf '[credentials]\n  shared_credential_profile = \"default\"\n  shared_credential_file = \"" + credsDir + "/credentials\"' | sudo tee /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml>/dev/null",
+	}
+}
+
 func (m *NetTestRunner) GetTestName() string {
 	return "Net"
 }
