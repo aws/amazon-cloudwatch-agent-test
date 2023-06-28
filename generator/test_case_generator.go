@@ -55,7 +55,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
-		{testDir: "./test/metrics_number_dimension"},
+		{
+			testDir: "./test/metrics_number_dimension",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 		{testDir: "./test/metric_value_benchmark"},
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
