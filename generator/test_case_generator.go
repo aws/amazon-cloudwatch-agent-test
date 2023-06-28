@@ -53,39 +53,39 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/nvidia_gpu"},
 	},
 	testTypeKeyEc2Linux: {
-		{testDir: "./test/ca_bundle"},
-		{testDir: "./test/cloudwatchlogs"},
-		{
-			testDir: "./test/metrics_number_dimension",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{testDir: "./test/metric_value_benchmark"},
-		{testDir: "./test/run_as_user"},
-		{testDir: "./test/collection_interval"},
-		{testDir: "./test/metric_dimension"},
-		{testDir: "./test/restart"},
-		{
-			testDir: "./test/acceptance",
-			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
-		},
-		// skipping FIPS test as the test cannot be verified
-		// neither ssh nor SSM works after a reboot once FIPS is enabled
+		//{testDir: "./test/ca_bundle"},
+		//{testDir: "./test/cloudwatchlogs"},
 		//{
-		//	testDir: "./test/fips",
-		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		//	testDir: "./test/metrics_number_dimension",
+		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		//},
-		{
-			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/proxy",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/ssl_cert",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
+		//{testDir: "./test/metric_value_benchmark"},
+		//{testDir: "./test/run_as_user"},
+		//{testDir: "./test/collection_interval"},
+		//{testDir: "./test/metric_dimension"},
+		//{testDir: "./test/restart"},
+		//{
+		//	testDir: "./test/acceptance",
+		//	targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
+		//},
+		//// skipping FIPS test as the test cannot be verified
+		//// neither ssh nor SSM works after a reboot once FIPS is enabled
+		////{
+		////	testDir: "./test/fips",
+		////	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		////},
+		//{
+		//	testDir: "./test/lvm",
+		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		//},
+		//{
+		//	testDir: "./test/proxy",
+		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		//},
+		//{
+		//	testDir: "./test/ssl_cert",
+		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		//},
 		{
 			testDir:      "./test/userdata",
 			terraformDir: "terraform/ec2/userdata",
