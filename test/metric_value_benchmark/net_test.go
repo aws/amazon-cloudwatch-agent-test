@@ -6,6 +6,7 @@
 package metric_value_benchmark
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -31,6 +32,14 @@ func (m *NetTestRunner) Validate() status.TestGroupResult {
 		Name:        m.GetTestName(),
 		TestResults: testResults,
 	}
+}
+
+func (m *NetTestRunner) SetupBeforeAgentRun() error {
+	err := common.RunCommands([]string{"sudo systemctl restart docker"})
+	if err != nil {
+		return err
+	}
+	return m.SetUpConfig()
 }
 
 func (m *NetTestRunner) GetTestName() string {
