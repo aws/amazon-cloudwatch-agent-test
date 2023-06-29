@@ -1,30 +1,23 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build !windows
+//go:build windows
+// +build windows
 
 package multi_config
 
 import (
-	"log"
 	"testing"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 )
 
 const (
-	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	namespace        = "MultiConfigTest"
+	configOutputPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\config.json"
+	namespace        = "MultiConfigWindowsTest"
+	agentRuntime     = 2 * time.Minute
 )
-
-// Let the agent run for 2 minutes. This will give agent enough time to call server
-const agentRuntime = 2 * time.Minute
 
 var envMetaDataStrings = &(environment.MetaDataStrings{})
 
@@ -32,16 +25,14 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-func TestMultipleConfig(t *testing.T) {
-
-	agentConfigurations := []string{"resources/LinuxMemoryOnlyConfig.json", "resources/LinuxLogOnlyConfig.json"}
-
+func TestMultipleConfigWindows(t *testing.T) {
+	agentConfigurations := []string{"resources/WindowsLogOnlyConfig.json", "resources/WindowsMemoryOnlyConfig.json"}
 	for index, agentConfig := range agentConfigurations {
 		common.CopyFile(agentConfig, configOutputPath)
 		log.Printf(configOutputPath)
-		if index == 0{
+		if index == 0 {
 			common.StartAgent(configOutputPath, true, false)
-		} else	{
+		} else {
 			common.StartAgentWithMultiConfig(configOutputPath, true, false)
 		}
 	}
