@@ -106,3 +106,9 @@ variable "plugin_tests" {
   type    = string
   default = ""
 }
+
+variable "agent_start" {
+  description = "default command should be for ec2 with linux"
+  type        = string
+  default     = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c "
+}
