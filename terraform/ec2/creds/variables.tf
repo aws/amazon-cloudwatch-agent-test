@@ -97,6 +97,11 @@ variable "is_canary" {
   default = false
 }
 
+variable "excluded_tests" {
+  type    = string
+  default = ""
+}
+
 variable "plugin_tests" {
   type    = string
   default = ""
