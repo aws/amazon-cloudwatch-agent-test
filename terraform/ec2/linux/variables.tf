@@ -102,6 +102,12 @@ variable "plugin_tests" {
   default = ""
 }
 
+
+variable "excluded_tests" {
+  type    = string
+  default = ""
+}
+
 variable "pre_test_setup" {
   type    = string
   default = "echo no pre-test setup"
