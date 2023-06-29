@@ -145,19 +145,19 @@ func GetLogStreams(logGroupName string) []types.LogStream {
 			Descending:   aws.Bool(true),
 			Limit:        aws.Int32(10),
 		})
-	
+
 		if err != nil {
 			log.Printf("failed to get log streams for log group: %v - err: %v", logGroupName, err)
 			continue
 		}
-		
+
 		if len(describeLogStreamsOutput.LogStreams) > 0 {
-			return describeLogStreamsOutput.LogStreams 
+			return describeLogStreamsOutput.LogStreams
 		}
 
 		time.Sleep(10 * time.Second)
 	}
-	
+
 	return []types.LogStream{}
 }
 

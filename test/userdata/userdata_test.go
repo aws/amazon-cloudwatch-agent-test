@@ -23,10 +23,8 @@ type UserdataTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func (t UserdataTestRunner) Validate() status.TestGroupResult {
@@ -115,7 +113,7 @@ func (t UserdataTestRunner) Run() status.TestGroupResult {
 }
 
 func TestUserdata(t *testing.T) {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 	// userdata doesn't use Run() from base_test_runner since agent has already been started with userdata script
 	userdataRunner := &UserdataTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}

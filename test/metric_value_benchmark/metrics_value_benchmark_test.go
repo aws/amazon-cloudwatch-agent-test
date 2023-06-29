@@ -37,10 +37,8 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished MetricBenchmarkTestSuite")
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 var (
@@ -121,7 +119,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 }
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	switch env.ComputeType {
 	case computetype.ECS:
 		log.Println("Environment compute type is ECS")
@@ -154,9 +152,10 @@ func TestMetricValueBenchmarkSuite(t *testing.T) {
 }
 
 func shouldRunEC2Test(env *environment.MetaData, t *test_runner.TestRunner) bool {
-	if env.EC2PluginTests == nil {
+	if env.EC2PluginTests == nil && env.ExcludedTests == nil {
 		return true // default behavior is to run all tests
 	}
-	_, ok := env.EC2PluginTests[strings.ToLower(t.TestRunner.GetTestName())]
-	return ok
+	_, shouldRun := env.EC2PluginTests[strings.ToLower(t.TestRunner.GetTestName())]
+	_, shouldExclude := env.ExcludedTests[strings.ToLower(t.TestRunner.GetTestName())]
+	return shouldRun || !shouldExclude
 }

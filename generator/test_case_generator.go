@@ -24,11 +24,13 @@ type matrixRow struct {
 	BinaryName          string `json:"binaryName"`
 	Username            string `json:"username"`
 	InstallAgentCommand string `json:"installAgentCommand"`
+	AgentStartCommand   string `json:"agentStartCommand"`
 	CaCertPath          string `json:"caCertPath"`
 	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
 	K8sVersion          string `json:"k8s_version"`
 	TerraformDir        string `json:"terraform_dir"`
 	UseSSM              bool   `json:"useSSM"`
+	ExcludedTests       string `json:"excludedTests"`
 }
 
 type testConfig struct {
@@ -41,15 +43,22 @@ type testConfig struct {
 	targets map[string]map[string]struct{}
 }
 
+const (
+	testTypeKeyEc2Linux = "ec2_linux"
+)
+
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
 	},
-	"ec2_linux": {
+	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
-		{testDir: "./test/metrics_number_dimension"},
+		{
+			testDir: "./test/metrics_number_dimension",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 		{testDir: "./test/metric_value_benchmark"},
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
@@ -59,10 +68,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
 		},
-		{
-			testDir: "./test/fips",
-			targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
-		},
+		// skipping FIPS test as the test cannot be verified
+		// neither ssh nor SSM works after a reboot once FIPS is enabled
+		//{
+		//	testDir: "./test/fips",
+		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		//},
 		{
 			testDir: "./test/lvm",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -95,7 +106,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/mac"},
 	},
 	"ec2_windows": {
+		{testDir: "../../../test/feature/windows"},
+		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
+		// assume role test doesn't add much value, and it already being tested with linux
+		//{testDir: "../../../test/assume_role"},
 	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},
@@ -143,7 +158,21 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 }
 
+func copyAllEC2LinuxTestForOnpremTesting() {
+	/* Some tests need to be fixed in order to run in both environment, so for now for PoC, run one that works.
+	testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
+	*/
+	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
+		{
+			testDir: "./test/lvm",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+	}
+}
+
 func main() {
+	copyAllEC2LinuxTestForOnpremTesting()
+
 	for testType, testConfigs := range testTypeToTestConfig {
 		testMatrix := genMatrix(testType, testConfigs)
 		writeTestMatrixFile(testType, testMatrix)

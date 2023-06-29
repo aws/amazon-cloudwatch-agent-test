@@ -4,6 +4,7 @@
 package awsservice
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"testing"
@@ -26,8 +27,7 @@ type metric struct {
 	value string
 }
 
-// ValidateMetrics takes the metric name, metric dimension and corresponding namespace that contains the metric
-func ValidateMetrics(t *testing.T, metricName, namespace string, dimensionsFilter []types.DimensionFilter) {
+func ValidateMetric(metricName, namespace string, dimensionsFilter []types.DimensionFilter) error {
 	listMetricsInput := cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
 		Namespace:      aws.String(namespace),
@@ -36,23 +36,32 @@ func ValidateMetrics(t *testing.T, metricName, namespace string, dimensionsFilte
 	}
 	data, err := CwmClient.ListMetrics(ctx, &listMetricsInput)
 	if err != nil {
-		t.Errorf("Error getting metric data %v", err)
+		return errors.New(fmt.Sprintf("Error getting metric data %v", err))
 	}
 
 	// Only validate if certain metrics are published by CloudWatchAgent in corresponding namespace
 	// Since the metric value can be unpredictive.
 	if len(data.Metrics) == 0 {
-		metrics := make([]metric, len(dimensionsFilter))
+		dims := make([]metric, len(dimensionsFilter))
 		for i, filter := range dimensionsFilter {
-			metrics[i] = metric{
+			dims[i] = metric{
 				name:  *filter.Name,
 				value: *filter.Value,
 			}
 		}
-		t.Errorf("No metrics found for dimension %v metric name %v namespace %v",
-			metrics, metricName, namespace)
+		return errors.New(fmt.Sprintf("No metrics found for dimension %v metric name %v namespace %v",
+			dims, metricName, namespace))
 	}
 
+	return nil
+}
+
+// ValidateMetrics takes the metric name, metric dimension and corresponding namespace that contains the metric
+func ValidateMetricWithTest(t *testing.T, metricName, namespace string, dimensionsFilter []types.DimensionFilter) {
+	err := ValidateMetric(metricName, namespace, dimensionsFilter)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 }
 
 func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimension,
@@ -135,8 +144,8 @@ func ReportMetric(namespace string,
 		MetricData: []types.MetricDatum{
 			{
 				MetricName: aws.String(name),
-				Value: aws.Float64(value),
-				Unit: units,
+				Value:      aws.Float64(value),
+				Unit:       units,
 			},
 		},
 	})

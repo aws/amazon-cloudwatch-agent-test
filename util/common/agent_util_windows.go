@@ -130,6 +130,8 @@ func RunShellScript(path string, args ...string) (string, error) {
 	shellArgs = append(shellArgs, path)
 	shellArgs = append(shellArgs, args...)
 
+	log.Printf("running %v", shellArgs)
+
 	out, err := exec.Command(ps, shellArgs...).Output()
 
 	if err != nil {

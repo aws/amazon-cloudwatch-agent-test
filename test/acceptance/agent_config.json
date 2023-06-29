@@ -3,7 +3,7 @@
         "debug": true
     },
     "metrics": {
-        "namespace": "WindowsFilePermissionsTest",
+        "namespace": "WindowsTest",
         "append_dimensions": {
             "InstanceId": "${aws:InstanceId}"
         },

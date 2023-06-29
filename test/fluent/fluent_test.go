@@ -11,9 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 const logStreamRetry = 20
@@ -34,15 +33,13 @@ var logGroupToKey = map[string][][]string{
 	},
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestFluentLogs(t *testing.T) {
 	t.Log("starting EKS fluent log validation...")
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 
 	now := time.Now()
 	for group, fieldsArr := range logGroupToKey {

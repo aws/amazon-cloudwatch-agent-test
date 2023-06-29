@@ -7,6 +7,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"log"
 	"os/exec"
 	"path/filepath"
@@ -121,12 +122,19 @@ func InstallAgent(installerFilePath string) error {
 }
 
 func StartAgent(configOutputPath string, fatalOnFailure bool, ssm bool) error {
+	agentStartCommand := environment.GetEnvironmentMetaData().AgentStartCommand
+	return StartAgentWithCommand(configOutputPath, fatalOnFailure, ssm, agentStartCommand)
+}
+
+func StartAgentWithCommand(configOutputPath string, fatalOnFailure bool, ssm bool, agentStartCommand string) error {
 	path := "file:"
 	if ssm {
 		path = "ssm:"
 	}
+	completedAgentStartCommand := agentStartCommand + path + configOutputPath
+	log.Printf("Starting agent with command %s", completedAgentStartCommand)
 	out, err := exec.
-		Command("bash", "-c", "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c "+path+configOutputPath).
+		Command("bash", "-c", completedAgentStartCommand).
 		Output()
 
 	if err != nil && fatalOnFailure {
@@ -154,7 +162,7 @@ func StopAgent() {
 
 func ReadAgentOutput(d time.Duration) string {
 	out, err := exec.Command("bash", "-c",
-		fmt.Sprintf("journalctl -u amazon-cloudwatch-agent.service --since \"%s ago\" --no-pager", d.String())).
+		fmt.Sprintf("sudo journalctl -u amazon-cloudwatch-agent.service --since \"%s ago\" --no-pager -q", d.String())).
 		Output()
 
 	if err != nil {

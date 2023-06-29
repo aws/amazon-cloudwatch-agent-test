@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-
 func DownloadFile(bucket, key, outFilename string) error {
 	log.Printf("downloading, %s, %s, to %s...", bucket, key, outFilename)
 	file, err := os.Create(outFilename)
