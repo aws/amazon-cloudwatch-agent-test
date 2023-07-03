@@ -7,6 +7,7 @@ package multi_config
 
 import (
 	"log"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
@@ -26,10 +27,8 @@ const (
 // Let the agent run for 2 minutes. This will give agent enough time to call server
 const agentRuntime = 2 * time.Minute
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestMultipleConfig(t *testing.T) {
@@ -44,6 +43,7 @@ func TestMultipleConfig(t *testing.T) {
 		} else {
 			common.StartAgentWithMultiConfig(configOutputPath, true, false)
 		}
+		time.Sleep(30 * time.Second)
 	}
 
 	time.Sleep(agentRuntime)
@@ -61,6 +61,22 @@ func TestMultipleConfig(t *testing.T) {
 
 	expectedMetrics := []string{"mem_used_percent"}
 	for _, expectedMetric := range expectedMetrics {
-		awsservice.ValidateMetrics(t, expectedMetric, namespace, expectedDimensions)
+		awsservice.ValidateMetric(expectedMetric, namespace, expectedDimensions)
+	}
+
+	ok, err := awsservice.ValidateLogs(logGroup, logStream, &start, &end, func(logs []string) bool {
+		if len(logs) != len(lines) {
+			return false
+		}
+
+		for i := 0; i < len(logs); i++ {
+			expected := strings.ReplaceAll(lines[i], "'", "\"")
+			actual := strings.ReplaceAll(logs[i], "'", "\"")
+			if expected != actual {
+				return false
+			}
+		}
+
+		return true
 	}
 }

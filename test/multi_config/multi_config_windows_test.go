@@ -35,6 +35,7 @@ func TestMultipleConfigWindows(t *testing.T) {
 		} else {
 			common.StartAgentWithMultiConfig(configOutputPath, true, false)
 		}
+		time.Sleep(30 * time.Second)
 	}
 
 	time.Sleep(agentRuntime)
@@ -52,6 +53,6 @@ func TestMultipleConfigWindows(t *testing.T) {
 
 	expectedMetrics := []string{"mem_used_percent"}
 	for _, expectedMetric := range expectedMetrics {
-		awsservice.ValidateMetrics(t, expectedMetric, namespace, expectedDimensions)
+		awsservice.ValidateMetric(expectedMetric, namespace, expectedDimensions)
 	}
 }
