@@ -27,17 +27,7 @@ func Validate() error {
 
 	agentConfigurations := []string{"resources/LinuxCpuOnlyConfig.json", "resources/LinuxMemoryOnlyConfig.json", "resources/LinuxDiskOnlyConfig.json"}
 
-	for index, agentConfig := range agentConfigurations {
-		common.CopyFile(agentConfig, configOutputPath)
-
-		log.Printf(configOutputPath)
-		if index == 0 {
-			common.StartAgent(configOutputPath, true, false)
-		} else {
-			common.StartAgentWithMultiConfig(configOutputPath, true, false)
-		}
-		time.Sleep(30 * time.Second)
-	}
+	AppendConfigs(agentConfigurations, configOutputPath)
 
 	time.Sleep(agentRuntime)
 	log.Printf("Agent has been running for : %s", agentRuntime.String())

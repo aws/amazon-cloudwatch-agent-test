@@ -8,7 +8,7 @@
       "Processor": {
         "measurement": [
           "% Idle Time",
-           "% InterruptTime",
+          "% InterruptTime",
           "% User Time",
           "% Processor Time"
         ],

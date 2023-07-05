@@ -27,28 +27,12 @@ func init() {
 
 func Validate(t *testing.T) error {
 	agentConfigurations := []string{"resources/WindowsLogOnlyConfig.json", "resources/WindowsMemoryOnlyConfig.json"}
-	for index, agentConfig := range agentConfigurations {
-		err := common.CopyFile(agentConfig, configOutputPath
-		if err != nil {
-			log.Printf("Copying agent config file failed: %v", err)
-			return err
-		}
-		log.Printf(configOutputPath)
-		if index == 0 {
-			err = common.StartAgent(configOutputPath, true, false)
-		} else {
-			err = common.StartAgentWithMultiConfig(configOutputPath, true, false)
-		}
-		if err != nil {
-			log.Printf("Starting agent failed: %v", err)
-			return err
-		}
-		time.Sleep(30 * time.Second)
-	}
+
+	AppendConfigs(agentConfigurations, configOutputPath)
 
 	time.Sleep(agentRuntime)
 	log.Printf("Agent has been running for : %s", agentRuntime.String())
-	err = common.StopAgent()
+	err := common.StopAgent()
 	if err != nil {
 		log.Printf("Stopping agent failed: %v", err)
 		return err
