@@ -37,6 +37,10 @@
 				{
 				  "exe": "amazon-cloudwatch-agent.exe",
 				  "measurement": [
+					  {
+						  "name": "cpu_usage",
+						  "rename": "procstat_cpu_usage"
+					  },
 					"cpu_usage",
 					"memory_rss",
 					"memory_swap",
