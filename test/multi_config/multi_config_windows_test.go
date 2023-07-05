@@ -7,7 +7,6 @@
 package multi_config
 
 import (
-	"testing"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -25,7 +24,7 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-func Validate(t *testing.T) error {
+func Validate() error {
 	agentConfigurations := []string{"resources/WindowsLogOnlyConfig.json", "resources/WindowsMemoryOnlyConfig.json"}
 
 	AppendConfigs(agentConfigurations, configOutputPath)
