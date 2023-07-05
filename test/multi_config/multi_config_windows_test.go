@@ -25,7 +25,7 @@ func init() {
 }
 
 func Validate() error {
-	agentConfigurations := []string{"resources/WindowsLogOnlyConfig.json", "resources/WindowsMemoryOnlyConfig.json"}
+	agentConfigurations := []string{"resources/WindowsCompleteConfig.json", "resources/WindowsMemoryOnlyConfig.json"}
 
 	AppendConfigs(agentConfigurations, configOutputPath)
 
