@@ -7,9 +7,13 @@
 package multi_config
 
 import (
+	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 const (
@@ -17,12 +21,6 @@ const (
 	namespace        = "MultiConfigWindowsTest"
 	agentRuntime     = 2 * time.Minute
 )
-
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
-func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
-}
 
 func Validate() error {
 	agentConfigurations := []string{"resources/WindowsCompleteConfig.json", "resources/WindowsMemoryOnlyConfig.json"}
