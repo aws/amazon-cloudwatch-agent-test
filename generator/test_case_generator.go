@@ -113,12 +113,39 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{testDir: "../../../test/assume_role"},
 	},
 	"ec2_performance": {
-		{testDir: "../../test/performance/emf"},
-		{testDir: "../../test/performance/logs"},
-		{testDir: "../../test/performance/system"},
-		{testDir: "../../test/performance/statsd"},
-		{testDir: "../../test/performance/collectd"},
+		{
+			testDir: "../../test/performance/emf",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "../../test/performance/logs",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "../../test/performance/system",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "../../test/performance/statsd",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "../../test/performance/collectd",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "../../test/performance_windows/logs",
+			targets: map[string]map[string]struct{}{"os": {"win-2022": {}}},
+		},
+		{
+			testDir: "../../test/performance_windows/system",
+			targets: map[string]map[string]struct{}{"os": {"win-2022": {}}},
+		},
 	},
+	//"ec2_performance_windows": {
+	//	{testDir: "../../test/performance_windows/logs"},
+	//	{testDir: "../../test/performance_windows/system"},
+	//},
 	"ec2_stress": {
 		{testDir: "../../test/stress/emf"},
 		{testDir: "../../test/stress/logs"},
