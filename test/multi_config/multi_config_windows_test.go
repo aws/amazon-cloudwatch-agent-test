@@ -25,22 +25,34 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
 }
 
-func TestMultipleConfigWindows(t *testing.T) {
+func Validate(t *testing.T) error {
 	agentConfigurations := []string{"resources/WindowsLogOnlyConfig.json", "resources/WindowsMemoryOnlyConfig.json"}
 	for index, agentConfig := range agentConfigurations {
-		common.CopyFile(agentConfig, configOutputPath)
+		err := common.CopyFile(agentConfig, configOutputPath
+		if err != nil {
+			log.Printf("Copying agent config file failed: %v", err)
+			return err
+		}
 		log.Printf(configOutputPath)
 		if index == 0 {
-			common.StartAgent(configOutputPath, true, false)
+			err = common.StartAgent(configOutputPath, true, false)
 		} else {
-			common.StartAgentWithMultiConfig(configOutputPath, true, false)
+			err = common.StartAgentWithMultiConfig(configOutputPath, true, false)
+		}
+		if err != nil {
+			log.Printf("Starting agent failed: %v", err)
+			return err
 		}
 		time.Sleep(30 * time.Second)
 	}
 
 	time.Sleep(agentRuntime)
 	log.Printf("Agent has been running for : %s", agentRuntime.String())
-	common.StopAgent()
+	err = common.StopAgent()
+	if err != nil {
+		log.Printf("Stopping agent failed: %v", err)
+		return err
+	}
 
 	// test for cloud watch metrics
 	ec2InstanceId := awsservice.GetInstanceId()
@@ -51,8 +63,13 @@ func TestMultipleConfigWindows(t *testing.T) {
 		},
 	}
 
-	expectedMetrics := []string{"mem_used_percent"}
+	expectedMetrics := []string{"% Committed Bytes In Use", "% InterruptTime"}
 	for _, expectedMetric := range expectedMetrics {
-		awsservice.ValidateMetric(expectedMetric, namespace, expectedDimensions)
+		err = awsservice.ValidateMetric(expectedMetric, namespace, expectedDimensions)
 	}
+	if err != nil {
+		log.Printf("CloudWatch Agent apped config not working : %v", err)
+		return err
+	}
+	return nil
 }

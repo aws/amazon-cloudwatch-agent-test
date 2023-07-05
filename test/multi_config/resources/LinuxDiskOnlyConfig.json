@@ -1,0 +1,31 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "MultiConfigTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
+    "metrics_collected": {
+      "disk": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          "free"
+        ],
+        "drop_device": true
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

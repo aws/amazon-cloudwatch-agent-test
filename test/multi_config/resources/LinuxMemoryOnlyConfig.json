@@ -1,5 +1,6 @@
 {
   "metrics": {
+    "namespace": "MultiConfigTest",
     "metrics_collected": {
       "mem": {
         "measurement": [
