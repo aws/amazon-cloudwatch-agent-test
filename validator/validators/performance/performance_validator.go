@@ -160,12 +160,18 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 	if err != nil {
 		return nil, err
 	}
-
+	for _, messages := range metrics.Messages {
+		log.Printf("Event message is: %s", *messages.Value)
+	}
 	for _, metric := range metrics.MetricDataResults {
 		log.Printf("Metric ID is: %s", *metric.Id)
 		log.Printf("Metric Label is: %s", *metric.Label)
 		for _, message := range metric.Messages {
 			log.Printf("Metric Label is: %s", *message.Value)
+		}
+		log.Printf("Metric Values are: ")
+		for _, value := range metric.Values {
+			log.Printf("%f, ", value)
 		}
 	}
 
