@@ -37,11 +37,6 @@
           "*"
         ]
       },
-      "Memory": {
-        "measurement": [
-          "% Committed Bytes In Use"
-        ]
-      },
       "Network Interface": {
         "measurement": [
           "Bytes Sent/sec",

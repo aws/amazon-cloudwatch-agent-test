@@ -44,7 +44,7 @@ func Validate() error {
 		},
 	}
 
-	expectedMetrics := []string{"% Committed Bytes In Use", "% InterruptTime"}
+	expectedMetrics := []string{"% Committed Bytes In Use", "% InterruptTime", "% Disk Time"}
 	for _, expectedMetric := range expectedMetrics {
 		err = awsservice.ValidateMetric(expectedMetric, namespace, expectedDimensions)
 	}
