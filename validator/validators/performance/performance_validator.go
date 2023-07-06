@@ -5,6 +5,7 @@ package performance
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"log"
 	"strings"
 	"time"
@@ -45,7 +46,11 @@ func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFact
 }
 
 func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
+	stat, percent, err := s.GetWindowsPerformanceMetrics(startTime, endTime)
 	metrics, err := s.GetPerformanceMetrics(startTime, endTime)
+	if stat == nil && percent == nil {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -131,6 +136,40 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
 }
 
+//
+//func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statistic cloudwatch.GetMetricStatisticsOutput) (PerformanceInformation, error) {
+//	var (
+//		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
+//		commitHash, commitDate = s.vConfig.GetCommitInformation()
+//		dataType               = s.vConfig.GetDataType()
+//		dataRate               = fmt.Sprint(s.vConfig.GetDataRate())
+//		uniqueID               = s.vConfig.GetUniqueID()
+//		agentCollectionPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
+//	)
+//	performanceMetricResults := make(map[string]Stats)
+//
+//	for _, metric := range metrics {
+//		metricLabel := strings.Split(*metric.Label, " ")
+//		metricName := metricLabel[len(metricLabel)-1]
+//		metricValues := metric.Values
+//		//Convert every bytes to MB
+//		if slices.Contains(metricsConvertToMB, metricName) {
+//			for i, val := range metricValues {
+//				metricValues[i] = val / (1024 * 1024)
+//			}
+//		}
+//		log.Printf("Start calculate metric statictics for metric %s %v \n", metricName, metricValues)
+//		if !isAllValuesGreaterThanOrEqualToZero(metricValues) {
+//			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
+//		}
+//		metricStats := CalculateMetricStatisticsBasedOnDataAndPeriod(metricValues, agentCollectionPeriod)
+//		log.Printf("Finished calculate metric statictics for metric %s: %v \n", metricName, metricStats)
+//		performanceMetricResults[metricName] = metricStats
+//	}
+//
+//	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
+//}
+
 func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Time) ([]types.MetricDataResult, error) {
 	var (
 		metricNamespace              = s.vConfig.GetMetricNamespace()
@@ -168,54 +207,17 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 				Value: aws.String(dimension.Value),
 			})
 		}
-		log.Printf("Trying to get Metric %s for GetMetricStatistic ", stat.MetricName)
-		statList := []types.Statistic{
-			types.StatisticAverage,
-			types.StatisticMaximum,
-			types.StatisticMinimum,
-		}
-		extendedStatList := []string{
-			"p99",
-		}
-		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), statList, nil)
-		percentiles, pererr := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), nil, extendedStatList)
-
-		if err != nil || pererr != nil {
-			return nil, err
-		}
-		for _, datapoint := range statistics.Datapoints {
-			log.Printf("Statistics for Metric: %s", stat.MetricName)
-			log.Printf("Average: %f, Maximum: %f, Minimum: %f", *(datapoint.Average), *(datapoint.Maximum), *(datapoint.Minimum))
-		}
-		for _, datapoint := range percentiles.Datapoints {
-			log.Printf("Percentile for Metric: %s", stat.MetricName)
-			log.Printf("p99 is %f", datapoint.ExtendedStatistics["p99"])
-		}
 	}
 	metrics, err := awsservice.GetMetricData(performanceMetricDataQueries, startTime, endTime)
 
 	if err != nil {
 		return nil, err
 	}
-	for _, messages := range metrics.Messages {
-		log.Printf("Event message is: %s", *messages.Value)
-	}
-	for _, metric := range metrics.MetricDataResults {
-		log.Printf("Metric ID is: %s", *metric.Id)
-		log.Printf("Metric Label is: %s", *metric.Label)
-		for _, message := range metric.Messages {
-			log.Printf("Metric Label is: %s", *message.Value)
-		}
-		log.Printf("Metric Values are: ")
-		for _, value := range metric.Values {
-			log.Printf("%f, ", value)
-		}
-	}
 
 	return metrics.MetricDataResults, nil
 }
 
-func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime time.Time) ([]types.Datapoint, error) {
+func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime time.Time) ([]*cloudwatch.GetMetricStatisticsOutput, []*cloudwatch.GetMetricStatisticsOutput, error) {
 	var (
 		metricNamespace  = s.vConfig.GetMetricNamespace()
 		validationMetric = s.vConfig.GetMetricValidation()
@@ -223,6 +225,7 @@ func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime t
 	)
 	log.Printf("Start getting performance metrics from CloudWatch")
 
+	var statistics, percentiles = []*cloudwatch.GetMetricStatisticsOutput{}, []*cloudwatch.GetMetricStatisticsOutput{}
 	for _, stat := range validationMetric {
 		metricDimensions := []types.Dimension{
 			{
@@ -245,22 +248,27 @@ func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime t
 		extendedStatList := []string{
 			"p99",
 		}
-		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), statList, nil)
-		percentiles, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), nil, extendedStatList)
-		if err != nil {
-			return nil, err
+		statistic, staterr := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), statList, nil)
+		percentile, percerr := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), nil, extendedStatList)
+		if staterr != nil {
+			return nil, nil, staterr
 		}
-		for _, datapoint := range statistics.Datapoints {
+		if percerr != nil {
+			return nil, nil, percerr
+		}
+		statistics = append(statistics, statistic)
+		percentiles = append(percentiles, percentile)
+		for _, datapoint := range statistic.Datapoints {
 			log.Printf("Statistics for Metric: %s", stat.MetricName)
 			log.Printf("Average: %f, Maximum: %f, Minimum: %f", *(datapoint.Average), *(datapoint.Maximum), *(datapoint.Minimum))
 		}
-		for _, datapoint := range percentiles.Datapoints {
+		for _, datapoint := range percentile.Datapoints {
 			log.Printf("Percentile for Metric: %s", stat.MetricName)
 			log.Printf("p99 is %f", datapoint.ExtendedStatistics["p99"])
 		}
 	}
 
-	return nil, nil
+	return statistics, percentiles, nil
 }
 
 func (s *PerformanceValidator) buildPerformanceMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {

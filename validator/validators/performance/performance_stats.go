@@ -4,6 +4,7 @@
 package performance
 
 import (
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"log"
 	"math"
 	"sort"
@@ -57,6 +58,28 @@ func CalculateMetricStatisticsBasedOnDataAndPeriod(data []float64, dataPeriod fl
 		Max:     max,
 		Min:     min,
 		P99:     p99Val,
+		Std:     math.Sqrt(stdDevSum / float64(length)),
+		Period:  int(dataPeriod / float64(length)),
+	}
+}
+
+func CalculateMetricStatisticsWindows(data []types.Datapoint, dataPeriod float64, avg float64, max float64, min float64, p99 float64) Stats {
+	length := len(data)
+	if length == 0 {
+		return Stats{}
+	}
+
+	stdDevSum := 0.0
+	for _, value := range data {
+		// Retrieving Average statistic on a secondly period is the same as retrieving a single data point
+		stdDevSum += math.Pow(avg-(*value.Average), 2)
+	}
+
+	return Stats{
+		Average: avg,
+		Max:     max,
+		Min:     min,
+		P99:     p99,
 		Std:     math.Sqrt(stdDevSum / float64(length)),
 		Period:  int(dataPeriod / float64(length)),
 	}
