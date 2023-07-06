@@ -27,7 +27,7 @@
 			},
 			"procstat": [
 				{
-				  "exe": "amazon-cloudwatch-agent.exe",
+				  "exe": "cloudwatch-agent",
 				  "measurement": [
 					"cpu_usage",
 					"memory_rss",
