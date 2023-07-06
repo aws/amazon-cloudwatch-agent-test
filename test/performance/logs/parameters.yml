@@ -18,7 +18,7 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # Metric that the test needs to validate
 metric_namespace: "CloudWatchAgentPerformance"
 metric_validation: 
-  - metric_name: "procstat_cpu_usage"
+  - metric_name: "procstat cpu_usage"
     metric_dimension: 
       - name: "exe"
         value: "cloudwatch-agent"
