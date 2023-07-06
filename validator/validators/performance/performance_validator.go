@@ -46,27 +46,35 @@ func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFact
 }
 
 func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
-	stat, err := s.GetWindowsPerformanceMetrics(startTime, endTime)
-	if stat == nil {
-		return nil
-	}
-	statInfo, err := s.CalculateWindowsMetricStatsAndPackMetrics(stat)
-	if statInfo == nil {
-		return nil
-	}
-	metrics, err := s.GetPerformanceMetrics(startTime, endTime)
-	if err != nil {
-		return err
-	}
+	if strings.Contains(s.vConfig.GetTestCase(), "windows") {
+		stat, err := s.GetWindowsPerformanceMetrics(startTime, endTime)
+		if err != nil {
+			return err
+		}
+		statInfo, err := s.CalculateWindowsMetricStatsAndPackMetrics(stat)
+		if err != nil {
+			return err
+		}
+		err = s.SendPacketToDatabase(statInfo)
+		if err != nil {
+			return err
+		}
+	} else {
 
-	perfInfo, err := s.CalculateMetricStatsAndPackMetrics(metrics)
-	if err != nil {
-		return err
-	}
+		metrics, err := s.GetPerformanceMetrics(startTime, endTime)
+		if err != nil {
+			return err
+		}
 
-	err = s.SendPacketToDatabase(perfInfo)
-	if err != nil {
-		return err
+		perfInfo, err := s.CalculateMetricStatsAndPackMetrics(metrics)
+		if err != nil {
+			return err
+		}
+
+		err = s.SendPacketToDatabase(perfInfo)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -166,7 +174,7 @@ func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statist
 			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
 		}
 		metricStats := CalculateMetricStatisticsWindows(metric.Datapoints, agentCollectionPeriod)
-		log.Printf("Finished calculate metric statictics for metric %s: %v \n", metricName, metricStats)
+		log.Printf("Finished calculate metric statictics for metric %s: %+v \n", metricName, metricStats)
 		performanceMetricResults[metricName] = metricStats
 	}
 

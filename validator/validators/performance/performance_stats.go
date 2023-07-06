@@ -4,7 +4,6 @@
 package performance
 
 import (
-	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"log"
 	"math"
@@ -53,15 +52,6 @@ func CalculateMetricStatisticsBasedOnDataAndPeriod(data []float64, dataPeriod fl
 	for _, value := range data {
 		stdDevSum += math.Pow(avg-value, 2)
 	}
-
-	fmt.Printf("%+v\n", Stats{
-		Average: avg,
-		Max:     max,
-		Min:     min,
-		P99:     p99Val,
-		Std:     math.Sqrt(stdDevSum / float64(length)),
-		Period:  int(dataPeriod / float64(length)),
-	})
 
 	return Stats{
 		Average: avg,
