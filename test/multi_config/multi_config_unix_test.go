@@ -25,7 +25,7 @@ const agentRuntime = 2 * time.Minute
 
 func Validate() error {
 
-	agentConfigurations := []string{"resources/LinuxCpuOnlyConfig.json", "resources/LinuxMemoryOnlyConfig.json", "resources/LinuxDiskOnlyConfig.json"}
+	agentConfigurations := []string{"resources/linux/LinuxCpuOnlyConfig.json", "resources/linux/LinuxMemoryOnlyConfig.json", "resources/linux/LinuxDiskOnlyConfig.json"}
 
 	AppendConfigs(agentConfigurations, configOutputPath)
 

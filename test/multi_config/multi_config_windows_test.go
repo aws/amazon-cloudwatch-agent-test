@@ -23,7 +23,7 @@ const (
 )
 
 func Validate() error {
-	agentConfigurations := []string{"resources/WindowsCompleteConfig.json", "resources/WindowsMemoryOnlyConfig.json"}
+	agentConfigurations := []string{"resources/windows/WindowsCompleteConfig.json", "resources/windows/WindowsMemoryOnlyConfig.json"}
 
 	AppendConfigs(agentConfigurations, configOutputPath)
 

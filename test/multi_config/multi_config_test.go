@@ -23,7 +23,7 @@ func AppendConfigs(config []string, configOutputPath string) {
 		} else {
 			common.StartAgentWithMultiConfig(configOutputPath, true, false)
 		}
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }
 
