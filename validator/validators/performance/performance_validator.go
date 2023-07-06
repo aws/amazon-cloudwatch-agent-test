@@ -168,8 +168,11 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 				Value: aws.String(dimension.Value),
 			})
 		}
+		log.Printf("Trying to get Metric %s for GetMetricStatistic ", stat.MetricName)
 		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), types.StatisticAverage)
+
 		if err != nil {
+			log.Printf("An error occurred for %s ", stat.MetricName)
 			return nil, err
 		}
 		for _, datapoint := range statistics.Datapoints {
