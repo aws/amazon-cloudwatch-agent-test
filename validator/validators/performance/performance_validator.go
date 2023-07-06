@@ -28,7 +28,7 @@ const (
 
 var (
 	// The default unit for these metrics is byte. However, we want to convert to MB for easier understanding
-	metricsConvertToMB = []string{"mem_total", "procstat_memory_rss", "procstat_memory_swap", "procstat_memory_data", "procstat_memory_vms", "procstat_write_bytes", "procstat_bytes_sent"}
+	metricsConvertToMB = []string{"mem_total", "procstat_memory_rss", "procstat_memory_swap", "procstat_memory_data", "procstat_memory_vms", "procstat_write_bytes", "procstat_bytes_sent", "procstat memory_rss", "procstat memory_vms", "procstat write_bytes"}
 )
 
 type PerformanceValidator struct {
@@ -46,11 +46,15 @@ func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFact
 }
 
 func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
-	stat, percent, err := s.GetWindowsPerformanceMetrics(startTime, endTime)
-	metrics, err := s.GetPerformanceMetrics(startTime, endTime)
-	if stat == nil && percent == nil {
+	stat, err := s.GetWindowsPerformanceMetrics(startTime, endTime)
+	if stat == nil {
 		return nil
 	}
+	statInfo, err := s.CalculateWindowsMetricStatsAndPackMetrics(stat)
+	if statInfo == nil {
+		return nil
+	}
+	metrics, err := s.GetPerformanceMetrics(startTime, endTime)
 	if err != nil {
 		return err
 	}
@@ -136,7 +140,7 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
 }
 
-func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statistic []*cloudwatch.GetMetricStatisticsOutput, percentile []*cloudwatch.GetMetricStatisticsOutput) (PerformanceInformation, error) {
+func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statistic []*cloudwatch.GetMetricStatisticsOutput) (PerformanceInformation, error) {
 	var (
 		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 		commitHash, commitDate = s.vConfig.GetCommitInformation()
@@ -147,10 +151,10 @@ func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statist
 	)
 	performanceMetricResults := make(map[string]Stats)
 
-	for index := range statistic {
-		metricLabel := strings.Split(*statistic[index].Label, " ")
+	for _, metric := range statistic {
+		metricLabel := strings.Split(*metric.Label, " ")
 		metricName := metricLabel[len(metricLabel)-1]
-		metricValues := statistic[index].Datapoints
+		metricValues := metric.Datapoints
 		//Convert every bytes to MB
 		if slices.Contains(metricsConvertToMB, metricName) {
 			for i, val := range metricValues {
@@ -161,7 +165,7 @@ func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statist
 		if !isAllStatisticsGreaterThanOrEqualToZero(metricValues) {
 			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
 		}
-		metricStats := CalculateMetricStatisticsWindows(metricValues, agentCollectionPeriod, *statistic[index].Datapoints[0].Average, *statistic[index].Datapoints[0].Maximum, *statistic[index].Datapoints[0].Minimum, percentile[index].Datapoints[0].ExtendedStatistics["p99"])
+		metricStats := CalculateMetricStatisticsWindows(metric.Datapoints, agentCollectionPeriod)
 		log.Printf("Finished calculate metric statictics for metric %s: %v \n", metricName, metricStats)
 		performanceMetricResults[metricName] = metricStats
 	}
@@ -216,7 +220,7 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 	return metrics.MetricDataResults, nil
 }
 
-func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime time.Time) ([]*cloudwatch.GetMetricStatisticsOutput, []*cloudwatch.GetMetricStatisticsOutput, error) {
+func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime time.Time) ([]*cloudwatch.GetMetricStatisticsOutput, error) {
 	var (
 		metricNamespace  = s.vConfig.GetMetricNamespace()
 		validationMetric = s.vConfig.GetMetricValidation()
@@ -224,7 +228,7 @@ func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime t
 	)
 	log.Printf("Start getting performance metrics from CloudWatch")
 
-	var statistics, percentiles = []*cloudwatch.GetMetricStatisticsOutput{}, []*cloudwatch.GetMetricStatisticsOutput{}
+	var statistics = []*cloudwatch.GetMetricStatisticsOutput{}
 	for _, stat := range validationMetric {
 		metricDimensions := []types.Dimension{
 			{
@@ -241,33 +245,19 @@ func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime t
 		log.Printf("Trying to get Metric %s for GetMetricStatistic ", stat.MetricName)
 		statList := []types.Statistic{
 			types.StatisticAverage,
-			types.StatisticMaximum,
-			types.StatisticMinimum,
 		}
-		extendedStatList := []string{
-			"p99",
-		}
-		statistic, staterr := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), statList, nil)
-		percentile, percerr := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), nil, extendedStatList)
-		if staterr != nil {
-			return nil, nil, staterr
-		}
-		if percerr != nil {
-			return nil, nil, percerr
+		statistic, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, 1, statList, nil)
+		if err != nil {
+			return nil, err
 		}
 		statistics = append(statistics, statistic)
-		percentiles = append(percentiles, percentile)
 		for _, datapoint := range statistic.Datapoints {
 			log.Printf("Statistics for Metric: %s", stat.MetricName)
-			log.Printf("Average: %f, Maximum: %f, Minimum: %f", *(datapoint.Average), *(datapoint.Maximum), *(datapoint.Minimum))
-		}
-		for _, datapoint := range percentile.Datapoints {
-			log.Printf("Percentile for Metric: %s", stat.MetricName)
-			log.Printf("p99 is %f", datapoint.ExtendedStatistics["p99"])
+			log.Printf("Average: %f", *(datapoint.Average))
 		}
 	}
 
-	return statistics, percentiles, nil
+	return statistics, nil
 }
 
 func (s *PerformanceValidator) buildPerformanceMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {

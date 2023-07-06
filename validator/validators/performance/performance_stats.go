@@ -4,6 +4,7 @@
 package performance
 
 import (
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"log"
 	"math"
@@ -53,6 +54,15 @@ func CalculateMetricStatisticsBasedOnDataAndPeriod(data []float64, dataPeriod fl
 		stdDevSum += math.Pow(avg-value, 2)
 	}
 
+	fmt.Printf("%+v\n", Stats{
+		Average: avg,
+		Max:     max,
+		Min:     min,
+		P99:     p99Val,
+		Std:     math.Sqrt(stdDevSum / float64(length)),
+		Period:  int(dataPeriod / float64(length)),
+	})
+
 	return Stats{
 		Average: avg,
 		Max:     max,
@@ -63,23 +73,43 @@ func CalculateMetricStatisticsBasedOnDataAndPeriod(data []float64, dataPeriod fl
 	}
 }
 
-func CalculateMetricStatisticsWindows(data []types.Datapoint, dataPeriod float64, avg float64, max float64, min float64, p99 float64) Stats {
+func CalculateMetricStatisticsWindows(datapoints []types.Datapoint, dataPeriod float64) Stats {
+	var data []float64
+	for _, datapoint := range datapoints {
+		data = append(data, *datapoint.Average)
+	}
 	length := len(data)
 	if length == 0 {
 		return Stats{}
 	}
+	sort.Float64s(data)
+
+	min := data[0]
+	max := data[length-1]
+
+	sum := 0.0
+	for _, value := range data {
+		sum += value
+	}
+
+	avg := sum / float64(length)
+
+	if length < 99 {
+		log.Println("Note: less than 99 values given, p99 value will be equal the max value")
+	}
+	p99Index := int(float64(length)*.99) - 1
+	p99Val := data[p99Index]
 
 	stdDevSum := 0.0
 	for _, value := range data {
-		// Retrieving Average statistic on a secondly period is the same as retrieving a single data point
-		stdDevSum += math.Pow(avg-(*value.Average), 2)
+		stdDevSum += math.Pow(avg-value, 2)
 	}
 
 	return Stats{
 		Average: avg,
 		Max:     max,
 		Min:     min,
-		P99:     p99,
+		P99:     p99Val,
 		Std:     math.Sqrt(stdDevSum / float64(length)),
 		Period:  int(dataPeriod / float64(length)),
 	}
