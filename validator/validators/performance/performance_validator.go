@@ -173,7 +173,7 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 			return nil, err
 		}
 		for _, datapoint := range statistics.Datapoints {
-			log.Printf("Statistic info: %f", datapoint.Average)
+			log.Printf("Statistic info: %f", *(datapoint.Average))
 		}
 	}
 	metrics, err := awsservice.GetMetricData(performanceMetricDataQueries, startTime, endTime)
