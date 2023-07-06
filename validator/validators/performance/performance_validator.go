@@ -178,9 +178,9 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 			"p99",
 		}
 		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), statList, nil)
-		percentiles, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), nil, extendedStatList)
+		percentiles, pererr := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), nil, extendedStatList)
 
-		if err != nil {
+		if err != nil || pererr != nil {
 			return nil, err
 		}
 		for _, datapoint := range statistics.Datapoints {
