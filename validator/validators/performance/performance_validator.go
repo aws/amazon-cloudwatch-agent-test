@@ -136,39 +136,38 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
 }
 
-//
-//func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statistic cloudwatch.GetMetricStatisticsOutput) (PerformanceInformation, error) {
-//	var (
-//		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
-//		commitHash, commitDate = s.vConfig.GetCommitInformation()
-//		dataType               = s.vConfig.GetDataType()
-//		dataRate               = fmt.Sprint(s.vConfig.GetDataRate())
-//		uniqueID               = s.vConfig.GetUniqueID()
-//		agentCollectionPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
-//	)
-//	performanceMetricResults := make(map[string]Stats)
-//
-//	for _, metric := range metrics {
-//		metricLabel := strings.Split(*metric.Label, " ")
-//		metricName := metricLabel[len(metricLabel)-1]
-//		metricValues := metric.Values
-//		//Convert every bytes to MB
-//		if slices.Contains(metricsConvertToMB, metricName) {
-//			for i, val := range metricValues {
-//				metricValues[i] = val / (1024 * 1024)
-//			}
-//		}
-//		log.Printf("Start calculate metric statictics for metric %s %v \n", metricName, metricValues)
-//		if !isAllValuesGreaterThanOrEqualToZero(metricValues) {
-//			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
-//		}
-//		metricStats := CalculateMetricStatisticsBasedOnDataAndPeriod(metricValues, agentCollectionPeriod)
-//		log.Printf("Finished calculate metric statictics for metric %s: %v \n", metricName, metricStats)
-//		performanceMetricResults[metricName] = metricStats
-//	}
-//
-//	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
-//}
+func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statistic []*cloudwatch.GetMetricStatisticsOutput, percentile []*cloudwatch.GetMetricStatisticsOutput) (PerformanceInformation, error) {
+	var (
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
+		commitHash, commitDate = s.vConfig.GetCommitInformation()
+		dataType               = s.vConfig.GetDataType()
+		dataRate               = fmt.Sprint(s.vConfig.GetDataRate())
+		uniqueID               = s.vConfig.GetUniqueID()
+		agentCollectionPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
+	)
+	performanceMetricResults := make(map[string]Stats)
+
+	for index := range statistic {
+		metricLabel := strings.Split(*statistic[index].Label, " ")
+		metricName := metricLabel[len(metricLabel)-1]
+		metricValues := statistic[index].Datapoints
+		//Convert every bytes to MB
+		if slices.Contains(metricsConvertToMB, metricName) {
+			for i, val := range metricValues {
+				*metricValues[i].Average = *val.Average / (1024 * 1024)
+			}
+		}
+		log.Printf("Start calculate metric statictics for metric %s %v \n", metricName, metricValues)
+		if !isAllStatisticsGreaterThanOrEqualToZero(metricValues) {
+			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
+		}
+		metricStats := CalculateMetricStatisticsWindows(metricValues, agentCollectionPeriod, *statistic[index].Datapoints[0].Average, *statistic[index].Datapoints[0].Maximum, *statistic[index].Datapoints[0].Minimum, percentile[index].Datapoints[0].ExtendedStatistics["p99"])
+		log.Printf("Finished calculate metric statictics for metric %s: %v \n", metricName, metricStats)
+		performanceMetricResults[metricName] = metricStats
+	}
+
+	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
+}
 
 func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Time) ([]types.MetricDataResult, error) {
 	var (
@@ -315,6 +314,18 @@ func isAllValuesGreaterThanOrEqualToZero(values []float64) bool {
 	}
 	for _, value := range values {
 		if value < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func isAllStatisticsGreaterThanOrEqualToZero(datapoints []types.Datapoint) bool {
+	if len(datapoints) == 0 {
+		return false
+	}
+	for _, datapoint := range datapoints {
+		if *datapoint.Average < 0 {
 			return false
 		}
 	}
