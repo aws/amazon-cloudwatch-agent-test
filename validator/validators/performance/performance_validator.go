@@ -168,7 +168,7 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 				Value: aws.String(dimension.Value),
 			})
 		}
-		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod()))
+		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod()), types.StatisticAverage)
 		if err != nil {
 			return nil, err
 		}

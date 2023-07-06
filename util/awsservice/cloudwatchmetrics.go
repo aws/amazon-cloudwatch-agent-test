@@ -114,7 +114,7 @@ func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime
 }
 
 func GetMetricStatistics(metricName, namespace string, dimensions []types.Dimension,
-	startTime time.Time, endTime time.Time, periodInSeconds int32) (*cloudwatch.GetMetricStatisticsOutput, error) {
+	startTime time.Time, endTime time.Time, periodInSeconds int32, statType types.Statistic) (*cloudwatch.GetMetricStatisticsOutput, error) {
 
 	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
 		MetricName: aws.String(metricName),
@@ -123,6 +123,7 @@ func GetMetricStatistics(metricName, namespace string, dimensions []types.Dimens
 		EndTime:    aws.Time(endTime),
 		Period:     aws.Int32(periodInSeconds),
 		Dimensions: dimensions,
+		Statistics: []types.Statistic{statType},
 	}
 	data, err := CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
 	if err != nil {
