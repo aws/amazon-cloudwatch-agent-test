@@ -18,11 +18,11 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # Metric that the test needs to validate
 metric_namespace: "CloudWatchAgentPerformance"
 metric_validation: 
-  - metric_name: "cpu_usage"
+  - metric_name: "procstat cpu_usage"
     metric_dimension: 
       - name: "exe"
         value: "cloudwatch-agent"
-      - name: "procstat process_name"
+      - name: "process_name"
         value: "amazon-cloudwatch-agent.exe"
   - metric_name: "memory_rss"
     metric_dimension: 
