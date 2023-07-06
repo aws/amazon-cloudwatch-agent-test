@@ -59,7 +59,7 @@ variable "values_per_minute" {
 
 variable "family" {
   type    = string
-  default = "windows"
+  default = "linux"
 
   validation {
     condition     = contains(["windows", "linux"], var.family)

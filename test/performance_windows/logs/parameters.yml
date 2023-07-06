@@ -22,7 +22,7 @@ metric_validation:
     metric_dimension: 
       - name: "exe"
         value: "cloudwatch-agent"
-      - name: "process_name"
+      - name: "procstat process_name"
         value: "amazon-cloudwatch-agent.exe"
   - metric_name: "memory_rss"
     metric_dimension: 
