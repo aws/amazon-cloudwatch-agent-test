@@ -155,6 +155,27 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 		performanceMetricDataQueries = append(performanceMetricDataQueries, s.buildPerformanceMetricQueries(metric.MetricName, metricNamespace, metricDimensions))
 	}
 
+	for _, stat := range validationMetric {
+		metricDimensions := []types.Dimension{
+			{
+				Name:  aws.String("InstanceId"),
+				Value: aws.String(ec2InstanceId),
+			},
+		}
+		for _, dimension := range stat.MetricDimension {
+			metricDimensions = append(metricDimensions, types.Dimension{
+				Name:  aws.String(dimension.Name),
+				Value: aws.String(dimension.Value),
+			})
+		}
+		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod()))
+		if err != nil {
+			return nil, err
+		}
+		for _, datapoint := range statistics.Datapoints {
+			log.Printf("Statistic info: %f", datapoint.Average)
+		}
+	}
 	metrics, err := awsservice.GetMetricData(performanceMetricDataQueries, startTime, endTime)
 
 	if err != nil {
