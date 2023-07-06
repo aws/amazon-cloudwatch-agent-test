@@ -173,6 +173,7 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 			return nil, err
 		}
 		for _, datapoint := range statistics.Datapoints {
+			log.Printf("Average for Metric: %s", stat.MetricName)
 			log.Printf("Statistic info: %f", *(datapoint.Average))
 		}
 	}
