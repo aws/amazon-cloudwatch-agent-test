@@ -169,14 +169,27 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 			})
 		}
 		log.Printf("Trying to get Metric %s for GetMetricStatistic ", stat.MetricName)
-		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, 60, types.StatisticAverage)
+		statList := []types.Statistic{
+			types.StatisticAverage,
+			types.StatisticMaximum,
+			types.StatisticMinimum,
+		}
+		extendedStatList := []string{
+			"p99",
+		}
+		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), statList, nil)
+		percentiles, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), nil, extendedStatList)
 
 		if err != nil {
 			return nil, err
 		}
 		for _, datapoint := range statistics.Datapoints {
-			log.Printf("Average for Metric: %s", stat.MetricName)
-			log.Printf("Statistic info: %f", *(datapoint.Average))
+			log.Printf("Statistics for Metric: %s", stat.MetricName)
+			log.Printf("Average: %f, Maximum: %f, Minimum: %f", *(datapoint.Average), *(datapoint.Maximum), *(datapoint.Minimum))
+		}
+		for _, datapoint := range percentiles.Datapoints {
+			log.Printf("Percentile for Metric: %s", stat.MetricName)
+			log.Printf("p99 is %f", datapoint.ExtendedStatistics["p99"])
 		}
 	}
 	metrics, err := awsservice.GetMetricData(performanceMetricDataQueries, startTime, endTime)
@@ -200,6 +213,54 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 	}
 
 	return metrics.MetricDataResults, nil
+}
+
+func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime time.Time) ([]types.Datapoint, error) {
+	var (
+		metricNamespace  = s.vConfig.GetMetricNamespace()
+		validationMetric = s.vConfig.GetMetricValidation()
+		ec2InstanceId    = awsservice.GetInstanceId()
+	)
+	log.Printf("Start getting performance metrics from CloudWatch")
+
+	for _, stat := range validationMetric {
+		metricDimensions := []types.Dimension{
+			{
+				Name:  aws.String("InstanceId"),
+				Value: aws.String(ec2InstanceId),
+			},
+		}
+		for _, dimension := range stat.MetricDimension {
+			metricDimensions = append(metricDimensions, types.Dimension{
+				Name:  aws.String(dimension.Name),
+				Value: aws.String(dimension.Value),
+			})
+		}
+		log.Printf("Trying to get Metric %s for GetMetricStatistic ", stat.MetricName)
+		statList := []types.Statistic{
+			types.StatisticAverage,
+			types.StatisticMaximum,
+			types.StatisticMinimum,
+		}
+		extendedStatList := []string{
+			"p99",
+		}
+		statistics, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), statList, nil)
+		percentiles, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, int32(s.vConfig.GetAgentCollectionPeriod().Seconds()), nil, extendedStatList)
+		if err != nil {
+			return nil, err
+		}
+		for _, datapoint := range statistics.Datapoints {
+			log.Printf("Statistics for Metric: %s", stat.MetricName)
+			log.Printf("Average: %f, Maximum: %f, Minimum: %f", *(datapoint.Average), *(datapoint.Maximum), *(datapoint.Minimum))
+		}
+		for _, datapoint := range percentiles.Datapoints {
+			log.Printf("Percentile for Metric: %s", stat.MetricName)
+			log.Printf("p99 is %f", datapoint.ExtendedStatistics["p99"])
+		}
+	}
+
+	return nil, nil
 }
 
 func (s *PerformanceValidator) buildPerformanceMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {
