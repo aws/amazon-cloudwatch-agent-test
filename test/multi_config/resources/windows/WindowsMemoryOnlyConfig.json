@@ -6,7 +6,7 @@
     "metrics_collected": {
       "Memory": {
         "measurement": [
-          {"name":"% Committed Bytes In Use", "rename": "memory"}
+          "% Committed Bytes In Use"
         ]
       }
     },
