@@ -41,7 +41,15 @@
         },
         "Network Interface": {
           "measurement": [
-            "Bytes Received/sec", "Bytes Sent/sec", "Packets Received/sec", "Packets Sent/sec"
+            {
+              "name": "Bytes Sent/sec",
+              "rename": "Bytes_Sent_Per_Sec"
+            },
+            {
+              "name": "Packets Sent/sec",
+              "rename": "Packets_Sent_Per_Sec"
+            },
+            "Bytes Received/sec", "Packets Received/sec"
           ],
           "resources": [
             "*"
@@ -51,8 +59,12 @@
         "Memory": {
           "measurement": [
             "Available Memory", "Nonpageable memory pool bytes", "Pageable memory pool bytes", "Committed Bytes",
-            "Available Bytes", "Cache Faults/sec", "Page Faults/sec", "Pages Input/sec", "Pages Output/sec",
-            "Page Reads/sec", "Page Writes/sec", "Pages/sec"
+            "Cache Faults/sec", "Page Faults/sec", "Pages Input/sec", "Pages Output/sec", "Page Reads/sec",
+            "Page Writes/sec", "Pages/sec",
+            {
+              "name": "Available Bytes",
+              "rename": "Available_Bytes"
+            }
           ],
           "metrics_collection_interval": 1
         },
