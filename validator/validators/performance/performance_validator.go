@@ -28,7 +28,7 @@ const (
 
 var (
 	// The default unit for these metrics is byte. However, we want to convert to MB for easier understanding
-	metricsConvertToMB = []string{"mem_total", "procstat_memory_rss", "procstat_memory_swap", "procstat_memory_data", "procstat_memory_vms", "procstat_write_bytes", "procstat_bytes_sent", "procstat memory_rss", "procstat memory_vms", "procstat write_bytes"}
+	metricsConvertToMB = []string{"mem_total", "procstat_memory_rss", "procstat_memory_swap", "procstat_memory_data", "procstat_memory_vms", "procstat_write_bytes", "procstat_bytes_sent", "procstat memory_rss", "memory_vms", "write_bytes", "Bytes_Sent_Per_Sec", "Available_Bytes"}
 )
 
 type PerformanceValidator struct {
@@ -60,7 +60,6 @@ func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
 			return err
 		}
 	} else {
-
 		metrics, err := s.GetPerformanceMetrics(startTime, endTime)
 		if err != nil {
 			return err
