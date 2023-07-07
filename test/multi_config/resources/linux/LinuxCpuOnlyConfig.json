@@ -1,0 +1,17 @@
+{
+  "metrics": {
+    "namespace": "MultiConfigTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          {"name": "time_active", "rename":"cpu_time_active_userdata"}
+        ],
+        "metrics_collection_interval": 15
+      }
+    },
+    "force_flush_interval": 5
+  }
+}
