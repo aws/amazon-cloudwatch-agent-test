@@ -169,7 +169,7 @@ func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statist
 				*metricValues[i].Average = *val.Average / (1024 * 1024)
 			}
 		}
-		log.Printf("Start calculate metric statictics for metric %s %v \n", metricName, metricValues)
+		log.Printf("Start calculate metric statictics for metric %s \n", metricName)
 		if !isAllStatisticsGreaterThanOrEqualToZero(metricValues) {
 			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
 		}
