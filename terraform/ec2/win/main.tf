@@ -140,12 +140,40 @@ resource "null_resource" "integration_test_wait" {
   ]
 }
 
-resource "null_resource" "integration_test_run" {
+resource "null_resource" "integration_test_run_restart" {
   # run go test when it's not feature test
-  count = length(regexall("/feature/windows", var.test_dir)) < 1 ? 1 : 0
+  count = length(regexall("restart", var.test_dir)) > 0 ? 1 : 0
   depends_on = [
     null_resource.integration_test_setup,
     null_resource.integration_test_wait,
+  ]
+
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+    timeout = "10m"
+  }
+
+  provisioner "file" {
+    source      = module.validator.agent_config
+    destination = module.validator.instance_agent_config
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "set AWS_REGION=${var.region}",
+      "validator.exe --test-name=${var.test_dir}"
+    ]
+  }
+}
+
+resource "null_resource" "integration_test_run_acceptance" {
+  # run go test when it's not feature test
+  count = length(regexall("acceptance", var.test_dir)) > 0 ? 1 : 0
+  depends_on = [
+    null_resource.integration_test_setup,
   ]
 
   connection {
@@ -163,7 +191,8 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      "validator.exe --test-name=${var.test_dir}"
+      var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
+      "validator.exe --test-name=${var.test_dir}",
     ]
   }
 }
