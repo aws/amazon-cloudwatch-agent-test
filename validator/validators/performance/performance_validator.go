@@ -263,8 +263,8 @@ func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime t
 			return nil, err
 		}
 		statistics = append(statistics, statistic)
+		log.Printf("Statistics for Metric: %s", stat.MetricName)
 		for _, datapoint := range statistic.Datapoints {
-			log.Printf("Statistics for Metric: %s", stat.MetricName)
 			log.Printf("Average: %f", *(datapoint.Average))
 		}
 	}
