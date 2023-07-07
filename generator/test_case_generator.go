@@ -113,6 +113,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{testDir: "../../../test/assume_role"},
 	},
 	"ec2_performance": {
+		// Assigning OS so Windows tests don't run for Linux and also bundle all performance tests under one workflow section
+		// This is a two-way door and we can separate this into separate matrix if preferred
 		{
 			testDir: "../../test/performance/emf",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -142,10 +144,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"win-2022": {}}},
 		},
 	},
-	//"ec2_performance_windows": {
-	//	{testDir: "../../test/performance_windows/logs"},
-	//	{testDir: "../../test/performance_windows/system"},
-	//},
 	"ec2_stress": {
 		{testDir: "../../test/stress/emf"},
 		{testDir: "../../test/stress/logs"},

@@ -43,9 +43,9 @@ compile:
 validator-build:
 	$(VALIDATOR_WIN_BUILD)/validator.exe github.com/aws/amazon-cloudwatch-agent-test/validator
 	$(VALIDATOR_LINUX_AMD64_BUILD)/validator github.com/aws/amazon-cloudwatch-agent-test/validator
-#	$(VALIDATOR_LINUX_ARM64_BUILD)/validator github.com/aws/amazon-cloudwatch-agent-test/validator
-#	$(VALIDATOR_DARWIN_AMD64_BUILD)/validator github.com/aws/amazon-cloudwatch-agent-test/validator
-#	$(VALIDATOR_DARWIN_ARM64_BUILD)/validator github.com/aws/amazon-cloudwatch-agent-test/validator
+	$(VALIDATOR_LINUX_ARM64_BUILD)/validator github.com/aws/amazon-cloudwatch-agent-test/validator
+	$(VALIDATOR_DARWIN_AMD64_BUILD)/validator github.com/aws/amazon-cloudwatch-agent-test/validator
+	$(VALIDATOR_DARWIN_ARM64_BUILD)/validator github.com/aws/amazon-cloudwatch-agent-test/validator
 
 dockerized-build: validator-build
 	docker buildx build --platform linux/amd64 --load -f ./validator/Dockerfile .

@@ -172,6 +172,9 @@ func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statist
 		if !isAllStatisticsGreaterThanOrEqualToZero(metricValues) {
 			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
 		}
+		// GetMetricStatistics provides these statistics, however this will require maintaining multiple data arrays
+		// and can be difficult for code readability. This way follows the same calculation pattern as Linux
+		// and simplify the logics.
 		metricStats := CalculateMetricStatisticsWindows(metric.Datapoints, agentCollectionPeriod)
 		log.Printf("Finished calculate metric statictics for metric %s: %+v \n", metricName, metricStats)
 		performanceMetricResults[metricName] = metricStats
@@ -253,6 +256,8 @@ func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime t
 		statList := []types.Statistic{
 			types.StatisticAverage,
 		}
+		// Windows procstat metrics always append a space and GetMetricData does not support space character
+		// Only workaround is to use GetMetricStatistics and retrieve the datapoints on a secondly period
 		statistic, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, 1, statList, nil)
 		if err != nil {
 			return nil, err
