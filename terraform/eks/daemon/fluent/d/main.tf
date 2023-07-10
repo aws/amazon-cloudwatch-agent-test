@@ -394,7 +394,7 @@ kubernetes.conf
 resource "kubernetes_daemonset" "fluentd_daemon" {
   depends_on = [
     module.fluent_common,
-    kubernetes_cluster_role_binding.fluentd_rolebinding
+    kubernetes_cluster_role_binding.fluentd_rolebinding,
     kubernetes_config_map.fluentd_config,
   ]
   metadata {
