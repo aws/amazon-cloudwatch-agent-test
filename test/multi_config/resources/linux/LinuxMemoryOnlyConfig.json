@@ -1,0 +1,15 @@
+{
+  "metrics": {
+    "namespace": "MultiConfigTest",
+    "metrics_collected": {
+      "mem": {
+        "measurement": [
+          {"name":"used_percent", "rename": "memory"}
+        ]
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    }
+  }
+}

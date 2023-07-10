@@ -86,7 +86,7 @@ var (
 				"procstat_memory_rss":  float64(130000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(888000000),
-				"procstat_memory_data": float64(140000000),
+				"procstat_memory_data": float64(145000000),
 				"procstat_num_fds":     float64(15),
 				"net_bytes_sent":       float64(524000),
 				"net_packets_sent":     float64(520),

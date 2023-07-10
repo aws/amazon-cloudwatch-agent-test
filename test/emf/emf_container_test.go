@@ -55,21 +55,20 @@ func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult 
 	var failed []dimension.Instruction
 	if t.testName == "EMF_ECS" {
 		namespace = "EMFECSNameSpace"
-		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
-			{
-				Key:   "ClusterName",
-				Value: dimension.UnknownDimensionValue(),
-			},
-			{
-				Key:   "Type",
-				Value: dimension.ExpectedDimensionValue{Value: aws.String("Counter")},
-			},
-		})
 	}
 	if t.testName == "EMF_EKS" {
 		namespace = "EMFEKSNameSpace"
-		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{})
 	}
+	dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "ClusterName",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "Type",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("Counter")},
+		},
+	})
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,

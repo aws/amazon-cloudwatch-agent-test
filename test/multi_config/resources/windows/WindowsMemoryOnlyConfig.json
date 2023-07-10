@@ -1,0 +1,17 @@
+{
+  "agent": {
+    "logfile": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+  },
+  "metrics": {
+    "metrics_collected": {
+      "Memory": {
+        "measurement": [
+          "% Committed Bytes In Use"
+        ]
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    }
+  }
+}
