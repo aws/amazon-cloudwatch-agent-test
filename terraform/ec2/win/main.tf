@@ -153,7 +153,7 @@ resource "null_resource" "integration_test_run_restart" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
-    timeout = "2m"
+    timeout = "5m"
   }
 
   provisioner "file" {

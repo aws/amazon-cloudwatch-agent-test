@@ -152,8 +152,8 @@ func printOutputAndError(stdout []byte, err error) {
 }
 
 func RunCommand(cmd string) (string, error) {
-	log.Printf("running cmd, %s %s %s %s %s", "powershell.exe", "-NoProfile", "-NonInteractive", "-NoExit", cmd)
-	out, err := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-NoExit", cmd).Output()
+	log.Printf("running cmd, %s %s %s %s %s", "powershell.exe", "-NoProfile", "-NonInteractive", cmd)
+	out, err := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", cmd).Output()
 	printOutputAndError(out, err)
 	return string(out), err
 }
