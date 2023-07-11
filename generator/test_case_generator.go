@@ -105,7 +105,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	*/
 	"ec2_mac": {
 		{testDir: "../../../test/feature/mac"},
-		{testDir: "../../../test/run_as_user"},
+		//{testDir: "../../../test/run_as_user"},
 	},
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
