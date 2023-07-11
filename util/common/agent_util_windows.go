@@ -141,9 +141,9 @@ func RunShellScript(path string, args ...string) (string, error) {
 // printOutputAndError does nothing if there was no error.
 // Else it prints stdout and stderr.
 func printOutputAndError(stdout []byte, err error) {
-	if err == nil {
-		return
-	}
+	//if err == nil {
+	//	return
+	//}
 	stderr := ""
 	ee, ok := err.(*exec.ExitError)
 	if ok {
