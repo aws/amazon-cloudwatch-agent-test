@@ -17,3 +17,6 @@ output "proxy_instance_proxy_ip" {
   value = module.proxy_instance.proxy_ip
 }
 
+output "cwa_onprem_assumed_iam_role_arm" {
+  value = module.common.cwa_onprem_assumed_iam_role_arm
+}

@@ -394,7 +394,7 @@ kubernetes.conf
 resource "kubernetes_daemonset" "fluentd_daemon" {
   depends_on = [
     module.fluent_common,
-    kubernetes_service_account.fluentd_service,
+    kubernetes_cluster_role_binding.fluentd_rolebinding,
     kubernetes_config_map.fluentd_config,
   ]
   metadata {
@@ -436,7 +436,7 @@ resource "kubernetes_daemonset" "fluentd_daemon" {
         }
         container {
           name  = "fluentd-cloudwatch"
-          image = "fluent/fluentd-kubernetes-daemonset:v1.7.3-debian-cloudwatch-1.0"
+          image = "fluent/fluentd-kubernetes-daemonset:v1.10.3-debian-cloudwatch-1.0"
           env {
             name = "AWS_REGION"
             value_from {
