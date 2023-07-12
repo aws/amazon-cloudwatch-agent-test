@@ -60,7 +60,7 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-stress-${module.common.testing_id}"
+    Name = "cwagent-stress-${var.family}-${module.common.testing_id}"
   }
 }
 
