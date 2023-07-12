@@ -1,0 +1,70 @@
+receivers: ["logs"]
+
+test_case: "logs_win_stress"
+validate_type: "stress"
+data_type: "logs"
+# Number of logs being written
+number_monitored_logs: 100
+# Number of metrics to be sent or number of log lines being written  each minute
+values_per_minute: "<values_per_minute>"
+# Number of seconds the agent should run and collect the metrics. In this case, 5 minutes
+agent_collection_period: 300 
+
+commit_hash: <commit_hash>
+commit_date: <commit_date>
+
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+
+# Metric that the test needs to validate; moreover, the stress validation already has
+# InstanceID dimension; therefore, does not need to validate it
+# https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
+metric_namespace: "CloudWatchAgentStress"
+metric_validation: 
+  - metric_name: "procstat cpu_usage"
+    metric_sample_count: 300
+    metric_dimension: 
+      - name: "exe"
+        value: "amazon-cloudwatch-agent.exe"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent.exe"
+  - metric_name: "procstat memory_rss"
+    metric_sample_count: 300
+    metric_dimension:
+      - name: "exe"
+        value: "amazon-cloudwatch-agent.exe"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent.exe"
+  - metric_name: "procstat memory_vms"
+    metric_sample_count: 300
+    metric_dimension:
+      - name: "exe"
+        value: "amazon-cloudwatch-agent.exe"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent.exe"
+  - metric_name: "procstat write_bytes"
+    metric_sample_count: 300
+    metric_dimension:
+      - name: "exe"
+        value: "amazon-cloudwatch-agent.exe"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent.exe"
+
+  # Validations for Network Interface
+  - metric_name: "Bytes_Sent_Per_Sec"
+    metric_dimension:
+      - name: "objectname"
+        value: "Network Interface"
+      - name: "instance"
+        value: "Amazon Elastic Network Adapter"
+  - metric_name: "Packets_Sent_Per_Sec"
+    metric_dimension:
+      - name: "objectname"
+        value: "Network Interface"
+      - name: "instance"
+        value: "Amazon Elastic Network Adapter"
+  # Validate Memory metrics
+  - metric_name: "Available_Bytes"
+    metric_sample_count: 60
+    metric_dimension:
+      - name: "objectname"
+        value: "Memory"
