@@ -278,7 +278,13 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(dimension.Value),
 			})
 		}
-		err := s.ValidateStressMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricSampleCount, startTime, endTime)
+
+		var err error
+		if strings.Contains(s.vConfig.GetTestCase(), "windows") {
+			err = s.ValidateStressMetricWindows(metric.MetricName, metricNamespace, metricDimensions, metric.MetricSampleCount, startTime, endTime)
+		} else {
+			err = s.ValidateStressMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricSampleCount, startTime, endTime)
+		}
 		if err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
@@ -298,7 +304,7 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 
 	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
 
-	// We are only interesting in the maxium metric values within the time range
+	// We are only interested in the maximum metric values within the time range
 	metrics, err := awsservice.GetMetricData(stressMetricQueries, startTime, endTime)
 	if err != nil {
 		return err
@@ -319,6 +325,59 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	// Assuming each plugin are testing one at a time
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 	metricValue := metrics.MetricDataResults[0].Values[0]
+	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
+	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f \n", metricName, metricNamespace, metricValue, upperBoundValue)
+
+	if metricValue < 0 || metricValue > upperBoundValue {
+		return fmt.Errorf("\n metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
+	}
+
+	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
+	// , it will need to have 60 sample counts - 1 datapoint / second)
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-5, metricSampleCount, int32(boundAndPeriod)); !ok {
+		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount-5, metricSampleCount)
+	}
+
+	return nil
+}
+
+func (s *StressValidator) ValidateStressMetricWindows(metricName, metricNamespace string, metricDimensions []types.Dimension, metricSampleCount int, startTime, endTime time.Time) error {
+	var (
+		dataRate       = fmt.Sprint(s.vConfig.GetDataRate())
+		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
+		receiver       = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
+	)
+	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
+
+	metrics, err := awsservice.GetMetricStatistics(
+		metricName,
+		metricNamespace,
+		metricDimensions,
+		startTime,
+		endTime,
+		int32(boundAndPeriod),
+		[]types.Statistic{types.StatisticMaximum},
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	if len(metrics.Datapoints) == 0 || metrics.Datapoints[0].Maximum == nil {
+		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
+	}
+
+	if _, ok := metricPluginBoundValue[dataRate][receiver]; !ok {
+		return fmt.Errorf("\n plugin %s does not have data rate", receiver)
+	}
+
+	if _, ok := metricPluginBoundValue[dataRate][receiver][metricName]; !ok {
+		return fmt.Errorf("\n metric %s does not have bound", receiver)
+	}
+
+	// Assuming each plugin are testing one at a time
+	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
+	metricValue := *metrics.Datapoints[0].Maximum
 	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
 	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f \n", metricName, metricNamespace, metricValue, upperBoundValue)
 
