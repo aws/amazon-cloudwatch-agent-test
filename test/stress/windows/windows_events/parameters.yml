@@ -1,6 +1,6 @@
-receivers: ["logs"]
+receivers: ["windows_events"]
 
-test_case: "logs_win_events_stress"
+test_case: "logs_windows_events_stress"
 validate_type: "stress"
 data_type: "logs"
 # Number of logs being written
