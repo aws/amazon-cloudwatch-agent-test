@@ -49,7 +49,7 @@ func Validate() error {
 		err = awsservice.ValidateMetric(expectedMetric, namespace, expectedDimensions)
 	}
 	if err != nil {
-		log.Printf("CloudWatch Agent apped config not working : %v", err)
+		log.Printf("CloudWatch Agent append config not working : %v", err)
 		return err
 	}
 	return nil

@@ -42,11 +42,11 @@ func Validate() error {
 		},
 	}
 
-	expectedMetrics := []string{"mem_used_percent", "cpu_time_active_userdata", "disk_free"}
+	expectedMetrics := []string{"memory", "cpu_time_active_userdata", "disk_free"}
 	for _, expectedMetric := range expectedMetrics {
 		err := awsservice.ValidateMetric(expectedMetric, namespace, expectedDimensions)
 		if err != nil {
-			log.Printf("CloudWatch Agent apped config not working : %v", err)
+			log.Printf("CloudWatch Agent append config not working : %v", err)
 			return err
 		}
 	}
