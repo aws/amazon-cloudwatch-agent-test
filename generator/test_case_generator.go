@@ -1,260 +1,335 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package main
+package performance
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"log"
-	"os"
+	"strings"
+	"time"
 
-	"github.com/mitchellh/mapstructure"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/aws-sdk-go/aws"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
-
-type matrixRow struct {
-	TestDir             string `json:"test_dir"`
-	Os                  string `json:"os"`
-	Family              string `json:"family"`
-	TestType            string `json:"testType"`
-	Arc                 string `json:"arc"`
-	InstanceType        string `json:"instanceType"`
-	Ami                 string `json:"ami"`
-	BinaryName          string `json:"binaryName"`
-	Username            string `json:"username"`
-	InstallAgentCommand string `json:"installAgentCommand"`
-	AgentStartCommand   string `json:"agentStartCommand"`
-	CaCertPath          string `json:"caCertPath"`
-	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
-	K8sVersion          string `json:"k8s_version"`
-	TerraformDir        string `json:"terraform_dir"`
-	UseSSM              bool   `json:"useSSM"`
-	ExcludedTests       string `json:"excludedTests"`
-}
-
-type testConfig struct {
-	// this gives more flexibility to define terraform dir when there should be a different set of terraform files
-	// e.g. statsd can have a multiple terraform module sets for difference test scenarios (ecs, eks or ec2)
-	testDir      string
-	terraformDir string
-	// define target matrix field as set(s)
-	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
-	targets map[string]map[string]struct{}
-}
 
 const (
-	testTypeKeyEc2Linux = "ec2_linux"
+	ServiceName      = "AmazonCloudWatchAgent"
+	DynamoDBDataBase = "CWAPerformanceMetrics"
 )
 
-// you can't have a const map in golang
-var testTypeToTestConfig = map[string][]testConfig{
-	"ec2_gpu": {
-		{testDir: "./test/nvidia_gpu"},
-	},
-	testTypeKeyEc2Linux: {
-		{testDir: "./test/ca_bundle"},
-		{testDir: "./test/cloudwatchlogs"},
-		{
-			testDir: "./test/metrics_number_dimension",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{testDir: "./test/metric_value_benchmark"},
-		{testDir: "./test/run_as_user"},
-		{testDir: "./test/collection_interval"},
-		{testDir: "./test/metric_dimension"},
-		{testDir: "./test/restart"},
-		{testDir: "./test/multi_config"},
-		{
-			testDir: "./test/acceptance",
-			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
-		},
-		// skipping FIPS test as the test cannot be verified
-		// neither ssh nor SSM works after a reboot once FIPS is enabled
-		//{
-		//	testDir: "./test/fips",
-		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
-		//},
-		{
-			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/proxy",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/ssl_cert",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir:      "./test/userdata",
-			terraformDir: "terraform/ec2/userdata",
-			targets:      map[string]map[string]struct{}{"os": {"ol9": {}}},
-		},
-		{
-			testDir:      "./test/assume_role",
-			terraformDir: "terraform/ec2/creds",
-			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-	},
-	/*
-		You can only place 1 mac instance on a dedicate host a single time.
-		Therefore, limit down the scope for testing in Mac since EC2 can be done with Linux
-		and Mac under the hood share similar plugins with Linux
-	*/
-	"ec2_mac": {
-		{testDir: "../../../test/feature/mac"},
-		{testDir: "../../../test/run_as_user"},
-	},
-	"ec2_windows": {
-		{testDir: "../../../test/feature/windows"},
-		{testDir: "../../../test/restart"},
-		{testDir: "../../../test/acceptance"},
-		{testDir: "../../../test/multi_config"},
-		// assume role test doesn't add much value, and it already being tested with linux
-		//{testDir: "../../../test/assume_role"},
-	},
-	"ec2_performance": {
-		{testDir: "../../test/performance/emf"},
-		{testDir: "../../test/performance/logs"},
-		{testDir: "../../test/performance/system"},
-		{testDir: "../../test/performance/statsd"},
-		{testDir: "../../test/performance/collectd"},
-	},
-	"ec2_windows_performance": {
-		{testDir: "../../test/performance/windows/logs"},
-		{testDir: "../../test/performance/windows/system"},
-		{testDir: "../../test/performance/windows/windows_events"},
-	},
-	"ec2_stress": {
-		{testDir: "../../test/stress/emf"},
-		{testDir: "../../test/stress/logs"},
-		{testDir: "../../test/stress/system"},
-		{testDir: "../../test/stress/statsd"},
-		{testDir: "../../test/stress/collectd"},
-	},
-	"ec2_windows_stress": {
-		{testDir: "../../test/stress/windows/logs"},
-		{testDir: "../../test/stress/windows/system"},
-		{testDir: "../../test/stress/windows/windows_events"},
-	},
-	"ecs_fargate": {
-		{testDir: "./test/ecs/ecs_metadata"},
-	},
-	"ecs_ec2_daemon": {
-		{testDir: "./test/metric_value_benchmark"},
-		{testDir: "./test/statsd"},
-		{testDir: "./test/emf"},
-	},
-	"eks_daemon": {
-		{
-			testDir: "./test/metric_value_benchmark",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/statsd", terraformDir: "terraform/eks/daemon/statsd",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/emf", terraformDir: "terraform/eks/daemon/emf",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/d",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
-	},
-	"eks_deployment": {
-		{testDir: "./test/metric_value_benchmark"},
-	},
+var (
+	// The default unit for these metrics is byte. However, we want to convert to MB for easier understanding
+	metricsConvertToMB = []string{"mem_total", "procstat_memory_rss", "procstat_memory_swap", "procstat_memory_data", "procstat_memory_vms", "procstat_write_bytes", "procstat_bytes_sent", "memory_rss", "memory_vms", "write_bytes", "Bytes_Sent_Per_Sec", "Available_Bytes"}
+)
+
+type PerformanceValidator struct {
+	vConfig models.ValidateConfig
+	models.ValidatorFactory
 }
 
-func copyAllEC2LinuxTestForOnpremTesting() {
-	/* Some tests need to be fixed in order to run in both environment, so for now for PoC, run one that works.
-	testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
-	*/
-	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
-		{
-			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
+var _ models.ValidatorFactory = (*PerformanceValidator)(nil)
+
+func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
+	return &PerformanceValidator{
+		vConfig:          vConfig,
+		ValidatorFactory: basic.NewBasicValidator(vConfig),
 	}
 }
 
-func main() {
-	copyAllEC2LinuxTestForOnpremTesting()
+func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
+	perfInfo := PerformanceInformation{}
+	if s.vConfig.GetOSFamily() == "windows" {
+		stat, err := s.GetWindowsPerformanceMetrics(startTime, endTime)
+		if err != nil {
+			return err
+		}
+		perfInfo, err = s.CalculateWindowsMetricStatsAndPackMetrics(stat)
+		if err != nil {
+			return err
+		}
+	} else {
+		metrics, err := s.GetPerformanceMetrics(startTime, endTime)
+		if err != nil {
+			return err
+		}
 
-	for testType, testConfigs := range testTypeToTestConfig {
-		testMatrix := genMatrix(testType, testConfigs)
-		writeTestMatrixFile(testType, testMatrix)
+		perfInfo, err = s.CalculateMetricStatsAndPackMetrics(metrics)
+		if err != nil {
+			return err
+		}
 	}
-}
-
-func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
-	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
-
+	err := s.SendPacketToDatabase(perfInfo)
 	if err != nil {
-		log.Panicf("can't read file %v_test_matrix.json err %v", testType, err)
+		return err
 	}
 
-	defer openTestMatrix.Close()
+	return nil
+}
 
-	byteValueTestMatrix, _ := io.ReadAll(openTestMatrix)
+func (s *PerformanceValidator) SendPacketToDatabase(perfInfo PerformanceInformation) error {
+	var (
+		dataType               = s.vConfig.GetDataType()
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
+		commitHash, commitDate = s.vConfig.GetCommitInformation()
+		agentCollectionPeriod  = fmt.Sprint(s.vConfig.GetAgentCollectionPeriod().Seconds())
+		// The secondary global index that is used for checking if there are item has already been exist in the table
+		// The performance validator will query based on the UseCaseHash to confirm if the current commit with the use case
+		// has been exist or not? If yes, merge it. If not, sending it to the database
+		// https://github.com/aws/amazon-cloudwatch-agent-test/blob/e07fe7adb1b1d75244d8984507d3f83a7237c3d3/terraform/setup/main.tf#L46-L53
+		kCheckingAttribute = []string{"CommitHash", "UseCase"}
+		vCheckingAttribute = []string{fmt.Sprint(commitHash), receiver}
+	)
 
-	var testMatrix []map[string]interface{}
-	err = json.Unmarshal(byteValueTestMatrix, &testMatrix)
-	if err != nil {
-		log.Panicf("can't unmarshall file %v_test_matrix.json err %v", testType, err)
-	}
+	err := backoff.Retry(func() error {
+		existingPerfInfo, err := awsservice.GetItemInDatabase(DynamoDBDataBase, "UseCaseHash", kCheckingAttribute, vCheckingAttribute, perfInfo)
+		if err != nil {
+			return err
+		}
 
-	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
-	for _, test := range testMatrix {
-		for _, testConfig := range testConfigs {
-			row := matrixRow{TestDir: testConfig.testDir, TestType: testType, TerraformDir: testConfig.terraformDir}
-			err = mapstructure.Decode(test, &row)
-			if err != nil {
-				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
-			}
+		// Get the latest performance information from the database and update by merging the existing one
+		// and finally replace the packet in the database
+		maps.Copy(existingPerfInfo["Results"].(map[string]interface{}), perfInfo["Results"].(map[string]interface{}))
 
-			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
-				testMatrixComplete = append(testMatrixComplete, row)
+		finalPerfInfo := packIntoPerformanceInformation(existingPerfInfo["UniqueID"].(string), receiver, dataType, agentCollectionPeriod, commitHash, commitDate, existingPerfInfo["Results"])
+
+		err = awsservice.ReplaceItemInDatabase(DynamoDBDataBase, finalPerfInfo)
+
+		if err != nil {
+			return err
+		}
+		return nil
+	}, awsservice.StandardExponentialBackoff)
+
+	return err
+}
+func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []types.MetricDataResult) (PerformanceInformation, error) {
+	var (
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
+		commitHash, commitDate = s.vConfig.GetCommitInformation()
+		dataType               = s.vConfig.GetDataType()
+		dataRate               = fmt.Sprint(s.vConfig.GetDataRate())
+		uniqueID               = s.vConfig.GetUniqueID()
+		agentCollectionPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
+	)
+	performanceMetricResults := make(map[string]Stats)
+
+	for _, metric := range metrics {
+		metricLabel := strings.Split(*metric.Label, " ")
+		metricName := metricLabel[len(metricLabel)-1]
+		metricValues := metric.Values
+		//Convert every bytes to MB
+		if slices.Contains(metricsConvertToMB, metricName) {
+			for i, val := range metricValues {
+				metricValues[i] = val / (1024 * 1024)
 			}
 		}
+		log.Printf("Start calculate metric statictics for metric %s %v \n", metricName, metricValues)
+		if !isAllValuesGreaterThanOrEqualToZero(metricValues) {
+			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
+		}
+		metricStats := CalculateMetricStatisticsBasedOnDataAndPeriod(metricValues, agentCollectionPeriod)
+		log.Printf("Finished calculate metric statictics for metric %s: %v \n", metricName, metricStats)
+		performanceMetricResults[metricName] = metricStats
 	}
-	return testMatrixComplete
+
+	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
 }
 
-// not so robust way to determine a matrix entry should be included to complete test matrix, but it serves the purpose
-// struct (matrixRow) field should be added as elif to support more. could use reflection with some tradeoffs
-func shouldAddTest(row *matrixRow, targets map[string]map[string]struct{}) bool {
-	for key, set := range targets {
-		var rowVal string
-		if key == "arc" {
-			rowVal = row.Arc
-		} else if key == "os" {
-			rowVal = row.Os
-		}
+func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statistic []*cloudwatch.GetMetricStatisticsOutput) (PerformanceInformation, error) {
+	var (
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
+		commitHash, commitDate = s.vConfig.GetCommitInformation()
+		dataType               = s.vConfig.GetDataType()
+		dataRate               = fmt.Sprint(s.vConfig.GetDataRate())
+		uniqueID               = s.vConfig.GetUniqueID()
+		agentCollectionPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
+	)
+	performanceMetricResults := make(map[string]Stats)
 
-		if rowVal == "" {
-			continue
+	for _, metric := range statistic {
+		metricLabel := strings.Split(*metric.Label, " ")
+		metricName := metricLabel[len(metricLabel)-1]
+		metricValues := metric.Datapoints
+		//Convert every bytes to MB
+		if slices.Contains(metricsConvertToMB, metricName) {
+			for i, val := range metricValues {
+				*metricValues[i].Average = *val.Average / (1024 * 1024)
+			}
 		}
-		_, ok := set[rowVal]
-		if !ok {
+		log.Printf("Start calculate metric statictics for metric %s \n", metricName)
+		if !isAllStatisticsGreaterThanOrEqualToZero(metricValues) {
+			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
+		}
+		// GetMetricStatistics provides these statistics, however this will require maintaining multiple data arrays
+		// and can be difficult for code readability. This way follows the same calculation pattern as Linux
+		// and simplify the logics.
+		var data []float64
+		for _, datapoint := range metric.Datapoints {
+			data = append(data, *datapoint.Average)
+		}
+		metricStats := CalculateMetricStatisticsBasedOnDataAndPeriod(data, agentCollectionPeriod)
+		log.Printf("Finished calculate metric statictics for metric %s: %+v \n", metricName, metricStats)
+		performanceMetricResults[metricName] = metricStats
+	}
+
+	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
+}
+
+func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Time) ([]types.MetricDataResult, error) {
+	var (
+		metricNamespace              = s.vConfig.GetMetricNamespace()
+		validationMetric             = s.vConfig.GetMetricValidation()
+		ec2InstanceId                = awsservice.GetInstanceId()
+		performanceMetricDataQueries = []types.MetricDataQuery{}
+	)
+	log.Printf("Start getting performance metrics from CloudWatch")
+	for _, metric := range validationMetric {
+		metricDimensions := []types.Dimension{
+			{
+				Name:  aws.String("InstanceId"),
+				Value: aws.String(ec2InstanceId),
+			},
+		}
+		for _, dimension := range metric.MetricDimension {
+			metricDimensions = append(metricDimensions, types.Dimension{
+				Name:  aws.String(dimension.Name),
+				Value: aws.String(dimension.Value),
+			})
+		}
+		performanceMetricDataQueries = append(performanceMetricDataQueries, s.buildPerformanceMetricQueries(metric.MetricName, metricNamespace, metricDimensions))
+	}
+
+	for _, stat := range validationMetric {
+		metricDimensions := []types.Dimension{
+			{
+				Name:  aws.String("InstanceId"),
+				Value: aws.String(ec2InstanceId),
+			},
+		}
+		for _, dimension := range stat.MetricDimension {
+			metricDimensions = append(metricDimensions, types.Dimension{
+				Name:  aws.String(dimension.Name),
+				Value: aws.String(dimension.Value),
+			})
+		}
+	}
+	metrics, err := awsservice.GetMetricData(performanceMetricDataQueries, startTime, endTime)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return metrics.MetricDataResults, nil
+}
+
+func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime time.Time) ([]*cloudwatch.GetMetricStatisticsOutput, error) {
+	var (
+		metricNamespace  = s.vConfig.GetMetricNamespace()
+		validationMetric = s.vConfig.GetMetricValidation()
+		ec2InstanceId    = awsservice.GetInstanceId()
+	)
+	log.Printf("Start getting performance metrics from CloudWatch")
+
+	var statistics = []*cloudwatch.GetMetricStatisticsOutput{}
+	for _, stat := range validationMetric {
+		metricDimensions := []types.Dimension{
+			{
+				Name:  aws.String("InstanceId"),
+				Value: aws.String(ec2InstanceId),
+			},
+		}
+		for _, dimension := range stat.MetricDimension {
+			metricDimensions = append(metricDimensions, types.Dimension{
+				Name:  aws.String(dimension.Name),
+				Value: aws.String(dimension.Value),
+			})
+		}
+		log.Printf("Trying to get Metric %s for GetMetricStatistic ", stat.MetricName)
+		statList := []types.Statistic{
+			types.StatisticAverage,
+		}
+		// Windows procstat metrics always append a space and GetMetricData does not support space character
+		// Only workaround is to use GetMetricStatistics and retrieve the datapoints on a secondly period
+		statistic, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, 1, statList, nil)
+		if err != nil {
+			return nil, err
+		}
+		statistics = append(statistics, statistic)
+		log.Printf("Statistics for Metric: %s", stat.MetricName)
+		for _, datapoint := range statistic.Datapoints {
+			log.Printf("Average: %f", *(datapoint.Average))
+		}
+	}
+
+	return statistics, nil
+}
+
+func (s *PerformanceValidator) buildPerformanceMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {
+	metricInformation := types.Metric{
+		Namespace:  aws.String(metricNamespace),
+		MetricName: aws.String(metricName),
+		Dimensions: metricDimensions,
+	}
+
+	metricDataQuery := types.MetricDataQuery{
+		MetricStat: &types.MetricStat{
+			Metric: &metricInformation,
+			Period: aws.Int32(10),
+			Stat:   aws.String(string(models.AVERAGE)),
+		},
+		Id: aws.String(strings.ToLower(metricName)),
+	}
+	return metricDataQuery
+}
+
+// packIntoPerformanceInformation will package all the information into the required format of MongoDb Database
+// https://github.com/aws/amazon-cloudwatch-agent-test/blob/e07fe7adb1b1d75244d8984507d3f83a7237c3d3/terraform/setup/main.tf#L8-L63
+func packIntoPerformanceInformation(uniqueID, receiver, dataType, collectionPeriod, commitHash string, commitDate int64, result interface{}) PerformanceInformation {
+	instanceAMI := awsservice.GetImageId()
+	instanceType := awsservice.GetInstanceType()
+
+	return PerformanceInformation{
+		"UniqueID":         uniqueID,
+		"Service":          ServiceName,
+		"UseCase":          receiver,
+		"CommitDate":       commitDate,
+		"CommitHash":       commitHash,
+		"DataType":         dataType,
+		"Results":          result,
+		"CollectionPeriod": collectionPeriod,
+		"InstanceAMI":      instanceAMI,
+		"InstanceType":     instanceType,
+	}
+}
+
+func isAllValuesGreaterThanOrEqualToZero(values []float64) bool {
+	if len(values) == 0 {
+		return false
+	}
+	for _, value := range values {
+		if value < 0 {
 			return false
 		}
 	}
 	return true
 }
 
-func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
-	bytes, err := json.MarshalIndent(testMatrix, "", " ")
-	if err != nil {
-		log.Panicf("Can't marshal json for target os %v, err %v", testType, err)
+func isAllStatisticsGreaterThanOrEqualToZero(datapoints []types.Datapoint) bool {
+	if len(datapoints) == 0 {
+		return false
 	}
-	err = os.WriteFile(fmt.Sprintf("generator/resources/%v_complete_test_matrix.json", testType), bytes, os.ModePerm)
-	if err != nil {
-		log.Panicf("Can't write json to file for target os %v, err %v", testType, err)
+	for _, datapoint := range datapoints {
+		if *datapoint.Average < 0 {
+			return false
+		}
 	}
+	return true
 }
