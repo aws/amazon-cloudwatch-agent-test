@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/cenkalti/backoff/v4"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
