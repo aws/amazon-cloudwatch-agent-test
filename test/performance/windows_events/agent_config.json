@@ -3,7 +3,7 @@
     "metrics_collection_interval": 1
   },
   "metrics": {
-    "namespace": "CloudWatchAgentPerformance",
+    "namespace": "CloudWatchAgentEventsLogsPerformance",
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },

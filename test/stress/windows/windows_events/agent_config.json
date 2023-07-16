@@ -3,7 +3,7 @@
     "debug": true
   },
   "metrics": {
-    "namespace": "CloudWatchAgentEventsLogsStress",
+    "namespace": "CloudWatchAgentStress",
     "metrics_collected": {
       "net": {
         "resources": [
