@@ -125,7 +125,7 @@ func getLogFilePaths(configPath string) ([]string, error) {
 		return nil, err
 	}
 
-	logFiles := cfgFileData["logs"].(map[string]interface{})["logs_collected"].(map[string]interface{})["files"].(map[string]interface{})["collect_list"].([]interface{})
+	logFiles := cfgFileData["logs"].(map[string]interface{})["logs_collected"].(map[string]interface{})["windows_events"].(map[string]interface{})["collect_list"].([]interface{})
 	var filePaths []string
 	for _, process := range logFiles {
 		filePaths = append(filePaths, process.(map[string]interface{})["file_path"].(string))
