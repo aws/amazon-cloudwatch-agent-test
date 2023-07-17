@@ -419,18 +419,24 @@ func (s *StressValidator) ValidateStressMetricWindows(metricName, metricNamespac
 		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
 		receiver       = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
 	)
+	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
 
-	stressMetricQueries := s.buildStressMetricQueries(metricName, metricNamespace, metricDimensions)
-
-	log.Printf("Start to collect and validate windows metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
-
-	metrics, err := awsservice.GetMetricData(stressMetricQueries, startTime, endTime)
+	metrics, err := awsservice.GetMetricStatistics(
+		metricName,
+		metricNamespace,
+		metricDimensions,
+		startTime,
+		endTime,
+		int32(boundAndPeriod),
+		[]types.Statistic{types.StatisticMaximum},
+		nil,
+	)
 	if err != nil {
 		return err
 	}
 
 	if len(metrics.Datapoints) == 0 || metrics.Datapoints[0].Maximum == nil {
-		return fmt.Errorf("\n getting windows metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
+		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
 	}
 
 	if _, ok := windowsMetricPluginBoundValue[dataRate][receiver]; !ok {
