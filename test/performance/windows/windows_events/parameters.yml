@@ -1,4 +1,4 @@
-receivers: ["windows_events"]
+receivers: ["logs"]
 
 test_case: "logs_windows_events_performance"
 validate_type: "performance"
