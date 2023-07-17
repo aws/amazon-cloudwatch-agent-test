@@ -68,3 +68,65 @@ metric_validation:
     metric_dimension:
       - name: "objectname"
         value: "Memory"
+
+log_validation:
+  - log_value: "Security Informational log"
+    log_level: "Information"
+    log_lines: 1
+    log_stream: "Security"
+    log_source: "WindowsEvents"
+  - log_value: "Security Warning log"
+    log_level: "Warning"
+    log_lines: 1
+    log_stream: "Security"
+    log_source: "WindowsEvents"
+  - log_value: "Security Error log"
+    log_level: "Error"
+    log_lines: 1
+    log_stream: "Security"
+    log_source: "WindowsEvents"
+  - log_value: "Security Critical log"
+    log_level: "Critical"
+    log_lines: 1
+    log_stream: "Security"
+    log_source: "WindowsEvents"
+  - log_value: "System information log"
+    log_level: "Information"
+    log_lines: 1
+    log_stream: "System"
+    log_source: "WindowsEvents"
+  - log_value: "System warning log"
+    log_level: "Warning"
+    log_lines: 1
+    log_stream: "System"
+    log_source: "WindowsEvents"
+  - log_value: "System error log"
+    log_level: "Error"
+    log_lines: 1
+    log_stream: "System"
+    log_source: "WindowsEvents"
+  - log_value: "System Critical log"
+    log_level: "Critical"
+    log_lines: 1
+    log_stream: "System"
+    log_source: "WindowsEvents"
+  - log_value: "Application information log"
+    log_level: "Information"
+    log_lines: 1
+    log_stream: "Application"
+    log_source: "WindowsEvents"
+  - log_value: "Application warning log"
+    log_level: "Warning"
+    log_lines: 1
+    log_stream: "Application"
+    log_source: "WindowsEvents"
+  - log_value: "Application error log"
+    log_level: "Error"
+    log_lines: 1
+    log_stream: "Application"
+    log_source: "WindowsEvents"
+  - log_value: "Application critical log"
+    log_level: "Critical"
+    log_lines: 1
+    log_stream: "Application"
+    log_source: "WindowsEvents"

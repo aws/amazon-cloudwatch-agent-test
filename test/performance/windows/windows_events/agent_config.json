@@ -61,8 +61,8 @@
               "CRITICAL"
             ],
             "event_name": "System",
-            "log_group_name": "EC2_EventLogs",
-            "log_stream_name": "{instance_id}"
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "System"
           },
           {
             "event_format": "xml",
@@ -74,8 +74,8 @@
               "CRITICAL"
             ],
             "event_name": "Security",
-            "log_group_name": "EC2_EventLogs",
-            "log_stream_name": "{instance_id}"
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "Security"
           },
           {
             "event_format": "xml",
@@ -87,8 +87,8 @@
               "CRITICAL"
             ],
             "event_name": "Application",
-            "log_group_name": "EC2_EventLogs",
-            "log_stream_name": "{instance_id}"
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "Application"
           }
         ]
       }
