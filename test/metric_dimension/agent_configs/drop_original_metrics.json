@@ -30,7 +30,7 @@
       "cpu": {
         "drop_original_metrics": ["usage_guest", "usage_idle"],
         "measurement": [
-          "usage_guest",
+          {"name": "usage_guest", "rename": "cpu_usage_visitor"},
           "usage_idle",
           "usage_user"
         ]

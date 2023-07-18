@@ -59,16 +59,9 @@ func (t *DropOriginalMetricsTestRunner) GetAgentConfigFileName() string {
 	return "drop_original_metrics.json"
 }
 
+// unused
 func (t *DropOriginalMetricsTestRunner) GetMeasuredMetrics() []string {
-	return []string{
-		"mem_available",
-		"mem_used_percent",
-		"cpu_usage_guest",
-		"cpu_usage_idle",
-		"cpu_usage_user",
-		"swap_free",
-		"swap_used",
-	}
+	return []string{}
 }
 
 func (t *DropOriginalMetricsTestRunner) validate(want expectation) error {
@@ -113,22 +106,22 @@ func (t *DropOriginalMetricsTestRunner) testCases() map[string][]expectation {
 				},
 			},
 		},
-		"Standard": {
+		"StandardWithRename": {
 			{
 				shouldExist: true,
-				metricNames: []string{"cpu_usage_guest", "cpu_usage_idle", "cpu_usage_user"},
+				metricNames: []string{"cpu_usage_visitor", "cpu_usage_idle", "cpu_usage_user"},
 				dimensions:  []dimension.Instruction{},
 			},
 			{
 				shouldExist: true,
-				metricNames: []string{"cpu_usage_guest", "cpu_usage_idle", "cpu_usage_user"},
+				metricNames: []string{"cpu_usage_visitor", "cpu_usage_idle", "cpu_usage_user"},
 				dimensions: []dimension.Instruction{
 					{"InstanceId", dimension.UnknownDimensionValue()},
 				},
 			},
 			{
 				shouldExist: true,
-				metricNames: []string{"cpu_usage_guest", "cpu_usage_idle", "cpu_usage_user"},
+				metricNames: []string{"cpu_usage_visitor", "cpu_usage_idle", "cpu_usage_user"},
 				dimensions: []dimension.Instruction{
 					{"InstanceId", dimension.UnknownDimensionValue()},
 					{"InstanceType", dimension.UnknownDimensionValue()},
@@ -145,7 +138,7 @@ func (t *DropOriginalMetricsTestRunner) testCases() map[string][]expectation {
 			},
 			{
 				shouldExist: false,
-				metricNames: []string{"cpu_usage_guest", "cpu_usage_idle"},
+				metricNames: []string{"cpu_usage_visitor", "cpu_usage_idle"},
 				dimensions: []dimension.Instruction{
 					{"InstanceId", dimension.UnknownDimensionValue()},
 					{"InstanceType", dimension.UnknownDimensionValue()},
