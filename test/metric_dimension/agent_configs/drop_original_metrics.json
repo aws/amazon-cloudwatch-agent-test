@@ -1,0 +1,47 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10
+  },
+  "metrics": {
+    "force_flush_interval": 5,
+    "namespace": "TestDropOriginalMetrics",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
+    "aggregation_dimensions": [
+      [],
+      [
+        "InstanceId"
+      ],
+      [
+        "InstanceId",
+        "InstanceType"
+      ]
+    ],
+    "metrics_collected": {
+      "mem": {
+        "drop_original_metrics": ["*"],
+        "measurement": [
+          "available",
+          "used_percent"
+        ]
+      },
+      "cpu": {
+        "drop_original_metrics": ["usage_guest", "usage_idle"],
+        "measurement": [
+          {"name": "usage_guest", "rename": "cpu_usage_visitor"},
+          "usage_idle",
+          "usage_user"
+        ]
+      },
+      "swap": {
+        "drop_original_metrics": [],
+        "measurement": [
+          "free",
+          "used"
+        ]
+      }
+    }
+  }
+}
