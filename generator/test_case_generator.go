@@ -139,11 +139,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 		{
-			testDir: "../../test/performance_windows/logs",
+			testDir: "../../test/performance/windows/logs",
 			targets: map[string]map[string]struct{}{"os": {"win-2022": {}}},
 		},
 		{
-			testDir: "../../test/performance_windows/system",
+			testDir: "../../test/performance/windows/system",
 			targets: map[string]map[string]struct{}{"os": {"win-2022": {}}},
 		},
 	},

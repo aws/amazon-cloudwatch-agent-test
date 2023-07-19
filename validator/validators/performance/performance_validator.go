@@ -46,16 +46,14 @@ func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFact
 }
 
 func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
-	if strings.Contains(s.vConfig.GetTestCase(), "windows") {
+	log.Printf("GetOSFamily is returning value: %s", s.vConfig.GetOSFamily())
+	perfInfo := PerformanceInformation{}
+	if s.vConfig.GetOSFamily() == "windows" {
 		stat, err := s.GetWindowsPerformanceMetrics(startTime, endTime)
 		if err != nil {
 			return err
 		}
-		statInfo, err := s.CalculateWindowsMetricStatsAndPackMetrics(stat)
-		if err != nil {
-			return err
-		}
-		err = s.SendPacketToDatabase(statInfo)
+		perfInfo, err = s.CalculateWindowsMetricStatsAndPackMetrics(stat)
 		if err != nil {
 			return err
 		}
@@ -65,16 +63,16 @@ func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
 			return err
 		}
 
-		perfInfo, err := s.CalculateMetricStatsAndPackMetrics(metrics)
-		if err != nil {
-			return err
-		}
-
-		err = s.SendPacketToDatabase(perfInfo)
+		perfInfo, err = s.CalculateMetricStatsAndPackMetrics(metrics)
 		if err != nil {
 			return err
 		}
 	}
+	err := s.SendPacketToDatabase(perfInfo)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -175,7 +173,11 @@ func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statist
 		// GetMetricStatistics provides these statistics, however this will require maintaining multiple data arrays
 		// and can be difficult for code readability. This way follows the same calculation pattern as Linux
 		// and simplify the logics.
-		metricStats := CalculateMetricStatisticsWindows(metric.Datapoints, agentCollectionPeriod)
+		var data []float64
+		for _, datapoint := range metric.Datapoints {
+			data = append(data, *datapoint.Average)
+		}
+		metricStats := CalculateMetricStatisticsBasedOnDataAndPeriod(data, agentCollectionPeriod)
 		log.Printf("Finished calculate metric statictics for metric %s: %+v \n", metricName, metricStats)
 		performanceMetricResults[metricName] = metricStats
 	}
