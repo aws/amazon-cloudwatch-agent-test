@@ -242,6 +242,78 @@ var (
 			},
 		},
 	}
+
+	windowsMetricPluginBoundValue = MetricPluginBoundValue{
+		"1000": {
+			"logs": {
+				"procstat cpu_usage":   float64(250),
+				"procstat memory_rss":  float64(220000000),
+				"procstat memory_vms":  float64(888000000),
+				"Bytes_Sent_Per_Sec":   float64(1800000),
+				"Packets_Sent_Per_Sec": float64(5000),
+			},
+			"system": {
+				"procstat cpu_usage":   float64(15),
+				"procstat memory_rss":  float64(80000000),
+				"procstat memory_vms":  float64(818000000),
+				"Bytes_Sent_Per_Sec":   float64(90000),
+				"Packets_Sent_Per_Sec": float64(100),
+			},
+		},
+		"5000": {
+			"logs": {
+				"procstat cpu_usage":   float64(400),
+				"procstat memory_rss":  float64(540000000),
+				"procstat memory_vms":  float64(1100000000),
+				"Bytes_Sent_Per_Sec":   float64(6500000),
+				"Packets_Sent_Per_Sec": float64(8500),
+			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(80000000),
+				"procstat_memory_vms":  float64(818000000),
+				"Bytes_Sent_Per_Sec":   float64(90000),
+				"Packets_Sent_Per_Sec": float64(100),
+			},
+		},
+		"10000": {
+			"logs": {
+				"procstat_cpu_usage":   float64(400),
+				"procstat_memory_rss":  float64(800000000),
+				"procstat_memory_vms":  float64(1500000000),
+				"Bytes_Sent_Per_Sec":   float64(6820000),
+				"Packets_Sent_Per_Sec": float64(8300),
+			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(80000000),
+				"procstat_memory_vms":  float64(818000000),
+				"Bytes_Sent_Per_Sec":   float64(90000),
+				"Packets_Sent_Per_Sec": float64(100),
+			},
+		},
+		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
+		// https://github.com/aws/amazon-cloudwatch-agent/blob/c85501042b088014ec40b636a8b6b2ccc9739738/translator/translate/agent/ruleMetricBufferLimit.go#L14
+		// For more information on Metric Buffer and how they will exchange for the resources, please follow
+		// https://github.com/influxdata/telegraf/wiki/MetricBuffer
+
+		"50000": {
+			"logs": {
+				"procstat_cpu_usage":   float64(400),
+				"procstat_memory_rss":  float64(800000000),
+				"procstat_memory_vms":  float64(1500000000),
+				"Bytes_Sent_Per_Sec":   float64(6900000),
+				"Packets_Sent_Per_Sec": float64(6500),
+			},
+			"system": {
+				"procstat_cpu_usage":   float64(15),
+				"procstat_memory_rss":  float64(80000000),
+				"procstat_memory_vms":  float64(818000000),
+				"Bytes_Sent_Per_Sec":   float64(90000),
+				"Packets_Sent_Per_Sec": float64(100),
+			},
+		},
+	}
 )
 
 type StressValidator struct {

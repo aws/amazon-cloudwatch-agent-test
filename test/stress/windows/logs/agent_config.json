@@ -5,7 +5,7 @@
     "metrics": {
       "namespace": "CloudWatchAgentStress",
       "metrics_collected": {
-        "net": {
+        "Network Interface": {
           "resources": [
             "*"
           ],
@@ -23,7 +23,7 @@
         },
         "procstat": [
           {
-            "exe": "cloudwatch-agent",
+            "exe": "amazon-cloudwatch-agent.exe",
             "measurement": [
               "cpu_usage",
               "memory_rss",
