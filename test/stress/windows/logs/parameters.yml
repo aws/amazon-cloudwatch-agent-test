@@ -51,12 +51,14 @@ metric_validation:
 
   # Validations for Network Interface
   - metric_name: "Bytes_Sent_Per_Sec"
+    metric_sample_count: 300
     metric_dimension:
       - name: "objectname"
         value: "Network Interface"
       - name: "instance"
         value: "Amazon Elastic Network Adapter"
   - metric_name: "Packets_Sent_Per_Sec"
+    metric_sample_count: 300
     metric_dimension:
       - name: "objectname"
         value: "Network Interface"
@@ -64,7 +66,7 @@ metric_validation:
         value: "Amazon Elastic Network Adapter"
   # Validate Memory metrics
   - metric_name: "Available_Bytes"
-    metric_sample_count: 60
+    metric_sample_count: 300
     metric_dimension:
       - name: "objectname"
         value: "Memory"
