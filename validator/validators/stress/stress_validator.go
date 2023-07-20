@@ -439,18 +439,18 @@ func (s *StressValidator) ValidateStressMetricWindows(metricName, metricNamespac
 		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
 	}
 
-	if _, ok := metricPluginBoundValue[dataRate][receiver]; !ok {
+	if _, ok := windowsMetricPluginBoundValue[dataRate][receiver]; !ok {
 		return fmt.Errorf("\n plugin %s does not have data rate", receiver)
 	}
 
-	if _, ok := metricPluginBoundValue[dataRate][receiver][metricName]; !ok {
-		return fmt.Errorf("\n metric %s does not have bound", receiver)
+	if _, ok := windowsMetricPluginBoundValue[dataRate][receiver][metricName]; !ok {
+		return fmt.Errorf("\n metric %s does not have bound", metricName)
 	}
 
 	// Assuming each plugin are testing one at a time
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 	metricValue := *metrics.Datapoints[0].Maximum
-	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
+	upperBoundValue := windowsMetricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
 	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f \n", metricName, metricNamespace, metricValue, upperBoundValue)
 
 	if metricValue < 0 || metricValue > upperBoundValue {
