@@ -131,6 +131,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"ec2_windows_stress": {
 		{testDir: "../../test/stress/windows/logs"},
+		{testDir: "../../test/stress/windows/system"},
 	},
 	"ecs_fargate": {
 		{testDir: "./test/ecs/ecs_metadata"},
