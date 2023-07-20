@@ -24,28 +24,28 @@ metric_validation:
     metric_sample_count: 300
     metric_dimension: 
       - name: "exe"
-        value: "amazon-cloudwatch-agent.exe"
+        value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent.exe"
   - metric_name: "procstat memory_rss"
     metric_sample_count: 300
     metric_dimension:
       - name: "exe"
-        value: "amazon-cloudwatch-agent.exe"
+        value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent.exe"
   - metric_name: "procstat memory_vms"
     metric_sample_count: 300
     metric_dimension:
       - name: "exe"
-        value: "amazon-cloudwatch-agent.exe"
+        value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent.exe"
   - metric_name: "procstat write_bytes"
     metric_sample_count: 300
     metric_dimension:
       - name: "exe"
-        value: "amazon-cloudwatch-agent.exe"
+        value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent.exe"
 
