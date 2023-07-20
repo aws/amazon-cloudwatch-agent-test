@@ -3,7 +3,7 @@
     "debug": true
   },
   "metrics": {
-    "namespace": "CloudWatchAgentPerformance",
+    "namespace": "CloudWatchAgentStress",
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },
