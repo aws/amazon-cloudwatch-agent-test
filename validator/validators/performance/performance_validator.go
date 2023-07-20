@@ -46,7 +46,6 @@ func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFact
 }
 
 func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
-	log.Printf("GetOSFamily is returning value: %s", s.vConfig.GetOSFamily())
 	perfInfo := PerformanceInformation{}
 	if s.vConfig.GetOSFamily() == "windows" {
 		stat, err := s.GetWindowsPerformanceMetrics(startTime, endTime)
