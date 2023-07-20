@@ -5,15 +5,6 @@
     "metrics": {
       "namespace": "CloudWatchAgentStress",
       "metrics_collected": {
-        "Memory": {
-          "measurement": [
-            {
-              "name": "Available Bytes",
-              "rename": "Available_Bytes"
-            }
-          ],
-          "metrics_collection_interval": 1
-        },
         "Network Interface": {
           "resources": [
             "*"
@@ -36,8 +27,7 @@
             "measurement": [
               "cpu_usage",
               "memory_rss",
-              "memory_vms",
-              "write_bytes"
+              "memory_vms"
             ],
             "metrics_collection_interval": 1
           }

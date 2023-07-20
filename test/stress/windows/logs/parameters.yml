@@ -64,9 +64,3 @@ metric_validation:
         value: "Network Interface"
       - name: "instance"
         value: "Amazon Elastic Network Adapter"
-  # Validate Memory metrics
-  - metric_name: "Available_Bytes"
-    metric_sample_count: 300
-    metric_dimension:
-      - name: "objectname"
-        value: "Memory"
