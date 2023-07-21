@@ -71,3 +71,8 @@ variable "license_manager_arn" {
   default = ""
 }
 
+variable "user" {
+  type    = string
+  default = "ec2-user"
+}
+

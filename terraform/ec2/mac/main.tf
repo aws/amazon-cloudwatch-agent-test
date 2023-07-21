@@ -156,7 +156,7 @@ resource "null_resource" "integration_test_run" {
   }
 
   depends_on = [
-    null_resource.integration_test_setup,
+    null_resource.integration_test,
     null_resource.integration_test_wait,
   ]
 }
@@ -172,5 +172,14 @@ data "aws_ami" "latest" {
   filter {
     name   = "architecture"
     values = [var.arc == "arm64" ? "arm64_mac" : "x86_64_mac"]
+  }
+}
+
+resource "null_resource" "integration_test_wait" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Sleeping after initiating instance restart"
+      sleep 180
+    EOT
   }
 }

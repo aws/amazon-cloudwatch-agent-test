@@ -116,36 +116,15 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{testDir: "../../../test/assume_role"},
 	},
 	"ec2_performance": {
-		// Assigning OS so Windows tests don't run for Linux and also bundle all performance tests under one workflow section
-		// This is a two-way door and we can separate this into separate matrix if preferred
-		{
-			testDir: "../../test/performance/emf",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "../../test/performance/logs",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "../../test/performance/system",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "../../test/performance/statsd",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "../../test/performance/collectd",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "../../test/performance/windows/logs",
-			targets: map[string]map[string]struct{}{"os": {"win-2022": {}}},
-		},
-		{
-			testDir: "../../test/performance/windows/system",
-			targets: map[string]map[string]struct{}{"os": {"win-2022": {}}},
-		},
+		{testDir: "../../test/performance/emf"},
+		{testDir: "../../test/performance/logs"},
+		{testDir: "../../test/performance/system"},
+		{testDir: "../../test/performance/statsd"},
+		{testDir: "../../test/performance/collectd"},
+	},
+	"ec2_windows_performance": {
+		{testDir: "../../test/performance/windows/logs"},
+		{testDir: "../../test/performance/windows/system"},
 	},
 	"ec2_stress": {
 		{testDir: "../../test/stress/emf"},
