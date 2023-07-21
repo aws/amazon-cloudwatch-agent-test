@@ -19,7 +19,7 @@ variable "ami_family" {
       install_package   = "amazon-cloudwatch-agent.msi"
       install_validator = "validator.exe"
       temp_folder       = "C:/Users/Administrator/AppData/Local/Temp"
-      install_command   = "msiexec /i C:\\amazon-cloudwatch-agent.msi"
+      install_command   = "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-"
       start_command     = "powershell \"& 'C:/Program Files/Amazon/AmazonCloudWatchAgent/amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:%s\""
       status_command    = "powershell \"& 'C:/Program Files/Amazon/AmazonCloudWatchAgent/amazon-cloudwatch-agent-ctl.ps1' -a status\""
       connection_type   = "winrm"

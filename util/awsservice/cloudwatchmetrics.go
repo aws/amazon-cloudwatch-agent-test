@@ -113,6 +113,34 @@ func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime
 	return data, nil
 }
 
+func GetMetricStatistics(
+	metricName string,
+	namespace string,
+	dimensions []types.Dimension,
+	startTime time.Time,
+	endTime time.Time,
+	periodInSeconds int32,
+	statType []types.Statistic,
+	extendedStatType []string,
+) (*cloudwatch.GetMetricStatisticsOutput, error) {
+	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
+		MetricName: aws.String(metricName),
+		Namespace:  aws.String(namespace),
+		StartTime:  aws.Time(startTime),
+		EndTime:    aws.Time(endTime),
+		Period:     aws.Int32(periodInSeconds),
+		Dimensions: dimensions,
+	}
+	// GetMetricStatistics can only have either Statistics or ExtendedStatistics, not both
+	if extendedStatType == nil {
+		metricStatsInput.Statistics = statType
+	} else {
+		metricStatsInput.ExtendedStatistics = extendedStatType
+	}
+
+	return CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
+}
+
 func BuildDimensionFilterList(appendDimension int) []types.DimensionFilter {
 	// we append dimension from 0 to max number - 2
 	// then we add dimension instance id
