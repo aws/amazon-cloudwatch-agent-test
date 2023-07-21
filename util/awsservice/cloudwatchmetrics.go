@@ -113,38 +113,32 @@ func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime
 	return data, nil
 }
 
-func GetMetricStatistics(metricName, namespace string, dimensions []types.Dimension,
-	startTime time.Time, endTime time.Time, periodInSeconds int32, statType []types.Statistic, extendedStatType []string) (*cloudwatch.GetMetricStatisticsOutput, error) {
-	metricStatsInput := cloudwatch.GetMetricStatisticsInput{}
+func GetMetricStatistics(
+	metricName string,
+	namespace string,
+	dimensions []types.Dimension,
+	startTime time.Time,
+	endTime time.Time,
+	periodInSeconds int32,
+	statType []types.Statistic,
+	extendedStatType []string,
+) (*cloudwatch.GetMetricStatisticsOutput, error) {
+	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
+		MetricName: aws.String(metricName),
+		Namespace:  aws.String(namespace),
+		StartTime:  aws.Time(startTime),
+		EndTime:    aws.Time(endTime),
+		Period:     aws.Int32(periodInSeconds),
+		Dimensions: dimensions,
+	}
 	// GetMetricStatistics can only have either Statistics or ExtendedStatistics, not both
 	if extendedStatType == nil {
-		metricStatsInput = cloudwatch.GetMetricStatisticsInput{
-			MetricName: aws.String(metricName),
-			Namespace:  aws.String(namespace),
-			StartTime:  aws.Time(startTime),
-			EndTime:    aws.Time(endTime),
-			Period:     aws.Int32(periodInSeconds),
-			Dimensions: dimensions,
-			Statistics: statType,
-		}
+		metricStatsInput.Statistics = statType
 	} else {
-		metricStatsInput = cloudwatch.GetMetricStatisticsInput{
-			MetricName:         aws.String(metricName),
-			Namespace:          aws.String(namespace),
-			StartTime:          aws.Time(startTime),
-			EndTime:            aws.Time(endTime),
-			Period:             aws.Int32(periodInSeconds),
-			Dimensions:         dimensions,
-			ExtendedStatistics: extendedStatType,
-		}
-	}
-	data, err := CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
-	if err != nil {
-		return nil, err
+		metricStatsInput.ExtendedStatistics = extendedStatType
 	}
 
-	return data, err
-
+	return CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
 }
 
 func BuildDimensionFilterList(appendDimension int) []types.DimensionFilter {
