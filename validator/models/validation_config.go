@@ -31,6 +31,7 @@ type ValidateConfig interface {
 	GetLogValidation() []LogValidation
 	GetCommitInformation() (string, int64)
 	GetUniqueID() string
+	GetOSFamily() string
 }
 
 type validatorConfig struct {
@@ -44,6 +45,7 @@ type validatorConfig struct {
 	NumberMonitoredLogs   int    `yaml:"number_monitored_logs"`   // Number of logs to be monitored
 	ValuesPerMinute       string `yaml:"values_per_minute"`       // Number of metrics to be sent or number of log lines to write
 	AgentCollectionPeriod int    `yaml:"agent_collection_period"` // Number of seconds the agent should run and collect the metrics
+	OSFamily              string `yaml:"os_family"`               // OS Family for the validator test
 
 	ConfigPath string `yaml:"cloudwatch_agent_config"`
 
@@ -170,4 +172,8 @@ func (v *validatorConfig) GetCommitInformation() (string, int64) {
 
 func (v *validatorConfig) GetUniqueID() string {
 	return uuid.NewString()
+}
+
+func (v *validatorConfig) GetOSFamily() string {
+	return v.OSFamily
 }

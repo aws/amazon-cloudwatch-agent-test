@@ -5,6 +5,7 @@ package performance
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"log"
 	"strings"
 	"time"
@@ -27,7 +28,7 @@ const (
 
 var (
 	// The default unit for these metrics is byte. However, we want to convert to MB for easier understanding
-	metricsConvertToMB = []string{"mem_total", "procstat_memory_rss", "procstat_memory_swap", "procstat_memory_data", "procstat_memory_vms", "procstat_write_bytes", "procstat_bytes_sent"}
+	metricsConvertToMB = []string{"mem_total", "procstat_memory_rss", "procstat_memory_swap", "procstat_memory_data", "procstat_memory_vms", "procstat_write_bytes", "procstat_bytes_sent", "memory_rss", "memory_vms", "write_bytes", "Bytes_Sent_Per_Sec", "Available_Bytes"}
 )
 
 type PerformanceValidator struct {
@@ -45,20 +46,32 @@ func NewPerformanceValidator(vConfig models.ValidateConfig) models.ValidatorFact
 }
 
 func (s *PerformanceValidator) CheckData(startTime, endTime time.Time) error {
-	metrics, err := s.GetPerformanceMetrics(startTime, endTime)
+	perfInfo := PerformanceInformation{}
+	if s.vConfig.GetOSFamily() == "windows" {
+		stat, err := s.GetWindowsPerformanceMetrics(startTime, endTime)
+		if err != nil {
+			return err
+		}
+		perfInfo, err = s.CalculateWindowsMetricStatsAndPackMetrics(stat)
+		if err != nil {
+			return err
+		}
+	} else {
+		metrics, err := s.GetPerformanceMetrics(startTime, endTime)
+		if err != nil {
+			return err
+		}
+
+		perfInfo, err = s.CalculateMetricStatsAndPackMetrics(metrics)
+		if err != nil {
+			return err
+		}
+	}
+	err := s.SendPacketToDatabase(perfInfo)
 	if err != nil {
 		return err
 	}
 
-	perfInfo, err := s.CalculateMetricStatsAndPackMetrics(metrics)
-	if err != nil {
-		return err
-	}
-
-	err = s.SendPacketToDatabase(perfInfo)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -131,6 +144,46 @@ func (s *PerformanceValidator) CalculateMetricStatsAndPackMetrics(metrics []type
 	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
 }
 
+func (s *PerformanceValidator) CalculateWindowsMetricStatsAndPackMetrics(statistic []*cloudwatch.GetMetricStatisticsOutput) (PerformanceInformation, error) {
+	var (
+		receiver               = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
+		commitHash, commitDate = s.vConfig.GetCommitInformation()
+		dataType               = s.vConfig.GetDataType()
+		dataRate               = fmt.Sprint(s.vConfig.GetDataRate())
+		uniqueID               = s.vConfig.GetUniqueID()
+		agentCollectionPeriod  = s.vConfig.GetAgentCollectionPeriod().Seconds()
+	)
+	performanceMetricResults := make(map[string]Stats)
+
+	for _, metric := range statistic {
+		metricLabel := strings.Split(*metric.Label, " ")
+		metricName := metricLabel[len(metricLabel)-1]
+		metricValues := metric.Datapoints
+		//Convert every bytes to MB
+		if slices.Contains(metricsConvertToMB, metricName) {
+			for i, val := range metricValues {
+				*metricValues[i].Average = *val.Average / (1024 * 1024)
+			}
+		}
+		log.Printf("Start calculate metric statictics for metric %s \n", metricName)
+		if !isAllStatisticsGreaterThanOrEqualToZero(metricValues) {
+			return nil, fmt.Errorf("\n values are not all greater than or equal to zero for metric %s with values: %v", metricName, metricValues)
+		}
+		// GetMetricStatistics provides these statistics, however this will require maintaining multiple data arrays
+		// and can be difficult for code readability. This way follows the same calculation pattern as Linux
+		// and simplify the logics.
+		var data []float64
+		for _, datapoint := range metric.Datapoints {
+			data = append(data, *datapoint.Average)
+		}
+		metricStats := CalculateMetricStatisticsBasedOnDataAndPeriod(data, agentCollectionPeriod)
+		log.Printf("Finished calculate metric statictics for metric %s: %+v \n", metricName, metricStats)
+		performanceMetricResults[metricName] = metricStats
+	}
+
+	return packIntoPerformanceInformation(uniqueID, receiver, dataType, fmt.Sprint(agentCollectionPeriod), commitHash, commitDate, map[string]interface{}{dataRate: performanceMetricResults}), nil
+}
+
 func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Time) ([]types.MetricDataResult, error) {
 	var (
 		metricNamespace              = s.vConfig.GetMetricNamespace()
@@ -155,6 +208,20 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 		performanceMetricDataQueries = append(performanceMetricDataQueries, s.buildPerformanceMetricQueries(metric.MetricName, metricNamespace, metricDimensions))
 	}
 
+	for _, stat := range validationMetric {
+		metricDimensions := []types.Dimension{
+			{
+				Name:  aws.String("InstanceId"),
+				Value: aws.String(ec2InstanceId),
+			},
+		}
+		for _, dimension := range stat.MetricDimension {
+			metricDimensions = append(metricDimensions, types.Dimension{
+				Name:  aws.String(dimension.Name),
+				Value: aws.String(dimension.Value),
+			})
+		}
+	}
 	metrics, err := awsservice.GetMetricData(performanceMetricDataQueries, startTime, endTime)
 
 	if err != nil {
@@ -162,6 +229,48 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 	}
 
 	return metrics.MetricDataResults, nil
+}
+
+func (s *PerformanceValidator) GetWindowsPerformanceMetrics(startTime, endTime time.Time) ([]*cloudwatch.GetMetricStatisticsOutput, error) {
+	var (
+		metricNamespace  = s.vConfig.GetMetricNamespace()
+		validationMetric = s.vConfig.GetMetricValidation()
+		ec2InstanceId    = awsservice.GetInstanceId()
+	)
+	log.Printf("Start getting performance metrics from CloudWatch")
+
+	var statistics = []*cloudwatch.GetMetricStatisticsOutput{}
+	for _, stat := range validationMetric {
+		metricDimensions := []types.Dimension{
+			{
+				Name:  aws.String("InstanceId"),
+				Value: aws.String(ec2InstanceId),
+			},
+		}
+		for _, dimension := range stat.MetricDimension {
+			metricDimensions = append(metricDimensions, types.Dimension{
+				Name:  aws.String(dimension.Name),
+				Value: aws.String(dimension.Value),
+			})
+		}
+		log.Printf("Trying to get Metric %s for GetMetricStatistic ", stat.MetricName)
+		statList := []types.Statistic{
+			types.StatisticAverage,
+		}
+		// Windows procstat metrics always append a space and GetMetricData does not support space character
+		// Only workaround is to use GetMetricStatistics and retrieve the datapoints on a secondly period
+		statistic, err := awsservice.GetMetricStatistics(stat.MetricName, metricNamespace, metricDimensions, startTime, endTime, 1, statList, nil)
+		if err != nil {
+			return nil, err
+		}
+		statistics = append(statistics, statistic)
+		log.Printf("Statistics for Metric: %s", stat.MetricName)
+		for _, datapoint := range statistic.Datapoints {
+			log.Printf("Average: %f", *(datapoint.Average))
+		}
+	}
+
+	return statistics, nil
 }
 
 func (s *PerformanceValidator) buildPerformanceMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) types.MetricDataQuery {
@@ -208,6 +317,18 @@ func isAllValuesGreaterThanOrEqualToZero(values []float64) bool {
 	}
 	for _, value := range values {
 		if value < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func isAllStatisticsGreaterThanOrEqualToZero(datapoints []types.Datapoint) bool {
+	if len(datapoints) == 0 {
+		return false
+	}
+	for _, datapoint := range datapoints {
+		if *datapoint.Average < 0 {
 			return false
 		}
 	}
