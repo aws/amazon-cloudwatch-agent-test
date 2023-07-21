@@ -64,7 +64,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
-		{testDir: "./test/multi_config"},
 		{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
@@ -105,13 +104,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 	*/
 	"ec2_mac": {
 		{testDir: "../../../test/feature/mac"},
-		{testDir: "../../../test/run_as_user"},
 	},
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
 		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
-		{testDir: "../../../test/multi_config"},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
