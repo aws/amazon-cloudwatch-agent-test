@@ -352,7 +352,7 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 		}
 
 		var err error
-		if strings.Contains(s.vConfig.GetTestCase(), "windows") {
+		if s.vConfig.GetOSFamily() == "windows" {
 			err = s.ValidateStressMetricWindows(metric.MetricName, metricNamespace, metricDimensions, metric.MetricSampleCount, startTime, endTime)
 		} else {
 			err = s.ValidateStressMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricSampleCount, startTime, endTime)

@@ -11,6 +11,7 @@ agent_collection_period: 300
 commit_hash: <commit_hash>
 commit_date: <commit_date>
 
+os_family: "<os_family>"
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 
 # Metric that the test needs to validate; moreover, the stress validation already has
