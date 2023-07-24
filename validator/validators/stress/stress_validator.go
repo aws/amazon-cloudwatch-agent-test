@@ -242,6 +242,78 @@ var (
 			},
 		},
 	}
+
+	windowsMetricPluginBoundValue = MetricPluginBoundValue{
+		"1000": {
+			"logs": {
+				"procstat cpu_usage":   float64(250),
+				"procstat memory_rss":  float64(220000000),
+				"procstat memory_vms":  float64(888000000),
+				"Bytes_Sent_Per_Sec":   float64(1800000),
+				"Packets_Sent_Per_Sec": float64(5000),
+			},
+			"system": {
+				"procstat cpu_usage":   float64(15),
+				"procstat memory_rss":  float64(80000000),
+				"procstat memory_vms":  float64(818000000),
+				"Bytes_Sent_Per_Sec":   float64(90000),
+				"Packets_Sent_Per_Sec": float64(100),
+			},
+		},
+		"5000": {
+			"logs": {
+				"procstat cpu_usage":   float64(400),
+				"procstat memory_rss":  float64(540000000),
+				"procstat memory_vms":  float64(1100000000),
+				"Bytes_Sent_Per_Sec":   float64(6500000),
+				"Packets_Sent_Per_Sec": float64(8500),
+			},
+			"system": {
+				"procstat cpu_usage":   float64(15),
+				"procstat memory_rss":  float64(80000000),
+				"procstat memory_vms":  float64(818000000),
+				"Bytes_Sent_Per_Sec":   float64(90000),
+				"Packets_Sent_Per_Sec": float64(100),
+			},
+		},
+		"10000": {
+			"logs": {
+				"procstat cpu_usage":   float64(400),
+				"procstat memory_rss":  float64(800000000),
+				"procstat memory_vms":  float64(1500000000),
+				"Bytes_Sent_Per_Sec":   float64(6820000),
+				"Packets_Sent_Per_Sec": float64(8300),
+			},
+			"system": {
+				"procstat cpu_usage":   float64(15),
+				"procstat memory_rss":  float64(80000000),
+				"procstat memory_vms":  float64(818000000),
+				"Bytes_Sent_Per_Sec":   float64(90000),
+				"Packets_Sent_Per_Sec": float64(100),
+			},
+		},
+		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
+		// https://github.com/aws/amazon-cloudwatch-agent/blob/c85501042b088014ec40b636a8b6b2ccc9739738/translator/translate/agent/ruleMetricBufferLimit.go#L14
+		// For more information on Metric Buffer and how they will exchange for the resources, please follow
+		// https://github.com/influxdata/telegraf/wiki/MetricBuffer
+
+		"50000": {
+			"logs": {
+				"procstat cpu_usage":   float64(400),
+				"procstat memory_rss":  float64(800000000),
+				"procstat memory_vms":  float64(1500000000),
+				"Bytes_Sent_Per_Sec":   float64(6900000),
+				"Packets_Sent_Per_Sec": float64(6500),
+			},
+			"system": {
+				"procstat cpu_usage":   float64(15),
+				"procstat memory_rss":  float64(80000000),
+				"procstat memory_vms":  float64(818000000),
+				"Bytes_Sent_Per_Sec":   float64(90000),
+				"Packets_Sent_Per_Sec": float64(100),
+			},
+		},
+	}
 )
 
 type StressValidator struct {
@@ -278,7 +350,13 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(dimension.Value),
 			})
 		}
-		err := s.ValidateStressMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricSampleCount, startTime, endTime)
+
+		var err error
+		if s.vConfig.GetOSFamily() == "windows" {
+			err = s.ValidateStressMetricWindows(metric.MetricName, metricNamespace, metricDimensions, metric.MetricSampleCount, startTime, endTime)
+		} else {
+			err = s.ValidateStressMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricSampleCount, startTime, endTime)
+		}
 		if err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
@@ -298,7 +376,7 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 
 	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
 
-	// We are only interesting in the maxium metric values within the time range
+	// We are only interested in the maximum metric values within the time range
 	metrics, err := awsservice.GetMetricData(stressMetricQueries, startTime, endTime)
 	if err != nil {
 		return err
@@ -320,6 +398,59 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 	metricValue := metrics.MetricDataResults[0].Values[0]
 	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
+	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f \n", metricName, metricNamespace, metricValue, upperBoundValue)
+
+	if metricValue < 0 || metricValue > upperBoundValue {
+		return fmt.Errorf("\n metric %s with value %f is larger than %f limit", metricName, metricValue, upperBoundValue)
+	}
+
+	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
+	// , it will need to have 60 sample counts - 1 datapoint / second)
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-5, metricSampleCount, int32(boundAndPeriod)); !ok {
+		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount-5, metricSampleCount)
+	}
+
+	return nil
+}
+
+func (s *StressValidator) ValidateStressMetricWindows(metricName, metricNamespace string, metricDimensions []types.Dimension, metricSampleCount int, startTime, endTime time.Time) error {
+	var (
+		dataRate       = fmt.Sprint(s.vConfig.GetDataRate())
+		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
+		receiver       = s.vConfig.GetPluginsConfig()[0] //Assuming one plugin at a time
+	)
+	log.Printf("Start to collect and validate metric %s with the namespace %s, start time %v and end time %v \n", metricName, metricNamespace, startTime, endTime)
+
+	metrics, err := awsservice.GetMetricStatistics(
+		metricName,
+		metricNamespace,
+		metricDimensions,
+		startTime,
+		endTime,
+		int32(boundAndPeriod),
+		[]types.Statistic{types.StatisticMaximum},
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	if len(metrics.Datapoints) == 0 || metrics.Datapoints[0].Maximum == nil {
+		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
+	}
+
+	if _, ok := windowsMetricPluginBoundValue[dataRate][receiver]; !ok {
+		return fmt.Errorf("\n plugin %s does not have data rate", receiver)
+	}
+
+	if _, ok := windowsMetricPluginBoundValue[dataRate][receiver][metricName]; !ok {
+		return fmt.Errorf("\n metric %s does not have bound", metricName)
+	}
+
+	// Assuming each plugin are testing one at a time
+	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
+	metricValue := *metrics.Datapoints[0].Maximum
+	upperBoundValue := windowsMetricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
 	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f \n", metricName, metricNamespace, metricValue, upperBoundValue)
 
 	if metricValue < 0 || metricValue > upperBoundValue {
