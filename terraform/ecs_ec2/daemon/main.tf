@@ -11,7 +11,7 @@ module "basic_components" {
 }
 
 resource "aws_ecs_cluster" "cluster" {
-  name = "cwagent-integ-test-cluster-${module.common.testing_id}"
+  name = "${local.basename}-${module.common.testing_id}"
 }
 
 ######
@@ -63,6 +63,12 @@ resource "aws_autoscaling_group" "cluster" {
     value               = ""
     propagate_at_launch = true
   }
+
+  tag {
+    key                 = "BaseClusterName"
+    value               = local.basename
+    propagate_at_launch = true
+  }
 }
 
 resource "aws_ecs_capacity_provider" "cluster" {
@@ -108,6 +114,7 @@ locals {
   prometheus_config             = fileexists("../../../${var.test_dir}/resources/ecs_prometheus.tpl") ? "../../../${var.test_dir}/resources/ecs_prometheus.tpl" : "./default_resources/default_ecs_prometheus.tpl"
   extra_apps_ecs_taskdef        = fileexists("../../../${var.test_dir}/resources/extra_apps.tpl") ? "../../../${var.test_dir}/resources/extra_apps.tpl" : "./default_resources/default_extra_apps.tpl"
   cwagent_config_ssm_param_name = "cwagent-integ-test-ssm-config-${module.common.testing_id}"
+  basename                      = "cwagent-integ-test-cluster"
 }
 
 data "template_file" "cwagent_config" {
