@@ -137,6 +137,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/stress/windows/logs"},
 		{testDir: "../../test/stress/windows/system"},
 	},
+	"ec2_trace_integration": {
+		{testDir: "../../test/trace/integration/trace"},
+	},
 	"ecs_fargate": {
 		{testDir: "./test/ecs/ecs_metadata"},
 	},
