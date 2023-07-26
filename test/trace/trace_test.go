@@ -6,22 +6,21 @@ package trace
 import (
 	"context"
 	"encoding/json"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/trace/generator"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/trace/generator/otlp"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/trace/generator/xray"
 	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/aws-sdk-go-v2/service/xray/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/generator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/generator/otlp"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/generator/xray"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/util/awsservice"
 )
 
 const (
@@ -87,7 +86,7 @@ func TestTraces(t *testing.T) {
 			},
 		},
 	}
-	t.Logf("Sanity check: %d", len(testCases))
+	t.Logf("Sanity check: number of test cases:%d", len(testCases))
 	for name, testCase := range testCases {
 
 		t.Run(name, func(t *testing.T) {

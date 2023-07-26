@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/aws-xray-sdk-go/xray"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/generator"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/trace/generator"
 )
 
 var testErr = errors.New("test error")

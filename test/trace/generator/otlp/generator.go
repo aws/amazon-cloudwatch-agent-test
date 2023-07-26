@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/maps"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/generator"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/trace/generator"
 )
 
 const (
