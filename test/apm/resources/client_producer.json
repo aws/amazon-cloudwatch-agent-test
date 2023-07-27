@@ -1,0 +1,199 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "k8s.namespace.name",
+            "value": {
+              "stringValue": "default"
+            }
+          },
+          {
+            "key": "k8s.pod.name",
+            "value": {
+              "stringValue": "pod-name"
+            }
+          },
+          {
+            "key": "aws.deployment.name",
+            "value": {
+              "stringValue": "service-name"
+            }
+          },
+          {
+            "key": "host.id",
+            "value": {
+              "stringValue": "i-00000000000000000"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "metrics": [
+            {
+              "name": "Error",
+              "unit": "Milliseconds",
+              "sum": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "aws.span.kind",
+                        "value": {
+                          "stringValue": "CLIENT"
+                        }
+                      },
+                      {
+                        "key": "aws.local.operation",
+                        "value": {
+                          "stringValue": "operation"
+                        }
+                      },
+                      {
+                        "key": "aws.local.service",
+                        "value": {
+                          "stringValue": "service-name"
+                        }
+                      },
+                      {
+                        "key": "aws.remote.operation",
+                        "value": {
+                          "stringValue": "remote-operation"
+                        }
+                      },
+                      {
+                        "key": "aws.remote.service",
+                        "value": {
+                          "stringValue": "service-name-remote"
+                        }
+                      },
+                      {
+                        "key": "aws.remote.target",
+                        "value": {
+                          "stringValue": "remote-target"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "sum": 0,
+                    "min": 0,
+                    "max": 0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Fault",
+              "unit": "Milliseconds",
+              "sum": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "aws.span.kind",
+                        "value": {
+                          "stringValue": "CLIENT"
+                        }
+                      },
+                      {
+                        "key": "aws.local.operation",
+                        "value": {
+                          "stringValue": "operation"
+                        }
+                      },
+                      {
+                        "key": "aws.local.service",
+                        "value": {
+                          "stringValue": "service-name"
+                        }
+                      },
+                      {
+                        "key": "aws.remote.operation",
+                        "value": {
+                          "stringValue": "remote-operation"
+                        }
+                      },
+                      {
+                        "key": "aws.remote.service",
+                        "value": {
+                          "stringValue": "service-name-remote"
+                        }
+                      },
+                      {
+                        "key": "aws.remote.target",
+                        "value": {
+                          "stringValue": "remote-target"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "sum": 0,
+                    "min": 0,
+                    "max": 0
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Latency",
+              "unit": "Milliseconds",
+              "sum": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "aws.span.kind",
+                        "value": {
+                          "stringValue": "CLIENT"
+                        }
+                      },
+                      {
+                        "key": "aws.local.operation",
+                        "value": {
+                          "stringValue": "operation"
+                        }
+                      },
+                      {
+                        "key": "aws.local.service",
+                        "value": {
+                          "stringValue": "service-name"
+                        }
+                      },
+                      {
+                        "key": "aws.remote.operation",
+                        "value": {
+                          "stringValue": "remote-operation"
+                        }
+                      },
+                      {
+                        "key": "aws.remote.service",
+                        "value": {
+                          "stringValue": "service-name-remote"
+                        }
+                      },
+                      {
+                        "key": "aws.remote.target",
+                        "value": {
+                          "stringValue": "remote-target"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "sum": 0,
+                    "min": 0,
+                    "max": 0
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

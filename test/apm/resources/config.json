@@ -1,0 +1,19 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "logs": {
+    "metrics_collected": {
+      "apm": {
+        "enabled": true
+      }
+    }
+  },
+  "traces": {
+    "traces_collected": {
+      "apm": {
+        "enabled": true
+      }
+    }
+  }
+}
