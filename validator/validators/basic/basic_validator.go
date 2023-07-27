@@ -105,13 +105,13 @@ func (s *BasicValidator) Cleanup() error {
 	return nil
 }
 
-func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource string, numberOfLogLine int, startTime, endTime time.Time) error {
+func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource string, expectedNumberOfLogLine int, startTime, endTime time.Time) error {
 	var (
 		logGroup = awsservice.GetInstanceId()
 	)
-	log.Printf("Start to validate log '%s' with number of logs lines %d within log group %s, log stream %s, start time %v and end time %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime)
+	log.Printf("Start to validate log '%s' with number of logs lines %d within log group %s, log stream %s, start time %v and end time %v", logLine, expectedNumberOfLogLine, logGroup, logStream, startTime, endTime)
 	ok, err := awsservice.ValidateLogs(logGroup, logStream, &startTime, &endTime, func(logs []string) bool {
-		if len(logs) < 1 {
+		if len(logs) == 0 {
 			return false
 		}
 		actualNumberOfLogLines := 0
@@ -128,11 +128,11 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource st
 			}
 		}
 
-		return numberOfLogLine <= actualNumberOfLogLines
+		return expectedNumberOfLogLine == actualNumberOfLogLines
 	})
 
 	if !ok || err != nil {
-		return fmt.Errorf("\n the number of log line for '%s' is %d which does not match the actual number with log group %s, log stream %s, start time %v and end time %v with err %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime, err)
+		return fmt.Errorf("\n the number of log line for '%s' is %d which does not match the actual number with log group %s, log stream %s, start time %v and end time %v with err %v", logLine, expectedNumberOfLogLine, logGroup, logStream, startTime, endTime, err)
 	}
 
 	return nil
