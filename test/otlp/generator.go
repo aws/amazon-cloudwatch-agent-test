@@ -25,14 +25,8 @@ const (
 )
 
 type OtlpTracesGenerator struct {
-	common.TracesTestInterface
-	cfg                     *common.TraceConfig
-	testCasesGeneratedCount int
-	testCasesEndedCount     int
-	agentConfigPath         string
-	agentRuntime            time.Duration
-	name                    string
-	done                    chan struct{}
+	common.TraceGenerator
+	common.TraceGeneratorInterface
 }
 
 func (g *OtlpTracesGenerator) StartSendingTraces(ctx context.Context) error {
@@ -41,10 +35,10 @@ func (g *OtlpTracesGenerator) StartSendingTraces(ctx context.Context) error {
 		return err
 	}
 	defer shutdown(ctx)
-	ticker := time.NewTicker(g.cfg.Interval)
+	ticker := time.NewTicker(g.Cfg.Interval)
 	for {
 		select {
-		case <-g.done:
+		case <-g.Done:
 			ticker.Stop()
 			return client.ForceFlush(ctx)
 		case <-ticker.C:
@@ -55,76 +49,50 @@ func (g *OtlpTracesGenerator) StartSendingTraces(ctx context.Context) error {
 	}
 }
 func (g *OtlpTracesGenerator) StopSendingTraces() {
-	close(g.done)
+	close(g.Done)
 }
-func newLoadGenerator(cfg *common.TraceConfig) *OtlpTracesGenerator {
+func newLoadGenerator(cfg *common.TraceGeneratorConfig) *OtlpTracesGenerator {
 	return &OtlpTracesGenerator{
-		cfg:                     cfg,
-		done:                    make(chan struct{}),
-		testCasesGeneratedCount: 0,
-		testCasesEndedCount:     0,
+		TraceGenerator: common.TraceGenerator{
+			Cfg:                     cfg,
+			Done:                    make(chan struct{}),
+			SegmentsGenerationCount: 0,
+			SegmentsEndedCount:      0,
+		},
 	}
 }
 func (g *OtlpTracesGenerator) Generate(ctx context.Context) error {
 	tracer := otel.Tracer("tracer")
-	g.testCasesGeneratedCount++
+	g.SegmentsGenerationCount++
 	_, span := tracer.Start(ctx, "example-span", trace.WithSpanKind(trace.SpanKindServer))
 	defer func() {
 		span.End()
-		g.testCasesEndedCount++
+		g.SegmentsEndedCount++
 	}()
 
-	if len(g.cfg.Annotations) > 0 {
-		span.SetAttributes(attribute.StringSlice(attributeKeyAwsXrayAnnotations, maps.Keys(g.cfg.Annotations)))
+	if len(g.Cfg.Annotations) > 0 {
+		span.SetAttributes(attribute.StringSlice(attributeKeyAwsXrayAnnotations, maps.Keys(g.Cfg.Annotations)))
 	}
-	span.SetAttributes(g.cfg.Attributes...)
+	span.SetAttributes(g.Cfg.Attributes...)
 	return nil
 }
 
-func (g *OtlpTracesGenerator) GetTestCount() (int, int) {
-	return g.testCasesGeneratedCount, g.testCasesEndedCount
+func (g *OtlpTracesGenerator) GetSegmentCount() (int, int) {
+	return g.SegmentsGenerationCount, g.SegmentsEndedCount
 }
 
 func (g *OtlpTracesGenerator) GetAgentConfigPath() string {
-	return g.agentConfigPath
+	return g.AgentConfigPath
 }
 func (g *OtlpTracesGenerator) GetAgentRuntime() time.Duration {
-	return g.agentRuntime
+	return g.AgentRuntime
 }
 func (g *OtlpTracesGenerator) GetName() string {
-	return g.name
+	return g.Name
 }
-func (g *OtlpTracesGenerator) GetGeneratorConfig() *common.TraceConfig {
-	return g.cfg
+func (g *OtlpTracesGenerator) GetGeneratorConfig() *common.TraceGeneratorConfig {
+	return g.Cfg
 }
-
-//func (g *OtlpTracesGenerator) validateSegments(t *testing.T, segments []types.Segment, cfg *common.TraceConfig) {
-//	t.Helper()
-//	for _, segment := range segments {
-//		var result map[string]interface{}
-//		require.NoError(t, json.Unmarshal([]byte(*segment.Document), &result))
-//		if _, ok := result["parent_id"]; ok {
-//			// skip subsegments
-//			continue
-//		}
-//		annotations, ok := result["annotations"]
-//		assert.True(t, ok, "missing annotations")
-//		assert.True(t, reflect.DeepEqual(annotations, cfg.Annotations), "mismatching annotations")
-//		metadataByNamespace, ok := result["metadata"].(map[string]interface{})
-//		assert.True(t, ok, "missing metadata")
-//		for namespace, wantMetadata := range cfg.Metadata {
-//			var gotMetadata map[string]interface{}
-//			gotMetadata, ok = metadataByNamespace[namespace].(map[string]interface{})
-//			assert.Truef(t, ok, "missing metadata in namespace: %s", namespace)
-//			for key, wantValue := range wantMetadata {
-//				var gotValue interface{}
-//				gotValue, ok = gotMetadata[key]
-//				assert.Truef(t, ok, "missing expected metadata key: %s", key)
-//				assert.Truef(t, reflect.DeepEqual(gotValue, wantValue), "mismatching values for key (%s):\ngot\n\t%v\nwant\n\t%v", key, gotValue, wantValue)
-//			}
-//		}
-//	}
-//}
 
 func setupClient(ctx context.Context) (*sdktrace.TracerProvider, func(context.Context) error, error) {
 	res := resource.NewWithAttributes(

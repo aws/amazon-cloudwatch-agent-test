@@ -11,11 +11,14 @@ import (
 )
 
 const (
-	agentRuntime          = 5 * time.Minute
-	loadGeneratorInterval = 5 * time.Second
-	testSegmentCount      = 20
+	agentRuntime          = 1 * time.Minute
+	loadGeneratorInterval = 20 * time.Second
 )
 
+// WARNING: This test can only run 20 traces total
+// This means that if you are running on 14 linux version.
+// Each version can run only 3 traces each.(agentRuntime:1 , interval: 20)
+// This is a known bug, for more info contact: okankoAMZ
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
@@ -24,11 +27,11 @@ func TestTraces(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 	testCases := map[string]struct {
 		agentConfigPath string
-		generatorConfig *common.TraceConfig
+		generatorConfig *common.TraceGeneratorConfig
 	}{
 		"WithXray/Simple": {
 			agentConfigPath: filepath.Join("resources", "xray-config.json"),
-			generatorConfig: &common.TraceConfig{
+			generatorConfig: &common.TraceGeneratorConfig{
 				Interval: loadGeneratorInterval,
 				Annotations: map[string]interface{}{
 					"test_type":   "simple_xray",
@@ -48,16 +51,15 @@ func TestTraces(t *testing.T) {
 			},
 		},
 	}
-	t.Logf("Sanity check: number of test cases:%d", len(testCases))
 	for name, testCase := range testCases {
 
 		t.Run(name, func(t *testing.T) {
 
 			XrayTest := newLoadGenerator(testCase.generatorConfig)
-			XrayTest.agentConfigPath = testCase.agentConfigPath
-			XrayTest.name = name
-			XrayTest.agentRuntime = agentRuntime
-			t.Logf("config interval %v", XrayTest.cfg.Interval)
+			XrayTest.AgentConfigPath = testCase.agentConfigPath
+			XrayTest.Name = name
+			XrayTest.AgentRuntime = agentRuntime
+			t.Logf("config interval %v", XrayTest.Cfg.Interval)
 			err := common.TraceTest(t, XrayTest)
 			require.NoError(t, err, "TraceTest failed because %s", err)
 

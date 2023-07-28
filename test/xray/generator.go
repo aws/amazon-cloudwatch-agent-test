@@ -2,37 +2,28 @@ package xray
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"reflect"
-	"testing"
+	"fmt"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-	"github.com/aws/aws-sdk-go-v2/service/xray/types"
 	"github.com/aws/aws-xray-sdk-go/xray"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/google/uuid"
 )
 
 var generatorError = errors.New("Generator error")
 
 type XrayTracesGenerator struct {
-	common.TracesTestInterface
-	cfg                     *common.TraceConfig
-	testCasesGeneratedCount int
-	testCasesEndedCount     int
-	agentConfigPath         string
-	agentRuntime            time.Duration
-	name                    string
-	done                    chan struct{}
+	segmentID string
+	common.TraceGenerator
+	common.TraceGeneratorInterface
 }
 
 func (g *XrayTracesGenerator) StartSendingTraces(ctx context.Context) error {
-	ticker := time.NewTicker(g.cfg.Interval)
+	ticker := time.NewTicker(g.Cfg.Interval)
 	for {
 		select {
-		case <-g.done:
+		case <-g.Done:
 			ticker.Stop()
 			return nil
 		case <-ticker.C:
@@ -43,31 +34,35 @@ func (g *XrayTracesGenerator) StartSendingTraces(ctx context.Context) error {
 	}
 }
 func (g *XrayTracesGenerator) StopSendingTraces() {
-	close(g.done)
+	close(g.Done)
 }
-func newLoadGenerator(cfg *common.TraceConfig) *XrayTracesGenerator {
+func newLoadGenerator(cfg *common.TraceGeneratorConfig) *XrayTracesGenerator {
 	return &XrayTracesGenerator{
-		cfg:                     cfg,
-		done:                    make(chan struct{}),
-		testCasesGeneratedCount: 0,
-		testCasesEndedCount:     0,
+		segmentID: uuid.New().String(),
+		TraceGenerator: common.TraceGenerator{
+			Cfg:                     cfg,
+			Done:                    make(chan struct{}),
+			SegmentsGenerationCount: 0,
+			SegmentsEndedCount:      0,
+		},
 	}
 }
 func (g *XrayTracesGenerator) Generate(ctx context.Context) error {
-	rootCtx, root := xray.BeginSegment(ctx, "load-generator")
-	g.testCasesGeneratedCount++
+	rootCtx, root := xray.BeginSegment(ctx, fmt.Sprintf(
+		"load-generator-%s", g.segmentID))
+	g.SegmentsGenerationCount++
 	defer func() {
 		root.Close(nil)
-		g.testCasesEndedCount++
+		g.SegmentsEndedCount++
 	}()
 
-	for key, value := range g.cfg.Annotations {
+	for key, value := range g.Cfg.Annotations {
 		if err := root.AddAnnotation(key, value); err != nil {
 			return err
 		}
 	}
 
-	for namespace, metadata := range g.cfg.Metadata {
+	for namespace, metadata := range g.Cfg.Metadata {
 		for key, value := range metadata {
 			if err := root.AddMetadataToNamespace(namespace, key, value); err != nil {
 				return err
@@ -85,48 +80,19 @@ func (g *XrayTracesGenerator) Generate(ctx context.Context) error {
 	return nil
 }
 
-func (g *XrayTracesGenerator) GetTestCount() (int, int) {
-	return g.testCasesGeneratedCount, g.testCasesEndedCount
+func (g *XrayTracesGenerator) GetSegmentCount() (int, int) {
+	return g.SegmentsGenerationCount, g.SegmentsEndedCount
 }
 
 func (g *XrayTracesGenerator) GetAgentConfigPath() string {
-	return g.agentConfigPath
+	return g.AgentConfigPath
 }
 func (g *XrayTracesGenerator) GetAgentRuntime() time.Duration {
-	return g.agentRuntime
+	return g.AgentRuntime
 }
 func (g *XrayTracesGenerator) GetName() string {
-	return g.name
+	return g.Name
 }
-func (g * XrayTracesGenerator) GetGeneratorConfig() * common.TraceConfig{
-	return g.cfg
-}
-
-
-func (g *XrayTracesGenerator) validateSegments(t *testing.T, segments []types.Segment, cfg *common.TraceConfig) {
-	t.Helper()
-	for _, segment := range segments {
-		var result map[string]interface{}
-		require.NoError(t, json.Unmarshal([]byte(*segment.Document), &result))
-		if _, ok := result["parent_id"]; ok {
-			// skip subsegments
-			continue
-		}
-		annotations, ok := result["annotations"]
-		assert.True(t, ok, "missing annotations")
-		assert.True(t, reflect.DeepEqual(annotations, cfg.Annotations), "mismatching annotations")
-		metadataByNamespace, ok := result["metadata"].(map[string]interface{})
-		assert.True(t, ok, "missing metadata")
-		for namespace, wantMetadata := range cfg.Metadata {
-			var gotMetadata map[string]interface{}
-			gotMetadata, ok = metadataByNamespace[namespace].(map[string]interface{})
-			assert.Truef(t, ok, "missing metadata in namespace: %s", namespace)
-			for key, wantValue := range wantMetadata {
-				var gotValue interface{}
-				gotValue, ok = gotMetadata[key]
-				assert.Truef(t, ok, "missing expected metadata key: %s", key)
-				assert.Truef(t, reflect.DeepEqual(gotValue, wantValue), "mismatching values for key (%s):\ngot\n\t%v\nwant\n\t%v", key, gotValue, wantValue)
-			}
-		}
-	}
+func (g *XrayTracesGenerator) GetGeneratorConfig() *common.TraceGeneratorConfig {
+	return g.Cfg
 }

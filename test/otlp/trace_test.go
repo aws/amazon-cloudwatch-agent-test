@@ -25,11 +25,11 @@ func TestTraces(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 	testCases := map[string]struct {
 		agentConfigPath string
-		generatorConfig *common.TraceConfig
+		generatorConfig *common.TraceGeneratorConfig
 	}{
 		"WithOTLP/Simple": {
 			agentConfigPath: filepath.Join("resources", "otlp-config.json"),
-			generatorConfig: &common.TraceConfig{
+			generatorConfig: &common.TraceGeneratorConfig{
 				Interval: loadGeneratorInterval,
 				Annotations: map[string]interface{}{
 					"test_type":   "simple_otlp",
@@ -56,10 +56,10 @@ func TestTraces(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			OtlpTest := newLoadGenerator(testCase.generatorConfig)
-			OtlpTest.agentConfigPath = testCase.agentConfigPath
-			OtlpTest.name = name
-			OtlpTest.agentRuntime = agentRuntime
-			t.Logf("config interval %v", OtlpTest.cfg.Interval)
+			OtlpTest.AgentConfigPath = testCase.agentConfigPath
+			OtlpTest.Name = name
+			OtlpTest.AgentRuntime = agentRuntime
+			t.Logf("config interval %v", OtlpTest.Cfg.Interval)
 			err := common.TraceTest(t, OtlpTest)
 			require.NoError(t, err, "TraceTest failed because %s", err)
 

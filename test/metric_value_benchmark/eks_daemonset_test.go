@@ -156,6 +156,7 @@ func (e *EKSDaemonTestRunner) validateLogs(env *environment.MetaData) status.Tes
 
 				if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
 					log.Println("failed to match log with schema")
+					log.Printf("log entry %s json schema %s", l, jsonSchema)
 					return false
 				}
 			}
