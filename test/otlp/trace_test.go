@@ -28,7 +28,7 @@ func TestTraces(t *testing.T) {
 		generatorConfig *common.TraceConfig
 	}{
 		"WithOTLP/Simple": {
-			agentConfigPath: filepath.Join("testdata", "otlp-config.json"),
+			agentConfigPath: filepath.Join("resources", "otlp-config.json"),
 			generatorConfig: &common.TraceConfig{
 				Interval: loadGeneratorInterval,
 				Annotations: map[string]interface{}{

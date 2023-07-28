@@ -37,7 +37,7 @@ func TraceTest(t *testing.T, traceTest TracesTestInterface) error {
 	startTime := time.Now()
 	t.Logf("AgentConfigpath %s", traceTest.GetAgentConfigPath())
 	CopyFile(traceTest.GetAgentConfigPath(), ConfigOutputPath)
-	require.NoError(t, StartAgent(ConfigOutputPath, true, false))
+	require.NoError(t, StartAgent(ConfigOutputPath, true, false), "Couldn't copy file")
 	t.Logf("Successfully copied file.")
 	t.Log("Starting to send traces")
 	go func() {
@@ -60,7 +60,7 @@ func TraceTest(t *testing.T, traceTest TracesTestInterface) error {
 	segments, err := awsservice.GetSegments(traceIDs)
 	require.NoError(t, err, "unable to get segments")
 
-	assert.True(t, len(segments) >= testSegmentCount,
+	assert.True(t, len(segments) >= testsGenerated,
 		"FAILED: Not enough segments, expected %d but got %d",
 		testSegmentCount, len(segments))
 	// traceTest.validateSegments(t, segments, traceTest.GetGeneratorConfig())
