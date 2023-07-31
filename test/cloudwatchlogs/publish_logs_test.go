@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -99,11 +100,14 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			end := time.Now()
 
 			// check CWL to ensure we got the expected number of logs in the log stream
-			ok, err := awsservice.ValidateLogs(instanceId, instanceId, &start, &end, func(logs []string) bool {
-				return param.numExpectedLogs == len(logs)
-			})
+			err = awsservice.ValidateLogs(
+				instanceId,
+				instanceId,
+				&start,
+				&end,
+				awsservice.AssertLogsCount(param.numExpectedLogs),
+			)
 			assert.NoError(t, err)
-			assert.True(t, ok)
 		})
 	}
 }
@@ -151,23 +155,24 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 
 	end := time.Now()
 
-	ok, err := awsservice.ValidateLogs(logGroup, logStream, &start, &end, func(logs []string) bool {
-		if len(logs) != len(lines) {
-			return false
-		}
-
-		for i := 0; i < len(logs); i++ {
-			expected := strings.ReplaceAll(lines[i], "'", "\"")
-			actual := strings.ReplaceAll(logs[i], "'", "\"")
-			if expected != actual {
-				return false
+	err := awsservice.ValidateLogs(
+		logGroup,
+		logStream,
+		&start,
+		&end,
+		awsservice.AssertLogsCount(len(lines)),
+		func(events []types.OutputLogEvent) error {
+			for i := 0; i < len(events); i++ {
+				expected := strings.ReplaceAll(lines[i], "'", "\"")
+				actual := strings.ReplaceAll(*events[i].Message, "'", "\"")
+				if expected != actual {
+					return fmt.Errorf("actual log event %q does not match the expected %q", actual, expected)
+				}
 			}
-		}
-
-		return true
-	})
+			return nil
+		},
+	)
 	assert.NoError(t, err)
-	assert.True(t, ok)
 }
 
 func writeLogs(t *testing.T, f *os.File, iterations int) {

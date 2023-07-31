@@ -8,10 +8,8 @@ package metric_value_benchmark
 import (
 	_ "embed"
 	"fmt"
-	"strings"
+	"log"
 	"time"
-
-	"github.com/qri-io/jsonschema"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -113,8 +111,6 @@ func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult
 		Status: status.FAILED,
 	}
 
-	rs := jsonschema.Must(emfContainerInsightsSchema)
-
 	now := time.Now()
 	group := fmt.Sprintf("/aws/ecs/containerinsights/%s/performance", e.EcsClusterName)
 
@@ -125,26 +121,21 @@ func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult
 	}
 
 	for _, container := range containers {
-		validateLogContents := func(s string) bool {
-			return strings.Contains(s, fmt.Sprintf("\"ContainerInstanceId\":\"%s\"", container.ContainerInstanceId))
-		}
-
-		var ok bool
 		stream := fmt.Sprintf("NodeTelemetry-%s", container.ContainerInstanceId)
-		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
-			if len(logs) < 1 {
-				return false
-			}
+		err = awsservice.ValidateLogs(
+			group,
+			stream,
+			nil,
+			&now,
+			awsservice.AssertLogsNotEmpty(),
+			awsservice.AssertPerLog(
+				awsservice.AssertLogSchema(awsservice.WithSchema(emfContainerInsightsSchema)),
+				awsservice.AssertLogSubstring(fmt.Sprintf("\"ContainerInstanceId\":\"%s\"", container.ContainerInstanceId)),
+			),
+		)
 
-			for _, l := range logs {
-				if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
-					return false
-				}
-			}
-			return true
-		})
-
-		if err != nil || !ok {
+		if err != nil {
+			log.Printf("log validation (%s/%s) for container (%s) failed: %v", group, stream, container.ContainerInstanceId, err)
 			return testResult
 		}
 	}

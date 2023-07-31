@@ -7,11 +7,8 @@ package metric_value_benchmark
 
 import (
 	_ "embed"
-	"strings"
+	"log"
 	"time"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/qri-io/jsonschema"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
@@ -19,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 type EMFTestRunner struct {
@@ -116,27 +114,20 @@ func validateEMFLogs(group, stream string) status.TestResult {
 		Status: status.FAILED,
 	}
 
-	rs := jsonschema.Must(emfMetricValueBenchmarkSchema)
-
-	validateLogContents := func(s string) bool {
-		return strings.Contains(s, "\"EMFCounter\":5")
-	}
-
 	now := time.Now()
-	ok, err := awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
-		if len(logs) < 1 {
-			return false
-		}
-
-		for _, l := range logs {
-			if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
-				return false
-			}
-		}
-		return true
-	})
-
-	if err != nil || !ok {
+	err := awsservice.ValidateLogs(
+		group,
+		stream,
+		nil,
+		&now,
+		awsservice.AssertLogsNotEmpty(),
+		awsservice.AssertPerLog(
+			awsservice.AssertLogSchema(awsservice.WithSchema(emfMetricValueBenchmarkSchema)),
+			awsservice.AssertLogSubstring("\"EMFCounter\":5"),
+		),
+	)
+	if err != nil {
+		log.Printf("log validation (%s/%s) failed: %v", group, stream, err)
 		return testResult
 	}
 
