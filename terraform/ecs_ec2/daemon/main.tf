@@ -37,7 +37,7 @@ resource "aws_launch_configuration" "cluster" {
 
   user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
   metadata_options {
-    http_endpoint               = "enabled"
+    http_endpoint               =  "disabled"
     http_tokens                 = "required"
     http_put_response_hop_limit = 2
   }
