@@ -125,6 +125,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_windows_performance": {
 		{testDir: "../../test/performance/windows/logs"},
 		{testDir: "../../test/performance/windows/system"},
+		{testDir: "../../test/performance/windows/windows_events"},
 	},
 	"ec2_stress": {
 		{testDir: "../../test/stress/emf"},
@@ -136,6 +137,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_windows_stress": {
 		{testDir: "../../test/stress/windows/logs"},
 		{testDir: "../../test/stress/windows/system"},
+		{testDir: "../../test/stress/windows/windows_events"},
 	},
 	"ecs_fargate": {
 		{testDir: "./test/ecs/ecs_metadata"},

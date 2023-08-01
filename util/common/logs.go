@@ -32,6 +32,7 @@ func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval
 }
 
 func GenerateWindowsEvents(validationLog []models.LogValidation) error {
+	log.Printf("Windows event creation")
 	var multiErr error
 	for _, vLog := range validationLog {
 		if vLog.LogSource == "WindowsEvents" && vLog.LogLevel != "" {
