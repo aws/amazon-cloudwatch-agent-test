@@ -2,8 +2,7 @@
   "agent": {
     "metrics_collection_interval": 10,
     "run_as_user": "root",
-    "debug": true,
-    "logfile": ""
+    "debug": true
   },
   "metrics": {
     "endpoint_override": "http://localhost.localstack.cloud:4566",

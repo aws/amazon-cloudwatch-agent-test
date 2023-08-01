@@ -1,0 +1,13 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "endpoint_override": "http://localhost.localstack.cloud:4566",
+    "metrics_collected": {
+      "emf": { }
+    },
+    "force_flush_interval": 5
+  }
+}

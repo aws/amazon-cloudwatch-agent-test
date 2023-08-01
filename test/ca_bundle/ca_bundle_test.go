@@ -38,11 +38,14 @@ const (
 	combinePem           = "combine.pem"
 	snakeOilPem          = "snakeoil.pem"
 	tmpDirectory         = "/tmp/"
+	runEMF               = "sudo bash resources/emf.sh"
+	logfile              = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 )
 
 type input struct {
 	findTarget bool
 	dataInput  string
+	testType   string
 }
 
 func init() {
@@ -58,28 +61,35 @@ func TestBundle(t *testing.T) {
 
 	parameters := []input{
 		//Use the system pem ca bundle  + local stack pem file ssl should connect thus target string not found
-		{dataInput: "resources/integration/ssl/with/combine/bundle", findTarget: false},
+		{dataInput: "resources/with/combine/bundle", findTarget: false, testType: "metric"},
+		{dataInput: "resources/with/combine/bundle", findTarget: false, testType: "emf"},
 		//Do not look for ca bundle with http connection should connect thus target string not found
-		{dataInput: "resources/integration/ssl/without/bundle/http", findTarget: false},
+		{dataInput: "resources/without/bundle/http", findTarget: false, testType: "metric"},
+		{dataInput: "resources/without/bundle/http", findTarget: false, testType: "emf"},
 		//Use the system pem ca bundle ssl should not connect thus target string found
-		{dataInput: "resources/integration/ssl/with/original/bundle", findTarget: true},
+		{dataInput: "resources/with/original/bundle", findTarget: true, testType: "metric"},
+		{dataInput: "resources/with/original/bundle", findTarget: true, testType: "emf"},
 		//Do not look for ca bundle should not connect thus target string found
-		{dataInput: "resources/integration/ssl/without/bundle", findTarget: true},
+		{dataInput: "resources/without/bundle", findTarget: true, testType: "metric"},
+		{dataInput: "resources/without/bundle", findTarget: true, testType: "emf"},
 	}
 
 	for _, parameter := range parameters {
 		//before test run
-		log.Printf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget)
-		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget), func(t *testing.T) {
-			common.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
-			t.Logf("config file after localstack host replace %s", string(readFile(parameter.dataInput+configJSON)))
-			common.CopyFile(parameter.dataInput+configJSON, configOutputPath)
-			common.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
+		pathDir := parameter.dataInput + "/" + parameter.testType
+		log.Printf("resource file location %s find target %t", pathDir, parameter.findTarget)
+		t.Run(fmt.Sprintf("resource file location %s find target %t", pathDir, parameter.findTarget), func(t *testing.T) {
+			common.RecreateAgentLogfile(logfile)
+			common.ReplaceLocalStackHostName(pathDir + configJSON)
+			t.Logf("config file after localstack host replace %s", string(readFile(pathDir+configJSON)))
+			common.CopyFile(pathDir+configJSON, configOutputPath)
+			common.CopyFile(pathDir+commonConfigTOML, commonConfigOutputPath)
 			common.StartAgent(configOutputPath, true, false)
+			common.RunCommand(runEMF)
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
 			common.StopAgent()
-			output := common.ReadAgentOutput(agentRuntime)
+			output := common.ReadAgentLogfile(logfile)
 			containsTarget := outputLogContainsTarget(output)
 			if (parameter.findTarget && !containsTarget) || (!parameter.findTarget && containsTarget) {
 				t.Errorf("Find target is %t contains target is %t", parameter.findTarget, containsTarget)
