@@ -383,10 +383,10 @@ resource "kubernetes_daemonset" "service" {
 # Template Files
 ##########################################
 locals {
-  cwagent_config = "../../../../${var.test_dir}/resources/config.json"
-  server_consumer = "../../../../${var.test_dir}/resources/metrics/server_consumer.json"
-  client_producer = "../../../../${var.test_dir}/resources/metrics/client_producer.json"
-  traces = "../../../../${var.test_dir}/resources/traces/traces.json"
+  cwagent_config    = "../../../../${var.test_dir}/resources/config.json"
+  server_consumer   = "../../../../${var.test_dir}/resources/metrics/server_consumer.json"
+  client_producer   = "../../../../${var.test_dir}/resources/metrics/client_producer.json"
+  traces            = "../../../../${var.test_dir}/resources/traces/traces.json"
   traceid_generator = "../../../../${var.test_dir}/resources/traceid_generator.go"
 }
 
