@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	lookbackDuration = time.Duration(-50) * time.Minute
+	lookbackDuration = time.Duration(-70) * time.Minute
 	EKSClusterAnnotation = "EKS_Cluster"
 )
 
