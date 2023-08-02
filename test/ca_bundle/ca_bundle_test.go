@@ -29,8 +29,6 @@ const (
 	commonConfigTOML       = "/common-config.toml"
 	targetString           = "x509: certificate signed by unknown authority"
 
-	// Let the agent run for 30 seconds. This will give agent enough time to call server
-	agentRuntime         = 30 * time.Second
 	localstackS3Key      = "integration-test/ls_tmp/%s"
 	keyDelimiter         = "/"
 	localstackConfigPath = "../../localstack/ls_tmp/"
@@ -85,9 +83,9 @@ func TestBundle(t *testing.T) {
 			common.CopyFile(pathDir+configJSON, configOutputPath)
 			common.CopyFile(pathDir+commonConfigTOML, commonConfigOutputPath)
 			common.StartAgent(configOutputPath, true, false)
+			// this command will take 5 seconds time 12 = 1 minute
 			common.RunCommand(runEMF)
-			time.Sleep(agentRuntime)
-			log.Printf("Agent has been running for : %s", agentRuntime.String())
+			log.Printf("Agent has been running for : %s", time.Minute)
 			common.StopAgent()
 			output := common.ReadAgentLogfile(logfile)
 			containsTarget := outputLogContainsTarget(output)
