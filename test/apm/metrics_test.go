@@ -16,13 +16,13 @@ import (
 const testRetryCount = 3
 const namespace = "AWS/APM"
 
-type APMRunner struct {
+type APMMetricsRunner struct {
 	test_runner.BaseTestRunner
 	testName     string
 	dimensionKey string
 }
 
-func (t *APMRunner) Validate() status.TestGroupResult {
+func (t *APMMetricsRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	instructions := GetInstructionsFromTestName(t.testName)
@@ -45,19 +45,19 @@ func (t *APMRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *APMRunner) GetTestName() string {
+func (t *APMMetricsRunner) GetTestName() string {
 	return t.testName
 }
 
-func (t *APMRunner) GetAgentRunDuration() time.Duration {
+func (t *APMMetricsRunner) GetAgentRunDuration() time.Duration {
 	return 3 * time.Minute
 }
 
-func (t *APMRunner) GetMeasuredMetrics() []string {
+func (t *APMMetricsRunner) GetMeasuredMetrics() []string {
 	return metric.APMMetricNames
 }
 
-func (e *APMRunner) GetAgentConfigFileName() string {
+func (e *APMMetricsRunner) GetAgentConfigFileName() string {
 	return ""
 }
 
@@ -72,4 +72,4 @@ func GetInstructionsFromTestName(testName string) []dimension.Instruction {
 	}
 }
 
-var _ test_runner.ITestRunner = (*APMRunner)(nil)
+var _ test_runner.ITestRunner = (*APMMetricsRunner)(nil)

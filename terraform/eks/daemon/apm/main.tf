@@ -56,7 +56,8 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy
+    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
+    aws_iam_role_policy_attachment.node_AWSXRayDaemonWriteAccess
   ]
 }
 
@@ -97,6 +98,10 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
 
 resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.node_role.name
+}
+resource "aws_iam_role_policy_attachment" "node_AWSXRayDaemonWriteAccess" {
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
   role       = aws_iam_role.node_role.name
 }
 
@@ -321,22 +326,22 @@ resource "kubernetes_daemonset" "service" {
 
         container {
           name              = "apm-client"
-          image             = "public.ecr.aws/amazonlinux/amazonlinux:latest"
+          image             = "public.ecr.aws/docker/library/golang:latest"
           image_pull_policy = "Always"
           resources {
             limits = {
               "cpu" : "50m",
-              "memory" : "50Mi"
+              "memory" : "300Mi"
             }
             requests = {
               "cpu" : "50m",
-              "memory" : "50Mi"
+              "memory" : "300Mi"
             }
           }
           command = [
             "/bin/sh",
             "-c",
-            "while true; do echo '${data.template_file.server_consumer.rendered}' | sed -e \"s/START_TIME/$(date +%s%N)/\" > server_consumer.json; curl -H 'Content-Type: application/json' -d @server_consumer.json -i http://127.0.0.1:4318/v1/metrics --verbose --http0.9; echo '${data.template_file.client_producer.rendered}' | sed -e \"s/START_TIME/$(date +%s%N)/\" > client_producer.json; curl -H 'Content-Type: application/json' -d @client_producer.json -i http://127.0.0.1:4318/v1/metrics --verbose --http0.9; sleep 1; done"
+            "while true; echo '${data.template_file.traceid_generator.rendered}' > traceid_generator.go && chmod +x traceid_generator.go; export START_TIME=$(date +%s%N); export TRACE_ID=$(go run ./traceid_generator.go); do echo '${data.template_file.server_consumer.rendered}' | sed -e \"s/START_TIME/$START_TIME/\" > server_consumer.json; curl -H 'Content-Type: application/json' -d @server_consumer.json -i http://127.0.0.1:4318/v1/metrics --verbose; echo '${data.template_file.client_producer.rendered}' | sed -e \"s/START_TIME/$START_TIME/\" > client_producer.json; curl -H 'Content-Type: application/json' -d @client_producer.json -i http://127.0.0.1:4318/v1/metrics --verbose; echo '${data.template_file.traces.rendered}' | sed -e \"s/START_TIME/$START_TIME/\" | sed -e \"s/TRACE_ID/$TRACE_ID/\" > traces.json; curl -H 'Content-Type: application/json' -d @traces.json -i http://127.0.0.1:4318/v1/traces --verbose; sleep 1; done"
           ]
           env {
             name = "HOST_IP"
@@ -379,8 +384,10 @@ resource "kubernetes_daemonset" "service" {
 ##########################################
 locals {
   cwagent_config = "../../../../${var.test_dir}/resources/config.json"
-  server_consumer = "../../../../${var.test_dir}/resources/server_consumer.json"
-  client_producer = "../../../../${var.test_dir}/resources/client_producer.json"
+  server_consumer = "../../../../${var.test_dir}/resources/metrics/server_consumer.json"
+  client_producer = "../../../../${var.test_dir}/resources/metrics/client_producer.json"
+  traces = "../../../../${var.test_dir}/resources/traces/traces.json"
+  traceid_generator = "../../../../${var.test_dir}/resources/traceid_generator.go"
 }
 
 data "template_file" "cwagent_config" {
@@ -411,6 +418,18 @@ data "template_file" "server_consumer" {
 
 data "template_file" "client_producer" {
   template = file(local.client_producer)
+  vars = {
+  }
+}
+
+data "template_file" "traces" {
+  template = file(local.traces)
+  vars = {
+  }
+}
+
+data "template_file" "traceid_generator" {
+  template = file(local.traceid_generator)
   vars = {
   }
 }

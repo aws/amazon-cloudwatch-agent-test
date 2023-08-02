@@ -1,0 +1,90 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "k8s.namespace.name",
+            "value": {
+              "stringValue": "default"
+            }
+          },
+          {
+            "key": "k8s.pod.name",
+            "value": {
+              "stringValue": "pod-name"
+            }
+          },
+          {
+            "key": "aws.deployment.name",
+            "value": {
+              "stringValue": "deployment-name"
+            }
+          },
+          {
+            "key": "host.id",
+            "value": {
+              "stringValue": "i-00000000000000000"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "apm-integration-test"
+          },
+          "spans": [
+            {
+              "traceId": "TRACE_ID",
+              "spanId": "EEE19B7EC3C1B174",
+              "parentSpanId": "EEE19B7EC3C1B173",
+              "name": "apm-integration-test-traces",
+              "startTimeUnixNano": START_TIME,
+              "endTimeUnixNano": START_TIME,
+              "kind": 2,
+              "attributes": [
+                {
+                  "key": "aws.span.kind",
+                  "value": {
+                    "stringValue": "CLIENT"
+                  }
+                },
+                {
+                  "key": "aws.local.operation",
+                  "value": {
+                    "stringValue": "operation"
+                  }
+                },
+                {
+                  "key": "aws.local.service",
+                  "value": {
+                    "stringValue": "service-name"
+                  }
+                },
+                {
+                  "key": "aws.remote.operation",
+                  "value": {
+                    "stringValue": "remote-operation"
+                  }
+                },
+                {
+                  "key": "aws.remote.service",
+                  "value": {
+                    "stringValue": "service-name-remote"
+                  }
+                },
+                {
+                  "key": "aws.remote.target",
+                  "value": {
+                    "stringValue": "remote-target"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
