@@ -134,7 +134,6 @@ resource "null_resource" "integration_test" {
     ]
 
     depends_on = [
-      null_resource.integration_test,
       null_resource.integration_test_wait,
     ]
   }
