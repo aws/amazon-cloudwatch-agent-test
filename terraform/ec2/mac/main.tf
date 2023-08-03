@@ -73,7 +73,7 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
-  depends_on = [aws_instance.cwagent, module.validator]
+  depends_on = [aws_instance.cwagent, module.validator, integration_test_wait]
 
   connection {
     type        = "ssh"
@@ -131,10 +131,6 @@ resource "null_resource" "integration_test" {
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
       "cd ~/amazon-cloudwatch-agent-test",
       "sudo go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v",
-    ]
-
-    depends_on = [
-      null_resource.integration_test_wait,
     ]
   }
 
