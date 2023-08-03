@@ -123,7 +123,7 @@ resource "null_resource" "integration_test" {
       "NONINTERACTIVE=1 brew install go",
 
       # Run integration test and sanity check
-      "echo run sanity test && sudo go test ./test/sanity -p 1 -v",
+      "echo run sanity test && sudo go test ~/amazon-cloudwatch-agent-test/test/sanity -p 1 -v",
       "echo Execute integration tests",
       "export AWS_REGION=${var.region}",
       "sudo chmod +x ./validator",
