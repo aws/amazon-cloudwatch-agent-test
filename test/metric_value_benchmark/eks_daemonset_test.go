@@ -209,7 +209,6 @@ func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
 		"pod_memory_utilization_over_pod_limit",
 		"pod_network_rx_bytes",
 		"pod_network_tx_bytes",
-		"pod_number_of_container_restarts",
 		"service_number_of_running_pods",
 	}
 }
