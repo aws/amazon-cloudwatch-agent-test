@@ -73,7 +73,7 @@ resource "aws_instance" "cwagent" {
 }
 
 resource "null_resource" "integration_test" {
-  depends_on = [aws_instance.cwagent, module.validator, integration_test_wait]
+  depends_on = [aws_instance.cwagent, module.validator, null_resource.integration_test_wait]
 
   connection {
     type        = "ssh"
