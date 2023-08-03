@@ -101,7 +101,7 @@ resource "null_resource" "integration_test" {
       "sudo installer -pkg AWSCLIV2.pkg -target /",
 
       #Install Brew and set path for mac1 and mac2 instances
-      lp",
+      "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
       "(echo; echo 'eval \"$(/usr/local/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile",
       "eval \"$(/usr/local/bin/brew shellenv)\"",
       "(echo; echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile",
