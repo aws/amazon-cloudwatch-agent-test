@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	StandardRetries = 1
+	StandardRetries = 3
 )
 
 var (
