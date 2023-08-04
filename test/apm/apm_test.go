@@ -53,15 +53,15 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 
 		eksTestRunners = []*test_runner.EKSTestRunner{
 			{
-				Runner: &APMTracesRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMTracesTestName, env.EKSClusterName},
-				Env:    *env,
-			},
-			{
 				Runner: &APMMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMServerConsumerTestName, "EKS.Cluster"},
 				Env:    *env,
 			},
 			{
 				Runner: &APMMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMClientProducerTestName, "EKS.Cluster"},
+				Env:    *env,
+			},
+			{
+				Runner: &APMTracesRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMTracesTestName, env.EKSClusterName},
 				Env:    *env,
 			},
 		}
