@@ -84,7 +84,7 @@ func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]strin
 	fmt.Println(endTime)
 	fmt.Println(filter)
 	var traceIDs []string
-	input := &xray.GetTraceSummariesInput{StartTime: aws.Time(startTime), EndTime: aws.Time(endTime), FilterExpression: aws.String(filter)}
+	input := &xray.GetTraceSummariesInput{StartTime: aws.Time(startTime), EndTime: aws.Time(endTime)}
 	for {
 		output, err := awsservice.XrayClient.GetTraceSummaries(context.Background(), input)
 		if err != nil {
