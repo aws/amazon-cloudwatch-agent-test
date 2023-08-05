@@ -18,18 +18,18 @@ import (
 )
 
 const (
-	lookbackDuration = time.Duration(-200) * time.Minute
+	lookbackDuration = time.Duration(-80) * time.Minute
 	EKSClusterAnnotation = "EKS_Cluster"
 )
 
 
 var annotations = map[string]interface{} {
-	"aws_remote_target": "remote-target",
-	"aws_remote_operation": "remote-operation",
-	"aws_local_service": "service-name",
-	"aws_remote_service": "service-name-remote",
-	"K8s_Namespace": "default",
-	"aws_local_operation": "operation",
+	// "aws_remote_target": "remote-target",
+	// "aws_remote_operation": "remote-operation",
+	// "aws_local_service": "service-name",
+	// "aws_remote_service": "service-name-remote",
+	// "K8s_Namespace": "default",
+	// "aws_local_operation": "operation",
 }
 
 type APMTracesRunner struct {
@@ -85,7 +85,7 @@ func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]strin
 	fmt.Println(endTime)
 	fmt.Println(filter)
 	var traceIDs []string
-	input := &xray.GetTraceSummariesInput{StartTime: aws.Time(startTime), EndTime: aws.Time(endTime), FilterExpression: aws.String(filter)}
+	input := &xray.GetTraceSummariesInput{StartTime: aws.Time(startTime), EndTime: aws.Time(endTime)}
 	output, err := awsservice.XrayClient.GetTraceSummaries(context.Background(), input)
 	if err != nil {
 		return nil, err
@@ -99,14 +99,14 @@ func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]strin
 func FilterExpression(annotations map[string]interface{}) string {
 	var expression string
 	for key, value := range annotations {
-	result, err := json.Marshal(value)
-	if err != nil {
-	continue
-	}
-	if len(expression) != 0 {
-	expression += " AND "
-	}
-	expression += fmt.Sprintf("annotation.%s = %s", key, result)
+		result, err := json.Marshal(value)
+		if err != nil {
+			continue
+		}
+		if len(expression) != 0 {
+			expression += " AND "
+		}
+		expression += fmt.Sprintf("annotation.%s = %s", key, result)
 	}
 	return expression
 }
