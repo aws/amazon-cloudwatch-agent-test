@@ -45,7 +45,6 @@ func (t *APMTracesRunner) Validate() status.TestGroupResult {
 	}}
 	timeNow := time.Now()
 
-	fmt.Println(t.clusterName)
 	annotations[EKSClusterAnnotation] = t.clusterName
 	xrayFilter := FilterExpression(annotations)
 	traceIds, err := GetTraceIDs(timeNow.Add(lookbackDuration),timeNow, xrayFilter)
@@ -82,9 +81,6 @@ func (e *APMTracesRunner) GetAgentConfigFileName() string {
 }
 
 func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]string, error) {
-	fmt.Println(startTime)
-	fmt.Println(endTime)
-	fmt.Println(filter)
 	var traceIDs []string
 	input := &xray.GetTraceSummariesInput{StartTime: aws.Time(startTime), EndTime: aws.Time(endTime), FilterExpression: aws.String(filter)}
 	output, err := awsservice.XrayClient.GetTraceSummaries(context.Background(), input)
