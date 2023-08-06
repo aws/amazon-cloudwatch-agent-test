@@ -24,12 +24,12 @@ const (
 
 
 var annotations = map[string]string {
-	// "aws_remote_target": "remote-target",
-	// "aws_remote_operation": "remote-operation",
-	// "aws_local_service": "service-name",
-	// "aws_remote_service": "service-name-remote",
-	// "K8s_Namespace": "default",
-	// "aws_local_operation": "operation",
+	"aws_remote_target": "remote-target",
+	"aws_remote_operation": "remote-operation",
+	"aws_local_service": "service-name",
+	"aws_remote_service": "service-name-remote",
+	"K8s_Namespace": "default",
+	"aws_local_operation": "operation",
 }
 
 type APMTracesRunner struct {
@@ -99,8 +99,6 @@ func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]strin
 func FilterExpression(annotations map[string]string) string {
 	var expression string
 	for key, value := range annotations {
-		fmt.Println("Marshalling")
-		fmt.Println(value)
 		result, err := json.Marshal(value)
 		if err != nil {
 			continue
