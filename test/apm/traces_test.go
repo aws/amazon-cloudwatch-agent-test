@@ -53,7 +53,6 @@ func (t *APMTracesRunner) Validate() status.TestGroupResult {
 	} else {
 		fmt.Printf("Trace IDs: %v\n", traceIds)
 		if len(traceIds) > 0 {
-			fmt.Println("Successful")
 			testResults[0].Status = status.SUCCESSFUL
 		}
 	}
@@ -96,7 +95,6 @@ func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]strin
 func FilterExpression(annotations map[string]string) string {
 	var expression string
 	for key, value := range annotations {
-		fmt.Println(value)
 		result, err := json.Marshal(value)
 		if err != nil {
 			continue
