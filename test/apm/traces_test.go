@@ -45,6 +45,7 @@ func (t *APMTracesRunner) Validate() status.TestGroupResult {
 	}}
 	timeNow := time.Now()
 
+	fmt.Println(t.clusterName)
 	annotations[EKSClusterAnnotation] = t.clusterName
 	xrayFilter := FilterExpression(annotations)
 	traceIds, err := GetTraceIDs(timeNow.Add(lookbackDuration),timeNow, xrayFilter)
@@ -99,6 +100,7 @@ func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]strin
 func FilterExpression(annotations map[string]string) string {
 	var expression string
 	for key, value := range annotations {
+		fmt.Println(value)
 		result, err := json.Marshal(value)
 		if err != nil {
 			continue
