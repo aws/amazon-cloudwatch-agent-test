@@ -23,7 +23,7 @@ const (
 )
 
 
-var annotations = map[string]interface{} {
+var annotations = map[string]string {
 	// "aws_remote_target": "remote-target",
 	// "aws_remote_operation": "remote-operation",
 	// "aws_local_service": "service-name",
@@ -85,7 +85,7 @@ func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]strin
 	fmt.Println(endTime)
 	fmt.Println(filter)
 	var traceIDs []string
-	input := &xray.GetTraceSummariesInput{StartTime: aws.Time(startTime), EndTime: aws.Time(endTime)}
+	input := &xray.GetTraceSummariesInput{StartTime: aws.Time(startTime), EndTime: aws.Time(endTime), FilterExpression: aws.String(filter)}
 	output, err := awsservice.XrayClient.GetTraceSummaries(context.Background(), input)
 	if err != nil {
 		return nil, err
@@ -96,9 +96,11 @@ func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]strin
 	return traceIDs, nil
 }
 
-func FilterExpression(annotations map[string]interface{}) string {
+func FilterExpression(annotations map[string]string) string {
 	var expression string
 	for key, value := range annotations {
+		fmt.Println("Marshalling")
+		fmt.Println(value)
 		result, err := json.Marshal(value)
 		if err != nil {
 			continue
