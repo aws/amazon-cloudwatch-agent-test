@@ -39,8 +39,6 @@ type APMTracesRunner struct {
 }
 
 func (t *APMTracesRunner) Validate() status.TestGroupResult {
-	t.SetTimeout(20*time.Minute)
-
 	testResults := []status.TestResult{{
 		Name:   t.testName,
 		Status: status.FAILED,
