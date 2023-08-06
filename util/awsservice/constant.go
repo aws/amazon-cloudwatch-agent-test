@@ -5,11 +5,9 @@ package awsservice
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
-	"time"
-
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -17,7 +15,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/xray"
 	backoff "github.com/cenkalti/backoff/v4"
+	"time"
 )
 
 const (
@@ -48,4 +48,5 @@ var (
 	DynamodbClient       = dynamodb.NewFromConfig(awsCfg)
 	S3Client             = s3.NewFromConfig(awsCfg)
 	CloudformationClient = cloudformation.NewFromConfig(awsCfg)
+	XrayClient 			 = xray.NewFromConfig(awsCfg)
 )

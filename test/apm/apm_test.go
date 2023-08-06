@@ -22,6 +22,7 @@ import (
 const (
 	APMServerConsumerTestName = "APM-Server-Consumer"
 	APMClientProducerTestName = "APM-Client-Producer"
+	APMTracesTestName = "APM-Traces"
 )
 
 type APMTestSuite struct {
@@ -52,11 +53,15 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 
 		eksTestRunners = []*test_runner.EKSTestRunner{
 			{
-				Runner: &APMRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMServerConsumerTestName, "EKS.Cluster"},
+				Runner: &APMMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMServerConsumerTestName, "EKS.Cluster"},
 				Env:    *env,
 			},
 			{
-				Runner: &APMRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMClientProducerTestName, "EKS.Cluster"},
+				Runner: &APMMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMClientProducerTestName, "EKS.Cluster"},
+				Env:    *env,
+			},
+			{
+				Runner: &APMTracesRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMTracesTestName, env.EKSClusterName},
 				Env:    *env,
 			},
 		}
