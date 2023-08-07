@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	AGENT_SHUTDOWN_DELAY  = 60 * time.Second // this const is the delay between stoping trace generation and stopping agent
-	AGENT_TRACE_PASS_RATE = 0.8
+	AGENT_SHUTDOWN_DELAY = 20 * time.Second // this const is the delay between stoping trace generation and stopping agent
 )
 
 type TraceGeneratorConfig struct {
@@ -70,7 +69,7 @@ func TraceTest(t *testing.T, traceTest TraceGeneratorInterface) error {
 	segments, err := awsservice.GetSegments(traceIDs)
 	require.NoError(t, err, "unable to get segments")
 
-	assert.True(t, len(segments) >= int(float32(testsGenerated)*AGENT_TRACE_PASS_RATE),
+	assert.True(t, len(segments) >= testsGenerated,
 		"FAILED: Not enough segments, expected %d but got %d , traceIDCount: %d",
 		testsGenerated, len(segments), len(traceIDs))
 	require.NoError(t, SegmentValidationTest(t, traceTest, segments), "Segment Validation Failed")

@@ -12,13 +12,12 @@ import (
 
 const (
 	agentRuntime          = 1 * time.Minute
-	loadGeneratorInterval = 20 * time.Second
+	loadGeneratorInterval = 6 * time.Second
 )
 
-// WARNING: This test can only run 20 traces total
-// This means that if you are running on 14 linux version.
-// Each version can run only 3 traces each.(agentRuntime:1 , interval: 20)
-// This is a known bug, for more info contact: okankoAMZ
+// WARNING: If you increase number of segments generated
+// You might see that the xray is dropping segments 
+// To overcome this please update the sampling-rule such that the "rate" is higher.
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }

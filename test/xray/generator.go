@@ -4,15 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"path"
 	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/aws-xray-sdk-go/strategy/sampling"
 	"github.com/aws/aws-xray-sdk-go/xray"
+	"github.com/aws/aws-xray-sdk-go/xraylog"
 	"github.com/google/uuid"
 )
 
 var generatorError = errors.New("Generator error")
-
+const DEBUG_LOG = false
 type XrayTracesGenerator struct {
 	segmentID string
 	common.TraceGenerator
@@ -37,6 +41,15 @@ func (g *XrayTracesGenerator) StopSendingTraces() {
 	close(g.Done)
 }
 func newLoadGenerator(cfg *common.TraceGeneratorConfig) *XrayTracesGenerator {
+	s, err := sampling.NewLocalizedStrategyFromFilePath(
+		path.Join("resources", "sampling-rule.json"))
+	if err != nil {
+		log.Fatalf("error : %s", err)
+	}
+	xray.Configure(xray.Config{SamplingStrategy: s})
+	if DEBUG_LOG{
+		xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
+	}
 	return &XrayTracesGenerator{
 		segmentID: uuid.New().String(),
 		TraceGenerator: common.TraceGenerator{
