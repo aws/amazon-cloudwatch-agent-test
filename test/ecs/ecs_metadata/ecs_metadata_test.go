@@ -70,7 +70,7 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 					}
 					return nil
 				},
-				awsservice.AssertLogSubstring("\"job\":\"prometheus-redis\""),
+				awsservice.AssertLogContainsSubstring("\"job\":\"prometheus-redis\""),
 			),
 		)
 		assert.NoError(t, err)

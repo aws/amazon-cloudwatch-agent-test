@@ -200,7 +200,7 @@ func AssertLogSchema(schemaRetriever SchemaRetriever) LogEventValidator {
 	}
 }
 
-func AssertLogSubstring(substr string) LogEventValidator {
+func AssertLogContainsSubstring(substr string) LogEventValidator {
 	return func(event types.OutputLogEvent) error {
 		if !strings.Contains(*event.Message, substr) {
 			return fmt.Errorf("log event message missing substring (%s): %s", substr, *event.Message)
@@ -254,10 +254,9 @@ func AssertNoDuplicateLogs() LogEventsValidator {
 			}
 			_, ok = messages[message]
 			if !ok {
-				messages[message] = struct{}{}
-				continue
+				return fmt.Errorf("duplicate message found at %v | message: %s", time.UnixMilli(timestamp), message)
 			}
-			return fmt.Errorf("duplicate message found at %v | message: %s", time.UnixMilli(timestamp), message)
+			messages[message] = struct{}{}
 		}
 		return nil
 	}

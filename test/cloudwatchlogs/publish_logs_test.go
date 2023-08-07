@@ -106,6 +106,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 				&start,
 				&end,
 				awsservice.AssertLogsCount(param.numExpectedLogs),
+				awsservice.AssertNoDuplicateLogs(),
 			)
 			assert.NoError(t, err)
 		})

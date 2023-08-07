@@ -123,7 +123,7 @@ func validateEMFLogs(group, stream string) status.TestResult {
 		awsservice.AssertLogsNotEmpty(),
 		awsservice.AssertPerLog(
 			awsservice.AssertLogSchema(awsservice.WithSchema(emfMetricValueBenchmarkSchema)),
-			awsservice.AssertLogSubstring("\"EMFCounter\":5"),
+			awsservice.AssertLogContainsSubstring("\"EMFCounter\":5"),
 		),
 	)
 	if err != nil {

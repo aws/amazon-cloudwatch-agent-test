@@ -130,7 +130,7 @@ func validateLogsForContainerInsights(e *environment.MetaData) status.TestResult
 			awsservice.AssertLogsNotEmpty(),
 			awsservice.AssertPerLog(
 				awsservice.AssertLogSchema(awsservice.WithSchema(emfContainerInsightsSchema)),
-				awsservice.AssertLogSubstring(fmt.Sprintf("\"ContainerInstanceId\":\"%s\"", container.ContainerInstanceId)),
+				awsservice.AssertLogContainsSubstring(fmt.Sprintf("\"ContainerInstanceId\":\"%s\"", container.ContainerInstanceId)),
 			),
 		)
 

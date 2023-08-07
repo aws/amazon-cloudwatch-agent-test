@@ -148,7 +148,7 @@ func (e *EKSDaemonTestRunner) validateLogs(env *environment.MetaData) status.Tes
 					}
 					return jsonSchema, nil
 				}),
-				awsservice.AssertLogSubstring(fmt.Sprintf("\"ClusterName\":\"%s\"", env.EKSClusterName)),
+				awsservice.AssertLogContainsSubstring(fmt.Sprintf("\"ClusterName\":\"%s\"", env.EKSClusterName)),
 			),
 		)
 
