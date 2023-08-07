@@ -48,5 +48,5 @@ var (
 	DynamodbClient       = dynamodb.NewFromConfig(awsCfg)
 	S3Client             = s3.NewFromConfig(awsCfg)
 	CloudformationClient = cloudformation.NewFromConfig(awsCfg)
-	XrayClient 			 = xray.NewFromConfig(awsCfg)
+	XrayClient           = xray.NewFromConfig(awsCfg)
 )
