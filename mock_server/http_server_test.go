@@ -1,6 +1,7 @@
 package mockserver
 
 import (
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -13,17 +14,31 @@ const (
 	APP_SERVER_PORT = ":" + "8080"
 	APP_SERVER      = APP_SERVER_ADDR + APP_SERVER_PORT
 )
-
+func HttpGetRequest(url string) (string,error) {
+	res,err := http.Get(url)
+	if err!=nil{
+		return "",err
+	}
+	responseText, err := io.ReadAll(res.Body)
+	if err!=nil{
+		return "",err
+	}
+	return string(responseText),nil
+	
+}
 func HttpServerSanityCheck(t *testing.T) {
 	t.Helper()
-	res, err := http.Get(APP_SERVER)
-	require.NoErrorf(t, err, "Healthcheck failed: %s", err.Error())
-	require.Contains(t, res, HealthCheckMessage)
+	resString, err := HttpGetRequest(APP_SERVER)
+	require.NoErrorf(t, err, "Healthcheck failed: %v", err)
+	require.Contains(t, resString, HealthCheckMessage)
 }
-
+func HttpServerCheckData(t * testing.T){
+	
+}
 func TestHttpServer(t *testing.T) {
-	go startHttpServer()
-	time.Sleep(30 * time.Second)
+	serverControlChan := startHttpServer()
+	time.Sleep(3 * time.Second)
 	HttpServerSanityCheck(t)
+	serverControlChan<-0
 
 }

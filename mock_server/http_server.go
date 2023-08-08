@@ -15,11 +15,11 @@
 package mockserver
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -85,35 +85,46 @@ func (ts *transactionStore) tpm(w http.ResponseWriter, _ *http.Request) {
 
 // Starts an HTTPS server that receives requests for the data handler service at the sample server port
 // Starts an HTTP server that receives request from validator only to verify the data ingestion
-func startHttpServer() {
-	var wg sync.WaitGroup
-	wg.Add(2)
+func startHttpServer() chan interface{} {
+	serverControlChan := make(chan interface{})
 	log.Println("\033[31m Starting Server \033[0m")
 	store := transactionStore{startTime: time.Now()}
-
+	dataApp := mux.NewRouter()
+	daemonServer := &http.Server{Addr: DaemonPort, Handler: dataApp}
+	verifyApp := http.NewServeMux()
+	appServer := &http.Server{Addr: ":8080", Handler: verifyApp}
 	go func(ts *transactionStore) {
-		defer wg.Done()
-		defer log.Println("\033[32m Stopping Server \033[0m")
-		dataApp := mux.NewRouter()
+		defer close(serverControlChan)
 		dataApp.PathPrefix("/put-data").HandlerFunc(ts.dataReceived)
 		dataApp.HandleFunc("/trace/v1", ts.dataReceived)
 		dataApp.HandleFunc("/metric/v1", ts.dataReceived)
-		if err := http.ListenAndServe(DaemonPort, dataApp); err != nil {
+		if err := daemonServer.ListenAndServe(); err != nil {
 			log.Fatalf("HTTPS server error: %v", err)
+			err = daemonServer.Shutdown(context.TODO())
+			log.Fatalf("Shutdown server error: %v", err)
 		}
 	}(&store)
 
 	go func(ts *transactionStore) {
-		defer wg.Done()
-		defer log.Println("\033[32m Stopping Server \033[0m")
-		verifyApp := http.NewServeMux()
+		defer close(serverControlChan)
 		verifyApp.HandleFunc("/", healthCheck)
 		verifyApp.HandleFunc("/check-data", ts.checkData)
 		verifyApp.HandleFunc("/tpm", ts.tpm)
-		if err := http.ListenAndServe(":8080", verifyApp); err != nil {
+		if err := appServer.ListenAndServe(); err != nil {
 			log.Fatalf("Verification server error: %v", err)
+			err := appServer.Shutdown(context.TODO())
+			log.Fatalf("Shuwdown server error: %v", err)
 		}
 	}(&store)
+	go func() {
+		for {
+			select {
+			case <-serverControlChan:
+				log.Println("\033[32m Stopping Server \033[0m")
 
-	wg.Wait()
+			}
+		}
+	}()
+
+	return serverControlChan
 }
