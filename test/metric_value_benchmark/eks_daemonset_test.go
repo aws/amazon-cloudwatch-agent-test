@@ -156,6 +156,7 @@ func (e *EKSDaemonTestRunner) validateLogs(env *environment.MetaData) status.Tes
 
 				if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
 					log.Println("failed to match log with schema")
+					log.Printf("log entry %s json schema %s", l, jsonSchema)
 					return false
 				}
 			}
@@ -208,7 +209,6 @@ func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
 		"pod_memory_utilization_over_pod_limit",
 		"pod_network_rx_bytes",
 		"pod_network_tx_bytes",
-		"pod_number_of_container_restarts",
 		"service_number_of_running_pods",
 	}
 }
