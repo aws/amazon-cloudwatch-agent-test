@@ -16,7 +16,7 @@ const (
 )
 
 // WARNING: If you increase number of segments generated
-// You might see that the xray is dropping segments 
+// You might see that the xray is dropping segments
 // To overcome this please update the sampling-rule such that the "rate" is higher.
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
@@ -53,13 +53,13 @@ func TestTraces(t *testing.T) {
 	for name, testCase := range testCases {
 
 		t.Run(name, func(t *testing.T) {
-
-			XrayTest := newLoadGenerator(testCase.generatorConfig)
-			XrayTest.AgentConfigPath = testCase.agentConfigPath
-			XrayTest.Name = name
-			XrayTest.AgentRuntime = agentRuntime
-			t.Logf("config interval %v", XrayTest.Cfg.Interval)
-			err := common.TraceTest(t, XrayTest)
+			XrayTestCfg := common.TraceTestConfig{
+				Generator:       newLoadGenerator(testCase.generatorConfig),
+				Name:            name,
+				AgentConfigPath: testCase.agentConfigPath,
+				AgentRuntime:    agentRuntime,
+			}
+			err := common.TraceTest(t, XrayTestCfg)
 			require.NoError(t, err, "TraceTest failed because %s", err)
 
 		})

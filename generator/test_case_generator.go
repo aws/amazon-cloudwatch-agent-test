@@ -64,7 +64,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
-		{testDir: "./test/multi_config"},
+		{testDir: "./test/xray"},
+		{testDir: "./test/otlp"},
 		{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
@@ -136,10 +137,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_windows_stress": {
 		{testDir: "../../test/stress/windows/logs"},
 		{testDir: "../../test/stress/windows/system"},
-	},
-	"ec2_trace_integration": {
-		{testDir: "./test/xray"},
-		{testDir: "./test/otlp"},
 	},
 	"ecs_fargate": {
 		{testDir: "./test/ecs/ecs_metadata"},

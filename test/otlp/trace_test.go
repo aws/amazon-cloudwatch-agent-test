@@ -55,12 +55,13 @@ func TestTraces(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			OtlpTest := newLoadGenerator(testCase.generatorConfig)
-			OtlpTest.AgentConfigPath = testCase.agentConfigPath
-			OtlpTest.Name = name
-			OtlpTest.AgentRuntime = agentRuntime
-			t.Logf("config interval %v", OtlpTest.Cfg.Interval)
-			err := common.TraceTest(t, OtlpTest)
+			OtlpTestCfg := common.TraceTestConfig{
+				Generator:       newLoadGenerator(testCase.generatorConfig),
+				Name:            name,
+				AgentConfigPath: testCase.agentConfigPath,
+				AgentRuntime:    agentRuntime,
+			}
+			err := common.TraceTest(t, OtlpTestCfg)
 			require.NoError(t, err, "TraceTest failed because %s", err)
 
 		})

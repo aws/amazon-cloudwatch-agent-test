@@ -15,9 +15,15 @@ import (
 )
 
 const (
-	AGENT_SHUTDOWN_DELAY = 20 * time.Second // this const is the delay between stoping trace generation and stopping agent
+	AGENT_SHUTDOWN_DELAY = 20 * time.Second // this const is the delay between stopping trace generation and stopping agent
 )
 
+type TraceTestConfig struct {
+	Generator       TraceGeneratorInterface
+	Name            string
+	AgentConfigPath string
+	AgentRuntime    time.Duration
+}
 type TraceGeneratorConfig struct {
 	Interval    time.Duration
 	Annotations map[string]interface{}
@@ -45,26 +51,26 @@ type TraceGeneratorInterface interface {
 	GetName() string
 }
 
-func TraceTest(t *testing.T, traceTest TraceGeneratorInterface) error {
+func TraceTest(t *testing.T, traceTest TraceTestConfig) error {
 	t.Helper()
 	startTime := time.Now()
-	CopyFile(traceTest.GetAgentConfigPath(), ConfigOutputPath)
+	CopyFile(traceTest.AgentConfigPath, ConfigOutputPath)
 	require.NoError(t, StartAgent(ConfigOutputPath, true, false), "Couldn't Start the agent")
 	go func() {
-		require.NoError(t, traceTest.StartSendingTraces(context.Background()), "load generator exited with error")
+		require.NoError(t, traceTest.Generator.StartSendingTraces(context.Background()), "load generator exited with error")
 	}()
-	time.Sleep(traceTest.GetAgentRuntime())
-	traceTest.StopSendingTraces()
+	time.Sleep(traceTest.AgentRuntime)
+	traceTest.Generator.StopSendingTraces()
 	time.Sleep(AGENT_SHUTDOWN_DELAY)
 	StopAgent()
-	testsGenerated, testsEnded := traceTest.GetSegmentCount()
-	t.Logf("For %s , Test Cases Generated %d | Test Cases Ended: %d", traceTest.GetName(), testsGenerated, testsEnded)
+	testsGenerated, testsEnded := traceTest.Generator.GetSegmentCount()
+	t.Logf("For %s , Test Cases Generated %d | Test Cases Ended: %d", traceTest.Name, testsGenerated, testsEnded)
 	endTime := time.Now()
 	t.Logf("Agent has been running for %s", endTime.Sub(startTime))
 	time.Sleep(10 * time.Second)
 
 	traceIDs, err := awsservice.GetTraceIDs(startTime, endTime, awsservice.FilterExpression(
-		traceTest.GetGeneratorConfig().Annotations))
+		traceTest.Generator.GetGeneratorConfig().Annotations))
 	require.NoError(t, err, "unable to get trace IDs")
 	segments, err := awsservice.GetSegments(traceIDs)
 	require.NoError(t, err, "unable to get segments")
@@ -76,9 +82,9 @@ func TraceTest(t *testing.T, traceTest TraceGeneratorInterface) error {
 	return nil
 }
 
-func SegmentValidationTest(t *testing.T, traceTest TraceGeneratorInterface, segments []types.Segment) error {
+func SegmentValidationTest(t *testing.T, traceTest TraceTestConfig, segments []types.Segment) error {
 	t.Helper()
-	cfg := traceTest.GetGeneratorConfig()
+	cfg := traceTest.Generator.GetGeneratorConfig()
 	for _, segment := range segments {
 		var result map[string]interface{}
 		require.NoError(t, json.Unmarshal([]byte(*segment.Document), &result))

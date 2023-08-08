@@ -3,7 +3,6 @@ package xray
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -12,13 +11,10 @@ import (
 	"github.com/aws/aws-xray-sdk-go/strategy/sampling"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/aws/aws-xray-sdk-go/xraylog"
-	"github.com/google/uuid"
 )
 
 var generatorError = errors.New("Generator error")
-const DEBUG_LOG = false
 type XrayTracesGenerator struct {
-	segmentID string
 	common.TraceGenerator
 	common.TraceGeneratorInterface
 }
@@ -44,14 +40,11 @@ func newLoadGenerator(cfg *common.TraceGeneratorConfig) *XrayTracesGenerator {
 	s, err := sampling.NewLocalizedStrategyFromFilePath(
 		path.Join("resources", "sampling-rule.json"))
 	if err != nil {
-		log.Fatalf("error : %s", err)
+		log.Fatalf("Couldn't apply sampling rule : %s", err)
 	}
 	xray.Configure(xray.Config{SamplingStrategy: s})
-	if DEBUG_LOG{
-		xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
-	}
+	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelWarn))
 	return &XrayTracesGenerator{
-		segmentID: uuid.New().String(),
 		TraceGenerator: common.TraceGenerator{
 			Cfg:                     cfg,
 			Done:                    make(chan struct{}),
@@ -61,8 +54,7 @@ func newLoadGenerator(cfg *common.TraceGeneratorConfig) *XrayTracesGenerator {
 	}
 }
 func (g *XrayTracesGenerator) Generate(ctx context.Context) error {
-	rootCtx, root := xray.BeginSegment(ctx, fmt.Sprintf(
-		"load-generator-%s", g.segmentID))
+	rootCtx, root := xray.BeginSegment(ctx, "load-generator")
 	g.SegmentsGenerationCount++
 	defer func() {
 		root.Close(nil)
