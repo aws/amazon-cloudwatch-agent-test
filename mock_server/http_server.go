@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package mockserver
 
 import (
 	"encoding/json"
@@ -85,7 +85,7 @@ func (ts *transactionStore) tpm(w http.ResponseWriter, _ *http.Request) {
 
 // Starts an HTTPS server that receives requests for the data handler service at the sample server port
 // Starts an HTTP server that receives request from validator only to verify the data ingestion
-func main() {
+func startHttpServer() {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	log.Println("\033[31m Starting Server \033[0m")
