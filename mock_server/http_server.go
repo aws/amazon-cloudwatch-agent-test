@@ -17,6 +17,7 @@ package mockserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -51,10 +52,11 @@ func healthCheck(w http.ResponseWriter, _ *http.Request) {
 
 func (ts *transactionStore) checkData(w http.ResponseWriter, _ *http.Request) {
 	var message string
-	if atomic.LoadUint32(&ts.transactions) > 0 {
+	var t =atomic.LoadUint32(&ts.transactions)
+	if  t > 0 {
 		message = SuccessMessage
 	}
-
+	fmt.Printf("\033[31m Time: %d | checkData msg: %s | %d\033[0m \n", time.Now().Unix(), message,t)
 	if _, err := io.WriteString(w, message); err != nil {
 		io.WriteString(w, err.Error())
 		log.Printf("Unable to write response: %v", err)
@@ -65,6 +67,7 @@ func (ts *transactionStore) dataReceived(w http.ResponseWriter, _ *http.Request)
 	atomic.AddUint32(&ts.transactions, 1)
 
 	// Built-in latency
+	fmt.Printf("\033[31m Time: %d | data Received \033[0m \n", time.Now().Unix())
 	time.Sleep(15 * time.Millisecond)
 	w.WriteHeader(http.StatusOK)
 }
@@ -90,11 +93,12 @@ func startHttpServer() chan interface{} {
 	log.Println("\033[31m Starting Server \033[0m")
 	store := transactionStore{startTime: time.Now()}
 	dataApp := mux.NewRouter()
-	daemonServer := &http.Server{Addr: DaemonPort, Handler: dataApp}
+	daemonServer := &http.Server{Addr: ":443", Handler: dataApp}
 	verifyApp := http.NewServeMux()
 	appServer := &http.Server{Addr: ":8080", Handler: verifyApp}
 	go func(ts *transactionStore) {
 		defer close(serverControlChan)
+		dataApp.HandleFunc("/", healthCheck)
 		dataApp.PathPrefix("/put-data").HandlerFunc(ts.dataReceived)
 		dataApp.HandleFunc("/trace/v1", ts.dataReceived)
 		dataApp.HandleFunc("/metric/v1", ts.dataReceived)
