@@ -7,12 +7,12 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"log"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/qri-io/jsonschema"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -36,8 +36,6 @@ var clusterName = flag.String("clusterName", "", "Please provide the os preferen
 var schema string
 
 func TestValidatingCloudWatchLogs(t *testing.T) {
-	rs := jsonschema.Must(schema)
-
 	start := time.Now()
 
 	logGroupName := fmt.Sprintf(ECSLogGroupNameFormat, *clusterName)
@@ -57,25 +55,25 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 
 		end := time.Now()
 
-		ok, err := awsservice.ValidateLogs(logGroupName, LogStreamName, &start, &end, func(logs []string) bool {
-			if len(logs) < 1 {
-				return false
-			}
-			for _, l := range logs {
-				if !awsservice.MatchEMFLogWithSchema(l, rs, func(s string) bool {
-					ok := true
-					if strings.Contains(l, "CloudWatchMetrics") {
-						ok = ok && strings.Contains(l, "\"Namespace\":\"ECS/ContainerInsights/Prometheus\"")
+		err := awsservice.ValidateLogs(
+			logGroupName,
+			LogStreamName,
+			&start,
+			&end,
+			awsservice.AssertLogsNotEmpty(),
+			awsservice.AssertPerLog(
+				awsservice.AssertLogSchema(awsservice.WithSchema(schema)),
+				func(event types.OutputLogEvent) error {
+					if strings.Contains(*event.Message, "CloudWatchMetrics") &&
+						!strings.Contains(*event.Message, "\"Namespace\":\"ECS/ContainerInsights/Prometheus\"") {
+						return fmt.Errorf("emf log found for non ECS/ContainerInsights/Prometheus namespace: %s", *event.Message)
 					}
-					return ok && strings.Contains(l, "\"job\":\"prometheus-redis\"")
-				}) {
-					return false
-				}
-			}
-			return true
-		})
+					return nil
+				},
+				awsservice.AssertLogContainsSubstring("\"job\":\"prometheus-redis\""),
+			),
+		)
 		assert.NoError(t, err)
-		assert.True(t, ok)
 
 		break
 	}
