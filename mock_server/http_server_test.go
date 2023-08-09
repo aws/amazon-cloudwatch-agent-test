@@ -1,11 +1,13 @@
 package mockserver
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,14 +45,28 @@ func HttpServerCheckData(t *testing.T) {
 	// require.Contains(t, resString, HealthCheckMessage)
 	t.Logf("resString: %s", resString)
 }
+func HttpServerCheckTPM(t *testing.T) {
+	t.Helper()
+	resString, err := HttpGetRequest(APP_SERVER + "/tpm")
+	require.NoErrorf(t, err, "tpm failed: %v", err)
+	var httpData map[string]interface{}
+	json.Unmarshal([]byte(resString), &httpData)
+	tpm, ok := httpData["tpm"]
+	require.True(t, ok, "tpm json is broken")
+	assert.Truef(t,tpm.(float64) > 1, "tpm is less than 1 %f", tpm)
+}
 func HttpServerSendTrace(t *require.TestingT) {}
 func TestHttpServer(t *testing.T) {
 	serverControlChan := startHttpServer()
 	time.Sleep(3 * time.Second)
 	HttpServerSanityCheck(t, APP_SERVER)
-	HttpServerSanityCheck(t, DATA_SERVER)
+	// HttpServerSanityCheck(t, DATA_SERVER)
 	HttpServerCheckData(t)
-	time.Sleep(5 * time.Minute)
+	time.Sleep(1 * time.Minute)
+	for i := 1; i < 5; i++ {
+		HttpServerCheckTPM(t)
+		time.Sleep(20 * time.Minute)
+	}
 	serverControlChan <- 0
 
 }

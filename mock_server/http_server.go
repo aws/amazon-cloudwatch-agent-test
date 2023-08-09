@@ -102,7 +102,7 @@ func startHttpServer() chan interface{} {
 		dataApp.PathPrefix("/put-data").HandlerFunc(ts.dataReceived)
 		dataApp.HandleFunc("/trace/v1", ts.dataReceived)
 		dataApp.HandleFunc("/metric/v1", ts.dataReceived)
-		if err := daemonServer.ListenAndServe(); err != nil {
+		if err := daemonServer.ListenAndServeTLS(CertFilePath, KeyFilePath	); err != nil {
 			log.Fatalf("HTTPS server error: %v", err)
 			err = daemonServer.Shutdown(context.TODO())
 			log.Fatalf("Shutdown server error: %v", err)
