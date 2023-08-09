@@ -253,7 +253,7 @@ func AssertNoDuplicateLogs() LogEventsValidator {
 				byTimestamp[timestamp] = messages
 			}
 			_, ok = messages[message]
-			if !ok {
+			if ok {
 				return fmt.Errorf("duplicate message found at %v | message: %s", time.UnixMilli(timestamp), message)
 			}
 			messages[message] = struct{}{}
