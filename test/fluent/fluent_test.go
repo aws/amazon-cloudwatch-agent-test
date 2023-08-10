@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
@@ -43,41 +45,47 @@ func TestFluentLogs(t *testing.T) {
 
 	now := time.Now()
 	for group, fieldsArr := range logGroupToKey {
-		group := fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, group)
+		group = fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, group)
 		if !awsservice.IsLogGroupExists(group) {
 			t.Fatalf("fluent log group doesn't exsit: %s", group)
 		}
 
 		streams := awsservice.GetLogStreams(group)
-		if len(streams) < 1 {
+		if len(streams) == 0 {
 			t.Fatalf("fluent log streams are empty for log group: %s", group)
 		}
 
-		ok, err := awsservice.ValidateLogs(group, *(streams[0].LogStreamName), nil, &now, func(logs []string) bool {
-			if len(logs) < 1 {
-				return false
-			}
-
-			// only 1 log message gets validate
-			// log message must include expected fields, and there could be more than 1 set of expected fields  per log group
-			var found = false
-			for _, fields := range fieldsArr {
-				match := 0
-				for _, field := range fields {
-					if strings.Contains(logs[0], "\""+field+"\"") {
-						match += 1
+		err := awsservice.ValidateLogs(
+			group,
+			*(streams[0].LogStreamName),
+			nil,
+			&now,
+			awsservice.AssertLogsNotEmpty(),
+			func(events []types.OutputLogEvent) error {
+				// only 1 log message gets validated
+				// log message must include expected fields, and there could be more than 1 set of expected fields per log group
+				var found bool
+				for _, fields := range fieldsArr {
+					var match int
+					for _, field := range fields {
+						if strings.Contains(*events[0].Message, "\""+field+"\"") {
+							match += 1
+						}
+					}
+					if match == len(fields) {
+						found = true
+						break
 					}
 				}
-				if match == len(fields) {
-					found = true
-					break
+				if !found {
+					return fmt.Errorf("fluent log entry doesn't include expected message fields: %s", *events[0].Message)
 				}
-			}
-			return found
-		})
+				return nil
+			},
+		)
 
-		if err != nil || !ok {
-			t.Fatalf("fluent log entry doesn't include expected message fields for logGroup: %s", group)
+		if err != nil {
+			t.Fatalf("failed validation for log group %s: %v", group, err)
 		}
 	}
 

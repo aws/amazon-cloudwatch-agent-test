@@ -136,31 +136,6 @@ resource "null_resource" "integration_test" {
 
 }
 
-resource "null_resource" "integration_test_run" {
-  connection {
-    type        = "ssh"
-    user        = var.user
-    private_key = local.private_key_content
-    host        = aws_instance.cwagent.public_ip
-  }
-
-  #Run sanity check and integration test
-  provisioner "remote-exec" {
-    inline = [
-      "echo prepare environment",
-      "export AWS_REGION=${var.region}",
-      "echo run integration test",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket}  -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v"
-    ]
-  }
-
-  depends_on = [
-    null_resource.integration_test,
-    null_resource.integration_test_wait,
-  ]
-}
-
 data "aws_ami" "latest" {
   most_recent = true
 
