@@ -33,9 +33,8 @@ func CopyFile(pathIn string, pathOut string) error {
 	}
 
 	log.Printf("File %s abs path %s", pathIn, pathInAbs)
-	params := append([]string{"-NoProfile", "-NonInteractive",  "cp " + pathInAbs + " " + pathOut})
-	out, err := exec.Command(ps, params...).Output()
-
+	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "cp " + pathInAbs + " " + pathOut})
+	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil {
 		log.Printf("Copy file failed: %v; the output is: %s", err, string(out))
@@ -47,29 +46,6 @@ func CopyFile(pathIn string, pathOut string) error {
 
 }
 
-func StartAgentWithMultiConfig(configOutputPath string, fatalOnFailure bool, ssm bool) error {
-
-	ps, err := exec.LookPath("powershell.exe")
-
-	if err != nil {
-		return err
-	}
-
-	params := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a append-config -m ec2 -s -c file:" + configOutputPath})
-	out, err := exec.Command(ps, params...).Output()
-
-	if err != nil && fatalOnFailure {
-		log.Printf("Start agent failed: %v; the output is: %s", err, string(out))
-		return err
-	} else if err != nil {
-		log.Printf(fmt.Sprint(err) + string(out))
-	} else {
-		log.Printf("Agent has started")
-	}
-
-	return err
-}
-
 func StartAgent(configOutputPath string, fatalOnFailure bool, ssm bool) error {
 	// @TODO add ssm functionality
 
@@ -79,8 +55,8 @@ func StartAgent(configOutputPath string, fatalOnFailure bool, ssm bool) error {
 		return err
 	}
 
-	params := append([]string{"-NoProfile", "-NonInteractive", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a fetch-config -m ec2 -s -c file:" + configOutputPath})
-	out, err := exec.Command(ps, params...).Output()
+	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a fetch-config -m ec2 -s -c file:" + configOutputPath})
+	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil && fatalOnFailure {
 		log.Printf("Start agent failed: %v; the output is: %s", err, string(out))
@@ -101,8 +77,8 @@ func StopAgent() error {
 		return err
 	}
 
-	params := append([]string{"-NoProfile", "-NonInteractive", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a stop"})
-	out, err := exec.Command(ps, params...).Output()
+	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a stop"})
+	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil {
 		log.Printf("Stop agent failed: %v; the output is: %s", err, string(out))
