@@ -6,13 +6,15 @@
 package common
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 const (
@@ -41,10 +43,14 @@ func CopyFile(pathIn string, pathOut string) {
 	}
 
 	log.Printf("File %s abs path %s", pathIn, pathInAbs)
-	out, err := exec.Command("bash", "-c", "sudo cp "+pathInAbs+" "+pathOut).Output()
-
+	cmd := exec.Command("bash", "-c", "sudo cp "+pathInAbs+" "+pathOut)
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Fatalf("Error : %s | Error Code: %s | Out: %s", fmt.Sprint(err), stderr.String(), out.String())
 	}
 
 	log.Printf("File : %s copied to : %s", pathIn, pathOut)

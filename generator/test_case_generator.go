@@ -64,6 +64,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
+		{testDir: "./test/xray"},
+		{testDir: "./test/otlp"},
 		{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
