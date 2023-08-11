@@ -26,6 +26,7 @@ require (
 	github.com/aws/aws-xray-sdk-go v1.8.1
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/google/uuid v1.3.0
+	github.com/gorilla/mux v1.8.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prozz/aws-embedded-metrics-golang v1.2.0
 	github.com/qri-io/jsonschema v0.2.1
@@ -67,7 +68,6 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect

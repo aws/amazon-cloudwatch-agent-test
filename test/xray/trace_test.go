@@ -54,7 +54,7 @@ func TestTraces(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			XrayTestCfg := common.TraceTestConfig{
-				Generator:       newLoadGenerator(testCase.generatorConfig),
+				Generator:       NewLoadGenerator(testCase.generatorConfig),
 				Name:            name,
 				AgentConfigPath: testCase.agentConfigPath,
 				AgentRuntime:    agentRuntime,
