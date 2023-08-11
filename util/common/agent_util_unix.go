@@ -9,10 +9,10 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
@@ -166,16 +166,22 @@ func StopAgent() {
 	log.Printf("Agent is stopped")
 }
 
-func ReadAgentOutput(d time.Duration) string {
+func ReadAgentLogfile(logfile string) string {
+	out, err := os.ReadFile(logfile)
+	if err != nil {
+		log.Fatal(fmt.Sprint(err) + string(out))
+	}
+	return string(out)
+}
+
+func RecreateAgentLogfile(logfile string) {
 	out, err := exec.Command("bash", "-c",
-		fmt.Sprintf("sudo journalctl -u amazon-cloudwatch-agent.service --since \"%s ago\" --no-pager -q", d.String())).
+		fmt.Sprintf("sudo rm %s", logfile)).
 		Output()
 
 	if err != nil {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
-
-	return string(out)
 }
 
 func RunShellScript(path string, args ...string) (string, error) {
