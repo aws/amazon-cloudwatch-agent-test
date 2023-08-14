@@ -83,29 +83,16 @@ func HttpServerCheckTPM(t *testing.T) {
 	assert.Truef(t, tpm.(float64) > 1, "tpm is less than 1 %f", tpm)
 }
 
-//	func HttpServerSendData(t *testing.T,) {
-//		var wg sync.WaitGroup
-//		wg.Add(2)
-//		go func(){
-//			defer wg.Done()
-//			for i := 1; i < 5; i++ {
-//				HttpServerCheckTPM(t)
-//				time.Sleep(TPM_CHECK_INTERVAL)
-//			}
-//		}()
-//		wg.Wait()
-//	}
 func TestMockServer(t *testing.T) {
-	serverControlChan := startHttpServer()
+	serverControlChan := StartHttpServer()
 	time.Sleep(3 * time.Second)
 	HttpServerSanityCheck(t, APP_SERVER)
 	HttpsServerSanityCheck(t, DATA_SERVER)
-	// HttpServerSendData(t)
-	// time.Sleep(1 * time.Minute)
+	time.Sleep(1 * time.Minute)
 	serverControlChan <- 0
 
 }
 
 func TestStartMockServer(t *testing.T) {
-	startHttpServer()
+	StartHttpServer()
 }

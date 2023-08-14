@@ -6,7 +6,6 @@ package util
 import (
 	"fmt"
 	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/xray"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
@@ -22,17 +21,17 @@ func LogCloudWatchDimension(dims []types.Dimension) string {
 	return dimension
 }
 
-func StartTraceGeneration(receiver string, agentConfigPath string,agentRuntime time.Duration ,traceSendingInterval time.Duration) error{
+func StartTraceGeneration(receiver string, agentConfigPath string, agentRuntime time.Duration, traceSendingInterval time.Duration) error {
 	cfg := common.TraceTestConfig{
-		Generator: nil,
-		Name: "",
-		AgentConfigPath:  agentConfigPath,
-		AgentRuntime: agentRuntime,
+		Generator:       nil,
+		Name:            "",
+		AgentConfigPath: agentConfigPath,
+		AgentRuntime:    agentRuntime,
 	}
 	xrayGenCfg := common.TraceGeneratorConfig{
 		Interval: traceSendingInterval,
-		Annotations:map[string]interface{}{
-					"test_type":   "simple_otlp",
+		Annotations: map[string]interface{}{
+			"test_type": "simple_otlp",
 		},
 		Metadata: map[string]map[string]interface{}{
 			"default": {
@@ -44,14 +43,15 @@ func StartTraceGeneration(receiver string, agentConfigPath string,agentRuntime t
 				"custom_key": "custom_value",
 			},
 		},
-	}	
-	switch receiver{
+	}
+	switch receiver {
 	case "xray":
 		cfg.Generator = xray.NewLoadGenerator(&xrayGenCfg)
 		cfg.Name = "xray-performance-test"
 	case "otlp":
+		panic("Only supports xray for now.")
 	default:
-		panic("Invalid trace receiver")	
+		panic("Invalid trace receiver")
 	}
 	err := common.GenerateTraces(cfg)
 	return err

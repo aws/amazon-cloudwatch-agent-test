@@ -1,13 +1,16 @@
 # Header above mocked_servers cert in bundle
-CERT_HEADER=mocked_servers
+CERT_HEADER=mockserver
 
 CONFIG_PATH=openssl.conf
 CERT_PATH=certificates/ssl/certificate.crt
 KEY_PATH=certificates/private.key
 BUNDLE_PATH=certificates/ssl/ca-bundle.crt
-
+.PHONY: clean
+clean: 
+	rm -rf $(CERT_PATH) $(BUNDLE_PATH) $(KEY_PATH)
+	touch $(CERT_PATH) $(BUNDLE_PATH) $(KEY_PATH)
 .PHONY: update-certs
-update-certs: gen-cert update-bundle
+update-certs: clean gen-cert update-bundle
 
 # Expects mocked_servers cert to be the last cert in the bundle
 # Cuts until the first instance of "mocked_servers" in the bundle

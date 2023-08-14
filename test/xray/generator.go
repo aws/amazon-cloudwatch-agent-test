@@ -56,7 +56,7 @@ func NewLoadGenerator(cfg *common.TraceGeneratorConfig) *XrayTracesGenerator {
 }
 func (g *XrayTracesGenerator) Generate(ctx context.Context) error {
 	rootCtx, root := xray.BeginSegment(ctx, "load-generator")
-	log.Println("Generated Trace")
+	log.Println("\033[34mGenerated Trace\033[0m")
 	g.SegmentsGenerationCount++
 	defer func() {
 		root.Close(nil)
