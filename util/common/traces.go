@@ -112,3 +112,13 @@ func SegmentValidationTest(t *testing.T, traceTest TraceTestConfig, segments []t
 	return nil
 
 }
+func GenerateTraces(traceTest TraceTestConfig) error{
+		CopyFile(traceTest.AgentConfigPath, ConfigOutputPath)
+		go func() {
+			traceTest.Generator.StartSendingTraces(context.Background())
+		}()
+		time.Sleep(traceTest.AgentRuntime)
+		traceTest.Generator.StopSendingTraces()
+		time.Sleep(AGENT_SHUTDOWN_DELAY)
+		return nil
+}

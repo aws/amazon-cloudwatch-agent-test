@@ -91,6 +91,8 @@ resource "null_resource" "install_binaries" {
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_package} .",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_validator} .",
+      "git clone https://github.com/okankoAMZ/amazon-cloudwatch-agent-test.git",
+      "cp -r amazon-cloudwatch-agent-test/test/xray/resources /home/ec2-user/",
       local.ami_family["install_command"],
     ]
   }

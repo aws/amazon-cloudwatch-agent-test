@@ -51,7 +51,7 @@ func (g *OtlpTracesGenerator) StartSendingTraces(ctx context.Context) error {
 func (g *OtlpTracesGenerator) StopSendingTraces() {
 	close(g.Done)
 }
-func newLoadGenerator(cfg *common.TraceGeneratorConfig) *OtlpTracesGenerator {
+func NewLoadGenerator(cfg *common.TraceGeneratorConfig) *OtlpTracesGenerator {
 	return &OtlpTracesGenerator{
 		TraceGenerator: common.TraceGenerator{
 			Cfg:                     cfg,

@@ -1,0 +1,11 @@
+{
+  "agent":{
+    "debug":true
+  },
+  "traces": {
+    "traces_collected": {
+      "xray": {
+      }
+    }
+  }
+}

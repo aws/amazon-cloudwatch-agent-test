@@ -26,6 +26,7 @@ require (
 	github.com/aws/aws-xray-sdk-go v1.8.1
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/google/uuid v1.3.0
+	github.com/gorilla/mux v1.8.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prozz/aws-embedded-metrics-golang v1.2.0
 	github.com/qri-io/jsonschema v0.2.1
