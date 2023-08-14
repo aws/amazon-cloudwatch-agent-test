@@ -5,16 +5,14 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test/xray"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-//https://github.com/aws-observability/aws-otel-test-framework/blob/terraform/mocked_servers/https/main.go
+
+// https://github.com/aws-observability/aws-otel-test-framework/blob/terraform/mocked_servers/https/main.go
 const (
 	APP_SERVER_ADDR  = "http://127.0.0.1"
 	APP_SERVER_PORT  = ":" + "8080"
@@ -23,22 +21,22 @@ const (
 	DATA_SERVER_PORT = ":" + "443"
 	DATA_SERVER      = DATA_SERVER_ADDR + DATA_SERVER_PORT
 
-	SEND_TEST_DATA_COUNT  time.Duration= 10 * time.Second
-	TPM_CHECK_INTERVAL time.Duration  = 10 *  time.Second
-
+	SEND_TEST_DATA_COUNT time.Duration = 10 * time.Second
+	TPM_CHECK_INTERVAL   time.Duration = 10 * time.Second
 )
-func ResponseToString(res * http.Response) (string,error){
+
+func ResponseToString(res *http.Response) (string, error) {
 	responseText, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}
 	return string(responseText), nil
 }
-func HttpsGetRequest(url string) (string, error){
+func HttpsGetRequest(url string) (string, error) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		
+	}
+
 	client := &http.Client{Transport: tr}
 
 	res, err := client.Get(url)
@@ -82,20 +80,21 @@ func HttpServerCheckTPM(t *testing.T) {
 	json.Unmarshal([]byte(resString), &httpData)
 	tpm, ok := httpData["tpm"]
 	require.True(t, ok, "tpm json is broken")
-	assert.Truef(t,tpm.(float64) > 1, "tpm is less than 1 %f", tpm)
+	assert.Truef(t, tpm.(float64) > 1, "tpm is less than 1 %f", tpm)
 }
-// func HttpServerSendData(t *testing.T,) {
-// 	var wg sync.WaitGroup 
-// 	wg.Add(2)
-// 	go func(){
-// 		defer wg.Done()
-// 		for i := 1; i < 5; i++ {
-// 			HttpServerCheckTPM(t)
-// 			time.Sleep(TPM_CHECK_INTERVAL)
-// 		}
-// 	}()
-// 	wg.Wait()
-// }
+
+//	func HttpServerSendData(t *testing.T,) {
+//		var wg sync.WaitGroup
+//		wg.Add(2)
+//		go func(){
+//			defer wg.Done()
+//			for i := 1; i < 5; i++ {
+//				HttpServerCheckTPM(t)
+//				time.Sleep(TPM_CHECK_INTERVAL)
+//			}
+//		}()
+//		wg.Wait()
+//	}
 func TestMockServer(t *testing.T) {
 	serverControlChan := startHttpServer()
 	time.Sleep(3 * time.Second)
@@ -107,7 +106,6 @@ func TestMockServer(t *testing.T) {
 
 }
 
-
-func TestStartMockServer(t * testing.T){
+func TestStartMockServer(t *testing.T) {
 	startHttpServer()
 }

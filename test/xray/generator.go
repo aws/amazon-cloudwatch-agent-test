@@ -3,13 +3,10 @@ package xray
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/aws-xray-sdk-go/strategy/sampling"
 	"github.com/aws/aws-xray-sdk-go/xray"
@@ -40,21 +37,7 @@ func (g *XrayTracesGenerator) StartSendingTraces(ctx context.Context) error {
 func (g *XrayTracesGenerator) StopSendingTraces() {
 	close(g.Done)
 }
-func listDir() {
-	err := filepath.Walk(".",
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			fmt.Println(path, info.Size())
-			return nil
-		})
-	if err != nil {
-		log.Println(err)
-	}
-}
 func NewLoadGenerator(cfg *common.TraceGeneratorConfig) *XrayTracesGenerator {
-	listDir()
 	s, err := sampling.NewLocalizedStrategyFromFilePath(
 		path.Join("resources", "sampling-rule.json"))
 	if err != nil {

@@ -17,6 +17,7 @@ import (
 const (
 	AGENT_SHUTDOWN_DELAY = 20 * time.Second // this const is the delay between stopping trace generation and stopping agent
 )
+
 type TraceTestConfig struct {
 	Generator       TraceGeneratorInterface
 	Name            string
@@ -49,6 +50,7 @@ type TraceGeneratorInterface interface {
 	GetAgentRuntime() time.Duration
 	GetName() string
 }
+
 func TraceTest(t *testing.T, traceTest TraceTestConfig) error {
 	t.Helper()
 	startTime := time.Now()
