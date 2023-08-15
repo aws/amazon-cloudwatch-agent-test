@@ -37,7 +37,7 @@ resource "aws_launch_configuration" "cluster" {
 
   user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
   metadata_options {
-    http_endpoint               =  var.metadataEnabled
+    http_endpoint               =  "enabled"
     http_tokens                 = "required"
     http_put_response_hop_limit = 2
   }
@@ -191,6 +191,7 @@ resource "aws_ecs_service" "cwagent_service" {
   task_definition     = aws_ecs_task_definition.cwagent_task_definition.arn
   launch_type         = "EC2"
   scheduling_strategy = "DAEMON"
+  enable_execute_command = true
 
   depends_on = [aws_ecs_task_definition.cwagent_task_definition]
 }
@@ -225,6 +226,7 @@ resource "aws_ecs_service" "extra_apps_service" {
   task_definition = aws_ecs_task_definition.extra_apps_task_definition.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     security_groups  = [module.basic_components.security_group]
@@ -238,10 +240,26 @@ resource "aws_ecs_service" "extra_apps_service" {
 resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
+      echo Checking task metadata
       echo "Validating metrics/logs"
       cd ../../..
       go test ${var.test_dir} -timeout 0 -computeType=ECS -ecsLaunchType=EC2 -ecsDeploymentStrategy=DAEMON -cwagentConfigSsmParamName=${local.cwagent_config_ssm_param_name} -clusterArn=${aws_ecs_cluster.cluster.arn} -cwagentECSServiceName=${aws_ecs_service.cwagent_service.name} -v
     EOT
   }
-  depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service]
+  depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service, null_resource.disable_metadata]
+}
+
+resource "null_resource" "disable_metadata" {
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo Sleep for 30 seconds to allow instance to be attached to the cluster
+      sleep 30
+      echo Setting metadata option for ECS EC2 instance to ${var.metadataEnabled}
+      INSTANCEID=`aws ec2 describe-instances --filters Name=tag:ClusterName,Values=${aws_ecs_cluster.cluster.name} --query "Reservations[*].Instances[*].InstanceId" --output text`
+      echo Instance ID for ECS instance is $INSTANCEID
+      aws ec2 modify-instance-metadata-options --instance-id $INSTANCEID --http-endpoint ${var.metadataEnabled}
+    EOT
+  }
+  depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service, aws_autoscaling_group.cluster]
 }

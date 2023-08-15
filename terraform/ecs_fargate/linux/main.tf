@@ -90,6 +90,7 @@ resource "aws_ecs_service" "cwagent_service" {
   task_definition = aws_ecs_task_definition.cwagent_task_definition.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     security_groups  = [module.basic_components.security_group]
@@ -130,6 +131,7 @@ resource "aws_ecs_service" "extra_apps_service" {
   task_definition = aws_ecs_task_definition.extra_apps_task_definition.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     security_groups  = [module.basic_components.security_group]
