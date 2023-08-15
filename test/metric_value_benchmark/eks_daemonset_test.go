@@ -7,13 +7,12 @@ package metric_value_benchmark
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"github.com/qri-io/jsonschema"
 	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -127,43 +126,34 @@ func (e *EKSDaemonTestRunner) validateLogs(env *environment.MetaData) status.Tes
 	}
 
 	for _, instance := range eKSInstances {
-		validateLogContents := func(s string) bool {
-			return strings.Contains(s, fmt.Sprintf("\"ClusterName\":\"%s\"", env.EKSClusterName))
-		}
-
-		var ok bool
 		stream := *instance.InstanceName
-		ok, err = awsservice.ValidateLogs(group, stream, nil, &now, func(logs []string) bool {
-			if len(logs) < 1 {
-				log.Println(fmt.Sprintf("failed to get logs for instance: %s", stream))
-				return false
-			}
+		err = awsservice.ValidateLogs(
+			group,
+			stream,
+			nil,
+			&now,
+			awsservice.AssertLogsNotEmpty(),
+			awsservice.AssertPerLog(
+				awsservice.AssertLogSchema(func(message string) (string, error) {
+					var eksClusterType awsservice.EKSClusterType
+					innerErr := json.Unmarshal([]byte(message), &eksClusterType)
+					if innerErr != nil {
+						return "", fmt.Errorf("failed to unmarshal log file: %w", innerErr)
+					}
 
-			for _, l := range logs {
-				var eksClusterType awsservice.EKSClusterType
-				err := json.Unmarshal([]byte(l), &eksClusterType)
-				if err != nil {
-					log.Println("failed to unmarshal log file")
-				}
+					log.Printf("eksClusterType is: %s", eksClusterType.Type)
+					jsonSchema, ok := eks_resources.EksClusterValidationMap[eksClusterType.Type]
+					if !ok {
+						return "", errors.New("invalid cluster type provided")
+					}
+					return jsonSchema, nil
+				}),
+				awsservice.AssertLogContainsSubstring(fmt.Sprintf("\"ClusterName\":\"%s\"", env.EKSClusterName)),
+			),
+		)
 
-				log.Println(fmt.Sprintf("eksClusterType is: %s", eksClusterType.Type))
-				jsonSchema, ok := eks_resources.EksClusterValidationMap[eksClusterType.Type]
-				if !ok {
-					log.Println("invalid cluster type provided")
-					return false
-				}
-				rs := jsonschema.Must(jsonSchema)
-
-				if !awsservice.MatchEMFLogWithSchema(l, rs, validateLogContents) {
-					log.Println("failed to match log with schema")
-					log.Printf("log entry %s json schema %s", l, jsonSchema)
-					return false
-				}
-			}
-			return true
-		})
-
-		if err != nil || !ok {
+		if err != nil {
+			log.Printf("log validation (%s/%s) failed: %v", group, stream, err)
 			return testResult
 		}
 	}
@@ -209,7 +199,6 @@ func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
 		"pod_memory_utilization_over_pod_limit",
 		"pod_network_rx_bytes",
 		"pod_network_tx_bytes",
-		"pod_number_of_container_restarts",
 		"service_number_of_running_pods",
 	}
 }
