@@ -37,7 +37,7 @@ resource "aws_launch_configuration" "cluster" {
 
   user_data = "#!/bin/bash\necho ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config"
   metadata_options {
-    http_endpoint               =  "enabled"
+    http_endpoint               = "enabled"
     http_tokens                 = "required"
     http_put_response_hop_limit = 2
   }
@@ -186,11 +186,11 @@ resource "aws_ecs_task_definition" "cwagent_task_definition" {
 }
 
 resource "aws_ecs_service" "cwagent_service" {
-  name                = "cwagent-service-${module.common.testing_id}"
-  cluster             = aws_ecs_cluster.cluster.id
-  task_definition     = aws_ecs_task_definition.cwagent_task_definition.arn
-  launch_type         = "EC2"
-  scheduling_strategy = "DAEMON"
+  name                   = "cwagent-service-${module.common.testing_id}"
+  cluster                = aws_ecs_cluster.cluster.id
+  task_definition        = aws_ecs_task_definition.cwagent_task_definition.arn
+  launch_type            = "EC2"
+  scheduling_strategy    = "DAEMON"
   enable_execute_command = true
 
   depends_on = [aws_ecs_task_definition.cwagent_task_definition]
@@ -221,11 +221,11 @@ resource "aws_ecs_task_definition" "extra_apps_task_definition" {
 }
 
 resource "aws_ecs_service" "extra_apps_service" {
-  name            = "extra-apps-service-${module.common.testing_id}"
-  cluster         = aws_ecs_cluster.cluster.id
-  task_definition = aws_ecs_task_definition.extra_apps_task_definition.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                   = "extra-apps-service-${module.common.testing_id}"
+  cluster                = aws_ecs_cluster.cluster.id
+  task_definition        = aws_ecs_task_definition.extra_apps_task_definition.arn
+  desired_count          = 1
+  launch_type            = "FARGATE"
   enable_execute_command = true
 
   network_configuration {
