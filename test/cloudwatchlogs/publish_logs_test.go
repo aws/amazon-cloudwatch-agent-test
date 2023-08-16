@@ -36,6 +36,7 @@ type input struct {
 	iterations      int
 	numExpectedLogs int
 	configPath      string
+	logGroupName    string
 }
 
 var testParameters = []input{
@@ -44,18 +45,21 @@ var testParameters = []input{
 		iterations:      100,
 		numExpectedLogs: 200,
 		configPath:      "resources/config_log.json",
+		logGroupName:    awsservice.GetInstanceId(),
 	},
 	{
 		testName:        "Client-side log filtering",
 		iterations:      100,
 		numExpectedLogs: 100,
 		configPath:      "resources/config_log_filter.json",
+		logGroupName:    awsservice.GetInstanceId(),
 	},
-	{
+	{ //TODO update all naming from basic to essentials once SDK changes are available
 		testName:        "Basic Log Group Class",
 		iterations:      100,
 		numExpectedLogs: 100,
 		configPath:      "resources/config_log_basic.json",
+		logGroupName:    awsservice.GetInstanceId() + "-basic",
 	},
 }
 
@@ -107,7 +111,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			// check CWL to ensure we got the expected number of logs in the log stream
 			err = awsservice.ValidateLogs(
-				instanceId,
+				param.logGroupName,
 				instanceId,
 				&start,
 				&end,
