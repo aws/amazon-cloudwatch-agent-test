@@ -51,6 +51,12 @@ var testParameters = []input{
 		numExpectedLogs: 100,
 		configPath:      "resources/config_log_filter.json",
 	},
+	{
+		testName:        "Basic Log Group Class",
+		iterations:      100,
+		numExpectedLogs: 100,
+		configPath:      "resources/config_log_basic.json",
+	},
 }
 
 func init() {
