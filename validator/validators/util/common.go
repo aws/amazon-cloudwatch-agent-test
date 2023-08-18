@@ -21,7 +21,7 @@ func LogCloudWatchDimension(dims []types.Dimension) string {
 	return dimension
 }
 
-func StartTraceGeneration(receiver string, agentConfigPath string, agentRuntime time.Duration, traceSendingInterval time.Duration) error {
+func  StartTraceGeneration(receiver string, agentConfigPath string, agentRuntime time.Duration, traceSendingInterval time.Duration) error {
 	cfg := common.TraceTestConfig{
 		Generator:       nil,
 		Name:            "",

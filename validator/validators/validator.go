@@ -8,7 +8,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/mockserver"
+	// "github.com/aws/amazon-cloudwatch-agent-test/mockserver"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/feature"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/performance"
@@ -45,8 +45,6 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 
 	log.Printf("Start to sleep %f s for the metric to be available in the beginning of next minute ", durationBeforeNextMinute.Seconds())
 	time.Sleep(durationBeforeNextMinute)
-	log.Printf("Start mock server \n")
-	mockserverChan := mockserver.StartHttpServer()
 	log.Printf("Start to generate load in %f s for the agent to collect and send all the metrics to CloudWatch within the datapoint period ", agentCollectionPeriod.Seconds())
 	err = validator.GenerateLoad()
 	if err != nil {
@@ -62,9 +60,6 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Closing the mock server")
-	mockserverChan <- 0
-	close(mockserverChan)
 	err = validator.Cleanup()
 	if err != nil {
 		return err

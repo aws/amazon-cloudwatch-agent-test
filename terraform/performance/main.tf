@@ -109,21 +109,22 @@ resource "null_resource" "validator_linux" {
   }
   provisioner "remote-exec" {
     inline = [
-      "export AWS_REGION=${var.region}",
-      "sudo chmod +x ./${local.install_validator}",
       #mock server dependencies getting transfered.
       "git clone https://github.com/okankoAMZ/amazon-cloudwatch-agent-test.git",
-      "cd amazon-cloudwatch-agent-test && git checkout xray-performance-test",
+      "cd amazon-cloudwatch-agent-test && git checkout xray-perf-test-docker",
+      "cd mockserver && sudo docker build -t mockserver . && cd ..",
+      "sudo docker run --name mockserver -d -p 8080:8080 -p 443:443  mockserver",
+      # "go test ./test/xray -p 1 -timeout 1h -computeType=EC2 ",
       "cd ..",
       "cp -r amazon-cloudwatch-agent-test/test/xray/resources /home/ec2-user/",
       "cp -a amazon-cloudwatch-agent-test/mockserver/. /home/ec2-user/",
       "sudo make update-certs",
-      "sudo cp certificates/ssl/certificate.crt /usr/local/share/ca-certificates/terraform.crt",
-      "sudo update-ca-certificates",
-      "sudo ./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
-      "sudo setcap 'cap_net_bind_service=+ep' validator",
+      "export AWS_REGION=${var.region}",
+      "sudo chmod +x ./${local.install_validator}",
+      "printenv",
+      "./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       local.start_command,
-      "sudo ./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
+      "./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
   }
 }
