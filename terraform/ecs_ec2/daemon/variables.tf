@@ -27,3 +27,8 @@ variable "cwagent_image_tag" {
   type    = string
   default = "latest"
 }
+
+variable "metadataEnabled" {
+  type    = string
+  default = "enabled"
+}
