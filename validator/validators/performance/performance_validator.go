@@ -222,7 +222,6 @@ func (s *PerformanceValidator) GetPerformanceMetrics(startTime, endTime time.Tim
 			})
 		}
 	}
-	log.Println("Performance Metric Query", performanceMetricDataQueries)
 	metrics, err := awsservice.GetMetricData(performanceMetricDataQueries, startTime, endTime)
 
 	if err != nil {

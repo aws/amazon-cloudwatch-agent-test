@@ -115,11 +115,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{testDir: "../../../test/assume_role"},
 	},
 	"ec2_performance": {
-		// {testDir: "../../test/performance/emf"},
-		// {testDir: "../../test/performance/logs"},
-		// {testDir: "../../test/performance/system"},
-		// {testDir: "../../test/performance/statsd"},
-		// {testDir: "../../test/performance/collectd"},
+		{testDir: "../../test/performance/emf"},
+		{testDir: "../../test/performance/logs"},
+		{testDir: "../../test/performance/system"},
+		{testDir: "../../test/performance/statsd"},
+		{testDir: "../../test/performance/collectd"},
 		{testDir: "../../test/performance/trace/xray"},
 	},
 	"ec2_windows_performance": {
