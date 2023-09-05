@@ -66,7 +66,7 @@ variable "family" {
     error_message = "Valid values for family are (windows, linux)."
   }
 }
-variable "run_mock_server"{
-  type = bool
+variable "run_mock_server" {
+  type    = bool
   default = false
 }

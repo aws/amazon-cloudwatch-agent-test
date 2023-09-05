@@ -111,10 +111,10 @@ resource "null_resource" "validator_linux" {
     inline = [
       #mock server dependencies getting transfered.
       # todo make this optional with a env var.
-      "git clone https://github.com/okankoAMZ/amazon-cloudwatch-agent-test.git",
-      "cd amazon-cloudwatch-agent-test && git checkout xray-perf-test-docker",
-      var.run_mock_server? "cd mockserver && sudo docker build -t mockserver . && cd .." : "",
-      var.run_mock_server? "sudo docker run --name mockserver -d -p 8080:8080 -p 443:443  mockserver" : "",
+      "git clone https://github.com/aws/amazon-cloudwatch-agent-test.git",
+      "cd amazon-cloudwatch-agent-test && git checkout xray-performance-test",
+      var.run_mock_server ? "cd mockserver && sudo docker build -t mockserver . && cd .." : "echo skipping mock server build",
+      var.run_mock_server ? "sudo docker run --name mockserver -d -p 8080:8080 -p 443:443  mockserver" : "echo skipping mock server",
       "cd ..",
       "cp -r amazon-cloudwatch-agent-test/test/xray/resources /home/ec2-user/",
       "export AWS_REGION=${var.region}",

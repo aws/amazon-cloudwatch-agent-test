@@ -31,7 +31,6 @@ type matrixRow struct {
 	TerraformDir        string `json:"terraform_dir"`
 	UseSSM              bool   `json:"useSSM"`
 	ExcludedTests       string `json:"excludedTests"`
-	RunMockServer       bool   `json:"run_mock_server"`
 	MetadataEnabled     string `json:"metadataEnabled"`
 }
 
@@ -123,8 +122,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/performance/system"},
 		{testDir: "../../test/performance/statsd"},
 		{testDir: "../../test/performance/collectd"},
-		{testDir: "../../test/performance/trace/xray",
-			runMockServer: true},
+		{testDir: "../../test/performance/trace/xray",runMockServer: true},
 	},
 	"ec2_windows_performance": {
 		{testDir: "../../test/performance/windows/logs"},
@@ -227,9 +225,7 @@ func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
-			log.Printf("Run mock? %s",testConfig.runMockServer)
-			row := matrixRow{TestDir: testConfig.testDir, TestType: testType, TerraformDir: testConfig.terraformDir,
-				 RunMockServer: testConfig.runMockServer}
+			row := matrixRow{TestDir: testConfig.testDir, TestType: testType, TerraformDir: testConfig.terraformDir}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
 				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
