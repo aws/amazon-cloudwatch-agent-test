@@ -32,6 +32,7 @@ type matrixRow struct {
 	UseSSM              bool   `json:"useSSM"`
 	ExcludedTests       string `json:"excludedTests"`
 	RunMockServer       bool   `json:"run_mock_server"`
+	MetadataEnabled     string `json:"metadataEnabled"`
 }
 
 type testConfig struct {
@@ -144,9 +145,22 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/ecs/ecs_metadata"},
 	},
 	"ecs_ec2_daemon": {
-		{testDir: "./test/metric_value_benchmark"},
-		{testDir: "./test/statsd"},
-		{testDir: "./test/emf"},
+		{
+			testDir: "./test/metric_value_benchmark",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+		},
+		{
+			testDir: "./test/statsd",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+		},
+		{
+			testDir: "./test/emf",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"disabled": {}}},
+		},
+		{
+			testDir: "./test/emf",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+		},
 	},
 	"eks_daemon": {
 		{
@@ -238,6 +252,8 @@ func shouldAddTest(row *matrixRow, targets map[string]map[string]struct{}) bool 
 			rowVal = row.Arc
 		} else if key == "os" {
 			rowVal = row.Os
+		} else if key == "metadataEnabled" {
+			rowVal = row.MetadataEnabled
 		}
 
 		if rowVal == "" {
