@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -25,8 +27,8 @@ const (
 	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	logLineId1       = "foo"
 	logLineId2       = "bar"
-	logFilePath      = "/tmp/test.log"  // TODO: not sure how well this will work on Windows
-	agentRuntime     = 20 * time.Second // default flush interval is 5 seconds
+	logFilePath      = "/tmp/cwagent_log_test.log"  // TODO: not sure how well this will work on Windows
+	sleepForFlush    = 20 * time.Second // default flush interval is 5 seconds
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
@@ -86,17 +88,10 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			// ensure that there is enough time from the "start" time and the first log line,
 			// so we don't miss it in the GetLogEvents call
-			time.Sleep(agentRuntime)
-			writeLogs(t, f, param.iterations)
-			time.Sleep(agentRuntime)
+			time.Sleep(sleepForFlush)
+			writeLogLines(t, f, param.iterations)
+			time.Sleep(sleepForFlush)
 			common.StopAgent()
-
-			agentLog, err := common.RunCommand(common.CatCommand + common.AgentLogFile)
-			if err != nil {
-				return
-			}
-			t.Logf("Agent logs %s", agentLog)
-
 			end := time.Now()
 
 			// check CWL to ensure we got the expected number of logs in the log stream
@@ -113,33 +108,102 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	}
 }
 
+func autoRemovalTestCleanup() {
+	instanceId := awsservice.GetInstanceId()
+	awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+	paths, _ := filepath.Glob(logFilePath + "*")
+	for _, p := range paths {
+		_ = os.Remove(p)
+	}
+}
+
+
 // TestAutoRemovalStopAgent configures agent to monitor a file with auto removal on.
 // Then it restarts the agent.
 // Verify the file is NOT removed.
 func TestAutoRemovalStopAgent(t *testing.T) {
-	// Use instance id so 2 tests in parallel on different machines do not conflict.
-	instanceId := awsservice.GetInstanceId()
-	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+	configPath := "resources/config_auto_removal.json"
+	defer autoRemovalTestCleanup()
+
 	fpath := logFilePath + "1"
 	f, err := os.Create(fpath)
 	if err != nil {
 		t.Fatalf("Error occurred creating log file for writing: %v", err)
 	}
 	defer f.Close()
-	defer os.Remove(fpath)
+
+	// Restart the agent multiple times.
+	loopCount := 5
+	linesPerLoop := 1000
+	start := time.Now()
+	for i := 0; i < loopCount; i++ {
+		common.StartAgent(configPath, true, false)
+		// Sleep to ensure agent detects file before it is written.
+		time.Sleep(sleepForFlush)
+		writeLogLines(t, f, linesPerLoop)
+		time.Sleep(sleepForFlush)
+		common.StopAgent()
+		assert.FileExists(t, fpath)
+	}
+
+	end := time.Now()
+	// Sleep to ensure backend stores logs.
+	time.Sleep(time.Second*60)
+	instanceId := awsservice.GetInstanceId()
+	err = awsservice.ValidateLogs(
+		instanceId,
+		instanceId,
+		&start,
+		&end,
+		// *2 because 2 lines per loop
+		awsservice.AssertLogsCount(loopCount * linesPerLoop * 2),
+		awsservice.AssertNoDuplicateLogs(),
+	)
+	assert.NoError(t, err)
+}
+
+// TestAutoRemovalFileRotation repeatedly created files matching the monitored pattern.
+// After creating each file, write some log lines, sleep and verify previous_file was auto removed.
+// Retrieve LogEvents from CWL and verify all log lines were uploaded.
+func TestAutoRemovalFileRotation(t *testing.T) {
+	defer autoRemovalTestCleanup()
 	configPath := "resources/config_auto_removal.json"
 	common.StartAgent(configPath, true, false)
-	// Sleep 20 seconds before and after writing the file to ensure the agent reads it.
-	sleepTime := time.Second*20
-	time.Sleep(sleepTime)
-	writeLogs(t, f, 1000)
-	time.Sleep(sleepTime)
-	common.StopAgent()
-	time.Sleep(sleepTime)
-	assert.FileExists(t, fpath, "file does not exist, {}", fpath)
-	common.StartAgent(configPath, true, false)
-	time.Sleep(sleepTime)
-	assert.FileExists(t, fpath, "file does not exist, {}", fpath)
+
+	start := time.Now()
+	loopCount := 5
+	linesPerLoop := 1000
+	for i := 0; i < loopCount; i++ {
+		fpath := logFilePath + strconv.Itoa(i)
+		// Create new file each minute and run for 5 minutes.
+		f, err := os.Create(fpath)
+		if err != nil {
+			t.Fatalf("Error occurred creating log file for writing: %v", err)
+		}
+		defer f.Close()
+
+		// Sleep to ensure agent detects file before it is written.
+		time.Sleep(sleepForFlush)
+		writeLogLines(t, f, linesPerLoop)
+		time.Sleep(sleepForFlush)
+		assert.FileExists(t, fpath, "file does not exist, {}", fpath)
+		assert.NoFileExists(t, logFilePath + strconv.Itoa(i-1))
+	}
+
+	end := time.Now()
+	// Sleep to ensure backend stores logs.
+	time.Sleep(time.Second*60)
+	instanceId := awsservice.GetInstanceId()
+	err := awsservice.ValidateLogs(
+		instanceId,
+		instanceId,
+		&start,
+		&end,
+		// *2 because 2 lines per loop
+		awsservice.AssertLogsCount(loopCount * linesPerLoop * 2),
+		awsservice.AssertNoDuplicateLogs(),
+	)
+	assert.NoError(t, err)
 }
 
 // TestRotatingLogsDoesNotSkipLines validates https://github.com/aws/amazon-cloudwatch-agent/issues/447
@@ -165,11 +229,11 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 
 	// ensure that there is enough time from the "start" time and the first log line,
 	// so we don't miss it in the GetLogEvents call
-	time.Sleep(agentRuntime)
+	time.Sleep(sleepForFlush)
 	t.Log("Writing logs and rotating")
 	// execute the script used in the repro case
 	common.RunCommand("/usr/bin/python3 resources/write_and_rotate_logs.py")
-	time.Sleep(agentRuntime)
+	time.Sleep(sleepForFlush)
 	common.StopAgent()
 
 	// These expected log lines are created using resources/write_and_rotate_logs.py,
@@ -205,7 +269,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func writeLogs(t *testing.T, f *os.File, iterations int) {
+func writeLogLines(t *testing.T, f *os.File, iterations int) {
 	log.Printf("Writing %d lines to %s", iterations*len(logLineIds), f.Name())
 
 	for i := 0; i < iterations; i++ {
@@ -221,3 +285,4 @@ func writeLogs(t *testing.T, f *os.File, iterations int) {
 		time.Sleep(1 * time.Millisecond)
 	}
 }
+
