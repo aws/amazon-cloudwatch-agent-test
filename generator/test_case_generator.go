@@ -112,6 +112,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/windows"},
 		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
+		{testDir: "../../../test/feature/windows/event_logs"},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
