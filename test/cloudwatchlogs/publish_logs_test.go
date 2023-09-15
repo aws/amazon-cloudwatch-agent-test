@@ -113,6 +113,29 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	}
 }
 
+// TestAutoRemovalStopAgent configures agent to monitor a file with auto removal on.
+// Then it restarts the agent.
+// Verify the file is NOT removed.
+func TestAutoRemovalStopAgent(t *testing.T) {
+	// Use instance id so 2 tests in parallel on different machines do not conflict.
+	instanceId := awsservice.GetInstanceId()
+	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+	configPath := "resources/config_auto_removal.json"
+	fpath := logFilePath + "1"
+	f, err := os.Create(logFilePath)
+	if err != nil {
+		t.Fatalf("Error occurred creating log file for writing: %v", err)
+	}
+	defer f.Close()
+	defer os.Remove(fpath)
+	common.StartAgent(configPath, true, false)
+	time.Sleep(agentRuntime)
+	writeLogs(t, f, 100_000)
+	common.StopAgent()
+	time.Sleep(agentRuntime)
+	assert.FileExists(t, fpath, "file does not exist, {}", fpath)
+}
+
 // TestRotatingLogsDoesNotSkipLines validates https://github.com/aws/amazon-cloudwatch-agent/issues/447
 // The following should happen in the test:
 // 1. A log line of size N should be written
