@@ -134,6 +134,9 @@ func TestAutoRemovalStopAgent(t *testing.T) {
 	common.StopAgent()
 	time.Sleep(agentRuntime)
 	assert.FileExists(t, fpath, "file does not exist, {}", fpath)
+	common.StartAgent(configPath, true, false)
+	time.Sleep(agentRuntime)
+	assert.FileExists(t, fpath, "file does not exist, {}", fpath)
 }
 
 // TestRotatingLogsDoesNotSkipLines validates https://github.com/aws/amazon-cloudwatch-agent/issues/447
