@@ -120,7 +120,6 @@ func TestAutoRemovalStopAgent(t *testing.T) {
 	// Use instance id so 2 tests in parallel on different machines do not conflict.
 	instanceId := awsservice.GetInstanceId()
 	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
-	configPath := "resources/config_auto_removal.json"
 	fpath := logFilePath + "1"
 	f, err := os.Create(fpath)
 	if err != nil {
@@ -128,15 +127,18 @@ func TestAutoRemovalStopAgent(t *testing.T) {
 	}
 	defer f.Close()
 	defer os.Remove(fpath)
+	configPath := "resources/config_auto_removal.json"
 	common.StartAgent(configPath, true, false)
-	time.Sleep(agentRuntime)
+	// Sleep 20 seconds before and after writing the file to ensure the agent reads it.
+	sleepTime := time.Second*20
+	time.Sleep(sleepTime)
 	writeLogs(t, f, 1000)
-	time.Sleep(agentRuntime)
+	time.Sleep(sleepTime)
 	common.StopAgent()
-	time.Sleep(agentRuntime)
+	time.Sleep(sleepTime)
 	assert.FileExists(t, fpath, "file does not exist, {}", fpath)
 	common.StartAgent(configPath, true, false)
-	time.Sleep(agentRuntime)
+	time.Sleep(sleepTime)
 	assert.FileExists(t, fpath, "file does not exist, {}", fpath)
 }
 
