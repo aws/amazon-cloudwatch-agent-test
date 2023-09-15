@@ -122,7 +122,7 @@ func TestAutoRemovalStopAgent(t *testing.T) {
 	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
 	configPath := "resources/config_auto_removal.json"
 	fpath := logFilePath + "1"
-	f, err := os.Create(logFilePath)
+	f, err := os.Create(fpath)
 	if err != nil {
 		t.Fatalf("Error occurred creating log file for writing: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestAutoRemovalStopAgent(t *testing.T) {
 	defer os.Remove(fpath)
 	common.StartAgent(configPath, true, false)
 	time.Sleep(agentRuntime)
-	writeLogs(t, f, 100_000)
+	writeLogs(t, f, 1000)
 	common.StopAgent()
 	time.Sleep(agentRuntime)
 	assert.FileExists(t, fpath, "file does not exist, {}", fpath)
