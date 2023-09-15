@@ -131,6 +131,7 @@ func TestAutoRemovalStopAgent(t *testing.T) {
 	common.StartAgent(configPath, true, false)
 	time.Sleep(agentRuntime)
 	writeLogs(t, f, 1000)
+	time.Sleep(agentRuntime)
 	common.StopAgent()
 	time.Sleep(agentRuntime)
 	assert.FileExists(t, fpath, "file does not exist, {}", fpath)
