@@ -24,11 +24,11 @@ import (
 )
 
 const (
-	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	logLineId1       = "foo"
-	logLineId2       = "bar"
-	logFilePath      = "/tmp/cwagent_log_test.log"  // TODO: not sure how well this will work on Windows
-	sleepForFlush    = 20 * time.Second // default flush interval is 5 seconds
+	configOutputPath      = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	logLineId1            = "foo"
+	logLineId2            = "bar"
+	logFilePath           = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
+	sleepForFlush         = 20 * time.Second            // default flush interval is 5 seconds
 	configPathAutoRemoval = "resources/config_auto_removal.json"
 )
 
@@ -118,12 +118,11 @@ func autoRemovalTestCleanup() {
 	}
 }
 
-
 // checkData queries CWL and verifies the number of log lines.
 func checkData(t *testing.T, start time.Time, lineCount int) {
 	end := time.Now()
 	// Sleep to ensure backend stores logs.
-	time.Sleep(time.Second*60)
+	time.Sleep(time.Second * 60)
 	instanceId := awsservice.GetInstanceId()
 	err := awsservice.ValidateLogs(
 		instanceId,
@@ -167,7 +166,7 @@ func TestAutoRemovalStopAgent(t *testing.T) {
 	for i := 0; i < loopCount; i++ {
 		writeSleepRestart(t, f, configPathAutoRemoval, linesPerLoop, true)
 	}
-	checkData(t, start, loopCount * linesPerLoop * 2)
+	checkData(t, start, loopCount*linesPerLoop*2)
 }
 
 // TestAutoRemovalFileRotation repeatedly creates files matching the monitored pattern.
@@ -185,7 +184,7 @@ func TestAutoRemovalFileRotation(t *testing.T) {
 		defer f.Close()
 		writeSleepRestart(t, f, configPathAutoRemoval, linesPerLoop, false)
 	}
-	checkData(t, start, loopCount * linesPerLoop * 2)
+	checkData(t, start, loopCount*linesPerLoop*2)
 }
 
 // TestRotatingLogsDoesNotSkipLines validates https://github.com/aws/amazon-cloudwatch-agent/issues/447
@@ -267,4 +266,3 @@ func writeLogLines(t *testing.T, f *os.File, iterations int) {
 		time.Sleep(1 * time.Millisecond)
 	}
 }
-
