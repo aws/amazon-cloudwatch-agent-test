@@ -29,6 +29,7 @@ const (
 	logLineId2       = "bar"
 	logFilePath      = "/tmp/cwagent_log_test.log"  // TODO: not sure how well this will work on Windows
 	sleepForFlush    = 20 * time.Second // default flush interval is 5 seconds
+	configPathAutoRemoval = "resources/config_auto_removal.json"
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
@@ -118,78 +119,8 @@ func autoRemovalTestCleanup() {
 }
 
 
-// TestAutoRemovalStopAgent configures agent to monitor a file with auto removal on.
-// Then it restarts the agent.
-// Verify the file is NOT removed.
-func TestAutoRemovalStopAgent(t *testing.T) {
-	configPath := "resources/config_auto_removal.json"
-	defer autoRemovalTestCleanup()
-
-	fpath := logFilePath + "1"
-	f, err := os.Create(fpath)
-	if err != nil {
-		t.Fatalf("Error occurred creating log file for writing: %v", err)
-	}
-	defer f.Close()
-
-	// Restart the agent multiple times.
-	loopCount := 5
-	linesPerLoop := 1000
-	start := time.Now()
-	for i := 0; i < loopCount; i++ {
-		common.StartAgent(configPath, true, false)
-		// Sleep to ensure agent detects file before it is written.
-		time.Sleep(sleepForFlush)
-		writeLogLines(t, f, linesPerLoop)
-		time.Sleep(sleepForFlush)
-		common.StopAgent()
-		assert.FileExists(t, fpath)
-	}
-
-	end := time.Now()
-	// Sleep to ensure backend stores logs.
-	time.Sleep(time.Second*60)
-	instanceId := awsservice.GetInstanceId()
-	err = awsservice.ValidateLogs(
-		instanceId,
-		instanceId,
-		&start,
-		&end,
-		// *2 because 2 lines per loop
-		awsservice.AssertLogsCount(loopCount * linesPerLoop * 2),
-		awsservice.AssertNoDuplicateLogs(),
-	)
-	assert.NoError(t, err)
-}
-
-// TestAutoRemovalFileRotation repeatedly created files matching the monitored pattern.
-// After creating each file, write some log lines, sleep and verify previous_file was auto removed.
-// Retrieve LogEvents from CWL and verify all log lines were uploaded.
-func TestAutoRemovalFileRotation(t *testing.T) {
-	defer autoRemovalTestCleanup()
-	configPath := "resources/config_auto_removal.json"
-	common.StartAgent(configPath, true, false)
-
-	start := time.Now()
-	loopCount := 5
-	linesPerLoop := 1000
-	for i := 0; i < loopCount; i++ {
-		fpath := logFilePath + strconv.Itoa(i)
-		// Create new file each minute and run for 5 minutes.
-		f, err := os.Create(fpath)
-		if err != nil {
-			t.Fatalf("Error occurred creating log file for writing: %v", err)
-		}
-		defer f.Close()
-
-		// Sleep to ensure agent detects file before it is written.
-		time.Sleep(sleepForFlush)
-		writeLogLines(t, f, linesPerLoop)
-		time.Sleep(sleepForFlush)
-		assert.FileExists(t, fpath, "file does not exist, {}", fpath)
-		assert.NoFileExists(t, logFilePath + strconv.Itoa(i-1))
-	}
-
+// checkData queries CWL and verifies the number of log lines.
+func checkData(t *testing.T, start time.Time, lineCount int) {
 	end := time.Now()
 	// Sleep to ensure backend stores logs.
 	time.Sleep(time.Second*60)
@@ -200,10 +131,61 @@ func TestAutoRemovalFileRotation(t *testing.T) {
 		&start,
 		&end,
 		// *2 because 2 lines per loop
-		awsservice.AssertLogsCount(loopCount * linesPerLoop * 2),
+		awsservice.AssertLogsCount(lineCount),
 		awsservice.AssertNoDuplicateLogs(),
 	)
 	assert.NoError(t, err)
+
+}
+
+func writeSleepRestart(t *testing.T, f *os.File, configPath string, linesPerLoop int, doRestart bool) {
+	if doRestart {
+		common.StartAgent(configPath, true, false)
+	}
+	// Sleep to ensure agent detects file before it is written.
+	time.Sleep(sleepForFlush)
+	writeLogLines(t, f, linesPerLoop)
+	time.Sleep(sleepForFlush)
+	if doRestart {
+		common.StopAgent()
+	}
+	c, _ := filepath.Glob(logFilePath + "*")
+	assert.Equal(t, 1, len(c))
+}
+
+// TestAutoRemovalStopAgent configures agent to monitor a file with auto removal on.
+// Then it restarts the agent.
+// Verify the file is NOT removed.
+func TestAutoRemovalStopAgent(t *testing.T) {
+	defer autoRemovalTestCleanup()
+	f, _ := os.Create(logFilePath + "1")
+	defer f.Close()
+	// Restart the agent multiple times.
+	loopCount := 5
+	linesPerLoop := 1000
+	start := time.Now()
+	for i := 0; i < loopCount; i++ {
+		writeSleepRestart(t, f, configPathAutoRemoval, linesPerLoop, true)
+	}
+	checkData(t, start, loopCount * linesPerLoop * 2)
+}
+
+// TestAutoRemovalFileRotation repeatedly creates files matching the monitored pattern.
+// After creating each file, write some log lines, sleep and verify previous_file was auto removed.
+// Retrieve LogEvents from CWL and verify all log lines were uploaded.
+func TestAutoRemovalFileRotation(t *testing.T) {
+	defer autoRemovalTestCleanup()
+	common.StartAgent(configPathAutoRemoval, true, false)
+	loopCount := 5
+	linesPerLoop := 1000
+	start := time.Now()
+	for i := 0; i < loopCount; i++ {
+		// Create new file each minute and run for 5 minutes.
+		f, _ := os.Create(logFilePath + strconv.Itoa(i))
+		defer f.Close()
+		writeSleepRestart(t, f, configPathAutoRemoval, linesPerLoop, false)
+	}
+	checkData(t, start, loopCount * linesPerLoop * 2)
 }
 
 // TestRotatingLogsDoesNotSkipLines validates https://github.com/aws/amazon-cloudwatch-agent/issues/447
