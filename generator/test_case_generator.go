@@ -32,6 +32,7 @@ type matrixRow struct {
 	UseSSM              bool   `json:"useSSM"`
 	ExcludedTests       string `json:"excludedTests"`
 	MetadataEnabled     string `json:"metadataEnabled"`
+	MaxAttempts         int    `json:"max_attempts"`
 }
 
 type testConfig struct {
@@ -41,7 +42,8 @@ type testConfig struct {
 	terraformDir string
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
-	targets map[string]map[string]struct{}
+	targets     map[string]map[string]struct{}
+	maxAttempts int
 }
 
 const (
@@ -59,6 +61,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir:     "./test/emf_concurrent",
+			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
+			maxAttempts: 1,
 		},
 		{testDir: "./test/metric_value_benchmark"},
 		{testDir: "./test/run_as_user"},
@@ -185,7 +192,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 
 func copyAllEC2LinuxTestForOnpremTesting() {
 	/* Some tests need to be fixed in order to run in both environment, so for now for PoC, run one that works.
-	testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
+	   testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
 	*/
 	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
 		{
@@ -224,7 +231,12 @@ func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
-			row := matrixRow{TestDir: testConfig.testDir, TestType: testType, TerraformDir: testConfig.terraformDir}
+			row := matrixRow{
+				TestDir:      testConfig.testDir,
+				TestType:     testType,
+				TerraformDir: testConfig.terraformDir,
+				MaxAttempts:  testConfig.maxAttempts,
+			}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
 				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
