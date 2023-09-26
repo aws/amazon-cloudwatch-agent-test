@@ -205,6 +205,14 @@ func GetLogStreams(logGroupName string) []types.LogStream {
 	return []types.LogStream{}
 }
 
+func GetLogStreamNames(logGroupName string) []string {
+	var logStreamNames []string
+	for _, stream := range GetLogStreams(logGroupName) {
+		logStreamNames = append(logStreamNames, *stream.LogStreamName)
+	}
+	return logStreamNames
+}
+
 type LogEventValidator func(event types.OutputLogEvent) error
 
 type LogEventsValidator func(events []types.OutputLogEvent) error

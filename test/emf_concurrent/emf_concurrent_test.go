@@ -18,8 +18,8 @@ import (
 
 const (
 	testRuntime     = 10 * time.Minute
-	threadCount     = 10
-	connectionCount = 10
+	threadCount     = 15
+	connectionCount = 5
 	interval        = 500 * time.Millisecond
 	emfAddress      = "0.0.0.0:25888"
 )
@@ -35,7 +35,7 @@ func TestConcurrent(t *testing.T) {
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
 
 	// wait for agent to start up
-	time.Sleep(10 * interval)
+	time.Sleep(5 * time.Second)
 
 	e := &emitter{
 		interval:      interval,
@@ -75,19 +75,16 @@ func TestConcurrent(t *testing.T) {
 	endTime := time.Now()
 	log.Println("Stopping EMF emitters")
 
-	var gotStreamNames []string
-	for _, stream := range awsservice.GetLogStreams(e.logGroupName) {
-		gotStreamNames = append(gotStreamNames, *stream.LogStreamName)
-	}
-	assert.Lenf(t, gotStreamNames, 1, "Detected corruption: multiple streams found")
+	assert.Lenf(t, awsservice.GetLogStreamNames(e.logGroupName), 1, "Detected corruption: multiple streams found")
 	qs := queryString()
 	log.Printf("Starting query for log group (%s): %s", e.logGroupName, qs)
-	gotLogQueryStats, err := awsservice.GetLogQueryStats(e.logGroupName, startTime.Unix(), endTime.Unix(), qs)
+	got, err := awsservice.GetLogQueryStats(e.logGroupName, startTime.Unix(), endTime.Unix(), qs)
 	require.NoError(t, err, "Unable to get log query stats")
-	assert.NotZero(t, gotLogQueryStats.RecordsScanned, "No records found in CloudWatch Logs")
-	assert.Zerof(t, gotLogQueryStats.RecordsMatched, "Detected corruption: %v/%v records matched", gotLogQueryStats.RecordsMatched, gotLogQueryStats.RecordsScanned)
+	assert.NotZero(t, got.RecordsScanned, "No records found in CloudWatch Logs")
+	assert.Zerof(t, got.RecordsMatched, "Detected corruption: %v/%v records matched", got.RecordsMatched, got.RecordsScanned)
 }
 
+// queryString creates a log query string that will match corrupted logs.
 func queryString() string {
 	return fmt.Sprintf("filter ispresent(%[1]s) and ispresent(%[2]s) and (%[1]s != %[2]s or (_aws.CloudWatchMetrics.0.Metrics.0.Unit!=%[3]q) or (_aws.CloudWatchMetrics.0.Metrics.1.Unit!=%[3]q))", metricName1, metricName2, metricUnit)
 }
