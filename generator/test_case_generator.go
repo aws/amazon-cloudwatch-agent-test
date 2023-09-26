@@ -42,7 +42,8 @@ type testConfig struct {
 	terraformDir string
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
-	targets     map[string]map[string]struct{}
+	targets map[string]map[string]struct{}
+	// maxAttempts limits the number of times a test will be run.
 	maxAttempts int
 }
 

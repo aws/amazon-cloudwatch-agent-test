@@ -24,6 +24,11 @@ const (
 	emfAddress      = "0.0.0.0:25888"
 )
 
+var (
+	// queryString checks that both metric values are the same and have the same expected unit.
+	queryString = fmt.Sprintf("filter ispresent(%[1]s) and ispresent(%[2]s) and (%[1]s != %[2]s or (_aws.CloudWatchMetrics.0.Metrics.0.Unit!=%[3]q) or (_aws.CloudWatchMetrics.0.Metrics.1.Unit!=%[3]q))", metricName1, metricName2, metricUnit)
+)
+
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
@@ -70,21 +75,15 @@ func TestConcurrent(t *testing.T) {
 	}
 	time.Sleep(testRuntime)
 	close(e.done)
+	log.Println("Stopping EMF emitters")
 	e.wg.Wait()
 	common.StopAgent()
 	endTime := time.Now()
-	log.Println("Stopping EMF emitters")
 
 	assert.Lenf(t, awsservice.GetLogStreamNames(e.logGroupName), 1, "Detected corruption: multiple streams found")
-	qs := queryString()
-	log.Printf("Starting query for log group (%s): %s", e.logGroupName, qs)
-	got, err := awsservice.GetLogQueryStats(e.logGroupName, startTime.Unix(), endTime.Unix(), qs)
+	log.Printf("Starting query for log group (%s): %s", e.logGroupName, queryString)
+	got, err := awsservice.GetLogQueryStats(e.logGroupName, startTime.Unix(), endTime.Unix(), queryString)
 	require.NoError(t, err, "Unable to get log query stats")
 	assert.NotZero(t, got.RecordsScanned, "No records found in CloudWatch Logs")
 	assert.Zerof(t, got.RecordsMatched, "Detected corruption: %v/%v records matched", got.RecordsMatched, got.RecordsScanned)
-}
-
-// queryString creates a log query string that will match corrupted logs.
-func queryString() string {
-	return fmt.Sprintf("filter ispresent(%[1]s) and ispresent(%[2]s) and (%[1]s != %[2]s or (_aws.CloudWatchMetrics.0.Metrics.0.Unit!=%[3]q) or (_aws.CloudWatchMetrics.0.Metrics.1.Unit!=%[3]q))", metricName1, metricName2, metricUnit)
 }

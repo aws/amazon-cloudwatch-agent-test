@@ -161,8 +161,11 @@ func GetLogQueryStats(logGroupName string, startTime, endTime int64, queryString
 		return nil, fmt.Errorf("failed to start query for log group (%s): %w", logGroupName, err)
 	}
 
+	// Sleep a fixed amount of time after making the query to give it time to
+	// process the request.
 	time.Sleep(retryInterval)
 
+	var attempts int
 	for {
 		results, err := CwlClient.GetQueryResults(ctx, &cloudwatchlogs.GetQueryResultsInput{
 			QueryId: output.QueryId,
@@ -171,12 +174,16 @@ func GetLogQueryStats(logGroupName string, startTime, endTime int64, queryString
 			return nil, fmt.Errorf("failed to get query results for log group (%s): %w", logGroupName, err)
 		}
 		switch results.Status {
-		case types.QueryStatusFailed, types.QueryStatusCancelled, types.QueryStatusTimeout:
-			return nil, fmt.Errorf("unexpected query status: %v", results.Status)
 		case types.QueryStatusScheduled, types.QueryStatusRunning, types.QueryStatusUnknown:
+			if attempts >= StandardRetries {
+				return nil, fmt.Errorf("attempted get query results after %s without success. final status: %v", time.Duration(attempts)*retryInterval, results.Status)
+			}
+			attempts++
 			time.Sleep(retryInterval)
 		case types.QueryStatusComplete:
 			return results.Statistics, nil
+		default:
+			return nil, fmt.Errorf("unexpected query status: %v", results.Status)
 		}
 	}
 }
