@@ -17,7 +17,10 @@ import (
 	"github.com/qri-io/jsonschema"
 )
 
-const logStreamRetry = 20
+const (
+	logStreamRetry = 20
+	retryInterval  = 10 * time.Second
+)
 
 // catch ResourceNotFoundException when deleting the log group and log stream, as these
 // are not useful exceptions to log errors on during cleanup
@@ -144,6 +147,47 @@ func IsLogGroupExists(logGroupName string) bool {
 	return len(describeLogGroupOutput.LogGroups) > 0
 }
 
+// GetLogQueryStats for the log group between start/end (in epoch seconds) for the
+// query string.
+func GetLogQueryStats(logGroupName string, startTime, endTime int64, queryString string) (*types.QueryStatistics, error) {
+	output, err := CwlClient.StartQuery(ctx, &cloudwatchlogs.StartQueryInput{
+		LogGroupName: aws.String(logGroupName),
+		StartTime:    aws.Int64(startTime),
+		EndTime:      aws.Int64(endTime),
+		QueryString:  aws.String(queryString),
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to start query for log group (%s): %w", logGroupName, err)
+	}
+
+	// Sleep a fixed amount of time after making the query to give it time to
+	// process the request.
+	time.Sleep(retryInterval)
+
+	var attempts int
+	for {
+		results, err := CwlClient.GetQueryResults(ctx, &cloudwatchlogs.GetQueryResultsInput{
+			QueryId: output.QueryId,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get query results for log group (%s): %w", logGroupName, err)
+		}
+		switch results.Status {
+		case types.QueryStatusScheduled, types.QueryStatusRunning, types.QueryStatusUnknown:
+			if attempts >= StandardRetries {
+				return nil, fmt.Errorf("attempted get query results after %s without success. final status: %v", time.Duration(attempts)*retryInterval, results.Status)
+			}
+			attempts++
+			time.Sleep(retryInterval)
+		case types.QueryStatusComplete:
+			return results.Statistics, nil
+		default:
+			return nil, fmt.Errorf("unexpected query status: %v", results.Status)
+		}
+	}
+}
+
 func GetLogStreams(logGroupName string) []types.LogStream {
 	for i := 0; i < logStreamRetry; i++ {
 		describeLogStreamsOutput, err := CwlClient.DescribeLogStreams(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
@@ -162,10 +206,18 @@ func GetLogStreams(logGroupName string) []types.LogStream {
 			return describeLogStreamsOutput.LogStreams
 		}
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(retryInterval)
 	}
 
 	return []types.LogStream{}
+}
+
+func GetLogStreamNames(logGroupName string) []string {
+	var logStreamNames []string
+	for _, stream := range GetLogStreams(logGroupName) {
+		logStreamNames = append(logStreamNames, *stream.LogStreamName)
+	}
+	return logStreamNames
 }
 
 type LogEventValidator func(event types.OutputLogEvent) error
