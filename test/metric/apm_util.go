@@ -67,6 +67,21 @@ var (
 			Value: dimension.ExpectedDimensionValue{Value: aws.String("remote-target")},
 		},
 	}
+
+	EC2ServerConsumerInstructions = []dimension.Instruction{
+		{
+			Key:   "HostedIn.Environment",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("alpha/pet-clinic")},
+		},
+		{
+			Key:   "Service",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("pet-clinic-frontend")},
+		},
+		{
+			Key:   "Operation",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("GET /api/gateway/owners/{ownerId}")},
+		},
+	}
 )
 
 func ValidateAPMMetric(dimFactory dimension.Factory, namespace string, metricName string, instructions []dimension.Instruction) status.TestResult {
