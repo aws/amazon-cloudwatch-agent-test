@@ -1,17 +1,17 @@
-package common
+package base
 
 import (
 	"context"
 	"encoding/json"
-	"reflect"
-	"testing"
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/aws-sdk-go-v2/service/xray/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"reflect"
+	"testing"
+	"time"
 )
 
 const (
@@ -54,15 +54,15 @@ type TraceGeneratorInterface interface {
 func TraceTest(t *testing.T, traceTest TraceTestConfig) error {
 	t.Helper()
 	startTime := time.Now()
-	CopyFile(traceTest.AgentConfigPath, ConfigOutputPath)
-	require.NoError(t, StartAgent(ConfigOutputPath, true, false), "Couldn't Start the agent")
+	common.CopyFile(traceTest.AgentConfigPath, common.ConfigOutputPath)
+	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false), "Couldn't Start the agent")
 	go func() {
 		require.NoError(t, traceTest.Generator.StartSendingTraces(context.Background()), "load generator exited with error")
 	}()
 	time.Sleep(traceTest.AgentRuntime)
 	traceTest.Generator.StopSendingTraces()
 	time.Sleep(AGENT_SHUTDOWN_DELAY)
-	StopAgent()
+	common.StopAgent()
 	testsGenerated, testsEnded := traceTest.Generator.GetSegmentCount()
 	t.Logf("For %s , Test Cases Generated %d | Test Cases Ended: %d", traceTest.Name, testsGenerated, testsEnded)
 	endTime := time.Now()
@@ -113,7 +113,7 @@ func SegmentValidationTest(t *testing.T, traceTest TraceTestConfig, segments []t
 
 }
 func GenerateTraces(traceTest TraceTestConfig) error {
-	CopyFile(traceTest.AgentConfigPath, ConfigOutputPath)
+	common.CopyFile(traceTest.AgentConfigPath, common.ConfigOutputPath)
 	go func() {
 		traceTest.Generator.StartSendingTraces(context.Background())
 	}()

@@ -131,7 +131,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/performance/system"},
 		{testDir: "../../test/performance/statsd"},
 		{testDir: "../../test/performance/collectd"},
-		{testDir: "../../test/performance/trace/xray",runMockServer: true},
+		{testDir: "../../test/performance/trace/xray", runMockServer: true},
 	},
 	"ec2_windows_performance": {
 		{testDir: "../../test/performance/windows/logs"},

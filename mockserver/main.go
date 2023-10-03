@@ -1,4 +1,4 @@
-// Copyright 2021 Amazon.com, Inc. or its affiliates
+// Copyright 2023 Amazon.com, Inc. or its affiliates
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -39,45 +38,51 @@ var (
 	KeyFilePath  = path.Join("certificates", "private.key")
 )
 
-type transactionStore struct {
+type transactionHttpServer struct {
 	transactions uint32
 	startTime    time.Time
 }
 
 type TransactionPayload struct {
-	TransactionsPerMinute float64 `json:"tpm"`
+	TransactionsPerMinute float64 `json:"GetNumberOfTransactionsPerMinute"`
 }
 
-func healthCheck(w http.ResponseWriter, _ *http.Request)  {
+func healthCheck(w http.ResponseWriter, _ *http.Request) {
 	if _, err := io.WriteString(w, HealthCheckMessage); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Unable to write response: %v", err)
+		return
 	}
+	w.WriteHeader(http.StatusOK)
 }
 
-func (ts *transactionStore) checkData(w http.ResponseWriter, _ *http.Request) {
+func (ts *transactionHttpServer) checkTransactionCount(w http.ResponseWriter, _ *http.Request) {
 	var message string
 	var t = atomic.LoadUint32(&ts.transactions)
 	if t > 0 {
 		message = SuccessMessage
 	}
-	fmt.Printf("\033[31m Time: %d | checkData msg: %s | %d\033[0m \n", time.Now().Unix(), message, t)
+	log.Printf("\033[31m Time: %d | checkTransactionCount msg: %s | %d\033[0m \n", time.Now().Unix(), message, t)
 	if _, err := io.WriteString(w, message); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		io.WriteString(w, err.Error())
 		log.Printf("Unable to write response: %v", err)
+		return
 	}
+	w.WriteHeader(http.StatusOK)
 }
 
-func (ts *transactionStore) dataReceived(w http.ResponseWriter, _ *http.Request) {
+func (ts *transactionHttpServer) recordTransaction(w http.ResponseWriter, _ *http.Request) {
 	atomic.AddUint32(&ts.transactions, 1)
 
 	// Built-in latency
-	fmt.Printf("\033[31m Time: %d | data Received \033[0m \n", time.Now().Unix())
+	log.Printf("\033[31m Time: %s | transaction received \033[0m \n", time.Now().String())
 	time.Sleep(15 * time.Millisecond)
 	w.WriteHeader(http.StatusOK)
 }
 
 // Retrieve number of transactions per minute
-func (ts *transactionStore) tpm(w http.ResponseWriter, _ *http.Request) {
+func (ts *transactionHttpServer) GetNumberOfTransactionsPerMinute(w http.ResponseWriter, _ *http.Request) {
 	// Calculate duration in minutes
 	duration := time.Now().Sub(ts.startTime)
 	transactions := float64(atomic.LoadUint32(&ts.transactions))
@@ -85,46 +90,48 @@ func (ts *transactionStore) tpm(w http.ResponseWriter, _ *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(TransactionPayload{tpm}); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		io.WriteString(w, err.Error())
 		log.Printf("Unable to write response: %v", err)
 	}
 }
 
-// Starts an HTTPS server that receives requests for the data handler service at the sample server port
 // Starts an HTTP server that receives request from validator only to verify the data ingestion
 func StartHttpServer() {
 	var wg sync.WaitGroup
 	log.Println("\033[31m Starting Server \033[0m")
-	store := transactionStore{startTime: time.Now()}
+	store := transactionHttpServer{startTime: time.Now()}
+	//2 servers one for receiving the data , one for verify data
 	dataApp := mux.NewRouter()
-	daemonServer := &http.Server{Addr: ":443", Handler: dataApp}
-	verifyApp := http.NewServeMux()
-	appServer := &http.Server{Addr: ":8080", Handler: verifyApp}
-	go func(ts *transactionStore) {
-		wg.Add(1)
+	dataReceiverServer := &http.Server{Addr: ":443", Handler: dataApp}
+	verificationRequestServer := http.NewServeMux()
+	appServer := &http.Server{Addr: ":8080", Handler: verificationRequestServer}
+	wg.Add(2)
+	go func(ts *transactionHttpServer) {
+		defer wg.Done()
 		dataApp.HandleFunc("/ping", healthCheck)
-		dataApp.PathPrefix("/put-data").HandlerFunc(ts.dataReceived)
-		dataApp.HandleFunc("/trace/v1", ts.dataReceived)
-		dataApp.HandleFunc("/metric/v1", ts.dataReceived)
-		if err := daemonServer.ListenAndServeTLS(CertFilePath, KeyFilePath); err != nil {
+		dataApp.PathPrefix("/put-data").HandlerFunc(ts.recordTransaction)
+		dataApp.HandleFunc("/trace/v1", ts.recordTransaction)
+		dataApp.HandleFunc("/metric/v1", ts.recordTransaction)
+		if err := dataReceiverServer.ListenAndServeTLS(CertFilePath, KeyFilePath); err != nil {
 			log.Printf("HTTPS server error: %v", err)
-			err = daemonServer.Shutdown(context.TODO())
+			err = dataReceiverServer.Shutdown(context.TODO())
 			log.Fatalf("Shutdown server error: %v", err)
 		}
 	}(&store)
 
-	go func(ts *transactionStore) {
-		wg.Add(1)
-		verifyApp.HandleFunc("/ping", healthCheck)
-		verifyApp.HandleFunc("/check-data", ts.checkData)
-		verifyApp.HandleFunc("/tpm", ts.tpm)
+	go func(ts *transactionHttpServer) {
+		defer wg.Done()
+		verificationRequestServer.HandleFunc("/ping", healthCheck)
+		verificationRequestServer.HandleFunc("/check-data", ts.checkTransactionCount)
+		verificationRequestServer.HandleFunc("/tpm", ts.GetNumberOfTransactionsPerMinute)
 		if err := appServer.ListenAndServe(); err != nil {
 			log.Printf("Verification server error: %v", err)
 			err := appServer.Shutdown(context.TODO())
-			log.Fatalf("Shuwdown server error: %v", err)
+			log.Fatalf("Shutdown server error: %v", err)
 		}
 	}(&store)
-	wg.Done()
+	wg.Wait()
 	log.Println("\033[32m Stopping Server \033[0m")
 }
 

@@ -3,21 +3,21 @@ package xray
 import (
 	"context"
 	"errors"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
+	"github.com/aws/aws-xray-sdk-go/strategy/sampling"
+	"github.com/aws/aws-xray-sdk-go/xray"
+	"github.com/aws/aws-xray-sdk-go/xraylog"
 	"log"
 	"os"
 	"path"
 	"time"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-	"github.com/aws/aws-xray-sdk-go/strategy/sampling"
-	"github.com/aws/aws-xray-sdk-go/xray"
-	"github.com/aws/aws-xray-sdk-go/xraylog"
 )
 
 var generatorError = errors.New("Generator error")
 
 type XrayTracesGenerator struct {
-	common.TraceGenerator
-	common.TraceGeneratorInterface
+	base.TraceGenerator
+	base.TraceGeneratorInterface
 }
 
 func (g *XrayTracesGenerator) StartSendingTraces(ctx context.Context) error {
@@ -37,7 +37,7 @@ func (g *XrayTracesGenerator) StartSendingTraces(ctx context.Context) error {
 func (g *XrayTracesGenerator) StopSendingTraces() {
 	close(g.Done)
 }
-func NewLoadGenerator(cfg *common.TraceGeneratorConfig) *XrayTracesGenerator {
+func NewLoadGenerator(cfg *base.TraceGeneratorConfig) *XrayTracesGenerator {
 	s, err := sampling.NewLocalizedStrategyFromFilePath(
 		path.Join("resources", "sampling-rule.json"))
 	if err != nil {
@@ -46,7 +46,7 @@ func NewLoadGenerator(cfg *common.TraceGeneratorConfig) *XrayTracesGenerator {
 	xray.Configure(xray.Config{SamplingStrategy: s})
 	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelWarn))
 	return &XrayTracesGenerator{
-		TraceGenerator: common.TraceGenerator{
+		TraceGenerator: base.TraceGenerator{
 			Cfg:                     cfg,
 			Done:                    make(chan struct{}),
 			SegmentsGenerationCount: 0,
@@ -56,7 +56,6 @@ func NewLoadGenerator(cfg *common.TraceGeneratorConfig) *XrayTracesGenerator {
 }
 func (g *XrayTracesGenerator) Generate(ctx context.Context) error {
 	rootCtx, root := xray.BeginSegment(ctx, "load-generator")
-	log.Println("\033[34mGenerated Trace\033[0m")
 	g.SegmentsGenerationCount++
 	defer func() {
 		root.Close(nil)
@@ -100,6 +99,6 @@ func (g *XrayTracesGenerator) GetAgentRuntime() time.Duration {
 func (g *XrayTracesGenerator) GetName() string {
 	return g.Name
 }
-func (g *XrayTracesGenerator) GetGeneratorConfig() *common.TraceGeneratorConfig {
+func (g *XrayTracesGenerator) GetGeneratorConfig() *base.TraceGeneratorConfig {
 	return g.Cfg
 }

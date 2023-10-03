@@ -1,3 +1,0 @@
-# Mocked Servers
-
-The servers themselves are very basic. They listen for a message and tend to set a flag to success upon receiving it. Typically, they are set up with two servers: one to mock the backend and one to report on the status of that mock (if endpoint is called, how many times, etc.). There's a built-in 15ms of latency between each message that's received. The status reporter will always be on port 8080 and support the `:8080/` (returns "healthcheck") and the `:8080/check-data` (returns "success" if mock has received messages) endpoints.

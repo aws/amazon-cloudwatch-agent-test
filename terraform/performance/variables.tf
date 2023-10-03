@@ -66,6 +66,15 @@ variable "family" {
     error_message = "Valid values for family are (windows, linux)."
   }
 }
+variable "github_test_repo" {
+  type    = string
+  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+}
+
+variable "github_test_repo_branch" {
+  type    = string
+  default = "main"
+}
 variable "run_mock_server" {
   type    = bool
   default = false
