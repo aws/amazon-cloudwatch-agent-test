@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	APMServerConsumerTestName = "APM-Server-Consumer"
-	APMClientProducerTestName = "APM-Client-Producer"
+	APMServerConsumerTestName = "APM-High-Cardinality-Server-Consumer"
+	APMClientProducerTestName = "APM-High-Cardinality-Client-Producer-Replaced"
 )
 
 type APMTestSuite struct {

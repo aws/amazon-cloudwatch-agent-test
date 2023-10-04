@@ -20,11 +20,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
-const (
-	APMServerConsumerTestName = "APM-Server-Consumer"
-	APMClientProducerTestName = "APM-Client-Producer"
-)
-
 type APMTestSuite struct {
 	suite.Suite
 	test_runner.TestSuite
@@ -53,11 +48,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 
 		eksTestRunners = []*test_runner.EKSTestRunner{
 			{
-				Runner: &APMRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMServerConsumerTestName, "HostedIn.EKS.Cluster"},
-				Env:    *env,
-			},
-			{
-				Runner: &APMRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMClientProducerTestName, "HostedIn.EKS.Cluster"},
+				Runner: &APMRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, "APM-High-Cardinality-Keep-Metrics", "HostedIn.EKS.Cluster"},
 				Env:    *env,
 			},
 		}

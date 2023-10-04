@@ -26,7 +26,7 @@ type APMRunner struct {
 func (t *APMRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
-	instructions := GetInstructionsFromTestName(t.testName)
+	instructions := GetInstructions()
 
 	for i, metricName := range metricsToFetch {
 		var testResult status.TestResult
@@ -62,15 +62,8 @@ func (e *APMRunner) GetAgentConfigFileName() string {
 	return ""
 }
 
-func GetInstructionsFromTestName(testName string) []dimension.Instruction {
-	switch testName{
-	case APMClientProducerTestName:
-		return metric.ClientProducerInstructions
-	case APMServerConsumerTestName:
-		return metric.ServerConsumerInstructions
-	default:
-		return nil
-	}
+func GetInstructions() []dimension.Instruction {
+	return metric.ServerConsumerInstructions
 }
 
 var _ test_runner.ITestRunner = (*APMRunner)(nil)
