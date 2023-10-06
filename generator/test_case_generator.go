@@ -38,8 +38,9 @@ type matrixRow struct {
 type testConfig struct {
 	// this gives more flexibility to define terraform dir when there should be a different set of terraform files
 	// e.g. statsd can have a multiple terraform module sets for difference test scenarios (ecs, eks or ec2)
-	testDir      string
-	terraformDir string
+	testDir       string
+	terraformDir  string
+	runMockServer bool
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
 	targets map[string]map[string]struct{}
@@ -130,6 +131,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/performance/system"},
 		{testDir: "../../test/performance/statsd"},
 		{testDir: "../../test/performance/collectd"},
+		{testDir: "../../test/performance/trace/xray", runMockServer: true},
 	},
 	"ec2_windows_performance": {
 		{testDir: "../../test/performance/windows/logs"},

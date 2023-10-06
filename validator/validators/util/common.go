@@ -5,7 +5,6 @@ package util
 
 import (
 	"fmt"
-
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
@@ -18,3 +17,4 @@ func LogCloudWatchDimension(dims []types.Dimension) string {
 	}
 	return dimension
 }
+

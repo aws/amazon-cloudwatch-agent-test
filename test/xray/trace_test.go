@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/xray"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,11 +27,11 @@ func TestTraces(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 	testCases := map[string]struct {
 		agentConfigPath string
-		generatorConfig *common.TraceGeneratorConfig
+		generatorConfig *base.TraceGeneratorConfig
 	}{
 		"WithXray/Simple": {
 			agentConfigPath: filepath.Join("resources", "xray-config.json"),
-			generatorConfig: &common.TraceGeneratorConfig{
+			generatorConfig: &base.TraceGeneratorConfig{
 				Interval: loadGeneratorInterval,
 				Annotations: map[string]interface{}{
 					"test_type":   "simple_xray",
@@ -53,13 +54,13 @@ func TestTraces(t *testing.T) {
 	for name, testCase := range testCases {
 
 		t.Run(name, func(t *testing.T) {
-			XrayTestCfg := common.TraceTestConfig{
-				Generator:       newLoadGenerator(testCase.generatorConfig),
+			XrayTestCfg := base.TraceTestConfig{
+				Generator:       xray.NewLoadGenerator(testCase.generatorConfig),
 				Name:            name,
 				AgentConfigPath: testCase.agentConfigPath,
 				AgentRuntime:    agentRuntime,
 			}
-			err := common.TraceTest(t, XrayTestCfg)
+			err := base.TraceTest(t, XrayTestCfg)
 			require.NoError(t, err, "TraceTest failed because %s", err)
 
 		})
