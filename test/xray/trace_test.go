@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package xray
 
 import (
@@ -5,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/xray"
-	"github.com/stretchr/testify/require"
 )
 
 const (

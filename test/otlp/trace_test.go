@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package otlp
 
 import (
@@ -5,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/otlp"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 const (

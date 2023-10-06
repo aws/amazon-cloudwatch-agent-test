@@ -12,11 +12,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/stretchr/testify/require"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"github.com/stretchr/testify/require"
 )
 
 const (

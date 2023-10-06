@@ -7,9 +7,10 @@ package filesystem
 
 import (
 	"fmt"
-	"golang.org/x/sys/windows"
 	"os"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 // CheckFileRights check that the given filename has access controls and system permission for Administrator, Local System

@@ -6,12 +6,14 @@
 package metric
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
 const (

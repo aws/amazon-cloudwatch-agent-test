@@ -6,11 +6,12 @@
 package statsd
 
 import (
+	"strings"
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"strings"
-	"time"
 )
 
 const testRetryCount = 3

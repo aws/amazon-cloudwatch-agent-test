@@ -1,17 +1,22 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package base
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/service/xray/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
-	"reflect"
-	"testing"
-	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
