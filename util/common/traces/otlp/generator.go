@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package otlp
 
 import (
@@ -5,7 +8,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -15,6 +17,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/maps"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
 )
 
 var generatorError = errors.New("Generator error")

@@ -14,8 +14,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"go.uber.org/multierr"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 )
 
 const logLine = "# %d - This is a log line. \n"

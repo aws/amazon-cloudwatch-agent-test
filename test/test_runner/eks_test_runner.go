@@ -6,10 +6,11 @@
 package test_runner
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"log"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
 type EKSTestRunner struct {

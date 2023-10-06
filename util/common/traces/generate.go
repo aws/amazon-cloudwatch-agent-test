@@ -1,10 +1,14 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package traces
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/xray"
-	"time"
 )
 
 func StartTraceGeneration(receiver string, agentConfigPath string, agentRuntime time.Duration, traceSendingInterval time.Duration) error {

@@ -1,16 +1,21 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package xray
 
 import (
 	"context"
 	"errors"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
-	"github.com/aws/aws-xray-sdk-go/strategy/sampling"
-	"github.com/aws/aws-xray-sdk-go/xray"
-	"github.com/aws/aws-xray-sdk-go/xraylog"
 	"log"
 	"os"
 	"path"
 	"time"
+
+	"github.com/aws/aws-xray-sdk-go/strategy/sampling"
+	"github.com/aws/aws-xray-sdk-go/xray"
+	"github.com/aws/aws-xray-sdk-go/xraylog"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
 )
 
 var generatorError = errors.New("Generator error")

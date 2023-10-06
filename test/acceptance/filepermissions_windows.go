@@ -10,9 +10,10 @@ import (
 	"log"
 	"time"
 
+	"go.uber.org/multierr"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-	"go.uber.org/multierr"
 )
 
 const (

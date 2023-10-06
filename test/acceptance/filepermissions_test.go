@@ -6,14 +6,16 @@ package acceptance
 
 import (
 	"fmt"
+	"log"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-	"github.com/stretchr/testify/assert"
-	"log"
-	"testing"
-	"time"
 )
 
 func init() {
