@@ -6,13 +6,15 @@
 package common
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 const (
@@ -41,10 +43,14 @@ func CopyFile(pathIn string, pathOut string) {
 	}
 
 	log.Printf("File %s abs path %s", pathIn, pathInAbs)
-	out, err := exec.Command("bash", "-c", "sudo cp "+pathInAbs+" "+pathOut).Output()
-
+	cmd := exec.Command("bash", "-c", "sudo cp "+pathInAbs+" "+pathOut)
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Fatalf("Error : %s | Error Code: %s | Out: %s", fmt.Sprint(err), stderr.String(), out.String())
 	}
 
 	log.Printf("File : %s copied to : %s", pathIn, pathOut)
@@ -118,26 +124,6 @@ func InstallAgent(installerFilePath string) error {
 	}
 	out, err := c.Output()
 	printOutputAndError(out, err)
-	return err
-}
-
-func StartAgentWithMultiConfig(configOutputPath string, fatalOnFailure bool, ssm bool) error {
-	path := "file:"
-	if ssm {
-		path = "ssm:"
-	}
-	out, err := exec.
-		Command("bash", "-c", "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a append-config -m ec2 -s -c "+path+configOutputPath).
-		Output()
-
-	if err != nil && fatalOnFailure {
-		log.Fatal(fmt.Sprint(err) + string(out))
-	} else if err != nil {
-		log.Printf(fmt.Sprint(err) + string(out))
-	} else {
-		log.Printf("Agent has started")
-	}
-
 	return err
 }
 

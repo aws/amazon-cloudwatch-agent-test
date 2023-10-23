@@ -57,10 +57,18 @@ func ValidateMetric(metricName, namespace string, dimensionsFilter []types.Dimen
 }
 
 // ValidateMetrics takes the metric name, metric dimension and corresponding namespace that contains the metric
-func ValidateMetricWithTest(t *testing.T, metricName, namespace string, dimensionsFilter []types.DimensionFilter) {
-	err := ValidateMetric(metricName, namespace, dimensionsFilter)
+func ValidateMetricWithTest(t *testing.T, metricName, namespace string, dimensionsFilter []types.DimensionFilter, retries int, retryTime time.Duration) {
+	var err error
+	for i := 0; i < retries; i++ {
+		err = ValidateMetric(metricName, namespace, dimensionsFilter)
+		if err == nil {
+			return
+		}
+		log.Printf("could not validate metrics try : %d of %d error %v", i+1, retries, err)
+		time.Sleep(retryTime)
+	}
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("could not validate metrics")
 	}
 }
 
