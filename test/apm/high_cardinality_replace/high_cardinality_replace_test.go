@@ -65,7 +65,7 @@ func (e *APMRunner) GetAgentConfigFileName() string {
 func GetInstructionsFromTestName(testName string) []dimension.Instruction {
 	switch testName{
 	case APMClientProducerTestName:
-		return metric.ClientProducerInstructions
+		return metric.ClientProducerInstructions_ReplacedRemoteTarget
 	case APMServerConsumerTestName:
 		return metric.ServerConsumerInstructions
 	default:
