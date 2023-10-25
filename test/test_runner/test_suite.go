@@ -7,6 +7,7 @@ package test_runner
 
 import (
 	"fmt"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 

@@ -6,10 +6,11 @@
 package proxy
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 )
 
 const commonConfigPath = "/opt/aws/amazon-cloudwatch-agent/etc/common-config.toml"

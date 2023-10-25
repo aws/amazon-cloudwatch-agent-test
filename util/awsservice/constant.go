@@ -5,6 +5,8 @@ package awsservice
 
 import (
 	"context"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -17,7 +19,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/xray"
 	backoff "github.com/cenkalti/backoff/v4"
-	"time"
 )
 
 const (

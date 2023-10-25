@@ -7,13 +7,13 @@ package test_runner
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"os"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 type IAgentRunStrategy interface {

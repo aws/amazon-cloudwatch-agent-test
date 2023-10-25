@@ -8,15 +8,16 @@ package ca_bundle
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"log"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
@@ -29,8 +30,6 @@ const (
 	commonConfigTOML       = "/common-config.toml"
 	targetString           = "x509: certificate signed by unknown authority"
 
-	// Let the agent run for 30 seconds. This will give agent enough time to call server
-	agentRuntime         = 30 * time.Second
 	localstackS3Key      = "integration-test/ls_tmp/%s"
 	keyDelimiter         = "/"
 	localstackConfigPath = "../../localstack/ls_tmp/"
@@ -38,11 +37,15 @@ const (
 	combinePem           = "combine.pem"
 	snakeOilPem          = "snakeoil.pem"
 	tmpDirectory         = "/tmp/"
+	runEMF               = "sudo bash resources/emf.sh"
+	logfile              = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 )
 
 type input struct {
-	findTarget bool
-	dataInput  string
+	findTarget        bool
+	commonConfigInput string
+	agentConfigInput  string
+	testType          string
 }
 
 func init() {
@@ -58,28 +61,36 @@ func TestBundle(t *testing.T) {
 
 	parameters := []input{
 		//Use the system pem ca bundle  + local stack pem file ssl should connect thus target string not found
-		{dataInput: "resources/integration/ssl/with/combine/bundle", findTarget: false},
+		{commonConfigInput: "resources/with/combine/", agentConfigInput: "resources/https/", findTarget: false, testType: "metric"},
+		{commonConfigInput: "resources/with/combine/", agentConfigInput: "resources/https/", findTarget: false, testType: "emf"},
 		//Do not look for ca bundle with http connection should connect thus target string not found
-		{dataInput: "resources/integration/ssl/without/bundle/http", findTarget: false},
+		{commonConfigInput: "resources/without/", agentConfigInput: "resources/http/", findTarget: false, testType: "metric"},
+		{commonConfigInput: "resources/without/", agentConfigInput: "resources/http/", findTarget: false, testType: "emf"},
 		//Use the system pem ca bundle ssl should not connect thus target string found
-		{dataInput: "resources/integration/ssl/with/original/bundle", findTarget: true},
+		{commonConfigInput: "resources/with/original/", agentConfigInput: "resources/https/", findTarget: true, testType: "metric"},
+		{commonConfigInput: "resources/with/original/", agentConfigInput: "resources/https/", findTarget: true, testType: "emf"},
 		//Do not look for ca bundle should not connect thus target string found
-		{dataInput: "resources/integration/ssl/without/bundle", findTarget: true},
+		{commonConfigInput: "resources/without/", agentConfigInput: "resources/https/", findTarget: true, testType: "metric"},
+		{commonConfigInput: "resources/without/", agentConfigInput: "resources/https/", findTarget: true, testType: "emf"},
 	}
 
 	for _, parameter := range parameters {
 		//before test run
-		log.Printf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget)
-		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget), func(t *testing.T) {
-			common.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
-			t.Logf("config file after localstack host replace %s", string(readFile(parameter.dataInput+configJSON)))
-			common.CopyFile(parameter.dataInput+configJSON, configOutputPath)
-			common.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
+		configFile := parameter.agentConfigInput + parameter.testType + configJSON
+		commonConfigFile := parameter.commonConfigInput + commonConfigTOML
+		log.Printf("common config file location %s agent config file %s find target %t", commonConfigFile, configFile, parameter.findTarget)
+		t.Run(fmt.Sprintf("common config file location %s agent config file %s find target %t", commonConfigFile, configFile, parameter.findTarget), func(t *testing.T) {
+			common.RecreateAgentLogfile(logfile)
+			common.ReplaceLocalStackHostName(configFile)
+			t.Logf("config file after localstack host replace %s", string(readFile(configFile)))
+			common.CopyFile(configFile, configOutputPath)
+			common.CopyFile(commonConfigFile, commonConfigOutputPath)
 			common.StartAgent(configOutputPath, true, false)
-			time.Sleep(agentRuntime)
-			log.Printf("Agent has been running for : %s", agentRuntime.String())
+			// this command will take 5 seconds time 12 = 1 minute
+			common.RunCommand(runEMF)
+			log.Printf("Agent has been running for : %s", time.Minute)
 			common.StopAgent()
-			output := common.ReadAgentOutput(agentRuntime)
+			output := common.ReadAgentLogfile(logfile)
 			containsTarget := outputLogContainsTarget(output)
 			if (parameter.findTarget && !containsTarget) || (!parameter.findTarget && containsTarget) {
 				t.Errorf("Find target is %t contains target is %t", parameter.findTarget, containsTarget)

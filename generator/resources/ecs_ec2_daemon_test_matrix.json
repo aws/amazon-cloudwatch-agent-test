@@ -2,6 +2,13 @@
   {
     "instanceType":"t3a.xlarge",
     "ami": "cloudwatch-agent-integration-test-al2*",
-    "family": "linux"
+    "family": "linux",
+    "metadataEnabled": "enabled"
+  },
+  {
+    "instanceType":"t3a.xlarge",
+    "ami": "cloudwatch-agent-integration-test-al2*",
+    "family": "linux",
+    "metadataEnabled": "disabled"
   }
 ]

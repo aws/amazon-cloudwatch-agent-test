@@ -31,16 +31,21 @@ type matrixRow struct {
 	TerraformDir        string `json:"terraform_dir"`
 	UseSSM              bool   `json:"useSSM"`
 	ExcludedTests       string `json:"excludedTests"`
+	MetadataEnabled     string `json:"metadataEnabled"`
+	MaxAttempts         int    `json:"max_attempts"`
 }
 
 type testConfig struct {
 	// this gives more flexibility to define terraform dir when there should be a different set of terraform files
 	// e.g. statsd can have a multiple terraform module sets for difference test scenarios (ecs, eks or ec2)
-	testDir      string
-	terraformDir string
+	testDir       string
+	terraformDir  string
+	runMockServer bool
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
 	targets map[string]map[string]struct{}
+	// maxAttempts limits the number of times a test will be run.
+	maxAttempts int
 }
 
 const (
@@ -58,6 +63,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir:     "./test/emf_concurrent",
+			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
+			maxAttempts: 1,
 		},
 		{testDir: "./test/metric_value_benchmark"},
 		{testDir: "./test/run_as_user"},
@@ -111,6 +121,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/windows"},
 		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
+		{testDir: "../../../test/feature/windows/event_logs"},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
@@ -120,6 +131,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/performance/system"},
 		{testDir: "../../test/performance/statsd"},
 		{testDir: "../../test/performance/collectd"},
+		{testDir: "../../test/performance/trace/xray", runMockServer: true},
 	},
 	"ec2_windows_performance": {
 		{testDir: "../../test/performance/windows/logs"},
@@ -140,9 +152,22 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/ecs/ecs_metadata"},
 	},
 	"ecs_ec2_daemon": {
-		{testDir: "./test/metric_value_benchmark"},
-		{testDir: "./test/statsd"},
-		{testDir: "./test/emf"},
+		{
+			testDir: "./test/metric_value_benchmark",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+		},
+		{
+			testDir: "./test/statsd",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+		},
+		{
+			testDir: "./test/emf",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"disabled": {}}},
+		},
+		{
+			testDir: "./test/emf",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+		},
 	},
 	"eks_daemon": {
 		{
@@ -173,7 +198,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 
 func copyAllEC2LinuxTestForOnpremTesting() {
 	/* Some tests need to be fixed in order to run in both environment, so for now for PoC, run one that works.
-	testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
+	   testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
 	*/
 	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
 		{
@@ -212,7 +237,12 @@ func genMatrix(testType string, testConfigs []testConfig) []matrixRow {
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
-			row := matrixRow{TestDir: testConfig.testDir, TestType: testType, TerraformDir: testConfig.terraformDir}
+			row := matrixRow{
+				TestDir:      testConfig.testDir,
+				TestType:     testType,
+				TerraformDir: testConfig.terraformDir,
+				MaxAttempts:  testConfig.maxAttempts,
+			}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
 				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
@@ -235,6 +265,8 @@ func shouldAddTest(row *matrixRow, targets map[string]map[string]struct{}) bool 
 			rowVal = row.Arc
 		} else if key == "os" {
 			rowVal = row.Os
+		} else if key == "metadataEnabled" {
+			rowVal = row.MetadataEnabled
 		}
 
 		if rowVal == "" {

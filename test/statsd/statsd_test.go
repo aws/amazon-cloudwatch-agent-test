@@ -7,13 +7,13 @@ package statsd
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"log"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"

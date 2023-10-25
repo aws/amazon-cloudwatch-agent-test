@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package otlp
 
 import (
@@ -5,10 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/otlp"
 )
 
 const (
@@ -25,11 +30,11 @@ func TestTraces(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 	testCases := map[string]struct {
 		agentConfigPath string
-		generatorConfig *common.TraceGeneratorConfig
+		generatorConfig *base.TraceGeneratorConfig
 	}{
 		"WithOTLP/Simple": {
 			agentConfigPath: filepath.Join("resources", "otlp-config.json"),
-			generatorConfig: &common.TraceGeneratorConfig{
+			generatorConfig: &base.TraceGeneratorConfig{
 				Interval: loadGeneratorInterval,
 				Annotations: map[string]interface{}{
 					"test_type":   "simple_otlp",
@@ -55,13 +60,13 @@ func TestTraces(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			OtlpTestCfg := common.TraceTestConfig{
-				Generator:       newLoadGenerator(testCase.generatorConfig),
+			OtlpTestCfg := base.TraceTestConfig{
+				Generator:       otlp.NewLoadGenerator(testCase.generatorConfig),
 				Name:            name,
 				AgentConfigPath: testCase.agentConfigPath,
 				AgentRuntime:    agentRuntime,
 			}
-			err := common.TraceTest(t, OtlpTestCfg)
+			err := base.TraceTest(t, OtlpTestCfg)
 			require.NoError(t, err, "TraceTest failed because %s", err)
 
 		})

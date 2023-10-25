@@ -25,6 +25,9 @@ jobs:
       - name: Lint Terraform
         if: runner.os == 'Linux'
         run: cd terraform && make check-fmt
+      - name: Lint Go
+        if: runner.os == 'Linux'
+        run: make simple-lint
       - name: Compile tests
         run: |
           echo "Compile tests"
