@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const testRetryCount = 3
+const testRetryCount = 5
 const namespace = "AWS/APM"
 
 type APMMetricsRunner struct {
@@ -62,7 +62,7 @@ func (e *APMMetricsRunner) GetAgentConfigFileName() string {
 }
 
 func GetInstructionsFromTestName(testName string) []dimension.Instruction {
-	switch testName{
+	switch testName {
 	case APMClientProducerTestName:
 		return metric.ClientProducerInstructions
 	case APMServerConsumerTestName:
