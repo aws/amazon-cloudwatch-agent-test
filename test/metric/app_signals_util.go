@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	APMMetricNames = []string{
+	AppSignalsMetricNames = []string{
 		"Error",
 		"Fault",
 		"Latency",
@@ -70,7 +70,7 @@ var (
 	}
 )
 
-func ValidateAPMMetric(dimFactory dimension.Factory, namespace string, metricName string, instructions []dimension.Instruction) status.TestResult {
+func ValidateAppSignalsMetric(dimFactory dimension.Factory, namespace string, metricName string, instructions []dimension.Instruction) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,

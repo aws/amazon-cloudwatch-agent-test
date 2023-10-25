@@ -15,15 +15,15 @@ import (
 )
 
 const testRetryCount = 6
-const namespace = "AWS/APM"
+const namespace = "AWS/AppSignals"
 
-type APMMetricsRunner struct {
+type AppSignalsMetricsRunner struct {
 	test_runner.BaseTestRunner
 	testName     string
 	dimensionKey string
 }
 
-func (t *APMMetricsRunner) Validate() status.TestGroupResult {
+func (t *AppSignalsMetricsRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	instructions := GetInstructionsFromTestName(t.testName)
@@ -31,7 +31,7 @@ func (t *APMMetricsRunner) Validate() status.TestGroupResult {
 	for i, metricName := range metricsToFetch {
 		var testResult status.TestResult
 		for j := 0; j < testRetryCount; j++ {
-			testResult = metric.ValidateAPMMetric(t.DimensionFactory, namespace, metricName, instructions)
+			testResult = metric.ValidateAppSignalsMetric(t.DimensionFactory, namespace, metricName, instructions)
 			if testResult.Status == status.SUCCESSFUL {
 				break
 			}
@@ -46,31 +46,31 @@ func (t *APMMetricsRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *APMMetricsRunner) GetTestName() string {
+func (t *AppSignalsMetricsRunner) GetTestName() string {
 	return t.testName
 }
 
-func (t *APMMetricsRunner) GetAgentRunDuration() time.Duration {
+func (t *AppSignalsMetricsRunner) GetAgentRunDuration() time.Duration {
 	return 3 * time.Minute
 }
 
-func (t *APMMetricsRunner) GetMeasuredMetrics() []string {
-	return metric.APMMetricNames
+func (t *AppSignalsMetricsRunner) GetMeasuredMetrics() []string {
+	return metric.AppSignalsMetricNames
 }
 
-func (e *APMMetricsRunner) GetAgentConfigFileName() string {
+func (e *AppSignalsMetricsRunner) GetAgentConfigFileName() string {
 	return ""
 }
 
 func GetInstructionsFromTestName(testName string) []dimension.Instruction {
 	switch testName {
-	case APMClientProducerTestName:
+	case AppSignalsClientProducerTestName:
 		return metric.ClientProducerInstructions
-	case APMServerConsumerTestName:
+	case AppSignalsServerConsumerTestName:
 		return metric.ServerConsumerInstructions
 	default:
 		return nil
 	}
 }
 
-var _ test_runner.ITestRunner = (*APMMetricsRunner)(nil)
+var _ test_runner.ITestRunner = (*AppSignalsMetricsRunner)(nil)

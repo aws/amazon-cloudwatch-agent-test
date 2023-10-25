@@ -33,13 +33,13 @@ var annotations = map[string]string{
 	"aws_local_operation":    "operation",
 }
 
-type APMTracesRunner struct {
+type AppSignalsTracesRunner struct {
 	test_runner.BaseTestRunner
 	testName    string
 	clusterName string
 }
 
-func (t *APMTracesRunner) Validate() status.TestGroupResult {
+func (t *AppSignalsTracesRunner) Validate() status.TestGroupResult {
 	testResults := []status.TestResult{{
 		Name:   t.testName,
 		Status: status.FAILED,
@@ -63,19 +63,19 @@ func (t *APMTracesRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *APMTracesRunner) GetTestName() string {
+func (t *AppSignalsTracesRunner) GetTestName() string {
 	return t.testName
 }
 
-func (t *APMTracesRunner) GetAgentRunDuration() time.Duration {
+func (t *AppSignalsTracesRunner) GetAgentRunDuration() time.Duration {
 	return 3 * time.Minute
 }
 
-func (t *APMTracesRunner) GetMeasuredMetrics() []string {
+func (t *AppSignalsTracesRunner) GetMeasuredMetrics() []string {
 	return nil
 }
 
-func (e *APMTracesRunner) GetAgentConfigFileName() string {
+func (e *AppSignalsTracesRunner) GetAgentConfigFileName() string {
 	return ""
 }
 
@@ -107,4 +107,4 @@ func FilterExpression(annotations map[string]string) string {
 	return expression
 }
 
-var _ test_runner.ITestRunner = (*APMTracesRunner)(nil)
+var _ test_runner.ITestRunner = (*AppSignalsTracesRunner)(nil)

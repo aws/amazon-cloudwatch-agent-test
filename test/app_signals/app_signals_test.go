@@ -20,23 +20,23 @@ import (
 )
 
 const (
-	APMServerConsumerTestName = "APM-Server-Consumer"
-	APMClientProducerTestName = "APM-Client-Producer"
-	APMTracesTestName         = "APM-Traces"
+	AppSignalsServerConsumerTestName = "AppSignals-Server-Consumer"
+	AppSignalsClientProducerTestName = "AppSignals-Client-Producer"
+	AppSignalsTracesTestName         = "AppSignals-Traces"
 )
 
-type APMTestSuite struct {
+type AppSignalsTestSuite struct {
 	suite.Suite
 	test_runner.TestSuite
 }
 
-func (suite *APMTestSuite) SetupSuite() {
-	fmt.Println(">>>> Starting APMTestSuite")
+func (suite *AppSignalsTestSuite) SetupSuite() {
+	fmt.Println(">>>> Starting AppSignalsTestSuite")
 }
 
-func (suite *APMTestSuite) TearDownSuite() {
+func (suite *AppSignalsTestSuite) TearDownSuite() {
 	suite.Result.Print()
-	fmt.Println(">>>> Finished APMTestSuite")
+	fmt.Println(">>>> Finished AppSignalsTestSuite")
 }
 
 func init() {
@@ -53,15 +53,15 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 
 		eksTestRunners = []*test_runner.EKSTestRunner{
 			{
-				Runner: &APMMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMServerConsumerTestName, "HostedIn.EKS.Cluster"},
+				Runner: &AppSignalsMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsServerConsumerTestName, "HostedIn.EKS.Cluster"},
 				Env:    *env,
 			},
 			{
-				Runner: &APMMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMClientProducerTestName, "HostedIn.EKS.Cluster"},
+				Runner: &AppSignalsMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsClientProducerTestName, "HostedIn.EKS.Cluster"},
 				Env:    *env,
 			},
 			{
-				Runner: &APMTracesRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, APMTracesTestName, env.EKSClusterName},
+				Runner: &AppSignalsTracesRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsTracesTestName, env.EKSClusterName},
 				Env:    *env,
 			},
 		}
@@ -69,7 +69,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 	return eksTestRunners
 }
 
-func (suite *APMTestSuite) TestAllInSuite() {
+func (suite *AppSignalsTestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData()
 	switch env.ComputeType {
 	case computetype.EKS:
@@ -81,13 +81,13 @@ func (suite *APMTestSuite) TestAllInSuite() {
 		return
 	}
 
-	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "APM Test Suite Failed")
+	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "AppSignals Test Suite Failed")
 }
 
-func (suite *APMTestSuite) AddToSuiteResult(r status.TestGroupResult) {
+func (suite *AppSignalsTestSuite) AddToSuiteResult(r status.TestGroupResult) {
 	suite.Result.TestGroupResults = append(suite.Result.TestGroupResults, r)
 }
 
-func TestAPMSuite(t *testing.T) {
-	suite.Run(t, new(APMTestSuite))
+func TestAppSignalsSuite(t *testing.T) {
+	suite.Run(t, new(AppSignalsTestSuite))
 }
