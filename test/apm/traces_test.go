@@ -43,7 +43,6 @@ func (t *APMTracesRunner) Validate() status.TestGroupResult {
 		Status: status.FAILED,
 	}}
 	timeNow := time.Now()
-	fmt.Printf("CLuster name: %v\n", t.clusterName)
 	annotations[EKSClusterAnnotation] = t.clusterName
 	xrayFilter := FilterExpression(annotations)
 	traceIds, err := GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, xrayFilter)
@@ -102,7 +101,6 @@ func FilterExpression(annotations map[string]string) string {
 			expression += " AND "
 		}
 		expression += fmt.Sprintf("annotation.%s = %s", key, result)
-		fmt.Printf("annotation.%s = %s", key, result)
 	}
 	return expression
 }
