@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const testRetryCount = 5
+const testRetryCount = 6
 const namespace = "AWS/APM"
 
 type APMMetricsRunner struct {
@@ -34,7 +34,7 @@ func (t *APMMetricsRunner) Validate() status.TestGroupResult {
 			if testResult.Status == status.SUCCESSFUL {
 				break
 			}
-			time.Sleep(20 * time.Second)
+			time.Sleep(30 * time.Second)
 		}
 		testResults[i] = testResult
 	}
