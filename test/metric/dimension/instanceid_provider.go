@@ -80,9 +80,9 @@ func (p *EKSClusterNameProvider) IsApplicable() bool {
 
 func (p *EKSClusterNameProvider) GetDimension(instruction Instruction) types.Dimension {
 	// For APM metrics, cluster name is under EKS.Cluster dimension
-	if instruction.Key == "EKS.Cluster" {
+	if instruction.Key == "HostedIn.EKS.Cluster" {
 		return types.Dimension{
-			Name:  aws.String("EKS.Cluster"),
+			Name:  aws.String("HostedIn.EKS.Cluster"),
 			Value: aws.String(p.env.EKSClusterName),
 		}
 	}

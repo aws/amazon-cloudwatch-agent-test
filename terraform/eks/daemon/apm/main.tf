@@ -218,8 +218,8 @@ resource "kubernetes_daemonset" "service" {
             }
           }
           port {
-            container_port = 4318
-            host_port      = 4318
+            container_port = 4316
+            host_port      = 4316
             protocol       = "TCP"
           }
           env {
@@ -349,7 +349,7 @@ resource "kubernetes_daemonset" "service" {
               field_ref {
                 field_path = "status.hostIP"
               }
-            }
+            }Ï
           }
           env {
             name = "HOST_NAME"
