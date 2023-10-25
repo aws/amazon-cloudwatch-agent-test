@@ -18,24 +18,23 @@ import (
 )
 
 const (
-	lookbackDuration = time.Duration(-80) * time.Minute
-	EKSClusterAnnotation = "EKS_Cluster"
+	lookbackDuration     = time.Duration(-80) * time.Minute
+	EKSClusterAnnotation = "HostedIn_EKS_Cluster"
 )
 
-
-var annotations = map[string]string {
-	"aws_remote_target": "remote-target",
+var annotations = map[string]string{
+	"aws_remote_target":    "remote-target",
 	"aws_remote_operation": "remote-operation",
-	"aws_local_service": "service-name",
-	"aws_remote_service": "service-name-remote",
-	"K8s_Namespace": "default",
-	"aws_local_operation": "operation",
+	"aws_local_service":    "service-name",
+	"aws_remote_service":   "service-name-remote",
+	"K8s_Namespace":        "default",
+	"aws_local_operation":  "operation",
 }
 
 type APMTracesRunner struct {
 	test_runner.BaseTestRunner
-	testName     string
-	clusterName  string
+	testName    string
+	clusterName string
 }
 
 func (t *APMTracesRunner) Validate() status.TestGroupResult {
@@ -44,10 +43,10 @@ func (t *APMTracesRunner) Validate() status.TestGroupResult {
 		Status: status.FAILED,
 	}}
 	timeNow := time.Now()
-
+	fmt.Printf("CLuster name: %v\n", t.clusterName)
 	annotations[EKSClusterAnnotation] = t.clusterName
 	xrayFilter := FilterExpression(annotations)
-	traceIds, err := GetTraceIDs(timeNow.Add(lookbackDuration),timeNow, xrayFilter)
+	traceIds, err := GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, xrayFilter)
 	if err != nil {
 		fmt.Printf("error getting trace ids: %v", err)
 	} else {
@@ -103,6 +102,7 @@ func FilterExpression(annotations map[string]string) string {
 			expression += " AND "
 		}
 		expression += fmt.Sprintf("annotation.%s = %s", key, result)
+		fmt.Printf("annotation.%s = %s", key, result)
 	}
 	return expression
 }
