@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package apm
+package app_signals
 
 import (
 	"fmt"

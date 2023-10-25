@@ -325,7 +325,7 @@ resource "kubernetes_daemonset" "service" {
         }
 
         container {
-          name              = "apm-client"
+          name              = "app_signals-client"
           image             = "public.ecr.aws/docker/library/golang:latest"
           image_pull_policy = "Always"
           resources {

@@ -4,14 +4,14 @@
   },
   "logs": {
     "metrics_collected": {
-      "apm": {
+      "app_signals": {
         "enabled": true
       }
     }
   },
   "traces": {
     "traces_collected": {
-      "apm": {
+      "app_signals": {
         "enabled": true
       }
     }

@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "./test/apm"
+  default = "./test/app_signals"
 }
 
 variable "cwagent_image_repo" {
