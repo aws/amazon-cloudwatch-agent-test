@@ -32,14 +32,14 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "app_signals-integration-test"
+            "name": "app-signals-integration-test"
           },
           "spans": [
             {
               "traceId": "TRACE_ID",
               "spanId": "EEE19B7EC3C1B174",
               "parentSpanId": "EEE19B7EC3C1B173",
-              "name": "app_signals-integration-test-traces",
+              "name": "app-signals-integration-test-traces",
               "startTimeUnixNano": START_TIME,
               "endTimeUnixNano": START_TIME,
               "kind": 2,
