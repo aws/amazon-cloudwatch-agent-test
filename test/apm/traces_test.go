@@ -23,12 +23,12 @@ const (
 )
 
 var annotations = map[string]string{
-	"aws_remote_target":    "remote-target",
-	"aws_remote_operation": "remote-operation",
-	"aws_local_service":    "service-name",
-	"aws_remote_service":   "service-name-remote",
-	"K8s_Namespace":        "default",
-	"aws_local_operation":  "operation",
+	"aws_remote_target":      "remote-target",
+	"aws_remote_operation":   "remote-operation",
+	"aws_local_service":      "service-name",
+	"aws_remote_service":     "service-name-remote",
+	"HostedIn_K8s_Namespace": "default",
+	"aws_local_operation":    "operation",
 }
 
 type APMTracesRunner struct {
