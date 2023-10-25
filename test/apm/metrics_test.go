@@ -34,7 +34,7 @@ func (t *APMMetricsRunner) Validate() status.TestGroupResult {
 			if testResult.Status == status.SUCCESSFUL {
 				break
 			}
-			time.Sleep(15 * time.Second)
+			time.Sleep(20 * time.Second)
 		}
 		testResults[i] = testResult
 	}
