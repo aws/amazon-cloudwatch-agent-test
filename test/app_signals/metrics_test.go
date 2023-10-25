@@ -15,7 +15,7 @@ import (
 )
 
 const testRetryCount = 6
-const namespace = "AWS/AppSignals"
+const namespace = "AWS/APM"
 
 type AppSignalsMetricsRunner struct {
 	test_runner.BaseTestRunner
