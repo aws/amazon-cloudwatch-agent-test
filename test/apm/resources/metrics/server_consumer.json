@@ -18,7 +18,7 @@
           {
             "key": "aws.deployment.name",
             "value": {
-              "stringValue": "deployment-name"
+              "stringValue": "service-name"
             }
           },
           {
@@ -162,7 +162,7 @@
                       {
                         "key": "aws.span.kind",
                         "value": {
-                          "stringValue": "CONSUMER"
+                          "stringValue": "SERVER"
                         }
                       },
                       {

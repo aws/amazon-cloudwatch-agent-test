@@ -18,7 +18,7 @@
           {
             "key": "aws.deployment.name",
             "value": {
-              "stringValue": "deployment-name"
+              "stringValue": "service-name"
             }
           },
           {
