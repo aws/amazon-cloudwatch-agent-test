@@ -349,7 +349,7 @@ resource "kubernetes_daemonset" "service" {
               field_ref {
                 field_path = "status.hostIP"
               }
-            }Ï
+            }
           }
           env {
             name = "HOST_NAME"
