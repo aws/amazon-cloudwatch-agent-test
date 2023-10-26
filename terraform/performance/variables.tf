@@ -77,5 +77,5 @@ variable "github_test_repo_branch" {
 }
 variable "run_mock_server" {
   type    = bool
-  default = true
+  default = false
 }
