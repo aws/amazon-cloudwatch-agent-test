@@ -13,7 +13,8 @@ variable "test_dir" {
 
 variable "cwagent_image_repo" {
   type    = string
-  default = "506463145083.dkr.ecr.us-west-2.amazonaws.com/apm-beta-release"
+  //Todo: change this to public ECR repo image after GA "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
+  default = "506463145083.dkr.ecr.us-west-2.amazonaws.com/apm-beta-pre-release:appsignals"
 }
 
 variable "cwagent_image_tag" {

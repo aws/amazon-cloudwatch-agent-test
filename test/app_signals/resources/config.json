@@ -4,16 +4,12 @@
   },
   "logs": {
     "metrics_collected": {
-      "app_signals": {
-        "enabled": true
-      }
+      "app_signals": {}
     }
   },
   "traces": {
     "traces_collected": {
-      "app_signals": {
-        "enabled": true
-      }
+      "app_signals": {}
     }
   }
 }
