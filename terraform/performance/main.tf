@@ -115,11 +115,15 @@ resource "null_resource" "validator_linux" {
       var.run_mock_server ? "sudo docker run --name mockserver -d -p 8080:8080 -p 443:443  mockserver" : "echo skipping mock server run",
       "pwd",
       "ls -lirt",
-      "cd ..", # return to root , two copy xray configs next to validator
+#      "cd ..", # return to root , two copy xray configs next to validator
+
       "pwd",
       "ls -lirt",
       "cp -r amazon-cloudwatch-agent-test/test/xray/resources /home/ec2-user/",
       "export AWS_REGION=${var.region}",
+      "cd ./validator/validators",
+      "ls -lirt",
+      "pwd",
       "sudo chmod +x ./${local.install_validator}",
       "./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       local.start_command,
