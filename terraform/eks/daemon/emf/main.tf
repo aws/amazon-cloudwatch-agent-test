@@ -65,19 +65,19 @@ resource "aws_iam_role" "node_role" {
   name = "cwagent-eks-Worker-Role-${module.common.testing_id}"
 
   assume_role_policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
     {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Principal": {
-            "Service": "ec2.amazonaws.com"
-          },
-          "Action": "sts:AssumeRole"
-        }
-      ]
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
     }
-    POLICY
+  ]
+}
+POLICY
 }
 
 resource "aws_iam_role_policy_attachment" "node_AmazonEKSWorkerNodePolicy" {
