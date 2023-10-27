@@ -6,13 +6,8 @@
 package app_signals
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/xray"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
@@ -20,11 +15,11 @@ import (
 )
 
 const (
-	lookbackDuration     = time.Duration(-80) * time.Minute
+	lookbackDuration     = time.Duration(-20) * time.Minute
 	EKSClusterAnnotation = "HostedIn_EKS_Cluster"
 )
 
-var annotations = map[string]string{
+var annotations = map[string]interface{}{
 	"aws_remote_target":      "remote-target",
 	"aws_remote_operation":   "remote-operation",
 	"aws_local_service":      "service-name",
@@ -40,26 +35,26 @@ type AppSignalsTracesRunner struct {
 }
 
 func (t *AppSignalsTracesRunner) Validate() status.TestGroupResult {
-	testResults := []status.TestResult{{
+	testResults := status.TestResult{
 		Name:   t.testName,
 		Status: status.FAILED,
-	}}
+	}
 	timeNow := time.Now()
 	annotations[EKSClusterAnnotation] = t.clusterName
-	xrayFilter := FilterExpression(annotations)
-	traceIds, err := GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, xrayFilter)
+	xrayFilter := awsservice.FilterExpression(annotations)
+	traceIds, err := awsservice.GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, xrayFilter)
 	if err != nil {
 		fmt.Printf("error getting trace ids: %v", err)
 	} else {
 		fmt.Printf("Trace IDs: %v\n", traceIds)
 		if len(traceIds) > 0 {
-			testResults[0].Status = status.SUCCESSFUL
+			testResults.Status = status.SUCCESSFUL
 		}
 	}
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
-		TestResults: testResults,
+		TestResults: []status.TestResult{testResults},
 	}
 }
 
@@ -77,34 +72,6 @@ func (t *AppSignalsTracesRunner) GetMeasuredMetrics() []string {
 
 func (e *AppSignalsTracesRunner) GetAgentConfigFileName() string {
 	return ""
-}
-
-func GetTraceIDs(startTime time.Time, endTime time.Time, filter string) ([]string, error) {
-	var traceIDs []string
-	input := &xray.GetTraceSummariesInput{StartTime: aws.Time(startTime), EndTime: aws.Time(endTime), FilterExpression: aws.String(filter)}
-	output, err := awsservice.XrayClient.GetTraceSummaries(context.Background(), input)
-	if err != nil {
-		return nil, err
-	}
-	for _, summary := range output.TraceSummaries {
-		traceIDs = append(traceIDs, *summary.Id)
-	}
-	return traceIDs, nil
-}
-
-func FilterExpression(annotations map[string]string) string {
-	var expression string
-	for key, value := range annotations {
-		result, err := json.Marshal(value)
-		if err != nil {
-			continue
-		}
-		if len(expression) != 0 {
-			expression += " AND "
-		}
-		expression += fmt.Sprintf("annotation.%s = %s", key, result)
-	}
-	return expression
 }
 
 var _ test_runner.ITestRunner = (*AppSignalsTracesRunner)(nil)
