@@ -129,6 +129,7 @@ func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
 	case computetype.EKS:
 		log.Println("Environment compute type is EKS")
 		for _, testRunner := range getEksTestRunners(env) {
+			fmt.Println("testRunner---------", testRunner.Env)
 			testRunner.Run(suite, env)
 		}
 	default: // EC2 tests
