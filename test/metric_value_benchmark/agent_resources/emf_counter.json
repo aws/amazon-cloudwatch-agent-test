@@ -6,7 +6,7 @@
   "properties": {
     "_aws": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "Timestamp": {},
         "LogGroupName": {
@@ -16,7 +16,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": true,
+            "additionalProperties": false,
             "properties": {
               "Namespace": {
                 "type": "string"
@@ -34,7 +34,7 @@
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "additionalProperties": true,
+                  "additionalProperties": false,
                   "properties": {
                     "Name": {
                       "type": "string"
@@ -66,5 +66,5 @@
     "EMFCounter",
     "InstanceId"
   ],
-  "additionalProperties": true
+  "additionalProperties": false
 }
