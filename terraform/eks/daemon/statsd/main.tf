@@ -63,7 +63,6 @@ resource "aws_eks_node_group" "this" {
 # EKS Node IAM Role
 resource "aws_iam_role" "node_role" {
   name = "cwagent-eks-Worker-Role-${module.common.testing_id}"
-
   assume_role_policy = <<POLICY
 {
   "Version": "2012-10-17",
