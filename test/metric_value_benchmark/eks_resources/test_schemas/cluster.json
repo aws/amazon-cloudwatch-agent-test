@@ -23,5 +23,5 @@
     "Version",
     "CloudWatchMetrics"
   ],
-  "additionalProperties": false
+  "additionalProperties": true
 }
