@@ -28,6 +28,5 @@
     "NodeName",
     "PodName",
     "Namespace"
-  ],
-  "additionalProperties": false
+  ]
 }

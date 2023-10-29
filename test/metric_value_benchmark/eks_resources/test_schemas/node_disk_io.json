@@ -47,6 +47,5 @@
     "NodeName",
     "kubernetes",
     "device"
-  ],
-  "additionalProperties": false
+  ]
 }

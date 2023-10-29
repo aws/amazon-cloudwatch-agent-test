@@ -105,6 +105,5 @@
     "Namespace",
     "kubernetes",
     "CloudWatchMetrics"
-  ],
-  "additionalProperties": false
+  ]
 }

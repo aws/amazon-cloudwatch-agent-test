@@ -78,6 +78,5 @@
     "NodeName",
     "kubernetes",
     "CloudWatchMetrics"
-  ],
-  "additionalProperties": false
+  ]
 }
