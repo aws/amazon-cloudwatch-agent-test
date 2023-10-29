@@ -8,6 +8,10 @@ import _ "embed"
 var (
 	//go:embed test_schemas/cluster.json
 	eksClusterSchema string
+	//go:embed test_schemas/cluster_daemonset.json
+	eksClusterDaemonsetSchema string
+	//go:embed test_schemas/cluster_deployment.json
+	eksClusterDeploymentSchema string
 	//go:embed test_schemas/cluster_namespace.json
 	eksClusterNamespaceSchema string
 	//go:embed test_schemas/cluster_service.json
@@ -16,6 +20,8 @@ var (
 	eksContainerSchema string
 	//go:embed test_schemas/container_fs.json
 	eksContainerFSSchema string
+	//go:embed test_schemas/control_plane.json
+	eksControlPlaneSchema string
 	//go:embed test_schemas/node.json
 	eksNodeSchema string
 	//go:embed test_schemas/node_disk_io.json
@@ -30,16 +36,19 @@ var (
 	eksPodNetSchema string
 
 	EksClusterValidationMap = map[string]string{
-		"Cluster":          eksClusterSchema,
-		"ClusterNamespace": eksClusterNamespaceSchema,
-		"ClusterService":   eksClusterServiceSchema,
-		"Container":        eksContainerSchema,
-		"ContainerFS":      eksContainerFSSchema,
-		"Node":             eksNodeSchema,
-		"NodeDiskIO":       eksNodeDiskIOSchema,
-		"NodeFS":           eksNodeFSSchema,
-		"NodeNet":          eksNodeNetSchema,
-		"Pod":              eksPodSchema,
-		"PodNet":           eksPodNetSchema,
+		"Cluster":           eksClusterSchema,
+		"ClusterDaemonset":  eksClusterDaemonsetSchema,
+		"ClusterDeployment": eksClusterDeploymentSchema,
+		"ClusterNamespace":  eksClusterNamespaceSchema,
+		"ClusterService":    eksClusterServiceSchema,
+		"Container":         eksContainerSchema,
+		"ContainerFS":       eksContainerFSSchema,
+		"ControlPlane":      eksControlPlaneSchema,
+		"Node":              eksNodeSchema,
+		"NodeDiskIO":        eksNodeDiskIOSchema,
+		"NodeFS":            eksNodeFSSchema,
+		"NodeNet":           eksNodeNetSchema,
+		"Pod":               eksPodSchema,
+		"PodNet":            eksPodNetSchema,
 	}
 )

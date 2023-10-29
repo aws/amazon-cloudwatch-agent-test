@@ -46,6 +46,9 @@
     "container_last_termination_reason":{},
     "number_of_container_restarts":{},
     "container_status":{},
+    "container_filesystem_usage":{},
+    "container_filesystem_available":{},
+    "container_filesystem_utilization":{},
     "kubernetes":{
       "type": "object",
       "properties": {

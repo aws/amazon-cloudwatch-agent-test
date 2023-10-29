@@ -2,7 +2,8 @@
   "logs": {
     "metrics_collected": {
       "kubernetes": {
-        "metrics_collection_interval": 30
+        "metrics_collection_interval": 30,
+        "enhanced_container_insights": true
       }
     },
     "force_flush_interval": 5
