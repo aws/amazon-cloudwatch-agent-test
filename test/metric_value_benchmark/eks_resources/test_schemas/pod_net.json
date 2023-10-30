@@ -55,6 +55,5 @@
     "Namespace",
     "interface",
     "kubernetes"
-  ],
-  "additionalProperties": false
+  ]
 }
