@@ -19,7 +19,7 @@
     "apiserver_request_total": {},
     "apiserver_request_total_5xx": {},
     "apiserver_admission_controller_admission_duration_seconds": {},
-    "apiserver_admission_step_admission_duration_seconds",
+    "apiserver_admission_step_admission_duration_seconds": {},
     "etcd_request_duration_seconds": {},
     "rest_client_requests_total": {},
     "apiserver_current_inflight_requests": {},
