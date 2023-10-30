@@ -116,8 +116,6 @@ resource "null_resource" "validator_linux" {
       "cp -r amazon-cloudwatch-agent-test/test/xray/resources /home/ec2-user/",
       "export AWS_REGION=${var.region}",
       "cd ./validator/validators",
-      "ls -lirt",
-      "pwd",
       "sudo chmod +x ./${local.install_validator}",
       "./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       local.start_command,
