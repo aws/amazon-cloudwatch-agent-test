@@ -1,0 +1,15 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "logs": {
+    "metrics_collected": {
+      "app_signals": {}
+    }
+  },
+  "traces": {
+    "traces_collected": {
+      "app_signals": {}
+    }
+  }
+}
