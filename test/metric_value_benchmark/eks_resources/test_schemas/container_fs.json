@@ -84,6 +84,5 @@
     "device",
     "fstype",
     "kubernetes"
-  ],
-  "additionalProperties": false
+  ]
 }
