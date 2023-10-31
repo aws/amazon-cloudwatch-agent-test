@@ -1,0 +1,31 @@
+{
+    "agent": {
+      "debug": true
+    },
+    "logs": {
+      "metrics_collected": {
+        "app_signals": {
+            "enabled": true,
+            "rules": [
+              {
+                "selectors": [
+                  {
+                    "dimensions": "RemoteTarget",
+                    "match": "remote-target"
+                  }
+                ],
+                "action": "drop",
+                "rule_name": "drop"
+              }
+            ]
+        }
+      }
+    },
+    "traces": {
+      "traces_collected": {
+        "app_signals": {
+            "enabled": true
+        }
+      }
+    }
+  }

@@ -68,6 +68,37 @@ var (
 			Value: dimension.ExpectedDimensionValue{Value: aws.String("remote-target")},
 		},
 	}
+
+	ClientProducerReplacedInstructions = []dimension.Instruction{
+		{
+			Key:   "HostedIn.EKS.Cluster",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "HostedIn.K8s.Namespace",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("default")},
+		},
+		{
+			Key:   "Service",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("service-name")},
+		},
+		{
+			Key:   "RemoteService",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("service-name-remote")},
+		},
+		{
+			Key:   "Operation",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("operation")},
+		},
+		{
+			Key:   "RemoteOperation",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("remote-operation")},
+		},
+		{
+			Key:   "RemoteTarget",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("replaced")},
+		},
+	}
 )
 
 func ValidateAppSignalsMetric(dimFactory dimension.Factory, namespace string, metricName string, instructions []dimension.Instruction) status.TestResult {

@@ -190,6 +190,21 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/app_signals", terraformDir: "terraform/eks/daemon/app_signals",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
+		{
+			testDir:      "./test/app_signals/high_cardinality_drop",
+			terraformDir: "terraform/eks/daemon/app_signals",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/app_signals/high_cardinality_keep",
+			terraformDir: "terraform/eks/daemon/app_signals",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/app_signals/high_cardinality_replace",
+			terraformDir: "terraform/eks/daemon/app_signals",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
 	},
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
