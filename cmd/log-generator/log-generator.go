@@ -1,15 +1,16 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package main
 
 import (
 	"flag"
 	"fmt"
-	"math"
 	"math/rand"
 	"os"
 	"path"
 	"runtime"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -25,7 +26,7 @@ var (
 	eventSize       = flag.Int("eventSize", 120, "Identify the single log line size, in Byte.")
 	outPutPath      = flag.String("path", "", "Identify the path where log files will generate.")
 	filePrefix      = flag.String("filePrefix", "tmp", "Identify the log file prefix")
-	loopNum         = flag.Int64("loopNum", math.MaxInt64, "How many loops to write teh logentry.")
+	runTime         = flag.Duration("runTime", 48*time.Hour, "Run time duration.")
 )
 
 func main() {
@@ -45,16 +46,15 @@ func main() {
 	for i := 0; i < *eventSize-1; i++ {
 		logEntry += "A"
 	}
-	var waitGroup = sync.WaitGroup{}
 	//Start generating log
 	for i := 0; i < *fileNum; i++ {
-		waitGroup.Add(1)
-		go writeLog(logEntry, i, *loopNum, &waitGroup)
+		go writeLog(logEntry, i)
 	}
-	waitGroup.Wait()
+	time.Sleep(*runTime)
+	// No cleanup needed, just exit.
 }
 
-func writeLog(logEntry string, instanceId int, loopNum int64, waitGroup *sync.WaitGroup) {
+func writeLog(logEntry string, instanceId int) {
 	curFilePath := path.Join(*outPutPath, fmt.Sprintf("%s%d.log", *filePrefix, instanceId))
 	fmt.Printf("Creating file %s\n", curFilePath)
 	os.MkdirAll(*outPutPath, 0755)
@@ -64,9 +64,7 @@ func writeLog(logEntry string, instanceId int, loopNum int64, waitGroup *sync.Wa
 	r := time.Duration(rand.Intn(1000))
 	time.Sleep(r * time.Millisecond)
 	ticker := time.NewTicker(time.Second)
-	var j int64
-	for j = 0; j < loopNum; j++ {
-		<-ticker.C
+	for range ticker.C {
 		fmt.Printf("%s Starting...\n", time.Now().Format(layoutFormat))
 		for i := 0; i < *eventsPerSecond; i++ {
 			if i%multilineRatio == 0 {
@@ -88,5 +86,4 @@ func writeLog(logEntry string, instanceId int, loopNum int64, waitGroup *sync.Wa
 		}
 		fmt.Printf("%s Ended.\n", time.Now().Format(layoutFormat))
 	}
-	waitGroup.Done()
 }

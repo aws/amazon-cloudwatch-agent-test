@@ -10,11 +10,12 @@ import (
 	"log"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/stretchr/testify/suite"
 )
 
 type MetricsAppendDimensionTestSuite struct {
@@ -31,10 +32,8 @@ func (suite *MetricsAppendDimensionTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished MetricAppendDimensionTestSuite")
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 var (
@@ -49,15 +48,16 @@ func getTestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &GlobalAppendDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &OneAggregateDimensionTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &AggregationDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &DropOriginalMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return testRunners
 }
 
 func (suite *MetricsAppendDimensionTestSuite) TestAllInSuite() {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	for _, testRunner := range getTestRunners(env) {
-		testRunner.Run(suite)
+		suite.AddToSuiteResult(testRunner.Run())
 	}
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Metric Append Dimension Test Suite Failed")
 }

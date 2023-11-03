@@ -11,7 +11,7 @@ module "basic_components" {
 }
 
 resource "aws_ecs_cluster" "cluster" {
-  name = "cwagent-integ-test-cluster-${module.common.testing_id}"
+  name = "${local.basename}-${module.common.testing_id}"
 }
 
 ######
@@ -63,6 +63,12 @@ resource "aws_autoscaling_group" "cluster" {
     value               = ""
     propagate_at_launch = true
   }
+
+  tag {
+    key                 = "BaseClusterName"
+    value               = local.basename
+    propagate_at_launch = true
+  }
 }
 
 resource "aws_ecs_capacity_provider" "cluster" {
@@ -108,6 +114,7 @@ locals {
   prometheus_config             = fileexists("../../../${var.test_dir}/resources/ecs_prometheus.tpl") ? "../../../${var.test_dir}/resources/ecs_prometheus.tpl" : "./default_resources/default_ecs_prometheus.tpl"
   extra_apps_ecs_taskdef        = fileexists("../../../${var.test_dir}/resources/extra_apps.tpl") ? "../../../${var.test_dir}/resources/extra_apps.tpl" : "./default_resources/default_extra_apps.tpl"
   cwagent_config_ssm_param_name = "cwagent-integ-test-ssm-config-${module.common.testing_id}"
+  basename                      = "cwagent-integ-test-cluster"
 }
 
 data "template_file" "cwagent_config" {
@@ -179,11 +186,12 @@ resource "aws_ecs_task_definition" "cwagent_task_definition" {
 }
 
 resource "aws_ecs_service" "cwagent_service" {
-  name                = "cwagent-service-${module.common.testing_id}"
-  cluster             = aws_ecs_cluster.cluster.id
-  task_definition     = aws_ecs_task_definition.cwagent_task_definition.arn
-  launch_type         = "EC2"
-  scheduling_strategy = "DAEMON"
+  name                   = "cwagent-service-${module.common.testing_id}"
+  cluster                = aws_ecs_cluster.cluster.id
+  task_definition        = aws_ecs_task_definition.cwagent_task_definition.arn
+  launch_type            = "EC2"
+  scheduling_strategy    = "DAEMON"
+  enable_execute_command = true
 
   depends_on = [aws_ecs_task_definition.cwagent_task_definition]
 }
@@ -213,11 +221,12 @@ resource "aws_ecs_task_definition" "extra_apps_task_definition" {
 }
 
 resource "aws_ecs_service" "extra_apps_service" {
-  name            = "extra-apps-service-${module.common.testing_id}"
-  cluster         = aws_ecs_cluster.cluster.id
-  task_definition = aws_ecs_task_definition.extra_apps_task_definition.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                   = "extra-apps-service-${module.common.testing_id}"
+  cluster                = aws_ecs_cluster.cluster.id
+  task_definition        = aws_ecs_task_definition.extra_apps_task_definition.arn
+  desired_count          = 1
+  launch_type            = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     security_groups  = [module.basic_components.security_group]
@@ -236,5 +245,20 @@ resource "null_resource" "validator" {
       go test ${var.test_dir} -timeout 0 -computeType=ECS -ecsLaunchType=EC2 -ecsDeploymentStrategy=DAEMON -cwagentConfigSsmParamName=${local.cwagent_config_ssm_param_name} -clusterArn=${aws_ecs_cluster.cluster.arn} -cwagentECSServiceName=${aws_ecs_service.cwagent_service.name} -v
     EOT
   }
-  depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service]
+  depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service, null_resource.disable_metadata]
+}
+
+resource "null_resource" "disable_metadata" {
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo Sleep for 30 seconds to allow instance to be attached to the cluster
+      sleep 30
+      echo Setting metadata option for ECS EC2 instance to ${var.metadataEnabled}
+      INSTANCEID=`aws ec2 describe-instances --filters Name=tag:ClusterName,Values=${aws_ecs_cluster.cluster.name} --query "Reservations[*].Instances[*].InstanceId" --output text`
+      echo Instance ID for ECS instance is $INSTANCEID
+      aws ec2 modify-instance-metadata-options --instance-id $INSTANCEID --http-endpoint ${var.metadataEnabled}
+    EOT
+  }
+  depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service, aws_autoscaling_group.cluster]
 }

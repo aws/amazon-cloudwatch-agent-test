@@ -45,6 +45,5 @@
     "NodeName",
     "kubernetes",
     "interface"
-  ],
-  "additionalProperties": false
+  ]
 }

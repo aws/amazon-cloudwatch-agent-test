@@ -6,9 +6,10 @@
 package dimension
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 )
 
 type EMFECSDimensionProvider struct {
@@ -22,12 +23,13 @@ func (p EMFECSDimensionProvider) IsApplicable() bool {
 }
 
 func (p EMFECSDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
-	if instruction.Key == "InstanceID" {
+	if instruction.Key == "Type" {
 		return types.Dimension{
-			Name:  aws.String("InstanceID"),
-			Value: aws.String("INSTANCEID"),
+			Name:  aws.String("Type"),
+			Value: aws.String("Counter"),
 		}
 	}
+
 	return types.Dimension{}
 }
 

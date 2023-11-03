@@ -63,21 +63,19 @@ resource "aws_eks_node_group" "this" {
 # EKS Node IAM Role
 resource "aws_iam_role" "node_role" {
   name = "cwagent-eks-Worker-Role-${module.common.testing_id}"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
 
-  assume_role_policy = <<POLICY
-    {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Principal": {
-            "Service": "ec2.amazonaws.com"
-          },
-          "Action": "sts:AssumeRole"
-        }
-      ]
-    }
-    POLICY
 }
 
 resource "aws_iam_role_policy_attachment" "node_AmazonEKSWorkerNodePolicy" {
@@ -337,7 +335,7 @@ resource "kubernetes_daemonset" "service" {
           command = [
             "/bin/sh",
             "-c",
-            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFEKSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFEKSNameSpace\",\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5}' | socat -v -t 0 - UDP:0.0.0.0:25888; sleep 60; done"
+            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFEKSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFEKSNameSpace\",\"Dimensions\":[[\"Type\",\"ClusterName\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"ClusterName\": \"${aws_eks_cluster.this.name}\"}' | socat -v -t 0 - UDP:0.0.0.0:25888; sleep 60; done"
           ]
           env {
             name = "HOST_IP"
@@ -476,7 +474,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating EKS metrics/logs for EMF"
       cd ../../../..
-      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v
+      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
   }
 }

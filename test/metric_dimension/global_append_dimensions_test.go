@@ -6,12 +6,14 @@
 package metric_dimension
 
 import (
+	"log"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"log"
 )
 
 type GlobalAppendDimensionsTestRunner struct {

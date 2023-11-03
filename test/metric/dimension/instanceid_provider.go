@@ -6,11 +6,13 @@
 package dimension
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
+	"log"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"log"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 type ECSInstanceIdDimensionProvider struct {
@@ -79,6 +81,14 @@ func (p *EKSClusterNameProvider) IsApplicable() bool {
 }
 
 func (p *EKSClusterNameProvider) GetDimension(instruction Instruction) types.Dimension {
+	// For AppSignals metrics, cluster name is under EKS.Cluster dimension
+	if instruction.Key == "HostedIn.EKS.Cluster" {
+		return types.Dimension{
+			Name:  aws.String("HostedIn.EKS.Cluster"),
+			Value: aws.String(p.env.EKSClusterName),
+		}
+	}
+
 	if instruction.Key != "ClusterName" || instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}

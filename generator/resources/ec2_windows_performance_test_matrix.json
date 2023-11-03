@@ -1,0 +1,23 @@
+[
+      {
+        "os": "win-2022",
+        "ami": "cloudwatch-agent-integration-test-win-2022*",
+        "arc": "amd64",
+        "valuesPerMinute": 100,
+        "family": "windows"
+      },
+      {
+        "os": "win-2022",
+        "ami": "cloudwatch-agent-integration-test-win-2022*",
+        "arc": "amd64",
+        "valuesPerMinute": 1000,
+        "family": "windows"
+      },
+      {
+        "os": "win-2022",
+        "ami": "cloudwatch-agent-integration-test-win-2022*",
+        "arc": "amd64",
+        "valuesPerMinute": 5000,
+        "family": "windows"
+      }
+]

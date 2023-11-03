@@ -40,7 +40,7 @@ variable "s3_bucket" {
 
 variable "test_dir" {
   type    = string
-  default = "../../test/stress/statsd"
+  default = "../../test/performance/system" # This is really only used during tf destroy. See https://github.com/hashicorp/terraform/issues/23552
 }
 
 variable "cwa_github_sha" {
@@ -65,4 +65,17 @@ variable "family" {
     condition     = contains(["windows", "linux"], var.family)
     error_message = "Valid values for family are (windows, linux)."
   }
+}
+variable "github_test_repo" {
+  type    = string
+  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+}
+
+variable "github_test_repo_branch" {
+  type    = string
+  default = "main"
+}
+variable "run_mock_server" {
+  type    = bool
+  default = false
 }

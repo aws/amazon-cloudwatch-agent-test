@@ -46,13 +46,33 @@ variable "test_name" {
   default = ""
 }
 
+variable "github_test_repo" {
+  type    = string
+  default = "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+}
+
+variable "github_test_repo_branch" {
+  type    = string
+  default = "main"
+}
+
 variable "test_dir" {
   type    = string
-  default = "../../../test/feature/mac"
+  default = "../../../test/feature/mac" # This is really only used during tf destroy. See https://github.com/hashicorp/terraform/issues/23552
 }
 
 variable "cwa_github_sha" {
   type    = string
   default = ""
+}
+
+variable "license_manager_arn" {
+  type    = string
+  default = ""
+}
+
+variable "user" {
+  type    = string
+  default = "ec2-user"
 }
 

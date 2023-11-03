@@ -9,10 +9,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
 
 type testConfig struct {
 	logFileCount      int
@@ -64,7 +70,7 @@ func startLogGen(fileNum int, eventsPerSecond int, eventSize int) error {
 	// Assume PWD is the .../test/soak/ directory.
 	cmd := fmt.Sprintf("go run ../../cmd/log-generator -fileNum=%d -eventsPerSecond=%d -eventSize=%d",
 		fileNum, eventsPerSecond, eventSize)
-	return common.RunAyncCommand(cmd)
+	return common.RunAsyncCommand(cmd)
 }
 
 // startEMFGen starts a long running process that writes EMF events to log files.
@@ -75,7 +81,7 @@ func startEMFGen(fileNum int, eventsPerSecond int) error {
 	}
 	cmd := fmt.Sprintf("go run ../../cmd/emf-generator -fileNum=%d -eventsPerSecond=%d",
 		fileNum, eventsPerSecond)
-	return common.RunAyncCommand(cmd)
+	return common.RunAsyncCommand(cmd)
 }
 
 // startStatsd starts a long running process that sends statsd metrics to a port.
@@ -86,7 +92,7 @@ func startStatsd(clientNum int, tps int, metricNum int) error {
 	}
 	cmd := fmt.Sprintf("go run ../../cmd/statsd-generator -clientNum=%d -tps=%d -metricNum=%d",
 		clientNum, tps, metricNum)
-	return common.RunAyncCommand(cmd)
+	return common.RunAsyncCommand(cmd)
 }
 
 // killExisting will search the command line of every process and kill any that match.

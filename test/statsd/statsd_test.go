@@ -7,13 +7,13 @@ package statsd
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"log"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
@@ -35,10 +35,8 @@ func (suite *StatsDTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished StatsDTestSuite")
 }
 
-var envMetaDataStrings = &(environment.MetaDataStrings{})
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 var (
@@ -76,7 +74,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 }
 
 func (suite *StatsDTestSuite) TestAllInSuite() {
-	env := environment.GetEnvironmentMetaData(envMetaDataStrings)
+	env := environment.GetEnvironmentMetaData()
 	switch env.ComputeType {
 	case computetype.ECS:
 		log.Println("Environment compute type is ECS")

@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package main
 
 import (
@@ -16,6 +19,7 @@ var (
 	clientNum = flag.Int("clientNum", 1, "The number of statsd client.")
 	tps       = flag.Int("tps", 100, "Transaction per second for each statsd client.")
 	metricNum = flag.Int("metricNum", 100, "The number of unique metrics for each statsd client.")
+	runTime   = flag.Duration("runTime", 48*time.Hour, "Run time duration.")
 )
 
 // sample command:
@@ -27,8 +31,8 @@ func main() {
 	for i := 0; i < *clientNum; i++ {
 		go startStatsDClient(i, *tps, *metricNum)
 	}
-	//wait forever
-	select {}
+	time.Sleep(*runTime)
+	// No cleanup needed, just exit.
 }
 
 func startStatsDClient(clientId, tps, metricNum int) {

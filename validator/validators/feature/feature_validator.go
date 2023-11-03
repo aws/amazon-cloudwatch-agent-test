@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/multierr"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
@@ -38,9 +38,10 @@ func (s *FeatureValidator) GenerateLoad() error {
 		agentCollectionPeriod = s.vConfig.GetAgentCollectionPeriod()
 		agentConfigFilePath   = s.vConfig.GetCloudWatchAgentConfigPath()
 		receivers             = s.vConfig.GetPluginsConfig()
+		validationLog         = s.vConfig.GetLogValidation()
 	)
 
-	if err := common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate); err != nil {
+	if err := common.GenerateLogs(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate, validationLog); err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}
 

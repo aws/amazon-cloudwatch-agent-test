@@ -1,14 +1,20 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 //go:build !windows
 
 package emf
 
 import (
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"time"
 )
 
 type EMFTestRunner struct {
@@ -54,17 +60,20 @@ func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult 
 	var failed []dimension.Instruction
 	if t.testName == "EMF_ECS" {
 		namespace = "EMFECSNameSpace"
-		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
-			{
-				Key:   "InstanceName",
-				Value: dimension.UnknownDimensionValue(),
-			},
-		})
 	}
 	if t.testName == "EMF_EKS" {
 		namespace = "EMFEKSNameSpace"
-		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{})
 	}
+	dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "ClusterName",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "Type",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("Counter")},
+		},
+	})
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,

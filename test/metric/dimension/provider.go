@@ -8,8 +8,9 @@ package dimension
 import (
 	"log"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 type ExpectedDimensionValue struct {

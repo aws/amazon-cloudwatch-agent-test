@@ -9,12 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	cwltypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"go.uber.org/multierr"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/internal/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/util"
 )
@@ -48,6 +50,8 @@ func (s *BasicValidator) GenerateLoad() error {
 	switch dataType {
 	case "logs":
 		return common.StartLogWrite(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate)
+	case "traces":
+		return traces.StartTraceGeneration(receiver, agentConfigFilePath, agentCollectionPeriod, metricSendingInterval)
 	default:
 		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
 		return common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate, logGroup, metricNamespace)
@@ -60,18 +64,18 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		ec2InstanceId    = awsservice.GetInstanceId()
 		metricNamespace  = s.vConfig.GetMetricNamespace()
 		validationMetric = s.vConfig.GetMetricValidation()
-		validationLog    = s.vConfig.GetLogValidation()
+		logValidations   = s.vConfig.GetLogValidation()
 	)
 
 	for _, metric := range validationMetric {
-		metricDimensions := []types.Dimension{
+		metricDimensions := []cwtypes.Dimension{
 			{
 				Name:  aws.String("InstanceId"),
 				Value: aws.String(ec2InstanceId),
 			},
 		}
 		for _, dimension := range metric.MetricDimension {
-			metricDimensions = append(metricDimensions, types.Dimension{
+			metricDimensions = append(metricDimensions, cwtypes.Dimension{
 				Name:  aws.String(dimension.Name),
 				Value: aws.String(dimension.Value),
 			})
@@ -82,8 +86,8 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		}
 	}
 
-	for _, log := range validationLog {
-		err := s.ValidateLogs(log.LogStream, log.LogValue, log.LogLines, startTime, endTime)
+	for _, logValidation := range logValidations {
+		err := s.ValidateLogs(logValidation.LogStream, logValidation.LogValue, logValidation.LogLevel, logValidation.LogSource, logValidation.LogLines, startTime, endTime)
 		if err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
@@ -105,33 +109,40 @@ func (s *BasicValidator) Cleanup() error {
 	return nil
 }
 
-func (s *BasicValidator) ValidateLogs(logStream, logLine string, numberOfLogLine int, startTime, endTime time.Time) error {
-	var (
-		logGroup = awsservice.GetInstanceId()
-	)
-	log.Printf("Start to validate log '%s' with number of logs lines %d within log group %s, log stream %s, start time %v and end time %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime)
-	ok, err := awsservice.ValidateLogs(logGroup, logStream, &startTime, &endTime, func(logs []string) bool {
-		if len(logs) < 1 {
-			return false
-		}
-		actualNumberOfLogLines := 0
-		for _, l := range logs {
-			if strings.Contains(l, logLine) {
-				actualNumberOfLogLines += 1
+func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource string, expectedMinimumEventCount int, startTime, endTime time.Time) error {
+	logGroup := awsservice.GetInstanceId()
+	log.Printf("Start to validate that substring '%s' has at least %d log event(s) within log group %s, log stream %s, between %v and %v", logLine, expectedMinimumEventCount, logGroup, logStream, startTime, endTime)
+	return awsservice.ValidateLogs(
+		logGroup,
+		logStream,
+		&startTime,
+		&endTime,
+		awsservice.AssertLogsNotEmpty(),
+		awsservice.AssertNoDuplicateLogs(),
+		func(events []cwltypes.OutputLogEvent) error {
+			var actualEventCount int
+			for _, event := range events {
+				message := *event.Message
+				switch logSource {
+				case "WindowsEvents":
+					if logLevel != "" && strings.Contains(message, logLine) && strings.Contains(message, logLevel) {
+						actualEventCount += 1
+					}
+				default:
+					if strings.Contains(message, logLine) {
+						actualEventCount += 1
+					}
+				}
 			}
-		}
-
-		return numberOfLogLine <= actualNumberOfLogLines
-	})
-
-	if !ok || err != nil {
-		return fmt.Errorf("\n the number of log line for '%s' is %d which does not match the actual number with log group %s, log stream %s, start time %v and end time %v with err %v", logLine, numberOfLogLine, logGroup, logStream, startTime, endTime, err)
-	}
-
-	return nil
+			if actualEventCount < expectedMinimumEventCount {
+				return fmt.Errorf("log event count for %q in %s/%s between %v and %v is %d which is less than the expected %d", logLine, logGroup, logStream, startTime, endTime, actualEventCount, expectedMinimumEventCount)
+			}
+			return nil
+		},
+	)
 }
 
-func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, metricValue float64, metricSampleCount int, startTime, endTime time.Time) error {
+func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metricDimensions []cwtypes.Dimension, metricValue float64, metricSampleCount int, startTime, endTime time.Time) error {
 	var (
 		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
 	)
@@ -167,18 +178,18 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 	return nil
 }
 
-func (s *BasicValidator) buildMetricQueries(metricName, metricNamespace string, metricDimensions []types.Dimension) []types.MetricDataQuery {
+func (s *BasicValidator) buildMetricQueries(metricName, metricNamespace string, metricDimensions []cwtypes.Dimension) []cwtypes.MetricDataQuery {
 	var metricQueryPeriod = int32(s.vConfig.GetAgentCollectionPeriod().Seconds())
 
-	metricInformation := types.Metric{
+	metricInformation := cwtypes.Metric{
 		Namespace:  aws.String(metricNamespace),
 		MetricName: aws.String(metricName),
 		Dimensions: metricDimensions,
 	}
 
-	metricDataQueries := []types.MetricDataQuery{
+	metricDataQueries := []cwtypes.MetricDataQuery{
 		{
-			MetricStat: &types.MetricStat{
+			MetricStat: &cwtypes.MetricStat{
 				Metric: &metricInformation,
 				Period: &metricQueryPeriod,
 				Stat:   aws.String(string(models.AVERAGE)),

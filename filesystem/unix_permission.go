@@ -7,8 +7,9 @@ package filesystem
 
 import (
 	"fmt"
-	"golang.org/x/sys/unix"
 	"os/user"
+
+	"golang.org/x/sys/unix"
 )
 
 type FilePermission string

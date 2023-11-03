@@ -169,6 +169,7 @@ required for testing locally but is required for testing on your personal fork.
             "autoscaling:SetInstanceProtection",
             "autoscaling:UpdateAutoScalingGroup",
             "cloudwatch:GetMetricData",
+            "cloudwatch:ListMetrics",
             "dynamodb:*",
             "ec2:AuthorizeSecurityGroupEgress",
             "ec2:AuthorizeSecurityGroupIngress",
@@ -316,6 +317,9 @@ on merge for your fork, you should go to `Actions`, select the `Run Integration 
 click the `...` and then select `Disable workflow`.
 See [GitHub docs](https://docs.github.com/en/actions/managing-workflow-runs/disabling-and-enabling-a-workflow)
 regarding how to turn workflows on and off.
+
+## macOS Test
+To learn more about how we generate and assign resources for integration tests, refer to the doc for [License Manager Setup](https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/docs/license-manager-setup.md)
 
 # Local setup (Not recommended)
 

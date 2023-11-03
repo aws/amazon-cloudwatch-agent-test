@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 type NetTestRunner struct {
@@ -31,6 +32,14 @@ func (m *NetTestRunner) Validate() status.TestGroupResult {
 		Name:        m.GetTestName(),
 		TestResults: testResults,
 	}
+}
+
+func (m *NetTestRunner) SetupBeforeAgentRun() error {
+	err := common.RunCommands([]string{"sudo systemctl restart docker"})
+	if err != nil {
+		return err
+	}
+	return m.SetUpConfig()
 }
 
 func (m *NetTestRunner) GetTestName() string {

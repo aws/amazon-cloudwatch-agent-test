@@ -60,7 +60,7 @@ resource "aws_instance" "cwagent" {
   }
 
   tags = {
-    Name = "cwagent-performance-${module.common.testing_id}"
+    Name = "cwagent-performance-${var.family}-${module.common.testing_id}"
   }
 }
 
@@ -88,6 +88,7 @@ resource "null_resource" "install_binaries" {
   provisioner "remote-exec" {
     inline = [
       local.ami_family["wait_cloud_init"],
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_package} .",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_validator} .",
       local.ami_family["install_command"],
@@ -108,7 +109,13 @@ resource "null_resource" "validator_linux" {
   }
   provisioner "remote-exec" {
     inline = [
+      #mock server dependencies getting transfered.
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      var.run_mock_server ? "cd mockserver && sudo docker build -t mockserver . && cd .." : "echo skipping mock server build",
+      var.run_mock_server ? "sudo docker run --name mockserver -d -p 8080:8080 -p 443:443  mockserver" : "echo skipping mock server run",
+      "cp -r amazon-cloudwatch-agent-test/test/xray/resources /home/ec2-user/",
       "export AWS_REGION=${var.region}",
+      "cd ./validator/validators",
       "sudo chmod +x ./${local.install_validator}",
       "./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       local.start_command,

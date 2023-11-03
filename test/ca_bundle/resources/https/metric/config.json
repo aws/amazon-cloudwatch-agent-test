@@ -1,0 +1,26 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "run_as_user": "root",
+    "debug": true
+  },
+  "metrics": {
+    "endpoint_override": "https://localhost.localstack.cloud:4566",
+    "metrics_collected": {
+      "disk": {
+        "measurement": [
+          "used_percent"
+        ],
+        "resources": [
+          "*"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ]
+      }
+    },
+    "force_flush_interval": 10
+  }
+}

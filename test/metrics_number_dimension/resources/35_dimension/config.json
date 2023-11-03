@@ -1,11 +1,12 @@
 {
   "agent": {
-    "metrics_collection_interval": 60,
+    "metrics_collection_interval": 10,
     "run_as_user": "root",
     "debug": true,
     "logfile": ""
   },
   "metrics": {
+    "force_flush_interval": 10,
     "namespace": "MetricNumberDimensionTest",
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
@@ -15,7 +16,7 @@
         "measurement": [
           "mem_used_percent"
         ],
-        "metrics_collection_interval": 60,
+        "metrics_collection_interval": 10,
         "append_dimensions": {
           "append0": "Lorem ipsum dolor sit amet consectetur adipiscing elit Vivamus non mauris malesuada mattis ex eget porttitor purus Suspendisse potenti Praesent vel sollicitudin ipsum Quisque luctus pretium lorem non faucibus Ut vel quam dui Nunc fermentum condimentum consectetur Morbi tellus mauris tristique tincidunt elit consectetur hendrerit placerat dui In nulla erat finibus eget erat a hendrerit sodales urna In sapien purus auctor sit amet congue ut congue eget nisi Vivamus sed neque ut ligula lobortis accumsan quis id metus In feugiat velit et leo mattis non fringilla dui elementum Proin a nisi ac sapien vulputate consequat Vestibulum eu tellus mi Integer consectetur efficiturappend0",
           "append1": "Lorem ipsum dolor sit amet consectetur adipiscing elit Vivamus non mauris malesuada mattis ex eget porttitor purus Suspendisse potenti Praesent vel sollicitudin ipsum Quisque luctus pretium lorem non faucibus Ut vel quam dui Nunc fermentum condimentum consectetur Morbi tellus mauris tristique tincidunt elit consectetur hendrerit placerat dui In nulla erat finibus eget erat a hendrerit sodales urna In sapien purus auctor sit amet congue ut congue eget nisi Vivamus sed neque ut ligula lobortis accumsan quis id metus In feugiat velit et leo mattis non fringilla dui elementum Proin a nisi ac sapien vulputate consequat Vestibulum eu tellus mi Integer consectetur efficiturappend1",

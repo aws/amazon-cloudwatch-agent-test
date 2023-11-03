@@ -11,16 +11,16 @@ import (
 )
 
 const (
-	retryNumber       = 10
-	retryTime         = 30 * time.Second
-	debInstall        = "deb"
-	rpmInstall        = "rpm"
+	retryNumber = 10
+	retryTime   = 30 * time.Second
+	debInstall  = "deb"
+	rpmInstall  = "rpm"
 )
 
 func main() {
 	installType := os.Args[1]
 	installCommand := ""
-	
+
 	debInstallCommand := "sudo dpkg -i -E ./amazon-cloudwatch-agent.deb"
 	rpmInstallCommand := "sudo rpm -U ./amazon-cloudwatch-agent.rpm"
 	if os.Geteuid() == 0 {

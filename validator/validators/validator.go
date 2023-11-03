@@ -41,7 +41,6 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 	if err != nil {
 		return err
 	}
-
 	log.Printf("Start to sleep %f s for the metric to be available in the beginning of next minute ", durationBeforeNextMinute.Seconds())
 	time.Sleep(durationBeforeNextMinute)
 
