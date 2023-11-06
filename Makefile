@@ -47,6 +47,7 @@ install-golang-lint:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.50.1
 
 fmt: install-goimports addlicense
+	terraform fmt -recursive
 	go fmt ./...
 	@echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
 
