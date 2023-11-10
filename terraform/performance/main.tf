@@ -113,9 +113,9 @@ resource "null_resource" "validator_linux" {
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       var.run_mock_server ? "cd mockserver && sudo docker build -t mockserver . && cd .." : "echo skipping mock server build",
       var.run_mock_server ? "sudo docker run --name mockserver -d -p 8080:8080 -p 443:443  mockserver" : "echo skipping mock server run",
-      "cd ..", # return to root , two copy xray configs next to validator
       "cp -r amazon-cloudwatch-agent-test/test/xray/resources /home/ec2-user/",
       "export AWS_REGION=${var.region}",
+      "cd ./validator/validators",
       "sudo chmod +x ./${local.install_validator}",
       "./${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       local.start_command,
