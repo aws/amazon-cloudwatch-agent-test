@@ -92,12 +92,4 @@ resource "aws_security_group" "ec2_security_group" {
     protocol    = "TCP"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  // RDP https://en.wikipedia.org/wiki/Remote_Desktop_Protocol
-  ingress {
-    from_port   = 3389
-    to_port     = 3389
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
