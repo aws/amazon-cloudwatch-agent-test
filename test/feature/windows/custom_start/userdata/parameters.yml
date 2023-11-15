@@ -1,0 +1,157 @@
+# Receivers that agent needs to tests
+receivers: ["system"]
+
+#Test case name
+test_case: "win_feature_userdata"
+validate_type: "feature"
+# Only support metrics/traces/logs, even in this case we validate more than logs,
+# we only make this data_type as a placeholder
+data_type: "metrics"
+
+# Number of metrics to be sent or number of log lines being written  each minute
+values_per_minute: "2"
+# Number of seconds the agent should run and collect the metrics. In this case, 1 minutes
+agent_collection_period: 60 
+
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+
+# Metric that the test needs to validate; moreover, the stress validation already has
+# InstanceID dimension; therefore, does not need to validate it
+# https://github.com/aws/amazon-cloudwatch-agent-test/pull/109/files#diff-47c87373e751dd9fd5ce504e44b320765c8b84d6cde524a4e8a32cfa34674165R124-R135
+metric_namespace: "CloudWatchAgentWinFeature"
+metric_validation:
+  # Validate Memory metrics
+  - metric_name: "Available_Bytes"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Memory"
+  - metric_name: "Cache_Faults_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Memory"
+  - metric_name: "Page_Faults_Per_sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Memory"
+  - metric_name: "Page_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Memory"
+# Validations for Logical Disks
+  - metric_name: "Free_Space"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "LogicalDisk"
+      - name: "instance"
+        value: "C:"
+# Validations for Physical Disks
+  - metric_name: "Disk_Time"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "PhysicalDisk"
+      - name: "instance"
+        value: "0 C:"
+  - metric_name: "Write_Bytes_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "PhysicalDisk"
+      - name: "instance"
+        value: "0 C:"
+  - metric_name: "Read_Bytes_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "PhysicalDisk"
+      - name: "instance"
+        value: "0 C:"
+  - metric_name: "Write_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "PhysicalDisk"
+      - name: "instance"
+        value: "0 C:"
+  - metric_name: "Disk_Read_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "PhysicalDisk"
+      - name: "instance"
+        value: "0 C:"
+
+# Validations for Processor
+  - metric_name: "Idle_Time"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Processor"
+      - name: "instance"
+        value: "0"
+  - metric_name: "Interrupt_Time"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Processor"
+      - name: "instance"
+        value: "0"
+  - metric_name: "User_Time"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Processor"
+      - name: "instance"
+        value: "0"
+  - metric_name: "Processor_Time"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Processor"
+      - name: "instance"
+        value: "0"
+# Validations for Network Interface 
+  - metric_name: "Bytes_Sent_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Network Interface"
+      - name: "instance"
+        value: "Amazon Elastic Network Adapter"
+  - metric_name: "Bytes_Received_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Network Interface"
+      - name: "instance"
+        value: "Amazon Elastic Network Adapter"
+  - metric_name: "Packets_Sent_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Network Interface"
+      - name: "instance"
+        value: "Amazon Elastic Network Adapter"
+  - metric_name: "Packets_Received_Per_Sec"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "Network Interface"
+      - name: "instance"
+        value: "Amazon Elastic Network Adapter"
+# Validations for TCPv4 and TCPv6
+  - metric_name: "Connections_Established"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "TCPv4"
+  - metric_name: "Connections_Established"
+    metric_sample_count: 60
+    metric_dimension: 
+      - name: "objectname"
+        value: "TCPv6"

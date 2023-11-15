@@ -62,7 +62,7 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids               = [module.basic_components.security_group]
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
-  user_data                            = length(regexall("/feature/windows/userdata", var.test_dir)) > 0 ? data.template_file.user_data.rendered : ""
+  user_data                            = length(regexall("/feature/windows/custom_start/userdata", var.test_dir)) > 0 ? data.template_file.user_data.rendered : ""
   get_password_data                    = true
 
   metadata_options {
@@ -86,7 +86,7 @@ resource "aws_ssm_parameter" "upload_ssm" {
 }
 
 resource "null_resource" "integration_test_setup_agent" {
-  count      = length(regexall("/feature/windows/userdata", var.test_dir)) > 0 ? 0 : 1
+  count      = length(regexall("/feature/windows/custom_start/userdata", var.test_dir)) > 0 ? 0 : 1
   depends_on = [aws_instance.cwagent, module.validator, aws_ssm_parameter.upload_ssm]
 
   # Install software
@@ -193,7 +193,7 @@ resource "null_resource" "integration_test_run" {
 
 resource "null_resource" "integration_test_run_validator" {
   # run validator only when test_dir is not passed e.g. the default from variable.tf
-  count = length(regexall("/feature/windows", var.test_dir)) > 0 && length(regexall("/feature/windows/userdata", var.test_dir)) < 1 ? 1 : 0
+  count = length(regexall("/feature/windows", var.test_dir)) > 0 && length(regexall("/feature/windows/custom_start", var.test_dir)) < 1 ? 1 : 0
   depends_on = [
     null_resource.integration_test_setup_agent,
     null_resource.integration_test_setup_validator,
@@ -237,9 +237,9 @@ resource "null_resource" "integration_test_run_validator" {
   }
 }
 
-resource "null_resource" "integration_test_run_validator_userdata" {
+resource "null_resource" "integration_test_run_validator_start_agent_ssm" {
   # run validator only when test_dir is not passed e.g. the default from variable.tf
-  count = length(regexall("/feature/windows/userdata", var.test_dir)) > 0 ? 1 : 0
+  count = length(regexall("/feature/windows/custom_start/ssm_start", var.test_dir)) > 0 ? 1 : 0
   depends_on = [
     null_resource.integration_test_setup_validator,
     null_resource.integration_test_wait,
@@ -266,8 +266,43 @@ resource "null_resource" "integration_test_run_validator_userdata" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
+      "aws ssm send-command --document-name AmazonCloudWatch-ManageAgent --parameters optionalConfigurationLocation=${local.ssm_parameter_name} --targets Key=tag:Name,Values=cwagent-integ-test-ec2-windows-${var.test_name}-${module.common.testing_id}",
+    ]
+  }
+}
+
+resource "null_resource" "integration_test_run_validator_custom_start" {
+  # run validator only when test_dir is not passed e.g. the default from variable.tf
+  count = length(regexall("/feature/windows/custom_start", var.test_dir)) > 0 ? 1 : 0
+  depends_on = [
+    null_resource.integration_test_setup_validator,
+    null_resource.integration_test_wait,
+    null_resource.integration_test_run_validator_start_agent_ssm
+  ]
+
+  connection {
+    type     = "winrm"
+    user     = "Administrator"
+    password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+    host     = aws_instance.cwagent.public_dns
+  }
+
+  provisioner "file" {
+    source      = module.validator.agent_config
+    destination = module.validator.instance_agent_config
+  }
+
+  provisioner "file" {
+    source      = module.validator.validator_config
+    destination = module.validator.instance_validator_config
+  }
+
+  //runs validator and sets up prometheus java agent
+  provisioner "remote-exec" {
+    inline = [
+      "set AWS_REGION=${var.region}",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
-      "powershell.exe \"& \"C:ProgramFiles\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -m ec2 -a status\"",
+      "powershell.exe \"& 'C:ProgramFiles\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -m ec2 -a status\"",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
     ]
   }
