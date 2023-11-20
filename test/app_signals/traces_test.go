@@ -25,7 +25,7 @@ var annotations = map[string]interface{}{
 	"aws_local_service":      "service-name",
 	"aws_remote_service":     "service-name-remote",
 	"HostedIn_K8s_Namespace": "default",
-	"aws_local_operation":    "operation",
+	"aws_local_operation":    "replaced-operation",
 }
 
 type AppSignalsTracesRunner struct {

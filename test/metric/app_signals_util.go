@@ -34,7 +34,7 @@ var (
 		},
 		{
 			Key:   "Operation",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("operation")},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("replaced-operation")},
 		},
 	}
 
@@ -57,7 +57,7 @@ var (
 		},
 		{
 			Key:   "Operation",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("operation")},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("replaced-operation")},
 		},
 		{
 			Key:   "RemoteOperation",

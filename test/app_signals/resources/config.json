@@ -4,7 +4,50 @@
   },
   "logs": {
     "metrics_collected": {
-      "app_signals": {}
+      "app_signals": {
+        "rules":[
+          {
+            "selectors":[
+              {
+                "dimension":"Operation",
+                "match":"operation"
+              }
+            ],
+            "action":"keep",
+            "rule_name":"keep01"
+          },
+          {
+            "selectors":[
+              {
+                "dimension":"Service",
+                "match":"drop-service-name*"
+              }
+            ],
+            "action":"drop",
+            "rule_name":"drop01"
+          },
+          {
+            "selectors":[
+              {
+                "dimension":"Operation",
+                "match":"operation"
+              },
+              {
+                "dimension":"Service",
+                "match":"service-name"
+              }
+            ],
+            "replacements":[
+              {
+                "target_dimension":"Operation",
+                "value":"replaced-operation"
+              }
+            ],
+            "action":"replace",
+            "rule_name":"replace01"
+          }
+        ]
+      }
     }
   },
   "traces": {
