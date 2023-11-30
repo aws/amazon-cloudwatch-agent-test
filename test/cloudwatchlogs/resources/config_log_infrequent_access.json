@@ -9,7 +9,7 @@
         "collect_list": [
           {
             "file_path": "/tmp/cwagent_log_test.log",
-            "log_group_name": "{instance_id}",
+            "log_group_name": "{instance_id}-infrequent_access",
             "log_stream_name": "{instance_id}",
             "timezone": "UTC",
             "log_group_class": "INFREQUENT_ACCESS"
