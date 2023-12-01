@@ -17,9 +17,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -28,20 +26,23 @@ import (
 )
 
 const (
-	configOutputPath      = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	logLineId1            = "foo"
-	logLineId2            = "bar"
-	logFilePath           = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
-	sleepForFlush         = 20 * time.Second            // default flush interval is 5 seconds
-	configPathAutoRemoval = "resources/config_auto_removal.json"
+	configOutputPath              = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	logLineId1                    = "foo"
+	logLineId2                    = "bar"
+	logFilePath                   = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
+	sleepForFlush                 = 20 * time.Second            // default flush interval is 5 seconds
+	configPathAutoRemoval         = "resources/config_auto_removal.json"
+	standardLogGroupClass         = "STANDARD"
+	infrequentAccessLogGroupClass = "INFREQUENT_ACCESS"
 )
 
 var (
-	logLineIds                      = []string{logLineId1, logLineId2}
-	instanceId                      = awsservice.GetInstanceId()
-	ctx                             = context.Background()
-	awsCfg, _                       = config.LoadDefaultConfig(ctx)
-	CwlClient                       = cloudwatchlogs.NewFromConfig(awsCfg)
+	logLineIds = []string{logLineId1, logLineId2}
+	instanceId = awsservice.GetInstanceId()
+	ctx        = context.Background()
+	awsCfg, _  = config.LoadDefaultConfig(ctx)
+	//CwlClient                       = cloudwatchlogs.NewFromConfig(awsCfg)
+	//CwlClient = cloudwatchlogs.New(&client.ConfigProvider{})
 	writeToCloudWatchTestParameters = []writeToCloudWatchTestInput{
 		{
 			testName:        "Happy path",
@@ -61,19 +62,19 @@ var (
 			testName:      "Standard log config",
 			configPath:    "resources/config_log.json",
 			logGroupName:  instanceId,
-			logGroupClass: types.LogGroupClassStandard,
+			logGroupClass: standardLogGroupClass,
 		},
 		{
 			testName:      "Standard log config with standard class specification",
 			configPath:    "resources/config_log_standard_access.json",
 			logGroupName:  instanceId + "-standard",
-			logGroupClass: types.LogGroupClassStandard,
+			logGroupClass: standardLogGroupClass,
 		},
 		{
 			testName:      "Standard log config with Infrequent_access class specification",
 			configPath:    "resources/config_log_infrequent_access.json",
 			logGroupName:  instanceId + "-infrequent_access",
-			logGroupClass: types.LogGroupClassInfrequentAccess,
+			logGroupClass: infrequentAccessLogGroupClass,
 		},
 	}
 )
@@ -89,7 +90,7 @@ type cloudWatchLogGroupClassTestInput struct {
 	testName      string
 	configPath    string
 	logGroupName  string
-	logGroupClass types.LogGroupClass
+	logGroupClass string
 }
 
 func init() {
@@ -250,7 +251,7 @@ func TestLogGroupClass(t *testing.T) {
 	defer logFile.Close()
 	defer os.Remove(logFilePath)
 
-	for run, param := range cloudWatchLogGroupClassTestParameters {
+	for _, param := range cloudWatchLogGroupClassTestParameters {
 		t.Run(param.testName, func(t *testing.T) {
 			defer awsservice.DeleteLogGroupAndStream(param.logGroupName, instanceId)
 			common.DeleteFile(common.AgentLogFile)
@@ -262,8 +263,7 @@ func TestLogGroupClass(t *testing.T) {
 			assert.Nil(t, err)
 			// ensure that there is enough time from the "start" time and the first log line,
 			time.Sleep(agentRuntime)
-			_, err = logFile.WriteString(fmt.Sprintf("%s - [%s] #%d This is a log line.\n", time.Now().Format(time.StampMilli), "test", run))
-			assert.Nil(t, err, "Error occurred writing log line: %v", err)
+			writeLogLines(t, logFile, 100)
 			time.Sleep(agentRuntime)
 			common.StopAgent()
 
@@ -273,9 +273,7 @@ func TestLogGroupClass(t *testing.T) {
 			}
 			t.Logf("Agent logs %s", string(agentLog))
 
-			valid, err := validateLogGroupExistence(param)
-			assert.NoError(t, err)
-			assert.True(t, valid)
+			assert.True(t, awsservice.IsLogGroupExists(param.logGroupName))
 		})
 	}
 }
@@ -335,21 +333,4 @@ func checkData(t *testing.T, start time.Time, lineCount int) {
 		awsservice.AssertNoDuplicateLogs(),
 	)
 	assert.NoError(t, err)
-}
-
-func validateLogGroupExistence(param cloudWatchLogGroupClassTestInput) (bool, error) {
-	// check CWL to ensure we got the expected log groups
-	describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
-		LogGroupNamePrefix: aws.String(param.logGroupName),
-		LogGroupClass:      param.logGroupClass,
-	}
-
-	describeLogGroupOutput, err := CwlClient.DescribeLogGroups(ctx, &describeLogGroupInput)
-
-	if err != nil {
-		log.Println("error occurred while calling DescribeLogGroups", err)
-		return false, err
-	}
-
-	return len(describeLogGroupOutput.LogGroups) > 0, nil
 }
