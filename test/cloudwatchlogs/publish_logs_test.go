@@ -269,7 +269,7 @@ func TestLogGroupClass(t *testing.T) {
 			}
 			t.Logf("Agent logs %s", string(agentLog))
 
-			assert.True(t, awsservice.IsLogGroupExists(instanceId+"-"+param.logGroupName))
+			assert.True(t, awsservice.IsLogGroupExists(param.logGroupName))
 		})
 	}
 }
