@@ -59,19 +59,19 @@ var (
 	cloudWatchLogGroupClassTestParameters = []cloudWatchLogGroupClassTestInput{
 		{
 			testName:      "Standard log config",
-			configPath:    "resources/config_log.json",
+			configPath:    "testdata/config_log.json",
 			logGroupName:  instanceId,
 			logGroupClass: types.LogGroupClassStandard,
 		},
 		{
 			testName:      "Standard log config with standard class specification",
-			configPath:    "resources/config_log_standard_access.json",
+			configPath:    "testdata/config_log_standard_access.json",
 			logGroupName:  instanceId + "-standard",
 			logGroupClass: types.LogGroupClassStandard,
 		},
 		{
 			testName:      "Standard log config with Infrequent_access class specification",
-			configPath:    "resources/config_log_infrequent_access.json",
+			configPath:    "testdata/config_log_infrequent_access.json",
 			logGroupName:  instanceId + "-infrequent_access",
 			logGroupClass: types.LogGroupClassInfrequentAccess,
 		},
