@@ -307,6 +307,7 @@ func writeSleepRestart(t *testing.T, f *os.File, configPath string, linesPerLoop
 }
 
 func autoRemovalTestCleanup() {
+	instanceId := awsservice.GetInstanceId()
 	awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
 	paths, _ := filepath.Glob(logFilePath + "*")
 	for _, p := range paths {
@@ -316,6 +317,7 @@ func autoRemovalTestCleanup() {
 
 // checkData queries CWL and verifies the number of log lines.
 func checkData(t *testing.T, start time.Time, lineCount int) {
+	instanceId := awsservice.GetInstanceId()
 	end := time.Now()
 	// Sleep to ensure backend stores logs.
 	time.Sleep(time.Second * 60)
