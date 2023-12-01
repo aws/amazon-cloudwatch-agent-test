@@ -37,10 +37,12 @@ const (
 )
 
 var (
-	logLineIds                      = []string{logLineId1, logLineId2}
-	instanceId                      = awsservice.GetInstanceId()
-	ctx                             = context.Background()
-	awsCfg, _                       = config.LoadDefaultConfig(ctx)
+	logLineIds = []string{logLineId1, logLineId2}
+	instanceId = awsservice.GetInstanceId()
+	ctx        = context.Background()
+	awsCfg, _  = config.LoadDefaultConfig(ctx)
+	//CwlClient                       = cloudwatchlogs.NewFromConfig(awsCfg)
+	//CwlClient = cloudwatchlogs.New(&client.ConfigProvider{})
 	writeToCloudWatchTestParameters = []writeToCloudWatchTestInput{
 		{
 			testName:        "Happy path",
