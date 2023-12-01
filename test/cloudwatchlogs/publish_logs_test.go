@@ -66,7 +66,7 @@ var (
 		{
 			testName:      "Standard log config with Infrequent_access class specification",
 			configPath:    "resources/config_log_infrequent_access.json",
-			logGroupName:  "standard-no-specification",
+			logGroupName:  "infrequent_access",
 			logGroupClass: infrequentAccessLogGroupClass,
 		},
 	}
