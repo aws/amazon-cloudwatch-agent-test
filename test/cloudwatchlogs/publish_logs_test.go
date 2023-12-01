@@ -55,19 +55,19 @@ var (
 			testName:      "Standard log config",
 			configPath:    "resources/config_log_no_class_specification.json",
 			logGroupName:  "standard-no-specification",
-			logGroupClass: standardLogGroupClass,
+			logGroupClass: types.LogGroupClassStandard,
 		},
 		{
 			testName:      "Standard log config with standard class specification",
 			configPath:    "resources/config_log_standard_access.json",
 			logGroupName:  "standard-with-specification",
-			logGroupClass: standardLogGroupClass,
+			logGroupClass: types.LogGroupClassStandard,
 		},
 		{
 			testName:      "Standard log config with Infrequent_access class specification",
 			configPath:    "resources/config_log_infrequent_access.json",
 			logGroupName:  "infrequent_access",
-			logGroupClass: infrequentAccessLogGroupClass,
+			logGroupClass: types.LogGroupClassInfrequentAccess,
 		},
 	}
 )
@@ -83,7 +83,7 @@ type cloudWatchLogGroupClassTestInput struct {
 	testName      string
 	configPath    string
 	logGroupName  string
-	logGroupClass string
+	logGroupClass types.LogGroupClass
 }
 
 func init() {
@@ -269,7 +269,7 @@ func TestLogGroupClass(t *testing.T) {
 			}
 			t.Logf("Agent logs %s", string(agentLog))
 
-			assert.True(t, awsservice.IsLogGroupExists(param.logGroupName))
+			assert.True(t, awsservice.IsLogGroupExists(param.logGroupName, param.logGroupClass))
 		})
 	}
 }
