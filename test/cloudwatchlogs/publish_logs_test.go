@@ -36,7 +36,6 @@ const (
 
 var (
 	logLineIds                      = []string{logLineId1, logLineId2}
-	instanceId                      = awsservice.GetInstanceId()
 	writeToCloudWatchTestParameters = []writeToCloudWatchTestInput{
 		{
 			testName:        "Happy path",
@@ -54,20 +53,20 @@ var (
 	cloudWatchLogGroupClassTestParameters = []cloudWatchLogGroupClassTestInput{
 		{
 			testName:      "Standard log config",
-			configPath:    "resources/config_log.json",
-			logGroupName:  instanceId,
+			configPath:    "resources/config_log_no_class_specification.json",
+			logGroupName:  "standard-no-specification",
 			logGroupClass: standardLogGroupClass,
 		},
 		{
 			testName:      "Standard log config with standard class specification",
 			configPath:    "resources/config_log_standard_access.json",
-			logGroupName:  instanceId + "-standard",
+			logGroupName:  "standard-with-specification",
 			logGroupClass: standardLogGroupClass,
 		},
 		{
 			testName:      "Standard log config with Infrequent_access class specification",
 			configPath:    "resources/config_log_infrequent_access.json",
-			logGroupName:  instanceId + "-infrequent_access",
+			logGroupName:  "standard-no-specification",
 			logGroupClass: infrequentAccessLogGroupClass,
 		},
 	}
@@ -96,6 +95,7 @@ func init() {
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
+	instanceId := awsservice.GetInstanceId()
 	log.Printf("Found instance id %s", instanceId)
 
 	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
@@ -181,6 +181,7 @@ func TestAutoRemovalFileRotation(t *testing.T) {
 // 3. The file should be rotated again, and a new log line of size GREATER THAN N should be written
 // 4. All three log lines, in full, should be visible in CloudWatch Logs
 func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
+	instanceId := awsservice.GetInstanceId()
 	cfgFilePath := "resources/config_log_rotated.json"
 
 	log.Printf("Found instance id %s", instanceId)
@@ -237,6 +238,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 }
 
 func TestLogGroupClass(t *testing.T) {
+	instanceId := awsservice.GetInstanceId()
 	logFile, err := os.Create(logFilePath)
 	agentRuntime := 20 * time.Second // default flush interval is 5 seconds
 	if err != nil {
@@ -267,7 +269,7 @@ func TestLogGroupClass(t *testing.T) {
 			}
 			t.Logf("Agent logs %s", string(agentLog))
 
-			assert.True(t, awsservice.IsLogGroupExists(param.logGroupName))
+			assert.True(t, awsservice.IsLogGroupExists(instanceId+"-"+param.logGroupName))
 		})
 	}
 }
