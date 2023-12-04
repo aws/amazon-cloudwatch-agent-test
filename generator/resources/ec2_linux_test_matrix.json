@@ -61,7 +61,7 @@
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-al2023*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
-    "arc": "amd64",
+    "arc": "arm64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
     "family": "linux"
   },
@@ -72,7 +72,7 @@
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-al2023*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
-    "arc": "amd64",
+    "arc": "arm64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
     "family": "linux"
   },
