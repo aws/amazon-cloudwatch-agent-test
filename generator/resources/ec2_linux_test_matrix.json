@@ -59,7 +59,7 @@
     "username": "ec2-user",
     "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
-    "ami": "cloudwatch-agent-integration-test-al2023*",
+    "ami": "cloudwatch-agent-integration-test-x86-al2023*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "arm64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
