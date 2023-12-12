@@ -132,9 +132,16 @@ func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]types.
 }
 
 // IsLogGroupExists confirms whether the logGroupName exists or not
-func IsLogGroupExists(logGroupName string) bool {
+func IsLogGroupExists(logGroupName string, logGroupClassArg ...types.LogGroupClass) bool {
+	var logGroupClass types.LogGroupClass
+	if len(logGroupClassArg) > 0 {
+		logGroupClass = logGroupClassArg[0]
+	} else {
+		logGroupClass = types.LogGroupClassStandard
+	}
 	describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(logGroupName),
+		LogGroupClass:      logGroupClass,
 	}
 
 	describeLogGroupOutput, err := CwlClient.DescribeLogGroups(ctx, &describeLogGroupInput)
