@@ -45,6 +45,7 @@ func init() {
 
 var (
 	eksTestRunners []*test_runner.EKSTestRunner
+	ec2TestRunners []*test_runner.TestRunner
 )
 
 func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
@@ -53,20 +54,39 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 
 		eksTestRunners = []*test_runner.EKSTestRunner{
 			{
-				Runner: &AppSignalsMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsServerConsumerTestName, "HostedIn.EKS.Cluster"},
+				Runner: &AppSignalsMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsServerConsumerTestName, "HostedIn.EKS.Cluster", env.ComputeType},
 				Env:    *env,
 			},
 			{
-				Runner: &AppSignalsMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsClientProducerTestName, "HostedIn.EKS.Cluster"},
+				Runner: &AppSignalsMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsClientProducerTestName, "HostedIn.EKS.Cluster", env.ComputeType},
 				Env:    *env,
 			},
 			{
-				Runner: &AppSignalsTracesRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsTracesTestName, env.EKSClusterName},
+				Runner: &AppSignalsTracesRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsTracesTestName, env.EKSClusterName, env.ComputeType},
 				Env:    *env,
 			},
 		}
 	}
 	return eksTestRunners
+}
+
+func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
+	if ec2TestRunners == nil {
+		factory := dimension.GetDimensionFactory(*env)
+
+		ec2TestRunners = []*test_runner.TestRunner{
+			{
+				TestRunner: &AppSignalsMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsServerConsumerTestName, "HostedIn.Environment", env.ComputeType},
+			},
+			{
+				TestRunner: &AppSignalsMetricsRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsClientProducerTestName, "HostedIn.Environment", env.ComputeType},
+			},
+			{
+				TestRunner: &AppSignalsTracesRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, AppSignalsTracesTestName, "Generic", env.ComputeType},
+			},
+		}
+	}
+	return ec2TestRunners
 }
 
 func (suite *AppSignalsTestSuite) TestAllInSuite() {
@@ -76,6 +96,11 @@ func (suite *AppSignalsTestSuite) TestAllInSuite() {
 		log.Println("Environment compute type is EKS")
 		for _, testRunner := range getEksTestRunners(env) {
 			testRunner.Run(suite, env)
+		}
+	case computetype.EC2:
+		log.Println("Environment compute type is EC2")
+		for _, testRunner := range getEc2TestRunners(env) {
+			suite.AddToSuiteResult(testRunner.Run())
 		}
 	default:
 		return
