@@ -21,14 +21,6 @@ var (
 
 	ServerConsumerInstructions = []dimension.Instruction{
 		{
-			Key:   "HostedIn.EKS.Cluster",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "HostedIn.K8s.Namespace",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("default")},
-		},
-		{
 			Key:   "Service",
 			Value: dimension.ExpectedDimensionValue{Value: aws.String("service-name")},
 		},
@@ -39,14 +31,6 @@ var (
 	}
 
 	ClientProducerInstructions = []dimension.Instruction{
-		{
-			Key:   "HostedIn.EKS.Cluster",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "HostedIn.K8s.Namespace",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("default")},
-		},
 		{
 			Key:   "Service",
 			Value: dimension.ExpectedDimensionValue{Value: aws.String("service-name")},
