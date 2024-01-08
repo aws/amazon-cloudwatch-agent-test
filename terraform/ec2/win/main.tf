@@ -230,6 +230,10 @@ resource "null_resource" "integration_test_run_validator" {
       "powershell.exe -Command \"Start-Sleep -s 60\"",
       "powershell.exe -Command \"Invoke-WebRequest -Uri http://localhost:9404 -UseBasicParsing\"",
       "set AWS_REGION=${var.region}",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "cd amazon-cloudwatch-agent-test",
+      "go test ./test/sanity -p 1 -v",
+      "cd ..",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
       "validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
