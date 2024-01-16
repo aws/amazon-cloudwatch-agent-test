@@ -1,0 +1,55 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "metrics": {
+    "namespace": "MetricValueBenchmarkJMXTest",
+    "force_flush_interval": 5,
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "jmx": [
+        {
+          "endpoint": "localhost:2030",
+          "tomcat": {
+            "measurement": [
+              "tomcat.traffic",
+              "tomcat.threads",
+              "tomcat.sessions",
+              "tomcat.request_count",
+              "tomcat.processing_time",
+              "tomcat.max_time",
+              "tomcat.errors"
+            ]
+          },
+          "jvm": {
+            "measurement": [
+              "jvm.threads.count",
+              "jvm.memory.pool.used",
+              "jvm.memory.pool.max",
+              "jvm.memory.pool.init",
+              "jvm.memory.pool.committed",
+              "jvm.memory.nonheap.used",
+              "jvm.memory.nonheap.max",
+              "jvm.memory.nonheap.init",
+              "jvm.memory.nonheap.committed",
+              "jvm.memory.heap.used",
+              "jvm.memory.heap.max",
+              "jvm.memory.heap.init",
+              "jvm.memory.heap.committed",
+              "jvm.gc.collections.elapsed",
+              "jvm.gc.collections.count",
+              "jvm.classes.loaded"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

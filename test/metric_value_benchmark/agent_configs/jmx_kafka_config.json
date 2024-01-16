@@ -1,0 +1,75 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "metrics": {
+    "namespace": "MetricValueBenchmarkJMXTest",
+    "force_flush_interval": 5,
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "jmx": [
+        {
+          "endpoint": "localhost:2000",
+          "kafka": {
+            "measurement": [
+              "kafka.unclean.election.rate",
+              "kafka.request.time.total",
+              "kafka.request.time.avg",
+              "kafka.request.time.99p",
+              "kafka.request.time.50p",
+              "kafka.request.queue",
+              "kafka.request.failed",
+              "kafka.request.count",
+              "kafka.purgatory.size",
+              "kafka.partition.under_replicated",
+              "kafka.partition.offline",
+              "kafka.partition.count",
+              "kafka.network.io",
+              "kafka.message.count",
+              "kafka.max.lag",
+              "kafka.leader.election.rate",
+              "kafka.isr.operation.count",
+              "kafka.controller.active.count"
+            ]
+          }
+        },
+        {
+          "endpoint": "localhost:2010",
+          "kafka-consumer": {
+            "measurement": [
+              "kafka.consumer.total.records-consumed-rate",
+              "kafka.consumer.total.bytes-consumed-rate",
+              "kafka.consumer.records-consumed-rate",
+              "kafka.consumer.fetch-rate",
+              "kafka.consumer.bytes-consumed-rate"
+            ]
+          }
+        },
+        {
+          "endpoint": "localhost:2020",
+          "kafka-producer": {
+            "measurement": [
+              "kafka.producer.io-wait-time-ns-avg",
+              "kafka.producer.record-retry-rate",
+              "kafka.producer.compression-rate",
+              "kafka.producer.outgoing-byte-rate",
+              "kafka.producer.request-rate",
+              "kafka.producer.byte-rate",
+              "kafka.producer.request-latency-avg",
+              "kafka.producer.response-rate",
+              "kafka.producer.record-error-rate",
+              "kafka.producer.record-send-rate"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
