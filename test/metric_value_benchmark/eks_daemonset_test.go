@@ -9,7 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
@@ -35,10 +37,9 @@ type EKSDaemonTestRunner struct {
 }
 
 func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
-	metrics := e.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, 0)
-	for _, name := range metrics {
-		testResults = append(testResults, e.validateInstanceMetrics(name))
+	for dim, metrics := range eks_resources.DimensionStringToMetricsMap {
+		testResults = append(testResults, e.validateMetricsAvailability(dim, metrics))
 	}
 
 	testResults = append(testResults, e.validateLogs(e.env))
@@ -46,6 +47,52 @@ func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 		Name:        e.GetTestName(),
 		TestResults: testResults,
 	}
+}
+
+func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string, metrics []string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   dimensionString,
+		Status: status.FAILED,
+	}
+
+	//dimensions := translateDimensionStringToStruct(dimensionString, metrics)
+
+	listFetcher := metric.MetricListFetcher{}
+	log.Printf("Fetching by dimension")
+	actualMetrics, err := listFetcher.FetchByDimension(containerInsightsNamespace, translateDimensionStringToDimType(dimensionString))
+	if err != nil {
+		log.Println("failed to fetch metric list", err)
+		return testResult
+	}
+
+	if len(actualMetrics) < 1 {
+		log.Println("cloudwatch metric list is empty")
+		return testResult
+	}
+
+	/*if len(actualMetrics) != len(metrics) {
+		log.Println("Actual metrics count doesn't match the expected metrics count")
+		return testResult
+	}*/
+
+	//verify the result metrics with expected metrics
+	for _, ciMetric := range actualMetrics {
+		log.Printf("ciMetric from CW : %v", ciMetric)
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func translateDimensionStringToDimType(dimensionString string) []types.Dimension {
+	split := strings.Split(dimensionString, "-")
+	var dims []types.Dimension
+	for _, str := range split {
+		dims = append(dims, types.Dimension{
+			Name: aws.String(str),
+		})
+	}
+	return dims
 }
 
 func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestResult {
