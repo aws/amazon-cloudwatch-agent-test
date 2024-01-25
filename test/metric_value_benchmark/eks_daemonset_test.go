@@ -64,14 +64,14 @@ func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string][]string
 		return nil
 	}
 	log.Printf("length of metrics %d", len(actualMetrics))
-	var testMap map[string][]string
+	testMap := make(map[string][]string)
 	for _, m := range actualMetrics {
 		var s string
 		for _, d := range m.Dimensions {
 			s += *d.Name
 		}
 		log.Printf("for dimension string %s", s)
-		if testMap[s] == nil {
+		if testMap == nil || testMap[s] == nil {
 			var mtr []string
 			testMap[s] = append(mtr, *m.MetricName)
 		} else {
