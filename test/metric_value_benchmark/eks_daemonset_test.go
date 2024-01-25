@@ -50,7 +50,9 @@ func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string][]string {
+type void struct{}
+
+func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string]map[string]void {
 	listFetcher := metric.MetricListFetcher{}
 	log.Printf("Fetching by cluster dimension")
 	actualMetrics, err := listFetcher.FetchByDimension(containerInsightsNamespace, e.translateDimensionStringToDimType("ClusterName"))
@@ -64,32 +66,37 @@ func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string][]string
 		return nil
 	}
 	log.Printf("length of metrics %d", len(actualMetrics))
-	testMap := make(map[string][]string)
+	testMap := make(map[string]map[string]void)
 	for _, m := range actualMetrics {
 		var s string
-		for _, d := range m.Dimensions {
-			s += *d.Name
+		for i, d := range m.Dimensions {
+			if i == len(m.Dimensions)-1 {
+				s += *d.Name
+				break
+			}
+			s += *d.Name + "-"
 		}
 		log.Printf("for dimension string %s", s)
 		if testMap == nil || testMap[s] == nil {
-			var mtr []string
-			testMap[s] = append(mtr, *m.MetricName)
+			mtr := make(map[string]void)
+			mtr[*m.MetricName] = void{}
+			testMap[s] = mtr
 		} else {
-			testMap[s] = append(testMap[s], *m.MetricName)
+			testMap[s][*m.MetricName] = void{}
 		}
 	}
 
 	return testMap
 }
 
-func logDimensions(metrics []string, dim string) {
+func logDimensions(metrics map[string]void, dim string) {
 	log.Printf("\t dimension: %s, Metrics:\n", dim)
-	for _, d := range metrics {
+	for d, _ := range metrics {
 		log.Printf("metric name: %s", d)
 	}
 }
 
-func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string, metrics []string, testMap map[string][]string) status.TestResult {
+func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string, metrics []string, testMap map[string]map[string]void) status.TestResult {
 	log.Printf("validateMetricsAvailability for dimension: %v", dimensionString)
 	testResult := status.TestResult{
 		Name:   dimensionString,
