@@ -50,6 +50,7 @@ func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 }
 
 func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string, metrics []string) status.TestResult {
+	log.Printf("validateMetricsAvailability for dimension: %v", dimensionString)
 	testResult := status.TestResult{
 		Name:   dimensionString,
 		Status: status.FAILED,
@@ -77,7 +78,7 @@ func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string
 
 	//verify the result metrics with expected metrics
 	for _, ciMetric := range actualMetrics {
-		log.Printf("ciMetric from CW : %v", ciMetric)
+		log.Printf("ciMetric Name from CW : %v", *ciMetric.MetricName)
 	}
 
 	testResult.Status = status.SUCCESSFUL

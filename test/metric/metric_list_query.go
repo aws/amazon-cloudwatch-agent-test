@@ -61,14 +61,14 @@ func (n *MetricListFetcher) FetchByDimension(namespace string, dimensions []type
 		Dimensions: dims,
 	}
 
-	log.Printf("Metric data input: namespace %v, dimensions %v", namespace, dims)
+	log.Printf("Metric data input: namespace %v, dimensions %v", namespace, fmt.Sprint(&dims))
 
 	output, err := awsservice.CwmClient.ListMetrics(context.Background(), &listMetricInput)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting metric data %v", err)
 	}
 
-	log.Printf("Metrics fetched : %s", fmt.Sprint(output))
+	log.Printf("Metrics fetched : %v", output.Metrics)
 
 	return output.Metrics, nil
 }
