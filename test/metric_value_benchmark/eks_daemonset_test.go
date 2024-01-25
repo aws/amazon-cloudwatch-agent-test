@@ -38,8 +38,9 @@ type EKSDaemonTestRunner struct {
 
 func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	testResults := make([]status.TestResult, 0)
+	testMap := e.getMetricsInClusterDimension()
 	for dim, metrics := range eks_resources.DimensionStringToMetricsMap {
-		testResults = append(testResults, e.validateMetricsAvailability(dim, metrics))
+		testResults = append(testResults, e.validateMetricsAvailability(dim, metrics, testMap))
 	}
 
 	testResults = append(testResults, e.validateLogs(e.env))
@@ -49,25 +50,52 @@ func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string, metrics []string) status.TestResult {
+func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string][]string {
+	listFetcher := metric.MetricListFetcher{}
+	log.Printf("Fetching by cluster dimension")
+	actualMetrics, err := listFetcher.FetchByDimension(containerInsightsNamespace, e.translateDimensionStringToDimType("ClusterName"))
+	if err != nil {
+		log.Println("failed to fetch metric list", err)
+		return nil
+	}
+
+	if len(actualMetrics) < 1 {
+		log.Println("cloudwatch metric list is empty")
+		return nil
+	}
+	log.Printf("length of metrics %d", len(actualMetrics))
+	var testMap map[string][]string
+	for _, m := range actualMetrics {
+		var s string
+		for _, d := range m.Dimensions {
+			s += *d.Name
+		}
+		log.Printf("for dimension string %s", s)
+		if testMap[s] == nil {
+			var mtr []string
+			testMap[s] = append(mtr, *m.MetricName)
+		} else {
+			testMap[s] = append(testMap[s], *m.MetricName)
+		}
+	}
+
+	return testMap
+}
+
+func logDimensions(metrics []string, dim string) {
+	log.Printf("\t dimension: %s, Metrics:\n", dim)
+	for _, d := range metrics {
+		log.Printf("metric name: %s", d)
+	}
+}
+
+func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string, metrics []string, testMap map[string][]string) status.TestResult {
 	log.Printf("validateMetricsAvailability for dimension: %v", dimensionString)
 	testResult := status.TestResult{
 		Name:   dimensionString,
 		Status: status.FAILED,
 	}
-	listFetcher := metric.MetricListFetcher{}
-	log.Printf("Fetching by dimension")
-	actualMetrics, err := listFetcher.FetchByDimension(containerInsightsNamespace, e.translateDimensionStringToDimType(dimensionString))
-	if err != nil {
-		log.Println("failed to fetch metric list", err)
-		return testResult
-	}
-
-	if len(actualMetrics) < 1 {
-		log.Println("cloudwatch metric list is empty")
-		return testResult
-	}
-
+	actualMetrics := testMap[dimensionString]
 	/*if len(actualMetrics) != len(metrics) {
 		log.Println("Actual metrics count doesn't match the expected metrics count")
 		return testResult
@@ -75,8 +103,10 @@ func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string
 
 	//verify the result metrics with expected metrics
 	log.Printf("length of actual metrics %d", len(actualMetrics))
+	log.Printf("length of expected metrics %d", len(metrics))
+	logDimensions(actualMetrics, dimensionString)
 	for _, ciMetric := range actualMetrics {
-		log.Printf("ciMetric Name from CW : %v", *ciMetric.MetricName)
+		log.Printf("ciMetric Name from CW : %v", ciMetric)
 	}
 
 	testResult.Status = status.SUCCESSFUL
@@ -94,6 +124,7 @@ func (e *EKSDaemonTestRunner) translateDimensionStringToDimType(dimensionString 
 		log.Printf("dim key %s", str)
 		log.Printf("dim value %s", e.getDimensionValue(str))
 	}
+	log.Printf("dimensions length %d", len(dims))
 	return dims
 }
 
