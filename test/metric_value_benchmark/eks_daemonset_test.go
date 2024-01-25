@@ -55,12 +55,9 @@ func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string
 		Name:   dimensionString,
 		Status: status.FAILED,
 	}
-
-	//dimensions := translateDimensionStringToStruct(dimensionString, metrics)
-
 	listFetcher := metric.MetricListFetcher{}
 	log.Printf("Fetching by dimension")
-	actualMetrics, err := listFetcher.FetchByDimension(containerInsightsNamespace, translateDimensionStringToDimType(dimensionString))
+	actualMetrics, err := listFetcher.FetchByDimension(containerInsightsNamespace, e.translateDimensionStringToDimType(dimensionString))
 	if err != nil {
 		log.Println("failed to fetch metric list", err)
 		return testResult
@@ -77,6 +74,7 @@ func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string
 	}*/
 
 	//verify the result metrics with expected metrics
+	log.Printf("length of actual metrics %d", len(actualMetrics))
 	for _, ciMetric := range actualMetrics {
 		log.Printf("ciMetric Name from CW : %v", *ciMetric.MetricName)
 	}
@@ -85,18 +83,32 @@ func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string
 	return testResult
 }
 
-func translateDimensionStringToDimType(dimensionString string) []types.Dimension {
+func (e *EKSDaemonTestRunner) translateDimensionStringToDimType(dimensionString string) []types.Dimension {
 	split := strings.Split(dimensionString, "-")
 	var dims []types.Dimension
 	for _, str := range split {
 		dims = append(dims, types.Dimension{
-			Name: aws.String(str),
+			Name:  aws.String(str),
+			Value: aws.String(e.getDimensionValue(str)),
 		})
+		log.Printf("dim key %s", str)
+		log.Printf("dim value %s", e.getDimensionValue(str))
 	}
 	return dims
 }
 
-func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestResult {
+func (e *EKSDaemonTestRunner) getDimensionValue(dim string) string {
+	switch dim {
+	case "ClusterName":
+		return e.env.EKSClusterName
+	case "Namespace":
+		return "amazon-cloudwatch"
+	default:
+		return ""
+	}
+}
+
+func (e *EKSDaemonTestRunner) validateMetricData(name string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   name,
 		Status: status.FAILED,
