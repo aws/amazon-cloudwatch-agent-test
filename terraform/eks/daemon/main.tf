@@ -420,6 +420,7 @@ resource "null_resource" "validator" {
     kubernetes_daemonset.service,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
+    time_sleep.wait_15_min
   ]
   provisioner "local-exec" {
     command = <<-EOT
