@@ -42,9 +42,9 @@ resource "aws_eks_node_group" "this" {
   subnet_ids      = module.basic_components.public_subnet_ids
 
   scaling_config {
-    desired_size = 1
-    max_size     = 1
-    min_size     = 1
+    desired_size = 2
+    max_size     = 2
+    min_size     = 2
   }
 
   ami_type       = "AL2_x86_64"
@@ -408,7 +408,7 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
   }
 }
 
-resource "time_sleep" "wait_15_min" {
+resource "time_sleep" "wait_2_min" {
   depends_on = [
     aws_eks_node_group.this,
     kubernetes_daemonset.service,
@@ -416,7 +416,7 @@ resource "time_sleep" "wait_15_min" {
     kubernetes_service_account.cwagentservice
   ]
 
-  create_duration = "15m"
+  create_duration = "2m"
 }
 
 resource "null_resource" "validator" {
@@ -425,7 +425,7 @@ resource "null_resource" "validator" {
     kubernetes_daemonset.service,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
-    time_sleep.wait_15_min
+    time_sleep.wait_2_min
   ]
   provisioner "local-exec" {
     command = <<-EOT
