@@ -51,7 +51,7 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 	}
 
 	endTime := time.Now()
-	startTime := subtractMinutes(endTime, 10)
+	startTime := subtractMinutes(endTime, 2)
 	getMetricDataInput := cloudwatch.GetMetricDataInput{
 		StartTime:         &startTime,
 		EndTime:           &endTime,
