@@ -159,7 +159,7 @@ func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimen
 		Status: status.FAILED,
 	}
 	valueFetcher := metric.MetricValueFetcher{}
-	values, err := valueFetcher.Fetch(containerInsightsNamespace, name, dims, metric.SAMPLE_COUNT, metric.HighResolutionStatPeriod)
+	values, err := valueFetcher.Fetch(containerInsightsNamespace, name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
