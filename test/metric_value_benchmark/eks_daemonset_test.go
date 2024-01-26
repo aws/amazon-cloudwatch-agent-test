@@ -14,16 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"golang.org/x/exp/slices"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark/eks_resources"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 const containerInsightsNamespace = "ContainerInsights"
@@ -41,8 +38,10 @@ func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	testMap := e.getMetricsInClusterDimension()
 	for dim, metrics := range eks_resources.DimensionStringToMetricsMap {
 		testResults = append(testResults, e.validateMetricsAvailability(dim, metrics, testMap))
+		for _, m := range metrics {
+			testResults = append(testResults, e.validateMetricData(m, e.translateDimensionStringToDimType(dim)))
+		}
 	}
-
 	testResults = append(testResults, e.validateLogs(e.env))
 	return status.TestGroupResult{
 		Name:        e.GetTestName(),
@@ -89,7 +88,7 @@ func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string]map[stri
 	return testMap
 }
 
-func logDimensions(metrics map[string]void, dim string) {
+func logMetrics(metrics map[string]void, dim string) {
 	log.Printf("\t dimension: %s, Metrics:\n", dim)
 	for d, _ := range metrics {
 		log.Printf("metric name: %s", d)
@@ -103,20 +102,14 @@ func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string
 		Status: status.FAILED,
 	}
 	actualMetrics := testMap[dimensionString]
-	/*if len(actualMetrics) != len(metrics) {
-		log.Println("Actual metrics count doesn't match the expected metrics count")
-		return testResult
-	}*/
 
 	//verify the result metrics with expected metrics
 	log.Printf("length of actual metrics %d", len(actualMetrics))
 	log.Printf("length of expected metrics %d", len(metrics))
-	logDimensions(actualMetrics, dimensionString)
-	for _, ciMetric := range actualMetrics {
-		log.Printf("ciMetric Name from CW : %v", ciMetric)
+	logMetrics(actualMetrics, dimensionString)
+	if compareMaptoList(actualMetrics, metrics) {
+		testResult.Status = status.SUCCESSFUL
 	}
-
-	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
 
@@ -146,54 +139,27 @@ func (e *EKSDaemonTestRunner) getDimensionValue(dim string) string {
 	}
 }
 
-func (e *EKSDaemonTestRunner) validateMetricData(name string) status.TestResult {
+func compareMaptoList(metricMap map[string]void, metricList []string) bool {
+	if len(metricMap) != len(metricList) {
+		return false
+	}
+
+	for _, key := range metricList {
+		if _, ok := metricMap[key]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimension) status.TestResult {
+	log.Printf("validateMetricData with metric: %s", name)
 	testResult := status.TestResult{
 		Name:   name,
 		Status: status.FAILED,
 	}
-
-	dims, failed := e.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "ClusterName",
-			Value: dimension.UnknownDimensionValue(),
-		},
-	})
-	if len(failed) > 0 {
-		log.Println("failed to get dimensions")
-		return testResult
-	}
-
-	// get list of metrics that has more dimensions for container insights
-	// this is to avoid adding more dimension provider for non-trivial dimensions e.g. PodName
-	listFetcher := metric.MetricListFetcher{}
-	if slices.Contains(metricsWithMoreDimensions, name) {
-		metrics, err := listFetcher.Fetch(containerInsightsNamespace, name, dims)
-		if err != nil {
-			log.Println("failed to fetch metric list", err)
-			return testResult
-		}
-
-		if len(metrics) < 1 {
-			log.Println("metric list is empty")
-			return testResult
-		}
-
-		// just verify 1 of returned metrics for values
-		for _, dim := range metrics[0].Dimensions {
-			// skip since it's provided by dimension provider
-			if *dim.Name == "ClusterName" {
-				continue
-			}
-
-			dims = append(dims, types.Dimension{
-				Name:  dim.Name,
-				Value: dim.Value,
-			})
-		}
-	}
-
 	valueFetcher := metric.MetricValueFetcher{}
-	values, err := valueFetcher.Fetch(containerInsightsNamespace, name, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+	values, err := valueFetcher.Fetch(containerInsightsNamespace, name, dims, metric.SAMPLE_COUNT, metric.HighResolutionStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
