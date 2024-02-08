@@ -35,6 +35,19 @@ var logGroupToKey = map[string][][]string{
 	},
 }
 
+// fluent log group with expected log message fields on Windows node.
+var logGroupToKeyWindows = map[string][][]string{
+	"dataplane": {
+		{"log", "file_name"},
+	},
+	"host": {
+		{"SourceName", "Message", "ComputerName"},
+	},
+	"application": {
+		{"log"},
+	},
+}
+
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
@@ -42,6 +55,10 @@ func init() {
 func TestFluentLogs(t *testing.T) {
 	t.Log("starting EKS fluent log validation...")
 	env := environment.GetEnvironmentMetaData()
+
+	if env.InstancePlatform == "windows" {
+		logGroupToKey = logGroupToKeyWindows
+	}
 
 	now := time.Now()
 	for group, fieldsArr := range logGroupToKey {

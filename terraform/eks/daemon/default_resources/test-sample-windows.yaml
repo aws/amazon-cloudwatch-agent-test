@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windows-test-deployment
+spec:
+  selector:
+    matchLabels:
+      app: windows-test-deployment
+      tier: backend
+      track: stable
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: windows-test-deployment
+        tier: backend
+        track: stable
+    spec:
+      containers:
+        - name: windows-test-deployment
+          image: mcr.microsoft.com/windows/servercore/iis:windowsservercore-ltsc2022
+          command:
+            - powershell.exe
+            - -command
+            - " ping -t google.com "
+      nodeSelector:
+        kubernetes.io/os: windows
+
