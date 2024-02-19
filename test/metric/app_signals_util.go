@@ -14,9 +14,9 @@ import (
 
 var (
 	AppSignalsMetricNames = []string{
-		"Error",
-		"Fault",
-		"Latency",
+		"error",
+		"fault",
+		"latency",
 	}
 
 	ServerConsumerInstructions = []dimension.Instruction{

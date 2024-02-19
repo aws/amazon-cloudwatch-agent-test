@@ -33,7 +33,7 @@
         {
           "metrics": [
             {
-              "name": "Error",
+              "name": "error",
               "unit": "Milliseconds",
               "sum": {
                 "dataPoints": [
@@ -86,7 +86,7 @@
               }
             },
             {
-              "name": "Fault",
+              "name": "fault",
               "unit": "Milliseconds",
               "sum": {
                 "dataPoints": [
@@ -139,7 +139,7 @@
               }
             },
             {
-              "name": "Latency",
+              "name": "latency",
               "unit": "Milliseconds",
               "sum": {
                 "dataPoints": [
