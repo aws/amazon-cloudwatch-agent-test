@@ -125,6 +125,13 @@ func (e *EKSDaemonTestRunner) validateLogs(env *environment.MetaData) status.Tes
 		return testResult
 	}
 
+	log.Println("Number of Nodes: ", len(eKSInstances))
+	if env.InstancePlatform == "windows" {
+		if len(eKSInstances) <= 1 {
+			return testResult
+		}
+	}
+
 	for _, instance := range eKSInstances {
 		stream := *instance.InstanceName
 		err = awsservice.ValidateLogs(
