@@ -52,7 +52,7 @@ resource "aws_instance" "integration-test" {
     inline = [
       "cloud-init status --wait",
       "clone the agent and start the localstack",
-      "git clone ${var.github_test_repo}",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "git reset --hard ${var.cwa_test_github_sha}",
       "echo set up ssl pem for localstack, then start localstack",
@@ -67,7 +67,7 @@ resource "aws_instance" "integration-test" {
     ]
     connection {
       type        = "ssh"
-      user        = "ubuntu"
+      user        = "ec2-user"
       private_key = local.private_key_content
       host        = self.public_dns
     }
@@ -83,6 +83,6 @@ data "aws_ami" "latest" {
 
   filter {
     name   = "name"
-    values = ["cloudwatch-agent-integration-test-ubuntu*"]
+    values = ["cloudwatch-agent-integration-test-aarch64-al2023*"]
   }
 }

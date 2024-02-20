@@ -3,7 +3,7 @@
 
 variable "ec2_instance_type" {
   type    = string
-  default = "t3a.medium"
+  default = "m6g.medium"
 }
 
 variable "ssh_key_name" {
@@ -39,4 +39,8 @@ variable "github_test_repo" {
 variable "s3_bucket" {
   type    = string
   default = ""
+}
+
+variable "github_test_repo_branch" {
+  default = "main"
 }
