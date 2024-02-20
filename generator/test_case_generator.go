@@ -182,6 +182,27 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/metric_value_benchmark",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
+		{
+			testDir:      "./test/metric_value_benchmark",
+			terraformDir: "terraform/eks/daemon/windows",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/statsd", terraformDir: "terraform/eks/daemon/statsd",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/emf", terraformDir: "terraform/eks/daemon/emf",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/d",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
+		{testDir: "./test/app_signals", terraformDir: "terraform/eks/daemon/app_signals",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows"},
 	},
 	"eks_deployment": {
