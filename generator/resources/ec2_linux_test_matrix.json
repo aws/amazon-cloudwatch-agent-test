@@ -79,7 +79,7 @@
   {
     "os": "al2023",
     "username": "ec2-user",
-    "instanceType":"m7g.medium",
+    "instanceType":"m6g.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-aarch64-al2023*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
