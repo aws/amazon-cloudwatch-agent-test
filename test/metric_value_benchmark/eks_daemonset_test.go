@@ -6,17 +6,17 @@
 package metric_value_benchmark
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 	"time"
-	"context"
 
+	"github.com/qri-io/jsonschema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"github.com/qri-io/jsonschema"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
