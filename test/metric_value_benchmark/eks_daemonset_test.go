@@ -13,6 +13,11 @@ import (
 	"time"
 	"context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"github.com/qri-io/jsonschema"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/internal/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -20,11 +25,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark/eks_resources"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"github.com/qri-io/jsonschema"
 )
 
 type EKSDaemonTestRunner struct {
