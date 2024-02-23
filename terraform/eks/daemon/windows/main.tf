@@ -14,7 +14,7 @@ module "basic_components" {
 }
 
 locals {
-  aws_eks  = "aws eks --region ${var.region}"
+  aws_eks      = "aws eks --region ${var.region}"
   cluster_name = "cwagent-eks-integ-${module.common.testing_id}"
 }
 

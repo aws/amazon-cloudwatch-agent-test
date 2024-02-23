@@ -14,7 +14,7 @@ module "basic_components" {
 }
 
 locals {
-  aws_eks  = "aws eks --region ${var.region}"
+  aws_eks      = "aws eks --region ${var.region}"
   cluster_name = module.fluent_common.cluster_name
 }
 
