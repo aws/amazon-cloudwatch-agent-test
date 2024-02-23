@@ -16,11 +16,6 @@ variable "cwagent_image_repo" {
   default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
 }
 
-variable "cwagent_windows_image_repo" {
-  type    = string
-  default = "506463145083.dkr.ecr.us-west-2.amazonaws.com/windows-container-internal"
-}
-
 variable "cwagent_image_tag" {
   type    = string
   default = "latest"
