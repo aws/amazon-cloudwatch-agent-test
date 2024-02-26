@@ -443,8 +443,8 @@ resource "null_resource" "windows-cwagent" {
     command = <<-EOT
       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
       chmod +x kubectl
-      sed 's+CW_TEST_IMAGE+506463145083.dkr.ecr.us-west-2.amazonaws.com/windows-container-internal:latest+' ./../default_resources/cwagent-windows.yaml | ./kubectl apply -f -
-      ./kubectl apply -f ./../default_resources/test-sample-windows.yaml
+      sed 's+CW_TEST_IMAGE+506463145083.dkr.ecr.us-west-2.amazonaws.com/windows-container-internal:latest+' ./../../default_resources/cwagent-windows.yaml | ./kubectl apply -f -
+      ./kubectl apply -f ./../../default_resources/test-sample-windows.yaml
       ./kubectl rollout status daemonset cloudwatch-agent-windows -n amazon-cloudwatch --timeout 600s
       ./kubectl rollout status deployment windows-test-deployment --timeout 600s
     EOT
@@ -553,7 +553,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating EKS metrics/logs"
-      cd ../../../..
+      cd ../../../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
   }

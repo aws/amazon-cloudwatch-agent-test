@@ -194,10 +194,10 @@ resource "null_resource" "fluentbit-windows" {
     command = <<-EOT
       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
       chmod +x kubectl
-      ./kubectl apply -f ./../../default_resources/fluenbit-windows-configmap.yaml
-      ./kubectl apply -f ./../../default_resources/fluenbit-windows-daemonset.yaml
+      ./kubectl apply -f ./../../../default_resources/fluenbit-windows-configmap.yaml
+      ./kubectl apply -f ./../../../default_resources/fluenbit-windows-daemonset.yaml
       ./kubectl rollout status daemonset fluent-bit-windows -n amazon-cloudwatch --timeout 600s
-      ./kubectl apply -f ./../../default_resources/test-sample-windows.yaml
+      ./kubectl apply -f ./../../../default_resources/test-sample-windows.yaml
       ./kubectl rollout status deployment windows-test-deployment --timeout 600s
       sleep 120
     EOT
@@ -213,7 +213,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating EKS fluentbit logs"
-      cd ../../../../..
+      cd ../../../../../..
       go test ${var.test_dir} -eksClusterName=${module.fluent_common.cluster_name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -instancePlatform=windows
     EOT
   }
