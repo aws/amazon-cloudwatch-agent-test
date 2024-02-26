@@ -4,4 +4,8 @@
 module "windows" {
   source        = "../"
   windows_os_version = var.windows_os_version
+  test_dir = var.test_dir
+  ami_type = var.ami_type
+  instance_type = var.instance_type
+  k8s_version = var.k8s_version
 }
