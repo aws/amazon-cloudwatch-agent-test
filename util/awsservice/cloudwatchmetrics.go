@@ -105,22 +105,6 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 	return false
 }
 
-// GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
-func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
-	getMetricDataInput := cloudwatch.GetMetricDataInput{
-		StartTime:         &startTime,
-		EndTime:           &endTime,
-		MetricDataQueries: metricDataQueries,
-	}
-
-	data, err := CwmClient.GetMetricData(ctx, &getMetricDataInput)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
 func GetMetricStatistics(
 	metricName string,
 	namespace string,
@@ -147,6 +131,22 @@ func GetMetricStatistics(
 	}
 
 	return CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
+}
+
+// GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
+func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
+	getMetricDataInput := cloudwatch.GetMetricDataInput{
+		StartTime:         &startTime,
+		EndTime:           &endTime,
+		MetricDataQueries: metricDataQueries,
+	}
+
+	data, err := CwmClient.GetMetricData(ctx, &getMetricDataInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func BuildDimensionFilterList(appendDimension int) []types.DimensionFilter {
