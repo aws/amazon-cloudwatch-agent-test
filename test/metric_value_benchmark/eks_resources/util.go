@@ -3,7 +3,10 @@
 
 package eks_resources
 
-import _ "embed"
+import (
+	_ "embed"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+)
 
 var (
 	//go:embed test_schemas/cluster.json
@@ -52,3 +55,13 @@ var (
 		"PodNet":            eksPodNetSchema,
 	}
 )
+
+type DimensionsToMetricsMap struct {
+	Dims    []types.Dimension
+	Metrics []string
+}
+
+var DimensionStringToMetricsMap = map[string][]string{
+	"ClusterName-Namespace": {"pod_cpu_utilization", "pod_memory_utilization", "pod_network_rx_bytes", "pod_network_tx_bytes",
+		"pod_cpu_utilization_over_pod_limit", "pod_memory_utilization_over_pod_limit", "pod_interface_network_rx_dropped", "pod_interface_network_tx_dropped", "namespace_number_of_running_pods"},
+}
