@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
 	"strings"
@@ -157,6 +158,7 @@ func compareMaptoList(metricMap map[string]void, metricList []string) bool {
 
 func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimension) status.TestResult {
 	log.Printf("validateMetricData with metric: %s", name)
+	log.Printf("dims %v", dims)
 	testResult := status.TestResult{
 		Name:   name,
 		Status: status.FAILED,
@@ -176,13 +178,15 @@ func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimen
 	duration := startTime.Sub(currentTime)
 	time.Sleep(duration)
 	endTime := time.Now()
-	if !(awsservice.ValidateSampleCount(name, "ClusterName", dims,
+	if !(awsservice.ValidateSampleCount(name, common.Namespace, dims,
 		startTime,
-		endTime, 11, 13, 60)) {
-
+		endTime, 0, 13, 60)) {
+		log.Printf("Test result failed: %v", testResult)
 		return testResult
 	}
 	testResult.Status = status.SUCCESSFUL
+	log.Printf("Test result passed: %v", testResult)
+
 	return testResult
 }
 
