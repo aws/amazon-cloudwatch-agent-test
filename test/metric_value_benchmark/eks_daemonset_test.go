@@ -38,6 +38,9 @@ func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	testMap := e.getMetricsInClusterDimension()
 	for dim, metrics := range eks_resources.DimensionStringToMetricsMap {
 		testResults = append(testResults, e.validateMetricsAvailability(dim, metrics, testMap))
+		log.Printf("testMap: %v", testMap)
+		log.Printf("testResult: %v", testMap)
+
 		for _, m := range metrics {
 			testResults = append(testResults, e.validateMetricData(m, e.translateDimensionStringToDimType(dim)))
 		}
@@ -183,45 +186,6 @@ func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimen
 	return testResult
 }
 
-// GetNumberOfPodsInCluster should return the current number of pods in the cluster
-func (e *EKSDaemonTestRunner) GetNumberOfPodsInCluster() (int, error) {
-
-	return 0, errors.New("not implemented")
-}
-
-func (e *EKSDaemonTestRunner) validateMetricSampleCount(metricName string, dims []types.Dimension) status.TestResult {
-	log.Printf("Validating sample count for metric: %s", metricName)
-	testResult := status.TestResult{
-		Name:   metricName,
-		Status: status.FAILED,
-	}
-
-	// Get the expected number of pods in the cluster
-	expectedPodCount, err := e.GetNumberOfPodsInCluster()
-	if err != nil {
-		log.Printf("Error fetching number of pods: %v", err)
-		return testResult
-	}
-
-	// Fetch metric data
-	valueFetcher := metric.MetricValueFetcher{}
-	values, err := valueFetcher.Fetch(containerInsightsNamespace, metricName, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
-	if err != nil {
-		log.Printf("Failed to fetch metric data: %v", err)
-		return testResult
-	}
-
-	// Check if the sample count matches the expected pod count
-	for _, value := range values {
-		if value > float64(expectedPodCount) {
-			log.Printf("Sample count for metric %s is greater than expected. Expected: %d, Actual: %f", metricName, expectedPodCount, value)
-			return testResult
-		}
-	}
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
-}
 func (e *EKSDaemonTestRunner) validateLogs(env *environment.MetaData) status.TestResult {
 	testResult := status.TestResult{
 		Name:   "emf-logs",
