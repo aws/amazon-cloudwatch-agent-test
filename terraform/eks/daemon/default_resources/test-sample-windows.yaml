@@ -8,7 +8,7 @@ spec:
       app: windows-test-deployment
       tier: backend
       track: stable
-  replicas: 1
+  replicas: REPLICAS
   template:
     metadata:
       labels:
