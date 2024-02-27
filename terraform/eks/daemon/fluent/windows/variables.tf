@@ -36,7 +36,12 @@ variable "instance_type" {
   default = "t3a.medium"
 }
 
-variable "windows_os_version" {
+variable "windows_ami_type" {
   type    = string
   default = "WINDOWS_CORE_2022_x86_64"
+}
+
+variable "windows_os_version" {
+  type    = string
+  default = "2022"
 }

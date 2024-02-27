@@ -100,7 +100,7 @@ resource "aws_eks_node_group" "node_group_windows" {
     min_size     = 1
   }
 
-  ami_type       = var.windows_os_version
+  ami_type       = var.windows_ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 50
   instance_types = ["t3.large"]
@@ -197,7 +197,7 @@ resource "null_resource" "fluentbit-windows" {
       ./kubectl apply -f ./../../../default_resources/fluenbit-windows-configmap.yaml
       ./kubectl apply -f ./../../../default_resources/fluenbit-windows-daemonset.yaml
       ./kubectl rollout status daemonset fluent-bit-windows -n amazon-cloudwatch --timeout 600s
-      ./kubectl apply -f ./../../../default_resources/test-sample-windows.yaml
+      sed 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' ./../../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
       ./kubectl rollout status deployment windows-test-deployment --timeout 600s
       sleep 120
     EOT

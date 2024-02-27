@@ -3,6 +3,7 @@
 
 module "windows" {
   source        = "../"
+  windows_ami_type = var.windows_ami_type
   windows_os_version = var.windows_os_version
   test_dir = var.test_dir
   ami_type = var.ami_type

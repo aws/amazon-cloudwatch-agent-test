@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: windows-test-deployment
-          image: mcr.microsoft.com/windows/servercore/iis:windowsservercore-ltsc2022
+          image: mcr.microsoft.com/windows/servercore/iis:windowsservercore-ltscWINDOWS_SERVER_VERSION
           command:
             - powershell.exe
             - -command
