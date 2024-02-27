@@ -62,6 +62,6 @@ type DimensionsToMetricsMap struct {
 }
 
 var DimensionStringToMetricsMap = map[string][]string{
-	"ClusterName-Namespace": {"pod_cpu_utilization", "pod_memory_utilization", "pod_network_rx_bytes", "pod_network_tx_bytes",
+	"amazon-cloudwatch": {"pod_cpu_utilization", "pod_memory_utilization", "pod_network_rx_bytes", "pod_network_tx_bytes",
 		"pod_cpu_utilization_over_pod_limit", "pod_memory_utilization_over_pod_limit", "pod_interface_network_rx_dropped", "pod_interface_network_tx_dropped", "namespace_number_of_running_pods"},
 }
