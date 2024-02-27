@@ -200,7 +200,6 @@ resource "null_resource" "fluentbit-windows" {
       ./kubectl apply -f ./../../../default_resources/fluenbit-windows-daemonset.yaml
       ./kubectl rollout status daemonset fluent-bit-windows -n amazon-cloudwatch --timeout 600s
       sleep 60
-      sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+1+' ./../../../default_resources/test-sample-windows.yaml | ./kubectl delete -f -
       sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+2+' ./../../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
       sleep 60
     EOT
