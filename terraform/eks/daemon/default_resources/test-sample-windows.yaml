@@ -22,7 +22,7 @@ spec:
           command:
             - powershell.exe
             - -command
-            - " ping -t google.com "
+            - " ping -t localhost "
       nodeSelector:
         kubernetes.io/os: windows
 
