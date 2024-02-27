@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
 	"strings"
@@ -69,6 +68,7 @@ func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string]map[stri
 		return nil
 	}
 	log.Printf("length of metrics %d", len(actualMetrics))
+	log.Printf("Actual metrics listed here: %v", actualMetrics)
 	testMap := make(map[string]map[string]void)
 	for _, m := range actualMetrics {
 		var s string
@@ -88,6 +88,7 @@ func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string]map[stri
 			testMap[s][*m.MetricName] = void{}
 		}
 	}
+	log.Printf("testMap after getting metrics in cluster dimension:%v", testMap)
 
 	return testMap
 }
@@ -178,7 +179,7 @@ func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimen
 	duration := startTime.Sub(currentTime)
 	time.Sleep(duration)
 	endTime := time.Now()
-	if !(awsservice.ValidateSampleCount(name, common.Namespace, dims,
+	if !(awsservice.ValidateSampleCount(name, containerInsightsNamespace, dims,
 		startTime,
 		endTime, 0, 13, 60)) {
 		log.Printf("Test result failed: %v", testResult)

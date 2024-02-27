@@ -95,7 +95,6 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 	for _, datapoint := range data.Datapoints {
 		dataPoints = dataPoints + int(*datapoint.SampleCount)
 	}
-
 	log.Printf("Number of datapoints for start time %v with endtime %v and period %d is %d is inclusive between %d and %d", startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
 
 	if lowerBoundInclusive <= dataPoints && dataPoints <= upperBoundInclusive {
