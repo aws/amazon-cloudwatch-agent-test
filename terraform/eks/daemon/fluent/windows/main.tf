@@ -195,11 +195,10 @@ resource "null_resource" "fluentbit-windows" {
       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
       chmod +x kubectl
       ./kubectl apply -f ./../../../default_resources/fluenbit-windows-configmap.yaml
-      ./kubectl apply -f ./../../../default_resources/fluenbit-windows-daemonset.yaml
-      ./kubectl rollout status daemonset fluent-bit-windows -n amazon-cloudwatch --timeout 600s
-      sleep 60
       sed 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' ./../../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
       ./kubectl rollout status deployment windows-test-deployment --timeout 600s
+      ./kubectl apply -f ./../../../default_resources/fluenbit-windows-daemonset.yaml
+      ./kubectl rollout status daemonset fluent-bit-windows -n amazon-cloudwatch --timeout 600s
       sleep 120
     EOT
   }
