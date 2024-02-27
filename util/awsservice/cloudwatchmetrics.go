@@ -91,6 +91,8 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 	}
 
 	dataPoints := 0
+	log.Printf("These are the data points: %v", data)
+	log.Printf("These are the data points: %v", data.Datapoints)
 
 	for _, datapoint := range data.Datapoints {
 		dataPoints = dataPoints + int(*datapoint.SampleCount)

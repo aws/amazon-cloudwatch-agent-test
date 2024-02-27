@@ -181,7 +181,7 @@ func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimen
 	endTime := time.Now()
 	if !(awsservice.ValidateSampleCount(name, containerInsightsNamespace, dims,
 		startTime,
-		endTime, 0, 13, 60)) {
+		endTime, 0, 13, metric.MinuteStatPeriod)) {
 		log.Printf("Test result failed: %v", testResult)
 		return testResult
 	}
