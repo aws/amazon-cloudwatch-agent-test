@@ -421,7 +421,7 @@ var expectedDimsToMetrics = map[string][]string{
 		"pod_number_of_running_containers",
 		"pod_status_scheduled",
 	},
-	"ClusterName-Namespace"{
+	"ClusterName-Namespace":{
 		"pod_interface_network_rx_dropped",
 		"pod_network_rx_bytes",
 		"pod_cpu_utilization_over_pod_limit",
