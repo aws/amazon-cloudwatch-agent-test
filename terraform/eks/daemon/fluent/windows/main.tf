@@ -134,7 +134,7 @@ resource "kubernetes_config_map" "cluster_info" {
   data = {
     "cluster.name" = module.fluent_common.cluster_name
     "logs.region"  = var.region
-    "http.server"  = "On"
+    "http.server"  = "Off"
     "http.port"    = "2020"
     "read.head"    = "Off"
     "read.tail"    = "On"
@@ -197,11 +197,10 @@ resource "null_resource" "fluentbit-windows" {
       ./kubectl apply -f ./../../../default_resources/fluenbit-windows-configmap.yaml
       sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+1+' ./../../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
       ./kubectl rollout status deployment windows-test-deployment --timeout 600s
+      sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+2+' ./../../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
       ./kubectl apply -f ./../../../default_resources/fluenbit-windows-daemonset.yaml
       ./kubectl rollout status daemonset fluent-bit-windows -n amazon-cloudwatch --timeout 600s
       sleep 120
-      sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+2+' ./../../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
-      sleep 60
     EOT
   }
 }
