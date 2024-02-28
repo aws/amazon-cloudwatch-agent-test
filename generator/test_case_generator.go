@@ -178,6 +178,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 	},
 	"eks_daemon": {
+		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2019"},
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
 	},
 	"eks_deployment": {

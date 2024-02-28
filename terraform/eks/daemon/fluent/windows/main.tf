@@ -103,7 +103,7 @@ resource "aws_eks_node_group" "node_group_windows" {
   ami_type       = var.windows_ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 50
-  instance_types = ["t3.large"]
+  instance_types = [var.instance_type]
 
   depends_on = [
     module.fluent_common
