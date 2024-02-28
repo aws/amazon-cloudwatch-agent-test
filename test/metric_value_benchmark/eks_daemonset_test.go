@@ -365,10 +365,7 @@ var expectedDimsToMetrics = map[string][]string{
 		"container_cpu_request",
 		"container_memory_failures_total",
 		"container_cpu_utilization",
-
-
-
-	}
+	},
 	"ClusterName-InstanceId-NodeName":{
 		"node_status_allocatable_pods",
 		"node_network_total_bytes",
@@ -396,7 +393,7 @@ var expectedDimsToMetrics = map[string][]string{
 		"node_filesystem_inodes_free",
 		"node_cpu_utilization",
 
-	}
+	},
 
 	"ClusterName-Namespace-Service":{
 		"pod_status_unknown",
@@ -423,7 +420,7 @@ var expectedDimsToMetrics = map[string][]string{
 		"pod_memory_utilization",
 		"pod_number_of_running_containers",
 		"pod_status_scheduled",
-	}
+	},
 	"ClusterName-Namespace"{
 		"pod_interface_network_rx_dropped",
 		"pod_network_rx_bytes",
@@ -442,7 +439,7 @@ var expectedDimsToMetrics = map[string][]string{
 		"pod_memory_utilization_over_pod_limit",
 		"pod_network_rx_bytes",
 		"pod_cpu_utilization",
-	}
+	},
 }
 
 type EKSDaemonTestRunner struct {
@@ -497,7 +494,7 @@ func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDim
 		}
 		results = append(results, validateMetricsAvailability(dims, metrics, actual))
 		for _, m := range metrics {
-			// picking a random dimension set to test metric data OR test all dimension sets which might be overkill (Hyunsoo)
+			// picking a random dimension set to test metric data so we don't have to test every dimension set
 			randIdx := rand.Intn(len(actual[m]))
 			results = append(results, validateMetricValue(m, actual[m][randIdx]))
 		}
