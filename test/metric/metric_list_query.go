@@ -31,20 +31,30 @@ func (n *MetricListFetcher) Fetch(namespace, metricName string, dimensions []typ
 
 	listMetricInput := cloudwatch.ListMetricsInput{
 		Namespace:  aws.String(namespace),
-		MetricName: aws.String(metricName),
 		Dimensions: dims,
+	}
+	if len(metricName) > 0 {
+		listMetricInput.MetricName = aws.String(metricName)
 	}
 
 	log.Printf("Metric data input: namespace %v, name %v", namespace, metricName)
-
-	output, err := awsservice.CwmClient.ListMetrics(context.Background(), &listMetricInput)
-	if err != nil {
-		return nil, fmt.Errorf("Error getting metric data %v", err)
+	var metrics []types.Metric
+	for {
+		// get a complete list of metrics with given dimensions
+		output, err := awsservice.CwmClient.ListMetrics(context.Background(), &listMetricInput)
+		if err != nil {
+			return nil, fmt.Errorf("Error getting metric data %v", err)
+		}
+		metrics = append(metrics, output.Metrics...)
+		// nil or empty nextToken means there is no more data to be fetched
+		nextToken := output.NextToken
+		if nextToken == nil || *nextToken == "" {
+			break
+		}
+		listMetricInput.NextToken = nextToken
 	}
-
-	log.Printf("Metrics fetched : %s", fmt.Sprint(output))
-
-	return output.Metrics, nil
+	log.Printf("total number of metrics fetched: %v", len(metrics))
+	return metrics, nil
 }
 
 func (n *MetricListFetcher) FetchByDimension(namespace string, dimensions []types.Dimension) ([]types.Metric, error) {
