@@ -8,7 +8,7 @@ spec:
       app: windows-test-deployment
       tier: backend
       track: stable
-  replicas: 1
+  replicas: REPLICAS
   template:
     metadata:
       labels:
@@ -18,11 +18,11 @@ spec:
     spec:
       containers:
         - name: windows-test-deployment
-          image: mcr.microsoft.com/windows/servercore/iis:windowsservercore-ltsc2022
+          image: mcr.microsoft.com/windows/servercore/iis:windowsservercore-ltscWINDOWS_SERVER_VERSION
           command:
             - powershell.exe
             - -command
-            - " ping -t google.com "
+            - "Add-WindowsFeature Web-Server; Invoke-WebRequest -UseBasicParsing -Uri 'https://dotnetbinaries.blob.core.windows.net/servicemonitor/2.0.1.6/ServiceMonitor.exe' -OutFile 'C:\\ServiceMonitor.exe'; echo '<html><body><br/><br/><H1>Windows Container Workshop - Windows LTSC2019!!!<H1></body><html>' > C:\\inetpub\\wwwroot\\iisstart.htm; C:\\ServiceMonitor.exe 'w3svc'; "
       nodeSelector:
         kubernetes.io/os: windows
 

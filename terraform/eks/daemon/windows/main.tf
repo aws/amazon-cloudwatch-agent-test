@@ -160,7 +160,7 @@ resource "aws_eks_node_group" "node_group_windows" {
     min_size     = 1
   }
 
-  ami_type       = var.windows_os_version
+  ami_type       = var.windows_ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 50
   instance_types = ["t3.large"]
@@ -444,7 +444,7 @@ resource "null_resource" "windows-cwagent" {
       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
       chmod +x kubectl
       sed 's+CW_TEST_IMAGE+${var.cwagent_image_repo}:${var.cwagent_image_tag}+' ./../default_resources/cwagent-windows.yaml | ./kubectl apply -f -
-      ./kubectl apply -f ./../default_resources/test-sample-windows.yaml
+      sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+1+' ./../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
       ./kubectl rollout status daemonset cloudwatch-agent-windows -n amazon-cloudwatch --timeout 600s
       ./kubectl rollout status deployment windows-test-deployment --timeout 600s
     EOT
@@ -456,7 +456,7 @@ resource "null_resource" "windows-cwagent" {
 # Template Files
 ##########################################
 locals {
-  cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./../default_resources/default_amazon_cloudwatch_agent.json"
+  cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./../../default_resources/default_amazon_cloudwatch_agent.json"
 }
 
 data "template_file" "cwagent_config" {
@@ -553,7 +553,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating EKS metrics/logs"
-      cd ../../../..
+      cd ../../../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
   }

@@ -38,10 +38,10 @@ variable "instance_type" {
 
 variable "windows_ami_type" {
   type    = string
-  default = "WINDOWS_CORE_2022_x86_64"
+  default = "WINDOWS_CORE_2019_x86_64"
 }
 
 variable "windows_os_version" {
   type    = string
-  default = "2022"
+  default = "2019"
 }

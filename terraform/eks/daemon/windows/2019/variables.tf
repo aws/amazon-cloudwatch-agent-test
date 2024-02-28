@@ -1,6 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 variable "region" {
   type    = string
   default = "us-west-2"
@@ -14,6 +17,11 @@ variable "test_dir" {
 variable "cwagent_image_repo" {
   type    = string
   default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
+}
+
+variable "cwagent_windows_image_repo" {
+  type    = string
+  default = "506463145083.dkr.ecr.us-west-2.amazonaws.com/windows-container-internal"
 }
 
 variable "cwagent_image_tag" {
@@ -38,10 +46,10 @@ variable "instance_type" {
 
 variable "windows_ami_type" {
   type    = string
-  default = "WINDOWS_CORE_2022_x86_64"
+  default = "WINDOWS_CORE_2019_x86_64"
 }
 
 variable "windows_os_version" {
   type    = string
-  default = "2022"
+  default = "2019"
 }
