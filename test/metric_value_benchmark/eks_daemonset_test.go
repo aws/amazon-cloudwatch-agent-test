@@ -57,7 +57,7 @@ type void struct{}
 func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string]map[string]void {
 	listFetcher := metric.MetricListFetcher{}
 	log.Printf("Fetching by cluster dimension")
-	actualMetrics, err := listFetcher.FetchByDimension(containerInsightsNamespace, e.translateDimensionStringToDimType("ClusterName"))
+	actualMetrics, err := listFetcher.FetchByDimension(containerInsightsNamespace, e.translateDimensionStringToDimType(e.getDimensionValue("Clustername")))
 	if err != nil {
 		log.Println("failed to fetch metric list", err)
 		return nil
@@ -159,13 +159,13 @@ func compareMaptoList(metricMap map[string]void, metricList []string) bool {
 
 func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimension) status.TestResult {
 	log.Printf("validateMetricData with metric: %s", name)
-	log.Printf("dims %v", e.translateDimensionStringToDimType("ClusterName"))
+	log.Printf("dims %v", e.translateDimensionStringToDimType(e.getDimensionValue("Clustername")))
 	testResult := status.TestResult{
 		Name:   name,
 		Status: status.FAILED,
 	}
 	valueFetcher := metric.MetricValueFetcher{}
-	values, err := valueFetcher.Fetch(containerInsightsNamespace, name, e.translateDimensionStringToDimType("ClusterName"), metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
+	values, err := valueFetcher.Fetch(containerInsightsNamespace, name, e.translateDimensionStringToDimType(e.getDimensionValue("Clustername")), metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
@@ -179,7 +179,7 @@ func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimen
 	duration := startTime.Sub(currentTime)
 	time.Sleep(duration)
 	endTime := time.Now()
-	if !(awsservice.ValidateSampleCount(name, containerInsightsNamespace, e.translateDimensionStringToDimType("ClusterName"),
+	if !(awsservice.ValidateSampleCount(name, containerInsightsNamespace, e.translateDimensionStringToDimType(e.getDimensionValue("Clustername")),
 		startTime,
 		endTime, 0, 13, metric.MinuteStatPeriod)) {
 		log.Printf("Test result failed: %v", testResult)
