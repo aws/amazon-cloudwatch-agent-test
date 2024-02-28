@@ -158,28 +158,7 @@ var expectedDimsToMetrics = map[string][]string{
 		"pod_memory_limit",
 
 	},
-	"ClusterName-ContainerName-FullPodName-Namespace":{
-		"container_memory_failures_total",
-		"container_cpu_utilization",
-		"container_cpu_utilization_over_container_limit",
-		"container_memory_limit",
-		"container_memory_utilization_over_container_limit",
-		"container_memory_utilization",
-		"container_cpu_request",
-		"container_memory_request",
-		"container_cpu_limit",
-	},
-	"ClusterName-ContainerName-NameSpace-PodName":{
-		"container_memory_request",
-		"container_memory_utilization_over_container_limit",
-		"container_cpu_limit",
-		"container_memory_failures_total",
-		"container_memory_utilization",
-		"container_cpu_utilization",
-		"container_cpu_utilization_over_container_limit",
-		"container_cpu_request",
-		"container_memory_limit",
-	},
+
 	"ClusterName-InstanceId-NodeName":{
 		"node_status_allocatable_pods",
 		"node_network_total_bytes",
@@ -264,7 +243,6 @@ func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-type void struct{}
 
 const (
 	dimDelimiter               = "-"
@@ -286,6 +264,7 @@ func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDim
 		var actual map[string][][]types.Dimension
 		//looping through dtms until we find the dimension string equal to the one in the hard coded map
 		for _, dtm := range dimsToMetrics {
+			log.Printf("dtm: %s vs dims %s", dtm.dimStr, dims) //testing purposes
 			if dtm.dimStr == dims {
 				actual = dtm.metrics
 				break
