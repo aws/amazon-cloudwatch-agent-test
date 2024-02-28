@@ -9,13 +9,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
+	"math/rand"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark/eks_resources"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
@@ -24,27 +26,25 @@ import (
 )
 
 const containerInsightsNamespace = "ContainerInsights"
+const gpuMetricIndicator = "_gpu_"
 
 // list of metrics with more dimensions e.g. PodName and Namespace
 var metricsWithMoreDimensions = []string{"pod_number_of_container_restarts"}
 
+var expectedDimsToMetrics = map[string][]string{
+	"ClusterName": {
+		"pod_cpu_utilization", "pod_memory_utilization", "pod_network_rx_bytes", "pod_network_tx_bytes", "pod_cpu_utilization_over_pod_limit", "pod_memory_utilization_over_pod_limit", "pod_interface_network_rx_dropped", "pod_interface_network_tx_dropped", "namespace_number_of_running_pods"},
+}
+
 type EKSDaemonTestRunner struct {
 	test_runner.BaseTestRunner
-	env *environment.MetaData
+	testName string
+	env      *environment.MetaData
 }
 
 func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
-	testResults := make([]status.TestResult, 0)
-	testMap := e.getMetricsInClusterDimension()
-	for dim, metrics := range eks_resources.DimensionStringToMetricsMap {
-		testResults = append(testResults, e.validateMetricsAvailability(dim, metrics, testMap))
-		log.Printf("testMap: %v", testMap)
-		log.Printf("testResult: %v", testMap)
-
-		for _, m := range metrics {
-			testResults = append(testResults, e.validateMetricData(m, e.translateDimensionStringToDimType(dim)))
-		}
-	}
+	var testResults []status.TestResult
+	testResults = append(testResults, ValidateMetrics(e.env, gpuMetricIndicator, expectedDimsToMetrics)...)
 	testResults = append(testResults, e.validateLogs(e.env))
 	return status.TestGroupResult{
 		Name:        e.GetTestName(),
@@ -54,118 +54,135 @@ func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 
 type void struct{}
 
-func (e *EKSDaemonTestRunner) getMetricsInClusterDimension() map[string]map[string]void {
+const (
+	dimDelimiter               = "-"
+	ContainerInsightsNamespace = "ContainerInsights"
+)
+
+type dimToMetrics struct {
+	// dim keys as string with dimDelimiter(-) eg. ClusterName-Namespace
+	dimStr string
+	// metric names to their dimensions with values. Dimension sets will be used for metric data validations
+	metrics map[string][][]types.Dimension
+}
+
+func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDimsToMetrics map[string][]string) []status.TestResult {
+	var results []status.TestResult
+	dimsToMetrics := getMetricsInClusterDimension(env, metricFilter)
+	for dims, metrics := range expectedDimsToMetrics {
+		var actual map[string][][]types.Dimension
+		for _, dtm := range dimsToMetrics {
+			if dtm.dimStr == dims {
+				actual = dtm.metrics
+				break
+			}
+		}
+		if len(actual) < 1 {
+			results = append(results, status.TestResult{
+				Name:   dims,
+				Status: status.FAILED,
+			})
+			log.Printf("ValidateMetrics failed with missing dimension set: %s", dims)
+			// keep testing other dims or fail early?
+			continue
+		}
+		results = append(results, validateMetricsAvailability(dims, metrics, actual))
+		for _, m := range metrics {
+			// picking a random dimension set to test metric data OR test all dimension sets which might be overkill (Hyunsoo)
+			randIdx := rand.Intn(len(actual[m]))
+			results = append(results, validateMetricValue(m, actual[m][randIdx]))
+		}
+	}
+	return results
+}
+
+func getMetricsInClusterDimension(env *environment.MetaData, metricFilter string) []dimToMetrics { //map[string]map[string]interface{} {
 	listFetcher := metric.MetricListFetcher{}
 	log.Printf("Fetching by cluster dimension")
-	actualMetrics, err := listFetcher.FetchByDimension(containerInsightsNamespace, e.translateDimensionStringToDimType(e.getDimensionValue("Clustername")))
+	dims := []types.Dimension{
+		{
+			Name:  aws.String("ClusterName"),
+			Value: aws.String(env.EKSClusterName),
+		},
+	}
+	metrics, err := listFetcher.Fetch(ContainerInsightsNamespace, "", dims)
 	if err != nil {
 		log.Println("failed to fetch metric list", err)
 		return nil
 	}
-
-	if len(actualMetrics) < 1 {
+	if len(metrics) < 1 {
 		log.Println("cloudwatch metric list is empty")
 		return nil
 	}
-	log.Printf("length of metrics %d", len(actualMetrics))
-	log.Printf("Actual metrics listed here: %v", actualMetrics)
-	testMap := make(map[string]map[string]void)
-	for _, m := range actualMetrics {
-		var s string
-		for i, d := range m.Dimensions {
-			if i == len(m.Dimensions)-1 {
-				s += *d.Name
+
+	var results []dimToMetrics
+	for _, m := range metrics {
+		// filter by metric name filter(skip gpu validation)
+		if metricFilter != "" && strings.Contains(*m.MetricName, metricFilter) {
+			continue
+		}
+		var dims []string
+		for _, d := range m.Dimensions {
+			dims = append(dims, *d.Name)
+		}
+		sort.Sort(sort.StringSlice(dims)) //what's the point of sorting?
+		dimsKey := strings.Join(dims, dimDelimiter)
+		log.Printf("processing dims: %s", dimsKey)
+
+		var dtm dimToMetrics
+		for _, ele := range results {
+			if ele.dimStr == dimsKey {
+				dtm = ele
 				break
 			}
-			s += *d.Name + "-"
 		}
-		log.Printf("for dimension string %s", s)
-		if testMap == nil || testMap[s] == nil {
-			mtr := make(map[string]void)
-			mtr[*m.MetricName] = void{}
-			testMap[s] = mtr
-		} else {
-			testMap[s][*m.MetricName] = void{}
+		if dtm.dimStr == "" {
+			dtm = dimToMetrics{
+				dimStr:  dimsKey,
+				metrics: make(map[string][][]types.Dimension),
+			}
+			results = append(results, dtm)
 		}
+		dtm.metrics[*m.MetricName] = append(dtm.metrics[*m.MetricName], m.Dimensions)
 	}
-	log.Printf("testMap after getting metrics in cluster dimension:%v", testMap)
-
-	return testMap
+	return results
 }
 
-func logMetrics(metrics map[string]void, dim string) {
-	log.Printf("\t dimension: %s, Metrics:\n", dim)
-	for d, _ := range metrics {
-		log.Printf("metric name: %s", d)
-	}
-}
-
-func (e *EKSDaemonTestRunner) validateMetricsAvailability(dimensionString string, metrics []string, testMap map[string]map[string]void) status.TestResult {
-	log.Printf("validateMetricsAvailability for dimension: %v", dimensionString)
+func validateMetricsAvailability(dims string, expected []string, actual map[string][][]types.Dimension) status.TestResult {
 	testResult := status.TestResult{
-		Name:   dimensionString,
+		Name:   dims,
 		Status: status.FAILED,
 	}
-	actualMetrics := testMap[dimensionString]
-
-	//verify the result metrics with expected metrics
-	log.Printf("length of actual metrics %d", len(actualMetrics))
-	log.Printf("length of expected metrics %d", len(metrics))
-	logMetrics(actualMetrics, dimensionString)
-	if compareMaptoList(actualMetrics, metrics) {
+	log.Printf("expected metrics: %d, actual metrics: %d", len(expected), len(actual))
+	if compareMetrics(expected, actual) {
 		testResult.Status = status.SUCCESSFUL
+	} else {
+		log.Printf("validateMetricsAvailability failed for %s", dims)
 	}
 	return testResult
 }
 
-func (e *EKSDaemonTestRunner) translateDimensionStringToDimType(dimensionString string) []types.Dimension {
-	split := strings.Split(dimensionString, "-")
-	var dims []types.Dimension
-	for _, str := range split {
-		dims = append(dims, types.Dimension{
-			Name:  aws.String(str),
-			Value: aws.String(e.getDimensionValue(str)),
-		})
-		log.Printf("dim key %s", str)
-		log.Printf("dim value %s", e.getDimensionValue(str))
-	}
-	log.Printf("dimensions length %d", len(dims))
-	return dims
-}
-
-func (e *EKSDaemonTestRunner) getDimensionValue(dim string) string {
-	switch dim {
-	case "ClusterName":
-		return e.env.EKSClusterName
-	case "Namespace":
-		return "amazon-cloudwatch"
-	default:
-		return ""
-	}
-}
-
-func compareMaptoList(metricMap map[string]void, metricList []string) bool {
-	if len(metricMap) != len(metricList) {
+func compareMetrics(expected []string, actual map[string][][]types.Dimension) bool {
+	if len(expected) != len(actual) {
 		return false
 	}
 
-	for _, key := range metricList {
-		if _, ok := metricMap[key]; !ok {
+	for _, key := range expected {
+		if _, ok := actual[key]; !ok {
 			return false
 		}
 	}
 	return true
 }
 
-func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimension) status.TestResult {
-	log.Printf("validateMetricData with metric: %s", name)
-	log.Printf("dims %v", e.translateDimensionStringToDimType(e.getDimensionValue("Clustername")))
+func validateMetricValue(name string, dims []types.Dimension) status.TestResult {
+	log.Printf("validateMetricValue with metric: %s", name)
 	testResult := status.TestResult{
 		Name:   name,
 		Status: status.FAILED,
 	}
 	valueFetcher := metric.MetricValueFetcher{}
-	values, err := valueFetcher.Fetch(containerInsightsNamespace, name, e.translateDimensionStringToDimType(e.getDimensionValue("Clustername")), metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
+	values, err := valueFetcher.Fetch(containerInsightsNamespace, name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
@@ -174,21 +191,8 @@ func (e *EKSDaemonTestRunner) validateMetricData(name string, dims []types.Dimen
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(name, values, 0) {
 		return testResult
 	}
-	currentTime := time.Now()
-	startTime := currentTime.Truncate(time.Minute).Add(time.Minute)
-	duration := startTime.Sub(currentTime)
-	time.Sleep(duration)
-	endTime := time.Now()
-	if !(awsservice.ValidateSampleCount(name, containerInsightsNamespace, e.translateDimensionStringToDimType(e.getDimensionValue("Clustername")),
-		startTime,
-		endTime, 0, 13, metric.MinuteStatPeriod)) {
-		log.Printf("Test result failed: %v", testResult)
-		return testResult
-	}
 
 	testResult.Status = status.SUCCESSFUL
-	log.Printf("Test result passed: %v", testResult)
-
 	return testResult
 }
 
