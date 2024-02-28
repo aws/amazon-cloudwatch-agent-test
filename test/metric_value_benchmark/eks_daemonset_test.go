@@ -418,6 +418,7 @@ func (e *EKSDaemonTestRunner) validateLogs(env *environment.MetaData) status.Tes
 			nil,
 			&now,
 			awsservice.AssertLogsNotEmpty(),
+			awsservice.AssertNoDuplicateLogs(),
 			awsservice.AssertPerLog(
 				awsservice.AssertLogSchema(func(message string) (string, error) {
 					var eksClusterType awsservice.EKSClusterType
