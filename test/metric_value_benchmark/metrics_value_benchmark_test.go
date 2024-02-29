@@ -113,6 +113,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &RenameSSMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &JMXTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return ec2TestRunners
@@ -157,5 +158,10 @@ func shouldRunEC2Test(env *environment.MetaData, t *test_runner.TestRunner) bool
 	}
 	_, shouldRun := env.EC2PluginTests[strings.ToLower(t.TestRunner.GetTestName())]
 	_, shouldExclude := env.ExcludedTests[strings.ToLower(t.TestRunner.GetTestName())]
-	return shouldRun || !shouldExclude
+	if shouldRun {
+		return true
+	} else if len(env.ExcludedTests) != 0 {
+		return !shouldExclude
+	}
+	return false
 }

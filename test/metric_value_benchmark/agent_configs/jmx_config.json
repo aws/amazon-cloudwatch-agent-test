@@ -1,0 +1,25 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "metrics": {
+    "namespace": "MetricValueBenchmarkJMXTest",
+    "force_flush_interval": 5,
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "jmx": [
+        {
+          "endpoint": "localhost:2020",
+          "target_system": "jvm,kafka"
+        }
+      ]
+    }
+  }
+}

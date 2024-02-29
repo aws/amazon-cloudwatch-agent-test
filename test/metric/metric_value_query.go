@@ -46,7 +46,7 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 				Period: &metricQueryPeriod,
 				Stat:   aws.String(string(stat)),
 			},
-			Id: aws.String(strings.ToLower(metricName)),
+			Id: aws.String(strings.ToLower(strings.ReplaceAll(metricName, ".", "_"))),
 		},
 	}
 
