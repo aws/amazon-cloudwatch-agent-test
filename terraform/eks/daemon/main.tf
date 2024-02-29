@@ -408,17 +408,6 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
   }
 }
 
-resource "time_sleep" "wait_2_min" {
-  depends_on = [
-    aws_eks_node_group.this,
-    kubernetes_daemonset.service,
-    kubernetes_cluster_role_binding.rolebinding,
-    kubernetes_service_account.cwagentservice
-  ]
-
-  create_duration = "2m"
-}
-
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
