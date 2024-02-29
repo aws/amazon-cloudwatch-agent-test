@@ -9,20 +9,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"log"
 	"math/rand"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark/eks_resources"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 const containerInsightsNamespace = "ContainerInsights"
