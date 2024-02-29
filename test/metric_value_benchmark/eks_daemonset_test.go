@@ -28,205 +28,6 @@ import (
 const containerInsightsNamespace = "ContainerInsights"
 const gpuMetricIndicator = "_gpu_"
 
-
-//Hard coded map which lists the expected metrics in each dimension set
-var expectedDimsToMetrics = map[string][]string{
-	"ClusterName": {
-		"pod_number_of_containers",
-		"node_status_allocatable_pods",
-		"pod_number_of_container_restarts",
-		"node_status_condition_unknown",
-		"node_number_of_running_pods",
-		"pod_container_status_running",
-		"node_status_condition_ready",
-		"pod_status_running",
-		"node_filesystem_utilization",
-		"pod_container_status_terminated",
-		"pod_status_pending",
-		"pod_cpu_utilization",
-		"node_filesystem_inodes",
-		"node_diskio_io_service_bytes_total",
-		"node_status_condition_memory_pressure",
-		"container_cpu_utilization",
-		"service_number_of_running_pods",
-		"pod_memory_utilization_over_pod_limit",
-		"node_memory_limit",
-		"pod_cpu_request",
-		"pod_interface_network_tx_dropped",
-		"pod_status_succeeded",
-		"namespace_number_of_running_pods",
-		"pod_memory_reserved_capacity",
-		"node_diskio_io_serviced_total",
-		"pod_network_rx_bytes",
-		"node_status_capacity_pods",
-		"pod_status_unknown",
-		"cluster_failed_node_count",
-		"container_memory_utilization",
-		"node_memory_utilization",
-		"node_filesystem_inodes_free",
-		"container_memory_request",
-		"container_cpu_limit",
-		"node_memory_reserved_capacity",
-		"node_interface_network_tx_dropped",
-		"pod_cpu_utilization_over_pod_limit",
-		"container_memory_failures_total",
-		"pod_status_ready",
-		"pod_number_of_running_containers",
-		"cluster_node_count",
-		"pod_memory_request",
-		"node_cpu_utilization",
-		"cluster_number_of_running_pods",
-		"node_memory_working_set",
-		"pod_status_failed",
-		"node_status_condition_pid_pressure",
-		"pod_status_scheduled",
-		"node_number_of_running_containers",
-		"node_cpu_limit",
-		"node_status_condition_disk_pressure",
-		"pod_cpu_limit",
-		"pod_memory_limit",
-		"node_cpu_usage_total",
-		"pod_cpu_reserved_capacity",
-		"pod_network_tx_bytes",
-		"container_memory_limit",
-		"pod_memory_utilization",
-		"node_interface_network_rx_dropped",
-		"node_network_total_bytes",
-		"container_cpu_utilization_over_container_limit",
-		"pod_interface_network_rx_dropped",
-		"pod_container_status_waiting",
-		"node_cpu_reserved_capacity",
-		"container_memory_utilization_over_container_limit",
-		"container_cpu_request",
-	},
-	"ClusterName-FullPodName-Namespace-PodName": {
-		"pod_network_tx_bytes",
-		"pod_interface_network_rx_dropped",
-		"pod_cpu_limit",
-		"pod_status_succeeded",
-		"pod_container_status_waiting",
-		"pod_number_of_running_containers",
-		"pod_number_of_container_restarts",
-		"pod_status_pending",
-		"pod_status_running",
-		"pod_container_status_running",
-		"pod_memory_limit",
-		"pod_status_unknown",
-		"pod_memory_utilization_over_pod_limit",
-		"pod_cpu_request",
-		"pod_status_scheduled",
-		"pod_memory_utilization",
-		"pod_status_failed",
-		"pod_network_rx_bytes",
-		"pod_number_of_containers",
-		"pod_cpu_utilization",
-		"pod_memory_reserved_capacity",
-		"pod_status_ready",
-		"pod_container_status_terminated",
-		"pod_interface_network_tx_dropped",
-		"pod_memory_request",
-		"pod_cpu_reserved_capacity",
-		"pod_cpu_utilization_over_pod_limit",
-	},
-	"ClusterName-Namespace-PodName":{
-		"pod_interface_network_rx_dropped",
-		"pod_status_succeeded",
-		"pod_container_status_running",
-		"pod_network_rx_bytes",
-		"pod_cpu_utilization",
-		"pod_memory_utilization",
-		"pod_interface_network_tx_dropped",
-		"pod_status_ready",
-		"pod_container_status_terminated",
-		"pod_cpu_reserved_capacity",
-		"pod_memory_request",
-		"pod_status_running",
-		"pod_status_pending",
-		"pod_number_of_containers",
-		"pod_memory_utilization_over_pod_limit",
-		"pod_status_unknown",
-		"pod_cpu_limit",
-		"pod_container_status_waiting",
-		"pod_memory_reserved_capacity",
-		"pod_network_tx_bytes",
-		"pod_status_failed",
-		"pod_number_of_running_containers",
-		"pod_number_of_container_restarts",
-		"pod_cpu_request",
-		"pod_cpu_utilization_over_pod_limit",
-		"pod_status_scheduled",
-		"pod_memory_limit",
-
-	},
-
-	"ClusterName-InstanceId-NodeName":{
-		"node_status_allocatable_pods",
-		"node_network_total_bytes",
-		"node_status_condition_unknown",
-		"node_interface_network_rx_dropped",
-		"node_number_of_running_containers",
-		"node_interface_network_tx_dropped",
-		"node_memory_utilization",
-		"node_cpu_limit",
-		"node_status_condition_disk_pressure",
-		"node_memory_working_set",
-		"node_cpu_reserved_capacity",
-		"node_status_condition_ready",
-		"node_filesystem_utilization",
-		"node_status_condition_memory_pressure",
-		"node_memory_limit",
-		"node_memory_reserved_capacity",
-		"node_diskio_io_serviced_total",
-		"node_status_condition_pid_pressure",
-		"node_filesystem_inodes",
-		"node_cpu_usage_total",
-		"node_number_of_running_pods",
-		"node_diskio_io_service_bytes_total",
-		"node_status_capacity_pods",
-		"node_filesystem_inodes_free",
-		"node_cpu_utilization",
-
-	},
-
-	"ClusterName-Namespace-Service":{
-		"pod_status_unknown",
-		"pod_memory_limit",
-		"pod_container_status_terminated",
-		"pod_status_ready",
-		"pod_number_of_container_restarts",
-		"pod_status_pending",
-		"pod_status_succeeded",
-		"pod_network_rx_bytes",
-		"pod_status_failed",
-		"pod_number_of_containers",
-		"pod_cpu_request",
-		"service_number_of_running_pods",
-		"pod_memory_reserved_capacity",
-		"pod_network_tx_bytes",
-		"pod_container_status_waiting",
-		"pod_memory_request",
-		"pod_status_running",
-		"pod_container_status_running",
-		"pod_cpu_reserved_capacity",
-		"pod_memory_utilization_over_pod_limit",
-		"pod_cpu_utilization",
-		"pod_memory_utilization",
-		"pod_number_of_running_containers",
-		"pod_status_scheduled",
-	},
-	"ClusterName-Namespace":{
-		"pod_interface_network_rx_dropped",
-		"pod_network_rx_bytes",
-		"pod_cpu_utilization_over_pod_limit",
-		"pod_memory_utilization_over_pod_limit",
-		"namespace_number_of_running_pods",
-		"pod_memory_utilization",
-		"pod_interface_network_tx_dropped",
-		"pod_cpu_utilization",
-		"pod_network_tx_bytes",
-	},
-}
-
 type EKSDaemonTestRunner struct {
 	test_runner.BaseTestRunner
 	testName string
@@ -235,14 +36,13 @@ type EKSDaemonTestRunner struct {
 
 func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	var testResults []status.TestResult
-	testResults = append(testResults, ValidateMetrics(e.env, gpuMetricIndicator, expectedDimsToMetrics)...)
+	testResults = append(testResults, validateMetrics(e.env, gpuMetricIndicator, eks_resources.ExpectedDimsToMetrics)...)
 	testResults = append(testResults, e.validateLogs(e.env))
 	return status.TestGroupResult{
 		Name:        e.GetTestName(),
 		TestResults: testResults,
 	}
 }
-
 
 const (
 	dimDelimiter               = "-"
@@ -256,7 +56,7 @@ type dimToMetrics struct {
 	metrics map[string][][]types.Dimension
 }
 
-func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDimsToMetrics map[string][]string) []status.TestResult {
+func validateMetrics(env *environment.MetaData, metricFilter string, expectedDimsToMetrics map[string][]string) []status.TestResult {
 	var results []status.TestResult
 	dimsToMetrics := getMetricsInClusterDimension(env, metricFilter)
 	//loops through each dimension set and checks if they exit in the cluster(fails if it doesn't)
@@ -292,7 +92,7 @@ func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDim
 	return results
 }
 
-//Fetches all metrics in cluster
+// Fetches all metrics in cluster
 func getMetricsInClusterDimension(env *environment.MetaData, metricFilter string) []dimToMetrics { //map[string]map[string]interface{} {
 	listFetcher := metric.MetricListFetcher{}
 	log.Printf("Fetching by cluster dimension")
@@ -345,7 +145,7 @@ func getMetricsInClusterDimension(env *environment.MetaData, metricFilter string
 	return results
 }
 
-//Check if all metrics from cluster matches hard coded map
+// Check if all metrics from cluster matches hard coded map
 func validateMetricsAvailability(dims string, expected []string, actual map[string][][]types.Dimension) status.TestResult {
 	testResult := status.TestResult{
 		Name:   dims,
