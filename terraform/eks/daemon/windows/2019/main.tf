@@ -10,5 +10,5 @@ module "windows" {
   instance_type      = var.instance_type
   k8s_version        = var.k8s_version
   cwagent_image_repo = var.cwagent_image_repo
-  cwagent_image_tag = var.cwagent_image_tag
+  cwagent_image_tag  = var.cwagent_image_tag
 }
