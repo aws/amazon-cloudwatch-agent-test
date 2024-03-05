@@ -81,11 +81,11 @@ resource "aws_ec2_host" "dedicated_host" {
   ## and upper bound for the newest version of Mac we support MacOS Ventura)
   for_each = {
     "Ventura_x86_64" : "mac1.metal"
-    "Sonoma_x86_64"  : "mac1.metal"
+    "Sonoma_x86_64" : "mac1.metal"
     "Big_Sur_x86_64" : "mac1.metal"
     "Ventura_arm64" : "mac2.metal"
     "Big_Sur_arm64" : "mac2.metal"
-    "Sonoma_arm64"  : "mac2.metal"
+    "Sonoma_arm64" : "mac2.metal"
   }
 
   ## Map 4x1 for avoid claimng resources
