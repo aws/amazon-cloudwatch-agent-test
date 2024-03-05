@@ -34,5 +34,17 @@
         "instanceType":"mac1.metal",
         "ami": "cloudwatch-agent-integration-test-mac-monterey-x86",
         "arc": "amd64"
+      },
+      {
+        "os": "macOS Sonoma Arm64",
+        "instanceType":"mac2.metal",
+        "ami": "cloudwatch-agent-integration-test-mac-sonoma-arm64",
+        "arc": "arm64"
+      },
+      {
+        "os": "macOS Sonoma Amd64",
+        "instanceType":"mac1.metal",
+        "ami": "cloudwatch-agent-integration-test-mac-sonoma-x86",
+        "arc": "amd64"
       }
 ]
