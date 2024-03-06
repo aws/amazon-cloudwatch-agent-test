@@ -184,6 +184,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"eks_daemon": {
 		{
+			testDir: "./test/metric_value_benchmark",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
+		{
 			testDir:      "./test/metric_value_benchmark",
 			terraformDir: "terraform/eks/daemon/windows/2019",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
