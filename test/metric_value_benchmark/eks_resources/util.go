@@ -5,6 +5,7 @@ package eks_resources
 
 import (
 	_ "embed"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
