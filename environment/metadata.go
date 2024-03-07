@@ -41,6 +41,7 @@ type MetaData struct {
 	ProxyUrl                  string
 	AssumeRoleArn             string
 	InstanceId                string
+	InstancePlatform          string
 	AgentStartCommand         string
 }
 
@@ -62,6 +63,7 @@ type MetaDataStrings struct {
 	ProxyUrl                  string
 	AssumeRoleArn             string
 	InstanceId                string
+	InstancePlatform          string
 	AgentStartCommand         string
 }
 
@@ -120,6 +122,10 @@ func registerAssumeRoleArn(dataString *MetaDataStrings) {
 
 func registerInstanceId(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.InstanceId), "instanceId", "", "ec2 instance ID that is being used by a test")
+}
+
+func registerInstancePlatform(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.InstancePlatform), "instancePlatform", "linux", "ec2 instance OS that is being used for a test")
 }
 
 func registerAgentStartCommand(dataString *MetaDataStrings) {
@@ -218,6 +224,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerProxyUrl(registeredMetaDataStrings)
 	registerAssumeRoleArn(registeredMetaDataStrings)
 	registerInstanceId(registeredMetaDataStrings)
+	registerInstancePlatform(registeredMetaDataStrings)
 	registerAgentStartCommand(registeredMetaDataStrings)
 
 	return registeredMetaDataStrings
@@ -241,6 +248,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.ProxyUrl = registeredMetaDataStrings.ProxyUrl
 	metaDataStorage.AssumeRoleArn = registeredMetaDataStrings.AssumeRoleArn
 	metaDataStorage.InstanceId = registeredMetaDataStrings.InstanceId
+	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
 
 	return metaDataStorage

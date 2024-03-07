@@ -37,7 +37,7 @@ type EKSDaemonTestRunner struct {
 
 func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	var testResults []status.TestResult
-	testResults = append(testResults, validateMetrics(e.env, gpuMetricIndicator, eks_resources.ExpectedDimsToMetrics)...)
+	testResults = append(testResults, validateMetrics(e.env, gpuMetricIndicator, eks_resources.GetExpectedDimsToMetrics(e.env))...)
 	testResults = append(testResults, e.validateLogs(e.env))
 	return status.TestGroupResult{
 		Name:        e.GetTestName(),

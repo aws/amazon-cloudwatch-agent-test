@@ -2,22 +2,37 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source             = "../../../../common"
+  source             = "../../../common"
   cwagent_image_repo = var.cwagent_image_repo
   cwagent_image_tag  = var.cwagent_image_tag
 }
 
 module "basic_components" {
-  source = "../../../../basic_components"
+  source = "../../../basic_components"
 
   region = var.region
 }
 
-data "aws_eks_cluster_auth" "cluster_auth" {
-  name = aws_eks_cluster.cluster.name
+locals {
+  aws_eks      = "aws eks --region ${var.region}"
+  cluster_name = "cwagent-eks-integ-${module.common.testing_id}"
 }
 
-resource "aws_eks_cluster" "cluster" {
+data "aws_caller_identity" "account_id" {}
+
+data "aws_eks_cluster" "eks_windows_cluster_ca" {
+  name = aws_eks_cluster.this.name
+}
+
+output "account_id" {
+  value = data.aws_caller_identity.account_id.account_id
+}
+
+data "aws_eks_cluster_auth" "this" {
+  name = aws_eks_cluster.this.name
+}
+
+resource "aws_eks_cluster" "this" {
   name     = "cwagent-eks-integ-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
@@ -34,9 +49,64 @@ resource "aws_eks_cluster" "cluster" {
   }
 }
 
+## EKS Cluster Addon
+
+resource "aws_eks_addon" "eks_windows_addon" {
+  cluster_name = aws_eks_cluster.this.name
+  addon_name   = "vpc-cni"
+}
+
+## Enable VPC CNI Windows Support
+
+resource "kubernetes_config_map_v1_data" "amazon_vpc_cni_windows" {
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_addon.eks_windows_addon
+  ]
+  metadata {
+    name      = "amazon-vpc-cni"
+    namespace = "kube-system"
+  }
+
+  force = true
+
+  data = {
+    enable-windows-ipam : "true"
+  }
+}
+
+## AWS CONFIGMAP
+
+resource "kubernetes_config_map" "configmap" {
+  data = {
+    "mapRoles" = <<EOT
+- groups:
+  - system:bootstrappers
+  - system:nodes
+  rolearn: arn:aws:iam::${data.aws_caller_identity.account_id.account_id}:role/cwagent-eks-Worker-Role-${module.common.testing_id}
+  username: system:node:{{EC2PrivateDNSName}}
+- groups:
+  - eks:kube-proxy-windows
+  - system:bootstrappers
+  - system:nodes
+  rolearn: arn:aws:iam::${data.aws_caller_identity.account_id.account_id}:role/cwagent-eks-Worker-Role-${module.common.testing_id}
+  username: system:node:{{EC2PrivateDNSName}}
+- groups:
+  - system:masters
+  rolearn: arn:aws:iam::${data.aws_caller_identity.account_id.account_id}:role/Admin-Windows
+
+EOT
+  }
+
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+}
+
 # EKS Node Groups
-resource "aws_eks_node_group" "node_group" {
-  cluster_name    = aws_eks_cluster.cluster.name
+resource "aws_eks_node_group" "this" {
+  cluster_name    = aws_eks_cluster.this.name
   node_group_name = "cwagent-eks-integ-node"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
@@ -47,10 +117,10 @@ resource "aws_eks_node_group" "node_group" {
     min_size     = 1
   }
 
-  ami_type       = var.ami_type
+  ami_type       = "AL2_x86_64"
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
-  instance_types = [var.instance_type]
+  instance_types = ["t3.medium"]
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
@@ -76,6 +146,33 @@ resource "aws_iam_role" "node_role" {
     ]
   })
 }
+
+# EKS Windows Node Groups
+resource "aws_eks_node_group" "node_group_windows" {
+  cluster_name    = aws_eks_cluster.this.name
+  node_group_name = "${local.cluster_name}-windows-node"
+  node_role_arn   = aws_iam_role.node_role.arn
+  subnet_ids      = module.basic_components.public_subnet_ids
+
+  scaling_config {
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
+  }
+
+  ami_type       = var.windows_ami_type
+  capacity_type  = "ON_DEMAND"
+  disk_size      = 50
+  instance_types = ["t3.large"]
+
+  depends_on = [
+    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
+    aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
+    aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy
+  ]
+}
+
 
 resource "aws_iam_role_policy_attachment" "node_AmazonEKSWorkerNodePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
@@ -166,100 +263,14 @@ resource "kubernetes_namespace" "namespace" {
   }
 }
 
-resource "kubernetes_service_account" "cwagentservice" {
-  depends_on = [kubernetes_namespace.namespace]
-  metadata {
-    name      = "cloudwatch-agent"
-    namespace = "amazon-cloudwatch"
-  }
-}
-
-resource "kubernetes_cluster_role" "clusterrole" {
-  depends_on = [kubernetes_namespace.namespace]
-  metadata {
-    name = "cloudwatch-agent-role"
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["pods", "nodes", "endpoints"]
-    api_groups = [""]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["replicasets"]
-    api_groups = ["apps"]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["jobs"]
-    api_groups = ["batch"]
-  }
-  rule {
-    verbs      = ["get"]
-    resources  = ["nodes/proxy"]
-    api_groups = ["get"]
-  }
-  rule {
-    verbs      = ["create", "get"]
-    resources  = ["nodes/stats", "configmaps", "events"]
-    api_groups = [""]
-  }
-  rule {
-    verbs          = ["get", "update"]
-    resource_names = ["cwagent-clusterleader"]
-    resources      = ["configmaps"]
-    api_groups     = [""]
-  }
-}
-
-resource "kubernetes_cluster_role_binding" "rolebinding" {
+# TODO: how do we support different deployment types? Should they be in separate terraform
+#       files, and spawn separate tests?
+resource "kubernetes_daemonset" "service" {
   depends_on = [
+    kubernetes_namespace.namespace,
+    kubernetes_config_map.cwagentconfig,
     kubernetes_service_account.cwagentservice,
-    kubernetes_cluster_role.clusterrole
-  ]
-  metadata {
-    name = "cloudwatch-agent-role-binding"
-  }
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cloudwatch-agent-role"
-  }
-  subject {
-    kind      = "ServiceAccount"
-    name      = "cloudwatch-agent"
-    namespace = "amazon-cloudwatch"
-  }
-}
-
-resource "kubernetes_config_map" "cwagentconfig" {
-  metadata {
-    name      = "cwagentconfig"
-    namespace = "amazon-cloudwatch"
-  }
-  data = {
-    "cwagentconfig.json" = <<EOF
-    {
-      "agent": {
-        "region": "${var.region}"
-      },
-      "logs": {
-        "metrics_collected": {
-          "kubernetes": {
-            "cluster_name": "${aws_eks_cluster.cluster.name}",
-            "metrics_collection_interval": 60
-          }
-        },
-        "force_flush_interval": 5
-      }
-    }
-    EOF
-  }
-}
-
-resource "kubernetes_daemonset" "agent_daemon" {
-  depends_on = [
-    kubernetes_config_map.cwagentconfig
+    aws_eks_node_group.this
   ]
   metadata {
     name      = "cloudwatch-agent"
@@ -278,9 +289,13 @@ resource "kubernetes_daemonset" "agent_daemon" {
         }
       }
       spec {
+        node_selector = {
+          "kubernetes.io/os" : "linux"
+        }
         container {
-          name  = "cloudwatch-agent"
-          image = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:1.247359.1b252618"
+          name              = "cwagent"
+          image             = "${var.cwagent_image_repo}:${var.cwagent_image_tag}"
+          image_pull_policy = "Always"
           resources {
             limits = {
               "cpu" : "200m",
@@ -314,10 +329,6 @@ resource "kubernetes_daemonset" "agent_daemon" {
                 field_path = "metadata.namespace"
               }
             }
-          }
-          env {
-            name  = "CI_VERSION"
-            value = "k8s/1.3.15"
           }
           volume_mount {
             mount_path = "/etc/cwagentconfig"
@@ -353,9 +364,6 @@ resource "kubernetes_daemonset" "agent_daemon" {
             name       = "devdisk"
             read_only  = true
           }
-        }
-        node_selector = {
-          "kubernetes.io/os" : "linux"
         }
         volume {
           name = "cwagentconfig"
@@ -396,36 +404,157 @@ resource "kubernetes_daemonset" "agent_daemon" {
         volume {
           name = "devdisk"
           host_path {
-            path = "/dev/disk/"
+            path = "/dev/disk"
           }
         }
-        termination_grace_period_seconds = 60
         service_account_name             = "cloudwatch-agent"
+        termination_grace_period_seconds = 60
       }
     }
   }
 }
 
-output "cluster_name" {
-  value = aws_eks_cluster.cluster.name
+resource "null_resource" "kubectl" {
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this,
+    aws_eks_node_group.node_group_windows
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
+      ${local.aws_eks} list-clusters --output text
+      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
+    EOT
+  }
 }
 
-output "cluster_auth_token" {
-  value = data.aws_eks_cluster_auth.cluster_auth.token
+
+resource "null_resource" "windows-cwagent" {
+  depends_on = [
+    kubernetes_namespace.namespace,
+    kubernetes_config_map.cwagentconfig,
+    kubernetes_service_account.cwagentservice,
+    aws_eks_node_group.node_group_windows,
+    null_resource.kubectl
+  ]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      sed 's+CW_TEST_IMAGE+${var.cwagent_image_repo}:${var.cwagent_image_tag}+' ./../../default_resources/cwagent-windows.yaml | ./kubectl apply -f -
+      sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+1+' ./../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
+      ./kubectl rollout status daemonset cloudwatch-agent-windows -n amazon-cloudwatch --timeout 600s
+      ./kubectl rollout status deployment windows-test-deployment --timeout 600s
+    EOT
+  }
+
 }
 
-output "cluster_endpoint" {
-  value = aws_eks_cluster.cluster.endpoint
+##########################################
+# Template Files
+##########################################
+locals {
+  cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./../../default_resources/default_amazon_cloudwatch_agent.json"
 }
 
-output "cluster_cert" {
-  value = aws_eks_cluster.cluster.certificate_authority.0.data
+data "template_file" "cwagent_config" {
+  template = file(local.cwagent_config)
+  vars = {
+  }
 }
 
-output "node_role_name" {
-  value = aws_iam_role.node_role.name
+resource "kubernetes_config_map" "cwagentconfig" {
+  depends_on = [
+    kubernetes_namespace.namespace,
+    kubernetes_service_account.cwagentservice
+  ]
+  metadata {
+    name      = "cwagentconfig"
+    namespace = "amazon-cloudwatch"
+  }
+  data = {
+    "cwagentconfig.json" : data.template_file.cwagent_config.rendered
+  }
 }
 
-output "node_role_arn" {
-  value = aws_iam_role.node_role.arn
+resource "kubernetes_service_account" "cwagentservice" {
+  depends_on = [kubernetes_namespace.namespace]
+  metadata {
+    name      = "cloudwatch-agent"
+    namespace = "amazon-cloudwatch"
+  }
+}
+
+resource "kubernetes_cluster_role" "clusterrole" {
+  depends_on = [kubernetes_namespace.namespace]
+  metadata {
+    name = "cloudwatch-agent-role"
+  }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["pods", "nodes", "endpoints"]
+    api_groups = [""]
+  }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["replicasets"]
+    api_groups = ["apps"]
+  }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["jobs"]
+    api_groups = ["batch"]
+  }
+  rule {
+    verbs      = ["get"]
+    resources  = ["nodes/proxy"]
+    api_groups = [""]
+  }
+  rule {
+    verbs      = ["create", "get"]
+    resources  = ["nodes/stats", "configmaps", "events"]
+    api_groups = [""]
+  }
+  rule {
+    verbs          = ["get", "update"]
+    resource_names = ["cwagent-clusterleader"]
+    resources      = ["configmaps"]
+    api_groups     = [""]
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "rolebinding" {
+  depends_on = [kubernetes_namespace.namespace]
+  metadata {
+    name = "cloudwatch-agent-role-binding"
+  }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cloudwatch-agent-role"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = "cloudwatch-agent"
+    namespace = "amazon-cloudwatch"
+  }
+}
+
+resource "null_resource" "validator" {
+  depends_on = [
+    aws_eks_node_group.this,
+    kubernetes_daemonset.service,
+    kubernetes_cluster_role_binding.rolebinding,
+    kubernetes_service_account.cwagentservice,
+    null_resource.windows-cwagent
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Validating EKS metrics/logs"
+      cd ../../../../..
+      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -instancePlatform=windows
+    EOT
+  }
 }

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windows-test-deployment
+spec:
+  selector:
+    matchLabels:
+      app: windows-test-deployment
+      tier: backend
+      track: stable
+  replicas: REPLICAS
+  template:
+    metadata:
+      labels:
+        app: windows-test-deployment
+        tier: backend
+        track: stable
+    spec:
+      containers:
+        - name: windows-test-deployment
+          image: mcr.microsoft.com/windows/servercore/iis:windowsservercore-ltscWINDOWS_SERVER_VERSION
+          command:
+            - powershell.exe
+            - -command
+            - "Add-WindowsFeature Web-Server; Invoke-WebRequest -UseBasicParsing -Uri 'https://dotnetbinaries.blob.core.windows.net/servicemonitor/2.0.1.6/ServiceMonitor.exe' -OutFile 'C:\\ServiceMonitor.exe'; echo '<html><body><br/><br/><H1>Windows Container Workshop - Windows LTSC2019!!!<H1></body><html>' > C:\\inetpub\\wwwroot\\iisstart.htm; C:\\ServiceMonitor.exe 'w3svc'; "
+      nodeSelector:
+        kubernetes.io/os: windows
+
