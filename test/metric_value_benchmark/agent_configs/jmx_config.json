@@ -17,7 +17,8 @@
       "jmx": [
         {
           "endpoint": "localhost:2020",
-          "target_system": "jvm,kafka"
+          "jvm": [],
+          "kafka" : []
         }
       ]
     }
