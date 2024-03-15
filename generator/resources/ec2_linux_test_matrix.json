@@ -24,7 +24,7 @@
   {
     "os": "ubuntu-23",
     "username": "ubuntu",
-    "instanceType":"t3a.medium",
+    "instanceType":"t3.medium",
     "installAgentCommand": "go run ./install/install_agent.go deb",
     "ami": "cloudwatch-agent-integration-test-ubuntu-23*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
