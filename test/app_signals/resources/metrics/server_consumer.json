@@ -35,61 +35,308 @@
             {
               "name": "Error",
               "unit": "Milliseconds",
-              "Error": {
-                "Values": [0],
-                "Counts": [1],
-                "Max": 0,
-                "Min": 0,
-                "Count": 1,
-                "Sum": 0
+              "sum": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "aws.span.kind",
+                        "value": {
+                          "stringValue": "SERVER"
+                        }
+                      },
+                      {
+                        "key": "Operation",
+                        "value": {
+                          "stringValue": "operation"
+                        }
+                      },
+                      {
+                        "key": "Service",
+                        "value": {
+                          "stringValue": "service-name"
+                        }
+                      },
+                      {
+                        "key": "K8s.Namespace",
+                        "value": {
+                          "stringValue": "default"
+                        }
+                      },
+                      {
+                        "key": "K8s.Pod",
+                        "value": {
+                          "stringValue": "pod-name"
+                        }
+                      },
+                      {
+                        "key": "K8s.Node",
+                        "value": {
+                          "stringValue": "i-00000000000000000"
+                        }
+                      },
+                      {
+                        "key": "K8s.Workload",
+                        "value": {
+                          "stringValue": "sample-app"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "values": [0],
+                    "counts": [1],
+                    "max": 0,
+                    "min": 0,
+                    "count": 1,
+                    "sum": 0
+                  }
+                ]
               }
             },
             {
               "name": "Fault",
               "unit": "Milliseconds",
-              "Fault": {
-                "Values": [0],
-                "Counts": [1],
-                "Max": 0,
-                "Min": 0,
-                "Count": 1,
-                "Sum": 0
+              "sum": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "aws.span.kind",
+                        "value": {
+                          "stringValue": "SERVER"
+                        }
+                      },
+                      {
+                        "key": "Operation",
+                        "value": {
+                          "stringValue": "operation"
+                        }
+                      },
+                      {
+                        "key": "Service",
+                        "value": {
+                          "stringValue": "service-name"
+                        }
+                      },
+                      {
+                        "key": "K8s.Namespace",
+                        "value": {
+                          "stringValue": "default"
+                        }
+                      },
+                      {
+                        "key": "K8s.Pod",
+                        "value": {
+                          "stringValue": "pod-name"
+                        }
+                      },
+                      {
+                        "key": "K8s.Node",
+                        "value": {
+                          "stringValue": "i-00000000000000000"
+                        }
+                      },
+                      {
+                        "key": "K8s.Workload",
+                        "value": {
+                          "stringValue": "sample-app"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "values": [0],
+                    "counts": [1],
+                    "max": 0,
+                    "min": 0,
+                    "count": 1,
+                    "sum": 0
+                  }
+                ]
               }
             },
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "Latency": {
-                "Values": [1],
-                "Counts": [1],
-                "Max": 1,
-                "Min": 1,
-                "Count": 1,
-                "Sum": 1
+              "sum": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "aws.span.kind",
+                        "value": {
+                          "stringValue": "SERVER"
+                        }
+                      },
+                      {
+                        "key": "Operation",
+                        "value": {
+                          "stringValue": "operation"
+                        }
+                      },
+                      {
+                        "key": "Service",
+                        "value": {
+                          "stringValue": "service-name"
+                        }
+                      },
+                      {
+                        "key": "K8s.Namespace",
+                        "value": {
+                          "stringValue": "default"
+                        }
+                      },
+                      {
+                        "key": "K8s.Pod",
+                        "value": {
+                          "stringValue": "pod-name"
+                        }
+                      },
+                      {
+                        "key": "K8s.Node",
+                        "value": {
+                          "stringValue": "i-00000000000000000"
+                        }
+                      },
+                      {
+                        "key": "K8s.Workload",
+                        "value": {
+                          "stringValue": "sample-app"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "values": [1],
+                    "counts": [1],
+                    "max": 1,
+                    "min": 1,
+                    "count": 1,
+                    "sum": 1
+                  }
+                ]
               }
             },
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "Latency": {
-                "Values": [1],
-                "Counts": [1],
-                "Max": 1,
-                "Min": 1,
-                "Count": 1,
-                "Sum": 1
+              "sum": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "aws.span.kind",
+                        "value": {
+                          "stringValue": "SERVER"
+                        }
+                      },
+                      {
+                        "key": "Operation",
+                        "value": {
+                          "stringValue": "operation"
+                        }
+                      },
+                      {
+                        "key": "Service",
+                        "value": {
+                          "stringValue": "drop-service-name-1"
+                        }
+                      },
+                      {
+                        "key": "K8s.Namespace",
+                        "value": {
+                          "stringValue": "default"
+                        }
+                      },
+                      {
+                        "key": "K8s.Pod",
+                        "value": {
+                          "stringValue": "pod-name"
+                        }
+                      },
+                      {
+                        "key": "K8s.Node",
+                        "value": {
+                          "stringValue": "i-00000000000000000"
+                        }
+                      },
+                      {
+                        "key": "K8s.Workload",
+                        "value": {
+                          "stringValue": "sample-app"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "sum": 1,
+                    "min": 1,
+                    "max": 1
+                  }
+                ]
               }
             },
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "Latency": {
-                "Values": [1],
-                "Counts": [1],
-                "Max": 1,
-                "Min": 1,
-                "Count": 1,
-                "Sum": 1
+              "sum": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "aws.span.kind",
+                        "value": {
+                          "stringValue": "SERVER"
+                        }
+                      },
+                      {
+                        "key": "Operation",
+                        "value": {
+                          "stringValue": "do-not-keep-operation-1"
+                        }
+                      },
+                      {
+                        "key": "Service",
+                        "value": {
+                          "stringValue": "service-name"
+                        }
+                      },
+                      {
+                        "key": "K8s.Namespace",
+                        "value": {
+                          "stringValue": "default"
+                        }
+                      },
+                      {
+                        "key": "K8s.Pod",
+                        "value": {
+                          "stringValue": "pod-name"
+                        }
+                      },
+                      {
+                        "key": "K8s.Node",
+                        "value": {
+                          "stringValue": "i-00000000000000000"
+                        }
+                      },
+                      {
+                        "key": "K8s.Workload",
+                        "value": {
+                          "stringValue": "sample-app"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "values": [1],
+                    "counts": [1],
+                    "max": 1,
+                    "min": 1,
+                    "count": 1,
+                    "sum": 1
+                  }
+                ]
               }
             }
           ]
