@@ -202,9 +202,9 @@
                     ],
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "sum": 0,
-                    "min": 0,
-                    "max": 0
+                    "sum": 1,
+                    "min": 1,
+                    "max": 1
                   }
                 ]
               }
