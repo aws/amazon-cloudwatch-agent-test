@@ -72,7 +72,7 @@ func (e *AppSignalsMetricsRunner) SetupAfterAgentRun() error {
 	if e.computeType == computetype.EC2 {
 		common.RunCommand("pwd")
 		cmd := `while true; export START_TIME=$(date +%s%N); do 
-			cat ./resources/metrics/server_consumer.json | sed -e "s/START_TIME/$START_TIME/" > server_consumer.json; 
+			cat ./resources/metrics/server_consumer.json | sed -e "s/START_TIME/$START_TIME/" > server_consumer.json;
 			curl -H 'Content-Type: application/json' -d @server_consumer.json -i http://127.0.0.1:4316/v1/metrics --verbose; 
 			cat ./resources/metrics/client_producer.json | sed -e "s/START_TIME/$START_TIME/" > client_producer.json; 
 			curl -H 'Content-Type: application/json' -d @client_producer.json -i http://127.0.0.1:4316/v1/metrics --verbose;
