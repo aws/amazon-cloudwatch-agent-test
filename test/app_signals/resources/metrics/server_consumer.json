@@ -34,7 +34,7 @@
           "metrics": [
             {
               "name": "Error",
-              "unit": "Milliseconds",
+              "unit": "Count",
               "sum": {
                 "dataPoints": [
                   {
@@ -96,7 +96,7 @@
             },
             {
               "name": "Fault",
-              "unit": "Milliseconds",
+              "unit": "Count",
               "sum": {
                 "dataPoints": [
                   {
