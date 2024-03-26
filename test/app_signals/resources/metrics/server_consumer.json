@@ -33,67 +33,8 @@
         {
           "metrics": [
             {
-              "name": "Error",
-              "unit": "Milliseconds",
-              "sum": {
-                "dataPoints": [
-                  {
-                    "attributes": [
-                      {
-                        "key": "aws.span.kind",
-                        "value": {
-                          "stringValue": "SERVER"
-                        }
-                      },
-                      {
-                        "key": "Operation",
-                        "value": {
-                          "stringValue": "operation"
-                        }
-                      },
-                      {
-                        "key": "Service",
-                        "value": {
-                          "stringValue": "service-name"
-                        }
-                      },
-                      {
-                        "key": "K8s.Namespace",
-                        "value": {
-                          "stringValue": "default"
-                        }
-                      },
-                      {
-                        "key": "K8s.Pod",
-                        "value": {
-                          "stringValue": "pod-name"
-                        }
-                      },
-                      {
-                        "key": "K8s.Node",
-                        "value": {
-                          "stringValue": "i-00000000000000000"
-                        }
-                      },
-                      {
-                        "key": "K8s.Workload",
-                        "value": {
-                          "stringValue": "sample-app"
-                        }
-                      }
-                    ],
-                    "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME,
-                    "sum": 0,
-                    "min": 0,
-                    "max": 0
-                  }
-                ]
-              }
-            },
-            {
               "name": "Fault",
-              "unit": "Milliseconds",
+              "unit": "Count",
               "sum": {
                 "dataPoints": [
                   {
@@ -141,11 +82,14 @@
                         }
                       }
                     ],
-                    "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME,
-                    "sum": 0,
-                    "min": 0,
-                    "max": 0
+                    "startTimeUnixNano": 1711468020777,
+                    "timeUnixNano": 1711468020777,
+                    "values": [1],
+                    "counts": [1],
+                    "max": 1,
+                    "min": 1,
+                    "count": 1,
+                    "sum": 1
                   }
                 ]
               }
@@ -200,11 +144,14 @@
                         }
                       }
                     ],
-                    "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME,
-                    "sum": 0,
-                    "min": 0,
-                    "max": 0
+                    "startTimeUnixNano": 1711468020777,
+                    "timeUnixNano": 1711468020777,
+                    "values": [1],
+                    "counts": [1],
+                    "max": 1,
+                    "min": 1,
+                    "count": 1,
+                    "sum": 1
                   }
                 ]
               }
@@ -259,11 +206,14 @@
                         }
                       }
                     ],
-                    "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME,
-                    "sum": 1,
+                    "startTimeUnixNano": 1711468020777,
+                    "timeUnixNano": 1711468020777,
+                    "values": [1],
+                    "counts": [1],
+                    "max": 1,
                     "min": 1,
-                    "max": 1
+                    "count": 1,
+                    "sum": 1
                   }
                 ]
               }
@@ -318,11 +268,14 @@
                         }
                       }
                     ],
-                    "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME,
-                    "sum": 1,
+                    "startTimeUnixNano": 1711468020777,
+                    "timeUnixNano": 1711468020777,
+                    "values": [1],
+                    "counts": [1],
+                    "max": 1,
                     "min": 1,
-                    "max": 1
+                    "count": 1,
+                    "sum": 1
                   }
                 ]
               }
