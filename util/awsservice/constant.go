@@ -5,6 +5,7 @@ package awsservice
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -38,16 +39,41 @@ var (
 )
 
 var (
-	ctx                  = context.Background()
-	awsCfg, _            = config.LoadDefaultConfig(ctx)
-	Ec2Client            = ec2.NewFromConfig(awsCfg)
-	EcsClient            = ecs.NewFromConfig(awsCfg)
-	SsmClient            = ssm.NewFromConfig(awsCfg)
-	ImdsClient           = imds.NewFromConfig(awsCfg)
-	CwmClient            = cloudwatch.NewFromConfig(awsCfg)
-	CwlClient            = cloudwatchlogs.NewFromConfig(awsCfg)
-	DynamodbClient       = dynamodb.NewFromConfig(awsCfg)
-	S3Client             = s3.NewFromConfig(awsCfg)
-	CloudformationClient = cloudformation.NewFromConfig(awsCfg)
-	XrayClient           = xray.NewFromConfig(awsCfg)
+	ctx context.Context
+
+	// AWS Clients
+	Ec2Client            *ec2.Client
+	EcsClient            *ecs.Client
+	SsmClient            *ssm.Client
+	ImdsClient           *imds.Client
+	CwmClient            *cloudwatch.Client
+	CwlClient            *cloudwatchlogs.Client
+	DynamodbClient       *dynamodb.Client
+	S3Client             *s3.Client
+	CloudformationClient *cloudformation.Client
+	XrayClient           *xray.Client
 )
+
+func init() {
+	ctx = context.Background()
+	var err error
+	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))
+	if err != nil {
+		// handle error
+		fmt.Println("There was an error trying to load default config: ", err)
+		return
+	}
+	fmt.Println("This is the aws region: ", awsCfg.Region)
+
+	// Initialize AWS Clients with the configured awsCfg
+	Ec2Client = ec2.NewFromConfig(awsCfg)
+	EcsClient = ecs.NewFromConfig(awsCfg)
+	SsmClient = ssm.NewFromConfig(awsCfg)
+	ImdsClient = imds.NewFromConfig(awsCfg)
+	CwmClient = cloudwatch.NewFromConfig(awsCfg)
+	CwlClient = cloudwatchlogs.NewFromConfig(awsCfg)
+	DynamodbClient = dynamodb.NewFromConfig(awsCfg)
+	S3Client = s3.NewFromConfig(awsCfg)
+	CloudformationClient = cloudformation.NewFromConfig(awsCfg)
+	XrayClient = xray.NewFromConfig(awsCfg)
+}
