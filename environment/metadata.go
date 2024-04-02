@@ -71,11 +71,11 @@ func registerComputeType(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS")
 }
 func registerBucket(dataString *MetaDataStrings) {
-	flag.StringVar(&(dataString.Bucket), "bucket", "", "s3 bucket ex cloudwatch-agent-integration-bucket")
+	flag.StringVar(&(dataString.Bucket), "bucket", "", "s3 bucket ex amazon-cloudwatch-agent.rpm")
 }
 func registerS3Key(dataString *MetaDataStrings) {
-	flag.StringVar(&(dataString.S3Key), "s3key", "release/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm",
-		"s3 key ex cloudwatch-agent-integration-bucket")
+	flag.StringVar(&(dataString.S3Key), "s3key", "amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm",
+		"s3 key ex amazon-cloudwatch-agent.rpm")
 }
 func registerCwaCommitSha(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.CwaCommitSha), "cwaCommitSha", "", "agent commit hash ex 0b81ac79ee13f5248b860bbda3afc4ee57f5b8b6")
