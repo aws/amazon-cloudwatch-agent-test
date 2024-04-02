@@ -27,9 +27,10 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendCollectDMetrics(metricPerInterval, sendingInterval, duration)
 		case "emf":
 			err = SendEMFMetrics(metricPerInterval, metricLogGroup, metricNamespace, sendingInterval, duration)
+		case "app_signals":
+			err = SendAppSignalMetrics(metricPerInterval, []string{}, sendingInterval, duration) //does app signals have dimension for metric?
 		default:
 		}
-
 	}()
 
 	return err
@@ -131,6 +132,19 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 	}
 
 }
+func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendingInterval, duration time.Duration) error {
+
+	// The bash script to be executed asynchronously.
+	RunCommand("pwd")
+	cmd := `while true; export START_TIME=$(date +%s%N); do 
+			cat ./resources/metrics/server_consumer.json | sed -e "s/START_TIME/$START_TIME/" > server_consumer.json; 
+			curl -H 'Content-Type: application/json' -d @server_consumer.json -i http://127.0.0.1:4316/v1/metrics --verbose; 
+			cat ./resources/metrics/client_producer.json | sed -e "s/START_TIME/$START_TIME/" > client_producer.json; 
+			curl -H 'Content-Type: application/json' -d @client_producer.json -i http://127.0.0.1:4316/v1/metrics --verbose;
+			sleep 5; done`
+	return RunAsyncCommand(cmd)
+
+}
 
 func SendStatsdMetrics(metricPerInterval int, metricDimension []string, sendingInterval, duration time.Duration) error {
 	// https://github.com/DataDog/datadog-go#metrics
@@ -210,4 +224,5 @@ func SendEMFMetrics(metricPerInterval int, metricLogGroup, metricNamespace strin
 			return nil
 		}
 	}
+
 }
