@@ -128,21 +128,27 @@ metric_validation:
   - metric_name: "mem_used_percent"
     metric_sample_count: 60
     metric_dimension: []
-  - metric_name: "Latency"
-    metric_sample_count: 60
-    metric_dimension: [ ]
-  - metric_name: "Error"
-    metric_sample_count: 60
-    metric_dimension: [ ]
   - metric_name: "Fault"
     metric_sample_count: 60
-    metric_dimension: [ ]
+    metric_dimension:
+      - name: "operation"
+        value: "operation"
+      - name: "service"
+        value: "service-name"
   - metric_name: "Latency"
     metric_sample_count: 60
-    metric_dimension: [ ]
+    metric_dimension:
+      - name: "operation"
+        value: "operation"
+      - name: "service"
+        value: "drop-service-name-1"
   - metric_name: "Error"
     metric_sample_count: 60
-    metric_dimension: [ ]
+    metric_dimension:
+      - name: "operation"
+        value: "operation"
+      - name: "service"
+        value: "service-name"
 
 # Logs that the test needs to validate; moreover, the feature validation already has
 # InstanceID as a log group; therefore, does not need to pass it
