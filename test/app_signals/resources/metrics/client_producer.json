@@ -54,7 +54,7 @@
                       {
                         "key": "aws.local.service",
                         "value": {
-                          "stringValue": "service-name"
+                          "stringValue": "alibaba-service"
                         }
                       },
                       {
