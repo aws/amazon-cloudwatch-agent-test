@@ -5,6 +5,8 @@
     "metrics": {
       "namespace": "CloudWatchAgentMacFeature",
       "metrics_collected": {
+        "app_signals": {},
+
         "statsd": {
           "metrics_aggregation_interval": 60,
           "metrics_collection_interval": 60,
@@ -96,6 +98,7 @@
         }
       },
       "metrics_collected": {
+        "app_signals": {},
         "emf": { }
       },
       "force_flush_interval": 5
