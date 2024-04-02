@@ -133,7 +133,7 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 
 }
 func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendingInterval, duration time.Duration) error {
-
+	fmt.Println()
 	// The bash script to be executed asynchronously.
 	RunCommand("pwd")
 	cmd := `while true; export START_TIME=$(date +%s%N); do
@@ -143,6 +143,7 @@ func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendi
 			cat ~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json | sed -e "s/START_TIME/$START_TIME/" > client_producer.json; 
 			curl -H 'Content-Type: application/json' -d @client_producer.json -i http://127.0.0.1:4316/v1/metrics --verbose;
 			cat ~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json
+			tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
 			sleep 5; done`
 	return RunAsyncCommand(cmd)
 
