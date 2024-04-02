@@ -2,11 +2,14 @@
     "agent": {
         "debug": true
     },
+  "traces": {
+    "traces_collected": {
+      "app_signals": {}
+    }
+  },
     "metrics": {
       "namespace": "CloudWatchAgentMacFeature",
       "metrics_collected": {
-        "app_signals": {},
-
         "statsd": {
           "metrics_aggregation_interval": 60,
           "metrics_collection_interval": 60,
@@ -14,7 +17,7 @@
         },
         "cpu": {
           "measurement": [
-            "time_active", 
+            "time_active",
             "time_guest"
           ],
           "metrics_collection_interval": 1
@@ -42,7 +45,7 @@
           },
         "mem": {
             "measurement": [
-              "available_percent", 
+              "available_percent",
               "used_percent"
             ],
             "metrics_collection_interval": 1
@@ -63,7 +66,7 @@
               "en0"
             ],
             "measurement": [
-              "bytes_sent", 
+              "bytes_sent",
               "bytes_recv"
             ],
             "metrics_collection_interval": 1
