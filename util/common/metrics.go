@@ -11,8 +11,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/user"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -139,19 +137,7 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 
 }
 func processFile(filePath string, startTime int64) {
-	// Expand the '~' to the user's home directory
-	if strings.HasPrefix(filePath, "~/") {
-		usr, err := user.Current()
-		if err != nil {
-			fmt.Println("Error getting current user:", err)
-			return
-		}
-		homeDir := usr.HomeDir
-		filePath = filepath.Join(homeDir, filePath[2:])
-	}
-
-	// Read the file
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) // Using os.ReadFile here
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return
@@ -182,8 +168,8 @@ func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendi
 		startTime := time.Now().UnixNano()
 
 		// Mimic the `sed` command to replace START_TIME in JSON files
-		processFile("~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/server_consumer.json", startTime)
-		processFile("~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json", startTime)
+		processFile("/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/server_consumer.json", startTime)
+		processFile("/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json", startTime)
 
 		// Sleep for 5 seconds like `sleep 5`
 		time.Sleep(5 * time.Second)
