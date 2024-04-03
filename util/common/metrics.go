@@ -162,7 +162,6 @@ func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendi
 	}
 	fmt.Println("Current Directory:", dir)
 
-	// Infinite loop to mimic `while true`
 	for i := 0; i < int(duration/5); i++ {
 		// Get current time like `date +%s%N`
 		startTime := time.Now().UnixNano()

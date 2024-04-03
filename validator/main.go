@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 	"log"
 	"os"
 	"strings"
@@ -79,6 +80,7 @@ func main() {
 func validate(vConfig models.ValidateConfig) error {
 	var err error
 	for i := 0; i < awsservice.StandardRetries; i++ {
+		basic.RetryCount = i + 1
 		err = validators.LaunchValidator(vConfig)
 
 		if err == nil {

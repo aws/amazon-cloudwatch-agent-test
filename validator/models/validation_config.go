@@ -16,6 +16,7 @@ import (
 )
 
 var supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf", "xray", "app_signals"}
+var retryCount = 0
 
 type ValidateConfig interface {
 	GetPluginsConfig() []string
@@ -55,6 +56,7 @@ type validatorConfig struct {
 
 	CommitHash string `yaml:"commit_hash"`
 	CommitDate string `yaml:"commit_date"`
+	retryCount int
 }
 
 type MetricValidation struct {
