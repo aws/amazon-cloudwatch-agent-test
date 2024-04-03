@@ -31,18 +31,18 @@ func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFact
 
 func LaunchValidator(vConfig models.ValidateConfig) error {
 	var (
-		agentCollectionPeriod = vConfig.GetAgentCollectionPeriod()
-		startTimeValidation   = time.Now().Add(-1 * time.Minute)
-		endTimeValidation     = startTimeValidation.Add(agentCollectionPeriod + 2*time.Minute)
-		//durationBeforeNextMinute = time.Until(startTimeValidation)
+		agentCollectionPeriod    = vConfig.GetAgentCollectionPeriod()
+		startTimeValidation      = time.Now().Truncate(time.Minute).Add(time.Minute)
+		endTimeValidation        = startTimeValidation.Add(agentCollectionPeriod)
+		durationBeforeNextMinute = time.Until(startTimeValidation)
 	)
 
 	validator, err := NewValidator(vConfig)
 	if err != nil {
 		return err
 	}
-	//log.Printf("Start to sleep %f s for the metric to be available in the beginning of next minute ", durationBeforeNextMinute.Seconds())
-	//time.Sleep(durationBeforeNextMinute)
+	log.Printf("Start to sleep %f s for the metric to be available in the beginning of next minute ", durationBeforeNextMinute.Seconds())
+	time.Sleep(durationBeforeNextMinute)
 
 	log.Printf("Start to generate load in %f s for the agent to collect and send all the metrics to CloudWatch within the datapoint period ", agentCollectionPeriod.Seconds())
 	err = validator.GenerateLoad()
@@ -52,8 +52,8 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 	}
 
 	time.Sleep(agentCollectionPeriod)
-	log.Printf("Start to sleep 20s for CloudWatch to process all the metrics")
-	time.Sleep(10 * time.Second)
+	log.Printf("Start to sleep 120s for CloudWatch to process all the metrics")
+	time.Sleep(2 * time.Minute)
 
 	err = validator.CheckData(startTimeValidation, endTimeValidation)
 	if err != nil {

@@ -103,7 +103,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		//quick testing method for app signals
 		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
 
-			err := s.ValidateMetric(metric.MetricName, "AppSignals", appSignalDimensions, metric.MetricValue, 1, startTime, endTime)
+			err := s.ValidateMetric(metric.MetricName, "AppSignals", appSignalDimensions, metric.MetricValue, metric.MetricSampleCount, startTime, endTime)
 			if err != nil {
 				multiErr = multierr.Append(multiErr, err)
 			}
@@ -188,61 +188,6 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 	}
 	fmt.Printf("For metric: %v This is the metric data result: %v and the result values: %v", metricName, metrics.MetricDataResults, metrics.MetricDataResults[0].Values)
 	if len(metrics.MetricDataResults) == 0 || len(metrics.MetricDataResults[0].Values) == 0 {
-		//fmt.Println("Attempting to read amazon cloudwatch agent logs after trying to validate getting metrics")
-		//logFilePath := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
-		//
-		//// Open the file
-		//file, err := os.Open(logFilePath)
-		//if err != nil {
-		//	fmt.Println("Error opening file:", err)
-		//	return err
-		//}
-		//defer file.Close()
-		//
-		//// Create a new Scanner for the file
-		//scanner := bufio.NewScanner(file)
-		//
-		//// Loop over all lines in the file
-		//for scanner.Scan() {
-		//	// Print each line
-		//	fmt.Println(scanner.Text())
-		//}
-		//
-		//// Check for errors during Scan
-		//if err := scanner.Err(); err != nil {
-		//	fmt.Println("Error reading file:", err)
-		//}
-		//homeDir, err := os.UserHomeDir()
-		//if err != nil {
-		//	fmt.Println("Error getting home directory:", err)
-		//	return err
-		//}
-		//
-		//// Construct the file path
-		//jsonFilePath := filepath.Join(homeDir, "amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json")
-		//fmt.Println("Attempting to read client_producer.json")
-		//
-		//// Open the JSON file
-		//file, err = os.Open(jsonFilePath)
-		//if err != nil {
-		//	fmt.Println("Error opening file:", err)
-		//	return err
-		//}
-		//defer file.Close()
-		//
-		//// Create a new Scanner for the file
-		//scanner = bufio.NewScanner(file)
-		//
-		//// Loop over all lines in the file
-		//for scanner.Scan() {
-		//	// Print each line
-		//	fmt.Println(scanner.Text())
-		//}
-		//
-		//// Check for errors during Scan
-		//if err := scanner.Err(); err != nil {
-		//	fmt.Println("Error reading file:", err)
-		//}
 		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
 	}
 
@@ -285,10 +230,6 @@ func (s *BasicValidator) buildMetricQueries(metricName, metricNamespace string, 
 			Id: aws.String(strings.ToLower(metricName)),
 		},
 	}
-	//if metricName == "Latency" || metricName == "Fault" || metricName == "Error" {
-	//	metricDataQueries[0].MetricStat.Unit = "Milliseconds"
-	//	*metricDataQueries[0].ReturnData = true
-	//}
 
 	fmt.Println("Maybe better form of metric query")
 	jsonBytes, err := json.MarshalIndent(metricDataQueries, "", "    ")
