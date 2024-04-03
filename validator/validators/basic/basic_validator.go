@@ -173,7 +173,6 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource st
 }
 
 func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metricDimensions []cwtypes.Dimension, metricValue float64, metricSampleCount int, startTime, endTime time.Time) error {
-	metricSampleCount = 10
 	var (
 		boundAndPeriod = s.vConfig.GetAgentCollectionPeriod().Seconds()
 	)
@@ -193,7 +192,7 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, 1, metricSampleCount+10, int32(boundAndPeriod)); !ok {
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount, metricSampleCount, int32(boundAndPeriod)); !ok {
 		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, 1, metricSampleCount)
 	} else {
 		fmt.Println("Yayyyyyyy!!!!!!! sample count is good for :", metricName)
