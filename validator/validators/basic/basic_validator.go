@@ -103,7 +103,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		//quick testing method for app signals
 		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
 
-			err := s.ValidateMetric(metric.MetricName, "AppSignals", appSignalDimensions, metric.MetricValue, 1, startTime, endTime)
+			err := s.ValidateMetric(metric.MetricName, "default", appSignalDimensions, metric.MetricValue, 1, startTime, endTime)
 			if err != nil {
 				multiErr = multierr.Append(multiErr, err)
 			}
