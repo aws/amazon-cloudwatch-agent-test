@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -138,7 +137,7 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 
 }
 func processFile(filePath string, startTime int64) {
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) // Using os.ReadFile here
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return
