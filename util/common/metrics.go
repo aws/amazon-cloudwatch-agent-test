@@ -4,10 +4,13 @@
 package common
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"time"
 
 	"collectd.org/api"
@@ -133,7 +136,6 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 
 }
 func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendingInterval, duration time.Duration) error {
-	fmt.Println()
 	// The bash script to be executed asynchronously.
 	RunCommand("pwd")
 	cmd := `while true; export START_TIME=$(date +%s%N); do
@@ -145,7 +147,64 @@ func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendi
 			cat ~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json
 			tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
 			sleep 5; done`
-	return RunAsyncCommand(cmd)
+
+	holder := RunAsyncCommand(cmd)
+	fmt.Println("Attempting to read amazon cloudwatch agent logs")
+	logFilePath := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+
+	// Open the file
+	file, err := os.Open(logFilePath)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return err
+	}
+	defer file.Close()
+
+	// Create a new Scanner for the file
+	scanner := bufio.NewScanner(file)
+
+	// Loop over all lines in the file
+	for scanner.Scan() {
+		// Print each line
+		fmt.Println(scanner.Text())
+	}
+
+	// Check for errors during Scan
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading file:", err)
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("Error getting home directory:", err)
+		return err
+	}
+
+	// Construct the file path
+	jsonFilePath := filepath.Join(homeDir, "amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json")
+	fmt.Println("Attempting to read client_producer.json")
+
+	// Open the JSON file
+	file, err = os.Open(jsonFilePath)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return err
+	}
+	defer file.Close()
+
+	// Create a new Scanner for the file
+	scanner = bufio.NewScanner(file)
+
+	// Loop over all lines in the file
+	for scanner.Scan() {
+		// Print each line
+		fmt.Println(scanner.Text())
+	}
+
+	// Check for errors during Scan
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading file:", err)
+	}
+	return holder
 
 }
 
