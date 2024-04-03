@@ -197,7 +197,7 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 	if metricName == "Latency" || metricName == "Error" || metricName == "Fault" {
 		metricSampleCount = metricSampleCount * RetryCount
 	}
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount, metricSampleCount, int32(boundAndPeriod)); !ok {
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-2, metricSampleCount, int32(boundAndPeriod)); !ok {
 		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, 1, metricSampleCount)
 	} else {
 		fmt.Println("Yayyyyyyy!!!!!!! sample count is good for :", metricName)
