@@ -4,9 +4,12 @@
 package basic
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -81,33 +84,12 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(dimension.Value),
 			})
 		}
-		environmentValue := "Generic"          // Replace with actual value
-		operationValue := "replaced-operation" // Replace with actual value
-		serviceValue := "service-name"         // Replace with actual value
+		//environmentValue := "Generic"          // Replace with actual value
+		//operationValue := "replaced-operation" // Replace with actual value
+		//serviceValue := "service-name"         // Replace with actual value
 
 		// Creating the first group of dimensions
-		appSignalDimensions := []cwtypes.Dimension{
-			{
-				Name:  aws.String("HostedIn.Environment"),
-				Value: aws.String(environmentValue),
-			},
-			{
-				Name:  aws.String("Operation"),
-				Value: aws.String(operationValue),
-			},
-			{
-				Name:  aws.String("Service"),
-				Value: aws.String(serviceValue),
-			},
-			{
-				Name:  aws.String("HostedIn.Environment"),
-				Value: aws.String(environmentValue),
-			},
-			{
-				Name:  aws.String("Service"),
-				Value: aws.String(serviceValue),
-			},
-		}
+		appSignalDimensions := []cwtypes.Dimension{}
 		//quick testing method for app signals
 		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
 
@@ -195,6 +177,61 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 	}
 
 	if len(metrics.MetricDataResults) == 0 || len(metrics.MetricDataResults[0].Values) == 0 {
+		fmt.Println("Attempting to read amazon cloudwatch agent logs after trying to validate getting metrics")
+		logFilePath := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+
+		// Open the file
+		file, err := os.Open(logFilePath)
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			return err
+		}
+		defer file.Close()
+
+		// Create a new Scanner for the file
+		scanner := bufio.NewScanner(file)
+
+		// Loop over all lines in the file
+		for scanner.Scan() {
+			// Print each line
+			fmt.Println(scanner.Text())
+		}
+
+		// Check for errors during Scan
+		if err := scanner.Err(); err != nil {
+			fmt.Println("Error reading file:", err)
+		}
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Println("Error getting home directory:", err)
+			return err
+		}
+
+		// Construct the file path
+		jsonFilePath := filepath.Join(homeDir, "amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json")
+		fmt.Println("Attempting to read client_producer.json")
+
+		// Open the JSON file
+		file, err = os.Open(jsonFilePath)
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			return err
+		}
+		defer file.Close()
+
+		// Create a new Scanner for the file
+		scanner = bufio.NewScanner(file)
+
+		// Loop over all lines in the file
+		for scanner.Scan() {
+			// Print each line
+			fmt.Println(scanner.Text())
+		}
+
+		// Check for errors during Scan
+		if err := scanner.Err(); err != nil {
+			fmt.Println("Error reading file:", err)
+		}
 		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
 	}
 
@@ -235,6 +272,11 @@ func (s *BasicValidator) buildMetricQueries(metricName, metricNamespace string, 
 			Id: aws.String(strings.ToLower(metricName)),
 		},
 	}
+	if metricName == "Latency" || metricName == "Fault" || metricName == "Error" {
+		metricDataQueries[0].MetricStat.Unit = "Milliseconds"
+		*metricDataQueries[0].ReturnData = true
+	}
+
 	fmt.Println("Maybe better form of metric query")
 	jsonBytes, err := json.MarshalIndent(metricDataQueries, "", "    ")
 	if err != nil {
