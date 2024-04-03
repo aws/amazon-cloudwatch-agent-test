@@ -4,13 +4,10 @@
 package common
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"time"
 
 	"collectd.org/api"
@@ -149,61 +146,61 @@ func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendi
 			sleep 5; done`
 
 	holder := RunAsyncCommand(cmd)
-	fmt.Println("Attempting to read amazon cloudwatch agent logs")
-	logFilePath := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
-
-	// Open the file
-	file, err := os.Open(logFilePath)
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return err
-	}
-	defer file.Close()
-
-	// Create a new Scanner for the file
-	scanner := bufio.NewScanner(file)
-
-	// Loop over all lines in the file
-	for scanner.Scan() {
-		// Print each line
-		fmt.Println(scanner.Text())
-	}
-
-	// Check for errors during Scan
-	if err := scanner.Err(); err != nil {
-		fmt.Println("Error reading file:", err)
-	}
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Println("Error getting home directory:", err)
-		return err
-	}
-
-	// Construct the file path
-	jsonFilePath := filepath.Join(homeDir, "amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json")
-	fmt.Println("Attempting to read client_producer.json")
-
-	// Open the JSON file
-	file, err = os.Open(jsonFilePath)
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return err
-	}
-	defer file.Close()
-
-	// Create a new Scanner for the file
-	scanner = bufio.NewScanner(file)
-
-	// Loop over all lines in the file
-	for scanner.Scan() {
-		// Print each line
-		fmt.Println(scanner.Text())
-	}
-
-	// Check for errors during Scan
-	if err := scanner.Err(); err != nil {
-		fmt.Println("Error reading file:", err)
-	}
+	//fmt.Println("Attempting to read amazon cloudwatch agent logs")
+	//logFilePath := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+	//
+	//// Open the file
+	//file, err := os.Open(logFilePath)
+	//if err != nil {
+	//	fmt.Println("Error opening file:", err)
+	//	return err
+	//}
+	//defer file.Close()
+	//
+	//// Create a new Scanner for the file
+	//scanner := bufio.NewScanner(file)
+	//
+	//// Loop over all lines in the file
+	//for scanner.Scan() {
+	//	// Print each line
+	//	fmt.Println(scanner.Text())
+	//}
+	//
+	//// Check for errors during Scan
+	//if err := scanner.Err(); err != nil {
+	//	fmt.Println("Error reading file:", err)
+	//}
+	//homeDir, err := os.UserHomeDir()
+	//if err != nil {
+	//	fmt.Println("Error getting home directory:", err)
+	//	return err
+	//}
+	//
+	//// Construct the file path
+	//jsonFilePath := filepath.Join(homeDir, "amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json")
+	//fmt.Println("Attempting to read client_producer.json")
+	//
+	//// Open the JSON file
+	//file, err = os.Open(jsonFilePath)
+	//if err != nil {
+	//	fmt.Println("Error opening file:", err)
+	//	return err
+	//}
+	//defer file.Close()
+	//
+	//// Create a new Scanner for the file
+	//scanner = bufio.NewScanner(file)
+	//
+	//// Loop over all lines in the file
+	//for scanner.Scan() {
+	//	// Print each line
+	//	fmt.Println(scanner.Text())
+	//}
+	//
+	//// Check for errors during Scan
+	//if err := scanner.Err(); err != nil {
+	//	fmt.Println("Error reading file:", err)
+	//}
 	return holder
 
 }
