@@ -38,7 +38,7 @@ func NewBasicValidator(vConfig models.ValidateConfig) models.ValidatorFactory {
 
 func (s *BasicValidator) GenerateLoad() error {
 	var (
-		metricSendingInterval = time.Minute
+		metricSendingInterval = 10 * time.Second
 		logGroup              = awsservice.GetInstanceId()
 		metricNamespace       = s.vConfig.GetMetricNamespace()
 		dataRate              = s.vConfig.GetDataRate()
@@ -269,10 +269,10 @@ func (s *BasicValidator) buildMetricQueries(metricName, metricNamespace string, 
 			Id: aws.String(strings.ToLower(metricName)),
 		},
 	}
-	if metricName == "Latency" || metricName == "Fault" || metricName == "Error" {
-		metricDataQueries[0].MetricStat.Unit = "Milliseconds"
-		*metricDataQueries[0].ReturnData = true
-	}
+	//if metricName == "Latency" || metricName == "Fault" || metricName == "Error" {
+	//	metricDataQueries[0].MetricStat.Unit = "Milliseconds"
+	//	*metricDataQueries[0].ReturnData = true
+	//}
 
 	fmt.Println("Maybe better form of metric query")
 	jsonBytes, err := json.MarshalIndent(metricDataQueries, "", "    ")

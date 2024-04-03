@@ -31,7 +31,7 @@ func NewFeatureValidator(vConfig models.ValidateConfig) models.ValidatorFactory 
 func (s *FeatureValidator) GenerateLoad() error {
 	var (
 		multiErr              error
-		metricSendingInterval = time.Minute
+		metricSendingInterval = 10 * time.Second
 		logGroup              = awsservice.GetInstanceId()
 		metricNamespace       = s.vConfig.GetMetricNamespace()
 		dataRate              = s.vConfig.GetDataRate()
