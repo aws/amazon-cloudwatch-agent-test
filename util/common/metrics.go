@@ -4,10 +4,15 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"collectd.org/api"
@@ -132,20 +137,44 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 	}
 
 }
+func processFile(filePath string, startTime int64) {
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	// Replace START_TIME with the current time
+	modifiedData := strings.ReplaceAll(string(data), "START_TIME", fmt.Sprintf("%d", startTime))
+
+	// Mimic `curl` command - sending HTTP POST request
+	url := "http://127.0.0.1:4316/v1/metrics"
+	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+	}
+}
 func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendingInterval, duration time.Duration) error {
 	// The bash script to be executed asynchronously.
-	RunCommand("pwd")
-	cmd := `while true; export START_TIME=$(date +%s%N); do
-			cat ~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/server_consumer.json | sed -e "s/START_TIME/$START_TIME/" > server_consumer.json; 
-			curl -H 'Content-Type: application/json' -d @server_consumer.json -i http://127.0.0.1:4316/v1/metrics --verbose; 
-			cat ~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/server_consumer.json
-			cat ~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json | sed -e "s/START_TIME/$START_TIME/" > client_producer.json; 
-			curl -H 'Content-Type: application/json' -d @client_producer.json -i http://127.0.0.1:4316/v1/metrics --verbose;
-			cat ~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json
-			tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
-			sleep 5; done`
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory:", err)
+		return err
+	}
+	fmt.Println("Current Directory:", dir)
 
-	holder := RunAsyncCommand(cmd)
+	// Infinite loop to mimic `while true`
+	for {
+		// Get current time like `date +%s%N`
+		startTime := time.Now().UnixNano()
+
+		// Mimic the `sed` command to replace START_TIME in JSON files
+		processFile("~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/server_consumer.json", startTime)
+		processFile("~/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json", startTime)
+
+		// Sleep for 5 seconds like `sleep 5`
+		time.Sleep(5 * time.Second)
+	}
 	//fmt.Println("Attempting to read amazon cloudwatch agent logs")
 	//logFilePath := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	//
@@ -201,7 +230,7 @@ func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendi
 	//if err := scanner.Err(); err != nil {
 	//	fmt.Println("Error reading file:", err)
 	//}
-	return holder
+	return nil
 
 }
 
