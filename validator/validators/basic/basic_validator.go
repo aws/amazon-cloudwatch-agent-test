@@ -82,9 +82,9 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(dimension.Value),
 			})
 		}
-		environmentValue := "Generic"  // Replace with actual value
-		operationValue := "operation"  // Replace with actual value
-		serviceValue := "service-name" // Replace with actual value
+		environmentValue := "Generic"
+		operationValue := "operation"
+		serviceValue := "service-name"
 
 		// Creating the first group of dimensions
 		appSignalDimensions := []cwtypes.Dimension{
@@ -103,7 +103,6 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		}
 		//quick testing method for app signals
 		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
-
 			err := s.ValidateMetric(metric.MetricName, "AppSignals", appSignalDimensions, metric.MetricValue, metric.MetricSampleCount, startTime, endTime)
 			if err != nil {
 				multiErr = multierr.Append(multiErr, err)

@@ -11,6 +11,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -162,15 +164,23 @@ func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendi
 	}
 	fmt.Println("Current Directory:", dir)
 
+	// Determine the base directory for the files based on the OS
+	var baseDir string
+	if runtime.GOOS == "windows" {
+		baseDir = "C:\\Users\\Administrator\\amazon-cloudwatch-agent-test\\test\\app_signals\\resources\\metrics"
+	} else { // assuming macOS or Unix-like system
+		baseDir = "/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics"
+	}
+
 	for i := 0; i < int(duration/5); i++ {
 		// Get current time like `date +%s%N`
 		startTime := time.Now().UnixNano()
 
-		// Mimic the `sed` command to replace START_TIME in JSON files
-		processFile("/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/server_consumer.json", startTime)
-		processFile("/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics/client_producer.json", startTime)
+		// Process files with dynamic paths
+		processFile(filepath.Join(baseDir, "server_consumer.json"), startTime)
+		processFile(filepath.Join(baseDir, "client_producer.json"), startTime)
 
-		// Sleep for 5 seconds like `sleep 5`
+		// Sleep for 5 seconds
 		time.Sleep(5 * time.Second)
 	}
 
