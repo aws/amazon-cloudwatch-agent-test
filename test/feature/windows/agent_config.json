@@ -2,6 +2,11 @@
     "agent": {
         "debug": true
     },
+  "traces": {
+    "traces_collected": {
+      "app_signals": {}
+    }
+  },
     "metrics": {
       "namespace": "CloudWatchAgentWinFeature",
       "metrics_collected": {
@@ -217,6 +222,7 @@
           }
       },
       "metrics_collected": {
+        "app_signals": {},
         "emf": { },
         "prometheus": {
           "prometheus_config_path": "C:/jmx_workload/prometheus.yaml",
