@@ -32,8 +32,8 @@ func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFact
 func LaunchValidator(vConfig models.ValidateConfig) error {
 	var (
 		agentCollectionPeriod = vConfig.GetAgentCollectionPeriod()
-		startTimeValidation   = time.Now()
-		endTimeValidation     = startTimeValidation.Add(agentCollectionPeriod)
+		startTimeValidation   = time.Now().Add(-1 * time.Minute)
+		endTimeValidation     = startTimeValidation.Add(agentCollectionPeriod + 2*time.Minute)
 		//durationBeforeNextMinute = time.Until(startTimeValidation)
 	)
 
