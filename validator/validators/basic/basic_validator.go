@@ -173,7 +173,7 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 	if err != nil {
 		return err
 	}
-
+	fmt.Printf("For metric: %v This is the metric data result: %v and the result values: %v", metricName, metrics.MetricDataResults, metrics.MetricDataResults[0].Values)
 	if len(metrics.MetricDataResults) == 0 || len(metrics.MetricDataResults[0].Values) == 0 {
 		//fmt.Println("Attempting to read amazon cloudwatch agent logs after trying to validate getting metrics")
 		//logFilePath := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
