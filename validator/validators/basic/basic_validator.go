@@ -81,9 +81,9 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(dimension.Value),
 			})
 		}
-		environmentValue := "Generic"          // Replace with actual value
-		operationValue := "replaced-operation" // Replace with actual value
-		serviceValue := "service-name"         // Replace with actual value
+		environmentValue := "Generic"  // Replace with actual value
+		operationValue := "operation"  // Replace with actual value
+		serviceValue := "service-name" // Replace with actual value
 
 		// Creating the first group of dimensions
 		appSignalDimensions := []cwtypes.Dimension{
