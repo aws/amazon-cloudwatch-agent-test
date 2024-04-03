@@ -11,6 +11,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -137,7 +139,19 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 
 }
 func processFile(filePath string, startTime int64) {
-	data, err := os.ReadFile(filePath) // Using os.ReadFile here
+	// Expand the '~' to the user's home directory
+	if strings.HasPrefix(filePath, "~/") {
+		usr, err := user.Current()
+		if err != nil {
+			fmt.Println("Error getting current user:", err)
+			return
+		}
+		homeDir := usr.HomeDir
+		filePath = filepath.Join(homeDir, filePath[2:])
+	}
+
+	// Read the file
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return
