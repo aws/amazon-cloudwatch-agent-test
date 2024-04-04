@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -26,6 +27,8 @@ import (
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
 )
 
+const LastSendTimeFile = "last_send_time.txt"
+const MinInterval = 60 // Minimum interval in seconds
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
 func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
 	go func() {
@@ -214,6 +217,27 @@ func processFile(filePath string, startTime int64) {
 		fmt.Println("Error sending request:", err)
 	}
 }
+func shouldSendMetrics() (bool, error) {
+	data, err := os.ReadFile(LastSendTimeFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return true, nil // File not found, so we should send
+		}
+		return false, err // Some other error reading the file
+	}
+
+	lastSendTime, err := time.Parse(time.RFC3339, string(data))
+	if err != nil {
+		return false, err // Error parsing the time
+	}
+
+	return time.Since(lastSendTime).Seconds() > MinInterval, nil
+}
+
+func updateLastSendTime() error {
+	now := time.Now().Format(time.RFC3339)
+	return ioutil.WriteFile(LastSendTimeFile, []byte(now), 0644)
+}
 func SendAppSignalMetrics(duration time.Duration) error {
 	// The bash script to be executed asynchronously.
 	dir, err := os.Getwd()
@@ -232,6 +256,14 @@ func SendAppSignalMetrics(duration time.Duration) error {
 	}
 
 	for i := 0; i < int(duration/5); i++ {
+		send, err := shouldSendMetrics()
+		if err != nil {
+			return err
+		}
+		if !send {
+			fmt.Println("Skipping sending metrics as it's too soon.")
+			continue
+		}
 		// Get current time like `date +%s%N`
 		startTime := time.Now().UnixNano()
 
