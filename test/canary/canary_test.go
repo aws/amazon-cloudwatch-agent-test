@@ -9,9 +9,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"testing"
-
+	
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/require"
 
@@ -22,6 +21,8 @@ import (
 
 const (
 	configInputPath = "resources/canary_config.json"
+	versionLink     = "https://amazoncloudwatch-agent.s3.amazonaws.com/info/latest/CWAGENT_VERSION"
+	rpm             = "https://amazoncloudwatch-agent.s3.amazonaws.com/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm"
 )
 
 func init() {
@@ -35,9 +36,8 @@ func TestCanary(t *testing.T) {
 	defer setupCron(e.Bucket, e.S3Key)
 	// Don't care if uninstall fails. Agent might not be installed anyways.
 	_ = common.UninstallAgent(common.RPM)
-	// S3 keys always use backslash, so split on that to get filename.
-	installerFilePath := "./" + e.S3Key[strings.LastIndex(e.S3Key, "/")+1:]
-	err := awsservice.DownloadFile(e.Bucket, e.S3Key, installerFilePath)
+	installerFilePath := "./amazon-cloudwatch-agent.rpm"
+	err := common.DownloadFile(installerFilePath, rpm)
 	reportMetric(t, "DownloadFail", err)
 	err = common.InstallAgent(installerFilePath)
 	reportMetric(t, "InstallFail", err)
@@ -45,8 +45,12 @@ func TestCanary(t *testing.T) {
 	err = common.StartAgent(common.ConfigOutputPath, false, false)
 	reportMetric(t, "StartFail", err)
 	actualVersion, _ := os.ReadFile(common.InstallAgentVersionPath)
-	expectedVersion, _ := getVersionFromS3(e.Bucket)
-	if expectedVersion != string(actualVersion) {
+	versionPath := "./CWAGENT_VERSION"
+	err = common.DownloadFile(versionPath, versionLink)
+	reportMetric(t, "DownloadFail for version", err)
+	expectedVersion, _ := os.ReadFile(versionPath)
+
+	if string(expectedVersion) != string(actualVersion) {
 		err = errors.New("agent version mismatch")
 	}
 	reportMetric(t, "VersionFail", err)
@@ -63,18 +67,6 @@ func reportMetric(t *testing.T, name string, err error) {
 	require.NoError(t, awsservice.ReportMetric("CanaryTest", name, v,
 		types.StandardUnitCount))
 	require.NoError(t, err)
-}
-
-func getVersionFromS3(bucket string) (string, error) {
-	filename := "./CWAGENT_VERSION"
-	// Assuming the release process will create this s3 key.
-	key := "release/CWAGENT_VERSION"
-	err := awsservice.DownloadFile(bucket, key, filename)
-	if err != nil {
-		return "", err
-	}
-	v, err := os.ReadFile(filename)
-	return string(v), err
 }
 
 func setupCron(bucket, key string) {

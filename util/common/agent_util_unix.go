@@ -8,7 +8,9 @@ package common
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -110,6 +112,24 @@ func UninstallAgent(pm PackageManager) error {
 	out, err := c.Output()
 	printOutputAndError(out, err)
 	return err
+}
+
+func DownloadFile(filepath string, downloadLink string) error {
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	resp, err := http.Get(downloadLink)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // InstallAgent can determine the package manager based on the installer suffix.
