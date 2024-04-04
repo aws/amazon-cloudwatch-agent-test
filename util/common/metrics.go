@@ -6,6 +6,9 @@ package common
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -34,12 +37,68 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 		case "emf":
 			err = SendEMFMetrics(metricPerInterval, metricLogGroup, metricNamespace, sendingInterval, duration)
 		case "app_signals":
-			err = SendAppSignalMetrics(metricPerInterval, []string{}, sendingInterval, duration) //does app signals have dimension for metric?
+			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
+		case "traces":
+			err = SendAppTraceMetrics(duration) //does app signals have dimension for metric?
+
 		default:
 		}
 	}()
 
 	return err
+}
+
+func SendAppTraceMetrics(duration time.Duration) error {
+	baseDir := getBaseDir()
+
+	for i := 0; i < int(duration/(5*time.Second)); i++ {
+		startTime := time.Now().UnixNano()
+		traceID := generateTraceID()
+		traceIDStr := hex.EncodeToString(traceID[:])
+
+		err := processTraceFile(filepath.Join(baseDir, "traces.json"), startTime, traceIDStr)
+		if err != nil {
+			fmt.Println("Error processing trace file:", err)
+			return err
+		}
+
+		time.Sleep(5 * time.Second)
+	}
+
+	return nil
+}
+
+func getBaseDir() string {
+	if runtime.GOOS == "windows" {
+		return "C:\\Users\\Administrator\\amazon-cloudwatch-agent-test\\test\\app_signals\\resources\\traces"
+	}
+	return "/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/traces"
+}
+
+func generateTraceID() [16]byte {
+	var r [16]byte
+	epochNow := time.Now().Unix()
+	binary.BigEndian.PutUint32(r[0:4], uint32(epochNow))
+	rand.Read(r[4:])
+	return r
+}
+
+func processTraceFile(filePath string, startTime int64, traceID string) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	modifiedData := strings.ReplaceAll(string(data), "START_TIME", fmt.Sprintf("%d", startTime))
+	modifiedData = strings.ReplaceAll(modifiedData, "TRACE_ID", traceID)
+
+	url := "http://127.0.0.1:4316/v1/traces"
+	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.Duration) error {
@@ -155,7 +214,7 @@ func processFile(filePath string, startTime int64) {
 		fmt.Println("Error sending request:", err)
 	}
 }
-func SendAppSignalMetrics(metricPerInterval int, metricDimension []string, sendingInterval, duration time.Duration) error {
+func SendAppSignalMetrics(duration time.Duration) error {
 	// The bash script to be executed asynchronously.
 	dir, err := os.Getwd()
 	if err != nil {

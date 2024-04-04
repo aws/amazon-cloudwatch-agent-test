@@ -1,5 +1,5 @@
 # Receivers that agent needs to tests
-receivers: ["system","statsd","emf"]
+receivers: ["system","statsd","emf","app_signals","traces"]
 
 #Test case name
 test_case: "win_feature"
