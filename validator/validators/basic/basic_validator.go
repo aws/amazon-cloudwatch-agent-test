@@ -100,6 +100,10 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				Name:  aws.String("Service"),
 				Value: aws.String(serviceValue),
 			},
+			{
+				Name:  aws.String("InstanceId"),
+				Value: aws.String(ec2InstanceId),
+			},
 		}
 		//quick testing method for app signals
 		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {

@@ -54,7 +54,7 @@
                       {
                         "key": "aws.local.service",
                         "value": {
-                          "stringValue": "alibaba-service"
+                          "stringValue": "service-name"
                         }
                       },
                       {
@@ -73,6 +73,12 @@
                         "key": "aws.remote.target",
                         "value": {
                           "stringValue": "remote-target"
+                        }
+                      },
+                      {
+                        "key": "InstanceID",
+                        "value": {
+                          "stringValue": INSTANCE_ID
                         }
                       }
                     ],
@@ -127,6 +133,12 @@
                         "value": {
                           "stringValue": "remote-target"
                         }
+                      },
+                      {
+                        "key": "InstanceID",
+                        "value": {
+                          "stringValue": INSTANCE_ID
+                        }
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
@@ -179,6 +191,12 @@
                         "key": "aws.remote.target",
                         "value": {
                           "stringValue": "remote-target"
+                        }
+                      },
+                      {
+                        "key": "InstanceID",
+                        "value": {
+                          "stringValue": INSTANCE_ID
                         }
                       }
                     ],
