@@ -82,7 +82,7 @@
                         }
                       },
                       {
-                        "key": "InstanceID",
+                        "key": "InstanceId",
                         "value": {
                           "stringValue": INSTANCE_ID
                         }
@@ -147,7 +147,7 @@
                         }
                       },
                       {
-                        "key": "InstanceID",
+                        "key": "InstanceId",
                         "value": {
                           "stringValue": INSTANCE_ID
                         }
@@ -212,7 +212,7 @@
                         }
                       },
                       {
-                        "key": "InstanceID",
+                        "key": "InstanceId",
                         "value": {
                           "stringValue": INSTANCE_ID
                         }
@@ -277,7 +277,7 @@
                         }
                       },
                       {
-                        "key": "InstanceID",
+                        "key": "InstanceId",
                         "value": {
                           "stringValue": INSTANCE_ID
                         }
@@ -343,7 +343,7 @@
                         }
                       },
                       {
-                        "key": "InstanceID",
+                        "key": "InstanceId",
                         "value": {
                           "stringValue": INSTANCE_ID
                         }
