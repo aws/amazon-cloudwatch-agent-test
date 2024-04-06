@@ -199,7 +199,7 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 	}
 
 }
-func processFile(filePath string, startTime int64) {
+func processFile(filePath string, startTime int64, instanceId string) {
 	data, err := os.ReadFile(filePath) // Using os.ReadFile here
 	if err != nil {
 		fmt.Println("Error reading file:", err)
@@ -208,6 +208,7 @@ func processFile(filePath string, startTime int64) {
 
 	// Replace START_TIME with the current time
 	modifiedData := strings.ReplaceAll(string(data), "START_TIME", fmt.Sprintf("%d", startTime))
+	modifiedData = strings.ReplaceAll(string(data), "INSTANCE_ID", fmt.Sprintf("%d", instanceId))
 
 	// Mimic `curl` command - sending HTTP POST request
 	url := "http://127.0.0.1:4316/v1/metrics"
@@ -267,8 +268,8 @@ func SendAppSignalMetrics(duration time.Duration, instanceId string) error {
 		startTime := time.Now().UnixNano()
 
 		// Process files with dynamic paths
-		processFile(filepath.Join(baseDir, "server_consumer.json"), startTime)
-		processFile(filepath.Join(baseDir, "client_producer.json"), startTime)
+		processFile(filepath.Join(baseDir, "server_consumer.json"), startTime, instanceId)
+		processFile(filepath.Join(baseDir, "client_producer.json"), startTime, instanceId)
 
 		// Sleep for 5 seconds
 		time.Sleep(5 * time.Second)

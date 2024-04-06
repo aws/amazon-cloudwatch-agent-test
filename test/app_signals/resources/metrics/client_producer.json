@@ -74,6 +74,12 @@
                         "value": {
                           "stringValue": "remote-target"
                         }
+                      },
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": INSTANCE_ID
+                        }
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
@@ -127,6 +133,12 @@
                         "value": {
                           "stringValue": "remote-target"
                         }
+                      },
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": INSTANCE_ID
+                        }
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
@@ -179,6 +191,12 @@
                         "key": "aws.remote.target",
                         "value": {
                           "stringValue": "remote-target"
+                        }
+                      },
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": INSTANCE_ID
                         }
                       }
                     ],
