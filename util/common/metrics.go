@@ -39,7 +39,7 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 		case "emf":
 			err = SendEMFMetrics(metricPerInterval, metricLogGroup, metricNamespace, sendingInterval, duration)
 		case "app_signals":
-			err = SendAppSignalMetrics(duration, metricLogGroup) //does app signals have dimension for metric?
+			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
 		case "traces":
 			err = SendAppTraceMetrics(duration) //does app signals have dimension for metric?
 
@@ -199,7 +199,7 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 	}
 
 }
-func processFile(filePath string, startTime int64, instanceId string) {
+func processFile(filePath string, startTime int64) {
 	data, err := os.ReadFile(filePath) // Using os.ReadFile here
 	if err != nil {
 		fmt.Println("Error reading file:", err)
@@ -208,7 +208,6 @@ func processFile(filePath string, startTime int64, instanceId string) {
 
 	// Replace START_TIME with the current time
 	modifiedData := strings.ReplaceAll(string(data), "START_TIME", fmt.Sprintf("%d", startTime))
-	modifiedData = strings.ReplaceAll(string(data), "INSTANCE_ID", fmt.Sprintf("%d", instanceId))
 
 	// Mimic `curl` command - sending HTTP POST request
 	url := "http://127.0.0.1:4316/v1/metrics"
@@ -238,7 +237,7 @@ func updateLastSendTime() error {
 	now := time.Now().Format(time.RFC3339)
 	return os.WriteFile(LastSendTimeFile, []byte(now), 0644)
 }
-func SendAppSignalMetrics(duration time.Duration, instanceId string) error {
+func SendAppSignalMetrics(duration time.Duration) error {
 	// The bash script to be executed asynchronously.
 	dir, err := os.Getwd()
 	if err != nil {
@@ -268,8 +267,8 @@ func SendAppSignalMetrics(duration time.Duration, instanceId string) error {
 		startTime := time.Now().UnixNano()
 
 		// Process files with dynamic paths
-		processFile(filepath.Join(baseDir, "server_consumer.json"), startTime, instanceId)
-		processFile(filepath.Join(baseDir, "client_producer.json"), startTime, instanceId)
+		processFile(filepath.Join(baseDir, "server_consumer.json"), startTime)
+		processFile(filepath.Join(baseDir, "client_producer.json"), startTime)
 
 		// Sleep for 5 seconds
 		time.Sleep(5 * time.Second)

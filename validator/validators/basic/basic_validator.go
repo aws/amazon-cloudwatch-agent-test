@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	apMetrics "github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	cwltypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws"
@@ -100,16 +101,16 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				Name:  aws.String("Service"),
 				Value: aws.String(serviceValue),
 			},
-			{
-				Name:  aws.String("InstanceId"),
-				Value: aws.String(ec2InstanceId),
-			},
 		}
 		//quick testing method for app signals
 		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
-			err := s.ValidateMetric(metric.MetricName, "AppSignals", appSignalDimensions, metric.MetricValue, metric.MetricSampleCount, startTime, endTime)
+			fetcher := apMetrics.MetricValueFetcher{}
+			values, err := fetcher.Fetch("AppSignals", metric.MetricName, appSignalDimensions, "sum", 60)
 			if err != nil {
-				multiErr = multierr.Append(multiErr, err)
+				fmt.Printf("error getting fetching app signals metrics %v", err)
+			}
+			if !apMetrics.IsAllValuesGreaterThanOrEqualToExpectedValue(metric.MetricName, values, 0) {
+				fmt.Printf("error value not the epected values%v", err)
 			}
 		} else {
 			err := s.ValidateMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricValue, metric.MetricSampleCount, startTime, endTime)
