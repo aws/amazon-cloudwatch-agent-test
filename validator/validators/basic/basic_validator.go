@@ -102,7 +102,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(serviceValue),
 			},
 		}
-		//quick testing method for app signals
+		//App Signals metric testing (This is because we want to use a different checking method (same that was done for linux test)
 		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
 			fetcher := apMetrics.MetricValueFetcher{}
 			values, err := fetcher.Fetch("AppSignals", metric.MetricName, appSignalDimensions, "sum", 60)
