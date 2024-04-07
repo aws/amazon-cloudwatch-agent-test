@@ -4,9 +4,6 @@
     },
   "traces": {
     "traces_collected": {
-      "append_dimensions": {
-        "InstanceId": "${aws:InstanceId}"
-      },
       "app_signals": {}
     }
   },
@@ -104,9 +101,6 @@
         }
       },
       "metrics_collected": {
-        "append_dimensions": {
-          "InstanceId": "${aws:InstanceId}"
-        },
         "app_signals": {},
         "emf": { }
       },
