@@ -56,7 +56,7 @@ func ValidateMetric(metricName, namespace string, dimensionsFilter []types.Dimen
 	return nil
 }
 
-// ValidateMetrics takes the metric name, metric dimension and corresponding namespace that contains the metric
+// ValidateMetricWithTest takes the metric name, metric dimension and corresponding namespace that contains the metric
 func ValidateMetricWithTest(t *testing.T, metricName, namespace string, dimensionsFilter []types.DimensionFilter, retries int, retryTime time.Duration) {
 	var err error
 	for i := 0; i < retries; i++ {

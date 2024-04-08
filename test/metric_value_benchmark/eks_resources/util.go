@@ -38,6 +38,14 @@ var (
 	eksPodSchema string
 	//go:embed test_schemas/pod_net.json
 	eksPodNetSchema string
+	//go:embed test_schemas/container_gpu.json
+	eksContainerGpuSchema string
+	//go:embed test_schemas/pod_gpu.json
+	eksPodGpuSchema string
+	//go:embed test_schemas/node_gpu.json
+	eksNodeGpuSchema string
+	//go:embed test_schemas/cluster_gpu.json
+	eksClusterGpuSchema string
 
 	EksClusterValidationMap = map[string]string{
 		"Cluster":           eksClusterSchema,
@@ -54,6 +62,10 @@ var (
 		"NodeNet":           eksNodeNetSchema,
 		"Pod":               eksPodSchema,
 		"PodNet":            eksPodNetSchema,
+		"ContainerGPU":      eksContainerGpuSchema,
+		"PodGPU":            eksPodGpuSchema,
+		"NodeGPU":           eksNodeGpuSchema,
+		"ClusterGPU":        eksClusterGpuSchema,
 	}
 )
 
