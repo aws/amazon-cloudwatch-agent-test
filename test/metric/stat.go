@@ -13,6 +13,5 @@ const (
 	MAXUMUM                  Statistics = "Maxmimum"
 	SUM                      Statistics = "Sum"
 	HighResolutionStatPeriod            = 10
-
-	MinuteStatPeriod = 60
+	MinuteStatPeriod                    = 60
 )
