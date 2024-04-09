@@ -45,3 +45,9 @@ variable "windows_os_version" {
   type    = string
   default = "2022"
 }
+
+variable "hop_limit" {
+  type    = number
+  default = 2
+}
+

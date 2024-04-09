@@ -36,3 +36,8 @@ variable "instance_type" {
   type    = string
   default = "t3a.medium"
 }
+
+variable "hop_limit" {
+  type    = number
+  default = 2
+}

@@ -35,3 +35,8 @@ variable "instance_type" {
   type    = string
   default = "g4dn.xlarge"
 }
+
+variable "hop_limit" {
+  type    = number
+  default = 2
+}

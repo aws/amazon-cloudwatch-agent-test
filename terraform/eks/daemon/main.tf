@@ -47,10 +47,10 @@ resource "aws_eks_node_group" "this" {
     min_size     = 1
   }
 
-  ami_type       = "AL2_x86_64"
+  ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
-  instance_types = ["t3.medium"]
+  instance_types = [var.instance_type]
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
@@ -174,7 +174,8 @@ resource "kubernetes_daemonset" "service" {
     kubernetes_namespace.namespace,
     kubernetes_config_map.cwagentconfig,
     kubernetes_service_account.cwagentservice,
-    aws_eks_node_group.this
+    aws_eks_node_group.this,
+    null_resource.modify_hop_limit
   ]
   metadata {
     name      = "cloudwatch-agent"
@@ -420,6 +421,17 @@ resource "null_resource" "validator" {
       echo "Validating EKS metrics/logs"
       cd ../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
+    EOT
+  }
+}
+
+resource "null_resource" "modify_hop_limit" {
+  depends_on = [
+    aws_eks_node_group.this,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      go run ./modify_hop_limit ${aws_eks_cluster.this.name} ${var.hop_limit}
     EOT
   }
 }

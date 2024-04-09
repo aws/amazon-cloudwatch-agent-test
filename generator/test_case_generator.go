@@ -29,6 +29,7 @@ type matrixRow struct {
 	CaCertPath          string `json:"caCertPath"`
 	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
 	K8sVersion          string `json:"k8s_version"`
+	HopLimit            int    `json:"hop_limit"`
 	TerraformDir        string `json:"terraform_dir"`
 	UseSSM              bool   `json:"useSSM"`
 	ExcludedTests       string `json:"excludedTests"`
@@ -44,13 +45,14 @@ type testConfig struct {
 	runMockServer bool
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
-	targets map[string]map[string]struct{}
+	targets map[string]map[any]struct{}
 	// maxAttempts limits the number of times a test will be run.
 	maxAttempts int
 }
 
 const (
 	testTypeKeyEc2Linux = "ec2_linux"
+	defaultHopLimit     = 2
 )
 
 // you can't have a const map in golang
@@ -63,11 +65,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/cloudwatchlogs"},
 		{
 			testDir: "./test/metrics_number_dimension",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+			targets: map[string]map[any]struct{}{"os": {"al2": {}}},
 		},
 		{
 			testDir:     "./test/emf_concurrent",
-			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
+			targets:     map[string]map[any]struct{}{"os": {"al2": {}}},
 			maxAttempts: 1,
 		},
 		{testDir: "./test/metric_value_benchmark"},
@@ -79,39 +81,39 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/otlp"},
 		{
 			testDir: "./test/acceptance",
-			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
+			targets: map[string]map[any]struct{}{"os": {"ubuntu-20.04": {}}},
 		},
 		// skipping FIPS test as the test cannot be verified
 		// neither ssh nor SSM works after a reboot once FIPS is enabled
 		//{
 		//	testDir: "./test/fips",
-		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		//	targets: map[string]map[any]struct{}{"os": {"rhel8": {}}},
 		//},
 		{
 			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+			targets: map[string]map[any]struct{}{"os": {"al2": {}}},
 		},
 		{
 			testDir: "./test/proxy",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+			targets: map[string]map[any]struct{}{"os": {"al2": {}}},
 		},
 		{
 			testDir: "./test/ssl_cert",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+			targets: map[string]map[any]struct{}{"os": {"al2": {}}},
 		},
 		{
 			testDir:      "./test/userdata",
 			terraformDir: "terraform/ec2/userdata",
-			targets:      map[string]map[string]struct{}{"os": {"ol9": {}}},
+			targets:      map[string]map[any]struct{}{"os": {"ol9": {}}},
 		},
 		{
 			testDir:      "./test/assume_role",
 			terraformDir: "terraform/ec2/creds",
-			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+			targets:      map[string]map[any]struct{}{"os": {"al2": {}}},
 		},
 		{
 			testDir: "./test/app_signals",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+			targets: map[string]map[any]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 	},
 	/*
@@ -129,11 +131,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/windows/event_logs"},
 		{
 			testDir: "../../../test/feature/windows/custom_start/userdata",
-			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
+			targets: map[string]map[any]struct{}{"os": {"win-2019": {}}},
 		},
 		{
 			testDir: "../../../test/feature/windows/custom_start/ssm_start",
-			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
+			targets: map[string]map[any]struct{}{"os": {"win-2019": {}}},
 		},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
@@ -167,56 +169,65 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ecs_ec2_daemon": {
 		{
 			testDir: "./test/metric_value_benchmark",
-			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+			targets: map[string]map[any]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 		{
 			testDir: "./test/statsd",
-			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+			targets: map[string]map[any]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 		{
 			testDir: "./test/emf",
-			targets: map[string]map[string]struct{}{"metadataEnabled": {"disabled": {}}},
+			targets: map[string]map[any]struct{}{"metadataEnabled": {"disabled": {}}},
 		},
 		{
 			testDir: "./test/emf",
-			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+			targets: map[string]map[any]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},
 	"eks_daemon": {
 		{
 			testDir: "./test/metric_value_benchmark",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets: map[string]map[any]struct{}{"arc": {"amd64": {}}},
 		},
 		{
 			testDir:      "./test/metric_value_benchmark",
 			terraformDir: "terraform/eks/daemon/windows/2019",
-			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets:      map[string]map[any]struct{}{"arc": {"amd64": {}}, "hopLimit": {2: {}}},
 		},
 		{
 			testDir:      "./test/metric_value_benchmark",
 			terraformDir: "terraform/eks/daemon/windows/2022",
-			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets:      map[string]map[any]struct{}{"arc": {"amd64": {}}, "hopLimit": {2: {}}},
 		},
 		{
 			testDir: "./test/statsd", terraformDir: "terraform/eks/daemon/statsd",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets: map[string]map[any]struct{}{"arc": {"amd64": {}}, "hopLimit": {2: {}}},
 		},
 		{
 			testDir: "./test/emf", terraformDir: "terraform/eks/daemon/emf",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets: map[string]map[any]struct{}{"arc": {"amd64": {}}, "hopLimit": {2: {}}},
 		},
 		{
 			testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/d",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets: map[string]map[any]struct{}{"arc": {"amd64": {}}, "hopLimit": {2: {}}},
 		},
-		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
-		{testDir: "./test/app_signals", terraformDir: "terraform/eks/daemon/app_signals",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		{
+			testDir:      "./test/fluent",
+			terraformDir: "terraform/eks/daemon/fluent/bit",
+			targets:      map[string]map[any]struct{}{"hopLimit": {2: {}}},
 		},
-		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
+		{
+			testDir: "./test/app_signals", terraformDir: "terraform/eks/daemon/app_signals",
+			targets: map[string]map[any]struct{}{"arc": {"amd64": {}}, "hopLimit": {2: {}}},
+		},
+		{
+			testDir:      "./test/fluent",
+			terraformDir: "terraform/eks/daemon/fluent/windows/2022",
+			targets:      map[string]map[any]struct{}{"arc": {"amd64": {}}, "hopLimit": {2: {}}},
+		},
 		{
 			testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets: map[string]map[any]struct{}{"arc": {"amd64": {}}, "hopLimit": {2: {}}},
 		},
 	},
 	"eks_deployment": {
@@ -254,7 +265,7 @@ func copyAllEC2LinuxTestForOnpremTesting() {
 	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
 		{
 			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+			targets: map[string]map[any]struct{}{"os": {"al2": {}}},
 		},
 	}
 }
@@ -298,6 +309,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 				TestType:     testType,
 				TerraformDir: testConfig.terraformDir,
 				MaxAttempts:  testConfig.maxAttempts,
+				HopLimit:     defaultHopLimit,
 			}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
@@ -318,15 +330,17 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 
 // not so robust way to determine a matrix entry should be included to complete test matrix, but it serves the purpose
 // struct (matrixRow) field should be added as elif to support more. could use reflection with some tradeoffs
-func shouldAddTest(row *matrixRow, targets map[string]map[string]struct{}) bool {
+func shouldAddTest(row *matrixRow, targets map[string]map[any]struct{}) bool {
 	for key, set := range targets {
-		var rowVal string
+		var rowVal any
 		if key == "arc" {
 			rowVal = row.Arc
 		} else if key == "os" {
 			rowVal = row.Os
 		} else if key == "metadataEnabled" {
 			rowVal = row.MetadataEnabled
+		} else if key == "hopLimit" {
+			rowVal = row.HopLimit
 		}
 
 		if rowVal == "" {

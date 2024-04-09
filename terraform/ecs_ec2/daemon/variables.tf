@@ -32,3 +32,8 @@ variable "metadataEnabled" {
   type    = string
   default = "enabled"
 }
+
+variable "hop_limit" {
+  type    = number
+  default = 2
+}
