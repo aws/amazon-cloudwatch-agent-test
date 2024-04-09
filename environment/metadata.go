@@ -43,6 +43,7 @@ type MetaData struct {
 	InstanceId                string
 	InstancePlatform          string
 	AgentStartCommand         string
+	EksGpuType                string
 }
 
 type MetaDataStrings struct {
@@ -65,6 +66,7 @@ type MetaDataStrings struct {
 	InstanceId                string
 	InstancePlatform          string
 	AgentStartCommand         string
+	EksGpuType                string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -94,6 +96,7 @@ func registerECSData(dataString *MetaDataStrings) {
 func registerEKSData(d *MetaDataStrings) {
 	flag.StringVar(&(d.EKSClusterName), "eksClusterName", "", "EKS cluster name")
 	flag.StringVar(&(d.EksDeploymentStrategy), "eksDeploymentStrategy", "", "Daemon/Replica/Sidecar")
+	flag.StringVar(&(d.EksGpuType), "eksGpuType", "", "nvidia/inferentia")
 }
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
@@ -210,6 +213,7 @@ func fillEKSData(e *MetaData, data *MetaDataStrings) {
 	}
 
 	e.EKSClusterName = data.EKSClusterName
+	e.EksGpuType = data.EksGpuType
 }
 func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerComputeType(registeredMetaDataStrings)
@@ -250,6 +254,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.InstanceId = registeredMetaDataStrings.InstanceId
 	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
+	metaDataStorage.EksGpuType = registeredMetaDataStrings.EksGpuType
 
 	return metaDataStorage
 }

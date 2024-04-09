@@ -17,10 +17,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
-type MetricListFetcher struct {
+type Fetcher struct {
 }
 
-func (n *MetricListFetcher) Fetch(namespace, metricName string, dimensions []types.Dimension) ([]types.Metric, error) {
+func (n *Fetcher) Fetch(namespace, metricName string, dimensions []types.Dimension) ([]types.Metric, error) {
 	var dims []types.DimensionFilter
 	for _, dim := range dimensions {
 		dims = append(dims, types.DimensionFilter{
@@ -55,30 +55,4 @@ func (n *MetricListFetcher) Fetch(namespace, metricName string, dimensions []typ
 	}
 	log.Printf("total number of metrics fetched: %v", len(metrics))
 	return metrics, nil
-}
-
-func (n *MetricListFetcher) FetchByDimension(namespace string, dimensions []types.Dimension) ([]types.Metric, error) {
-	var dims []types.DimensionFilter
-	for _, dim := range dimensions {
-		dims = append(dims, types.DimensionFilter{
-			Name:  dim.Name,
-			Value: dim.Value,
-		})
-	}
-
-	listMetricInput := cloudwatch.ListMetricsInput{
-		Namespace:  aws.String(namespace),
-		Dimensions: dims,
-	}
-
-	log.Printf("Metric data input: namespace %v, dimensions %v", namespace, fmt.Sprint(&dims))
-
-	output, err := awsservice.CwmClient.ListMetrics(context.Background(), &listMetricInput)
-	if err != nil {
-		return nil, fmt.Errorf("Error getting metric data %v", err)
-	}
-
-	log.Printf("Metrics fetched : %v", output.Metrics)
-
-	return output.Metrics, nil
 }
