@@ -35,7 +35,7 @@
             {
               "name": "Error",
               "unit": "Milliseconds",
-              "sum": {
+              "exponential_histogram": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -88,7 +88,7 @@
             {
               "name": "Fault",
               "unit": "Milliseconds",
-              "sum": {
+              "exponential_histogram": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -141,7 +141,7 @@
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "sum": {
+              "exponential_histogram": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -184,9 +184,9 @@
                     ],
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "sum": 1,
-                    "min": 1,
-                    "max": 1
+                    "sum": 0,
+                    "min": 0,
+                    "max": 0
                   }
                 ]
               }
