@@ -34,7 +34,7 @@
           "metrics": [
             {
               "name": "Error",
-              "unit": "Milliseconds",
+              "unit": "",
               "exponential_histogram": {
                 "dataPoints": [
                   {
@@ -87,7 +87,7 @@
             },
             {
               "name": "Fault",
-              "unit": "Milliseconds",
+              "unit": "",
               "exponential_histogram": {
                 "dataPoints": [
                   {
@@ -197,3 +197,4 @@
     }
   ]
 }
+
