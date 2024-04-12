@@ -1,3 +1,4 @@
+//server
 {
   "resourceMetrics": [
     {
@@ -80,6 +81,12 @@
                         "value": {
                           "stringValue": "sample-app"
                         }
+                      },
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": "INSTANCE_ID"
+                        }
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
@@ -139,6 +146,12 @@
                         "value": {
                           "stringValue": "sample-app"
                         }
+                      },
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": "INSTANCE_ID"
+                        }
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
@@ -197,6 +210,12 @@
                         "key": "K8s.Workload",
                         "value": {
                           "stringValue": "sample-app"
+                        }
+                      },
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": "INSTANCE_ID"
                         }
                       }
                     ],
@@ -257,8 +276,15 @@
                         "value": {
                           "stringValue": "sample-app"
                         }
+                      },
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": "INSTANCE_ID"
+                        }
                       }
                     ],
+
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
                     "sum": 1,
@@ -315,6 +341,12 @@
                         "key": "K8s.Workload",
                         "value": {
                           "stringValue": "sample-app"
+                        }
+                      },
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": "INSTANCE_ID"
                         }
                       }
                     ],
