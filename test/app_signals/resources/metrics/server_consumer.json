@@ -34,8 +34,8 @@
           "metrics": [
             {
               "name": "Error",
-              "unit": "Milliseconds",
-              "sum": {
+              "unit": "",
+              "exponential_histogram": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -93,8 +93,8 @@
             },
             {
               "name": "Fault",
-              "unit": "Milliseconds",
-              "sum": {
+              "unit": "",
+              "exponential_histogram": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -153,7 +153,7 @@
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "sum": {
+              "exponential_histogram": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -212,7 +212,7 @@
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "sum": {
+              "exponential_histogram": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -271,7 +271,7 @@
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "sum": {
+              "exponential_histogram": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -333,3 +333,4 @@
     }
   ]
 }
+
