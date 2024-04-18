@@ -78,7 +78,7 @@
                       {
                         "key": "InstanceId",
                         "value": {
-                          "stringValue": "INSTANCE_ID"
+                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],
@@ -137,7 +137,7 @@
                       {
                         "key": "InstanceId",
                         "value": {
-                          "stringValue": "INSTANCE_ID"
+                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],
@@ -196,7 +196,7 @@
                       {
                         "key": "InstanceId",
                         "value": {
-                          "stringValue": "INSTANCE_ID"
+                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],

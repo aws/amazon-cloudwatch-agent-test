@@ -4,6 +4,9 @@
   },
   "logs": {
     "metrics_collected": {
+      "append_dimensions": {
+        "InstanceId": "${aws:InstanceId}"
+      },
       "app_signals": {
         "rules":[
           {
