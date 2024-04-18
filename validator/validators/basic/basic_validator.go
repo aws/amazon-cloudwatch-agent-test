@@ -120,16 +120,8 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		}
 		lookbackDuration := time.Duration(-5) * time.Minute
 		timeNow := time.Now()
-		var annotations = map[string]interface{}{
-			"aws_remote_target":    "remote-target",
-			"aws_remote_operation": "remote-operation",
-			"aws_local_service":    "service-name",
-			"aws_remote_service":   "service-name-remote",
-			"aws_local_operation":  "replaced-operation",
-		}
-		annotations["HostedIn_Environment"] = "Generic"
-		xrayFilter := awsservice.FilterExpression(annotations)
-		traceIds, err := awsservice.GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, xrayFilter)
+
+		traceIds, err := awsservice.GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, "")
 		if err != nil {
 			fmt.Printf("error getting trace ids: %v", err)
 			multiErr = multierr.Append(multiErr, err)
