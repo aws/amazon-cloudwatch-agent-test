@@ -127,6 +127,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 			"aws_remote_service":   "service-name-remote",
 			"aws_local_operation":  "replaced-operation",
 		}
+		annotations["HostedIn_Environment"] = "Generic"
 		xrayFilter := awsservice.FilterExpression(annotations)
 		traceIds, err := awsservice.GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, xrayFilter)
 		if err != nil {
