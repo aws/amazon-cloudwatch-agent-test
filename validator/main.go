@@ -87,7 +87,7 @@ func validate(vConfig models.ValidateConfig) error {
 			log.Printf("Test case: %s, validate type: %s has been successfully validated", vConfig.GetTestCase(), vConfig.GetValidateType())
 			return nil
 		}
-		time.Sleep(20 * time.Second)
+		time.Sleep(60 * time.Second)
 		log.Printf("test case: %s, validate type: %s, error: %v", vConfig.GetTestCase(), vConfig.GetValidateType(), err)
 		continue
 	}
