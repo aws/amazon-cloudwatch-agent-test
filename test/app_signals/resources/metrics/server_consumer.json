@@ -80,12 +80,6 @@
                         "value": {
                           "stringValue": "sample-app"
                         }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
-                        }
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
@@ -145,12 +139,6 @@
                         "value": {
                           "stringValue": "sample-app"
                         }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
-                        }
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
@@ -209,12 +197,6 @@
                         "key": "K8s.Workload",
                         "value": {
                           "stringValue": "sample-app"
-                        }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],
@@ -275,12 +257,6 @@
                         "value": {
                           "stringValue": "sample-app"
                         }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
-                        }
                       }
                     ],
 
@@ -340,12 +316,6 @@
                         "key": "K8s.Workload",
                         "value": {
                           "stringValue": "sample-app"
-                        }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],
