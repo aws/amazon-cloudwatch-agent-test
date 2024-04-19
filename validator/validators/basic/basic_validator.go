@@ -132,9 +132,10 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 			fmt.Printf("Trace IDs: %v\n", traceIds)
 			if len(traceIds) > 0 {
 				fmt.Println("Trace IDs look good")
+			} else {
+				multiErr = multierr.Append(multiErr, fmt.Errorf("no trace IDs found"))
 			}
 		}
-		fmt.Println("Trace IDs:", traceIds)
 
 	}
 
