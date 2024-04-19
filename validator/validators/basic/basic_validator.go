@@ -118,29 +118,29 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				multiErr = multierr.Append(multiErr, err)
 			}
 		}
-		lookbackDuration := time.Duration(-5) * time.Minute
-		timeNow := time.Now()
-		var annotations = map[string]interface{}{
-			"aws_remote_target":    "remote-target",
-			"aws_remote_operation": "remote-operation",
-			"aws_local_service":    "service-name",
-			"aws_remote_service":   "service-name-remote",
-			"aws_local_operation":  "replaced-operation",
-		}
-		annotations["HostedIn_Environment"] = "Generic"
-		xrayFilter := awsservice.FilterExpression(annotations)
-		traceIds, err := awsservice.GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, xrayFilter)
-		if err != nil {
-			fmt.Printf("error getting trace ids: %v", err)
-			multiErr = multierr.Append(multiErr, err)
-		} else {
-			fmt.Printf("Trace IDs: %v\n", traceIds)
-			if len(traceIds) > 0 {
-				fmt.Println("Trace IDs look good")
-			}
-		}
-
+		//lookbackDuration := time.Duration(-5) * time.Minute
+		//timeNow := time.Now()
+		//var annotations = map[string]interface{}{
+		//	"aws_remote_target":    "remote-target",
+		//	"aws_remote_operation": "remote-operation",
+		//	"aws_local_service":    "service-name",
+		//	"aws_remote_service":   "service-name-remote",
+		//	"aws_local_operation":  "replaced-operation",
+		//}
+		//annotations["HostedIn_Environment"] = "Generic"
+		//xrayFilter := awsservice.FilterExpression(annotations)
+		//traceIds, err := awsservice.GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, xrayFilter)
+		//if err != nil {
+		//	fmt.Printf("error getting trace ids: %v", err)
+		//	multiErr = multierr.Append(multiErr, err)
+		//} else {
+		//	fmt.Printf("Trace IDs: %v\n", traceIds)
+		//	if len(traceIds) > 0 {
+		//		fmt.Println("Trace IDs look good")
+		//	}
 	}
+
+	//}
 	for _, logValidation := range logValidations {
 		err := s.ValidateLogs(logValidation.LogStream, logValidation.LogValue, logValidation.LogLevel, logValidation.LogSource, logValidation.LogLines, startTime, endTime)
 		if err != nil {
