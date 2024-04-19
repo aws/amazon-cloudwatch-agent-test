@@ -78,9 +78,9 @@
                     ],
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "sum": 0,
-                    "min": 0,
-                    "max": 0
+                    "sum_": 0,
+                    "min_": 0,
+                    "max_": 0
                   }
                 ]
               }
@@ -131,9 +131,9 @@
                     ],
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "sum": 0,
-                    "min": 0,
-                    "max": 0
+                    "sum_": 0,
+                    "min_": 0,
+                    "max_": 0
                   }
                 ]
               }
@@ -184,9 +184,9 @@
                     ],
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "sum": 1,
-                    "min": 1,
-                    "max": 1
+                    "sum_": 1,
+                    "min_": 1,
+                    "max_": 1
                   }
                 ]
               }
