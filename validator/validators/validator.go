@@ -53,7 +53,7 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 
 	time.Sleep(agentCollectionPeriod)
 	log.Printf("Start to sleep 120s for CloudWatch to process all the metrics")
-	time.Sleep(20 * time.Second)
+	time.Sleep(120 * time.Second)
 
 	err = validator.CheckData(startTimeValidation, endTimeValidation)
 	if err != nil {

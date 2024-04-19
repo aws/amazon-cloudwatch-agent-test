@@ -5,6 +5,7 @@ package metric
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -49,6 +50,15 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 			Id: aws.String(strings.ToLower(metricName)),
 		},
 	}
+
+	// Marshal the metricDataQueries slice into JSON with indentation
+	jsonData, err := json.MarshalIndent(metricDataQueries, "", "    ")
+	if err != nil {
+		fmt.Println("Error marshaling JSON:", err)
+	}
+
+	// Print the JSON data
+	fmt.Println(string(jsonData))
 
 	endTime := time.Now()
 	startTime := subtractMinutes(endTime, 10)
