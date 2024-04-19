@@ -129,7 +129,7 @@ metric_validation:
     metric_sample_count: 60
     metric_dimension: []
   - metric_name: "Fault"
-    metric_sample_count: 12
+    metric_sample_count: 60
     metric_dimension:
       - name: "HostedIn.Environment"
         value: "Generic"
@@ -138,7 +138,7 @@ metric_validation:
       - name: "Service"
         value: "service-name"
   - metric_name: "Latency"
-    metric_sample_count: 12
+    metric_sample_count: 60
     metric_dimension:
       - name: "HostedIn.Environment"
         value: "Generic"
@@ -147,7 +147,7 @@ metric_validation:
       - name: "Service"
         value: "service-name"
   - metric_name: "Error"
-    metric_sample_count: 12
+    metric_sample_count: 60
     metric_dimension:
       - name: "HostedIn.Environment"
         value: "Generic"
