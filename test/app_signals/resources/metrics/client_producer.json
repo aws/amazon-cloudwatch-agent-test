@@ -202,15 +202,7 @@
                     "timeUnixNano": START_TIME,
                     "count": 0,
                     "scale": 0,
-                    "zeroCount": 0,
-                    "positive": {
-                      "offset": 0,
-                      "bucket_counts": [1, 2, 3]
-                    },
-                    "negative": {
-                      "offset": 0,
-                      "bucket_counts": [1, 2, 3]
-                    }
+                    "zeroCount": 0
                   }
                 ]
               }
