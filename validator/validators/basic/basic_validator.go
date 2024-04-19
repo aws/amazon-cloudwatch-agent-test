@@ -120,7 +120,8 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		}
 		//lookbackDuration := time.Duration(-5) * time.Minute
 		serviceName := "service-name"
-		filterExpression := fmt.Sprintf("annotation.aws.local.service='%s'", serviceName)
+		serviceType := "AWS::EC2::Instance"
+		filterExpression := fmt.Sprintf("(service(id(name: \"%s\", type: \"%s\")))", serviceName, serviceType)
 
 		startTime := time.Now().Add(-time.Hour) // Example: 1 hour ago
 		endTime := time.Now()                   // Current time
