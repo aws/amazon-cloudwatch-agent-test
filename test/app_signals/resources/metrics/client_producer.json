@@ -36,150 +36,19 @@
               "name": "Error",
               "unit": "",
               "exponential_histogram": {
-                "dataPoints": [
-                  {
-                    "attributes": [
-                      {
-                        "key": "aws.span.kind",
-                        "value": {
-                          "stringValue": "CLIENT"
-                        }
-                      },
-                      {
-                        "key": "aws.local.operation",
-                        "value": {
-                          "stringValue": "operation"
-                        }
-                      },
-                      {
-                        "key": "aws.local.service",
-                        "value": {
-                          "stringValue": "service-name"
-                        }
-                      },
-                      {
-                        "key": "aws.remote.operation",
-                        "value": {
-                          "stringValue": "remote-operation"
-                        }
-                      },
-                      {
-                        "key": "aws.remote.service",
-                        "value": {
-                          "stringValue": "service-name-remote"
-                        }
-                      },
-                      {
-                        "key": "aws.remote.target",
-                        "value": {
-                          "stringValue": "remote-target"
-                        }
-                      }
-                    ],
-                    "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME
-                  }
-                ]
               }
             },
             {
               "name": "Fault",
               "unit": "",
               "exponential_histogram": {
-                "dataPoints": [
-                  {
-                    "attributes": [
-                      {
-                        "key": "aws.span.kind",
-                        "value": {
-                          "stringValue": "CLIENT"
-                        }
-                      },
-                      {
-                        "key": "aws.local.operation",
-                        "value": {
-                          "stringValue": "operation"
-                        }
-                      },
-                      {
-                        "key": "aws.local.service",
-                        "value": {
-                          "stringValue": "service-name"
-                        }
-                      },
-                      {
-                        "key": "aws.remote.operation",
-                        "value": {
-                          "stringValue": "remote-operation"
-                        }
-                      },
-                      {
-                        "key": "aws.remote.service",
-                        "value": {
-                          "stringValue": "service-name-remote"
-                        }
-                      },
-                      {
-                        "key": "aws.remote.target",
-                        "value": {
-                          "stringValue": "remote-target"
-                        }
-                      }
-                    ],
-                    "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME
-                  }
-                ]
               }
             },
             {
               "name": "Latency",
               "unit": "Milliseconds",
               "exponential_histogram": {
-                "dataPoints": [
-                  {
-                    "attributes": [
-                      {
-                        "key": "aws.span.kind",
-                        "value": {
-                          "stringValue": "CLIENT"
-                        }
-                      },
-                      {
-                        "key": "aws.local.operation",
-                        "value": {
-                          "stringValue": "operation"
-                        }
-                      },
-                      {
-                        "key": "aws.local.service",
-                        "value": {
-                          "stringValue": "service-name"
-                        }
-                      },
-                      {
-                        "key": "aws.remote.operation",
-                        "value": {
-                          "stringValue": "remote-operation"
-                        }
-                      },
-                      {
-                        "key": "aws.remote.service",
-                        "value": {
-                          "stringValue": "service-name-remote"
-                        }
-                      },
-                      {
-                        "key": "aws.remote.target",
-                        "value": {
-                          "stringValue": "remote-target"
-                        }
-                      }
-                    ],
-                    "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME
-                  }
-                ]
+
               }
             }
           ]
