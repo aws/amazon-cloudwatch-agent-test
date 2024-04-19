@@ -24,7 +24,7 @@ import (
 
 const (
 	configInputPath = "resources/canary_config.json"
-	// todo: expand testing to include regional S3 links, SSM, ECR.
+	// todo: expand testing to include regional S3 links.
 	// todo: test ARM64, DEB, MSI based on OS type.
 	downloadLink = "https://amazoncloudwatch-agent.s3.amazonaws.com/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm"
 	versionLink  = "https://amazoncloudwatch-agent.s3.amazonaws.com/info/latest/CWAGENT_VERSION"
