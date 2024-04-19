@@ -36,7 +36,7 @@ func init() {
 // TestCanary verifies downloading, installing, and starting the agent.
 // Reports metrics for each failure type.
 func TestCanary(t *testing.T) {
-	//defer setupCron()
+	defer setupCron()
 	// Don't care if uninstall fails. Agent might not be installed anyways.
 	_ = common.UninstallAgent(common.RPM)
 	// S3 keys always use backslash, so split on that to get filename.
