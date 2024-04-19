@@ -35,7 +35,7 @@
             {
               "name": "Error",
               "unit": "",
-              "exponential_histogram": {
+              "sum": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -73,12 +73,6 @@
                         "key": "aws.remote.target",
                         "value": {
                           "stringValue": "remote-target"
-                        }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],
@@ -94,7 +88,7 @@
             {
               "name": "Fault",
               "unit": "",
-              "exponential_histogram": {
+              "sum": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -132,12 +126,6 @@
                         "key": "aws.remote.target",
                         "value": {
                           "stringValue": "remote-target"
-                        }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],
@@ -153,7 +141,7 @@
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "exponential_histogram": {
+              "sum": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -191,12 +179,6 @@
                         "key": "aws.remote.target",
                         "value": {
                           "stringValue": "remote-target"
-                        }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],

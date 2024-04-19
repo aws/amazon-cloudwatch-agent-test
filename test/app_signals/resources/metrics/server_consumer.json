@@ -35,7 +35,7 @@
             {
               "name": "Error",
               "unit": "",
-              "exponential_histogram": {
+              "sum": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -79,12 +79,6 @@
                         "key": "K8s.Workload",
                         "value": {
                           "stringValue": "sample-app"
-                        }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],
@@ -100,7 +94,7 @@
             {
               "name": "Fault",
               "unit": "",
-              "exponential_histogram": {
+              "sum": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -144,12 +138,6 @@
                         "key": "K8s.Workload",
                         "value": {
                           "stringValue": "sample-app"
-                        }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],
@@ -165,7 +153,7 @@
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "exponential_histogram": {
+              "sum": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -210,12 +198,6 @@
                         "value": {
                           "stringValue": "sample-app"
                         }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
-                        }
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
@@ -230,7 +212,7 @@
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "exponential_histogram": {
+              "sum": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -275,12 +257,6 @@
                         "value": {
                           "stringValue": "sample-app"
                         }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
-                        }
                       }
                     ],
 
@@ -296,7 +272,7 @@
             {
               "name": "Latency",
               "unit": "Milliseconds",
-              "exponential_histogram": {
+              "sum": {
                 "dataPoints": [
                   {
                     "attributes": [
@@ -340,12 +316,6 @@
                         "key": "K8s.Workload",
                         "value": {
                           "stringValue": "sample-app"
-                        }
-                      },
-                      {
-                        "key": "InstanceId",
-                        "value": {
-                          "stringValue": "i-08a2324055c43ab65"
                         }
                       }
                     ],
