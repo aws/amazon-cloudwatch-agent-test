@@ -118,15 +118,13 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				multiErr = multierr.Append(multiErr, err)
 			}
 		}
-		//lookbackDuration := time.Duration(-5) * time.Minute
+		lookbackDuration := time.Duration(-5) * time.Minute
 		serviceName := "service-name"
 		serviceType := "AWS::EC2::Instance"
 		filterExpression := fmt.Sprintf("(service(id(name: \"%s\", type: \"%s\")))", serviceName, serviceType)
+		timeNow := time.Now()
 
-		startTime := time.Now().Add(-time.Hour) // Example: 1 hour ago
-		endTime := time.Now()                   // Current time
-
-		traceIds, err := awsservice.GetTraceIDs(startTime, endTime, filterExpression)
+		traceIds, err := awsservice.GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, filterExpression)
 		if err != nil {
 			fmt.Printf("error getting trace ids: %v", err)
 			multiErr = multierr.Append(multiErr, err)
