@@ -201,10 +201,7 @@
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME,
-                    "sum_": 1,
-                    "min_": 1,
-                    "max_": 1
+                    "timeUnixNano": START_TIME
                   }
                 ]
               }
@@ -261,10 +258,7 @@
                     ],
 
                     "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME,
-                    "sum_": 1,
-                    "min_": 1,
-                    "max_": 1
+                    "timeUnixNano": START_TIME
                   }
                 ]
               }
@@ -320,10 +314,7 @@
                       }
                     ],
                     "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME,
-                    "sum_": 1,
-                    "min_": 1,
-                    "max_": 1
+                    "timeUnixNano": START_TIME
                   }
                 ]
               }
