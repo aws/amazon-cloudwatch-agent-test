@@ -1,110 +1,110 @@
 {
-    "agent": {
-        "debug": true
+  "agent": {
+    "debug": true
+  },
+  "logs": {
+    "force_flush_interval": 5,
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/test1.log",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "test1.log",
+            "retention_in_days": 1,
+            "timezone": "UTC"
+          }
+        ]
+      }
     },
+    "metrics_collected": {
+      "app_signals": {},
+      "emf": {}
+    }
+  },
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "force_flush_interval": 30,
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "time_active",
+          "time_guest"
+        ],
+        "metrics_collection_interval": 1
+      },
+      "disk": {
+        "drop_device": true,
+        "measurement": [
+          "free",
+          "used_percent"
+        ],
+        "metrics_collection_interval": 1,
+        "resources": [
+          "*"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          "available_percent",
+          "used_percent"
+        ],
+        "metrics_collection_interval": 1
+      },
+      "net": {
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv"
+        ],
+        "metrics_collection_interval": 1,
+        "resources": [
+          "en0"
+        ]
+      },
+      "netstat": {
+        "measurement": [
+          "tcp_close",
+          "udp_socket"
+        ],
+        "metrics_collection_interval": 1
+      },
+      "processes": {
+        "measurement": [
+          "blocked",
+          "running"
+        ],
+        "metrics_collection_interval": 1
+      },
+      "procstat": [
+        {
+          "exe": "amazon-cloudwatch-agent",
+          "measurement": [
+            "cpu_usage",
+            "memory_rss"
+          ],
+          "metrics_collection_interval": 1
+        }
+      ],
+      "statsd": {
+        "metrics_aggregation_interval": 60,
+        "metrics_collection_interval": 60,
+        "service_address": ":8125"
+      },
+      "swap": {
+        "measurement": [
+          "free",
+          "used_percent"
+        ],
+        "metrics_collection_interval": 1
+      }
+    },
+    "namespace": "CloudWatchAgentMacFeature"
+  },
   "traces": {
     "traces_collected": {
       "app_signals": {}
     }
-  },
-    "metrics": {
-      "namespace": "CloudWatchAgentMacFeature",
-      "metrics_collected": {
-        "statsd": {
-          "metrics_aggregation_interval": 60,
-          "metrics_collection_interval": 60,
-          "service_address": ":8125"
-        },
-        "cpu": {
-          "measurement": [
-            "time_active",
-            "time_guest"
-          ],
-          "metrics_collection_interval": 1
-        },
-        "swap": {
-            "measurement": [
-              "free",
-              "used_percent"
-            ],
-            "metrics_collection_interval": 1
-        },
-        "processes": {
-            "measurement": [
-              "blocked",
-              "running"
-            ],
-            "metrics_collection_interval": 1
-        },
-        "netstat": {
-            "measurement": [
-              "tcp_close",
-              "udp_socket"
-            ],
-            "metrics_collection_interval": 1
-          },
-        "mem": {
-            "measurement": [
-              "available_percent",
-              "used_percent"
-            ],
-            "metrics_collection_interval": 1
-        },
-        "disk": {
-            "resources": [
-              "*"
-            ],
-            "measurement": [
-              "free",
-              "used_percent"
-            ],
-            "drop_device": true,
-            "metrics_collection_interval": 1
-        },
-        "net": {
-            "resources": [
-              "en0"
-            ],
-            "measurement": [
-              "bytes_sent",
-              "bytes_recv"
-            ],
-            "metrics_collection_interval": 1
-        },
-        "procstat": [
-            {
-              "exe": "amazon-cloudwatch-agent",
-              "measurement": [
-                "cpu_usage",
-                "memory_rss"
-              ],
-              "metrics_collection_interval": 1
-            }
-        ]
-      },
-      "append_dimensions": {
-        "InstanceId": "${aws:InstanceId}"
-      },
-      "force_flush_interval": 30
-    },
-    "logs": {
-      "logs_collected": {
-        "files": {
-        "collect_list": [
-          {
-          "file_path": "/tmp/test1.log",
-          "log_group_name": "{instance_id}",
-          "log_stream_name": "test1.log",
-          "timezone": "UTC"
-          }
-        ]
-        }
-      },
-      "metrics_collected": {
-        "app_signals": {},
-        "emf": { }
-      },
-      "force_flush_interval": 5
-    }
+  }
 }
-
