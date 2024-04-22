@@ -84,11 +84,25 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 			})
 		}
 		environmentValue := "Generic"
-		operationValue := "operation"
+		operationValue := "replaced-operation"
 		serviceValue := "service-name"
 
-		// Creating the first group of dimensions
 		appSignalDimensions := []cwtypes.Dimension{
+			{
+				Name:  aws.String("HostedIn.Environment"),
+				Value: aws.String(environmentValue),
+			},
+			{
+				Name:  aws.String("Operation"),
+				Value: aws.String(operationValue),
+			},
+			{
+				Name:  aws.String("Service"),
+				Value: aws.String(serviceValue),
+			},
+		}
+
+		appSignalDimensions2 := []cwtypes.Dimension{
 			{
 				Name:  aws.String("HostedIn.Environment"),
 				Value: aws.String(environmentValue),
