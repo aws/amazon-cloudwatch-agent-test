@@ -200,43 +200,24 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 
 }
 func processFile(filePath string, startTime int64) {
-	data, err := os.ReadFile(filePath) // Using os.ReadFile here
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return
 	}
 
-	// Replace START_TIME with the current time
+	//replace START_TIME with the current time
 	modifiedData := strings.ReplaceAll(string(data), "START_TIME", fmt.Sprintf("%d", startTime))
 
-	// Mimic `curl` command - sending HTTP POST request
+	//curl command
 	url := "http://127.0.0.1:4316/v1/metrics"
 	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
+
 	if err != nil {
 		fmt.Println("Error sending request:", err)
 	}
 }
-func shouldSendMetrics() (bool, error) {
-	data, err := os.ReadFile(LastSendTimeFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return true, nil // File not found, so we should send
-		}
-		return false, err // Some other error reading the file
-	}
 
-	lastSendTime, err := time.Parse(time.RFC3339, string(data))
-	if err != nil {
-		return false, err // Error parsing the time
-	}
-
-	return time.Since(lastSendTime).Seconds() > MinInterval, nil
-}
-
-func updateLastSendTime() error {
-	now := time.Now().Format(time.RFC3339)
-	return os.WriteFile(LastSendTimeFile, []byte(now), 0644)
-}
 func SendAppSignalMetrics(duration time.Duration) error {
 	// The bash script to be executed asynchronously.
 	dir, err := os.Getwd()
@@ -254,23 +235,18 @@ func SendAppSignalMetrics(duration time.Duration) error {
 		baseDir = "/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics"
 	}
 
-	for i := 0; i < int(duration/5); i++ {
-		send, err := shouldSendMetrics()
+	for i := 0; i < 12; i++ {
 		if err != nil {
 			return err
 		}
-		if !send {
-			fmt.Println("Skipping sending metrics as it's too soon.")
-			continue
-		}
-		// Get current time like `date +%s%N`
+
+		//start time to send to process file
 		startTime := time.Now().UnixNano()
 
-		// Process files with dynamic paths
+		//process files
 		processFile(filepath.Join(baseDir, "server_consumer.json"), startTime)
 		processFile(filepath.Join(baseDir, "client_producer.json"), startTime)
 
-		// Sleep for 5 seconds
 		time.Sleep(5 * time.Second)
 	}
 
