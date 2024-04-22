@@ -84,7 +84,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 			})
 		}
 		environmentValue := "Generic"
-		operationValue := "replaced-operation"
+		operationValue := "operation"
 		serviceValue := "service-name"
 
 		appSignalDimensions := []cwtypes.Dimension{
@@ -102,20 +102,6 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 			},
 		}
 
-		appSignalDimensions2 := []cwtypes.Dimension{
-			{
-				Name:  aws.String("HostedIn.Environment"),
-				Value: aws.String(environmentValue),
-			},
-			{
-				Name:  aws.String("Operation"),
-				Value: aws.String(operationValue),
-			},
-			{
-				Name:  aws.String("Service"),
-				Value: aws.String(serviceValue),
-			},
-		}
 		//App Signals metric testing (This is because we want to use a different checking method (same that was done for linux test))
 		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
 			fetcher := apMetrics.MetricValueFetcher{}
