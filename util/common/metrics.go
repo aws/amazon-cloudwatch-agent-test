@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -213,9 +214,26 @@ func processFile(filePath string, startTime int64) {
 	url := "http://127.0.0.1:4316/v1/metrics"
 	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
 
+	resp, err := http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		fmt.Println("Failed to send POST request to", url)
+		fmt.Printf("Error: %v\n", err)
+		return
 	}
+	defer resp.Body.Close()
+
+	fmt.Println("Response Status:", resp.Status)
+	fmt.Println("Response Body:")
+
+	// Copy response body to standard output
+	_, err = io.Copy(os.Stdout, resp.Body)
+	if err != nil {
+		fmt.Println("Failed to copy response body:", err)
+		return
+	} else {
+		fmt.Println("Success with post app signals!!!")
+	}
+
 }
 
 func SendAppSignalMetrics(duration time.Duration) error {
