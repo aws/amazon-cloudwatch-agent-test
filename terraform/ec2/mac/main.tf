@@ -128,6 +128,7 @@ resource "null_resource" "integration_test" {
       "sudo chmod +x ./validator",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
+      "sleep 5",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && sudo go test ./test/sanity -p 1 -v",
