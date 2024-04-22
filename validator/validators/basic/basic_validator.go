@@ -102,15 +102,16 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 				Value: aws.String(serviceValue),
 			},
 		}
-		//App Signals metric testing (This is because we want to use a different checking method (same that was done for linux test)
+		//App Signals metric testing (This is because we want to use a different checking method (same that was done for linux test))
 		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
 			fetcher := apMetrics.MetricValueFetcher{}
 			values, err := fetcher.Fetch("AppSignals", metric.MetricName, appSignalDimensions, "Sum", 60)
 			if err != nil {
-				fmt.Printf("error getting fetching app signals metrics %v", err)
+				multiErr = multierr.Append(multiErr, err)
 			}
 			if !apMetrics.IsAllValuesGreaterThanOrEqualToExpectedValue(metric.MetricName, values, 0) {
-				fmt.Printf("error value not the epected values%v", err)
+				fmt.Printf("Error values are not the epected values%v", err)
+				multiErr = multierr.Append(multiErr, fmt.Errorf("Incorrect Metric values "))
 			}
 		} else {
 			err := s.ValidateMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricValue, metric.MetricSampleCount, startTime, endTime)
@@ -121,6 +122,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		lookbackDuration := time.Duration(-5) * time.Minute
 		serviceName := "service-name"
 		serviceType := "AWS::EC2::Instance"
+		//filtering traces
 		filterExpression := fmt.Sprintf("(service(id(name: \"%s\", type: \"%s\")))", serviceName, serviceType)
 		timeNow := time.Now()
 
@@ -138,8 +140,6 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		}
 
 	}
-
-	//}
 	for _, logValidation := range logValidations {
 		err := s.ValidateLogs(logValidation.LogStream, logValidation.LogValue, logValidation.LogLevel, logValidation.LogSource, logValidation.LogLines, startTime, endTime)
 		if err != nil {
@@ -209,18 +209,15 @@ func (s *BasicValidator) ValidateMetric(metricName, metricNamespace string, metr
 	if err != nil {
 		return err
 	}
-	fmt.Printf("For metric: %v This is the metric data result: %v and the result values: %v", metricName, metrics.MetricDataResults, metrics.MetricDataResults[0].Values)
+
 	if len(metrics.MetricDataResults) == 0 || len(metrics.MetricDataResults[0].Values) == 0 {
 		return fmt.Errorf("\n getting metric %s failed with the namespace %s and dimension %v", metricName, metricNamespace, util.LogCloudWatchDimension(metricDimensions))
 	}
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-2, metricSampleCount, int32(boundAndPeriod)); !ok {
-		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount-2, metricSampleCount)
-	} else {
-		fmt.Println("Yayyyyyyy!!!!!!! sample count is good for :", metricName)
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount, metricSampleCount, int32(boundAndPeriod)); !ok {
+		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount, metricSampleCount)
 	}
 
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 10%]
@@ -255,7 +252,7 @@ func (s *BasicValidator) buildMetricQueries(metricName, metricNamespace string, 
 		},
 	}
 
-	fmt.Println("Maybe better form of metric query")
+	fmt.Println("Display query: ")
 	jsonBytes, err := json.MarshalIndent(metricDataQueries, "", "    ")
 	if err != nil {
 		// handle error
