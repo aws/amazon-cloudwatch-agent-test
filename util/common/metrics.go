@@ -225,7 +225,7 @@ func processFile(filePath string, startTime int64) {
 	fmt.Println("Response Status:", resp.Status)
 	fmt.Println("Response Body:")
 
-	// Copy response body to standard output
+	//copy response body to standard output
 	_, err = io.Copy(os.Stdout, resp.Body)
 	if err != nil {
 		fmt.Println("Failed to copy response body:", err)

@@ -130,7 +130,7 @@ resource "null_resource" "integration_test" {
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
       "tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log ",
       "sleep 60",
-      "tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log "
+      "tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log ",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && sudo go test ./test/sanity -p 1 -v",
