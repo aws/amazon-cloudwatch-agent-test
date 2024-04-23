@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	apMetrics "github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	cwltypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"go.uber.org/multierr"
 
+	apMetrics "github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces"

@@ -6,7 +6,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 	"log"
 	"os"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators"
+	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 var (
