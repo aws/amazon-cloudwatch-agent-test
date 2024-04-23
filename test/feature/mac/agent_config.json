@@ -2,32 +2,14 @@
   "agent": {
     "debug": true
   },
-  "logs": {
-    "force_flush_interval": 5,
-    "logs_collected": {
-      "files": {
-        "collect_list": [
-          {
-            "file_path": "/tmp/test1.log",
-            "log_group_name": "{instance_id}",
-            "log_stream_name": "test1.log",
-            "retention_in_days": 1,
-            "timezone": "UTC"
-          }
-        ]
-      }
-    },
-    "metrics_collected": {
-      "app_signals": {},
-      "emf": {}
-    }
-  },
   "metrics": {
-    "append_dimensions": {
-      "InstanceId": "${aws:InstanceId}"
-    },
-    "force_flush_interval": 30,
+    "namespace": "CloudWatchAgentMacFeature",
     "metrics_collected": {
+      "statsd": {
+        "metrics_aggregation_interval": 60,
+        "metrics_collection_interval": 60,
+        "service_address": ":8125"
+      },
       "cpu": {
         "measurement": [
           "time_active",
@@ -35,33 +17,19 @@
         ],
         "metrics_collection_interval": 1
       },
-      "disk": {
-        "drop_device": true,
+      "swap": {
         "measurement": [
           "free",
           "used_percent"
         ],
-        "metrics_collection_interval": 1,
-        "resources": [
-          "*"
-        ]
-      },
-      "mem": {
-        "measurement": [
-          "available_percent",
-          "used_percent"
-        ],
         "metrics_collection_interval": 1
       },
-      "net": {
+      "processes": {
         "measurement": [
-          "bytes_sent",
-          "bytes_recv"
+          "blocked",
+          "running"
         ],
-        "metrics_collection_interval": 1,
-        "resources": [
-          "en0"
-        ]
+        "metrics_collection_interval": 1
       },
       "netstat": {
         "measurement": [
@@ -70,10 +38,31 @@
         ],
         "metrics_collection_interval": 1
       },
-      "processes": {
+      "mem": {
         "measurement": [
-          "blocked",
-          "running"
+          "available_percent",
+          "used_percent"
+        ],
+        "metrics_collection_interval": 1
+      },
+      "disk": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          "free",
+          "used_percent"
+        ],
+        "drop_device": true,
+        "metrics_collection_interval": 1
+      },
+      "net": {
+        "resources": [
+          "en0"
+        ],
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv"
         ],
         "metrics_collection_interval": 1
       },
@@ -86,21 +75,31 @@
           ],
           "metrics_collection_interval": 1
         }
-      ],
-      "statsd": {
-        "metrics_aggregation_interval": 60,
-        "metrics_collection_interval": 60,
-        "service_address": ":8125"
-      },
-      "swap": {
-        "measurement": [
-          "free",
-          "used_percent"
-        ],
-        "metrics_collection_interval": 1
+      ]
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "force_flush_interval": 30
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/test1.log",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "test1.log",
+            "timezone": "UTC"
+          }
+        ]
       }
     },
-    "namespace": "CloudWatchAgentMacFeature"
+    "metrics_collected": {
+      "app_signals": {},
+      "emf": { }
+    },
+    "force_flush_interval": 5
   },
   "traces": {
     "traces_collected": {
