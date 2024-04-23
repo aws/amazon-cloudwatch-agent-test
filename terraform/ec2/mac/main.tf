@@ -126,7 +126,6 @@ resource "null_resource" "integration_test" {
       "echo Execute integration tests",
       "export AWS_REGION=${var.region}",
       "sudo chmod +x ./validator",
-      "git checkout MacOSEC2Test -f"
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",

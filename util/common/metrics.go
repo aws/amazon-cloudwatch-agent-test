@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -40,7 +39,7 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 		case "emf":
 			err = SendEMFMetrics(metricPerInterval, metricLogGroup, metricNamespace, sendingInterval, duration)
 		case "app_signals":
-			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
+			err = SendAppSignalMetrics() //does app signals have dimension for metric?
 		case "traces":
 			err = SendAppTraceMetrics(duration) //does app signals have dimension for metric?
 
@@ -200,11 +199,11 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 	}
 
 }
-func processFile(filePath string, startTime int64) {
+func processFile(filePath string, startTime int64) error {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
-		return
+		return nil
 	}
 
 	//replace START_TIME with the current time
@@ -214,29 +213,17 @@ func processFile(filePath string, startTime int64) {
 	url := "http://127.0.0.1:4316/v1/metrics"
 	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
 
-	resp, err := http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
+	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
 	if err != nil {
 		fmt.Println("Failed to send POST request to", url)
 		fmt.Printf("Error: %v\n", err)
-		return
+		return err
 	}
-	defer resp.Body.Close()
-
-	fmt.Println("Response Status:", resp.Status)
-	fmt.Println("Response Body:")
-
-	//copy response body to standard output
-	_, err = io.Copy(os.Stdout, resp.Body)
-	if err != nil {
-		fmt.Println("Failed to copy response body:", err)
-		return
-	} else {
-		fmt.Println("Success with post app signals!!!")
-	}
+	return nil
 
 }
 
-func SendAppSignalMetrics(duration time.Duration) error {
+func SendAppSignalMetrics() error {
 	// The bash script to be executed asynchronously.
 	dir, err := os.Getwd()
 	if err != nil {
@@ -262,8 +249,14 @@ func SendAppSignalMetrics(duration time.Duration) error {
 		startTime := time.Now().UnixNano()
 
 		//process files
-		processFile(filepath.Join(baseDir, "server_consumer.json"), startTime)
-		processFile(filepath.Join(baseDir, "client_producer.json"), startTime)
+		err = processFile(filepath.Join(baseDir, "server_consumer.json"), startTime)
+		if err != nil {
+			return err
+		}
+		err = processFile(filepath.Join(baseDir, "client_producer.json"), startTime)
+		if err != nil {
+			return err
+		}
 
 		time.Sleep(5 * time.Second)
 	}

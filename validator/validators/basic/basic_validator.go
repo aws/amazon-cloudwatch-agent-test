@@ -4,7 +4,6 @@
 package basic
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -251,13 +250,5 @@ func (s *BasicValidator) buildMetricQueries(metricName, metricNamespace string, 
 			Id: aws.String(strings.ToLower(metricName)),
 		},
 	}
-
-	fmt.Println("Display query: ")
-	jsonBytes, err := json.MarshalIndent(metricDataQueries, "", "    ")
-	if err != nil {
-		// handle error
-		log.Fatal(err)
-	}
-	fmt.Println(string(jsonBytes))
 	return metricDataQueries
 }
