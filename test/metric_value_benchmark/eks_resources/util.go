@@ -46,6 +46,10 @@ var (
 	eksNodeGpuSchema string
 	//go:embed test_schemas/cluster_gpu.json
 	eksClusterGpuSchema string
+	//go:embed test_schemas/node_neuroncore.json
+	eksNodeNeuronCoreSchema string
+	//go:embed test_schemas/node_neuron.json
+	eksNodeNeuronSchema string
 
 	EksClusterValidationMap = map[string]string{
 		"Cluster":           eksClusterSchema,
@@ -66,6 +70,8 @@ var (
 		"PodGPU":            eksPodGpuSchema,
 		"NodeGPU":           eksNodeGpuSchema,
 		"ClusterGPU":        eksClusterGpuSchema,
+		"NodeNeuronCore":    eksNodeNeuronCoreSchema,
+		"NodeNeuron":        eksNodeNeuronSchema,
 	}
 )
 
