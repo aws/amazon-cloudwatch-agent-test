@@ -18,7 +18,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators"
-	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators/basic"
 )
 
 var (
@@ -80,7 +79,6 @@ func main() {
 func validate(vConfig models.ValidateConfig) error {
 	var err error
 	for i := 0; i < awsservice.StandardRetries; i++ {
-		basic.RetryCount = i + 1
 		err = validators.LaunchValidator(vConfig)
 
 		if err == nil {

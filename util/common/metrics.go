@@ -26,8 +26,11 @@ import (
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
 )
 
-const LastSendTimeFile = "last_send_time.txt"
-const MinInterval = 60 // Minimum interval in seconds
+const SleepDuration = 5 * time.Second
+
+const TracesPort = "4316/v1/traces"
+const MetricPort = "4316/v1/metrics"
+
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
 func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
 	go func() {
@@ -39,9 +42,9 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 		case "emf":
 			err = SendEMFMetrics(metricPerInterval, metricLogGroup, metricNamespace, sendingInterval, duration)
 		case "app_signals":
-			err = SendAppSignalMetrics() //does app signals have dimension for metric?
+			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
 		case "traces":
-			err = SendAppTraceMetrics(duration) //does app signals have dimension for metric?
+			err = SendAppSignalsTraceMetrics(duration) //does app signals have dimension for metric?
 
 		default:
 		}
@@ -50,7 +53,7 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 	return err
 }
 
-func SendAppTraceMetrics(duration time.Duration) error {
+func SendAppSignalsTraceMetrics(duration time.Duration) error {
 	baseDir := getBaseDir()
 
 	for i := 0; i < int(duration/(5*time.Second)); i++ {
@@ -94,7 +97,7 @@ func processTraceFile(filePath string, startTime int64, traceID string) error {
 	modifiedData := strings.ReplaceAll(string(data), "START_TIME", fmt.Sprintf("%d", startTime))
 	modifiedData = strings.ReplaceAll(modifiedData, "TRACE_ID", traceID)
 
-	url := "http://127.0.0.1:4316/v1/traces"
+	url := "http://127.0.0.1:" + TracesPort
 	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
 	if err != nil {
 		return err
@@ -210,7 +213,7 @@ func processFile(filePath string, startTime int64) error {
 	modifiedData := strings.ReplaceAll(string(data), "START_TIME", fmt.Sprintf("%d", startTime))
 
 	//curl command
-	url := "http://127.0.0.1:4316/v1/metrics"
+	url := "http://127.0.0.1:" + MetricPort
 	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
 
 	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
@@ -223,7 +226,7 @@ func processFile(filePath string, startTime int64) error {
 
 }
 
-func SendAppSignalMetrics() error {
+func SendAppSignalMetrics(duration time.Duration) error {
 	// The bash script to be executed asynchronously.
 	dir, err := os.Getwd()
 	if err != nil {
@@ -235,12 +238,14 @@ func SendAppSignalMetrics() error {
 	// Determine the base directory for the files based on the OS
 	var baseDir string
 	if runtime.GOOS == "windows" {
-		baseDir = "C:\\Users\\Administrator\\amazon-cloudwatch-agent-test\\test\\app_signals\\resources\\metrics"
+		baseDir = filepath.Join("C:", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
 	} else { // assuming macOS or Unix-like system
-		baseDir = "/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics"
+		baseDir = filepath.Join("/", "Users", "ec2-user", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
 	}
 
-	for i := 0; i < 12; i++ {
+	fmt.Println("Base directory:", baseDir)
+
+	for i := 0; i < int(duration/SleepDuration); i++ {
 		if err != nil {
 			return err
 		}
