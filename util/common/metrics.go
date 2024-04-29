@@ -28,8 +28,8 @@ import (
 
 const SleepDuration = 5 * time.Second
 
-const TracesPort = "4316/v1/traces"
-const MetricPort = "4316/v1/metrics"
+const TracesEndpoint = "4316/v1/traces"
+const MetricEndpoint = "4316/v1/metrics"
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
 func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
@@ -97,7 +97,7 @@ func processTraceFile(filePath string, startTime int64, traceID string) error {
 	modifiedData := strings.ReplaceAll(string(data), "START_TIME", fmt.Sprintf("%d", startTime))
 	modifiedData = strings.ReplaceAll(modifiedData, "TRACE_ID", traceID)
 
-	url := "http://127.0.0.1:" + TracesPort
+	url := "http://127.0.0.1:" + TracesEndpoint
 	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
 	if err != nil {
 		return err
@@ -213,7 +213,7 @@ func processFile(filePath string, startTime int64) error {
 	modifiedData := strings.ReplaceAll(string(data), "START_TIME", fmt.Sprintf("%d", startTime))
 
 	//curl command
-	url := "http://127.0.0.1:" + MetricPort
+	url := "http://127.0.0.1:" + MetricEndpoint
 	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
 
 	_, err = http.Post(url, "application/json", bytes.NewBufferString(modifiedData))
