@@ -1,5 +1,5 @@
 # Receivers that agent needs to tests
-receivers: ["system","statsd","emf"]
+receivers: ["system","statsd","emf","app_signals","traces"]
 
 #Test case name
 test_case: "macos_feature"
@@ -13,7 +13,7 @@ number_monitored_logs: 1
 # Number of metrics to be sent or number of log lines being written  each minute
 values_per_minute: "2"
 # Number of seconds the agent should run and collect the metrics. In this case, 1 minutes
-agent_collection_period: 60 
+agent_collection_period: 60
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 
@@ -27,14 +27,14 @@ metric_validation:
   - metric_name: "statsd_gauge_1"
     metric_value: 1.0
     metric_sample_count: 1
-    metric_dimension: 
+    metric_dimension:
       - name: "metric_type"
         value: "gauge"
 
   - metric_name: "statsd_counter_1"
     metric_value: 1.0
     metric_sample_count: 1
-    metric_dimension:   
+    metric_dimension:
       - name: "metric_type"
         value: "counter"
   
@@ -43,38 +43,38 @@ metric_validation:
   - metric_name: "emf_time_1"
     metric_value: 1.0
     metric_sample_count: 1
-  
+
   - metric_name: "emf_time_2"
     metric_value: 2.0
     metric_sample_count: 1
 
   - metric_name: "cpu_time_active"
     metric_sample_count: 60
-    metric_dimension: 
+    metric_dimension:
       - name: "cpu"
         value: "cpu-total"
 
   - metric_name: "cpu_time_guest"
     metric_sample_count: 60
-    metric_dimension: 
+    metric_dimension:
       - name: "cpu"
         value: "cpu-total"
 
   - metric_name: "net_bytes_sent"
     metric_sample_count: 60
-    metric_dimension: 
+    metric_dimension:
       - name: "interface"
         value: "en0"
 
   - metric_name: "net_bytes_recv"
     metric_sample_count: 60
-    metric_dimension: 
+    metric_dimension:
       - name: "interface"
         value: "en0"
 
   - metric_name: "disk_free"
     metric_sample_count: 60
-    metric_dimension: 
+    metric_dimension:
       - name: "fstype"
         value: "devfs"
       - name: "path"
@@ -82,7 +82,7 @@ metric_validation:
 
   - metric_name: "disk_used_percent"
     metric_sample_count: 60
-    metric_dimension: 
+    metric_dimension:
       - name: "fstype"
         value: "devfs"
       - name: "path"
@@ -90,7 +90,7 @@ metric_validation:
 
   - metric_name: "procstat_cpu_usage"
     metric_sample_count: 60
-    metric_dimension: 
+    metric_dimension:
       - name: "exe"
         value: "amazon-cloudwatch-agent"
       - name: "process_name"
@@ -98,7 +98,7 @@ metric_validation:
 
   - metric_name: "procstat_memory_rss"
     metric_sample_count: 60
-    metric_dimension: 
+    metric_dimension:
       - name: "exe"
         value: "amazon-cloudwatch-agent"
       - name: "process_name"
@@ -128,6 +128,33 @@ metric_validation:
   - metric_name: "mem_used_percent"
     metric_sample_count: 60
     metric_dimension: []
+  - metric_name: "Fault"
+    metric_sample_count: 60
+    metric_dimension:
+      - name: "HostedIn.Environment"
+        value: "Generic"
+      - name: "Operation"
+        value: "operation"
+      - name: "Service"
+        value: "service-name"
+  - metric_name: "Latency"
+    metric_sample_count: 60
+    metric_dimension:
+      - name: "HostedIn.Environment"
+        value: "Generic"
+      - name: "Operation"
+        value: "operation"
+      - name: "Service"
+        value: "service-name"
+  - metric_name: "Error"
+    metric_sample_count: 60
+    metric_dimension:
+      - name: "HostedIn.Environment"
+        value: "Generic"
+      - name: "Operation"
+        value: "operation"
+      - name: "Service"
+        value: "service-name"
 
 # Logs that the test needs to validate; moreover, the feature validation already has
 # InstanceID as a log group; therefore, does not need to pass it

@@ -78,9 +78,17 @@
                     ],
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "sum": 0,
-                    "min": 0,
-                    "max": 0
+                    "count": 0,
+                    "scale": 0,
+                    "zeroCount": 0,
+                    "positive": {
+                      "offset": 0,
+                      "bucket_counts": [1, 2, 3]
+                    },
+                    "negative": {
+                      "offset": 0,
+                      "bucket_counts": [1, 2, 3]
+                    }
                   }
                 ]
               }
@@ -131,9 +139,17 @@
                     ],
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "sum": 0,
-                    "min": 0,
-                    "max": 0
+                    "count": 0,
+                    "scale": 0,
+                    "zeroCount": 0,
+                    "positive": {
+                      "offset": 0,
+                      "bucket_counts": [1, 2, 3]
+                    },
+                    "negative": {
+                      "offset": 0,
+                      "bucket_counts": [1, 2, 3]
+                    }
                   }
                 ]
               }
@@ -184,9 +200,17 @@
                     ],
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "sum": 0,
-                    "min": 0,
-                    "max": 0
+                    "count": 0,
+                    "scale": 0,
+                    "zeroCount": 0,
+                    "positive": {
+                      "offset": 0,
+                      "bucket_counts": [1, 2, 3]
+                    },
+                    "negative": {
+                      "offset": 0,
+                      "bucket_counts": [1, 2, 3]
+                    }
                   }
                 ]
               }
@@ -197,4 +221,3 @@
     }
   ]
 }
-

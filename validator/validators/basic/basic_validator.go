@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"go.uber.org/multierr"
 
+	AppSignalMetrics "github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces"
@@ -22,6 +23,7 @@ import (
 )
 
 const metricErrorBound = 0.1
+const AppSignalNamespace = "AppSignals"
 
 type BasicValidator struct {
 	vConfig models.ValidateConfig
@@ -68,24 +70,46 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 	)
 
 	for _, metric := range validationMetric {
-		metricDimensions := []cwtypes.Dimension{
-			{
-				Name:  aws.String("InstanceId"),
-				Value: aws.String(ec2InstanceId),
-			},
+		metricDimensions := []cwtypes.Dimension{}
+		//App Signal Metrics don't have instanceid dimension
+		if !isAppSignalMetric(metric) {
+			metricDimensions = []cwtypes.Dimension{
+				{
+					Name:  aws.String("InstanceId"),
+					Value: aws.String(ec2InstanceId),
+				},
+			}
 		}
+
 		for _, dimension := range metric.MetricDimension {
 			metricDimensions = append(metricDimensions, cwtypes.Dimension{
 				Name:  aws.String(dimension.Name),
 				Value: aws.String(dimension.Value),
 			})
 		}
-		err := s.ValidateMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricValue, metric.MetricSampleCount, startTime, endTime)
-		if err != nil {
-			multiErr = multierr.Append(multiErr, err)
-		}
-	}
 
+		//App Signals metric testing (This is because we want to use a different checking method (same that was done for linux test))
+		if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
+			err := s.ValidateAppSignalMetrics(metric, metricDimensions)
+			if err != nil {
+				multiErr = multierr.Append(multiErr, err)
+			} else {
+				fmt.Println("App Signal Metrics are correct!")
+			}
+		} else {
+			err := s.ValidateMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricValue, metric.MetricSampleCount, startTime, endTime)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+	err := s.ValidateTracesMetrics()
+	if err != nil {
+		multiErr = multierr.Append(multiErr, err)
+	} else {
+		fmt.Println("Traces Metrics are correct!")
+	}
 	for _, logValidation := range logValidations {
 		err := s.ValidateLogs(logValidation.LogStream, logValidation.LogValue, logValidation.LogLevel, logValidation.LogSource, logValidation.LogLines, startTime, endTime)
 		if err != nil {
@@ -106,6 +130,52 @@ func (s *BasicValidator) Cleanup() error {
 		awsservice.DeleteLogGroup(ec2InstanceId)
 	}
 
+	return nil
+}
+
+func isAppSignalMetric(metric models.MetricValidation) bool {
+	if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
+		return true
+	}
+	return false
+}
+func (s *BasicValidator) ValidateAppSignalMetrics(metric models.MetricValidation, metricDimensions []cwtypes.Dimension) error {
+
+	if metric.MetricName == "Latency" || metric.MetricName == "Fault" || metric.MetricName == "Error" {
+		fetcher := AppSignalMetrics.MetricValueFetcher{}
+		values, err := fetcher.Fetch(AppSignalNamespace, metric.MetricName, metricDimensions, "Sum", 60)
+		if err != nil {
+			return err
+		}
+		if !AppSignalMetrics.IsAllValuesGreaterThanOrEqualToExpectedValue(metric.MetricName, values, 0) {
+			fmt.Printf("Error values are not the epected values%v", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *BasicValidator) ValidateTracesMetrics() error {
+	lookbackDuration := time.Duration(-5) * time.Minute
+	serviceName := "service-name"
+	serviceType := "AWS::EC2::Instance"
+	//filtering traces
+	filterExpression := fmt.Sprintf("(service(id(name: \"%s\", type: \"%s\")))", serviceName, serviceType)
+	timeNow := time.Now()
+
+	traceIds, err := awsservice.GetTraceIDs(timeNow.Add(lookbackDuration), timeNow, filterExpression)
+	if err != nil {
+		fmt.Printf("error getting trace ids: %v", err)
+		return err
+	} else {
+		fmt.Printf("Trace IDs: %v\n", traceIds)
+		if len(traceIds) > 0 {
+			fmt.Println("Trace IDs look good")
+		} else {
+			return err
+		}
+	}
 	return nil
 }
 
