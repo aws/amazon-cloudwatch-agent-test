@@ -41,6 +41,7 @@ type testConfig struct {
 	// e.g. statsd can have a multiple terraform module sets for difference test scenarios (ecs, eks or ec2)
 	testDir       string
 	terraformDir  string
+	instanceType  string
 	runMockServer bool
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
@@ -216,7 +217,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
 		{
 			testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
 		},
 	},
 	"eks_deployment": {
@@ -302,6 +304,10 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
 				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
+			}
+
+			if testConfig.instanceType != "" {
+				row.InstanceType = testConfig.instanceType
 			}
 
 			if len(ami) != 0 && !slices.Contains(ami, row.Ami) {
