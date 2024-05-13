@@ -58,6 +58,15 @@ func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDim
 		}
 		results = append(results, validateMetricsAvailability(dims, metrics, actual))
 		for _, m := range metrics {
+			// this is to prevent panic with rand.Intn when metrics are not yet ready in a cluster
+			if _, ok := actual[m]; !ok {
+				results = append(results, status.TestResult{
+					Name:   dims,
+					Status: status.FAILED,
+				})
+				log.Printf("ValidateMetrics failed with missing metric: %s", m)
+				continue
+			}
 			// pick a random dimension set to test metric data OR test all dimension sets which might be overkill
 			randIdx := rand.Intn(len(actual[m]))
 			results = append(results, validateMetricValue(m, actual[m][randIdx]))
