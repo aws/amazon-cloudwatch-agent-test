@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source             = "../../../common"
+  source             = "../common"
   cwagent_image_repo = var.cwagent_image_repo
   cwagent_image_tag  = var.cwagent_image_tag
 }
 
 module "basic_components" {
-  source = "../../../basic_components"
+  source = "../basic_components"
 
   region = var.region
 }
