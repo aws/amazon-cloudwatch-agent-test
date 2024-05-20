@@ -218,3 +218,21 @@ resource "null_resource" "validator" {
     EOT
   }
 }
+
+resource "null_resource" "clean-up" {
+  depends_on = [
+    module.fluent_common,
+    null_resource.fluentbit-windows,
+    kubernetes_cluster_role_binding.fluentbit_rolebinding,
+    null_resource.validator
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Cleaning up EKS fluentbit applications"
+      sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+1+' ./../../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
+      ./kubectl wait --for=delete deployment.apps windows-test-deployment --timeout 600s
+      ./kubectl delete -f ./../../../default_resources/fluenbit-windows-daemonset.yaml
+      ./kubectl wait --for=delete daemonset.apps fluent-bit-windows --timeout 600s
+    EOT
+  }
+}
