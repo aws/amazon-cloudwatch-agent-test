@@ -262,6 +262,8 @@ locals {
   httpd_config     = "../../../../${var.test_dir}/resources/httpd.conf"
   httpd_ssl_config = "../../../../${var.test_dir}/resources/httpd-ssl.conf"
   cwagent_config   = fileexists("../../../../${var.test_dir}/resources/config.json") ? "../../../../${var.test_dir}/resources/config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
+  role_arn = format("%s%s", module.basic_components.role_arn, var.beta ? "-eks-beta" : "")
+  aws_eks  = format("%s%s", "aws eks --region ${var.region}", var.beta ? " --endpoint ${var.beta_endpoint}" : "")
 }
 
 data "template_file" "cwagent_config" {
@@ -360,6 +362,51 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
     namespace = "amazon-cloudwatch"
   }
 }
+
+
+resource "null_resource" "kubectl" {
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
+      ${local.aws_eks} list-clusters --output text
+      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
+    EOT
+  }
+}
+
+
+resource "null_resource" "kubectl" {
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
+      ${local.aws_eks} list-clusters --output text
+      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
+    EOT
+  }
+}
+
+resource "aws_eks_addon" "this" {
+  depends_on = [
+    null_resource.kubectl
+  ]
+  addon_name   = var.addon_name
+  cluster_name = aws_eks_cluster.this.name
+  addon_version = var.addon_version
+}
+
+resource "null_resource" "validator" {
+  depends_on = [
+      aws_eks_node_group.this,
+      aws_eks_addon.this
+  ]
 
 resource "null_resource" "validator" {
   depends_on = [
