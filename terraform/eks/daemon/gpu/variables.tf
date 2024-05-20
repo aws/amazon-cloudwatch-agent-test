@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "../test/gpu"
+  default = "./test/gpu"
 }
 
 variable "cwagent_image_repo" {
