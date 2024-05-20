@@ -131,16 +131,31 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<EOT
-      go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia
+      if go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
+        # Get all pods and describe them
+          kubectl get pods --all-namespaces -o wide > pods.txt
+          kubectl describe pods --all-namespaces > pods_describe.txt
 
+          # Log the contents of the files
+          cat pods.txt
+          cat pods_describe.txt
+        echo "Tests passed"
+
+      else
       # Get all pods and describe them
-      kubectl get pods --all-namespaces -o wide > pods.txt
-      kubectl describe pods --all-namespaces > pods_describe.txt
+        kubectl get pods --all-namespaces -o wide > pods.txt
+        kubectl describe pods --all-namespaces > pods_describe.txt
 
-      # Log the contents of the files
-      cat pods.txt
-      cat pods_describe.txt
+        # Log the contents of the files
+        cat pods.txt
+        cat pods_describe.txt
+        echo "Tests failed"
+        exit 1
+      fi
+
+
     EOT
   }
 }
+
 
