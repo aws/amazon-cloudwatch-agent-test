@@ -85,6 +85,10 @@ EOT
     name      = "aws-auth"
     namespace = "kube-system"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # EKS Windows Node Groups
