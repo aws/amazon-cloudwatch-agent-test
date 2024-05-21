@@ -712,7 +712,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating EKS metrics/logs for EMF"
-      kubectl apply -f
+      kubectl apply -f ../script.sh
       cd ../../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia
     EOT
