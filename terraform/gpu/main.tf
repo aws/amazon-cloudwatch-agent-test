@@ -132,6 +132,7 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<EOT
+      kubectl apply -f ../eks/daemon/gpuBurner.yaml
       if go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
         # Get all pods and describe them
           kubectl get pods --all-namespaces -o wide > pods.txt
