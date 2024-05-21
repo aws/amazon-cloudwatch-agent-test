@@ -272,19 +272,7 @@ data "template_file" "cwagent_config" {
   }
 }
 
-resource "kubernetes_config_map" "cwagentconfig" {
-  depends_on = [
-    kubernetes_namespace.namespace,
-    kubernetes_service_account.cwagentservice
-  ]
-  metadata {
-    name      = "cwagentconfig"
-    namespace = "amazon-cloudwatch"
-  }
-  data = {
-    "cwagentconfig.json" : data.template_file.cwagent_config.rendered
-  }
-}
+
 
 data "template_file" "httpd_config" {
   template = file(local.httpd_config)
@@ -364,19 +352,6 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
 }
 
 
-resource "null_resource" "kubectl" {
-  depends_on = [
-    aws_eks_cluster.this,
-    aws_eks_node_group.this
-  ]
-  provisioner "local-exec" {
-    command = <<-EOT
-      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
-      ${local.aws_eks} list-clusters --output text
-      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
-    EOT
-  }
-}
 
 
 resource "null_resource" "kubectl" {
@@ -404,14 +379,8 @@ resource "aws_eks_addon" "this" {
 
 resource "null_resource" "validator" {
   depends_on = [
-      aws_eks_node_group.this,
-      aws_eks_addon.this
-  ]
-
-resource "null_resource" "validator" {
-  depends_on = [
-      aws_eks_node_group.this,
-      aws_eks_addon.this
+    aws_eks_node_group.this,
+    aws_eks_addon.this
   ]
 
   provisioner "local-exec" {
@@ -442,3 +411,6 @@ resource "null_resource" "validator" {
     EOT
   }
 }
+
+
+

@@ -1,0 +1,28 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: gpu-burn
+  namespace: amazon-cloudwatch
+  labels:
+    app: gpu-burn
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: gpu-burn
+  template:
+    metadata:
+      labels:
+        app: gpu-burn
+    spec:
+      containers:
+        - name: main
+          image: oguzpastirmaci/gpu-burn
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - '-c'
+            - while true; do /app/gpu_burn 20; sleep 20; done
+          resources:
+            limits:
+              nvidia.com/gpu: 2
