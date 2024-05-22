@@ -1,12 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-
-
-
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
 module "common" {
   source             = "../common"
   cwagent_image_repo = var.cwagent_image_repo
@@ -141,15 +135,16 @@ resource "null_resource" "validator" {
       kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
       if go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
         # Get all pods and describe them
-        kubectl get pods --all-namespaces -o wide > pods.txt
-        kubectl describe pods --all-namespaces > pods_describe.txt
+          kubectl get pods --all-namespaces -o wide > pods.txt
+          kubectl describe pods --all-namespaces > pods_describe.txt
 
-        # Log the contents of the files
-        cat pods.txt
-        cat pods_describe.txt
+          # Log the contents of the files
+          cat pods.txt
+          cat pods_describe.txt
         echo "Tests passed"
+
       else
-        # Get all pods and describe them
+      # Get all pods and describe them
         kubectl get pods --all-namespaces -o wide > pods.txt
         kubectl describe pods --all-namespaces > pods_describe.txt
 
@@ -159,12 +154,9 @@ resource "null_resource" "validator" {
         echo "Tests failed"
         exit 1
       fi
+
+
     EOT
   }
 }
-
-
-
-
-
 

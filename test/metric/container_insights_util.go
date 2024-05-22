@@ -132,7 +132,7 @@ func validateMetricsAvailability(dims string, expected []string, actual map[stri
 		Name:   dims,
 		Status: status.FAILED,
 	}
-	log.Printf("expected metrics: %d, actual metrics: %d", len(expected), 3*len(actual))
+	log.Printf("expected metrics: %d, actual metrics: %d", len(expected), len(actual))
 	if compareMetrics(expected, actual) {
 		testResult.Status = status.SUCCESSFUL
 	} else {
