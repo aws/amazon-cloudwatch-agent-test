@@ -6,7 +6,7 @@ metadata:
   labels:
     app: gpu-burn
 spec:
-  replicas: 6
+  replicas: 1
   selector:
     matchLabels:
       app: gpu-burn
@@ -25,4 +25,4 @@ spec:
             - while true; do /app/gpu_burn 20; sleep 20; done
           resources:
             limits:
-              nvidia.com/gpu: 2
+              nvidia.com/gpu: 1
