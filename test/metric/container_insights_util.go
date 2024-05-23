@@ -212,6 +212,7 @@ func ValidateLogs(env *environment.MetaData) status.TestResult {
 					//log.Printf("eksClusterType is: %s", eksClusterType.Type)
 					jsonSchema, ok := eks_resources.EksClusterValidationMap[eksClusterType.Type]
 					if !ok {
+						fmt.Println("This is the eksClusterType:", eksClusterType.Type)
 						return "", errors.New("invalid cluster type provided")
 					}
 					return jsonSchema, nil
