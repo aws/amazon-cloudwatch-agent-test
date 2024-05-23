@@ -131,7 +131,8 @@ resource "aws_eks_addon" "this" {
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
-    aws_eks_addon.this
+    aws_eks_addon.this,
+    null_resource.kubectl
   ]
 
   provisioner "local-exec" {
@@ -159,8 +160,6 @@ resource "null_resource" "validator" {
         echo "Tests failed"
         exit 1
       fi
-
-
     EOT
   }
 }
