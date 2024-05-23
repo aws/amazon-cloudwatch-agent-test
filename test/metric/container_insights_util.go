@@ -193,6 +193,10 @@ func ValidateLogs(env *environment.MetaData) status.TestResult {
 	}
 
 	for _, instance := range eKSInstances {
+		fmt.Println("Number of eks Instances", len(eKSInstances))
+		fmt.Println("This is the instance", instance.InstanceName)
+		fmt.Println("This is the instance", instance)
+
 		stream := *instance.InstanceName
 		err = awsservice.ValidateLogs(
 			group,
@@ -208,11 +212,10 @@ func ValidateLogs(env *environment.MetaData) status.TestResult {
 					if innerErr != nil {
 						return "", fmt.Errorf("failed to unmarshal log file: %w", innerErr)
 					}
-
 					log.Printf("eksClusterType is: %v", eksClusterType.Type)
 					jsonSchema, ok := eks_resources.EksClusterValidationMap[eksClusterType.Type]
 					if !ok {
-						fmt.Println("This is the eksClusterType:", eksClusterType.Type)
+						log.Printf("eksClusterType is: %v", eksClusterType.Type)
 						return "", errors.New("invalid cluster type provided")
 					}
 					return jsonSchema, nil
