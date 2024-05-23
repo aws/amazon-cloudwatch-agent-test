@@ -21,6 +21,7 @@ spec:
       containers:
         - name: cloudwatch-agent
           image: CW_TEST_IMAGE
+          workingDir: "%CONTAINER_SANDBOX_MOUNT_POINT%\\Program Files\\Amazon\\AmazonCloudWatchAgent"
           volumeMounts:
             - name: cwagentconfig
               mountPath: C:\Program Files\Amazon\AmazonCloudWatchAgent\cwagentconfig
