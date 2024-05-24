@@ -44,7 +44,7 @@ variable "ami_type" {
 
 variable "instance_type" {
   type    = string
-  default = "g4dn.xlarge"
+  default = "g4dn.12xlarge"
 }
 
 variable "beta" {
