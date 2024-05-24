@@ -16,10 +16,7 @@ data "aws_eks_cluster_auth" "this" {
   name = aws_eks_cluster.this.name
 }
 
-locals {
-  role_arn = format("%s%s", module.basic_components.role_arn, var.beta ? "-eks-beta" : "")
-  aws_eks  = format("%s%s", "aws eks --region ${var.region}", var.beta ? " --endpoint ${var.beta_endpoint}" : "")
-}
+
 
 resource "aws_eks_cluster" "this" {
   name     = "cwagent-operator-eks-integ-${module.common.testing_id}"
@@ -63,7 +60,12 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy
   ]
 }
+locals {
+  cwagent_config = fileexists("${var.test_dir}/resources/config.json") ? "${var.test_dir}/resources/config.json" : "../eks/daemon/default_resources/default_amazon_cloudwatch_agent.json"
+  role_arn = format("%s%s", module.basic_components.role_arn, var.beta ? "-eks-beta" : "")
+  aws_eks  = format("%s%s", "aws eks --region ${var.region}", var.beta ? " --endpoint ${var.beta_endpoint}" : "")
 
+}
 # EKS Node IAM Role
 resource "aws_iam_role" "node_role" {
   name = "cwagent-operator-eks-Worker-Role-${module.common.testing_id}"
@@ -327,9 +329,7 @@ resource "kubernetes_daemonset" "service" {
 ##########################################
 # Template Files
 ##########################################
-locals {
-  cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
-}
+
 
 data "template_file" "cwagent_config" {
   template = file(local.cwagent_config)
