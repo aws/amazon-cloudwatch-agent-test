@@ -39,6 +39,7 @@ var logGroupToKey = map[string][][]string{
 var logGroupToKeyWindows = map[string][][]string{
 	"dataplane": {
 		{"log", "file_name"},
+		{"SourceName", "Message", "ComputerName"},
 	},
 	"host": {
 		{"SourceName", "Message", "ComputerName"},
