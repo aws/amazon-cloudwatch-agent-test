@@ -54,7 +54,7 @@ resource "aws_eks_node_group" "this" {
   ami_type       = "AL2_x86_64_GPU"
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
-  instance_types = ["g4dn.12xlarge"]
+  instance_types = ["g4dn.xlarge"]
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
@@ -137,8 +137,11 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<EOT
+      sleep 30
       kubectl apply -f ../eks/daemon/gpuBurner.yaml
+      sleep 30
       kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
+      sleep 30
       if go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
         # Get all pods and describe them
           kubectl get pods --all-namespaces -o wide > pods.txt
