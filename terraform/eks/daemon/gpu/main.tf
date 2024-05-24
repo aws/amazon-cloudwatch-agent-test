@@ -42,9 +42,9 @@ resource "aws_eks_node_group" "this" {
   subnet_ids      = module.basic_components.public_subnet_ids
 
   scaling_config {
-    desired_size = 2
-    max_size     = 2
-    min_size     = 2
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
   }
 
   ami_type       = var.ami_type
@@ -712,7 +712,6 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating EKS metrics/logs for EMF"
-      kubectl apply -f ../gpuBurner.yaml
       cd ../../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia
     EOT

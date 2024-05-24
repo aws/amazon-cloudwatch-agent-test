@@ -242,7 +242,6 @@ func WithSchema(schema string) SchemaRetriever {
 func AssertLogSchema(schemaRetriever SchemaRetriever) LogEventValidator {
 	return func(event types.OutputLogEvent) error {
 		message := *event.Message
-		fmt.Println("This is the message", message)
 		if schemaRetriever == nil {
 			return errors.New("nil schema retriever")
 		}
@@ -254,9 +253,6 @@ func AssertLogSchema(schemaRetriever SchemaRetriever) LogEventValidator {
 		if err != nil {
 			return fmt.Errorf("failed to execute schema validator: %w", err)
 		} else if len(keyErrors) > 0 {
-			fmt.Println("This is the length of key errors", len(keyErrors))
-			fmt.Printf("This is the first key errors info: Property Path: %s Invalid Value %s and the message %s \n ", keyErrors[0].PropertyPath, keyErrors[0].InvalidValue, keyErrors[0].Message)
-
 			return fmt.Errorf("failed schema validation: %v | schema: %s | log: %s", keyErrors, schema, message)
 		}
 		return nil

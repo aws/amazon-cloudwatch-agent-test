@@ -57,7 +57,6 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 		EndTime:           &endTime,
 		MetricDataQueries: metricDataQueries,
 	}
-	log.Print("This is the the getMetric data input", getMetricDataInput, getMetricDataInput.StartTime, getMetricDataInput.EndTime, getMetricDataInput.MetricDataQueries)
 
 	log.Printf("Metric data input: namespace %v, name %v, stat %v, period %v",
 		namespace, metricName, stat, metricQueryPeriod)
