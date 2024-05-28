@@ -213,6 +213,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "g4dn.xlarge",
 		},
+		{
+			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
 	},
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
