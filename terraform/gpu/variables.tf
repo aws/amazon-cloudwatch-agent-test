@@ -17,7 +17,7 @@ variable "addon_name" {
 }
 
 variable "addon_version" {
-  type = string
+  type    = string
   default = "latest"
 }
 
