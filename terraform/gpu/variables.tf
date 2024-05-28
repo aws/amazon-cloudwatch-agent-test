@@ -18,7 +18,7 @@ variable "addon_name" {
 
 variable "addon_version" {
   type = string
-  default = "v1.6.0-eksbuild.1"
+  default = "latest"
 }
 
 
@@ -34,7 +34,7 @@ variable "cwagent_image_tag" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.28"
+  default = "1.29"
 }
 
 variable "ami_type" {
@@ -44,7 +44,7 @@ variable "ami_type" {
 
 variable "instance_type" {
   type    = string
-  default = "g4dn.12xlarge"
+  default = "g4dn.xlarge"
 }
 
 variable "beta" {
