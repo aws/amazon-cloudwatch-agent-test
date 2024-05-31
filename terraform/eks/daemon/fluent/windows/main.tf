@@ -367,7 +367,7 @@ resource "kubernetes_daemonset" "agent_daemon" {
       spec {
         container {
           name  = "cloudwatch-agent"
-          image = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:1.247359.1b252618"
+          image = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:1.300040.0b650"
           resources {
             limits = {
               "cpu" : "200m",
