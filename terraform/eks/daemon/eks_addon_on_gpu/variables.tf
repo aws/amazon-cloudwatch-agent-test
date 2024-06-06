@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "../../test/gpu"
+  default = "../../../../test/gpu"
 }
 
 variable "addon_name" {
@@ -17,17 +17,6 @@ variable "addon_name" {
 }
 
 variable "addon_version" {
-  type    = string
-  default = "latest"
-}
-
-
-variable "cwagent_image_repo" {
-  type    = string
-  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
-}
-
-variable "cwagent_image_tag" {
   type    = string
   default = "latest"
 }

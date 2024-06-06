@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source = "../common"
+  source = "../../../common"
 }
 
 module "basic_components" {
-  source = "../basic_components"
-
+  source = "../../../basic_components"
   region = var.region
 }
 
@@ -137,7 +136,7 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<EOT
-      kubectl apply -f ../eks/daemon/gpuBurner.yaml
+      kubectl apply -f ./gpuBurner.yaml
       kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
       if go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
         echo "Tests passed"
