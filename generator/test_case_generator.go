@@ -179,6 +179,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},
+	"eks_addon": {
+		{
+			testDir:      "./test/metric_value_benchmark",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+		},
+	},
 	"eks_daemon": {
 		{
 			testDir:      "./test/metric_value_benchmark",
