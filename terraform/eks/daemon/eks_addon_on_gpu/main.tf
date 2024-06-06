@@ -21,7 +21,7 @@ locals {
 }
 
 resource "aws_eks_cluster" "this" {
-  name     = "cwagent-operator-eks-integ-${module.common.testing_id}"
+  name     = "cwagent-operator-eks-integ2-${module.common.testing_id}"
   role_arn = local.role_arn
   version  = var.k8s_version
   enabled_cluster_log_types = [
