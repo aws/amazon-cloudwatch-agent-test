@@ -181,7 +181,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"eks_addon": {
 		{
-			testDir:      "./test/metric_value_benchmark",
+			testDir:      "./test/gpu",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "g4dn.xlarge",
 		},
