@@ -1,27 +1,48 @@
 {
-    "agent": {
-        "metrics_collection_interval": 10,
-        "run_as_user": "root",
-        "debug": true,
-        "logfile": ""
-      },
-      "metrics": {
-        "namespace": "MetricValueBenchmarkTest",
+  "metrics": {
+    "namespace": "EthtoolTest4",
+    "metrics_collected": {
+      "ethtool": {
+        "metrics_include": [
+          "bw_in_allowance_exceeded",
+          "bw_out_allowance_exceeded",
+          "pps_allowance_exceeded",
+          "conntrack_allowance_exceeded",
+          "linklocal_allowance_exceeded",
+          "rx_gso_checksum_fixup",
+          "ena_admin_q_no_completion",
+          "ena_admin_q_out_of_space",
+          "ena_admin_q_completed_cmd",
+          "ena_admin_q_submitted_cmd",
+          "ena_admin_q_aborted_cmd",
+          "queue_7_rx_zc_queue_pkt_copy",
+          "queue_7_rx_rx_copybreak_pkt",
+          "queue_0_tx_cnt",
+          "conntrack_allowance_available",
+          "linklocal_allowance_exceeded",
+          "pps_allowance_exceeded",
+          "queue_0_rx_bytes"
+        ],
         "append_dimensions": {
-          "InstanceId": "${aws:InstanceId}"
-        },
-        "metrics_collected": {
-            "ethtool": {
-                "interface_include": [
-                    "eth0",
-                    "ens5"
-                ],
-                "metrics_include": [
-                  "queue_0_tx_cnt",
-                  "queue_0_rx_cnt"
-                ]
-            }
-        },
-        "force_flush_interval": 5
+          "name": "param",
+          "key": "chicken",
+          "key2": "chicken2"
+        }
+      },
+      "disk":{
+        "resources":[
+          "/",
+          "/tmp"
+        ],
+        "measurement":[
+          "total",
+          "used"
+        ],
+        "append_dimensions":{
+          "stackName":"Prod",
+          "name": "param"
+        }
       }
+    }
+  }
 }

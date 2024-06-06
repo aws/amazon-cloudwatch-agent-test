@@ -21,7 +21,7 @@ locals {
 }
 
 resource "aws_eks_cluster" "this" {
-  name     = "cwagent-operator-eks-integ-${module.common.testing_id}"
+  name     = "cwagent-operator-eks-integ5-${module.common.testing_id}"
   role_arn = local.role_arn
   version  = var.k8s_version
   enabled_cluster_log_types = [
@@ -45,9 +45,9 @@ resource "aws_eks_node_group" "this" {
   subnet_ids      = module.basic_components.public_subnet_ids
 
   scaling_config {
-    desired_size = 1
-    max_size     = 1
-    min_size     = 1
+    desired_size = 2
+    max_size     = 2
+    min_size     = 2
   }
 
   ami_type       = "AL2_x86_64_GPU"
