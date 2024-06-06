@@ -53,7 +53,7 @@ resource "aws_eks_node_group" "this" {
   ami_type       = "AL2_x86_64_GPU"
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
-  instance_types = var.instance_type
+  instance_types = [var.instance_type]
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
