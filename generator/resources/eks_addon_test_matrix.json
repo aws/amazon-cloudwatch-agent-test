@@ -1,10 +1,8 @@
 [
   {
     "k8s_version": "1.29",
-    "instanceType":"g4dn.xlarge",
-    "beta": "true",
     "addon_name":"amazon-cloudwatch-observability",
-    "addon_version":"v1.6.0-eksbuild.1"
-
+    "addon_version":"v1.6.0-eksbuild.1",
+    "ami_type": "AL2_x86_64_GPU"
   }
 ]

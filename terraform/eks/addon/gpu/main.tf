@@ -138,7 +138,13 @@ resource "null_resource" "validator" {
     command = <<EOT
       kubectl apply -f ./gpuBurner.yaml
       kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
-      kubectl set image daemonset/cloudwatch-agent otc-container=public.ecr.aws/cloudwatch-agent/cloudwatch-agent:latest -n amazon-cloudwatch
+      kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[
+          {
+            "op": "replace",
+            "path": "/spec/image",
+            "value": "${var.aws_ecr_private_registry}/${var.ecr_integration_test_repo}:${var.github_sha}"
+          }
+        ]'
       if go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
         echo "Tests passed"
       else
