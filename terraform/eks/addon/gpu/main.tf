@@ -145,7 +145,7 @@ resource "null_resource" "validator" {
             "value": "${var.aws_ecr_private_registry}/${var.ecr_integration_test_repo}:${var.github_sha}"
           }
         ]'
-      if go test ../../../../test/gpu -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
+      if go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
         echo "Tests passed"
       else
         echo "Tests failed"
