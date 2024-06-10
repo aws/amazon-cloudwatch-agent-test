@@ -57,6 +57,7 @@ func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDim
 			continue
 		}
 		results = append(results, validateMetricsAvailability(dims, metrics, actual))
+
 		for _, m := range metrics {
 			// this is to prevent panic with rand.Intn when metrics are not yet ready in a cluster
 			if _, ok := actual[m]; !ok {
