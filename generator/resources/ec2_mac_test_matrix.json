@@ -1,17 +1,5 @@
 [
       {
-        "os": "macOS Big Sur Arm64",
-        "instanceType":"mac2.metal",
-        "ami": "cloudwatch-agent-integration-test-mac-bigsur-arm64",
-        "arc": "arm64"
-      },
-      {
-        "os": "macOS Big Sur Amd64",
-        "instanceType":"mac1.metal",
-        "ami": "cloudwatch-agent-integration-test-mac-bigsur-x86",
-        "arc": "amd64"
-      },
-      {
         "os": "macOS Ventura Arm64",
         "instanceType":"mac2.metal",
         "ami": "cloudwatch-agent-integration-test-mac-ventura-arm64",

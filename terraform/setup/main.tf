@@ -82,9 +82,7 @@ resource "aws_ec2_host" "dedicated_host" {
   for_each = {
     "Ventura_x86_64" : "mac1.metal"
     "Sonoma_x86_64" : "mac1.metal"
-    "Big_Sur_x86_64" : "mac1.metal"
     "Ventura_arm64" : "mac2.metal"
-    "Big_Sur_arm64" : "mac2.metal"
     "Sonoma_arm64" : "mac2.metal"
   }
 

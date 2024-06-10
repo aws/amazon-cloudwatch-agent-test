@@ -21,7 +21,7 @@ func IsAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []fl
 
 	totalSum := 0.0
 	for _, value := range values {
-		if value < 0 {
+		if value < 0 && expectedValue >= 0 {
 			log.Printf("Values are not all greater than or equal to zero for %s", metricName)
 			return false
 		}
