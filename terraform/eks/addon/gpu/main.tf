@@ -126,6 +126,9 @@ resource "aws_eks_addon" "this" {
   cluster_name  = aws_eks_cluster.this.name
   addon_version = var.addon_version
 }
+output "eks_cluster_name" {
+  value = aws_eks_cluster.this.name
+}
 
 resource "null_resource" "validator" {
   depends_on = [
