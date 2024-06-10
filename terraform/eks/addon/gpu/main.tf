@@ -138,6 +138,7 @@ resource "null_resource" "validator" {
     command = <<EOT
       kubectl apply -f ./gpuBurner.yaml
       kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
+      kubectl get pods -A
       if go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
         echo "Tests passed"
       else
