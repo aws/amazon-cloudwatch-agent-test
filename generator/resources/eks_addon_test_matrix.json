@@ -4,6 +4,7 @@
     "addon_name":"amazon-cloudwatch-observability",
     "addon_version":"v1.6.0-eksbuild.1",
     "ami_type": "AL2_x86_64_GPU",
-    "terraform_dir": "terraform/eks/addon/gpu"
+    "terraform_dir": "terraform/eks/addon/gpu",
+    "test_dir": "../../../../test/gpu"
   }
 ]
