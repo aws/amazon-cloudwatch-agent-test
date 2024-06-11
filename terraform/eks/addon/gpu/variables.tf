@@ -25,30 +25,6 @@ variable "k8s_version" {
   type    = string
   default = "1.29"
 }
-variable "cwagent_image_repo" {
-  type    = string
-  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
-}
-variable "aws_ecr_private_registry" {
-  description = "The AWS ECR private registry"
-  type        = string
-}
-
-variable "ecr_integration_test_repo" {
-  description = "The ECR integration test repository"
-  type        = string
-}
-
-variable "github_sha" {
-  description = "The GitHub SHA"
-  type        = string
-}
-
-variable "cwagent_image_tag" {
-  type    = string
-  default = "latest"
-}
-
 
 variable "ami_type" {
   type    = string
