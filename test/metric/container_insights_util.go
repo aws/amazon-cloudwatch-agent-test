@@ -85,7 +85,6 @@ func getMetricsInClusterDimension(env *environment.MetaData, metricFilter string
 		},
 	}
 	metrics, err := listFetcher.Fetch(ContainerInsightsNamespace, "", dims)
-	fmt.Println(dims)
 	if err != nil {
 		log.Println("failed to fetch metric list", err)
 		return nil
@@ -98,7 +97,6 @@ func getMetricsInClusterDimension(env *environment.MetaData, metricFilter string
 	var results []dimToMetrics
 	for _, m := range metrics {
 		// filter by metric name filter
-		fmt.Println("This is the metric name and filter: ", *m.MetricName, metricFilter)
 		if metricFilter != "" && !strings.Contains(*m.MetricName, metricFilter) {
 			continue
 		}
@@ -134,11 +132,6 @@ func validateMetricsAvailability(dims string, expected []string, actual map[stri
 		Name:   dims,
 		Status: status.FAILED,
 	}
-	fmt.Println("Dims underneath")
-	fmt.Println(dims)
-	fmt.Println("This is the expected metrics: ", expected)
-	fmt.Println("This is the actual metrics: ", actual)
-	log.Printf("expected metrics: %d, actual metrics: %d", len(expected), len(actual))
 	if compareMetrics(expected, actual) {
 		testResult.Status = status.SUCCESSFUL
 	} else {
