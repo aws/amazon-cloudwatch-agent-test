@@ -94,7 +94,6 @@ type NvidiaTestRunner struct {
 var _ test_runner.ITestRunner = (*NvidiaTestRunner)(nil)
 
 func (t *NvidiaTestRunner) Validate() status.TestGroupResult {
-	time.Sleep(180 * time.Second)
 	var testResults []status.TestResult
 	testResults = append(testResults, metric.ValidateMetrics(t.env, gpuMetricIndicator, expectedDimsToMetrics)...)
 	testResults = append(testResults, metric.ValidateLogs(t.env))
