@@ -716,7 +716,7 @@ resource "null_resource" "validator" {
       while [ $i -lt 10 ]; do
         i=$((i+1))
         go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia && exit 0
-        sleep 10
+        sleep 30
       done
       exit 1
     EOT
