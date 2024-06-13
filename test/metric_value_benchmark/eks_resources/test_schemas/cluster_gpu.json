@@ -10,7 +10,7 @@
     "Type": {},
     "Version": {},
     "cluster_gpu_total": {},
-    "cluster_gpu_request": {},
+    "cluster_gpu_request": {}
   },
   "required": [
     "ClusterName",

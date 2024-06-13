@@ -49,7 +49,7 @@ var (
 
 	EksClusterValidationMap = map[string]string{
 		"Cluster":           eksClusterSchema,
-		"ClusterDaemonset":  eksClusterDaemonsetSchema,
+		"ClusterDaemonSet":  eksClusterDaemonsetSchema,
 		"ClusterDeployment": eksClusterDeploymentSchema,
 		"ClusterNamespace":  eksClusterNamespaceSchema,
 		"ClusterService":    eksClusterServiceSchema,
