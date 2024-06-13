@@ -6,6 +6,7 @@
 package emf
 
 import (
+	"flag"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -13,6 +14,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
+
+var useE2EMetrics = flag.Bool("useE2EMetrics", false, "Use E2E metrics mapping which uses latest build CWA")
 
 const (
 	gpuMetricIndicator = "_gpu_"
@@ -46,7 +49,48 @@ const (
 	clusterCountRequest = "cluster_gpu_request"
 )
 
-var expectedDimsToMetrics = map[string][]string{
+var expectedDimsToMetricsIntegTest = map[string][]string{
+	"ClusterName": {
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
+		//nodeCountTotal, nodeCountRequest, nodeCountLimit,
+		//clusterCountTotal, clusterCountRequest,
+	},
+	"ClusterName-Namespace": {
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+	},
+	//"ClusterName-Namespace-Service": {
+	//	podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+	//},
+	"ClusterName-Namespace-PodName": {
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+	},
+	"ClusterName-ContainerName-Namespace-PodName": {
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+	},
+	"ClusterName-ContainerName-FullPodName-Namespace-PodName": {
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+	},
+	"ClusterName-ContainerName-FullPodName-GpuDevice-Namespace-PodName": {
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+	},
+	"ClusterName-FullPodName-Namespace-PodName": {
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+	},
+	"ClusterName-FullPodName-GpuDevice-Namespace-PodName": {
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+	},
+	"ClusterName-InstanceId-NodeName": {
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
+		//nodeCountTotal, nodeCountRequest, nodeCountLimit,
+	},
+	"ClusterName-GpuDevice-InstanceId-InstanceType-NodeName": {
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
+	},
+}
+
+var expectedDimsToMetricsE2E = map[string][]string{
 	"ClusterName": {
 		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
 		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
@@ -95,6 +139,10 @@ var _ test_runner.ITestRunner = (*NvidiaTestRunner)(nil)
 
 func (t *NvidiaTestRunner) Validate() status.TestGroupResult {
 	var testResults []status.TestResult
+	expectedDimsToMetrics := expectedDimsToMetricsIntegTest
+	if *useE2EMetrics {
+		expectedDimsToMetrics = expectedDimsToMetricsE2E
+	}
 	testResults = append(testResults, metric.ValidateMetrics(t.env, gpuMetricIndicator, expectedDimsToMetrics)...)
 	testResults = append(testResults, metric.ValidateLogs(t.env))
 	return status.TestGroupResult{
