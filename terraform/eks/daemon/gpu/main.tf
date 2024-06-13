@@ -711,16 +711,14 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating EKS metrics/logs for EMF"
       cd ../../../..
-      for i in {1..10}; do
-        go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia && break || echo "Attempt $i failed, retrying..."
-        if [ $i -eq 10 ]; then
-          echo "Validation failed after 10 attempts"
-          exit 1
-        fi
-        sleep 30
+      i=0
+      while [ $i -lt 10 ]; do
+        i=$((i+1))
+        go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia && exit 0
+        sleep 10
       done
+      exit 1
     EOT
   }
 }
