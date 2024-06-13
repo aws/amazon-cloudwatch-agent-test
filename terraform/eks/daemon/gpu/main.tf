@@ -701,7 +701,6 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
     namespace = "amazon-cloudwatch"
   }
 }
-
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
@@ -709,11 +708,19 @@ resource "null_resource" "validator" {
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
   ]
+
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating EKS metrics/logs for EMF"
       cd ../../../..
-      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia
+      for i in {1..10}; do
+        go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia && break || echo "Attempt $i failed, retrying..."
+        if [ $i -eq 10 ]; then
+          echo "Validation failed after 10 attempts"
+          exit 1
+        fi
+        sleep 30
+      done
     EOT
   }
 }
