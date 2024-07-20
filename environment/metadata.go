@@ -44,6 +44,7 @@ type MetaData struct {
 	InstancePlatform          string
 	AgentStartCommand         string
 	EksGpuType                string
+	AmpWorkspaceId            string
 }
 
 type MetaDataStrings struct {
@@ -67,6 +68,7 @@ type MetaDataStrings struct {
 	InstancePlatform          string
 	AgentStartCommand         string
 	EksGpuType                string
+	AmpWorkspaceId            string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -215,6 +217,11 @@ func fillEKSData(e *MetaData, data *MetaDataStrings) {
 	e.EKSClusterName = data.EKSClusterName
 	e.EksGpuType = data.EksGpuType
 }
+
+func registerAmpWorkspaceId(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.AmpWorkspaceId), "ampWorkspaceId", "", "workspace Id for Amazon Managed Prometheus (AMP)")
+}
+
 func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerComputeType(registeredMetaDataStrings)
 	registerECSData(registeredMetaDataStrings)
@@ -230,6 +237,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerInstanceId(registeredMetaDataStrings)
 	registerInstancePlatform(registeredMetaDataStrings)
 	registerAgentStartCommand(registeredMetaDataStrings)
+	registerAmpWorkspaceId(registeredMetaDataStrings)
 
 	return registeredMetaDataStrings
 }
@@ -255,6 +263,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
 	metaDataStorage.EksGpuType = registeredMetaDataStrings.EksGpuType
+	metaDataStorage.AmpWorkspaceId = registeredMetaDataStrings.AmpWorkspaceId
 
 	return metaDataStorage
 }

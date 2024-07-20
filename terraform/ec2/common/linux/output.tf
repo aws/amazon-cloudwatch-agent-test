@@ -20,3 +20,7 @@ output "proxy_instance_proxy_ip" {
 output "cwa_onprem_assumed_iam_role_arm" {
   value = module.common.cwa_onprem_assumed_iam_role_arm
 }
+
+output "testing_id" {
+  value = module.common.testing_id
+}

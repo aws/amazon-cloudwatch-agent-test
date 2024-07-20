@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-module "linux_common" {
+module "common" {
   source = "../common/linux"
 
   region            = var.region
@@ -16,25 +16,16 @@ module "linux_common" {
   is_canary         = var.is_canary
 }
 
-module "reboot_common" {
-  source = "../common/linux_reboot"
-
-  test_dir              = var.test_dir
-  reboot_required_tests = local.reboot_required_tests
-  private_key_content   = module.linux_common.private_key_content
-  cwagent_public_ip     = module.linux_common.cwagent_public_ip
-  user                  = var.user
-
-  depends_on = [
-    null_resource.integration_test_setup,
-  ]
-}
-
 locals {
   // Canary downloads latest binary. Integration test downloads binary connect to git hash.
   binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
   // list of test that require instance reboot
   reboot_required_tests = tolist(["./test/restart"])
+}
+
+module "amp" {
+  source = "terraform-aws-modules/managed-service-prometheus/aws"
+  workspace_alias = "cwagent-integ-test-${module.common.testing_id}"
 }
 
 #####################################################################
@@ -45,8 +36,8 @@ resource "null_resource" "integration_test_setup" {
   connection {
     type        = "ssh"
     user        = var.user
-    private_key = module.linux_common.private_key_content
-    host        = module.linux_common.cwagent_public_ip
+    private_key = module.common.private_key_content
+    host        = module.common.cwagent_public_ip
   }
 
   # Prepare Integration Test
@@ -64,22 +55,16 @@ resource "null_resource" "integration_test_setup" {
   }
 
   depends_on = [
-    module.linux_common,
+    module.common,
   ]
-}
-
-module "amp" {
-  count = length(regexall("/amp", var.test_dir)) > 0 ? 1 : 0
-  source = "terraform-aws-modules/managed-service-prometheus/aws"
-  workspace_alias = "cwagent-integ-test-${module.linux_common.testing_id}"
 }
 
 resource "null_resource" "integration_test_run" {
   connection {
     type        = "ssh"
     user        = var.user
-    private_key = module.linux_common.private_key_content
-    host        = module.linux_common.cwagent_public_ip
+    private_key = module.common.private_key_content
+    host        = module.common.cwagent_public_ip
   }
 
   #Run sanity check and integration test
@@ -93,12 +78,12 @@ resource "null_resource" "integration_test_run" {
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
       var.pre_test_setup,
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v",
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.common.proxy_instance_proxy_ip} -instanceId=${module.common.cwagent_id} -v",
     ]
   }
 
   depends_on = [
+    module.amp,
     null_resource.integration_test_setup,
-    module.reboot_common,
   ]
 }
