@@ -47,10 +47,10 @@ resource "aws_eks_node_group" "this" {
     min_size     = 1
   }
 
-  ami_type       = "AL2_x86_64"
+  ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
-  instance_types = ["t3.medium"]
+  instance_types = [var.instance_type]
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
@@ -701,7 +701,6 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
     namespace = "amazon-cloudwatch"
   }
 }
-
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
@@ -709,11 +708,17 @@ resource "null_resource" "validator" {
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
   ]
+
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating EKS metrics/logs for EMF"
       cd ../../../..
-      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia
+      i=0
+      while [ $i -lt 10 ]; do
+        i=$((i+1))
+        go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia && exit 0
+        sleep 60
+      done
+      exit 1
     EOT
   }
 }

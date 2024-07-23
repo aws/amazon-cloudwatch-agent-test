@@ -9,7 +9,6 @@
     "Sources":{},
     "Timestamp":{},
     "Version":{},
-    "AutoScalingGroupName":{},
     "Namespace": {},
     "NodeName": {},
     "PodName": {},
@@ -24,7 +23,6 @@
     "Sources",
     "Timestamp",
     "Version",
-    "AutoScalingGroupName",
     "NodeName",
     "PodName",
     "Namespace"

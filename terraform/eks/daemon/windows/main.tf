@@ -443,7 +443,7 @@ resource "null_resource" "windows-cwagent" {
     command = <<-EOT
       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
       chmod +x kubectl
-      sed 's+CW_TEST_IMAGE+${var.cwagent_image_repo}:${var.cwagent_image_tag}+' ./../../default_resources/cwagent-windows.yaml | ./kubectl apply -f -
+      sed 's+CW_TEST_IMAGE+${var.cwagent_image_repo}:${var.cwagent_image_tag}+' ./../../default_resources/cwagent-windows-daemonset.yaml | ./kubectl apply -f -
       sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+1+' ./../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
       ./kubectl rollout status daemonset cloudwatch-agent-windows -n amazon-cloudwatch --timeout 600s
       ./kubectl rollout status deployment windows-test-deployment --timeout 600s
