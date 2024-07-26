@@ -45,7 +45,7 @@ type DataResult struct {
 
 const (
 	namespace = "AMPTest"
-	// template prometheus query for getting average of 1 min
+	// template prometheus query for getting average of 3 min
 	ampQueryTemplate = "avg_over_time(%s%s[3m])"
 )
 
