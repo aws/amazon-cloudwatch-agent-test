@@ -37,15 +37,15 @@ type AMPResponse struct {
 }
 type AMPResponseData struct {
 	ResultType string
-	Result     []DataResult
+	Result     []AMPDataResult
 }
-type DataResult struct {
+type AMPDataResult struct {
 	Metric map[string]interface{}
 	Value  []interface{}
 }
 
 const (
-	namespace = "AMPTest"
+	namespace = "AMPDestinationTest"
 	// template prometheus query for getting average of 3 min
 	ampQueryTemplate = "avg_over_time(%s%s[3m])"
 )
@@ -74,11 +74,11 @@ func init() {
 	}
 }
 
-type AmpTestRunner struct {
+type AmpDestinationTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-func (t AmpTestRunner) Validate() status.TestGroupResult {
+func (t AmpDestinationTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	time.Sleep(30 * time.Second)
@@ -92,7 +92,7 @@ func (t AmpTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *AmpTestRunner) validateMetric(metricName string) status.TestResult {
+func (t *AmpDestinationTestRunner) validateMetric(metricName string) status.TestResult {
 	env := environment.GetEnvironmentMetaData()
 
 	testResult := status.TestResult{
@@ -156,15 +156,15 @@ func (t *AmpTestRunner) validateMetric(metricName string) status.TestResult {
 	return testResult
 }
 
-func (t AmpTestRunner) GetTestName() string {
+func (t AmpDestinationTestRunner) GetTestName() string {
 	return namespace
 }
 
-func (t AmpTestRunner) GetAgentConfigFileName() string {
+func (t AmpDestinationTestRunner) GetAgentConfigFileName() string {
 	return "config.json"
 }
 
-func (t AmpTestRunner) GetMeasuredMetrics() []string {
+func (t AmpDestinationTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"CPU_USAGE_IDLE", "cpu_usage_nice", "cpu_usage_guest", "cpu_time_active", "cpu_usage_active",
 		"processes_blocked", "processes_dead", "processes_idle", "processes_paging", "processes_running",
@@ -173,7 +173,7 @@ func (t AmpTestRunner) GetMeasuredMetrics() []string {
 	}
 }
 
-func (t *AmpTestRunner) SetupBeforeAgentRun() error {
+func (t *AmpDestinationTestRunner) SetupBeforeAgentRun() error {
 	env := environment.GetEnvironmentMetaData()
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
@@ -194,12 +194,12 @@ func (t *AmpTestRunner) SetupBeforeAgentRun() error {
 }
 
 func TestAmp(t *testing.T) {
-	runner := test_runner.TestRunner{TestRunner: &AmpTestRunner{
+	runner := test_runner.TestRunner{TestRunner: &AmpDestinationTestRunner{
 		test_runner.BaseTestRunner{},
 	}}
 	result := runner.Run()
 	if result.GetStatus() != status.SUCCESSFUL {
-		t.Fatal("AMP test failed")
+		t.Fatal("AMP Destination test failed")
 		result.Print()
 	}
 }
@@ -268,4 +268,4 @@ func matchDimensions(labels map[string]interface{}) bool {
 	return true
 }
 
-var _ test_runner.ITestRunner = (*AmpTestRunner)(nil)
+var _ test_runner.ITestRunner = (*AmpDestinationTestRunner)(nil)
