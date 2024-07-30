@@ -17,10 +17,6 @@
         "resources": [
           "*"
         ],
-        "drop_original_metrics": [
-          "usage_iowait",
-          "time_idle"
-        ],
         "measurement": [
           {
             "name": "cpu_usage_idle",
