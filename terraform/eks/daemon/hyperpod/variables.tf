@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "./test/awsneuron"
+  default = "./test/hyperpod"
 }
 
 variable "cwagent_image_repo" {
