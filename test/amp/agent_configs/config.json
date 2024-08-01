@@ -1,0 +1,65 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "amp": {
+        "workspace_id": "{workspace_id}"
+      },
+      "cloudwatch": {}
+    },
+    "metrics_collected": {
+      "cpu": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_USAGE_IDLE",
+            "unit": "unit"
+          },
+          {
+            "name": "cpu_usage_nice",
+            "unit": "unit"
+          },
+          "cpu_usage_guest",
+          "time_active",
+          "usage_active"
+        ],
+        "totalcpu": false,
+        "metrics_collection_interval": 10,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      },
+      "processes": {
+        "measurement": [
+          "blocked","running","sleeping","stopped","total","dead","idle","paging","total_threads","zombies"
+        ],
+        "metrics_collection_interval": 10,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      }
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "aggregation_dimensions": [
+      [
+        "InstanceId",
+        "InstanceType"
+      ]
+    ]
+  }
+}
