@@ -22,13 +22,13 @@ import (
 const logLine = "# %d - This is a log line. \n"
 
 func KillEventLogService() error {
-	eventLogPid, err := exec.Command("gcim", "-ClassName", "Win32_Service", "-Filter", "name like \"EventLog\" or displayname like \"EventLog\"").Output()
+	eventLogPid, err := exec.Command("powershell.exe", "-Command", "\"gcim -ClassName Win32_Service -Filter name like \\\"EventLog\\\" or displayname like \\\"EventLog\\\"\"").Output()
 	if err != nil {
 		log.Printf("Error getting Windows event log service PID: %v", err)
 		return err
 	}
 
-	_, err = exec.Command("Stop-Process", string(eventLogPid), "-Force").Output()
+	_, err = exec.Command("powershell.exe", "-Command", "\"Stop-Process "+string(eventLogPid)+" -Force\"").Output()
 	if err != nil {
 		log.Printf("Error killing Windows event log service: %v", err)
 		return err
@@ -38,7 +38,7 @@ func KillEventLogService() error {
 }
 
 func StartEventLogService() error {
-	_, err := exec.Command("Start-Service", "EventLog").Output()
+	_, err := exec.Command("powershell.exe", "-Command", "\"Start-Service EventLog\"").Output()
 	if err != nil {
 		log.Printf("Error starting Windows event log service: %v", err)
 		return err
