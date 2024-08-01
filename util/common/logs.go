@@ -47,6 +47,15 @@ func StartEventLogService() error {
 	return nil
 }
 
+func ContainsWindowsEventLog(validationLog []models.LogValidation) bool {
+	for _, vLog := range validationLog {
+		if isWindowsEventLog(vLog) {
+			return true
+		}
+	}
+	return false
+}
+
 func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval time.Duration, logLinesPerMinute int, validationLog []models.LogValidation) error {
 	var multiErr error
 	if err := StartLogWrite(configFilePath, duration, sendingInterval, logLinesPerMinute); err != nil {
@@ -61,7 +70,7 @@ func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval
 func GenerateWindowsEvents(validationLog []models.LogValidation) error {
 	var multiErr error
 	for _, vLog := range validationLog {
-		if vLog.LogSource == "WindowsEvents" && vLog.LogLevel != "" {
+		if isWindowsEventLog(vLog) {
 			err := CreateWindowsEvent(vLog.LogStream, vLog.LogLevel, vLog.LogValue)
 			if err != nil {
 				multiErr = multierr.Append(multiErr, err)
@@ -102,6 +111,10 @@ func StartLogWrite(configFilePath string, duration time.Duration, sendingInterva
 	}
 
 	return multiErr
+}
+
+func isWindowsEventLog(vLog models.LogValidation) bool {
+	return vLog.LogSource == "WindowsEvents" && vLog.LogLevel != ""
 }
 
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
