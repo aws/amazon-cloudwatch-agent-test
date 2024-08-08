@@ -98,7 +98,7 @@ func registerECSData(dataString *MetaDataStrings) {
 func registerEKSData(d *MetaDataStrings) {
 	flag.StringVar(&(d.EKSClusterName), "eksClusterName", "", "EKS cluster name")
 	flag.StringVar(&(d.EksDeploymentStrategy), "eksDeploymentStrategy", "", "Daemon/Replica/Sidecar")
-	flag.StringVar(&(d.EksGpuType), "eksGpuType", "", "nvidia/inferentia")
+	flag.StringVar(&(d.EksGpuType), "eksGpuType", "", "nvidia/awsneuron")
 }
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
