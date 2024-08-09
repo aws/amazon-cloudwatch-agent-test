@@ -46,7 +46,7 @@ func (s *FeatureValidator) GenerateLoad() error {
 		if err := common.KillEventLogService(); err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
-		time.Sleep(20 * time.Second)
+		time.Sleep(5 * time.Second)
 		if err := common.StartEventLogService(); err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}

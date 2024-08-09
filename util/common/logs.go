@@ -30,8 +30,9 @@ func KillEventLogService() error {
 	out, err := GetEventLogServicePid()
 	if err != nil {
 		log.Printf("Error getting Windows event log service PID: %v; the output is %s", err, out)
+		return err
 	}
-	log.Printf("Windows EventLog Service PID: %s", out)
+	log.Printf("Killing Windows EventLog Service PID: %s", out)
 	_, _ = RunShellScript("Stop-Process -Force " + out)
 
 	return nil
@@ -40,11 +41,11 @@ func KillEventLogService() error {
 func StartEventLogService() error {
 	out, err := RunShellScript("Start-Service EventLog")
 	if err != nil {
-		log.Printf("Error starting Windows event log service: %v; the output is %s", err, string(out))
+		log.Printf("Error starting Windows event log service: %v; the output is %s", err, out)
 		return err
 	}
 	pid, _ := GetEventLogServicePid()
-	log.Printf("Windows EventLog Service PID: %s", pid)
+	log.Printf("Started Windows EventLog Service PID: %s", pid)
 
 	return nil
 }
