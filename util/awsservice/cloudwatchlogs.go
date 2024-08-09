@@ -5,6 +5,7 @@ package awsservice
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -20,6 +21,7 @@ import (
 const (
 	logStreamRetry = 20
 	retryInterval  = 10 * time.Second
+	NoLogTypeFound = "NoLogTypeFound"
 )
 
 // catch ResourceNotFoundException when deleting the log group and log stream, as these
@@ -319,4 +321,28 @@ func AssertNoDuplicateLogs() LogEventsValidator {
 		}
 		return nil
 	}
+}
+
+func GetLogEventCountPerType(logGroup, logStream string, since, until *time.Time) (map[string]int, error) {
+	var typeFrequency = make(map[string]int)
+	events, err := getLogsSince(logGroup, logStream, since, until)
+
+	// if there is an error, return the empty map
+	if err != nil {
+		return typeFrequency, err
+	}
+
+	typeFrequency[NoLogTypeFound] = 0
+	for _, event := range events {
+		message := *event.Message
+		var eksClusterType EKSClusterType
+		innerErr := json.Unmarshal([]byte(message), &eksClusterType)
+		if innerErr != nil {
+			typeFrequency[NoLogTypeFound]++
+		}
+
+		typeFrequency[eksClusterType.Type]++
+	}
+
+	return typeFrequency, nil
 }
