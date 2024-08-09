@@ -21,6 +21,44 @@ import (
 
 const logLine = "# %d - This is a log line. \n"
 
+func GetEventLogServicePid() (string, error) {
+	out, err := RunShellScript("gcim -ClassName Win32_Service -Filter \"name like 'EventLog' or displayname like 'EventLog'\" | Select-Object -ExpandProperty 'ProcessId'")
+	return out, err
+}
+
+func KillEventLogService() error {
+	out, err := GetEventLogServicePid()
+	if err != nil {
+		log.Printf("Error getting Windows event log service PID: %v; the output is %s", err, out)
+		return err
+	}
+	log.Printf("Killing Windows EventLog Service PID: %s", out)
+	_, _ = RunShellScript("Stop-Process -Force " + out)
+
+	return nil
+}
+
+func StartEventLogService() error {
+	out, err := RunShellScript("Start-Service EventLog")
+	if err != nil {
+		log.Printf("Error starting Windows event log service: %v; the output is %s", err, out)
+		return err
+	}
+	pid, _ := GetEventLogServicePid()
+	log.Printf("Started Windows EventLog Service PID: %s", pid)
+
+	return nil
+}
+
+func ContainsWindowsEventLog(validationLog []models.LogValidation) bool {
+	for _, vLog := range validationLog {
+		if isWindowsEventLog(vLog) {
+			return true
+		}
+	}
+	return false
+}
+
 func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval time.Duration, logLinesPerMinute int, validationLog []models.LogValidation) error {
 	var multiErr error
 	if err := StartLogWrite(configFilePath, duration, sendingInterval, logLinesPerMinute); err != nil {
@@ -35,7 +73,7 @@ func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval
 func GenerateWindowsEvents(validationLog []models.LogValidation) error {
 	var multiErr error
 	for _, vLog := range validationLog {
-		if vLog.LogSource == "WindowsEvents" && vLog.LogLevel != "" {
+		if isWindowsEventLog(vLog) {
 			err := CreateWindowsEvent(vLog.LogStream, vLog.LogLevel, vLog.LogValue)
 			if err != nil {
 				multiErr = multierr.Append(multiErr, err)
@@ -76,6 +114,10 @@ func StartLogWrite(configFilePath string, duration time.Duration, sendingInterva
 	}
 
 	return multiErr
+}
+
+func isWindowsEventLog(vLog models.LogValidation) bool {
+	return vLog.LogSource == "WindowsEvents" && vLog.LogLevel != ""
 }
 
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)

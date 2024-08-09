@@ -41,6 +41,17 @@ func (s *FeatureValidator) GenerateLoad() error {
 		validationLog         = s.vConfig.GetLogValidation()
 	)
 
+	// If we are validating windows event logs, kill event log service so the agent can resubscribe
+	if common.ContainsWindowsEventLog(validationLog) {
+		if err := common.KillEventLogService(); err != nil {
+			multiErr = multierr.Append(multiErr, err)
+		}
+		time.Sleep(5 * time.Second)
+		if err := common.StartEventLogService(); err != nil {
+			multiErr = multierr.Append(multiErr, err)
+		}
+	}
+
 	if err := common.GenerateLogs(agentConfigFilePath, agentCollectionPeriod, metricSendingInterval, dataRate, validationLog); err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}
