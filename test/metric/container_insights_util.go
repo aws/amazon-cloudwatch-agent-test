@@ -228,3 +228,49 @@ func ValidateLogs(env *environment.MetaData) status.TestResult {
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
+
+func ValidateLogsFrequency(env *environment.MetaData) status.TestResult {
+
+	testResult := status.TestResult{
+		Name:   "emf-logs-frequency",
+		Status: status.FAILED,
+	}
+
+	end := time.Now().Add(time.Duration(-2) * time.Minute).Truncate(time.Minute)
+	start := end.Add(time.Duration(-1) * time.Minute)
+	group := fmt.Sprintf("/aws/containerinsights/%s/performance", env.EKSClusterName)
+
+	// need to get the instances used for the EKS cluster
+	eKSInstances, err := awsservice.GetEKSInstances(env.EKSClusterName)
+	if err != nil {
+		log.Println("failed to get EKS instances", err)
+		return testResult
+	}
+
+	for _, instance := range eKSInstances {
+		stream := *instance.InstanceName
+		frequencyMap, err := awsservice.GetLogEventCountPerType(group, stream, &start, &end)
+
+		for logType, expectedFrequency := range eks_resources.EksClusterFrequencyValidationMap {
+			log.Printf("logs with no logtype : %d", frequencyMap[awsservice.NoLogTypeFound])
+
+			actualFrequency, ok := frequencyMap[logType]
+			if !ok {
+				log.Printf("no log with the expected logtype found : %s, start time : %s", logType, start.GoString())
+				return testResult
+			}
+			if actualFrequency != expectedFrequency {
+				log.Printf("log frequency validation failed for type: %s, expected: %d, actual: %d, start time: %s", logType, expectedFrequency, actualFrequency, start.GoString())
+				return testResult
+			}
+		}
+
+		if err != nil {
+			log.Printf("log validation (%s/%s) failed: %v, start time : %s", group, stream, err, start)
+			return testResult
+		}
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
