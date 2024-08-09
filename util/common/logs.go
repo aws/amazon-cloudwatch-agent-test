@@ -21,28 +21,30 @@ import (
 
 const logLine = "# %d - This is a log line. \n"
 
+func GetEventLogServicePid() (string, error) {
+	out, err := RunShellScript("gcim -ClassName Win32_Service -Filter \"name like 'EventLog' or displayname like 'EventLog'\" | Select-Object -ExpandProperty 'ProcessId'")
+	return out, err
+}
+
 func KillEventLogService() error {
-	out, err := RunShellScript("gcim", "-ClassName Win32_Service -Filter \\\"name like 'EventLog' or displayname like 'EventLog'\\\"")
+	out, err := GetEventLogServicePid()
 	if err != nil {
 		log.Printf("Error getting Windows event log service PID: %v; the output is %s", err, out)
-		return err
 	}
-
-	_, err = RunShellScript("Stop-Process " + string(out) + " -Force")
-	if err != nil {
-		log.Printf("Error killing Windows event log service: %v", err)
-		return err
-	}
+	log.Printf("Windows EventLog Service PID: %s", out)
+	_, _ = RunShellScript("Stop-Process -Force " + out)
 
 	return nil
 }
 
 func StartEventLogService() error {
-	out, err := RunCommand("Start-Service EventLog")
+	out, err := RunShellScript("Start-Service EventLog")
 	if err != nil {
 		log.Printf("Error starting Windows event log service: %v; the output is %s", err, string(out))
 		return err
 	}
+	pid, _ := GetEventLogServicePid()
+	log.Printf("Windows EventLog Service PID: %s", pid)
 
 	return nil
 }
