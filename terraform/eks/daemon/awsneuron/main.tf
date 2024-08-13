@@ -47,8 +47,6 @@ resource "aws_eks_node_group" "this" {
     min_size     = 1
   }
 
-  labels = {"beta.kubernetes.io/instance-type": "ml.t3.medium"}
-
   ami_type       = "AL2_x86_64"
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
