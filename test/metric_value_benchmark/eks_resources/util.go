@@ -139,6 +139,8 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"node_cpu_reserved_capacity",
 			"container_memory_utilization_over_container_limit",
 			"container_cpu_request",
+			"pod_cpu_usage_total",
+			"pod_memory_working_set",
 		},
 		"ClusterName-FullPodName-Namespace-PodName": {
 			"pod_network_tx_bytes",
@@ -168,6 +170,8 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_memory_request",
 			"pod_cpu_reserved_capacity",
 			"pod_cpu_utilization_over_pod_limit",
+			"pod_cpu_usage_total",
+			"pod_memory_working_set",
 		},
 		"ClusterName-Namespace-PodName": {
 			"pod_interface_network_rx_dropped",
@@ -197,6 +201,8 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_cpu_utilization_over_pod_limit",
 			"pod_status_scheduled",
 			"pod_memory_limit",
+			"pod_cpu_usage_total",
+			"pod_memory_working_set",
 		},
 
 		"ClusterName-InstanceId-NodeName": {
