@@ -21,27 +21,8 @@ variable "cwagent_image_tag" {
   default = "latest"
 }
 
-variable "neuron_monitor_image_repo" {
-  type    = string
-  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
-}
-
-variable "neuron_monitor_image_tag" {
-  type    = string
-  default = "latest"
-}
-
 variable "k8s_version" {
   type    = string
   default = "1.28"
 }
 
-variable "ami_type" {
-  type    = string
-  default = "AL2_x86_64"
-}
-
-variable "instance_type" {
-  type    = string
-  default = "trn1.2xlarge"
-}

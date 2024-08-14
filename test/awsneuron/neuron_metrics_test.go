@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package emf
+package awsneuron
 
 import (
 	"time"

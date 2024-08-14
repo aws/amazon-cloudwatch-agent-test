@@ -820,7 +820,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating EKS metrics/logs for EMF"
       cd ../../../..
-      go test -timeout 30m ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia
+      go test -timeout 30m ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
   }
 }
