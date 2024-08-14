@@ -258,6 +258,8 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_memory_utilization",
 			"pod_number_of_running_containers",
 			"pod_status_scheduled",
+			"pod_cpu_usage_total",
+			"pod_memory_working_set",
 		},
 		"ClusterName-Namespace": {
 			"pod_interface_network_rx_dropped",
@@ -269,6 +271,8 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_interface_network_tx_dropped",
 			"pod_cpu_utilization",
 			"pod_network_tx_bytes",
+			"pod_cpu_usage_total",
+			"pod_memory_working_set",
 		},
 	}
 
