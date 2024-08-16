@@ -3,7 +3,11 @@
 
 package metric
 
-import "log"
+import (
+	"errors"
+	"fmt"
+	"log"
+)
 
 var CpuMetrics = []string{"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
 	"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
@@ -40,4 +44,25 @@ func IsAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []fl
 	log.Printf("The average value %f for metric %s are within bound [%f, %f]",
 		metricAverageValue, metricName, lowerBoundValue, upperBoundValue)
 	return true
+}
+
+func IsAverageWithinBounds(values []float64, bounds [2]float64) error {
+	if len(values) == 0 {
+		return errors.New("no values found")
+	}
+	if bounds[0] > bounds[1] {
+		return fmt.Errorf("invalid value bounds: %v", bounds)
+	}
+	sum := 0.0
+	for _, value := range values {
+		if value < 0 {
+			return errors.New("values are not all greater than or equal to zero")
+		}
+		sum += value
+	}
+	average := sum / float64(len(values))
+	if average < bounds[0] || average > bounds[1] {
+		return fmt.Errorf("average value %v must be within bounds: %v", average, bounds)
+	}
+	return nil
 }

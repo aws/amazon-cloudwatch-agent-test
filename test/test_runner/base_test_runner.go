@@ -30,7 +30,7 @@ type ITestRunner interface {
 	GetTestName() string
 	GetAgentConfigFileName() string
 	GetAgentRunDuration() time.Duration
-	GetMeasuredMetrics() []string
+	//GetMeasuredMetrics() []string
 	SetupBeforeAgentRun() error
 	SetupAfterAgentRun() error
 	UseSSM() bool
