@@ -818,7 +818,7 @@ resource "null_resource" "validator" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating EKS metrics/logs for EMF"
+      echo "Validating EKS metrics/logs for AWS Neuron"
       cd ../../../..
       go test -timeout 30m ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
