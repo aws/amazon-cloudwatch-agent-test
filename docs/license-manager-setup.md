@@ -10,7 +10,7 @@ License manager requires a license to manage all the dedicated hosts own by a ac
 5. Provide `License name` and choose `Cores` for `Licence Type`.  Leave the `Number of Cores` empty for default value and click `Submit`
 
 # 2. Associate AMI for license
-In order launch dedicated host instances using License Manager, we have to associate AMI with the license we created. Note that we must own the AMI so to work around this we can copy existing AMI.
+In order to launch dedicated host instances using License Manager, we have to associate AMI with the license we created. Note that we must own the AMI so to work around this we can copy existing AMI.
 1. Go to EC2 page
 2. Click on `AMIs` on the sidebar
 3. Filter by `Public Images` and select the AMI you want to copy
@@ -24,7 +24,7 @@ In order launch dedicated host instances using License Manager, we have to assoc
 Host resource group manages the host associated with the server-bound licenses and this is the group we will call to help us access available dedicated hosts
 1. Go to AWS License Manager
 2. Click on `Host resource groups` on the sidebar
-3. Click on `Create sost resource groups`
+3. Click on `Create host resource groups`
 4. Provide `Host resource group name`, deselect `Release hosts automatically`, and use the license you created in step 1 for section `Associated self-managed licenses`
 5. Click on `Create`
 
@@ -46,7 +46,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   tenancy                              = "host"
-  host_resource_group_arn              = your_host_resourc_group_arn
+  host_resource_group_arn              = your_host_resource_group_arn
 
   metadata_options {
     http_endpoint = "enabled"
