@@ -52,6 +52,8 @@ resource "aws_eks_node_group" "this" {
   disk_size      = 20
   instance_types = [var.instance_type]
 
+  labels = { "beta.kubernetes.io/instance-type" : "ml.t3.medium", "sagemaker.amazonaws.com/node-health-status" : "Schedulable", }
+
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
@@ -161,349 +163,20 @@ resource "aws_security_group_rule" "nodes_cluster_inbound" {
   type                     = "ingress"
 }
 
-
-# create cert for communication between agent and neuron monitor
-resource "tls_private_key" "private_key" {
-  algorithm = "RSA"
-}
-
-resource "local_file" "ca_key" {
-  content  = tls_private_key.private_key.private_key_pem
-  filename = "${path.module}/certs/ca.key"
-}
-
-resource "tls_self_signed_cert" "ca_cert" {
-  private_key_pem   = tls_private_key.private_key.private_key_pem
-  is_ca_certificate = true
-  subject {
-    common_name  = "neuron-monitor-service.amazon-cloudwatch.svc"
-    organization = "Amazon CloudWatch Agent"
-  }
-  validity_period_hours = 24
-  allowed_uses = [
-    "digital_signature",
-    "key_encipherment",
-    "cert_signing",
-    "crl_signing",
-    "server_auth",
-    "client_auth",
-  ]
-}
-
-resource "local_file" "ca_cert_file" {
-  content  = tls_self_signed_cert.ca_cert.cert_pem
-  filename = "${path.module}/certs/ca.cert"
-}
-
-resource "tls_private_key" "server_private_key" {
-  algorithm = "RSA"
-}
-
-resource "local_file" "server_key" {
-  content  = tls_private_key.server_private_key.private_key_pem
-  filename = "${path.module}/certs/server.key"
-}
-
-resource "tls_cert_request" "local_csr" {
-  private_key_pem = tls_private_key.server_private_key.private_key_pem
-  dns_names       = ["localhost", "127.0.0.1", "neuron-monitor-service.amazon-cloudwatch.svc"]
-  subject {
-    common_name  = "neuron-monitor-service.amazon-cloudwatch.svc"
-    organization = "Amazon CloudWatch Agent"
-  }
-}
-
-resource "tls_locally_signed_cert" "server_cert" {
-  cert_request_pem      = tls_cert_request.local_csr.cert_request_pem
-  ca_private_key_pem    = tls_private_key.private_key.private_key_pem
-  ca_cert_pem           = tls_self_signed_cert.ca_cert.cert_pem
-  validity_period_hours = 12
-  allowed_uses = [
-    "digital_signature",
-    "key_encipherment",
-    "server_auth",
-    "client_auth",
-  ]
-}
-
-resource "local_file" "server_cert_file" {
-  content  = tls_locally_signed_cert.server_cert.cert_pem
-  filename = "${path.module}/certs/server.cert"
-}
-
-resource "kubernetes_secret" "agent_cert" {
-  metadata {
-    name      = "amazon-cloudwatch-observability-agent-cert"
-    namespace = "amazon-cloudwatch"
-  }
-  data = {
-    "ca.crt"  = tls_self_signed_cert.ca_cert.cert_pem              #filebase64(local_file.ca_cert_file.filename)
-    "tls.crt" = tls_locally_signed_cert.server_cert.cert_pem       #filebase64(local_file.server_cert_file.filename)
-    "tls.key" = tls_private_key.server_private_key.private_key_pem #filebase64(local_file.server_key.filename)
-  }
-}
-
-
 resource "kubernetes_namespace" "namespace" {
   metadata {
     name = "amazon-cloudwatch"
   }
 }
 
-resource "kubernetes_config_map" "neuron_monitor_config_map" {
-  depends_on = [
-    kubernetes_namespace.namespace
-  ]
-
-  metadata {
-    name      = "neuron-monitor-config-map"
-    namespace = "amazon-cloudwatch"
-  }
-
-  data = {
-    "monitor.json" = jsonencode({
-      period = "5s"
-      neuron_runtimes = [
-        {
-          tag_filter : ".*"
-          metrics = [
-            {
-              type = "neuroncore_counters"
-            },
-            {
-              type = "memory_used"
-            },
-            {
-              type = "neuron_runtime_vcpu_usage"
-            },
-            {
-              type = "execution_stats"
-            }
-          ]
-        }
-      ]
-      system_metrics = [
-        {
-          type = "memory_info"
-        },
-        {
-          period = "5s"
-          type   = "neuron_hw_counters"
-        }
-      ]
-    })
-  }
-}
-
-resource "kubernetes_service_account" "neuron_monitor_service_account" {
-  depends_on = [
-    kubernetes_namespace.namespace
-  ]
-  metadata {
-    name      = "neuron-monitor-service-acct"
-    namespace = "amazon-cloudwatch"
-  }
-}
-
-resource "kubernetes_role" "neuron_monitor_role" {
-  depends_on = [
-    kubernetes_namespace.namespace,
-    kubernetes_service_account.neuron_monitor_service_account,
-    kubernetes_config_map.neuron_monitor_config_map
-  ]
-  metadata {
-    name      = "neuron-monitor-role"
-    namespace = "amazon-cloudwatch"
-  }
-
-  rule {
-    api_groups     = [""]
-    resources      = ["configmaps"]
-    resource_names = ["neuron-monitor-config-map"]
-    verbs          = ["get"]
-  }
-}
-
-resource "kubernetes_role_binding" "neuron_monitor_role_binding" {
-  depends_on = [
-    kubernetes_namespace.namespace,
-    kubernetes_service_account.neuron_monitor_service_account,
-    kubernetes_role.neuron_monitor_role
-  ]
-
-  metadata {
-    namespace = "amazon-cloudwatch"
-    name      = "neuron-monitor-role-binding"
-  }
-
-  role_ref {
-    kind      = "Role"
-    name      = "neuron-monitor-role"
-    api_group = "rbac.authorization.k8s.io"
-  }
-
-  subject {
-    kind      = "ServiceAccount"
-    name      = "neuron-monitor-service-acct"
-    namespace = "amazon-cloudwatch"
-  }
-}
-
-resource "kubernetes_daemonset" "neuron_monitor" {
-  depends_on = [
-    kubernetes_namespace.namespace,
-    kubernetes_service_account.neuron_monitor_service_account,
-    kubernetes_role.neuron_monitor_role,
-    kubernetes_role_binding.neuron_monitor_role_binding,
-    kubernetes_config_map.neuron_monitor_config_map
-  ]
-
-  metadata {
-    name      = "neuron-monitor"
-    namespace = "amazon-cloudwatch"
-    labels = {
-      k8s-app = "neuron-monitor"
-      version = "v1"
-    }
-  }
-  spec {
-    selector {
-      match_labels = {
-        k8s-app = "neuron-monitor"
-      }
-    }
-    template {
-      metadata {
-        labels = {
-          k8s-app = "neuron-monitor"
-          version = "v1"
-        }
-      }
-      spec {
-        affinity {
-          node_affinity {
-            required_during_scheduling_ignored_during_execution {
-              node_selector_term {
-                match_expressions {
-                  key      = "kubernetes.io/os"
-                  operator = "In"
-                  values   = ["linux"]
-                }
-              }
-            }
-          }
-        }
-        container {
-          name  = "neuron-monitor-prometheus"
-          image = "506463145083.dkr.ecr.us-west-2.amazonaws.com/mocked-neuron-monitor:v2"
-          port {
-            container_port = 8000
-          }
-          command = [
-            "/bin/sh",
-            "-c",
-            "/opt/aws/neuron/bin/dummy_neuron_monitor.py --port 8000 --cert-file /etc/amazon-cloudwatch-observability-neuron-cert/server.crt --key-file /etc/amazon-cloudwatch-observability-neuron-cert/server.key"
-          ]
-          resources {
-            limits = {
-              cpu    = "500m"
-              memory = "256Mi"
-            }
-            requests = {
-              cpu    = "256m"
-              memory = "128Mi"
-            }
-          }
-          security_context {
-            privileged = true
-          }
-          env {
-            name = "NODE_NAME"
-            value_from {
-              field_ref {
-                field_path = "spec.nodeName"
-              }
-            }
-          }
-          env {
-            name  = "PATH"
-            value = "/usr/local/bin:/usr/bin:/bin:/opt/aws/neuron/bin"
-          }
-          volume_mount {
-            mount_path = "/etc/amazon-cloudwatch-observability-neuron-cert/"
-            name       = "neurontls"
-            read_only  = true
-          }
-          volume_mount {
-            mount_path = "/etc/neuron-monitor-config/"
-            name       = "neuron-monitor-config"
-            read_only  = true
-          }
-        }
-        volume {
-          name = "neurontls"
-          secret {
-            secret_name = "amazon-cloudwatch-observability-agent-cert"
-            items {
-              key  = "tls.crt"
-              path = "server.crt"
-            }
-            items {
-              key  = "tls.key"
-              path = "server.key"
-            }
-          }
-        }
-        volume {
-          name = "neuron-monitor-config"
-          config_map {
-            name = "neuron-monitor-config-map"
-          }
-        }
-        service_account_name = "neuron-monitor-service-acct"
-      }
-    }
-  }
-}
-
-resource "kubernetes_service" "neuron_monitor_service" {
-  depends_on = [
-    kubernetes_namespace.namespace,
-    kubernetes_service_account.cwagentservice,
-    aws_eks_node_group.this,
-    kubernetes_daemonset.neuron_monitor
-  ]
-  metadata {
-    name      = "neuron-monitor-service"
-    namespace = "amazon-cloudwatch"
-    labels = {
-      "k8s-app" : "neuron-monitor-service"
-    }
-    annotations = {
-      "prometheus.io/scrape" : "true"
-    }
-  }
-  spec {
-    type = "ClusterIP"
-    selector = {
-      k8s-app = "neuron-monitor"
-    }
-    port {
-      name        = "metrics"
-      port        = 8000
-      target_port = 8000
-      protocol    = "TCP"
-    }
-    internal_traffic_policy = "Local"
-  }
-}
-
+# TODO: how do we support different deployment types? Should they be in separate terraform
+#       files, and spawn separate tests?
 resource "kubernetes_daemonset" "service" {
   depends_on = [
     kubernetes_namespace.namespace,
+    kubernetes_config_map.cwagentconfig,
     kubernetes_service_account.cwagentservice,
-    aws_eks_node_group.this,
-    kubernetes_daemonset.neuron_monitor
+    aws_eks_node_group.this
   ]
   metadata {
     name      = "cloudwatch-agent"
@@ -602,16 +275,6 @@ resource "kubernetes_daemonset" "service" {
             name       = "devdisk"
             read_only  = true
           }
-          volume_mount {
-            mount_path = "/etc/amazon-cloudwatch-observability-agent-cert"
-            name       = "agenttls"
-            read_only  = true
-          }
-          volume_mount {
-            mount_path = "/var/lib/kubelet/pod-resources"
-            name       = "kubelet-podresources"
-            read_only  = true
-          }
         }
         volume {
           name = "cwagentconfig"
@@ -655,20 +318,54 @@ resource "kubernetes_daemonset" "service" {
             path = "/dev/disk"
           }
         }
-        volume {
-          name = "kubelet-podresources"
-          host_path {
-            path = "/var/lib/kubelet/pod-resources"
-          }
-        }
-        volume {
-          name = "agenttls"
-          secret {
-            secret_name = "amazon-cloudwatch-observability-agent-cert"
-            items {
-              key  = "ca.crt"
-              path = "tls-ca.crt"
+
+        container {
+          name              = "hyperpod-eks-testing"
+          image             = "alpine/socat:latest"
+          image_pull_policy = "Always"
+          resources {
+            limits = {
+              "cpu" : "50m",
+              "memory" : "50Mi"
             }
+            requests = {
+              "cpu" : "50m",
+              "memory" : "50Mi"
+            }
+          }
+
+          command = [
+            "/bin/sh",
+            "-c",
+            "while true; do CURRENT_TIME=\"$(date +%s%3N)\"; TIMESTAMP=\"$(($CURRENT_TIME *1000))\"; echo '{\"_aws\":{\"Timestamp\":'\"$${TIMESTAMP}\"',\"LogGroupName\":\"EMFEKSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFEKSNameSpace\",\"Dimensions\":[[\"Type\",\"ClusterName\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"ClusterName\": \"${aws_eks_cluster.this.name}\"}' | socat -v -t 0 - UDP:0.0.0.0:25888; sleep 60; done"
+          ]
+          env {
+            name = "HOST_IP"
+            value_from {
+              field_ref {
+                field_path = "status.hostIP"
+              }
+            }
+          }
+          env {
+            name = "HOST_NAME"
+            value_from {
+              field_ref {
+                field_path = "spec.nodeName"
+              }
+            }
+          }
+          env {
+            name = "K8S_NAMESPACE"
+            value_from {
+              field_ref {
+                field_path = "metadata.namespace"
+              }
+            }
+          }
+          volume_mount {
+            mount_path = "/etc/cwagentconfig"
+            name       = "cwagentconfig"
           }
         }
         service_account_name             = "cloudwatch-agent"
@@ -682,9 +379,7 @@ resource "kubernetes_daemonset" "service" {
 # Template Files
 ##########################################
 locals {
-  httpd_config     = "../../../../${var.test_dir}/resources/httpd.conf"
-  httpd_ssl_config = "../../../../${var.test_dir}/resources/httpd-ssl.conf"
-  cwagent_config   = fileexists("../../../../${var.test_dir}/resources/config.json") ? "../../../../${var.test_dir}/resources/config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
+  cwagent_config = fileexists("../../../../${var.test_dir}/resources/config.json") ? "../../../../${var.test_dir}/resources/config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
 }
 
 data "template_file" "cwagent_config" {
@@ -707,30 +402,6 @@ resource "kubernetes_config_map" "cwagentconfig" {
   }
 }
 
-data "template_file" "httpd_config" {
-  template = file(local.httpd_config)
-  vars     = {}
-}
-data "template_file" "httpd_ssl_config" {
-  template = file(local.httpd_ssl_config)
-  vars     = {}
-}
-
-resource "kubernetes_config_map" "httpdconfig" {
-  depends_on = [
-    kubernetes_namespace.namespace,
-    kubernetes_service_account.cwagentservice
-  ]
-  metadata {
-    name      = "httpdconfig"
-    namespace = "amazon-cloudwatch"
-  }
-  data = {
-    "httpd.conf" : data.template_file.httpd_config.rendered
-    "httpd-ssl.conf" : data.template_file.httpd_ssl_config.rendered
-  }
-}
-
 resource "kubernetes_service_account" "cwagentservice" {
   depends_on = [kubernetes_namespace.namespace]
   metadata {
@@ -745,8 +416,8 @@ resource "kubernetes_cluster_role" "clusterrole" {
     name = "cloudwatch-agent-role"
   }
   rule {
-    verbs      = ["get", "list", "watch"]
-    resources  = ["pods", "pods/logs", "nodes", "nodes/proxy", "namespaces", "endpoints"]
+    verbs      = ["list", "watch"]
+    resources  = ["pods", "nodes", "endpoints"]
     api_groups = [""]
   }
   rule {
@@ -774,21 +445,6 @@ resource "kubernetes_cluster_role" "clusterrole" {
     resource_names = ["cwagent-clusterleader"]
     resources      = ["configmaps"]
     api_groups     = [""]
-  }
-  rule {
-    verbs          = ["get"]
-    resource_names = ["neuron-monitor-config-map"]
-    resources      = ["configmaps"]
-    api_groups     = [""]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["services"]
-    api_groups = [""]
-  }
-  rule {
-    non_resource_urls = ["/metrics"]
-    verbs             = ["get", "list", "watch"]
   }
 }
 
@@ -818,9 +474,9 @@ resource "null_resource" "validator" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating EKS metrics/logs for AWS Neuron"
+      echo "Validating HyperPod Metrics"
       cd ../../../..
-      go test -timeout 30m ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
+      go test -timeout 120m ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
   }
 }
