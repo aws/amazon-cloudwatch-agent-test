@@ -231,6 +231,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
 	},
+	"ec2_otel_merging": {
+		{testDir: "./test/agent_otel_merging"},
+	},
 }
 
 type partition struct {
