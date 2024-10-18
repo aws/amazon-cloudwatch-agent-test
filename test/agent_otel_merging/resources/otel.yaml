@@ -1,0 +1,27 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  awsemf/otel-merging:
+    namespace: "CWAgent-testing-otel"
+    log_group_name: "CWA"
+    dimension_rollup_option: "NoDimensionRollup"
+    log_stream_name: "Testing-otel"
+    resource_to_telemetry_conversion:
+      enabled: true
+    version: "0"
+
+extensions:
+  health_check:
+
+service:
+  extensions:
+    - health_check
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      exporters: [awsemf/otel-merging]
+

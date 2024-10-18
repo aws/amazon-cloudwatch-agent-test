@@ -1,0 +1,11 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "cpu_usage_idle"
+        ]
+      }
+    }
+  }
+}
