@@ -8,6 +8,12 @@
             "value": {
               "stringValue": "test-service"
             }
+          },
+          {
+            "key": "instance_id",
+            "value": {
+              "stringValue": "$INSTANCE_ID"
+            }
           }
         ]
       },

@@ -14,7 +14,12 @@ exporters:
       enabled: true
     version: "0"
 
+extensions:
+  health_check:
+
 service:
+  extensions:
+    - health_check
   pipelines:
     metrics:
       receivers: [otlp]
