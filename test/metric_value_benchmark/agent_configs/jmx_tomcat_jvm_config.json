@@ -1,192 +1,55 @@
 {
   "agent": {
-    "debug": true,
-    "omit_hostname": true,
-    "metrics_collection_interval": 10
+    "debug": true
   },
   "metrics": {
     "namespace": "MetricValueBenchmarkJMXTest",
     "force_flush_interval": 5,
-    "aggregation_dimensions": [["InstanceId"]],
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },
-    "metrics_destinations": {
-      "cloudwatch": {}
-    },
     "metrics_collected": {
-      "jmx": {
-        "tomcat_jvm": {
-          "endpoint": "localhost:8090",
-          "jmx_collection_interval": 10,
-          "connection_properties": {
-            "ssl": false,
-            "connect_timeout": "10s",
-            "retry_interval": "5s",
-            "max_retries": 3
-          },
-          "validation": {
-            "timeout": "30s",
-            "retry_count": 3,
-            "required_metrics": [
-              "jvm.threads.count",
-              "tomcat.threads"
+      "jmx": [
+        {
+          "endpoint": "localhost:2030",
+          "tomcat": {
+            "measurement": [
+              "tomcat.traffic",
+              "tomcat.threads",
+              "tomcat.sessions",
+              "tomcat.request_count",
+              "tomcat.processing_time",
+              "tomcat.max_time",
+              "tomcat.errors"
             ]
           },
-          "measurement": [
-            {
-              "name": "jvm.threads.count",
-              "mBean": "java.lang:type=Threading",
-              "attribute": "ThreadCount"
-            },
-            {
-              "name": "jvm.memory.pool.used",
-              "mBean": "java.lang:type=MemoryPool,name=*",
-              "attribute": "Usage.used"
-            },
-            {
-              "name": "jvm.memory.pool.max",
-              "mBean": "java.lang:type=MemoryPool,name=*",
-              "attribute": "Usage.max"
-            },
-            {
-              "name": "jvm.memory.pool.init",
-              "mBean": "java.lang:type=MemoryPool,name=*",
-              "attribute": "Usage.init"
-            },
-            {
-              "name": "jvm.memory.pool.committed",
-              "mBean": "java.lang:type=MemoryPool,name=*",
-              "attribute": "Usage.committed"
-            },
-            {
-              "name": "jvm.memory.nonheap.used",
-              "mBean": "java.lang:type=Memory",
-              "attribute": "NonHeapMemoryUsage.used"
-            },
-            {
-              "name": "jvm.memory.nonheap.max",
-              "mBean": "java.lang:type=Memory",
-              "attribute": "NonHeapMemoryUsage.max"
-            },
-            {
-              "name": "jvm.memory.nonheap.init",
-              "mBean": "java.lang:type=Memory",
-              "attribute": "NonHeapMemoryUsage.init"
-            },
-            {
-              "name": "jvm.memory.nonheap.committed",
-              "mBean": "java.lang:type=Memory",
-              "attribute": "NonHeapMemoryUsage.committed"
-            },
-            {
-              "name": "jvm.memory.heap.used",
-              "mBean": "java.lang:type=Memory",
-              "attribute": "HeapMemoryUsage.used",
-              "rename": "JVM_MEM_HEAP_USED"
-            },
-            {
-              "name": "jvm.memory.heap.max",
-              "mBean": "java.lang:type=Memory",
-              "attribute": "HeapMemoryUsage.max"
-            },
-            {
-              "name": "jvm.memory.heap.init",
-              "mBean": "java.lang:type=Memory",
-              "attribute": "HeapMemoryUsage.init"
-            },
-            {
-              "name": "jvm.memory.heap.committed",
-              "mBean": "java.lang:type=Memory",
-              "attribute": "HeapMemoryUsage.committed"
-            },
-            {
-              "name": "jvm.gc.collections.elapsed",
-              "mBean": "java.lang:type=GarbageCollector,name=*",
-              "attribute": "CollectionTime"
-            },
-            {
-              "name": "jvm.gc.collections.count",
-              "mBean": "java.lang:type=GarbageCollector,name=*",
-              "attribute": "CollectionCount"
-            },
-            {
-              "name": "jvm.classes.loaded",
-              "mBean": "java.lang:type=ClassLoading",
-              "attribute": "LoadedClassCount"
-            },
-            {
-              "name": "tomcat.traffic",
-              "mBean": "Catalina:type=GlobalRequestProcessor,name=\"http-nio-8090\"",
-              "attribute": "bytesReceived"
-            },
-            {
-              "name": "tomcat.threads",
-              "mBean": "Catalina:type=ThreadPool,name=\"http-nio-8090\"",
-              "attribute": "currentThreadCount"
-            },
-            {
-              "name": "tomcat.sessions",
-              "mBean": "Catalina:type=Manager,context=/,host=localhost",
-              "attribute": "activeSessions"
-            },
-            {
-              "name": "tomcat.request_count",
-              "mBean": "Catalina:type=GlobalRequestProcessor,name=\"http-nio-8090\"",
-              "attribute": "requestCount"
-            },
-            {
-              "name": "tomcat.processing_time",
-              "mBean": "Catalina:type=GlobalRequestProcessor,name=\"http-nio-8090\"",
-              "attribute": "processingTime"
-            },
-            {
-              "name": "tomcat.max_time",
-              "mBean": "Catalina:type=GlobalRequestProcessor,name=\"http-nio-8090\"",
-              "attribute": "maxTime"
-            },
-            {
-              "name": "tomcat.errors",
-              "mBean": "Catalina:type=GlobalRequestProcessor,name=\"http-nio-8090\"",
-              "attribute": "errorCount"
-            }
-          ]
+          "jvm": {
+            "measurement": [
+              "jvm.threads.count",
+              "jvm.memory.pool.used",
+              "jvm.memory.pool.max",
+              "jvm.memory.pool.init",
+              "jvm.memory.pool.committed",
+              "jvm.memory.nonheap.used",
+              "jvm.memory.nonheap.max",
+              "jvm.memory.nonheap.init",
+              "jvm.memory.nonheap.committed",
+              "jvm.memory.heap.used",
+              "jvm.memory.heap.max",
+              "jvm.memory.heap.init",
+              "jvm.memory.heap.committed",
+              "jvm.gc.collections.elapsed",
+              "jvm.gc.collections.count",
+              "jvm.classes.loaded"
+            ]
+          }
         }
-      },
-      "cpu": {
-        "resources": [
-          "*"
-        ],
-        "measurement": [
-          {
-            "name": "cpu_usage_idle",
-            "rename": "CPU_USAGE_IDLE",
-            "unit": "unit"
-          },
-          {
-            "name": "cpu_usage_nice",
-            "unit": "unit"
-          },
-          "cpu_usage_guest",
-          "usage_active"
-        ]
-      },
-      "disk": {
-        "resources": [
-          "/",
-          "/dev",
-          "/sys"
-        ],
-        "measurement": [
-          {
-            "name": "free",
-            "rename": "DISK_FREE",
-            "unit": "unit"
-          },
-          "total",
-          "used"
-        ]
-      }
+      ]
     }
   }
 }
