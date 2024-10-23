@@ -78,6 +78,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/otlp"},
+		{testDir: "./test/agent_otel_merging"},
 		{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
@@ -109,10 +110,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/assume_role",
 			terraformDir: "terraform/ec2/creds",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/amp",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 	},
 	/*
@@ -183,17 +180,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},
-	"eks_addon": {
-		{
-			testDir:      "../../../../test/gpu",
-			terraformDir: "terraform/eks/addon/gpu",
-		},
-	},
 	"eks_daemon": {
 		{
-			testDir:      "./test/metric_value_benchmark",
-			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
-			instanceType: "g4dn.xlarge",
+			testDir: "./test/metric_value_benchmark",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 		{
 			testDir:      "./test/metric_value_benchmark",
@@ -221,18 +211,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
 		{
 			testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
 		},
 	},
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
-	},
-	"ec2_otel_merging": {
-		{testDir: "./test/agent_otel_merging"},
 	},
 }
 
