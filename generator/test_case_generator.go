@@ -78,7 +78,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/otlp"},
-		{testDir: "./test/agent_otel_merging"},
 		{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
@@ -110,6 +109,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/assume_role",
 			terraformDir: "terraform/ec2/creds",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+
+		{
+			testDir: "./test/agent_otel_merging",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 		{
 			testDir: "./test/amp",
