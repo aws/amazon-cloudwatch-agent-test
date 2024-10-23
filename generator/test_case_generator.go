@@ -111,6 +111,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			terraformDir: "terraform/ec2/creds",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
+		{
+			testDir: "./test/app_signals",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
@@ -208,6 +212,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
+		{testDir: "./test/app_signals", terraformDir: "terraform/eks/daemon/app_signals",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
 		{
 			testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
