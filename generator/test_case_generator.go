@@ -89,10 +89,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
 		//},
 		{
-			testDir: "./test/agent_otel_merging",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
 			testDir: "./test/lvm",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
@@ -116,6 +112,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{
 			testDir: "./test/amp",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/agent_otel_merging",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 	},
