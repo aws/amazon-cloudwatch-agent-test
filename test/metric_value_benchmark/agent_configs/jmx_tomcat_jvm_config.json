@@ -17,7 +17,7 @@
     "metrics_collected": {
       "jmx": {
         "tomcat_jvm": {
-          "endpoint": "localhost:2030",
+          "endpoint": "localhost:8090",
           "jmx_collection_interval": 10,
           "connection_properties": {
             "ssl": false,
