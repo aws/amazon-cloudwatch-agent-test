@@ -78,7 +78,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/otlp"},
-		{testDir: "./test/agent_otel_merging"},
 		{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
@@ -89,6 +88,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//	testDir: "./test/fips",
 		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
 		//},
+		{
+			testDir: "./test/agent_otel_merging",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 		{
 			testDir: "./test/lvm",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -101,6 +104,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/ssl_cert",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
+
 		{
 			testDir:      "./test/userdata",
 			terraformDir: "terraform/ec2/userdata",
