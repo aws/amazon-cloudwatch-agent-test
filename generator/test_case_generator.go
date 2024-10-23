@@ -104,7 +104,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/ssl_cert",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
-
 		{
 			testDir:      "./test/userdata",
 			terraformDir: "terraform/ec2/userdata",
