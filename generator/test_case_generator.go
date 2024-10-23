@@ -112,7 +112,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 		{
-			testDir: "./test/app_signals",
+			testDir: "./test/amp",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 	},
@@ -184,10 +184,17 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},
+	"eks_addon": {
+		{
+			testDir:      "../../../../test/gpu",
+			terraformDir: "terraform/eks/addon/gpu",
+		},
+	},
 	"eks_daemon": {
 		{
-			testDir: "./test/metric_value_benchmark",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			testDir:      "./test/metric_value_benchmark",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
 		},
 		{
 			testDir:      "./test/metric_value_benchmark",
@@ -212,14 +219,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
-		{testDir: "./test/app_signals", terraformDir: "terraform/eks/daemon/app_signals",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
 		{
 			testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
-			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
-			instanceType: "g4dn.xlarge",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 	},
 	"eks_deployment": {
