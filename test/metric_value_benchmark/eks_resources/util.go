@@ -56,6 +56,8 @@ var (
 	eksNodeNeuronDeviceSchema string
 	//go:embed test_schemas/node_neuron.json
 	eksNodeNeuronSchema string
+	//go:embed test_schemas/node_hyperpod.json
+	eksHyperPodNodeSchema string
 
 	EksClusterValidationMap = map[string]string{
 		"Cluster":                eksClusterSchema,
@@ -81,6 +83,7 @@ var (
 		"NodeAWSNeuronCore":      eksNodeNeuronCoreSchema,
 		"NodeAWSNeuronDevice":    eksNodeNeuronDeviceSchema,
 		"NodeAWSNeuron":          eksNodeNeuronSchema,
+		"HyperPodNode":           eksHyperPodNodeSchema,
 	}
 
 	EksClusterFrequencyValidationMap = map[string]int{
