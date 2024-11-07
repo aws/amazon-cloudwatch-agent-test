@@ -4,7 +4,7 @@
   },
   "metrics": {
     "namespace": "MetricValueBenchmarkJMXTest",
-    "force_flush_interval": 5,
+    "force_flush_interval": 60,
     "aggregation_dimensions": [
       [
         "InstanceId"
