@@ -57,7 +57,6 @@ func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
 
 	log.Println("set up jvm and tomcat")
 	startJMXCommands := []string{
-
 		"nohup java -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=2030 " +
 			"-Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false " +
 			"-Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.rmi.port=2030 " +
