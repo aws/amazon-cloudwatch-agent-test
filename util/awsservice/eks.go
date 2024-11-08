@@ -46,3 +46,4 @@ func describeEksInstances(clusterName string) (*ec2.DescribeInstancesOutput, err
 		},
 	})
 }
+
