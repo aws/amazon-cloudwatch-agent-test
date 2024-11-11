@@ -1,10 +1,11 @@
 {
   "agent": {
-    "debug": true
+    "debug": true,
+    "metrics_collection_interval": 10
   },
   "metrics": {
     "namespace": "MetricValueBenchmarkJMXTest",
-    "force_flush_interval": 60,
+    "force_flush_interval": 5,
     "aggregation_dimensions": [
       [
         "InstanceId"
