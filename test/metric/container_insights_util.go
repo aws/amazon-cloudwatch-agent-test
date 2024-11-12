@@ -181,6 +181,7 @@ func ValidateLogs(env *environment.MetaData) status.TestResult {
 	}
 
 	end := time.Now()
+
 	start := end.Add(time.Duration(-3) * time.Minute)
 	group := fmt.Sprintf("/aws/containerinsights/%s/performance", env.EKSClusterName)
 
@@ -223,6 +224,41 @@ func ValidateLogs(env *environment.MetaData) status.TestResult {
 			log.Printf("log validation (%s/%s) failed: %v", group, stream, err)
 			return testResult
 		}
+	}
+
+	// test for kueue metrics (the log group name is not a DNS address, it is kubernetes-kueue)
+	// ideally we only want to do this if kueue is enabled
+	if strings.Contains(env.EKSClusterName, "kueue") {
+		err = awsservice.ValidateLogs(
+			group,
+			"kubernetes-kueue",
+			&start,
+			&end,
+			awsservice.AssertLogsNotEmpty(),
+			//awsservice.AssertNoDuplicateLogs(),
+			awsservice.AssertPerLog(
+				awsservice.AssertLogSchema(func(message string) (string, error) {
+					var eksClusterType awsservice.EKSClusterType
+					innerErr := json.Unmarshal([]byte(message), &eksClusterType)
+					if innerErr != nil {
+						return "", fmt.Errorf("failed to unmarshal log file: %w", innerErr)
+					}
+
+					log.Printf("eksClusterType is: %s", eksClusterType.Type)
+					jsonSchema1, ok1 := eks_resources.EksClusterValidationMap["eksNodeKueueSchema"]
+					jsonSchema2, ok2 := eks_resources.EksClusterValidationMap["eksNodeKueueUsageSchema"]
+					if !(ok1 || ok2) {
+						return "", errors.New("invalid cluster type provided")
+					}
+					if ok1 {
+						return jsonSchema1, nil
+					} else {
+						return jsonSchema2, nil
+					}
+				}),
+				awsservice.AssertLogContainsSubstring(fmt.Sprintf("\"ClusterName\":\"%s\"", env.EKSClusterName)),
+			),
+		)
 	}
 
 	testResult.Status = status.SUCCESSFUL
