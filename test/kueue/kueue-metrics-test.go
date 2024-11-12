@@ -7,6 +7,7 @@ package keu
 
 import (
 	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	. "github.com/aws/amazon-cloudwatch-agent-test/test/kueue/resources"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -19,43 +20,43 @@ const (
 )
 
 var expectedDimsToMetrics = map[string][]string{
-    "ClusterName-ClusterQueue-Status": {
-        KueuePendingWorkloads,
-    },
-    "ClusterName-ClusterQueue": {
-        KueuePendingWorkloads,
-        KueueEvictedWorkloadsTotal,
-        KueueAdmittedActiveWorkloads,
-        KueueClusterQueueResourceUsage,
-    },
-    "ClusterName-Status": {
-        KueuePendingWorkloads,
-    },
-    "ClusterName": {
-        KueuePendingWorkloads,
-        KueueEvictedWorkloadsTotal,
-        KueueAdmittedActiveWorkloads,
-        KueueClusterQueueResourceUsage,
-        KueueClusterQueueNominalQuota,
-    },
-    "ClusterName-Reason": {
-        KueueEvictedWorkloadsTotal,
-    },
-    "ClusterName-ClusterQueue-Reason": {
-        KueueEvictedWorkloadsTotal,
-    },
-    "ClusterName-ClusterQueue-Resource-Flavor": {
-        KueueClusterQueueResourceUsage,
-        KueueClusterQueueNominalQuota,
-    },
-    "ClusterName-ClusterQueue-Resource": {
-        KueueClusterQueueResourceUsage,
-        KueueClusterQueueNominalQuota,
-    },
-    "ClusterName-ClusterQueue-Flavor": {
-        KueueClusterQueueResourceUsage,
-        KueueClusterQueueNominalQuota,
-    },
+	"ClusterName-ClusterQueue-Status": {
+		KueuePendingWorkloads,
+	},
+	"ClusterName-ClusterQueue": {
+		KueuePendingWorkloads,
+		KueueEvictedWorkloadsTotal,
+		KueueAdmittedActiveWorkloads,
+		KueueClusterQueueResourceUsage,
+	},
+	"ClusterName-Status": {
+		KueuePendingWorkloads,
+	},
+	"ClusterName": {
+		KueuePendingWorkloads,
+		KueueEvictedWorkloadsTotal,
+		KueueAdmittedActiveWorkloads,
+		KueueClusterQueueResourceUsage,
+		KueueClusterQueueNominalQuota,
+	},
+	"ClusterName-Reason": {
+		KueueEvictedWorkloadsTotal,
+	},
+	"ClusterName-ClusterQueue-Reason": {
+		KueueEvictedWorkloadsTotal,
+	},
+	"ClusterName-ClusterQueue-Resource-Flavor": {
+		KueueClusterQueueResourceUsage,
+		KueueClusterQueueNominalQuota,
+	},
+	"ClusterName-ClusterQueue-Resource": {
+		KueueClusterQueueResourceUsage,
+		KueueClusterQueueNominalQuota,
+	},
+	"ClusterName-ClusterQueue-Flavor": {
+		KueueClusterQueueResourceUsage,
+		KueueClusterQueueNominalQuota,
+	},
 }
 
 type AwsKueueTestRunner struct {

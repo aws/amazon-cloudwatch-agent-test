@@ -57,10 +57,9 @@ var (
 	//go:embed test_schemas/node_neuron.json
 	eksNodeNeuronSchema string
 	//go:embed test_schemas/cluster_kueue.json
-    eksNodeKueueSchema string
-    //go:embed test_schemas/cluster_kueue_usage.json
-    eksNodeKueueUsageSchema string
-
+	eksNodeKueueSchema string
+	//go:embed test_schemas/cluster_kueue_usage.json
+	eksNodeKueueUsageSchema string
 
 	EksClusterValidationMap = map[string]string{
 		"Cluster":                eksClusterSchema,
