@@ -1,16 +1,21 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package entity
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 const (

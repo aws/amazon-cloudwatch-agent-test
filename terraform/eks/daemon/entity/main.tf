@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source             = "../../../common"
+  source = "../../../common"
 }
 
 module "basic_components" {
@@ -177,9 +177,9 @@ resource "null_resource" "clone_helm_chart" {
 }
 
 resource "helm_release" "aws_observability" {
-  name       = "amazon-cloudwatch-observability"
-  chart      = "./helm-charts/charts/amazon-cloudwatch-observability"
-  namespace  = "amazon-cloudwatch"
+  name             = "amazon-cloudwatch-observability"
+  chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
+  namespace        = "amazon-cloudwatch"
   create_namespace = true
 
   set {
@@ -194,7 +194,7 @@ resource "helm_release" "aws_observability" {
   depends_on = [
     aws_eks_cluster.this,
     aws_eks_node_group.this,
-    null_resource.clone_helm_chart]
+  null_resource.clone_helm_chart]
 }
 
 resource "kubernetes_pod" "log_generator" {
