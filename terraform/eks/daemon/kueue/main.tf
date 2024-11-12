@@ -306,21 +306,7 @@ resource "kubernetes_daemonset" "exporter" {
             "-c",
           ]
      args = [
-      "bin/echo 'kueue_pending_workloads{queue="default",namespace="kueue-system"} 3
-      kueue_pending_workloads{queue="high-priority",namespace="kueue-system"} 1
-      kueue_evicted_workloads_total{queue="default",namespace="kueue-system"} 5
-      kueue_evicted_workloads_total{queue="high-priority",namespace="kueue-system"} 0
-      kueue_admitted_active_workloads{queue="default",namespace="kueue-system"} 7
-      kueue_admitted_active_workloads{queue="high-priority",namespace="kueue-system"} 2
-      kueue_cluster_queue_resource_usage{queue="default",resource="cpu",namespace="kueue-system"} 75
-      kueue_cluster_queue_resource_usage{queue="default",resource="memory",namespace="kueue-system"} 60
-      kueue_cluster_queue_resource_usage{queue="high-priority",resource="cpu",namespace="kueue-system"} 90
-      kueue_cluster_queue_resource_usage{queue="high-priority",resource="memory",namespace="kueue-system"} 80
-      kueue_cluster_queue_nominal_quota{queue="default",resource="cpu",namespace="kueue-system"} 100
-      kueue_cluster_queue_nominal_quota{queue="default",resource="memory",namespace="kueue-system"} 100
-      kueue_cluster_queue_nominal_quota{queue="high-priority",resource="cpu",namespace="kueue-system"} 200
-      kueue_cluster_queue_nominal_quota{queue="high-priority",resource="memory",namespace="kueue-system"} 200'
-      >> /usr/local/apache2/htdocs/metrics && sed -i -e \"s/hostname1/$HOST_NAME/g\" /usr/local/apache2/htdocs/metrics && httpd-foreground -k restart"
+      "bin/echo 'kueue_pending_workloads{queue="default",namespace="kueue-system"} 3\nkueue_pending_workloads{queue="high-priority",namespace="kueue-system"} 1\nkueue_evicted_workloads_total{queue="default",namespace="kueue-system"} 5\nkueue_evicted_workloads_total{queue="high-priority",namespace="kueue-system"} 0 \nkueue_admitted_active_workloads{queue="default",namespace="kueue-system"} 7 \nkueue_admitted_active_workloads{queue="high-priority",namespace="kueue-system"} 2 \nkueue_cluster_queue_resource_usage{queue="default",resource="cpu",namespace="kueue-system"} 75 \nkueue_cluster_queue_resource_usage{queue="default",resource="memory",namespace="kueue-system"} 60 \nkueue_cluster_queue_resource_usage{queue="high-priority",resource="cpu",namespace="kueue-system"} 90 \nkueue_cluster_queue_resource_usage{queue="high-priority",resource="memory",namespace="kueue-system"} 80 \nkueue_cluster_queue_nominal_quota{queue="default",resource="cpu",namespace="kueue-system"} 100 \nkueue_cluster_queue_nominal_quota{queue="default",resource="memory",namespace="kueue-system"} 100 \nkueue_cluster_queue_nominal_quota{queue="high-priority",resource="cpu",namespace="kueue-system"} 200 \nkueue_cluster_queue_nominal_quota{queue="high-priority",resource="memory",namespace="kueue-system"} 200' >> /usr/local/apache2/htdocs/metrics && sed -i -e \"s/hostname1/$HOST_NAME/g\" /usr/local/apache2/htdocs/metrics && httpd-foreground -k restart"
      ]
           volume_mount {
             mount_path = "/etc/amazon-cloudwatch-observability-kueue-cert"
