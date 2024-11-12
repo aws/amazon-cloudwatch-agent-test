@@ -182,7 +182,6 @@ resource "helm_release" "aws_observability" {
   namespace  = "amazon-cloudwatch"
   create_namespace = true
 
-  # Specify any necessary values here
   set {
     name  = "clusterName"
     value = aws_eks_cluster.this.name
@@ -251,7 +250,7 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating EKS metrics/traces for AppSignals"
+      echo "Validating EKS logs for entity fields"
       cd ../../../..
       go test ${var.test_dir} -timeout 1h -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -instanceId=${data.aws_instance.eks_node_detail.instance_id}
     EOT
