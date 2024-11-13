@@ -32,6 +32,13 @@ const (
 	entityK8sNamespace      = "@entity.Attributes.K8s.Namespace"
 	entityK8sWorkload       = "@entity.Attributes.K8s.Workload"
 	entityServiceNameSource = "@entity.Attributes.AWS.ServiceNameSource"
+
+	// Constants for possible vaues for entity attributes
+	eksServiceEntityType                   = "Service"
+	entityEKSPlatform                      = "AWS::EKS"
+	k8sDefaultNamespace                    = "default"
+	entityServiceNameSourceInstrumentation = "Instrumentation"
+	entityServiceNameSourceK8sWorkload     = "K8sWorkload"
 )
 
 type EntityValidator struct {
@@ -160,16 +167,34 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 			agentConfigPath: filepath.Join("resources", "compass_default_log.json"),
 			podName:         "log-generator",
 			expectedEntity: expectedEntity{
-				entityType:        "Service",
+				entityType:        eksServiceEntityType,
 				name:              "log-generator",
-				environment:       "eks:" + env.EKSClusterName + "/" + "default",
-				platformType:      "AWS::EKS",
+				environment:       "eks:" + env.EKSClusterName + "/" + k8sDefaultNamespace,
+				platformType:      entityEKSPlatform,
 				k8sWorkload:       "log-generator",
 				k8sNode:           *instancePrivateDNS,
-				k8sNamespace:      "default",
+				k8sNamespace:      k8sDefaultNamespace,
 				eksCluster:        env.EKSClusterName,
 				instanceId:        env.InstanceId,
-				serviceNameSource: "K8sWorkload",
+				serviceNameSource: entityServiceNameSourceK8sWorkload,
+			},
+		},
+		"Entity/InstrumentationServiceNameSource": {
+			agentConfigPath: filepath.Join("resources", "compass_default_log.json"),
+			podName:         "petclinic-instrumentation-default-env",
+			expectedEntity: expectedEntity{
+				entityType: eksServiceEntityType,
+				// This service name comes from OTEL_SERVICE_NAME which is
+				// customized in the terraform code when creating the pod
+				name:              "petclinic-custom-service-name",
+				environment:       "eks:" + env.EKSClusterName + "/" + k8sDefaultNamespace,
+				platformType:      entityEKSPlatform,
+				k8sWorkload:       "petclinic-instrumentation-default-env",
+				k8sNode:           *instancePrivateDNS,
+				k8sNamespace:      k8sDefaultNamespace,
+				eksCluster:        env.EKSClusterName,
+				instanceId:        env.InstanceId,
+				serviceNameSource: entityServiceNameSourceInstrumentation,
 			},
 		},
 	}
