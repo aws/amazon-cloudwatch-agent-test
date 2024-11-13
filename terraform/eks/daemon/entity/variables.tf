@@ -33,10 +33,10 @@ variable "helm_chart_branch" {
 
 variable "cwagent_image_repo" {
   type    = string
-  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
+  default = "506463145083.dkr.ecr.us-west-2.amazonaws.com/cwagent-integration-test"
 }
 
 variable "cwagent_image_tag" {
   type    = string
-  default = "latest"
+  default = "896a6b60258cf448fb5ffa57610972e1a4c82826"
 }
