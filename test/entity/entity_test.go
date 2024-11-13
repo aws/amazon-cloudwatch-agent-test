@@ -34,6 +34,83 @@ const (
 	entityServiceNameSource = "@entity.Attributes.AWS.ServiceNameSource"
 )
 
+type EntityValidator struct {
+	requiredFields  map[string]bool
+	expectedEntity  expectedEntity
+	platformType    string
+	fieldValidators map[string]func(fieldValue string) bool
+}
+
+// NewEntityValidator initializes the validator based on the platform type.
+func NewEntityValidator(platformType string, expected expectedEntity) *EntityValidator {
+	ev := &EntityValidator{
+		expectedEntity:  expected,
+		platformType:    platformType,
+		requiredFields:  make(map[string]bool),
+		fieldValidators: make(map[string]func(fieldValue string) bool),
+	}
+
+	// Define platform-specific required fields and validators
+	if platformType == "EC2" {
+		ev.requiredFields = map[string]bool{
+			entityType:        false,
+			entityName:        false,
+			entityEnvironment: false,
+			entityPlatform:    false,
+			entityInstanceId:  false,
+		}
+		ev.fieldValidators = map[string]func(fieldValue string) bool{
+			entityType:        func(v string) bool { return v == ev.expectedEntity.entityType },
+			entityName:        func(v string) bool { return v == ev.expectedEntity.name },
+			entityEnvironment: func(v string) bool { return v == ev.expectedEntity.environment },
+			entityPlatform:    func(v string) bool { return v == ev.expectedEntity.platformType },
+			entityInstanceId:  func(v string) bool { return v == ev.expectedEntity.instanceId },
+		}
+	} else if platformType == "EKS" {
+		ev.requiredFields = map[string]bool{
+			entityType:              false,
+			entityName:              false,
+			entityEnvironment:       false,
+			entityPlatform:          false,
+			entityEKSCluster:        false,
+			entityK8sNode:           false,
+			entityK8sNamespace:      false,
+			entityK8sWorkload:       false,
+			entityServiceNameSource: false,
+		}
+		ev.fieldValidators = map[string]func(fieldValue string) bool{
+			entityType:              func(v string) bool { return v == ev.expectedEntity.entityType },
+			entityName:              func(v string) bool { return v == ev.expectedEntity.name },
+			entityEnvironment:       func(v string) bool { return v == ev.expectedEntity.environment },
+			entityPlatform:          func(v string) bool { return v == ev.expectedEntity.platformType },
+			entityEKSCluster:        func(v string) bool { return v == ev.expectedEntity.eksCluster },
+			entityK8sNode:           func(v string) bool { return v == ev.expectedEntity.k8sNode },
+			entityK8sNamespace:      func(v string) bool { return v == ev.expectedEntity.k8sNamespace },
+			entityK8sWorkload:       func(v string) bool { return v == ev.expectedEntity.k8sWorkload },
+			entityServiceNameSource: func(v string) bool { return v == ev.expectedEntity.serviceNameSource },
+		}
+	}
+	return ev
+}
+
+// ValidateField checks if a field is expected and matches the expected value.
+func (ev *EntityValidator) ValidateField(field, value string, t *testing.T) {
+	if validator, ok := ev.fieldValidators[field]; ok {
+		ev.requiredFields[field] = true
+		assert.True(t, validator(value), "Validation failed for field %s", field)
+	}
+}
+
+// AllFieldsPresent ensures all required fields are found.
+func (ev *EntityValidator) AllFieldsPresent() bool {
+	for _, present := range ev.requiredFields {
+		if !present {
+			return false
+		}
+	}
+	return true
+}
+
 type expectedEntity struct {
 	entityType        string
 	name              string
@@ -112,108 +189,34 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 			assert.NotEmpty(t, podApplicationLogStream)
 			// check CWL to ensure we got the expected entities in the log group
 			queryString := fmt.Sprintf("fields @message, @entity.KeyAttributes.Type, @entity.KeyAttributes.Name, @entity.KeyAttributes.Environment, @entity.Attributes.PlatformType, @entity.Attributes.EKS.Cluster, @entity.Attributes.K8s.Node, @entity.Attributes.K8s.Namespace, @entity.Attributes.K8s.Workload, @entity.Attributes.AWS.ServiceNameSource, @entity.Attributes.EC2.InstanceId | filter @logStream == \"%s\"", podApplicationLogStream)
-			ValidateEntity(t, appLogGroup, podApplicationLogStream, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
+			ValidateLogEntity(t, appLogGroup, podApplicationLogStream, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
 		})
 	}
 }
 
-// ValidateEntity queries a given LogGroup/LogStream combination given the start and end times, and executes an
-// log query for entity attributes to ensure the entity values are correct
-func ValidateEntity(t *testing.T, logGroup, logStream string, end *time.Time, queryString string, expectedEntity expectedEntity, entityPlatformType string) {
-	var requiredEntityFields map[string]bool
-
+// ValidateLogEntity performs the entity validation for PutLogEvents.
+func ValidateLogEntity(t *testing.T, logGroup, logStream string, end *time.Time, queryString string, expectedEntity expectedEntity, entityPlatformType string) {
 	log.Printf("Checking log group/stream: %s/%s", logGroup, logStream)
-
 	if !awsservice.IsLogGroupExists(logGroup) {
-		t.Fatalf("application log group used for entity validation doesn't exsit: %s", logGroup)
+		t.Fatalf("application log group used for entity validation doesn't exist: %s", logGroup)
 	}
+
 	begin := end.Add(-sleepForFlush * 2)
-	log.Printf("Start time is " + begin.String() + " and end time is " + end.String())
+	log.Printf("Start time is %s and end time is %s", begin.String(), end.String())
 
 	result, err := awsservice.GetLogQueryResults(logGroup, begin.Unix(), end.Unix(), queryString)
 	assert.NoError(t, err)
 	if !assert.NotZero(t, len(result)) {
 		return
 	}
-	if entityPlatformType == "EC2" {
-		requiredEntityFields = map[string]bool{
-			entityType:        false,
-			entityName:        false,
-			entityEnvironment: false,
-			entityPlatform:    false,
-			entityInstanceId:  false,
-		}
-	} else if entityPlatformType == "EKS" {
-		requiredEntityFields = map[string]bool{
-			entityType:              false,
-			entityName:              false,
-			entityEnvironment:       false,
-			entityPlatform:          false,
-			entityEKSCluster:        false,
-			entityK8sNode:           false,
-			entityK8sNamespace:      false,
-			entityK8sWorkload:       false,
-			entityServiceNameSource: false,
-		}
-	}
-	for _, field := range result[0] {
-		if entityPlatformType == "EC2" {
-			switch aws.ToString(field.Field) {
-			case entityType:
-				requiredEntityFields[entityType] = true
-				assert.Equal(t, expectedEntity.entityType, aws.ToString(field.Value))
-			case entityName:
-				requiredEntityFields[entityName] = true
-				assert.Equal(t, expectedEntity.name, aws.ToString(field.Value))
-			case entityEnvironment:
-				requiredEntityFields[entityEnvironment] = true
-				assert.Equal(t, expectedEntity.environment, aws.ToString(field.Value))
-			case entityPlatform:
-				requiredEntityFields[entityPlatform] = true
-				assert.Equal(t, expectedEntity.platformType, aws.ToString(field.Value))
-			case entityInstanceId:
-				requiredEntityFields[entityInstanceId] = true
-				assert.Equal(t, expectedEntity.instanceId, aws.ToString(field.Value))
-			}
-		} else {
-			switch aws.ToString(field.Field) {
-			case entityType:
-				requiredEntityFields[entityType] = true
-				assert.Equal(t, expectedEntity.entityType, aws.ToString(field.Value))
-			case entityName:
-				requiredEntityFields[entityName] = true
-				assert.Equal(t, expectedEntity.name, aws.ToString(field.Value))
-			case entityEnvironment:
-				requiredEntityFields[entityEnvironment] = true
-				assert.Equal(t, expectedEntity.environment, aws.ToString(field.Value))
-			case entityPlatform:
-				requiredEntityFields[entityPlatform] = true
-				assert.Equal(t, expectedEntity.platformType, aws.ToString(field.Value))
-			case entityEKSCluster:
-				requiredEntityFields[entityEKSCluster] = true
-				assert.Equal(t, expectedEntity.eksCluster, aws.ToString(field.Value))
-			case entityK8sNode:
-				requiredEntityFields[entityK8sNode] = true
-				assert.Equal(t, expectedEntity.k8sNode, aws.ToString(field.Value))
-			case entityK8sNamespace:
-				requiredEntityFields[entityK8sNamespace] = true
-				assert.Equal(t, expectedEntity.k8sNamespace, aws.ToString(field.Value))
-			case entityK8sWorkload:
-				requiredEntityFields[entityK8sWorkload] = true
-				assert.Equal(t, expectedEntity.k8sWorkload, aws.ToString(field.Value))
-			case entityServiceNameSource:
-				requiredEntityFields[entityServiceNameSource] = true
-				assert.Equal(t, expectedEntity.serviceNameSource, aws.ToString(field.Value))
-			}
-		}
 
-		fmt.Printf("%s: %s\n", aws.ToString(field.Field), aws.ToString(field.Value))
+	validator := NewEntityValidator(entityPlatformType, expectedEntity)
+	for _, field := range result[0] {
+		fieldName := aws.ToString(field.Field)
+		fieldValue := aws.ToString(field.Value)
+		validator.ValidateField(fieldName, fieldValue, t)
+		fmt.Printf("%s: %s\n", fieldName, fieldValue)
 	}
-	allEntityFieldsFound := true
-	for _, value := range requiredEntityFields {
-		if !value {
-			allEntityFieldsFound = false
-		}
-	}
-	assert.True(t, allEntityFieldsFound)
+
+	assert.True(t, validator.AllFieldsPresent(), "Not all required fields were found")
 }
