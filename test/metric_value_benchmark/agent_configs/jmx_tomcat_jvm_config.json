@@ -1,6 +1,7 @@
 {
   "agent": {
-    "debug": true
+    "debug": true,
+    "metrics_collection_interval": 60
   },
   "metrics": {
     "namespace": "MetricValueBenchmarkJMXTest",
