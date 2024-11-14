@@ -12,7 +12,7 @@ module "basic_components" {
 }
 
 locals {
-  aws_eks  = "aws eks --region ${var.region}"
+  aws_eks = "aws eks --region ${var.region}"
 }
 
 data "aws_eks_cluster_auth" "this" {
@@ -211,7 +211,7 @@ resource "null_resource" "kubectl" {
 resource "null_resource" "update_image" {
   depends_on = [helm_release.aws_observability, null_resource.kubectl]
   triggers = {
-    timestamp  = "${timestamp()}"  # Forces re-run on every apply
+    timestamp = "${timestamp()}" # Forces re-run on every apply
   }
   provisioner "local-exec" {
     command = <<-EOT
@@ -243,7 +243,7 @@ resource "kubernetes_pod" "log_generator" {
 }
 
 resource "kubernetes_pod" "petclinic_instrumentation" {
-  depends_on = [aws_eks_node_group.this, helm_release.aws_observability,null_resource.update_image]
+  depends_on = [aws_eks_node_group.this, helm_release.aws_observability, null_resource.update_image]
   metadata {
     name = "petclinic-instrumentation-default-env"
     annotations = {
