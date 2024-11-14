@@ -12,7 +12,6 @@ module "basic_components" {
 locals {
   aws_eks      = "aws eks --region ${var.region}"
   cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-monitoring-config-e2e-eks"
-  agent-config                = fileexists(var.agent-config) ? var.agent-config : ""
 }
 
 data "aws_eks_cluster_auth" "this" {
