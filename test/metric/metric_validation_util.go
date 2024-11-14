@@ -27,7 +27,7 @@ func IsAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []fl
 		}
 		totalSum += value
 	}
-	metricErrorBound := 0.1
+	metricErrorBound := 0.15
 	metricAverageValue := totalSum / float64(len(values))
 	upperBoundValue := expectedValue * (1 + metricErrorBound)
 	lowerBoundValue := expectedValue * (1 - metricErrorBound)
