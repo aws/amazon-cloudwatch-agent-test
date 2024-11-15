@@ -35,9 +35,9 @@ resource "aws_eks_node_group" "this" {
   subnet_ids      = module.basic_components.public_subnet_ids
 
   scaling_config {
-    desired_size = 1
-    max_size     = 1
-    min_size     = 1
+    desired_size = 2
+    max_size     = 2
+    min_size     = 2
   }
 
   ami_type       = "AL2_x86_64"
@@ -121,14 +121,18 @@ resource "null_resource" "helm_charts" {
   }
 }
 
-resource "null_resource" "install_helm_release" {
+resource "null_resource" "install_helm_release_and_sample_app" {
   depends_on = [
     null_resource.kubectl,
-    aws_eks_cluster.this
+    null_resource.helm_charts,
+    aws_eks_cluster.this,
+    aws_eks_node_group.this
   ]
 
   provisioner "local-exec" {
     command = <<-EOT
+      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
+
       helm upgrade --install amazon-cloudwatch-observability \
         ${path.module}/helm-charts/charts/amazon-cloudwatch-observability \
         --values ${path.module}/helm-charts/charts/amazon-cloudwatch-observability/values.yaml \
@@ -145,6 +149,9 @@ resource "null_resource" "install_helm_release" {
         ${var.agent-config != "" ? "--set-json agent.config='${jsonencode(jsondecode(file(var.agent-config)))}'" : ""} \
         ${var.otel-config != "" ? "--set-file agent.otelConfig=${yamlencode(yamldecode(file(var.otel-config)))}" : ""} \
         ${var.prometheus-config != "" ? "--set-file agent.prometheus.config=${yamlencode(yamldecode(file(var.prometheus-config)))}" : ""}
+
+        kubectl apply -f ${var.sample-app}
+        kubectl wait --for=condition=available --timeout=300s deployment/${var.sample-app-name}
     EOT
 
     environment = {
@@ -155,7 +162,7 @@ resource "null_resource" "install_helm_release" {
 
 resource "null_resource" "test" {
   depends_on = [
-    null_resource.install_helm_release
+    null_resource.install_helm_release_and_sample_app
   ]
 
   provisioner "local-exec" {
