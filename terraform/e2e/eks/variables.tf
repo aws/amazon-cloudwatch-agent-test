@@ -16,34 +16,9 @@ variable "cluster_name" {
   default = "cwagent-otel-config-e2e-eks"
 }
 
-variable "agent_branch" {
-  type    = string
-  default = "main"
-}
-
-variable "operator_branch" {
-  type    = string
-  default = "main"
-}
-
 variable "helm_charts_branch" {
   type    = string
   default = "main"
-}
-
-variable "otel-config" {
-  type    = string
-  default = ""
-}
-
-variable "agent-config" {
-  type    = string
-  default = "../../../test/e2e/jmx/files/cwagent_configs/jvm_tomcat.json"
-}
-
-variable "prometheus-config" {
-  type    = string
-  default = ""
 }
 
 variable "cloudwatch_agent_repository" {
@@ -79,14 +54,4 @@ variable "cloudwatch_agent_operator_repository_url" {
 variable "validate_test" {
   type    = string
   default = ""
-}
-
-variable "sample-app" {
-  type    = string
-  default = ""
-}
-
-variable "sample-app-name" {
-  type    = string
-  default = "tomcat-deployment"
 }
