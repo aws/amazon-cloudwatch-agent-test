@@ -82,11 +82,11 @@ variable "validate_test" {
 }
 
 variable "sample-app" {
-  type = string
+  type    = string
   default = "../../../test/e2e/jmx/files/sample_applications/tomcat-deployment.yaml"
 }
 
 variable "sample-app-name" {
-  type = string
+  type    = string
   default = "tomcat-deployment"
 }
