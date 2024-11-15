@@ -11,6 +11,10 @@ module "basic_components" {
   region = var.region
 }
 
+locals {
+  aws_eks = "aws eks --region ${var.region}"
+}
+
 data "aws_eks_cluster_auth" "this" {
   name = aws_eks_cluster.this.name
 }
@@ -190,6 +194,34 @@ resource "helm_release" "aws_observability" {
   null_resource.clone_helm_chart]
 }
 
+resource "null_resource" "kubectl" {
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
+      ${local.aws_eks} list-clusters --output text
+      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
+    EOT
+  }
+}
+
+resource "null_resource" "update_image" {
+  depends_on = [helm_release.aws_observability, null_resource.kubectl]
+  triggers = {
+    timestamp = "${timestamp()}" # Forces re-run on every apply
+  }
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
+      kubectl set image deployment/amazon-cloudwatch-observability-controller-manager -n amazon-cloudwatch manager=public.ecr.aws/cloudwatch-agent/cloudwatch-agent-operator:latest
+      sleep 10
+    EOT
+  }
+}
+
 resource "kubernetes_pod" "log_generator" {
   depends_on = [aws_eks_node_group.this]
   metadata {
@@ -207,6 +239,76 @@ resource "kubernetes_pod" "log_generator" {
       args    = ["while true; do echo \"Log entry at $(date)\"; sleep 1; done"]
     }
     restart_policy = "Always"
+  }
+}
+
+resource "kubernetes_pod" "petclinic_instrumentation" {
+  depends_on = [aws_eks_node_group.this, helm_release.aws_observability, null_resource.update_image]
+  metadata {
+    name = "petclinic-instrumentation-default-env"
+    annotations = {
+      "instrumentation.opentelemetry.io/inject-java" = "true"
+    }
+    labels = {
+      app = "petclinic"
+    }
+  }
+
+  spec {
+    container {
+      name  = "petclinic"
+      image = "506463145083.dkr.ecr.us-west-2.amazonaws.com/cwagent-integ-test-petclinic:latest"
+
+      port {
+        container_port = 8080
+      }
+
+      env {
+        name  = "OTEL_SERVICE_NAME"
+        value = "petclinic-custom-service-name"
+      }
+
+    }
+  }
+}
+
+# Traffic generator pod with bash command
+resource "kubernetes_pod" "traffic_generator_instrumentation" {
+  depends_on = [kubernetes_pod.petclinic_instrumentation, kubernetes_service.petclinic_service]
+  metadata {
+    name = "traffic-generator-instrumentation-default-env"
+  }
+
+  spec {
+    container {
+      name  = "traffic-generator"
+      image = "alpine"
+
+      # Run the curl command as a loop to repeatedly send requests
+      command = ["/bin/sh", "-c"]
+      args = [
+        "apk add --no-cache curl && while true; do curl -s http://petclinic-service:8080/client-call; sleep 1; done"
+      ]
+    }
+  }
+}
+
+
+# Service for Petclinic Pods to load-balance traffic
+resource "kubernetes_service" "petclinic_service" {
+  metadata {
+    name = "petclinic-service"
+  }
+
+  spec {
+    selector = {
+      app = "petclinic"
+    }
+
+    port {
+      port        = 8080
+      target_port = 8080
+    }
   }
 }
 
@@ -234,7 +336,10 @@ resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
     helm_release.aws_observability,
-    kubernetes_pod.log_generator
+    null_resource.update_image,
+    kubernetes_pod.log_generator,
+    kubernetes_pod.petclinic_instrumentation,
+    kubernetes_pod.traffic_generator_instrumentation
   ]
 
   triggers = {
