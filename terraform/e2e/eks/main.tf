@@ -94,6 +94,25 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
 
 resource "null_resource" "test" {
   provisioner "local-exec" {
-    command = "go test -v ${var.validate_test}"
+    command = <<-EOT
+      go test -v ${var.validate_test} \
+      -region=${var.region} \
+      -k8s_version=${var.k8s_version} \
+      -cluster_name=${var.cluster_name} \
+      -agent_branch=${var.agent_branch} \
+      -operator_branch=${var.operator_branch} \
+      -helm_charts_branch=${var.helm_charts_branch} \
+      -otel-config=${var.otel-config} \
+      -agent-config=${var.agent-config} \
+      -prometheus-config=${var.prometheus-config} \
+      -cloudwatch_agent_repository=${var.cloudwatch_agent_repository} \
+      -cloudwatch_agent_tag=${var.cloudwatch_agent_tag} \
+      -cloudwatch_agent_repository_url=${var.cloudwatch_agent_repository_url} \
+      -cloudwatch_agent_operator_repository=${var.cloudwatch_agent_operator_repository} \
+      -cloudwatch_agent_operator_tag=${var.cloudwatch_agent_operator_tag} \
+      -cloudwatch_agent_operator_repository_url=${var.cloudwatch_agent_operator_repository_url} \
+      -sample-app=${var.sample-app} \
+      -sample-app-name=${var.sample-app-name}
+    EOT
   }
 }

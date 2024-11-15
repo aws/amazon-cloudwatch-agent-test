@@ -78,12 +78,12 @@ variable "cloudwatch_agent_operator_repository_url" {
 
 variable "validate_test" {
   type    = string
-  default = "../../../test/e2e/jmx/validate_test.go"
+  default = ""
 }
 
 variable "sample-app" {
   type    = string
-  default = "../../../test/e2e/jmx/files/sample_applications/tomcat-deployment.yaml"
+  default = ""
 }
 
 variable "sample-app-name" {
