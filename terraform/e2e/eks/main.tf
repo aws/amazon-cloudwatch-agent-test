@@ -106,22 +106,49 @@ resource "null_resource" "kubectl" {
   }
 }
 
-resource "null_resource" "helm_charts" {
-  provisioner "local-exec" {
-    command = <<-EOT
-      git clone https://github.com/aws-observability/helm-charts.git helm-charts
-      cd helm-charts
-      git checkout ${var.helm_charts_branch}
-    EOT
-  }
+resource "null_resource" "install_helm_release_and_sample_app" {
+  depends_on = [
+    null_resource.kubectl,
+    aws_eks_cluster.this,
+    aws_eks_node_group.this
+  ]
 
   provisioner "local-exec" {
-    when    = destroy
-    command = "rm -rf ${path.module}/helm-charts"
+    command = <<-EOT
+      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
+
+      helm upgrade --install amazon-cloudwatch-observability \
+        ${path.module}/helm-charts/charts/amazon-cloudwatch-observability \
+        --values ${path.module}/helm-charts/charts/amazon-cloudwatch-observability/values.yaml \
+        --set clusterName=${aws_eks_cluster.this.name} \
+        --set region=${var.region} \
+        --set agent.image.repository=${var.cloudwatch_agent_repository} \
+        --set agent.image.tag=${var.cloudwatch_agent_tag} \
+        --set agent.image.repositoryDomainMap.public=${var.cloudwatch_agent_repository_url} \
+        --set manager.image.repository=${var.cloudwatch_agent_operator_repository} \
+        --set manager.image.tag=${var.cloudwatch_agent_operator_tag} \
+        --set manager.image.repositoryDomainMap.public=${var.cloudwatch_agent_operator_repository_url} \
+        --namespace amazon-cloudwatch \
+        --create-namespace \
+        ${var.agent-config != "" ? "--set-json agent.config='${jsonencode(jsondecode(file(var.agent-config)))}'" : ""} \
+        ${var.otel-config != "" ? "--set-file agent.otelConfig=${yamlencode(yamldecode(file(var.otel-config)))}" : ""} \
+        ${var.prometheus-config != "" ? "--set-file agent.prometheus.config=${yamlencode(yamldecode(file(var.prometheus-config)))}" : ""}
+
+        kubectl apply -f ${var.sample-app}
+        kubectl wait --for=condition=available --timeout=300s deployment/${var.sample-app-name}
+    EOT
+
+    environment = {
+      KUBECONFIG = "$HOME/.kube/config"
+    }
   }
 }
 
 resource "null_resource" "test" {
+  depends_on = [
+    null_resource.install_helm_release_and_sample_app
+  ]
+
   provisioner "local-exec" {
     command = "go test -v ${var.validate_test}"
   }
