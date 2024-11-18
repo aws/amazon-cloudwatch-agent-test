@@ -197,6 +197,24 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 				serviceNameSource: entityServiceNameSourceInstrumentation,
 			},
 		},
+		"Entity/InstrumentationServiceNameSourceCustomEnvironment": {
+			agentConfigPath: filepath.Join("resources", "compass_default_log.json"),
+			podName:         "petclinic-instrumentation-custom-env",
+			expectedEntity: expectedEntity{
+				entityType: eksServiceEntityType,
+				// This service name comes from OTEL_SERVICE_NAME which is
+				// customized in the terraform code when creating the pod
+				name:              "petclinic-custom-service-name",
+				environment:       "petclinic-custom-environment",
+				platformType:      entityEKSPlatform,
+				k8sWorkload:       "petclinic-instrumentation-custom-env",
+				k8sNode:           *instancePrivateDNS,
+				k8sNamespace:      k8sDefaultNamespace,
+				eksCluster:        env.EKSClusterName,
+				instanceId:        env.InstanceId,
+				serviceNameSource: entityServiceNameSourceInstrumentation,
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
