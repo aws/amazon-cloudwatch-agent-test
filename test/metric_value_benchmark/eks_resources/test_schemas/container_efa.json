@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "structured log schema",
+  "description": "json schema for the cloudwatch agent k8s structured log",
+  "type": "object",
+  "properties": {
+    "CloudWatchMetrics": {},
+    "ClusterName": {},
+    "EfaDevice": {},
+    "InstanceId": {},
+    "InstanceType": {},
+    "NodeName": {},
+    "Timestamp": {},
+    "Type": {},
+    "Version": {},
+    "kubernetes": {},
+    "node_efa_rdma_read_bytes": {},
+    "node_efa_rdma_write_bytes": {},
+    "node_efa_rdma_write_recv_bytes": {},
+    "node_efa_rx_bytes": {},
+    "node_efa_rx_dropped": {},
+    "node_efa_tx_bytes": {}
+  },
+  "required": [
+    "ClusterName",
+    "EfaDevice",
+    "InstanceId",
+    "InstanceType",
+    "NodeName",
+    "Timestamp",
+    "Type",
+    "Version",
+    "CloudWatchMetrics"
+  ]
+}
