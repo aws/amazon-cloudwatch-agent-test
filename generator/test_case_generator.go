@@ -232,6 +232,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 		{
+			testDir: "./test/kueue", terraformDir: "terraform/eks/daemon/kueue",
+      targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+    {
 			testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
