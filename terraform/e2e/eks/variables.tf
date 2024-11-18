@@ -55,3 +55,28 @@ variable "validate_test" {
   type    = string
   default = ""
 }
+
+variable "agent_config" {
+  type    = string
+  default = ""
+}
+
+variable "otel_config" {
+  type    = string
+  default = ""
+}
+
+variable "prometheus_config" {
+  type    = string
+  default = ""
+}
+
+variable "sample_app" {
+  type    = string
+  default = ""
+}
+
+variable "sample_app_name" {
+  type    = string
+  default = ""
+}
