@@ -1,0 +1,47 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "test-service"
+            }
+          },
+          {
+            "key": "instance_id",
+            "value": {
+              "stringValue": "$INSTANCE_ID"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "my.library",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "test_metric",
+              "unit": "1",
+              "sum": {
+                "aggregationTemporality": 1,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "asDouble": 0.0,
+                    "startTimeUnixNano": "$CURRENT_TIMESTAMP",
+                    "timeUnixNano": "$CURRENT_TIMESTAMP"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
