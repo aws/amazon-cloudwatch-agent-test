@@ -256,13 +256,20 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 				}
 			})
 			if testCase.useEC2Tag {
+				// enable instance metadata tags
+				modifyInput := &ec2.ModifyInstanceMetadataOptionsInput{
+					InstanceId:           aws.String(instanceId),
+					InstanceMetadataTags: ec2Types.InstanceMetadataTagsStateEnabled,
+				}
+				_, modifyErr := ec2Client.ModifyInstanceMetadataOptions(context.TODO(), modifyInput)
+				assert.NoError(t, modifyErr)
+
 				input := &ec2.CreateTagsInput{
 					Resources: []string{instanceId},
 					Tags:      tagsToCreate,
 				}
-				_, err := ec2Client.CreateTags(context.TODO(), input)
-				//modify here
-				assert.NoError(t, err)
+				_, createErr := ec2Client.CreateTags(context.TODO(), input)
+				assert.NoError(t, createErr)
 			}
 			id := uuid.New()
 			f, err := os.Create(logFilePath + "-" + id.String())
