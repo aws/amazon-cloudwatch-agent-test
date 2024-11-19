@@ -36,7 +36,8 @@ const (
 	logLineId1                    = "foo"
 	logLineId2                    = "bar"
 	logFilePath                   = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
-	sleepForFlush                 = 180 * time.Second           // default flush interval is 5 seconds
+	sleepForFlush                 = 20 * time.Second            // default flush interval is 5 seconds
+	sleepForExtendedFlush         = 180 * time.Second           // increase flush time for the two main tests
 	retryWaitTime                 = 30 * time.Second
 	configPathAutoRemoval         = "resources/config_auto_removal.json"
 	standardLogGroupClass         = "STANDARD"
@@ -160,9 +161,9 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			// ensure that there is enough time from the "start" time and the first log line,
 			// so we don't miss it in the GetLogEvents call
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			writeLogLines(t, f, param.iterations)
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			common.StopAgent()
 			end := time.Now()
 
@@ -280,9 +281,9 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			common.CopyFile(testCase.agentConfigPath, configOutputPath)
 
 			common.StartAgent(configOutputPath, true, false)
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			writeLogLines(t, f, testCase.iterations)
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			common.StopAgent()
 			end := time.Now()
 
@@ -499,7 +500,7 @@ func ValidateEntity(t *testing.T, logGroup, logStream string, end *time.Time, ex
 		}
 	}
 	assert.NoError(t, err)
-	begin := end.Add(-sleepForFlush * 4)
+	begin := end.Add(-sleepForExtendedFlush * 4)
 	log.Printf("Query start time is " + begin.String() + " and end time is " + end.String())
 	queryId, err := getLogQueryId(logGroup, &begin, end)
 	assert.NoError(t, err)
