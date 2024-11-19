@@ -36,7 +36,7 @@ const (
 	logLineId1                    = "foo"
 	logLineId2                    = "bar"
 	logFilePath                   = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
-	sleepForFlush                 = 120 * time.Second           // default flush interval is 5 seconds
+	sleepForFlush                 = 180 * time.Second           // default flush interval is 5 seconds
 	retryWaitTime                 = 30 * time.Second
 	configPathAutoRemoval         = "resources/config_auto_removal.json"
 	standardLogGroupClass         = "STANDARD"
@@ -202,17 +202,6 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 		useEC2Tag       bool
 		expectedEntity  expectedEntity
 	}{
-		"IAMRole": {
-			agentConfigPath: filepath.Join("resources", "config_log.json"),
-			iterations:      1000,
-			expectedEntity: expectedEntity{
-				entityType:   "Service",
-				name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
-				environment:  "ec2:default",
-				platformType: "AWS::EC2",
-				instanceId:   instanceId,
-			},
-		},
 		"EC2Tags": {
 			agentConfigPath: filepath.Join("resources", "config_log.json"),
 			iterations:      1000,
@@ -220,6 +209,17 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			expectedEntity: expectedEntity{
 				entityType:   "Service",
 				name:         "service-test", //should match the value in tagsToCreate
+				environment:  "ec2:default",
+				platformType: "AWS::EC2",
+				instanceId:   instanceId,
+			},
+		},
+		"IAMRole": {
+			agentConfigPath: filepath.Join("resources", "config_log.json"),
+			iterations:      1000,
+			expectedEntity: expectedEntity{
+				entityType:   "Service",
+				name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
 				environment:  "ec2:default",
 				platformType: "AWS::EC2",
 				instanceId:   instanceId,
@@ -251,6 +251,8 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 					}
 					_, err := ec2Client.DeleteTags(context.TODO(), input)
 					assert.NoError(t, err)
+					// Add a short delay to ensure tag deletion propagates
+					time.Sleep(5 * time.Second)
 				}
 			})
 			if testCase.useEC2Tag {
