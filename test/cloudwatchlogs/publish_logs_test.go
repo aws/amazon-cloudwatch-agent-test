@@ -259,6 +259,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 					Tags:      tagsToCreate,
 				}
 				_, err := ec2Client.CreateTags(context.TODO(), input)
+				//modify here
 				assert.NoError(t, err)
 			}
 			id := uuid.New()
@@ -272,8 +273,8 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			common.CopyFile(testCase.agentConfigPath, configOutputPath)
 
 			common.StartAgent(configOutputPath, true, false)
-			writeLogLines(t, f, testCase.iterations)
 			time.Sleep(sleepForFlush)
+			writeLogLines(t, f, testCase.iterations)
 			common.StopAgent()
 			end := time.Now()
 
