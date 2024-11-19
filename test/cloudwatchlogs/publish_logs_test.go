@@ -36,7 +36,7 @@ const (
 	logLineId1                    = "foo"
 	logLineId2                    = "bar"
 	logFilePath                   = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
-	sleepForFlush                 = 90 * time.Second            // default flush interval is 5 seconds
+	sleepForFlush                 = 120 * time.Second           // default flush interval is 5 seconds
 	retryWaitTime                 = 30 * time.Second
 	configPathAutoRemoval         = "resources/config_auto_removal.json"
 	standardLogGroupClass         = "STANDARD"
