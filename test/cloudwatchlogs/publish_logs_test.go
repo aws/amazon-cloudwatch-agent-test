@@ -49,8 +49,6 @@ const (
 	entityEnvironment = "@entity.KeyAttributes.Environment"
 	entityPlatform    = "@entity.Attributes.PlatformType"
 	entityInstanceId  = "@entity.Attributes.EC2.InstanceId"
-	serviceName       = "service.name"
-	deploymentName    = "deployment.name"
 )
 
 var (
