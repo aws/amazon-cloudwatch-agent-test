@@ -164,6 +164,9 @@ resource "aws_security_group_rule" "nodes_cluster_inbound" {
 }
 
 resource "null_resource" "clone_helm_chart" {
+  triggers = {
+    timestamp = "${timestamp()}" # Forces re-run on every apply
+  }
   provisioner "local-exec" {
     command = <<-EOT
       if [ ! -d "./helm-charts" ]; then
@@ -272,9 +275,45 @@ resource "kubernetes_pod" "petclinic_instrumentation" {
   }
 }
 
+
+resource "kubernetes_pod" "petclinic_custom_env" {
+  depends_on = [aws_eks_node_group.this, helm_release.aws_observability, null_resource.update_image]
+  metadata {
+    name = "petclinic-instrumentation-custom-env"
+    annotations = {
+      "instrumentation.opentelemetry.io/inject-java" = "true"
+    }
+    labels = {
+      app = "petclinic"
+    }
+  }
+
+  spec {
+    container {
+      name  = "petclinic"
+      image = "506463145083.dkr.ecr.us-west-2.amazonaws.com/cwagent-integ-test-petclinic:latest"
+
+      port {
+        container_port = 8080
+      }
+
+      env {
+        name  = "OTEL_SERVICE_NAME"
+        value = "petclinic-custom-service-name"
+      }
+
+      env {
+        name  = "OTEL_RESOURCE_ATTRIBUTES"
+        value = "deployment.environment=petclinic-custom-environment"
+      }
+
+    }
+  }
+}
+
 # Traffic generator pod with bash command
 resource "kubernetes_pod" "traffic_generator_instrumentation" {
-  depends_on = [kubernetes_pod.petclinic_instrumentation, kubernetes_service.petclinic_service]
+  depends_on = [kubernetes_pod.petclinic_instrumentation, kubernetes_pod.petclinic_custom_env, kubernetes_service.petclinic_service]
   metadata {
     name = "traffic-generator-instrumentation-default-env"
   }
@@ -339,6 +378,7 @@ resource "null_resource" "validator" {
     null_resource.update_image,
     kubernetes_pod.log_generator,
     kubernetes_pod.petclinic_instrumentation,
+    kubernetes_pod.petclinic_custom_env,
     kubernetes_pod.traffic_generator_instrumentation
   ]
 
