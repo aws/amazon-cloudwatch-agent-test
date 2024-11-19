@@ -202,13 +202,12 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 		useEC2Tag       bool
 		expectedEntity  expectedEntity
 	}{
-		"EC2Tags": {
+		"IAMRole": {
 			agentConfigPath: filepath.Join("resources", "config_log.json"),
 			iterations:      1000,
-			useEC2Tag:       true,
 			expectedEntity: expectedEntity{
 				entityType:   "Service",
-				name:         "service-test", //should match the value in tagsToCreate
+				name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
 				environment:  "ec2:default",
 				platformType: "AWS::EC2",
 				instanceId:   instanceId,
@@ -225,12 +224,13 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 				instanceId:   instanceId,
 			},
 		},
-		"IAMRole": {
+		"EC2Tags": {
 			agentConfigPath: filepath.Join("resources", "config_log.json"),
 			iterations:      1000,
+			useEC2Tag:       true,
 			expectedEntity: expectedEntity{
 				entityType:   "Service",
-				name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
+				name:         "service-test", //should match the value in tagsToCreate
 				environment:  "ec2:default",
 				platformType: "AWS::EC2",
 				instanceId:   instanceId,
