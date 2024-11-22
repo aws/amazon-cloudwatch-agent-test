@@ -50,6 +50,7 @@ const (
 	entityEnvironment = "@entity.KeyAttributes.Environment"
 	entityPlatform    = "@entity.Attributes.PlatformType"
 	entityInstanceId  = "@entity.Attributes.EC2.InstanceId"
+	queryString       = "fields @message, @entity.KeyAttributes.Type, @entity.KeyAttributes.Name, @entity.KeyAttributes.Environment, @entity.Attributes.PlatformType, @entity.Attributes.EC2.InstanceId"
 )
 
 var (
@@ -88,9 +89,9 @@ var (
 			logGroupClass: types.LogGroupClassInfrequentAccess,
 		},
 	}
-	rnf       *types.ResourceNotFoundException
-	cwlClient *cloudwatchlogs.Client
-	ec2Client *ec2.Client
+	resourceNotFoundException *types.ResourceNotFoundException
+	cwlClient                 *cloudwatchlogs.Client
+	ec2Client                 *ec2.Client
 )
 
 type writeToCloudWatchTestInput struct {
@@ -122,8 +123,7 @@ func init() {
 		config.WithRegion(pdxRegionalCode),
 	)
 	if err != nil {
-		fmt.Println("There was an error trying to load default config: ", err)
-		return
+		log.Fatalf("Failed to load default config: %v", err)
 	}
 
 	cwlClient = cloudwatchlogs.NewFromConfig(awsCfg, func(o *cloudwatchlogs.Options) {
@@ -550,7 +550,7 @@ func ValidateEntity(t *testing.T, logGroup, logStream string, end *time.Time, ex
 func getLogQueryId(logGroup string, since, until *time.Time) (*string, error) {
 	var queryId *string
 	params := &cloudwatchlogs.StartQueryInput{
-		QueryString:  aws.String("fields @message, @entity.KeyAttributes.Type, @entity.KeyAttributes.Name, @entity.KeyAttributes.Environment, @entity.Attributes.PlatformType, @entity.Attributes.EC2.InstanceId"),
+		QueryString:  aws.String(queryString),
 		LogGroupName: aws.String(logGroup),
 	}
 	if since != nil {
@@ -566,7 +566,7 @@ func getLogQueryId(logGroup string, since, until *time.Time) (*string, error) {
 		attempts += 1
 
 		if err != nil {
-			if errors.As(err, &rnf) && attempts <= awsservice.StandardRetries {
+			if errors.As(err, &resourceNotFoundException) && attempts <= awsservice.StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(retryWaitTime)
 				continue
@@ -600,7 +600,7 @@ func getQueryResult(queryId *string) ([][]types.ResultField, error) {
 		}
 		log.Printf("GetQueryResult: result length is %d", len(result.Results))
 		if err != nil {
-			if errors.As(err, &rnf) {
+			if errors.As(err, &resourceNotFoundException) {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(retryWaitTime)
 				continue
@@ -624,7 +624,7 @@ func getLogGroup() ([]types.LogGroup, error) {
 		attempts += 1
 
 		if err != nil {
-			if errors.As(err, &rnf) && attempts <= awsservice.StandardRetries {
+			if errors.As(err, &resourceNotFoundException) && attempts <= awsservice.StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(retryWaitTime)
 				continue
