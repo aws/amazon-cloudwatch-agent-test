@@ -19,7 +19,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -44,6 +43,7 @@ const (
 	standardLogGroupClass         = "STANDARD"
 	infrequentAccessLogGroupClass = "INFREQUENT_ACCESS"
 	cwlPerfEndpoint               = "https://logs.us-west-2.amazonaws.com"
+	pdxRegionalCode = "us-west-2"
 
 	entityType        = "@entity.KeyAttributes.Type"
 	entityName        = "@entity.KeyAttributes.Name"
