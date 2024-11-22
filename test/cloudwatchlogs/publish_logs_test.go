@@ -43,7 +43,7 @@ const (
 	standardLogGroupClass         = "STANDARD"
 	infrequentAccessLogGroupClass = "INFREQUENT_ACCESS"
 	cwlPerfEndpoint               = "https://logs.us-west-2.amazonaws.com"
-	pdxRegionalCode = "us-west-2"
+	pdxRegionalCode               = "us-west-2"
 
 	entityType        = "@entity.KeyAttributes.Type"
 	entityName        = "@entity.KeyAttributes.Name"
@@ -275,6 +275,17 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error occurred creating log file for writing: %v", err)
 			}
+
+			// Defer file closing and removal with error handling
+			defer func() {
+				if err := f.Close(); err != nil {
+					t.Errorf("Error occurred closing log file: %v", err)
+				}
+				if err := os.Remove(logFilePath + "-" + id.String()); err != nil {
+					t.Errorf("Error occurred removing log file: %v", err)
+				}
+			}()
+
 			common.DeleteFile(common.AgentLogFile)
 			common.TouchFile(common.AgentLogFile)
 
@@ -286,11 +297,9 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			time.Sleep(sleepForExtendedFlush)
 			common.StopAgent()
 			end := time.Now()
+			begin := end.Add(-sleepForExtendedFlush * 4)
 
-			ValidateEntity(t, instanceId, instanceId, &end, testCase.expectedEntity)
-
-			f.Close()
-			os.Remove(logFilePath + "-" + id.String())
+			ValidateEntity(t, instanceId, instanceId, &begin, &end, testCase.expectedEntity)
 		})
 	}
 }
@@ -489,10 +498,10 @@ func checkData(t *testing.T, start time.Time, lineCount int) {
 	assert.NoError(t, err)
 }
 
-func ValidateEntity(t *testing.T, logGroup, logStream string, end *time.Time, expectedEntity expectedEntity) {
+func ValidateEntity(t *testing.T, logGroup, logStream string, begin, end *time.Time, expectedEntity expectedEntity) {
 	log.Printf("Validating entity for log group: %s, stream: %s", logGroup, logStream)
 
-	logGroupInfo, err := getLogGroup()
+	logGroupInfo, err := getLogGroup(logGroup)
 	for _, lg := range logGroupInfo {
 		if *lg.LogGroupName == logGroup {
 			log.Println("Log group " + *lg.LogGroupName + " exists")
@@ -500,9 +509,9 @@ func ValidateEntity(t *testing.T, logGroup, logStream string, end *time.Time, ex
 		}
 	}
 	assert.NoError(t, err)
-	begin := end.Add(-sleepForExtendedFlush * 4)
+	
 	log.Printf("Query start time is " + begin.String() + " and end time is " + end.String())
-	queryId, err := getLogQueryId(logGroup, &begin, end)
+	queryId, err := getLogQueryId(logGroup, begin, end)
 	assert.NoError(t, err)
 	log.Printf("queryId is " + *queryId)
 	result, err := getQueryResult(queryId)
@@ -614,10 +623,12 @@ func getQueryResult(queryId *string) ([][]types.ResultField, error) {
 	}
 }
 
-func getLogGroup() ([]types.LogGroup, error) {
+func getLogGroup(logGroupName string) ([]types.LogGroup, error) {
 	attempts := 0
 	var logGroups []types.LogGroup
-	params := &cloudwatchlogs.DescribeLogGroupsInput{}
+	params := &cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupNamePrefix: aws.String(logGroupName),
+	}
 	for {
 		output, err := cwlClient.DescribeLogGroups(context.Background(), params)
 
