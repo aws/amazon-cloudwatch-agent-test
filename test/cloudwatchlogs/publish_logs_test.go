@@ -88,9 +88,9 @@ var (
 			logGroupClass: types.LogGroupClassInfrequentAccess,
 		},
 	}
-	rnf       *types.ResourceNotFoundException
-	cwlClient *cloudwatchlogs.Client
-	ec2Client *ec2.Client
+	resourceNotFoundException *types.ResourceNotFoundException
+	cwlClient                 *cloudwatchlogs.Client
+	ec2Client                 *ec2.Client
 )
 
 type writeToCloudWatchTestInput struct {
@@ -121,10 +121,12 @@ func init() {
 		context.Background(),
 		config.WithRegion(pdxRegionalCode),
 	)
-	if err != nil {
+	if err == nil {
 		fmt.Println("There was an error trying to load default config: ", err)
 		return
 	}
+
+	fmt.Println("Loaded default config")
 
 	cwlClient = cloudwatchlogs.NewFromConfig(awsCfg, func(o *cloudwatchlogs.Options) {
 		o.BaseEndpoint = aws.String(cwlPerfEndpoint)
