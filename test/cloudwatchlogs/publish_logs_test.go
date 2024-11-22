@@ -627,7 +627,7 @@ func getLogGroup(logGroupName string) ([]types.LogGroup, error) {
 	attempts := 0
 	var logGroups []types.LogGroup
 	params := &cloudwatchlogs.DescribeLogGroupsInput{
-		LogGroupNamePrefix: aws.String(logGroupName),
+		LogGroupName: aws.String(logGroupName),
 	}
 	for {
 		output, err := cwlClient.DescribeLogGroups(context.Background(), params)
