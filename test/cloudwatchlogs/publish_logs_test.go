@@ -568,7 +568,7 @@ func getLogQueryId(logGroup string, since, until *time.Time) (*string, error) {
 		attempts += 1
 
 		if err != nil {
-			if errors.As(err, &rnf) && attempts <= awsservice.StandardRetries {
+			if errors.As(err, &resourceNotFoundException) && attempts <= awsservice.StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(retryWaitTime)
 				continue
@@ -602,7 +602,7 @@ func getQueryResult(queryId *string) ([][]types.ResultField, error) {
 		}
 		log.Printf("GetQueryResult: result length is %d", len(result.Results))
 		if err != nil {
-			if errors.As(err, &rnf) {
+			if errors.As(err, &resourceNotFoundException) {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(retryWaitTime)
 				continue
@@ -626,7 +626,7 @@ func getLogGroup() ([]types.LogGroup, error) {
 		attempts += 1
 
 		if err != nil {
-			if errors.As(err, &rnf) && attempts <= awsservice.StandardRetries {
+			if errors.As(err, &resourceNotFoundException) && attempts <= awsservice.StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(retryWaitTime)
 				continue
