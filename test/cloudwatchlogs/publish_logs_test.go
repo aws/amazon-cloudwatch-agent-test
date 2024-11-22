@@ -122,8 +122,7 @@ func init() {
 		config.WithRegion(pdxRegionalCode),
 	)
 	if err == nil {
-		fmt.Println("There was an error trying to load default config: ", err)
-		return
+		log.Fatalf("Failed to load default config: %v", err)
 	}
 
 	fmt.Println("Loaded default config")
