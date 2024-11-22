@@ -118,19 +118,9 @@ type expectedEntity struct {
 
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
-
-	imdsClient := imds.New(imds.Options{}) // create IMDS client to get region from EC2 instance
-
-	region, err := imdsClient.GetRegion(context.Background(), &imds.GetRegionInput{})
-	if err != nil {
-		log.Printf("Failed to get region from EC2 metadata, falling back to default region: %v", err)
-		region = &imds.GetRegionOutput{
-			Region: "us-west-2",
-		}
-	}
 	awsCfg, err := config.LoadDefaultConfig(
 		context.Background(),
-		config.WithRegion(region.Region),
+		config.WithRegion(pdxRegionalCode),
 	)
 	if err != nil {
 		log.Fatalf("Failed to load default config: %v", err)
