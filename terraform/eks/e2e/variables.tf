@@ -13,7 +13,7 @@ variable "k8s_version" {
 
 variable "cluster_name" {
   type    = string
-  default = "cwagent-otel-config-e2e-eks"
+  default = "cwagent-monitoring-config-e2e-eks"
 }
 
 variable "helm_charts_branch" {
@@ -51,7 +51,7 @@ variable "cloudwatch_agent_operator_repository_url" {
   default = "public.ecr.aws/cloudwatch-agent"
 }
 
-variable "validate_test" {
+variable "test_dir" {
   type    = string
   default = ""
 }

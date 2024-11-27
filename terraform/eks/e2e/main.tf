@@ -10,7 +10,6 @@ module "basic_components" {
 }
 
 locals {
-  aws_eks      = "aws eks"
   cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-monitoring-config-e2e-eks"
 }
 
@@ -23,8 +22,8 @@ resource "aws_eks_cluster" "this" {
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
   vpc_config {
-    subnet_ids         = module.basic_components.public_subnet_ids
-    security_group_ids = [module.basic_components.security_group]
+    subnet_ids             = module.basic_components.public_subnet_ids
+    security_group_ids     = [module.basic_components.security_group]
   }
 }
 
@@ -92,12 +91,27 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   role       = aws_iam_role.node_role.name
 }
 
+resource "null_resource" "helm_charts" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      git clone https://github.com/aws-observability/helm-charts.git helm-charts
+      cd helm-charts
+      git checkout ${var.helm_charts_branch}
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "rm -rf ${path.module}/helm-charts"
+  }
+}
+
 resource "null_resource" "test" {
-  depends_on = [aws_eks_cluster.this, aws_eks_node_group.this]
+  depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, null_resource.helm_charts]
 
   provisioner "local-exec" {
     command = <<-EOT
-      go test -v ${var.validate_test} \
+      go test -v ${var.test_dir} \
       -region=${var.region} \
       -k8s_version=${var.k8s_version} \
       -cluster_name=${aws_eks_cluster.this.name} \
@@ -111,8 +125,7 @@ resource "null_resource" "test" {
       -agent_config=${var.agent_config} \
       -otel_config=${var.otel_config} \
       -prometheus_config=${var.prometheus_config} \
-      -sample_app=${var.sample_app} \
-      -sample_app_name=${var.sample_app_name}
+      -sample_app=${var.sample_app}
     EOT
   }
 }
