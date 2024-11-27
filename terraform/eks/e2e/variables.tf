@@ -75,8 +75,3 @@ variable "sample_app" {
   type    = string
   default = ""
 }
-
-variable "sample_app_name" {
-  type    = string
-  default = ""
-}
