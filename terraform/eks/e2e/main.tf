@@ -106,11 +106,12 @@ resource "null_resource" "helm_charts" {
   }
 }
 
-resource "null_resource" "test" {
+resource "null_resource" "validator" {
   depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, null_resource.helm_charts]
 
   provisioner "local-exec" {
     command = <<-EOT
+      echo "Validating K8s resources and metrics"
       go test -v ${var.test_dir} \
       -region=${var.region} \
       -k8s_version=${var.k8s_version} \
