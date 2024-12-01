@@ -136,7 +136,7 @@ func TestMetrics(t *testing.T) {
 		name      string
 		namespace string
 	}{
-		{"tomcat.traffic", "JVM_TOMCAT_E2E"},
+		{"tomcat.traffic", "JVM_TOMCAT_E2E"}, // Add more metrics.
 	}
 
 	for _, metric := range metricsToCheck {
@@ -144,4 +144,6 @@ func TestMetrics(t *testing.T) {
 			awsservice.ValidateMetricWithTest(t, metric.name, metric.namespace, nil, 5, 1*time.Minute)
 		})
 	}
+
+	// Add more testing here from cloudwatchmetrics.go.
 }
