@@ -115,7 +115,8 @@ resource "null_resource" "validator" {
       go test -v ${var.test_dir} \
       -region=${var.region} \
       -k8s_version=${var.k8s_version} \
-      -cluster_name=${aws_eks_cluster.this.name} \
+      -eksClusterName=${aws_eks_cluster.this.name} \
+      -computeType=EKS \
       -helm_charts_branch=${var.helm_charts_branch} \
       -cloudwatch_agent_repository=${var.cloudwatch_agent_repository} \
       -cloudwatch_agent_tag=${var.cloudwatch_agent_tag} \

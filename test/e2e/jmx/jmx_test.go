@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"os"
 	"os/exec"
@@ -16,51 +17,26 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-var (
-	clusterName                          string
-	region                               string
-	k8sVersion                           string
-	helmChartsBranch                     string
-	cloudwatchAgentRepository            string
-	cloudwatchAgentTag                   string
-	cloudwatchAgentRepositoryURL         string
-	cloudwatchAgentOperatorRepository    string
-	cloudwatchAgentOperatorTag           string
-	cloudwatchAgentOperatorRepositoryURL string
-	agentConfig                          string
-	sampleApp                            string
-)
-
 func init() {
-	flag.StringVar(&clusterName, "cluster_name", "", "EKS cluster name") // Didn't use environment.RegisterEnvironmentMetaDataFlags() since we only need this one flag.
-	flag.StringVar(&region, "region", "", "AWS region")
-	flag.StringVar(&k8sVersion, "k8s_version", "", "Kubernetes version")
-	flag.StringVar(&helmChartsBranch, "helm_charts_branch", "", "Helm charts branch")
-	flag.StringVar(&cloudwatchAgentRepository, "cloudwatch_agent_repository", "", "CloudWatch Agent repository")
-	flag.StringVar(&cloudwatchAgentTag, "cloudwatch_agent_tag", "", "CloudWatch Agent tag")
-	flag.StringVar(&cloudwatchAgentRepositoryURL, "cloudwatch_agent_repository_url", "", "CloudWatch Agent repository URL")
-	flag.StringVar(&cloudwatchAgentOperatorRepository, "cloudwatch_agent_operator_repository", "", "CloudWatch Agent Operator repository")
-	flag.StringVar(&cloudwatchAgentOperatorTag, "cloudwatch_agent_operator_tag", "", "CloudWatch Agent Operator tag")
-	flag.StringVar(&cloudwatchAgentOperatorRepositoryURL, "cloudwatch_agent_operator_repository_url", "", "CloudWatch Agent Operator repository URL")
-	flag.StringVar(&agentConfig, "agent_config", "", "Agent configuration file path")
-	flag.StringVar(&sampleApp, "sample_app", "", "Sample application manifest file path")
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestMain(m *testing.M) {
 	flag.Parse()
+	env := environment.GetEnvironmentMetaData()
 
-	if region != "us-west-2" {
-		if err := awsservice.ReconfigureAWSClients(region); err != nil {
+	if env.Region != "us-west-2" {
+		if err := awsservice.ReconfigureAWSClients(env.Region); err != nil {
 			fmt.Printf("Failed to reconfigure AWS clients: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("AWS clients reconfigured to use region: %s\n", region)
+		fmt.Printf("AWS clients reconfigured to use region: %s\n", env.Region)
 	} else {
 		fmt.Printf("Using default testing region: us-west-2\n")
 	}
 
 	fmt.Println("Starting Helm installation...")
-	if err := ApplyHelm(); err != nil {
+	if err := ApplyHelm(env); err != nil {
 		fmt.Printf("Failed to apply Helm: %v\n", err)
 		os.Exit(1)
 	}
@@ -71,8 +47,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func ApplyHelm() error {
-	updateKubeconfigCmd := exec.Command("aws", "eks", "update-kubeconfig", "--name", clusterName)
+func ApplyHelm(env *environment.MetaData) error {
+	updateKubeconfigCmd := exec.Command("aws", "eks", "update-kubeconfig", "--name", env.EKSClusterName)
 	output, err := updateKubeconfigCmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to update kubeconfig: %w\nOutput: %s", err, output)
@@ -82,20 +58,20 @@ func ApplyHelm() error {
 		"helm", "upgrade", "--install", "amazon-cloudwatch-observability",
 		filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability"),
 		"--values", filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability", "values.yaml"),
-		"--set", fmt.Sprintf("clusterName=%s", clusterName),
-		"--set", fmt.Sprintf("region=%s", region),
-		"--set", fmt.Sprintf("agent.image.repository=%s", cloudwatchAgentRepository),
-		"--set", fmt.Sprintf("agent.image.tag=%s", cloudwatchAgentTag),
-		"--set", fmt.Sprintf("agent.image.repositoryDomainMap.public=%s", cloudwatchAgentRepositoryURL),
-		"--set", fmt.Sprintf("manager.image.repository=%s", cloudwatchAgentOperatorRepository),
-		"--set", fmt.Sprintf("manager.image.tag=%s", cloudwatchAgentOperatorTag),
-		"--set", fmt.Sprintf("manager.image.repositoryDomainMap.public=%s", cloudwatchAgentOperatorRepositoryURL),
+		"--set", fmt.Sprintf("clusterName=%s", env.EKSClusterName),
+		"--set", fmt.Sprintf("region=%s", env.Region),
+		"--set", fmt.Sprintf("agent.image.repository=%s", env.CloudwatchAgentRepository),
+		"--set", fmt.Sprintf("agent.image.tag=%s", env.CloudwatchAgentTag),
+		"--set", fmt.Sprintf("agent.image.repositoryDomainMap.public=%s", env.CloudwatchAgentRepositoryURL),
+		"--set", fmt.Sprintf("manager.image.repository=%s", env.CloudwatchAgentOperatorRepository),
+		"--set", fmt.Sprintf("manager.image.tag=%s", env.CloudwatchAgentOperatorTag),
+		"--set", fmt.Sprintf("manager.image.repositoryDomainMap.public=%s", env.CloudwatchAgentOperatorRepositoryURL),
 		"--namespace", "amazon-cloudwatch",
 		"--create-namespace",
 	}
 
-	if agentConfig != "" {
-		agentConfigContent, err := os.ReadFile(agentConfig)
+	if env.AgentConfig != "" {
+		agentConfigContent, err := os.ReadFile(env.AgentConfig)
 		if err != nil {
 			return fmt.Errorf("failed to read agent config file: %w", err)
 		}
@@ -112,7 +88,7 @@ func ApplyHelm() error {
 	fmt.Println("Waiting for CloudWatch Agent Operator to initialize...")
 	time.Sleep(300 * time.Second)
 
-	applyCmd := exec.Command("kubectl", "apply", "-f", sampleApp)
+	applyCmd := exec.Command("kubectl", "apply", "-f", env.SampleApp)
 	output, err = applyCmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to apply sample app: %w\nOutput: %s", err, output)
