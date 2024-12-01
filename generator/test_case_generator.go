@@ -244,7 +244,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/metric_value_benchmark"},
 	},
 	"eks_e2e": {
-		{testDir: "./test/e2e/jmx"},
+		{testDir: "../../../test/e2e/jmx"},
 	},
 }
 
