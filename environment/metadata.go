@@ -138,8 +138,8 @@ func registerEKSE2ETestData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.CloudwatchAgentOperatorTag), "cloudwatch_agent_operator_tag", "", "CloudWatch Agent Operator tag")
 	flag.StringVar(&(dataString.CloudwatchAgentOperatorRepositoryURL), "cloudwatch_agent_operator_repository_url", "", "CloudWatch Agent Operator repository URL")
 	flag.StringVar(&(dataString.AgentConfig), "agent_config", "", "Agent configuration file path")
-	flag.StringVar(&(dataString.AgentConfig), "prometheus_config", "", "Prometheus configuration file path")
-	flag.StringVar(&(dataString.AgentConfig), "otel_config", "", "OpenTelemetry configuration file path")
+	flag.StringVar(&(dataString.PrometheusConfig), "prometheus_config", "", "Prometheus configuration file path")
+	flag.StringVar(&(dataString.OtelConfig), "otel_config", "", "OpenTelemetry configuration file path")
 	flag.StringVar(&(dataString.SampleApp), "sample_app", "", "Sample application manifest file path")
 }
 

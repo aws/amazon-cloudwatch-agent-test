@@ -117,6 +117,7 @@ resource "null_resource" "validator" {
       -k8s_version=${var.k8s_version} \
       -eksClusterName=${aws_eks_cluster.this.name} \
       -computeType=EKS \
+      -eksDeploymentStrategy=DAEMON \
       -helm_charts_branch=${var.helm_charts_branch} \
       -cloudwatch_agent_repository=${var.cloudwatch_agent_repository} \
       -cloudwatch_agent_tag=${var.cloudwatch_agent_tag} \
@@ -125,8 +126,8 @@ resource "null_resource" "validator" {
       -cloudwatch_agent_operator_tag=${var.cloudwatch_agent_operator_tag} \
       -cloudwatch_agent_operator_repository_url=${var.cloudwatch_agent_operator_repository_url} \
       -agent_config="${var.test_dir}/${var.agent_config}" \
-      -otel_config="${var.test_dir}/${var.otel_config}" \
-      -prometheus_config="${var.test_dir}/${var.prometheus_config}" \
+      ${var.otel_config != "" ? "-otel_config=\"${var.test_dir}/${var.otel_config}\"" : ""} \
+      ${var.prometheus_config != "" ? "-prometheus_config=\"${var.test_dir}/${var.prometheus_config}\"" : ""} \
       -sample_app="${var.test_dir}/${var.sample_app}"
     EOT
   }
