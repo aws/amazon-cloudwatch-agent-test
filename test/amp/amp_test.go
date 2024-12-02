@@ -172,9 +172,11 @@ func (t AmpDestinationTestRunner) GetMeasuredMetrics() []string {
 		//"jvm.threads.count", "jvm.memory.heap.used", "jvm.memory.heap.max", "jvm.memory.heap.init",
 	}
 }
-
+func (t AmpDestinationTestRunner) GetAgentRunDuration() time.Duration {
+	return 2 * time.Minute
+}
 func (t *AmpDestinationTestRunner) SetupBeforeAgentRun() error {
-	env := environment.GetEnvironmentMetaData()
+	//env := environment.GetEnvironmentMetaData()
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
@@ -182,7 +184,7 @@ func (t *AmpDestinationTestRunner) SetupBeforeAgentRun() error {
 	// replace AMP workspace ID placeholder with a testing workspace ID from metadata
 	agentConfigPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
 	ampCommands := []string{
-		"sed -ie 's/{workspace_id}/" + env.AmpWorkspaceId + "/g' " + agentConfigPath,
+		"sed -ie 's/{workspace_id}/" + "ws-54b74174-2077-4cde-b826-dd16dce46bfe" + "/g' " + agentConfigPath,
 		// use below to add JMX metrics then update agent config & GetMeasuredMetrics()
 		//"nohup java -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=2030 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.rmi.port=2030  -Dcom.sun.management.jmxremote.host=0.0.0.0  -Djava.rmi.server.hostname=0.0.0.0 -Dserver.port=8090 -Dspring.application.admin.enabled=true -jar jars/spring-boot-web-starter-tomcat.jar > /tmp/spring-boot-web-starter-tomcat-jar.txt 2>&1 &",
 	}
