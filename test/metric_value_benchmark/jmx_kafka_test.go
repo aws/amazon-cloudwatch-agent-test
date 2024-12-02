@@ -8,6 +8,7 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -59,10 +60,10 @@ func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
 	if err != nil {
 		return fmt.Errorf("error getting latest kafka version: %v", err)
 	}
+	version = strings.TrimSpace(version)
 
 	log.Println("set up zookeeper and kafka")
 	startJMXCommands := []string{
-		"export KAFKA_VERSION=curl https://dlcdn.apache.org/kafka/ | grep -oE '\\d\\.\\d\\.\\d' | tail -1",
 		fmt.Sprintf("curl https://dlcdn.apache.org/kafka/%s/kafka_2.13-%s.tgz -o kafka_2.13-latest.tgz", version, version),
 		"tar -xzf kafka_2.13-latest.tgz",
 		"echo 'export JMX_PORT=2000'|cat - kafka_2.13-latest/bin/kafka-server-start.sh > /tmp/kafka-server-start.sh && mv /tmp/kafka-server-start.sh kafka_2.13-latest/bin/kafka-server-start.sh",
