@@ -61,11 +61,13 @@ func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
 		return fmt.Errorf("error getting latest kafka version: %v", err)
 	}
 	version = strings.TrimSpace(version)
+	kafkaPackageName := fmt.Sprintf("kafka_2.13-%s", version)
 
 	log.Println("set up zookeeper and kafka")
 	startJMXCommands := []string{
-		fmt.Sprintf("curl https://dlcdn.apache.org/kafka/%s/kafka_2.13-%s.tgz -o kafka_2.13-latest.tgz", version, version),
-		"tar -xzf kafka_2.13-latest.tgz",
+		fmt.Sprintf("curl https://dlcdn.apache.org/kafka/%s/%s.tgz -o %s.tgz", version, kafkaPackageName, kafkaPackageName),
+		fmt.Sprintf("tar -xzf %s.tgz", kafkaPackageName),
+		fmt.Sprintf("sudo mv %s kafka_2.13-latest", kafkaPackageName),
 		"echo 'export JMX_PORT=2000'|cat - kafka_2.13-latest/bin/kafka-server-start.sh > /tmp/kafka-server-start.sh && mv /tmp/kafka-server-start.sh kafka_2.13-latest/bin/kafka-server-start.sh",
 		"echo 'export JMX_PORT=2010'|cat - kafka_2.13-latest/bin/kafka-console-consumer.sh > /tmp/kafka-console-consumer.sh && mv /tmp/kafka-console-consumer.sh kafka_2.13-latest/bin/kafka-console-consumer.sh",
 		"echo 'export JMX_PORT=2020'|cat - kafka_2.13-latest/bin/kafka-console-producer.sh > /tmp/kafka-console-producer.sh && mv /tmp/kafka-console-producer.sh kafka_2.13-latest/bin/kafka-console-producer.sh",
