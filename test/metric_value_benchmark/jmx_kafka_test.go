@@ -46,7 +46,7 @@ func (t *JMXKafkaTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *JMXKafkaTestRunner) GetAgentRunDuration() time.Duration {
-	return 5 * time.Minute
+	return 2 * time.Minute
 }
 
 func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
