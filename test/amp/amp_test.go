@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
@@ -47,7 +47,7 @@ type AMPDataResult struct {
 const (
 	namespace = "AMPDestinationTest"
 	// template prometheus query for getting average of 3 min
-	ampQueryTemplate = "avg_over_time(%s%s[3m])"
+	ampQueryTemplate = "avg_over_time(%s%s[30m])"
 )
 
 // NOTE: this should match with append_dimensions under metrics in agent config
@@ -93,8 +93,8 @@ func (t AmpDestinationTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *AmpDestinationTestRunner) validateMetric(metricName string) status.TestResult {
-	env := environment.GetEnvironmentMetaData()
-
+	//env := environment.GetEnvironmentMetaData()
+	env := environment.MetaData{AmpWorkspaceId: "ws-54b74174-2077-4cde-b826-dd16dce46bfe"}
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -122,6 +122,7 @@ func (t *AmpDestinationTestRunner) validateMetric(metricName string) status.Test
 
 	if len(responseJson.Data.Result) == 0 {
 		fmt.Printf("AMP metric values are missing for %s\n", metricName)
+		fmt.Printf("Query returned the following result: %s\n", res)
 		return testResult
 	}
 
@@ -173,7 +174,7 @@ func (t AmpDestinationTestRunner) GetMeasuredMetrics() []string {
 	}
 }
 func (t AmpDestinationTestRunner) GetAgentRunDuration() time.Duration {
-	return 2 * time.Minute
+	return 5 * time.Minute
 }
 func (t *AmpDestinationTestRunner) SetupBeforeAgentRun() error {
 	//env := environment.GetEnvironmentMetaData()
@@ -204,6 +205,7 @@ func TestAmp(t *testing.T) {
 		t.Fatal("AMP Destination test failed")
 		result.Print()
 	}
+	//runner.TestRunner.Validate()
 }
 
 func getDimensions() []types.Dimension {
@@ -223,7 +225,6 @@ func getDimensions() []types.Dimension {
 	if len(failed) > 0 {
 		return []types.Dimension{}
 	}
-
 	return dims
 }
 
@@ -240,6 +241,7 @@ func buildPrometheusQuery(metricName string, dims []types.Dimension) string {
 
 func queryAMPMetrics(wsId string, q string) ([]byte, error) {
 	url := fmt.Sprintf("https://aps-workspaces.%s.amazonaws.com/workspaces/%s/api/v1/query?query=%s", awsConfig.Region, wsId, q)
+	fmt.Println(url)
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
 		return nil, err
