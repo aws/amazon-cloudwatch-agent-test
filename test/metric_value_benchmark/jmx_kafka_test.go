@@ -55,7 +55,7 @@ func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
 
 	log.Println("set up zookeeper and kafka")
 	startJMXCommands := []string{
-		"kafka_version=$(curl -s https://dlcdn.apache.org/kafka/ | grep -oE \"\\d\\.\\d\\.\\d\" | tail -1)\n",
+		"export kafka_version=$(curl -s https://dlcdn.apache.org/kafka/ | grep -oE \"\\d\\.\\d\\.\\d\" | tail -1)\n",
 		"curl https://dlcdn.apache.org/kafka/${kafka_version}/kafka_2.13-${kafka_version}.tgz -o kafka_2.13-${kafka_version}.tgz",
 		"tar -xzf kafka_2.13-${kafka_version}.tgz",
 		"echo 'export JMX_PORT=2000'|cat - kafka_2.13-${kafka_version}/bin/kafka-server-start.sh > /tmp/kafka-server-start.sh && mv /tmp/kafka-server-start.sh kafka_2.13-${kafka_version}/bin/kafka-server-start.sh",
