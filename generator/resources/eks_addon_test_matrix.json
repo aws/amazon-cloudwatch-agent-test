@@ -1,10 +1,11 @@
 [
   {
-    "k8s_version": "1.29",
+    "k8s_version": "1.31",
     "addon_name":"amazon-cloudwatch-observability",
-    "addon_version":"v1.6.0-eksbuild.1",
-    "ami_type": "AL2_x86_64_GPU",
+    "addon_version":"v2.5.0-eksbuild.1",
+    "ami": "AL2_x86_64_GPU",
     "terraform_dir": "terraform/eks/addon/gpu",
-    "test_dir": "../../../../test/gpu"
+    "test_dir": "../../../../test/gpu",
+    "instanceType":"g4dn.xlarge"
   }
 ]
