@@ -6,6 +6,7 @@
 package metric_value_benchmark
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -53,27 +54,29 @@ func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
+	log.Println("get kafka latest version")
+	version, err := common.RunCommand("curl https://dlcdn.apache.org/kafka/ | grep -oE \"\\d\\.\\d\\.\\d\" | tail -1")
+
 	log.Println("set up zookeeper and kafka")
 	startJMXCommands := []string{
-		"export kafka_version=$(curl -s https://dlcdn.apache.org/kafka/ | grep -oE \"\\d\\.\\d\\.\\d\" | tail -1)\n",
-		"curl https://dlcdn.apache.org/kafka/${kafka_version}/kafka_2.13-${kafka_version}.tgz -o kafka_2.13-${kafka_version}.tgz",
-		"tar -xzf kafka_2.13-${kafka_version}.tgz",
-		"echo 'export JMX_PORT=2000'|cat - kafka_2.13-${kafka_version}/bin/kafka-server-start.sh > /tmp/kafka-server-start.sh && mv /tmp/kafka-server-start.sh kafka_2.13-${kafka_version}/bin/kafka-server-start.sh",
-		"echo 'export JMX_PORT=2010'|cat - kafka_2.13-${kafka_version}/bin/kafka-console-consumer.sh > /tmp/kafka-console-consumer.sh && mv /tmp/kafka-console-consumer.sh kafka_2.13-${kafka_version}/bin/kafka-console-consumer.sh",
-		"echo 'export JMX_PORT=2020'|cat - kafka_2.13-${kafka_version}/bin/kafka-console-producer.sh > /tmp/kafka-console-producer.sh && mv /tmp/kafka-console-producer.sh kafka_2.13-${kafka_version}/bin/kafka-console-producer.sh",
-		"sudo chmod +x kafka_2.13-${kafka_version}/bin/kafka-run-class.sh",
-		"sudo chmod +x kafka_2.13-${kafka_version}/bin/kafka-server-start.sh",
-		"sudo chmod +x kafka_2.13-${kafka_version}/bin/kafka-console-consumer.sh",
-		"sudo chmod +x kafka_2.13-${kafka_version}/bin/kafka-console-producer.sh",
-		"(yes | nohup kafka_2.13-${kafka_version}/bin/kafka-console-producer.sh --topic quickstart-events --bootstrap-server localhost:9092) > /tmp/kafka-console-producer-logs.txt 2>&1 &",
-		"kafka_2.13-${kafka_version}/bin/kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server localhost:9092 > /tmp/kafka-console-consumer-logs.txt 2>&1 &",
+		fmt.Sprintf("curl https://dlcdn.apache.org/kafka/%s/kafka_2.13-%s.tgz -o kafka_2.13-latest.tgz", version),
+		"tar -xzf kafka_2.13-latest.tgz",
+		"echo 'export JMX_PORT=2000'|cat - kafka_2.13-latest/bin/kafka-server-start.sh > /tmp/kafka-server-start.sh && mv /tmp/kafka-server-start.sh kafka_2.13-latest/bin/kafka-server-start.sh",
+		"echo 'export JMX_PORT=2010'|cat - kafka_2.13-latest/bin/kafka-console-consumer.sh > /tmp/kafka-console-consumer.sh && mv /tmp/kafka-console-consumer.sh kafka_2.13-latest/bin/kafka-console-consumer.sh",
+		"echo 'export JMX_PORT=2020'|cat - kafka_2.13-latest/bin/kafka-console-producer.sh > /tmp/kafka-console-producer.sh && mv /tmp/kafka-console-producer.sh kafka_2.13-latest/bin/kafka-console-producer.sh",
+		"sudo chmod +x kafka_2.13-latest/bin/kafka-run-class.sh",
+		"sudo chmod +x kafka_2.13-latest/bin/kafka-server-start.sh",
+		"sudo chmod +x kafka_2.13-latest/bin/kafka-console-consumer.sh",
+		"sudo chmod +x kafka_2.13-latest/bin/kafka-console-producer.sh",
+		"(yes | nohup kafka_2.13-latest/bin/kafka-console-producer.sh --topic quickstart-events --bootstrap-server localhost:9092) > /tmp/kafka-console-producer-logs.txt 2>&1 &",
+		"kafka_2.13-latest/bin/kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server localhost:9092 > /tmp/kafka-console-consumer-logs.txt 2>&1 &",
 		"curl https://dlcdn.apache.org/zookeeper/zookeeper-3.8.4/apache-zookeeper-3.8.4-bin.tar.gz -o apache-zookeeper-3.8.4-bin.tar.gz",
 		"tar -xzf apache-zookeeper-3.8.4-bin.tar.gz",
 		"mkdir apache-zookeeper-3.8.4-bin/data",
 		"touch apache-zookeeper-3.8.4-bin/conf/zoo.cfg",
 		"echo -e 'tickTime = 2000\ndataDir = ../data\nclientPort = 2181\ninitLimit = 5\nsyncLimit = 2\n' >> apache-zookeeper-3.8.4-bin/conf/zoo.cfg",
 		"sudo apache-zookeeper-3.8.4-bin/bin/zkServer.sh start",
-		"sudo kafka_2.13-${kafka_version}/bin/kafka-server-start.sh kafka_2.13-${kafka_version}/config/server.properties > /tmp/kafka-server-start-logs.txt 2>&1 &",
+		"sudo kafka_2.13-latest/bin/kafka-server-start.sh kafka_2.13-latest/config/server.properties > /tmp/kafka-server-start-logs.txt 2>&1 &",
 	}
 
 	err = common.RunCommands(startJMXCommands)
