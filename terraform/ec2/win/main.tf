@@ -95,6 +95,7 @@ resource "null_resource" "integration_test_setup_agent" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
+    use_ntlm = true
   }
 
   # Install agent binaries
@@ -115,6 +116,7 @@ resource "null_resource" "integration_test_setup_validator" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
+    use_ntlm = true
   }
 
   # Install agent binaries
@@ -134,6 +136,7 @@ resource "null_resource" "integration_test_reboot" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
+    use_ntlm = true
   }
 
   # Prepare Integration Test
@@ -176,6 +179,7 @@ resource "null_resource" "integration_test_run" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
+    use_ntlm = true
   }
 
   provisioner "file" {
@@ -205,6 +209,7 @@ resource "null_resource" "integration_test_run_validator" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
+    use_ntlm = true
   }
 
   provisioner "file" {
@@ -254,6 +259,7 @@ resource "null_resource" "integration_test_run_validator_start_agent_ssm" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
+    use_ntlm = true
   }
 
   provisioner "file" {
@@ -289,6 +295,7 @@ resource "null_resource" "integration_test_run_validator_custom_start" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
+    use_ntlm = true
   }
 
   provisioner "file" {

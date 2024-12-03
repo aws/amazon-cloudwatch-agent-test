@@ -24,6 +24,7 @@ variable "ami_family" {
       status_command    = "powershell \"& 'C:/Program Files/Amazon/AmazonCloudWatchAgent/amazon-cloudwatch-agent-ctl.ps1' -a status\""
       connection_type   = "winrm"
       wait_cloud_init   = " "
+      use_ntlm = true
     }
   }
 }

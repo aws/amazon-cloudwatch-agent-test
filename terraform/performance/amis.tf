@@ -23,6 +23,7 @@ variable "ami_family" {
       start_command     = "powershell \"& 'C:/Program Files/Amazon/AmazonCloudWatchAgent/amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:%s\""
       status_command    = "powershell \"& 'C:/Program Files/Amazon/AmazonCloudWatchAgent/amazon-cloudwatch-agent-ctl.ps1' -a status\""
       connection_type   = "winrm"
+      use_ntlm = true
       wait_cloud_init   = " "
     }
   }
