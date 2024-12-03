@@ -320,6 +320,7 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
 }
 
 resource "kubernetes_config_map" "cwagentconfig" {
+  depends_on = [kubernetes_namespace.namespace]
   metadata {
     name      = "cwagentconfig"
     namespace = "amazon-cloudwatch"
@@ -525,6 +526,7 @@ resource "kubernetes_config_map" "cluster_info" {
 }
 
 resource "kubernetes_service_account" "fluentbit_service" {
+  depends_on = [kubernetes_namespace.namespace]
   metadata {
     name      = "fluent-bit"
     namespace = "amazon-cloudwatch"
