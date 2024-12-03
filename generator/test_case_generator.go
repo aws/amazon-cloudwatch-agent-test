@@ -222,7 +222,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
-		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
+		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022", targets: map[string]map[string]struct{}{"os": {"win-2022": {}}}},
 		//{
 		//	testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
 		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
