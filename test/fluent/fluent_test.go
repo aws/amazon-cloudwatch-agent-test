@@ -17,7 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
-const logStreamRetry = 20
+const logStreamRetry = 10
 
 // fluent log group with expected log message fields
 var logGroupToKey = map[string][][]string{
@@ -61,10 +61,19 @@ func TestFluentLogs(t *testing.T) {
 		logGroupToKey = logGroupToKeyWindows
 	}
 
+	currRetries := 0
 	now := time.Now()
 	for group, fieldsArr := range logGroupToKey {
 		group = fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, group)
-		if !awsservice.IsLogGroupExists(group) {
+		for currRetries < logStreamRetry {
+			if awsservice.IsLogGroupExists(group) {
+				break
+			} else {
+				currRetries++
+				time.Sleep(time.Duration(currRetries) * time.Second)
+			}
+		}
+		if currRetries >= logStreamRetry {
 			t.Fatalf("fluent log group doesn't exsit: %s", group)
 		}
 
