@@ -27,7 +27,6 @@ import (
 const (
 	dimDelimiter               = "-"
 	ContainerInsightsNamespace = "ContainerInsights"
-	maxMetricValidationRun     = 5
 )
 
 type dimToMetrics struct {
