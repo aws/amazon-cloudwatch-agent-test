@@ -121,7 +121,7 @@ func (t *NvidiaTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *NvidiaTestRunner) GetAgentRunDuration() time.Duration {
-	return 3 * time.Second
+	return 3 * time.Minute
 }
 
 func (t *NvidiaTestRunner) GetMeasuredMetrics() []string {
