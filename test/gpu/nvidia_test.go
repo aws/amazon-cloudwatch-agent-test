@@ -6,6 +6,7 @@
 package emf
 
 import (
+	"flag"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -39,19 +40,18 @@ const (
 	nodeTemp          = "node_gpu_temperature"
 	nodeUtil          = "node_gpu_utilization"
 	nodeMemUtil       = "node_gpu_memory_utilization"
-
-	nodeCountTotal = "node_gpu_usage_total"
-	nodeCountLimit = "node_gpu_limit"
-	nodeReserved   = "node_gpu_reserved_capacity"
+	nodeCountTotal    = "node_gpu_usage_total"
+	nodeCountLimit    = "node_gpu_limit"
+	nodeReserved      = "node_gpu_reserved_capacity"
 )
+
+var useE2EMetrics = flag.Bool("useE2EMetrics", false, "Use E2E metrics mapping which uses latest build CWA")
 
 var expectedDimsToMetricsIntegTest = map[string][]string{
 	"ClusterName": {
 		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
 		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
-		podReserved, podRequest, podCountTotal, podLimit,
 		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
-		nodeCountTotal, nodeCountLimit, nodeReserved,
 	},
 	"ClusterName-Namespace": {
 		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
@@ -60,7 +60,7 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 	//	podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
 	//},
 	"ClusterName-Namespace-PodName": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podCountTotal, podRequest, podReserved, podLimit,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
 	},
 	"ClusterName-ContainerName-Namespace-PodName": {
 		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
@@ -72,13 +72,13 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
 	},
 	"ClusterName-FullPodName-Namespace-PodName": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podLimit, podCountTotal, podRequest, podReserved,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
 	},
 	"ClusterName-FullPodName-GpuDevice-Namespace-PodName": {
 		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
 	},
 	"ClusterName-InstanceId-NodeName": {
-		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil, nodeCountLimit, nodeCountTotal, nodeReserved,
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
 		//nodeCountTotal, nodeCountRequest, nodeCountLimit,
 	},
 	"ClusterName-GpuDevice-InstanceId-InstanceType-NodeName": {
@@ -97,6 +97,13 @@ var _ test_runner.ITestRunner = (*NvidiaTestRunner)(nil)
 func (t *NvidiaTestRunner) Validate() status.TestGroupResult {
 	var testResults []status.TestResult
 	expectedDimsToMetrics := expectedDimsToMetricsIntegTest
+	if *useE2EMetrics {
+		// add GPU count metrics
+		expectedDimsToMetricsIntegTest["ClusterName"] = append(expectedDimsToMetricsIntegTest["ClusterName"], podReserved, podRequest, podCountTotal, podLimit, nodeCountTotal, nodeCountLimit, nodeReserved)
+		expectedDimsToMetricsIntegTest["ClusterName-Namespace-PodName"] = append(expectedDimsToMetricsIntegTest["ClusterName-Namespace-PodName"], podCountTotal, podRequest, podReserved, podLimit)
+		expectedDimsToMetricsIntegTest["ClusterName-FullPodName-Namespace-PodName"] = append(expectedDimsToMetricsIntegTest["ClusterName-FullPodName-Namespace-PodName"], podCountTotal, podRequest, podReserved, podLimit)
+		expectedDimsToMetricsIntegTest["ClusterName-InstanceId-NodeName"] = append(expectedDimsToMetricsIntegTest["ClusterName-InstanceId-NodeName"], nodeCountLimit, nodeCountTotal, nodeReserved)
+	}
 	testResults = append(testResults, metric.ValidateMetrics(t.env, gpuMetricIndicator, expectedDimsToMetrics)...)
 	testResults = append(testResults, metric.ValidateLogs(t.env))
 	return status.TestGroupResult{
@@ -114,7 +121,7 @@ func (t *NvidiaTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *NvidiaTestRunner) GetAgentRunDuration() time.Duration {
-	return 3 * time.Minute
+	return 3 * time.Second
 }
 
 func (t *NvidiaTestRunner) GetMeasuredMetrics() []string {
