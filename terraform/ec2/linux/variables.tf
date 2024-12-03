@@ -47,7 +47,7 @@ variable "arc" {
   default = "amd64"
 
   validation {
-    condition     = contains(["amd64", "arm64"], var.arc)
+    condition = contains(["amd64", "arm64"], var.arc)
     error_message = "Valid values for arc are (amd64, arm64)."
   }
 }
@@ -117,4 +117,10 @@ variable "agent_start" {
   description = "default command should be for ec2 with linux"
   type        = string
   default     = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c "
+}
+
+variable "use_vendor" {
+  description = "optionally use vendor for go mods"
+  type        = bool
+  default     = false
 }
