@@ -7,7 +7,6 @@ package cloudwatchlogs
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"os"
