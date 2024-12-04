@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
@@ -86,8 +85,6 @@ var (
 		},
 	}
 	resourceNotFoundException *types.ResourceNotFoundException
-	cwlClient                 *cloudwatchlogs.Client
-	ec2Client                 *ec2.Client
 )
 
 type writeToCloudWatchTestInput struct {
@@ -232,7 +229,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 						Resources: []string{instanceId},
 						Tags:      tagsToCreate,
 					}
-					_, err := ec2Client.DeleteTags(context.TODO(), input)
+					_, err := awsservice.Ec2Client.DeleteTags(context.TODO(), input)
 					assert.NoError(t, err)
 					// Add a short delay to ensure tag deletion propagates
 					time.Sleep(5 * time.Second)
@@ -244,14 +241,14 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 					InstanceId:           aws.String(instanceId),
 					InstanceMetadataTags: ec2Types.InstanceMetadataTagsStateEnabled,
 				}
-				_, modifyErr := ec2Client.ModifyInstanceMetadataOptions(context.TODO(), modifyInput)
+				_, modifyErr := awsservice.Ec2Client.ModifyInstanceMetadataOptions(context.TODO(), modifyInput)
 				assert.NoError(t, modifyErr)
 
 				input := &ec2.CreateTagsInput{
 					Resources: []string{instanceId},
 					Tags:      tagsToCreate,
 				}
-				_, createErr := ec2Client.CreateTags(context.TODO(), input)
+				_, createErr := awsservice.Ec2Client.CreateTags(context.TODO(), input)
 				assert.NoError(t, createErr)
 			}
 			id := uuid.New()
