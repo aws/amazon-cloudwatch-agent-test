@@ -28,7 +28,7 @@ type matrixRow struct {
 	AgentStartCommand   string `json:"agentStartCommand"`
 	CaCertPath          string `json:"caCertPath"`
 	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
-	K8sVersion          string `json:"k8s_version"`
+	K8sVersion          string `json:"k8sVersion"`
 	TerraformDir        string `json:"terraform_dir"`
 	UseSSM              bool   `json:"useSSM"`
 	ExcludedTests       string `json:"excludedTests"`
