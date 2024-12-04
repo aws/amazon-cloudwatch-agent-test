@@ -124,7 +124,6 @@ resource "aws_eks_addon" "this" {
   ]
   addon_name    = var.addon_name
   cluster_name  = aws_eks_cluster.this.name
-  addon_version = var.addon_version
 }
 output "eks_cluster_name" {
   value = aws_eks_cluster.this.name
