@@ -16,11 +16,6 @@ variable "addon_name" {
   default = "amazon-cloudwatch-observability"
 }
 
-variable "addon_version" {
-  type    = string
-  default = "v2.5.0-eksbuild.1"
-}
-
 variable "k8s_version" {
   type    = string
   default = "1.31"
