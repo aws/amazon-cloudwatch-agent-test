@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -42,8 +41,6 @@ const (
 	configPathAutoRemoval         = "resources/config_auto_removal.json"
 	standardLogGroupClass         = "STANDARD"
 	infrequentAccessLogGroupClass = "INFREQUENT_ACCESS"
-	cwlPerfEndpoint               = "https://logs.us-west-2.amazonaws.com"
-	pdxRegionalCode               = "us-west-2"
 
 	entityType        = "@entity.KeyAttributes.Type"
 	entityName        = "@entity.KeyAttributes.Name"
@@ -118,18 +115,6 @@ type expectedEntity struct {
 
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
-	awsCfg, err := config.LoadDefaultConfig(
-		context.Background(),
-		config.WithRegion(pdxRegionalCode),
-	)
-	if err != nil {
-		log.Fatalf("Failed to load default config: %v", err)
-	}
-
-	cwlClient = cloudwatchlogs.NewFromConfig(awsCfg, func(o *cloudwatchlogs.Options) {
-		o.BaseEndpoint = aws.String(cwlPerfEndpoint)
-	})
-	ec2Client = ec2.NewFromConfig(awsCfg)
 }
 
 // TestWriteLogsToCloudWatch writes N number of logs, and then validates that N logs
@@ -501,22 +486,15 @@ func checkData(t *testing.T, start time.Time, lineCount int) {
 func ValidateEntity(t *testing.T, logGroup, logStream string, begin, end *time.Time, expectedEntity expectedEntity) {
 	log.Printf("Validating entity for log group: %s, stream: %s", logGroup, logStream)
 
-	logGroupInfo, err := getLogGroup(logGroup)
-	for _, lg := range logGroupInfo {
-		if *lg.LogGroupName == logGroup {
-			log.Println("Log group " + *lg.LogGroupName + " exists")
-			break
-		}
-	}
-	assert.NoError(t, err)
+	logGroupExists := awsservice.IsLogGroupExists(logGroup)
+    assert.True(t, logGroupExists, "Log group %s does not exist", logGroup)
 	
 	log.Printf("Query start time is " + begin.String() + " and end time is " + end.String())
-	queryId, err := getLogQueryId(logGroup, begin, end)
-	assert.NoError(t, err)
-	log.Printf("queryId is " + *queryId)
-	result, err := getQueryResult(queryId)
-	assert.NoError(t, err)
-	if !assert.NotZero(t, len(result)) {
+
+	results, err := awsservice.GetLogQueryResults(logGroup, begin.Unix(), end.Unix(), queryString)
+    assert.NoError(t, err, "Failed to get query results")
+
+	if !assert.NotZero(t, len(results)) {
 		return
 	}
 	requiredEntityFields := map[string]bool{
@@ -526,7 +504,7 @@ func ValidateEntity(t *testing.T, logGroup, logStream string, begin, end *time.T
 		entityPlatform:    false,
 		entityInstanceId:  false,
 	}
-	for _, field := range result[0] {
+	for _, field := range results[0] {
 		switch aws.ToString(field.Field) {
 		case entityType:
 			requiredEntityFields[entityType] = true
@@ -554,97 +532,4 @@ func ValidateEntity(t *testing.T, logGroup, logStream string, begin, end *time.T
 		}
 	}
 	assert.True(t, allEntityFieldsFound)
-}
-
-func getLogQueryId(logGroup string, since, until *time.Time) (*string, error) {
-	var queryId *string
-	params := &cloudwatchlogs.StartQueryInput{
-		QueryString:  aws.String(queryString),
-		LogGroupName: aws.String(logGroup),
-	}
-	if since != nil {
-		params.StartTime = aws.Int64(since.UnixMilli())
-	}
-	if until != nil {
-		params.EndTime = aws.Int64(until.UnixMilli())
-	}
-	attempts := 0
-
-	for {
-		output, err := cwlClient.StartQuery(context.Background(), params)
-		attempts += 1
-
-		if err != nil {
-			if errors.As(err, &resourceNotFoundException) && attempts <= awsservice.StandardRetries {
-				// The log group/stream hasn't been created yet, so wait and retry
-				time.Sleep(retryWaitTime)
-				continue
-			}
-
-			// if the error is not a ResourceNotFoundException, we should fail here.
-			return queryId, err
-		}
-		queryId = output.QueryId
-		return queryId, err
-	}
-}
-
-func getQueryResult(queryId *string) ([][]types.ResultField, error) {
-	attempts := 0
-	var results [][]types.ResultField
-	params := &cloudwatchlogs.GetQueryResultsInput{
-		QueryId: aws.String(*queryId),
-	}
-	for {
-		if attempts > awsservice.StandardRetries {
-			return results, errors.New("exceeded retry count")
-		}
-		result, err := cwlClient.GetQueryResults(context.Background(), params)
-		log.Printf("GetQueryResult status is: %v", result.Status)
-		attempts += 1
-		if result.Status != types.QueryStatusComplete {
-			log.Printf("GetQueryResult: sleeping for 5 seconds until status is complete")
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		log.Printf("GetQueryResult: result length is %d", len(result.Results))
-		if err != nil {
-			if errors.As(err, &resourceNotFoundException) {
-				// The log group/stream hasn't been created yet, so wait and retry
-				time.Sleep(retryWaitTime)
-				continue
-			}
-
-			// if the error is not a ResourceNotFoundException, we should fail here.
-			return results, err
-		}
-		results = result.Results
-		return results, err
-	}
-}
-
-func getLogGroup(logGroupName string) ([]types.LogGroup, error) {
-	attempts := 0
-	var logGroups []types.LogGroup
-	params := &cloudwatchlogs.DescribeLogGroupsInput{
-		LogGroupNamePrefix: aws.String(logGroupName),
-	}
-	for {
-		output, err := cwlClient.DescribeLogGroups(context.Background(), params)
-
-		attempts += 1
-
-		if err != nil {
-			if errors.As(err, &resourceNotFoundException) && attempts <= awsservice.StandardRetries {
-				// The log group/stream hasn't been created yet, so wait and retry
-				time.Sleep(retryWaitTime)
-				continue
-			}
-
-			// if the error is not a ResourceNotFoundException, we should fail here.
-			return logGroups, err
-		}
-		logGroups = output.LogGroups
-		return logGroups, err
-	}
 }
