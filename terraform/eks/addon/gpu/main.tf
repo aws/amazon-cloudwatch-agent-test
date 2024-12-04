@@ -122,8 +122,8 @@ resource "aws_eks_addon" "this" {
   depends_on = [
     null_resource.kubectl
   ]
-  addon_name    = var.addon_name
-  cluster_name  = aws_eks_cluster.this.name
+  addon_name   = var.addon_name
+  cluster_name = aws_eks_cluster.this.name
 }
 output "eks_cluster_name" {
   value = aws_eks_cluster.this.name
