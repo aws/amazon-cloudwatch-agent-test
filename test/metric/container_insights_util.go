@@ -41,12 +41,14 @@ func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDim
 	dimsToMetrics := getMetricsInClusterDimension(env, metricFilter)
 	for dims, metrics := range expectedDimsToMetrics {
 		var actual map[string][][]types.Dimension
+		// find matching dim set from fetched and processed metric-dims groups
 		for _, dtm := range dimsToMetrics {
 			if dtm.dimStr == dims {
 				actual = dtm.metrics
 				break
 			}
 		}
+		// expected dim set doesn't exist
 		if len(actual) < 1 {
 			results = append(results, status.TestResult{
 				Name:   dims,
@@ -142,6 +144,7 @@ func validateMetricsAvailability(dims string, expected []string, actual map[stri
 
 func compareMetrics(expected []string, actual map[string][][]types.Dimension) bool {
 	if len(expected) != len(actual) {
+		log.Printf("the count of fetched metrics do not match with expected count: expected-%v, actual-%v\n", len(expected), len(actual))
 		return false
 	}
 

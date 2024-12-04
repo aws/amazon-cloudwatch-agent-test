@@ -21,7 +21,7 @@ locals {
 }
 
 resource "aws_eks_cluster" "this" {
-  name     = "cwagent-operator-eks-integ-${module.common.testing_id}"
+  name     = "cwagent-addon-eks-integ-${module.common.testing_id}"
   role_arn = local.role_arn
   version  = var.k8s_version
   enabled_cluster_log_types = [
@@ -40,17 +40,17 @@ resource "aws_eks_cluster" "this" {
 # EKS Node Groups
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "cwagent-operator-eks-integ-node"
+  node_group_name = "cwagent-addon-eks-integ-node"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
 
   scaling_config {
-    desired_size = 2
-    max_size     = 2
-    min_size     = 2
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
   }
 
-  ami_type       = "AL2_x86_64_GPU"
+  ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
   instance_types = [var.instance_type]
@@ -65,7 +65,7 @@ resource "aws_eks_node_group" "this" {
 
 # EKS Node IAM Role
 resource "aws_iam_role" "node_role" {
-  name = "cwagent-operator-eks-Worker-Role-${module.common.testing_id}"
+  name = "cwagent-addon-eks-Worker-Role-${module.common.testing_id}"
 
   assume_role_policy = <<POLICY
 {
@@ -129,6 +129,3 @@ resource "aws_eks_addon" "this" {
 output "eks_cluster_name" {
   value = aws_eks_cluster.this.name
 }
-
-
-
