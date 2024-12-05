@@ -126,7 +126,7 @@ func ValidateLogEntity(t *testing.T, logGroup, logStream string, end *time.Time,
 		t.Fatalf("application log group used for entity validation doesn't exist: %s", logGroup)
 	}
 
-	begin := end.Add(-2 * time.Minute)
+	begin := end.Add(-12 * time.Minute)
 	log.Printf("Start time is %s and end time is %s", begin.String(), end.String())
 
 	result, err := awsservice.GetLogQueryResults(logGroup, begin.Unix(), end.Unix(), queryString)
