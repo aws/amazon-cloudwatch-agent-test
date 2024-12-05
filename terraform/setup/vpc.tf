@@ -61,14 +61,6 @@ resource "aws_security_group" "ec2_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  // OpenSSH and others ssh into EC2 Instance
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   // localstack http and https
   ingress {
     from_port   = 4566
