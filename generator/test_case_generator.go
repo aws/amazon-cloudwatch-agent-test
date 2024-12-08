@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -28,7 +29,7 @@ type matrixRow struct {
 	AgentStartCommand   string `json:"agentStartCommand"`
 	CaCertPath          string `json:"caCertPath"`
 	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
-	K8sVersion          string `json:"k8s_version"`
+	K8sVersion          string `json:"k8sVersion"`
 	TerraformDir        string `json:"terraform_dir"`
 	UseSSM              bool   `json:"useSSM"`
 	ExcludedTests       string `json:"excludedTests"`
@@ -243,6 +244,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
 	},
+}
+
+var testTypeToTestConfigE2E = map[string][]testConfig{
 	"eks_e2e": {
 		{testDir: "../../../test/e2e/jmx"},
 	},
@@ -284,9 +288,17 @@ func copyAllEC2LinuxTestForOnpremTesting() {
 }
 
 func main() {
-	copyAllEC2LinuxTestForOnpremTesting()
+	useE2E := flag.Bool("e2e", false, "Use e2e test matrix generation")
+	flag.Parse()
 
-	for testType, testConfigs := range testTypeToTestConfig {
+	configMap := testTypeToTestConfig
+	if !*useE2E {
+		copyAllEC2LinuxTestForOnpremTesting()
+	} else {
+		configMap = testTypeToTestConfigE2E
+	}
+
+	for testType, testConfigs := range configMap {
 		for _, partition := range partitionTests {
 			if len(partition.tests) != 0 && !slices.Contains(partition.tests, testType) {
 				continue

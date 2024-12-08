@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: MIT
 
 assertStatus() {
+     sleep 3
      keyToCheck="${1:-}"
      expectedVal="${2:-}"
 
