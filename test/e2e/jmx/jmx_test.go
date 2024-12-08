@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -132,18 +133,75 @@ func TestResources(t *testing.T) {
 }
 
 func TestMetrics(t *testing.T) {
-	metricsToCheck := []struct {
-		name      string
-		namespace string
-	}{
-		{"tomcat.traffic", "JVM_TOMCAT_E2E"}, // Add more metrics.
-	}
+	t.Run("verify_jvm_tomcat_metrics", func(t *testing.T) {
+		metricsToCheck := []struct {
+			name      string
+			namespace string
+		}{
+			{"tomcat.traffic", "JVM_TOMCAT_E2E"},
+			{"jvm.classes.loaded", "JVM_TOMCAT_E2E"},
+			{"jvm.gc.collections.count", "JVM_TOMCAT_E2E"},
+			{"jvm.gc.collections.elapsed", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.heap.init", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.heap.max", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.heap.used", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.heap.committed", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.nonheap.init", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.nonheap.max", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.nonheap.used", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.nonheap.committed", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.pool.init", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.pool.max", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.pool.used", "JVM_TOMCAT_E2E"},
+			{"jvm.memory.pool.committed", "JVM_TOMCAT_E2E"},
+			{"jvm.threads.count", "JVM_TOMCAT_E2E"},
+			{"tomcat.sessions", "JVM_TOMCAT_E2E"},
+			{"tomcat.errors", "JVM_TOMCAT_E2E"},
+			{"tomcat.request_count", "JVM_TOMCAT_E2E"},
+			{"tomcat.max_time", "JVM_TOMCAT_E2E"},
+			{"tomcat.processing_time", "JVM_TOMCAT_E2E"},
+			{"tomcat.threads", "JVM_TOMCAT_E2E"},
+		}
 
-	for _, metric := range metricsToCheck {
-		t.Run(metric.name, func(t *testing.T) {
-			awsservice.ValidateMetricWithTest(t, metric.name, metric.namespace, nil, 5, 1*time.Minute)
-		})
-	}
+		for _, metric := range metricsToCheck {
+			t.Run(metric.name, func(t *testing.T) {
+				awsservice.ValidateMetricWithTest(t, metric.name, metric.namespace, nil, 5, 1*time.Minute)
+			})
+		}
+	})
 
-	// Add more testing here from cloudwatchmetrics.go.
+	t.Run("verify_tomcat_sessions", func(t *testing.T) {
+		for i := 0; i < 5; i++ {
+			resp, err := http.Get("http://localhost:8080/webapp/index.jsp")
+			if err != nil {
+				t.Logf("Request attempt %d failed: %v", i+1, err)
+				continue
+			}
+			err = resp.Body.Close()
+			if err != nil {
+				t.Errorf("Failed to close response body: %v", err)
+				return
+			}
+		}
+
+		time.Sleep(30 * time.Second)
+
+		startTime := time.Now().Add(-5 * time.Minute)
+		endTime := time.Now()
+
+		hasActiveSessions := awsservice.ValidateSampleCount(
+			"tomcat.sessions",
+			"JVM_TOMCAT_E2E",
+			nil,
+			startTime,
+			endTime,
+			1,
+			1000,
+			60,
+		)
+
+		if !hasActiveSessions {
+			t.Error("Expected non-zero tomcat.sessions after applying traffic")
+		}
+	})
 }
