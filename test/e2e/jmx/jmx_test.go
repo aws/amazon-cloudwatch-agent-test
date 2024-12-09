@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -111,16 +112,34 @@ func ApplyHelm(env *environment.MetaData) error {
 	fmt.Println("Waiting for CloudWatch Agent Operator to initialize...")
 	time.Sleep(300 * time.Second)
 
+	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yml")
+
 	apply := exec.Command("kubectl", "apply", "-f", env.SampleApp)
 	output, err = apply.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to apply sample app: %w\nOutput: %s", err, output)
 	}
 
-	wait := exec.Command("kubectl", "wait", "--for=condition=available", "--timeout=300s", "deployment", "--all", "-n", "default")
+	wait := exec.Command("kubectl", "wait", "--for=condition=available", "--timeout=300s", fmt.Sprintf("deployment/%s", deploymentName), "-n", "default")
 	output, err = wait.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to wait for deployments: %w\nOutput: %s", err, output)
+		return fmt.Errorf("failed to wait for deployment %s: %w\nOutput: %s", deploymentName, err, output)
+	}
+
+	var ports string
+	if deploymentName == "tomcat-deployment" {
+		ports = "8080:8080"
+	} else if deploymentName == "kafka-deployment" {
+		ports = "9092:9092"
+	} else {
+		return fmt.Errorf("unknown deployment type: %s", deploymentName)
+	}
+
+	portForward := exec.Command("kubectl", "port-forward", fmt.Sprintf("deployment/%s", deploymentName), ports)
+	portForward.Stdout = os.Stdout
+	portForward.Stderr = os.Stderr
+	if err := portForward.Run(); err != nil {
+		fmt.Printf("Port forwarding failed: %v\n", err)
 	}
 
 	return nil
