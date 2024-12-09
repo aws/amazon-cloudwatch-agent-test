@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+        cloudwatch.aws.amazon.com/inject-jmx-kafka: "true"
+        cloudwatch.aws.amazon.com/inject-jmx-kakfa-consumer: "true"
+        cloudwatch.aws.amazon.com/inject-jmx-kafka-producer: "true"
+    spec:
+      containers:
+        - name: kafka-container
+          image: apache/kafka:latest
+          ports:
+            - containerPort: 8080

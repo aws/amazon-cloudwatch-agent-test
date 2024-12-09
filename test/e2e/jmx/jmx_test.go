@@ -22,6 +22,27 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
+type TestConfig struct {
+	metricTests []func(*testing.T)
+}
+
+var testRegistry = map[string]TestConfig{
+	"jvm_tomcat.json": {
+		metricTests: []func(*testing.T){
+			testTomcatMetrics,
+			testTomcatSessions,
+		},
+	},
+	"kafka.json": {
+		metricTests: []func(*testing.T){
+			testKafkaMetrics,
+		},
+	},
+	"containerinsights.json": {
+		metricTests: []func(*testing.T){},
+	},
+}
+
 func TestMain(m *testing.M) {
 	flag.Parse()
 	env := environment.GetEnvironmentMetaData()
@@ -48,14 +69,15 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// Make this a utility function.
 func ApplyHelm(env *environment.MetaData) error {
-	updateKubeconfigCmd := exec.Command("aws", "eks", "update-kubeconfig", "--name", env.EKSClusterName)
-	output, err := updateKubeconfigCmd.CombinedOutput()
+	updateKubeconfig := exec.Command("aws", "eks", "update-kubeconfig", "--name", env.EKSClusterName)
+	output, err := updateKubeconfig.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to update kubeconfig: %w\nOutput: %s", err, output)
 	}
 
-	helmCmd := []string{
+	helm := []string{
 		"helm", "upgrade", "--install", "amazon-cloudwatch-observability",
 		filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability"),
 		"--values", filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability", "values.yaml"),
@@ -76,27 +98,27 @@ func ApplyHelm(env *environment.MetaData) error {
 		if err != nil {
 			return fmt.Errorf("failed to read agent config file: %w", err)
 		}
-		helmCmd = append(helmCmd, "--set-json", fmt.Sprintf("agent.config=%s", string(agentConfigContent)))
+		helm = append(helm, "--set-json", fmt.Sprintf("agent.config=%s", string(agentConfigContent)))
 	}
 
-	helmUpgradeCmd := exec.Command(helmCmd[0], helmCmd[1:]...)
-	helmUpgradeCmd.Stdout = os.Stdout
-	helmUpgradeCmd.Stderr = os.Stderr
-	if err := helmUpgradeCmd.Run(); err != nil {
+	helmUpgrade := exec.Command(helm[0], helm[1:]...)
+	helmUpgrade.Stdout = os.Stdout
+	helmUpgrade.Stderr = os.Stderr
+	if err := helmUpgrade.Run(); err != nil {
 		return fmt.Errorf("failed to install Helm release: %w", err)
 	}
 
 	fmt.Println("Waiting for CloudWatch Agent Operator to initialize...")
 	time.Sleep(300 * time.Second)
 
-	applyCmd := exec.Command("kubectl", "apply", "-f", env.SampleApp)
-	output, err = applyCmd.CombinedOutput()
+	apply := exec.Command("kubectl", "apply", "-f", env.SampleApp)
+	output, err = apply.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to apply sample app: %w\nOutput: %s", err, output)
 	}
 
-	waitCmd := exec.Command("kubectl", "wait", "--for=condition=available", "--timeout=300s", "deployment", "--all", "-n", "default")
-	output, err = waitCmd.CombinedOutput()
+	wait := exec.Command("kubectl", "wait", "--for=condition=available", "--timeout=300s", "deployment", "--all", "-n", "default")
+	output, err = wait.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to wait for deployments: %w\nOutput: %s", err, output)
 	}
@@ -133,6 +155,21 @@ func TestResources(t *testing.T) {
 }
 
 func TestMetrics(t *testing.T) {
+	env := environment.GetEnvironmentMetaData()
+	configFile := filepath.Base(env.AgentConfig)
+
+	config, exists := testRegistry[configFile]
+	if !exists {
+		t.Skipf("No tests registered for config file: %s", configFile)
+		return
+	}
+
+	for _, testFunc := range config.metricTests {
+		testFunc(t)
+	}
+}
+
+func testTomcatMetrics(t *testing.T) {
 	t.Run("verify_jvm_tomcat_metrics", func(t *testing.T) {
 		metricsToCheck := []struct {
 			name      string
@@ -169,7 +206,9 @@ func TestMetrics(t *testing.T) {
 			})
 		}
 	})
+}
 
+func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			resp, err := http.Get("http://localhost:8080/webapp/index.jsp")
@@ -205,3 +244,60 @@ func TestMetrics(t *testing.T) {
 		}
 	})
 }
+
+func testKafkaMetrics(t *testing.T) {
+	t.Run("verify_kafka_metrics", func(t *testing.T) {
+		metricsToCheck := []struct {
+			name      string
+			namespace string
+		}{
+			{"kafka.message.count", "KAFKA_E2E"},
+			{"kafka.request.count", "KAFKA_E2E"},
+			{"kafka.request.failed", "KAFKA_E2E"},
+			{"kafka.request.time.total", "KAFKA_E2E"},
+			{"kafka.request.time.50p", "KAFKA_E2E"},
+			{"kafka.request.time.99p", "KAFKA_E2E"},
+			{"kafka.request.time.avg", "KAFKA_E2E"},
+			{"kafka.network.io", "KAFKA_E2E"},
+			{"kafka.purgatory.size", "KAFKA_E2E"},
+			{"kafka.partition.count", "KAFKA_E2E"},
+			{"kafka.partition.offline", "KAFKA_E2E"},
+			{"kafka.partition.under_replicated", "KAFKA_E2E"},
+			{"kafka.isr.operation.count", "KAFKA_E2E"},
+			{"kafka.max.lag", "KAFKA_E2E"},
+			{"kafka.controller.active.count", "KAFKA_E2E"},
+			{"kafka.leader.election.rate", "KAFKA_E2E"},
+			{"kafka.unclean.election.rate", "KAFKA_E2E"},
+			{"kafka.request.queue", "KAFKA_E2E"},
+			{"kafka.logs.flush.time.count", "KAFKA_E2E"},
+			{"kafka.logs.flush.time.median", "KAFKA_E2E"},
+			{"kafka.logs.flush.time.99p", "KAFKA_E2E"},
+			{"kafka.consumer.fetch-rate", "KAFKA_E2E"},
+			{"kafka.consumer.records-lag-max", "KAFKA_E2E"},
+			{"kafka.consumer.total.bytes-consumed-rate", "KAFKA_E2E"},
+			{"kafka.consumer.total.fetch-size-avg", "KAFKA_E2E"},
+			{"kafka.consumer.total.records-consumed-rate", "KAFKA_E2E"},
+			{"kafka.consumer.bytes-consumed-rate", "KAFKA_E2E"},
+			{"kafka.consumer.fetch-size-avg", "KAFKA_E2E"},
+			{"kafka.consumer.records-consumed-rate", "KAFKA_E2E"},
+			{"kafka.producer.io-wait-time-ns-avg", "KAFKA_E2E"},
+			{"kafka.producer.outgoing-byte-rate", "KAFKA_E2E"},
+			{"kafka.producer.request-latency-avg", "KAFKA_E2E"},
+			{"kafka.producer.request-rate", "KAFKA_E2E"},
+			{"kafka.producer.response-rate", "KAFKA_E2E"},
+			{"kafka.producer.byte-rate", "KAFKA_E2E"},
+			{"kafka.producer.compression-rate", "KAFKA_E2E"},
+			{"kafka.producer.record-error-rate", "KAFKA_E2E"},
+			{"kafka.producer.record-retry-rate", "KAFKA_E2E"},
+			{"kafka.producer.record-send-rate", "KAFKA_E2E"},
+		}
+
+		for _, metric := range metricsToCheck {
+			t.Run(metric.name, func(t *testing.T) {
+				awsservice.ValidateMetricWithTest(t, metric.name, metric.namespace, nil, 5, 1*time.Minute)
+			})
+		}
+	})
+}
+
+// Implement order and also helm upgrade + metric test.
