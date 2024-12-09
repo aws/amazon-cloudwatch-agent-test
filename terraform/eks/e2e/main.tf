@@ -125,6 +125,9 @@ resource "null_resource" "validator" {
       -cloudwatch_agent_operator_repository=${var.cloudwatch_agent_operator_repository} \
       -cloudwatch_agent_operator_tag=${var.cloudwatch_agent_operator_tag} \
       -cloudwatch_agent_operator_repository_url=${var.cloudwatch_agent_operator_repository_url} \
+      -cloudwatch_agent_target_allocator_repository=${var.cloudwatch_agent_target_allocator_repository} \
+      -cloudwatch_agent_target_allocator_tag=${var.cloudwatch_agent_target_allocator_tag} \
+      -cloudwatch_agent_target_allocator_repository_url=${var.cloudwatch_agent_target_allocator_repository_url} \
       -agent_config="${var.test_dir}/${var.agent_config}" \
       ${var.otel_config != "" ? "-otel_config=\"${var.test_dir}/${var.otel_config}\"" : ""} \
       ${var.prometheus_config != "" ? "-prometheus_config=\"${var.test_dir}/${var.prometheus_config}\"" : ""} \

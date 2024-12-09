@@ -1,0 +1,9 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "kubernetes": {
+        "jmx_container_insights": true
+      }
+    }
+  }
+}

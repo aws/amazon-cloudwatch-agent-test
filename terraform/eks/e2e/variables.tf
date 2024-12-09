@@ -51,6 +51,21 @@ variable "cloudwatch_agent_operator_repository_url" {
   default = "public.ecr.aws/cloudwatch-agent"
 }
 
+variable "cloudwatch_agent_target_allocator_repository" {
+  type    = string
+  default = "cloudwatch-agent-target-allocator"
+}
+
+variable "cloudwatch_agent_target_allocator_tag" {
+  type    = string
+  default = "latest"
+}
+
+variable "cloudwatch_agent_target_allocator_repository_url" {
+  type    = string
+  default = "public.ecr.aws/cloudwatch-agent"
+}
+
 variable "test_dir" {
   type    = string
   default = ""

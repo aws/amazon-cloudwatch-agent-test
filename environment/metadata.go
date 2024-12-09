@@ -54,6 +54,9 @@ type MetaData struct {
 	CloudwatchAgentOperatorRepository    string
 	CloudwatchAgentOperatorTag           string
 	CloudwatchAgentOperatorRepositoryURL string
+	CloudwatchAgentTargetAllocatorRepository    string
+	CloudwatchAgentTargetAllocatorTag           string
+	CloudwatchAgentTargetAllocatorRepositoryURL string
 	AgentConfig                          string
 	PrometheusConfig                     string
 	OtelConfig                           string
@@ -91,6 +94,9 @@ type MetaDataStrings struct {
 	CloudwatchAgentOperatorRepository    string
 	CloudwatchAgentOperatorTag           string
 	CloudwatchAgentOperatorRepositoryURL string
+	CloudwatchAgentTargetAllocatorRepository    string
+	CloudwatchAgentTargetAllocatorTag           string
+	CloudwatchAgentTargetAllocatorRepositoryURL string
 	AgentConfig                          string
 	PrometheusConfig                     string
 	OtelConfig                           string
@@ -137,6 +143,9 @@ func registerEKSE2ETestData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.CloudwatchAgentOperatorRepository), "cloudwatch_agent_operator_repository", "", "CloudWatch Agent Operator repository")
 	flag.StringVar(&(dataString.CloudwatchAgentOperatorTag), "cloudwatch_agent_operator_tag", "", "CloudWatch Agent Operator tag")
 	flag.StringVar(&(dataString.CloudwatchAgentOperatorRepositoryURL), "cloudwatch_agent_operator_repository_url", "", "CloudWatch Agent Operator repository URL")
+	flag.StringVar(&(dataString.CloudwatchAgentTargetAllocatorRepository), "cloudwatch_agent_target_allocator_repository", "", "CloudWatch Agent Target Allocator repository")
+	flag.StringVar(&(dataString.CloudwatchAgentTargetAllocatorTag), "cloudwatch_agent_target_allocator_tag", "", "CloudWatch Agent Target Allocator tag")
+	flag.StringVar(&(dataString.CloudwatchAgentTargetAllocatorRepositoryURL), "cloudwatch_agent_target_allocator_repository_url", "", "CloudWatch Agent Target Allocator repository URL")
 	flag.StringVar(&(dataString.AgentConfig), "agent_config", "", "Agent configuration file path")
 	flag.StringVar(&(dataString.PrometheusConfig), "prometheus_config", "", "Prometheus configuration file path")
 	flag.StringVar(&(dataString.OtelConfig), "otel_config", "", "OpenTelemetry configuration file path")
@@ -316,6 +325,9 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.CloudwatchAgentOperatorRepository = registeredMetaDataStrings.CloudwatchAgentOperatorRepository
 	metaDataStorage.CloudwatchAgentOperatorTag = registeredMetaDataStrings.CloudwatchAgentOperatorTag
 	metaDataStorage.CloudwatchAgentOperatorRepositoryURL = registeredMetaDataStrings.CloudwatchAgentOperatorRepositoryURL
+	metaDataStorage.CloudwatchAgentTargetAllocatorRepository = registeredMetaDataStrings.CloudwatchAgentTargetAllocatorRepository
+	metaDataStorage.CloudwatchAgentTargetAllocatorTag = registeredMetaDataStrings.CloudwatchAgentTargetAllocatorTag
+	metaDataStorage.CloudwatchAgentTargetAllocatorRepositoryURL = registeredMetaDataStrings.CloudwatchAgentTargetAllocatorRepositoryURL
 	metaDataStorage.AgentConfig = registeredMetaDataStrings.AgentConfig
 	metaDataStorage.PrometheusConfig = registeredMetaDataStrings.PrometheusConfig
 	metaDataStorage.OtelConfig = registeredMetaDataStrings.OtelConfig
