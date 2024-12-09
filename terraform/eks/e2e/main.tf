@@ -112,7 +112,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating K8s resources and metrics"
-      go test -v ${var.test_dir} \
+      go test -timeout 30m -v ${var.test_dir} \
       -region=${var.region} \
       -k8s_version=${var.k8s_version} \
       -eksClusterName=${aws_eks_cluster.this.name} \
@@ -125,6 +125,9 @@ resource "null_resource" "validator" {
       -cloudwatch_agent_operator_repository=${var.cloudwatch_agent_operator_repository} \
       -cloudwatch_agent_operator_tag=${var.cloudwatch_agent_operator_tag} \
       -cloudwatch_agent_operator_repository_url=${var.cloudwatch_agent_operator_repository_url} \
+      -cloudwatch_agent_target_allocator_repository=${var.cloudwatch_agent_target_allocator_repository} \
+      -cloudwatch_agent_target_allocator_tag=${var.cloudwatch_agent_target_allocator_tag} \
+      -cloudwatch_agent_target_allocator_repository_url=${var.cloudwatch_agent_target_allocator_repository_url} \
       -agent_config="${var.test_dir}/${var.agent_config}" \
       ${var.otel_config != "" ? "-otel_config=\"${var.test_dir}/${var.otel_config}\"" : ""} \
       ${var.prometheus_config != "" ? "-prometheus_config=\"${var.test_dir}/${var.prometheus_config}\"" : ""} \
