@@ -37,3 +37,6 @@ output "performance-dynamodb-table" {
   value = "CWAPerformanceMetrics"
 }
 
+output "runner_prefix_list_id" {
+  value = var.prefix_list_id
+}

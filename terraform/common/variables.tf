@@ -17,3 +17,8 @@ variable "vpc_security_group" {
   default = "vpc_security_group"
 }
 
+variable "prefix_list_id" {
+  description = "The ID of the prefix list to modify"
+  type        = string
+  default = "pl-0416d95afa9ebd533"
+}
