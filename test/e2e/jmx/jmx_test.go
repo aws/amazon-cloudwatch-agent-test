@@ -40,7 +40,10 @@ var testRegistry = map[string]TestConfig{
 		},
 	},
 	"containerinsights.json": {
-		metricTests: []func(*testing.T){},
+		metricTests: []func(*testing.T){
+			testContainerInsightsMetrics,
+			testTomcatRejectedSessions,
+		},
 	},
 }
 
@@ -112,7 +115,7 @@ func ApplyHelm(env *environment.MetaData) error {
 	fmt.Println("Waiting for CloudWatch Agent Operator to initialize...")
 	time.Sleep(300 * time.Second)
 
-	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yml")
+	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
 
 	apply := exec.Command("kubectl", "apply", "-f", env.SampleApp)
 	output, err = apply.CombinedOutput()
@@ -170,6 +173,22 @@ func TestResources(t *testing.T) {
 	}
 	if configMap == nil {
 		t.Error("CloudWatch Agent ConfigMap not found")
+	}
+
+	service, err := clientset.CoreV1().Services("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("Error getting CloudWatch Agent Service: %v", err)
+	}
+	if service == nil {
+		t.Error("CloudWatch Agent Service not found")
+	}
+
+	serviceAccount, err := clientset.CoreV1().ServiceAccounts("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("Error getting CloudWatch Agent Service Account: %v", err)
+	}
+	if serviceAccount == nil {
+		t.Error("CloudWatch Agent Service Account not found")
 	}
 }
 
@@ -319,4 +338,75 @@ func testKafkaMetrics(t *testing.T) {
 	})
 }
 
-// Implement order and also helm upgrade + metric test.
+func testContainerInsightsMetrics(t *testing.T) {
+	t.Run("verify_containerinsights_metrics", func(t *testing.T) {
+		metricsToCheck := []struct {
+			name      string
+			namespace string
+		}{
+			{"jvm_classes_loaded", "ContainerInsights/Prometheus"},
+			{"jvm_threads_current", "ContainerInsights/Prometheus"},
+			{"jvm_threads_daemon", "ContainerInsights/Prometheus"},
+			{"java_lang_operatingsystem_totalswapspacesize", "ContainerInsights/Prometheus"},
+			{"java_lang_operatingsystem_systemcpuload", "ContainerInsights/Prometheus"},
+			{"java_lang_operatingsystem_processcpuload", "ContainerInsights/Prometheus"},
+			{"java_lang_operatingsystem_freeswapspacesize", "ContainerInsights/Prometheus"},
+			{"java_lang_operatingsystem_totalphysicalmemorysize", "ContainerInsights/Prometheus"},
+			{"java_lang_operatingsystem_freephysicalmemorysize", "ContainerInsights/Prometheus"},
+			{"java_lang_operatingsystem_openfiledescriptorcount", "ContainerInsights/Prometheus"},
+			{"java_lang_operatingsystem_availableprocessors", "ContainerInsights/Prometheus"},
+			{"jvm_memory_bytes_used", "ContainerInsights/Prometheus"},
+			{"jvm_memory_pool_bytes_used", "ContainerInsights/Prometheus"},
+			{"catalina_manager_activesessions", "ContainerInsights/Prometheus"},
+			{"catalina_manager_rejectedsessions", "ContainerInsights/Prometheus"},
+			{"catalina_globalrequestprocessor_bytesreceived", "ContainerInsights/Prometheus"},
+			{"catalina_globalrequestprocessor_bytessent", "ContainerInsights/Prometheus"},
+			{"catalina_globalrequestprocessor_requestcount", "ContainerInsights/Prometheus"},
+			{"catalina_globalrequestprocessor_errorcount", "ContainerInsights/Prometheus"},
+			{"catalina_globalrequestprocessor_processingtime", "ContainerInsights/Prometheus"},
+		}
+
+		for _, metric := range metricsToCheck {
+			t.Run(metric.name, func(t *testing.T) {
+				awsservice.ValidateMetricWithTest(t, metric.name, metric.namespace, nil, 5, 1*time.Minute)
+			})
+		}
+	})
+}
+
+func testTomcatRejectedSessions(t *testing.T) {
+	t.Run("verify_tomcat_sessions", func(t *testing.T) {
+		for i := 0; i < 5; i++ {
+			resp, err := http.Get("http://localhost:8080/webapp/index.jsp")
+			if err != nil {
+				t.Logf("Request attempt %d failed: %v", i+1, err)
+				continue
+			}
+			err = resp.Body.Close()
+			if err != nil {
+				t.Errorf("Failed to close response body: %v", err)
+				return
+			}
+		}
+
+		time.Sleep(30 * time.Second)
+
+		startTime := time.Now().Add(-5 * time.Minute)
+		endTime := time.Now()
+
+		hasActiveSessions := awsservice.ValidateSampleCount(
+			"catalina_manager_rejectedsessions",
+			"ContainerInsights/Prometheus",
+			nil,
+			startTime,
+			endTime,
+			1,
+			1000,
+			60,
+		)
+
+		if !hasActiveSessions {
+			t.Error("Expected non-zero catalina_manager_rejectedsessions after applying traffic")
+		}
+	})
+}
