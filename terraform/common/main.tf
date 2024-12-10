@@ -16,4 +16,7 @@ locals {
 resource "aws_ec2_managed_prefix_list_entry" "prefix_list_entry" {
   prefix_list_id = var.prefix_list_id
   cidr = "${local.my_ip}/32"
+  lifecycle {
+    ignore_changes = [ "cidr" ]
+  }
 }
