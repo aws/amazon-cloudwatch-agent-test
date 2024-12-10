@@ -38,20 +38,51 @@ locals {
 
 resource "null_resource" "manage_ip_in_prefix_list" {
   triggers = {
-    run_id = module.common.testing_id
+    run_id         = module.common.testing_id
     prefix_list_id = module.common.runner_prefix_list_id
-    my_ip = local.my_ip
+    my_ip          = local.my_ip
   }
 
   # Add or update the IP in the prefix list on apply
   provisioner "local-exec" {
-    command = "/bin/bash ../../../basic_components/add_ip.sh ${self.triggers.prefix_list_id} ${self.triggers.my_ip}"
+    command = <<-EOT
+      #!/bin/bash
+      set -e
+      PREFIX_LIST_ID=${self.triggers.prefix_list_id}
+      MY_IP=${self.triggers.my_ip}
+      CURRENT_VERSION=$(aws ec2 describe-managed-prefix-lists --prefix-list-id "$PREFIX_LIST_ID" --query 'PrefixLists[0].Version' --output text)
+      EXISTING_IPS=$(aws ec2 describe-managed-prefix-lists --prefix-list-id "$PREFIX_LIST_ID" --query 'PrefixLists[0].Entries[*].Cidr' --output text)
+      if echo "$EXISTING_IPS" | grep -q "$MY_IP/32"; then
+        echo "$MY_IP/32 is already present in the prefix list."
+      else
+        aws ec2 modify-managed-prefix-list \
+          --prefix-list-id "$PREFIX_LIST_ID" \
+          --current-version "$CURRENT_VERSION" \
+          --add-entries Cidr="$MY_IP/32",Description="Added by Terraform"
+        echo "Successfully added $MY_IP/32 to the prefix list."
+      fi
+    EOT
   }
 
   # Remove the IP from the prefix list on destroy
   provisioner "local-exec" {
-    when = destroy
-    command = "/bin/bash ../../../basic_components/remove_ip.sh ${self.triggers.prefix_list_id} ${self.triggers.my_ip}"
+    when    = destroy
+    command = <<-EOT
+      #!/bin/bash
+      set -e
+      PREFIX_LIST_ID=${self.triggers.prefix_list_id}
+      MY_IP=${self.triggers.my_ip}
+      CURRENT_VERSION=$(aws ec2 describe-managed-prefix-lists --prefix-list-id "$PREFIX_LIST_ID" --query 'PrefixLists[0].Version' --output text)
+      EXISTING_IPS=$(aws ec2 describe-managed-prefix-lists --prefix-list-id "$PREFIX_LIST_ID" --query 'PrefixLists[0].Entries[*].Cidr' --output text)
+      if echo "$EXISTING_IPS" | grep -q "$MY_IP/32"; then
+        aws ec2 modify-managed-prefix-list \
+          --prefix-list-id "$PREFIX_LIST_ID" \
+          --current-version "$CURRENT_VERSION" \
+          --remove-entries Cidr="$MY_IP/32"
+        echo "Successfully removed $MY_IP/32 from the prefix list."
+      else
+        echo "$MY_IP/32 is not present in the prefix list."
+      fi
+    EOT
   }
-  
 }
