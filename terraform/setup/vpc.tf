@@ -1,8 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-module "common" {
-  source = "../common"
-}
 data "aws_vpc" "default" {
   default = true
 }
@@ -93,16 +90,5 @@ resource "aws_security_group" "ec2_security_group" {
     to_port     = 3389
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_ec2_managed_prefix_list" "prefix_list" {
-  id = module.common.runner_prefix_list_id
-  address_family = "IPv4"
-  name = "github-runners"
-  max_entries = 100
-
-  entry {
-    cidr = module.common.runner_ip
   }
 }

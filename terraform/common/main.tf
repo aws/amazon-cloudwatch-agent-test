@@ -12,3 +12,14 @@ data "http" "myip" {
 locals {
   my_ip = chomp(data.http.myip.response_body)
 }
+
+resource "aws_ec2_managed_prefix_list" "prefix_list" {
+  id = var.prefix_list_id
+  address_family = "IPv4"
+  name = "github-runners"
+  max_entries = 100
+
+  entry {
+    cidr = local.my_ip
+  }
+}
