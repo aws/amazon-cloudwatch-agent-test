@@ -40,3 +40,8 @@ output "performance-dynamodb-table" {
 output "runner_prefix_list_id" {
   value = var.prefix_list_id
 }
+
+output "runner_ip" {
+  value = local.my_ip
+  description = "The ip of the runner that is running the terraform"
+}
