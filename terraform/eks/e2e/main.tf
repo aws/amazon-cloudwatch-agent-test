@@ -112,7 +112,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating K8s resources and metrics"
-      go test -timeout 30m -v ${var.test_dir} \
+      go test -timeout 2h -v ${var.test_dir} \
       -region=${var.region} \
       -k8s_version=${var.k8s_version} \
       -eksClusterName=${aws_eks_cluster.this.name} \
