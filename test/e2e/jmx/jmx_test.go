@@ -129,22 +129,6 @@ func ApplyHelm(env *environment.MetaData) error {
 		return fmt.Errorf("failed to wait for deployment %s: %w\nOutput: %s", deploymentName, err, output)
 	}
 
-	var ports string
-	if deploymentName == "tomcat-deployment" {
-		ports = "8080:8080"
-	} else if deploymentName == "kafka-deployment" {
-		ports = "9092:9092"
-	} else {
-		return fmt.Errorf("unknown deployment type: %s", deploymentName)
-	}
-
-	portForward := exec.Command("kubectl", "port-forward", fmt.Sprintf("deployment/%s", deploymentName), ports)
-	portForward.Stdout = os.Stdout
-	portForward.Stderr = os.Stderr
-	if err := portForward.Run(); err != nil {
-		fmt.Printf("Port forwarding failed: %v\n", err)
-	}
-
 	return nil
 }
 
@@ -249,7 +233,7 @@ func testTomcatMetrics(t *testing.T) {
 func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
 		for i := 0; i < 5; i++ {
-			resp, err := http.Get("http://localhost:8080/webapp/index.jsp")
+			resp, err := http.Get("http://tomcat-service:8080/webapp/index.jsp")
 			if err != nil {
 				t.Logf("Request attempt %d failed: %v", i+1, err)
 				continue
