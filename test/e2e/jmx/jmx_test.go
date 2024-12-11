@@ -73,7 +73,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// Make this a utility function.
 func ApplyHelm(env *environment.MetaData) error {
 	updateKubeconfig := exec.Command("aws", "eks", "update-kubeconfig", "--name", env.EKSClusterName)
 	output, err := updateKubeconfig.CombinedOutput()
@@ -232,8 +231,19 @@ func testTomcatMetrics(t *testing.T) {
 
 func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
+		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Error getting LoadBalancer URL: %v", err)
+		}
+
+		lbURL := strings.Trim(string(output), "'")
+		if lbURL == "" {
+			t.Fatal("LoadBalancer URL failed to format")
+		}
+
 		for i := 0; i < 5; i++ {
-			resp, err := http.Get("http://tomcat-service:8080/webapp/index.jsp")
+			resp, err := http.Get(fmt.Sprintf("http://%s/webapp/index.jsp", lbURL))
 			if err != nil {
 				t.Logf("Request attempt %d failed: %v", i+1, err)
 				continue
@@ -245,7 +255,7 @@ func testTomcatSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(30 * time.Second)
+		time.Sleep(5 * time.Minute)
 
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
@@ -360,8 +370,19 @@ func testContainerInsightsMetrics(t *testing.T) {
 
 func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
+		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Error getting LoadBalancer URL: %v", err)
+		}
+
+		lbURL := strings.Trim(string(output), "'")
+		if lbURL == "" {
+			t.Fatal("LoadBalancer URL failed to format")
+		}
+
 		for i := 0; i < 5; i++ {
-			resp, err := http.Get("http://localhost:8080/webapp/index.jsp")
+			resp, err := http.Get(fmt.Sprintf("http://%s/webapp/index.jsp", lbURL))
 			if err != nil {
 				t.Logf("Request attempt %d failed: %v", i+1, err)
 				continue
@@ -373,7 +394,7 @@ func testTomcatRejectedSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(30 * time.Second)
+		time.Sleep(5 * time.Minute)
 
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
