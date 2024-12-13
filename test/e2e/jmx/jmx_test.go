@@ -255,7 +255,7 @@ func testTomcatSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(3 * time.Minute)
+		time.Sleep(5 * time.Minute)
 
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
@@ -356,7 +356,7 @@ func testTomcatRejectedSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(3 * time.Minute)
+		time.Sleep(5 * time.Minute)
 
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
