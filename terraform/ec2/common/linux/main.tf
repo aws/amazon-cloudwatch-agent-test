@@ -60,6 +60,10 @@ resource "aws_instance" "cwagent" {
     #!/bin/bash
     # Disable password authentication for SSH
     sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+    
+    # Disable challenge-response authentication for SSH
+    sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+    
     # Restart SSH service to apply changes
     systemctl restart sshd
   EOT
