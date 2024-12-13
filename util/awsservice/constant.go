@@ -58,12 +58,23 @@ var (
 
 func init() {
 	ctx = context.Background()
-	var err error
-	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))
+
+	err := ConfigureAWSClients("us-west-2")
+	if err != nil {
+		fmt.Println("There was an error trying to configure the AWS clients: ", err)
+	}
+}
+
+// ConfigureAWSClients configures the AWS clients using a set region.
+func ConfigureAWSClients(region string) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		// handle error
 		fmt.Println("There was an error trying to load default config: ", err)
-		return
+		return err
 	}
 	fmt.Println("This is the aws region: ", awsCfg.Region)
 
@@ -78,28 +89,6 @@ func init() {
 	S3Client = s3.NewFromConfig(awsCfg)
 	CloudformationClient = cloudformation.NewFromConfig(awsCfg)
 	XrayClient = xray.NewFromConfig(awsCfg)
-}
-
-// ReconfigureAWSClients reconfigures the AWS clients using a new region.
-func ReconfigureAWSClients(region string) error {
-	mu.Lock()
-	defer mu.Unlock()
-
-	newCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	if err != nil {
-		return err
-	}
-
-	Ec2Client = ec2.NewFromConfig(newCfg)
-	EcsClient = ecs.NewFromConfig(newCfg)
-	SsmClient = ssm.NewFromConfig(newCfg)
-	ImdsClient = imds.NewFromConfig(newCfg)
-	CwmClient = cloudwatch.NewFromConfig(newCfg)
-	CwlClient = cloudwatchlogs.NewFromConfig(newCfg)
-	DynamodbClient = dynamodb.NewFromConfig(newCfg)
-	S3Client = s3.NewFromConfig(newCfg)
-	CloudformationClient = cloudformation.NewFromConfig(newCfg)
-	XrayClient = xray.NewFromConfig(newCfg)
 
 	return nil
 }

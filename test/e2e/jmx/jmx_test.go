@@ -52,7 +52,7 @@ func TestMain(m *testing.M) {
 	env := environment.GetEnvironmentMetaData()
 
 	if env.Region != "us-west-2" {
-		if err := awsservice.ReconfigureAWSClients(env.Region); err != nil {
+		if err := awsservice.ConfigureAWSClients(env.Region); err != nil {
 			fmt.Printf("Failed to reconfigure AWS clients: %v\n", err)
 			os.Exit(1)
 		}
