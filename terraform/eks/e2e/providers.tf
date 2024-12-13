@@ -3,6 +3,9 @@
 
 provider "aws" {
   region = var.region
+  assume_role {
+    role_arn = var.terraform_assume_role
+  }
 }
 
 provider "kubernetes" {
