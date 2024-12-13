@@ -16,11 +16,6 @@ variable "cluster_name" {
   default = "cwagent-monitoring-config-e2e-eks"
 }
 
-variable "terraform_assume_role" {
-  type        = string
-  default = ""
-}
-
 variable "helm_charts_branch" {
   type    = string
   default = "main"

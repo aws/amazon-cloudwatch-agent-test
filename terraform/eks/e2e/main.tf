@@ -11,7 +11,6 @@ module "basic_components" {
 
 locals {
   cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-monitoring-config-e2e-eks"
-  aws_eks = "aws eks"
 }
 
 data "aws_eks_cluster_auth" "this" {
@@ -26,35 +25,6 @@ resource "aws_eks_cluster" "this" {
     subnet_ids         = module.basic_components.public_subnet_ids
     security_group_ids = [module.basic_components.security_group]
   }
-}
-
-resource "kubernetes_config_map" "aws_auth" {
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
-
-  data = {
-    mapRoles = yamlencode([
-      {
-        rolearn  = aws_iam_role.node_role.arn
-        username = "system:node:{{EC2PrivateDNSName}}"
-        groups = [
-          "system:bootstrappers",
-          "system:nodes"
-        ]
-      },
-      {
-        rolearn  = var.terraform_assume_role
-        username = "github-actions"
-        groups = [
-          "system:masters"
-        ]
-      }
-    ])
-  }
-
-  depends_on = [aws_eks_cluster.this]
 }
 
 resource "aws_eks_node_group" "this" {
@@ -119,20 +89,6 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
 resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
   role       = aws_iam_role.node_role.name
-}
-
-resource "null_resource" "kubectl" {
-  depends_on = [
-    aws_eks_cluster.this,
-    aws_eks_node_group.this,
-  ]
-  provisioner "local-exec" {
-    command = <<-EOT
-      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
-      ${local.aws_eks} list-clusters --output text
-      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
-    EOT
-  }
 }
 
 resource "null_resource" "helm_charts" {
