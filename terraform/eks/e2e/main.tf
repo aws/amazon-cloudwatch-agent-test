@@ -27,6 +27,35 @@ resource "aws_eks_cluster" "this" {
   }
 }
 
+resource "kubernetes_config_map" "aws_auth" {
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+
+  data = {
+    mapRoles = yamlencode([
+      {
+        rolearn  = aws_iam_role.node_role.arn
+        username = "system:node:{{EC2PrivateDNSName}}"
+        groups = [
+          "system:bootstrappers",
+          "system:nodes"
+        ]
+      },
+      {
+        rolearn  = var.terraform_assume_role
+        username = "github-actions"
+        groups = [
+          "system:masters"
+        ]
+      }
+    ])
+  }
+
+  depends_on = [aws_eks_cluster.this]
+}
+
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "${local.cluster_name}-node"
