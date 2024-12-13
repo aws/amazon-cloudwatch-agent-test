@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
         - name: zookeeper
-          image: bitnami/zookeeper:latest
+          image: wurstmeister/zookeeper:latest
           ports:
             - containerPort: 2181
           env:
@@ -59,13 +59,64 @@ spec:
     spec:
       containers:
         - name: kafka
-          image: bitnami/kafka:latest
+          image: wurstmeister/kafka:latest
           ports:
             - containerPort: 9092
           env:
             - name: KAFKA_ZOOKEEPER_CONNECT
               value: "zookeeper-service:2181"
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://:9092"
             - name: KAFKA_ADVERTISED_LISTENERS
               value: "PLAINTEXT://:9092"
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
               value: "1"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-producer
+  template:
+    metadata:
+      labels:
+        app: kafka-producer
+    spec:
+      containers:
+        - name: kafka-producer
+          image: wurstmeister/kafka:latest
+          command: ["/bin/sh"]
+          args: ["-c", "while true; do echo 'Producing message'; kafka-console-producer.sh --broker-list kafka-service:9092 --topic test-topic | 'Test message'; sleep 5; done"]
+          env:
+            - name: KAFKA_BROKER_LIST
+              value: "kafka-service:9092"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-consumer
+  template:
+    metadata:
+      labels:
+        app: kafka-consumer
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+        cloudwatch.aws.amazon.com/inject-jmx-kafka-consumer: "true"
+    spec:
+      containers:
+        - name: kafka-consumer
+          image: wurstmeister/kafka:latest
+          command: ["/bin/sh"]
+          args: ["-c", "kafka-console-consumer.sh --bootstrap-server kafka-service:9092 --topic test-topic --from-beginning"]
+          env:
+            - name: KAFKA_BROKER_LIST
+              value: "kafka-service:9092"

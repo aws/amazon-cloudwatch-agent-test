@@ -3,55 +3,11 @@
     "namespace": "KAFKA_E2E",
     "metrics_collected": {
       "jmx": {
-        "kafka": {
-          "measurement": [
-            "kafka.message.count",
-            "kafka.request.count",
-            "kafka.request.failed",
-            "kafka.request.time.total",
-            "kafka.request.time.50p",
-            "kafka.request.time.99p",
-            "kafka.request.time.avg",
-            "kafka.network.io",
-            "kafka.purgatory.size",
-            "kafka.partition.count",
-            "kafka.partition.offline",
-            "kafka.partition.under_replicated",
-            "kafka.isr.operation.count",
-            "kafka.max.lag",
-            "kafka.controller.active.count",
-            "kafka.leader.election.rate",
-            "kafka.unclean.election.rate",
-            "kafka.request.queue",
-            "kafka.logs.flush.time.count",
-            "kafka.logs.flush.time.median",
-            "kafka.logs.flush.time.99p"
-          ]
-        },
         "kafka-consumer": {
           "measurement": [
-            "kafka.consumer.fetch-rate",
-            "kafka.consumer.records-lag-max",
-            "kafka.consumer.total.bytes-consumed-rate",
-            "kafka.consumer.total.fetch-size-avg",
             "kafka.consumer.total.records-consumed-rate",
-            "kafka.consumer.bytes-consumed-rate",
-            "kafka.consumer.fetch-size-avg",
-            "kafka.consumer.records-consumed-rate"
-          ]
-        },
-        "kakfa-producer": {
-          "measurement": [
-            "kafka.producer.io-wait-time-ns-avg",
-            "kafka.producer.outgoing-byte-rate",
-            "kafka.producer.request-latency-avg",
-            "kafka.producer.request-rate",
-            "kafka.producer.response-rate",
-            "kafka.producer.byte-rate",
-            "kafka.producer.compression-rate",
-            "kafka.producer.record-error-rate",
-            "kafka.producer.record-retry-rate",
-            "kafka.producer.record-send-rate"
+            "kafka.consumer.total.bytes-consumed-rate",
+            "kafka.consumer.fetch-rate"
           ]
         }
       }

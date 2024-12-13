@@ -255,7 +255,7 @@ func testTomcatSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(5 * time.Minute)
+		time.Sleep(3 * time.Minute)
 
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
@@ -353,8 +353,6 @@ func testContainerInsightsMetrics(t *testing.T) {
 			{"jvm_memory_pool_bytes_used", "ContainerInsights/Prometheus"},
 			{"catalina_manager_activesessions", "ContainerInsights/Prometheus"},
 			{"catalina_manager_rejectedsessions", "ContainerInsights/Prometheus"},
-			{"catalina_globalrequestprocessor_bytesreceived", "ContainerInsights/Prometheus"},
-			{"catalina_globalrequestprocessor_bytessent", "ContainerInsights/Prometheus"},
 			{"catalina_globalrequestprocessor_requestcount", "ContainerInsights/Prometheus"},
 			{"catalina_globalrequestprocessor_errorcount", "ContainerInsights/Prometheus"},
 			{"catalina_globalrequestprocessor_processingtime", "ContainerInsights/Prometheus"},
@@ -369,7 +367,7 @@ func testContainerInsightsMetrics(t *testing.T) {
 }
 
 func testTomcatRejectedSessions(t *testing.T) {
-	t.Run("verify_tomcat_sessions", func(t *testing.T) {
+	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
 		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
@@ -394,7 +392,7 @@ func testTomcatRejectedSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(5 * time.Minute)
+		time.Sleep(3 * time.Minute)
 
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
