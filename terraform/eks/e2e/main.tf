@@ -54,8 +54,6 @@ resource "kubernetes_config_map" "aws_auth" {
     ])
   }
 
-  force = true
-
   depends_on = [aws_eks_cluster.this]
 }
 
