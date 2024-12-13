@@ -11,6 +11,7 @@ module "basic_components" {
 
 locals {
   cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-monitoring-config-e2e-eks"
+  aws_eks = "aws eks"
 }
 
 data "aws_eks_cluster_auth" "this" {
@@ -52,6 +53,8 @@ resource "kubernetes_config_map" "aws_auth" {
       }
     ])
   }
+
+  force = true
 
   depends_on = [aws_eks_cluster.this]
 }
@@ -118,6 +121,20 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
 resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
   role       = aws_iam_role.node_role.name
+}
+
+resource "null_resource" "kubectl" {
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
+      ${local.aws_eks} list-clusters --output text
+      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
+    EOT
+  }
 }
 
 resource "null_resource" "helm_charts" {
