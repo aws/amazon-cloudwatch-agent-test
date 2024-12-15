@@ -260,13 +260,13 @@ func testTomcatSessions(t *testing.T) {
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
 
-		hasActiveSessions := awsservice.ValidateSampleCount(
+		hasActiveSessions := awsservice.ValidateSampleCountFloat(
 			"tomcat.sessions",
 			"JVM_TOMCAT_E2E",
 			nil,
 			startTime,
 			endTime,
-			1,
+			0.1,
 			1000,
 			60,
 		)

@@ -106,6 +106,42 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 	return false
 }
 
+func ValidateSampleCountFloat(metricName, namespace string, dimensions []types.Dimension,
+	startTime time.Time, endTime time.Time,
+	lowerBoundInclusive float64, upperBoundInclusive float64, periodInSeconds int32) bool {
+
+	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
+		MetricName: aws.String(metricName),
+		Namespace:  aws.String(namespace),
+		StartTime:  aws.Time(startTime),
+		EndTime:    aws.Time(endTime),
+		Period:     aws.Int32(periodInSeconds),
+		Dimensions: dimensions,
+		Statistics: []types.Statistic{types.StatisticSampleCount},
+	}
+	data, err := CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
+	if err != nil {
+		return false
+	}
+
+	var dataPoints float64
+	log.Printf("These are the data points: %v", data)
+	log.Printf("These are the data points: %v", data.Datapoints)
+
+	for _, datapoint := range data.Datapoints {
+		dataPoints += *datapoint.SampleCount
+	}
+	log.Printf("Number of datapoints for start time %v with endtime %v and period %d is %.3f is inclusive between %.3f and %.3f",
+		startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
+
+	if lowerBoundInclusive <= dataPoints && dataPoints <= upperBoundInclusive {
+		return true
+	}
+
+	return false
+}
+
+
 func GetMetricStatistics(
 	metricName string,
 	namespace string,
