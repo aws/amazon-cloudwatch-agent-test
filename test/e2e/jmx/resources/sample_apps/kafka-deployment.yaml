@@ -94,7 +94,7 @@ spec:
     spec:
       containers:
         - name: kafka-producer
-          image: wurstmeister/kafka:latest
+          image: wurstmeister/kafka:2.13-2.8.1
           command: ["/bin/sh"]
           args: ["-c", "while true; do echo 'Producing message'; kafka-console-producer.sh --broker-list kafka-service:9092 --topic test-topic | 'Test message'; sleep 5; done"]
           env:
