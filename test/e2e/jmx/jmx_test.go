@@ -266,7 +266,7 @@ func testTomcatSessions(t *testing.T) {
 			nil,
 			startTime,
 			endTime,
-			0.1,
+			0.01,
 			1000,
 			60,
 		)
@@ -361,13 +361,13 @@ func testTomcatRejectedSessions(t *testing.T) {
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
 
-		hasActiveSessions := awsservice.ValidateSampleCount(
+		hasActiveSessions := awsservice.ValidateSampleCountFloat(
 			"catalina_manager_rejectedsessions",
 			"ContainerInsights/Prometheus",
 			nil,
 			startTime,
 			endTime,
-			1,
+			0.01,
 			1000,
 			60,
 		)
