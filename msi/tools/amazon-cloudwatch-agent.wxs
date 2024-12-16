@@ -90,16 +90,23 @@
                 ErrorControl="normal"
                 Vital="yes"
             >
-                <ServiceDependency Id="LanmanServer"/>
-                <ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" ResetPeriodInDays="1" RestartServiceDelayInSeconds="2" xmlns="http://schemas.microsoft.com/wix/UtilExtension"/>
-                <ServiceConfig OnInstall="yes" OnReinstall="yes" FailureActionsWhen="failedToStopOrReturnedError"/>
+                <ServiceDependency Id="Tcpip"/>
+                <ServiceDependency Id="Dhcp"/>
+                <ServiceDependency Id="Dnscache"/>
+                <ServiceConfig 
+                FirstFailureActionType="restart" 
+                SecondFailureActionType="restart" 
+                ThirdFailureActionType="restart" 
+                ResetPeriodInDays="1" 
+                RestartServiceDelayInSeconds="2" 
+                xmlns="http://schemas.microsoft.com/wix/UtilExtension"/>
             </ServiceInstall>
             <ServiceControl
                 Id="StartService"
+                Start="install"
                 Stop="both"
                 Remove="uninstall"
                 Name="AmazonCloudWatchAgent"
-                Wait="yes"
             />
         </Component>
         <Component Id='AgentEXE' Guid='d98c86be-b6c8-4f24-84a5-03b08bd6e7f2' Win64='yes'>
