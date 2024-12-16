@@ -141,7 +141,6 @@ func ValidateSampleCountFloat(metricName, namespace string, dimensions []types.D
 	return false
 }
 
-
 func GetMetricStatistics(
 	metricName string,
 	namespace string,
