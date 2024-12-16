@@ -6,6 +6,7 @@ package awsservice
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -39,6 +40,7 @@ var (
 )
 
 var (
+	mu  sync.Mutex
 	ctx context.Context
 
 	// AWS Clients
@@ -56,12 +58,23 @@ var (
 
 func init() {
 	ctx = context.Background()
-	var err error
-	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))
+
+	err := ConfigureAWSClients("us-west-2")
+	if err != nil {
+		fmt.Println("There was an error trying to configure the AWS clients: ", err)
+	}
+}
+
+// ConfigureAWSClients configures the AWS clients using a set region.
+func ConfigureAWSClients(region string) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		// handle error
 		fmt.Println("There was an error trying to load default config: ", err)
-		return
+		return err
 	}
 	fmt.Println("This is the aws region: ", awsCfg.Region)
 
@@ -76,4 +89,6 @@ func init() {
 	S3Client = s3.NewFromConfig(awsCfg)
 	CloudformationClient = cloudformation.NewFromConfig(awsCfg)
 	XrayClient = xray.NewFromConfig(awsCfg)
+
+	return nil
 }
