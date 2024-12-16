@@ -17,7 +17,7 @@ variable "cluster_name" {
 }
 
 variable "nodes" {
-  type = number
+  type    = number
   default = 1
 }
 
