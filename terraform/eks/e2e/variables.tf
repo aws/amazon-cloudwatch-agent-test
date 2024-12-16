@@ -16,6 +16,11 @@ variable "cluster_name" {
   default = "cwagent-monitoring-config-e2e-eks"
 }
 
+variable "nodes" {
+  type = number
+  default = 1
+}
+
 variable "helm_charts_branch" {
   type    = string
   default = "main"
