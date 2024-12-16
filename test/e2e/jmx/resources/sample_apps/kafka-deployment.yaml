@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
         - name: zookeeper
-          image: wurstmeister/kafka:2.13-2.8.1
+          image: wurstmeister/zookeeper:latest
           ports:
             - containerPort: 2181
           env:
@@ -56,13 +56,10 @@ spec:
     metadata:
       labels:
         app: kafka
-      annotations:
-        instrumentation.opentelemetry.io/inject-java: "true"
-        cloudwatch.aws.amazon.com/inject-jmx-kafka: "true"
     spec:
       containers:
         - name: kafka
-          image: wurstmeister/kafka:2.13-2.8.1
+          image: wurstmeister/kafka:latest
           ports:
             - containerPort: 9092
           env:
@@ -88,13 +85,10 @@ spec:
     metadata:
       labels:
         app: kafka-producer
-      annotations:
-        instrumentation.opentelemetry.io/inject-java: "true"
-        cloudwatch.aws.amazon.com/inject-jmx-kafka-producer: "true"
     spec:
       containers:
         - name: kafka-producer
-          image: wurstmeister/kafka:2.13-2.8.1
+          image: wurstmeister/kafka:latest
           command: ["/bin/sh"]
           args: ["-c", "while true; do echo 'Producing message'; kafka-console-producer.sh --broker-list kafka-service:9092 --topic test-topic | 'Test message'; sleep 5; done"]
           env:
@@ -120,7 +114,7 @@ spec:
     spec:
       containers:
         - name: kafka-consumer
-          image: wurstmeister/kafka:2.13-2.8.1
+          image: wurstmeister/kafka:latest
           command: ["/bin/sh"]
           args: ["-c", "kafka-console-consumer.sh --bootstrap-server kafka-service:9092 --topic test-topic --from-beginning"]
           env:

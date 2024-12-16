@@ -255,9 +255,9 @@ func testTomcatSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(5 * time.Minute)
+		time.Sleep(10 * time.Minute)
 
-		startTime := time.Now().Add(-5 * time.Minute)
+		startTime := time.Now().Add(-15 * time.Minute)
 		endTime := time.Now()
 
 		hasActiveSessions := awsservice.ValidateSampleCountFloat(
@@ -356,9 +356,9 @@ func testTomcatRejectedSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(5 * time.Minute)
+		time.Sleep(10 * time.Minute)
 
-		startTime := time.Now().Add(-5 * time.Minute)
+		startTime := time.Now().Add(-15 * time.Minute)
 		endTime := time.Now()
 
 		hasActiveSessions := awsservice.ValidateSampleCountFloat(
