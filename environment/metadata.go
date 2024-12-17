@@ -23,52 +23,84 @@ var metaDataStorage *MetaData = nil
 var registeredMetaDataStrings = &(MetaDataStrings{})
 
 type MetaData struct {
-	ComputeType               computetype.ComputeType
-	EcsLaunchType             ecslaunchtype.ECSLaunchType
-	EcsDeploymentStrategy     ecsdeploymenttype.ECSDeploymentType
-	EksDeploymentStrategy     eksdeploymenttype.EKSDeploymentType
-	EcsClusterArn             string
-	EcsClusterName            string
-	CwagentConfigSsmParamName string
-	EcsServiceName            string
-	EC2PluginTests            map[string]struct{} // set of EC2 plugin names
-	ExcludedTests             map[string]struct{} // set of excluded names
-	Bucket                    string
-	S3Key                     string
-	CwaCommitSha              string
-	CaCertPath                string
-	EKSClusterName            string
-	ProxyUrl                  string
-	AssumeRoleArn             string
-	InstanceId                string
-	InstancePlatform          string
-	AgentStartCommand         string
-	EksGpuType                string
-	AmpWorkspaceId            string
+	ComputeType                                 computetype.ComputeType
+	EcsLaunchType                               ecslaunchtype.ECSLaunchType
+	EcsDeploymentStrategy                       ecsdeploymenttype.ECSDeploymentType
+	EksDeploymentStrategy                       eksdeploymenttype.EKSDeploymentType
+	EcsClusterArn                               string
+	EcsClusterName                              string
+	CwagentConfigSsmParamName                   string
+	EcsServiceName                              string
+	EC2PluginTests                              map[string]struct{} // set of EC2 plugin names
+	ExcludedTests                               map[string]struct{} // set of excluded names
+	Bucket                                      string
+	S3Key                                       string
+	CwaCommitSha                                string
+	CaCertPath                                  string
+	EKSClusterName                              string
+	ProxyUrl                                    string
+	AssumeRoleArn                               string
+	InstanceId                                  string
+	InstancePlatform                            string
+	AgentStartCommand                           string
+	EksGpuType                                  string
+	AmpWorkspaceId                              string
+	Region                                      string
+	K8sVersion                                  string
+	HelmChartsBranch                            string
+	CloudwatchAgentRepository                   string
+	CloudwatchAgentTag                          string
+	CloudwatchAgentRepositoryURL                string
+	CloudwatchAgentOperatorRepository           string
+	CloudwatchAgentOperatorTag                  string
+	CloudwatchAgentOperatorRepositoryURL        string
+	CloudwatchAgentTargetAllocatorRepository    string
+	CloudwatchAgentTargetAllocatorTag           string
+	CloudwatchAgentTargetAllocatorRepositoryURL string
+	AgentConfig                                 string
+	PrometheusConfig                            string
+	OtelConfig                                  string
+	SampleApp                                   string
 }
 
 type MetaDataStrings struct {
-	ComputeType               string
-	EcsLaunchType             string
-	EcsDeploymentStrategy     string
-	EksDeploymentStrategy     string
-	EcsClusterArn             string
-	CwagentConfigSsmParamName string
-	EcsServiceName            string
-	EC2PluginTests            string // input comma delimited list of plugin names
-	ExcludedTests             string // Exclude specific tests from OS
-	Bucket                    string
-	S3Key                     string
-	CwaCommitSha              string
-	CaCertPath                string
-	EKSClusterName            string
-	ProxyUrl                  string
-	AssumeRoleArn             string
-	InstanceId                string
-	InstancePlatform          string
-	AgentStartCommand         string
-	EksGpuType                string
-	AmpWorkspaceId            string
+	ComputeType                                 string
+	EcsLaunchType                               string
+	EcsDeploymentStrategy                       string
+	EksDeploymentStrategy                       string
+	EcsClusterArn                               string
+	CwagentConfigSsmParamName                   string
+	EcsServiceName                              string
+	EC2PluginTests                              string // input comma delimited list of plugin names
+	ExcludedTests                               string // Exclude specific tests from OS
+	Bucket                                      string
+	S3Key                                       string
+	CwaCommitSha                                string
+	CaCertPath                                  string
+	EKSClusterName                              string
+	ProxyUrl                                    string
+	AssumeRoleArn                               string
+	InstanceId                                  string
+	InstancePlatform                            string
+	AgentStartCommand                           string
+	EksGpuType                                  string
+	AmpWorkspaceId                              string
+	Region                                      string
+	K8sVersion                                  string
+	HelmChartsBranch                            string
+	CloudwatchAgentRepository                   string
+	CloudwatchAgentTag                          string
+	CloudwatchAgentRepositoryURL                string
+	CloudwatchAgentOperatorRepository           string
+	CloudwatchAgentOperatorTag                  string
+	CloudwatchAgentOperatorRepositoryURL        string
+	CloudwatchAgentTargetAllocatorRepository    string
+	CloudwatchAgentTargetAllocatorTag           string
+	CloudwatchAgentTargetAllocatorRepositoryURL string
+	AgentConfig                                 string
+	PrometheusConfig                            string
+	OtelConfig                                  string
+	SampleApp                                   string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -99,6 +131,25 @@ func registerEKSData(d *MetaDataStrings) {
 	flag.StringVar(&(d.EKSClusterName), "eksClusterName", "", "EKS cluster name")
 	flag.StringVar(&(d.EksDeploymentStrategy), "eksDeploymentStrategy", "", "Daemon/Replica/Sidecar")
 	flag.StringVar(&(d.EksGpuType), "eksGpuType", "", "nvidia/inferentia")
+}
+
+func registerEKSE2ETestData(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.Region), "region", "", "AWS region")
+	flag.StringVar(&(dataString.K8sVersion), "k8s_version", "", "Kubernetes version")
+	flag.StringVar(&(dataString.HelmChartsBranch), "helm_charts_branch", "", "Helm charts branch")
+	flag.StringVar(&(dataString.CloudwatchAgentRepository), "cloudwatch_agent_repository", "", "CloudWatch Agent repository")
+	flag.StringVar(&(dataString.CloudwatchAgentTag), "cloudwatch_agent_tag", "", "CloudWatch Agent tag")
+	flag.StringVar(&(dataString.CloudwatchAgentRepositoryURL), "cloudwatch_agent_repository_url", "", "CloudWatch Agent repository URL")
+	flag.StringVar(&(dataString.CloudwatchAgentOperatorRepository), "cloudwatch_agent_operator_repository", "", "CloudWatch Agent Operator repository")
+	flag.StringVar(&(dataString.CloudwatchAgentOperatorTag), "cloudwatch_agent_operator_tag", "", "CloudWatch Agent Operator tag")
+	flag.StringVar(&(dataString.CloudwatchAgentOperatorRepositoryURL), "cloudwatch_agent_operator_repository_url", "", "CloudWatch Agent Operator repository URL")
+	flag.StringVar(&(dataString.CloudwatchAgentTargetAllocatorRepository), "cloudwatch_agent_target_allocator_repository", "", "CloudWatch Agent Target Allocator repository")
+	flag.StringVar(&(dataString.CloudwatchAgentTargetAllocatorTag), "cloudwatch_agent_target_allocator_tag", "", "CloudWatch Agent Target Allocator tag")
+	flag.StringVar(&(dataString.CloudwatchAgentTargetAllocatorRepositoryURL), "cloudwatch_agent_target_allocator_repository_url", "", "CloudWatch Agent Target Allocator repository URL")
+	flag.StringVar(&(dataString.AgentConfig), "agent_config", "", "Agent configuration file path")
+	flag.StringVar(&(dataString.PrometheusConfig), "prometheus_config", "", "Prometheus configuration file path")
+	flag.StringVar(&(dataString.OtelConfig), "otel_config", "", "OpenTelemetry configuration file path")
+	flag.StringVar(&(dataString.SampleApp), "sample_app", "", "Sample application manifest file path")
 }
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
@@ -226,6 +277,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerComputeType(registeredMetaDataStrings)
 	registerECSData(registeredMetaDataStrings)
 	registerEKSData(registeredMetaDataStrings)
+	registerEKSE2ETestData(registeredMetaDataStrings)
 	registerBucket(registeredMetaDataStrings)
 	registerS3Key(registeredMetaDataStrings)
 	registerCwaCommitSha(registeredMetaDataStrings)
@@ -264,6 +316,22 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
 	metaDataStorage.EksGpuType = registeredMetaDataStrings.EksGpuType
 	metaDataStorage.AmpWorkspaceId = registeredMetaDataStrings.AmpWorkspaceId
+	metaDataStorage.Region = registeredMetaDataStrings.Region
+	metaDataStorage.K8sVersion = registeredMetaDataStrings.K8sVersion
+	metaDataStorage.HelmChartsBranch = registeredMetaDataStrings.HelmChartsBranch
+	metaDataStorage.CloudwatchAgentRepository = registeredMetaDataStrings.CloudwatchAgentRepository
+	metaDataStorage.CloudwatchAgentTag = registeredMetaDataStrings.CloudwatchAgentTag
+	metaDataStorage.CloudwatchAgentRepositoryURL = registeredMetaDataStrings.CloudwatchAgentRepositoryURL
+	metaDataStorage.CloudwatchAgentOperatorRepository = registeredMetaDataStrings.CloudwatchAgentOperatorRepository
+	metaDataStorage.CloudwatchAgentOperatorTag = registeredMetaDataStrings.CloudwatchAgentOperatorTag
+	metaDataStorage.CloudwatchAgentOperatorRepositoryURL = registeredMetaDataStrings.CloudwatchAgentOperatorRepositoryURL
+	metaDataStorage.CloudwatchAgentTargetAllocatorRepository = registeredMetaDataStrings.CloudwatchAgentTargetAllocatorRepository
+	metaDataStorage.CloudwatchAgentTargetAllocatorTag = registeredMetaDataStrings.CloudwatchAgentTargetAllocatorTag
+	metaDataStorage.CloudwatchAgentTargetAllocatorRepositoryURL = registeredMetaDataStrings.CloudwatchAgentTargetAllocatorRepositoryURL
+	metaDataStorage.AgentConfig = registeredMetaDataStrings.AgentConfig
+	metaDataStorage.PrometheusConfig = registeredMetaDataStrings.PrometheusConfig
+	metaDataStorage.OtelConfig = registeredMetaDataStrings.OtelConfig
+	metaDataStorage.SampleApp = registeredMetaDataStrings.SampleApp
 
 	return metaDataStorage
 }
