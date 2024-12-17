@@ -140,8 +140,8 @@ func GetMetricMaximum(
 	startTime time.Time,
 	endTime time.Time,
 	periodInSeconds int32,
+	nodeNames []string,
 ) (float64, error) {
-	// List metrics without any dimension filter to see what's available
 	listMetricsInput := cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
 		Namespace:      aws.String(namespace),
@@ -157,28 +157,43 @@ func GetMetricMaximum(
 	}
 
 	maxValue := float64(0)
-	// Iterate through all metrics found
 	for _, metric := range metrics.Metrics {
-		log.Printf("Found metric: %s", *metric.MetricName)
-		data, err := GetMetricStatistics(
-			metricName,
-			namespace,
-			metric.Dimensions,
-			startTime,
-			endTime,
-			periodInSeconds,
-			[]types.Statistic{types.StatisticMaximum},
-			nil,
-		)
-		if err != nil {
-			log.Printf("Error getting statistics for metric with dimensions %v: %v", metric.Dimensions, err)
-			continue // Continue with next metric if this one fails
+		var nodeNameMatch bool
+		var nodeName string
+		for _, dim := range metric.Dimensions {
+			if *dim.Name == "k8s.node.name" {
+				nodeName = *dim.Value
+				for _, name := range nodeNames {
+					if nodeName == name {
+						nodeNameMatch = true
+						break
+					}
+				}
+				break
+			}
 		}
 
-		// Check datapoints for this metric
-		for _, datapoint := range data.Datapoints {
-			if *datapoint.Maximum > maxValue {
-				maxValue = *datapoint.Maximum
+		if nodeNameMatch {
+			log.Printf("Found metric: %s for node: %s", *metric.MetricName, nodeName)
+			data, err := GetMetricStatistics(
+				metricName,
+				namespace,
+				metric.Dimensions,
+				startTime,
+				endTime,
+				periodInSeconds,
+				[]types.Statistic{types.StatisticMaximum},
+				nil,
+			)
+			if err != nil {
+				log.Printf("Error getting statistics for metric with dimensions %v: %v", metric.Dimensions, err)
+				continue
+			}
+
+			for _, datapoint := range data.Datapoints {
+				if *datapoint.Maximum > maxValue {
+					maxValue = *datapoint.Maximum
+				}
 			}
 		}
 	}
@@ -187,7 +202,7 @@ func GetMetricMaximum(
 		return 0, fmt.Errorf("no valid datapoints found for metric %s", metricName)
 	}
 
-	log.Printf("Maximum value found across all metrics: %v", maxValue)
+	log.Printf("Maximum value found across specified nodes: %v", maxValue)
 	return maxValue, nil
 }
 

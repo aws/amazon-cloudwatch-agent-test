@@ -41,6 +41,8 @@ var testRegistry = map[string][]func(*testing.T){
 	},
 }
 
+var nodeNames []string
+
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if flag.Lookup("test.run").Value.String() == "NO_MATCH" {
@@ -137,6 +139,15 @@ func TestResources(t *testing.T) {
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		t.Fatalf("Error creating Kubernetes client: %v", err)
+	}
+
+	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		t.Fatalf("Error listing nodes: %v", err)
+	}
+
+	for _, node := range nodes.Items {
+		nodeNames = append(nodeNames, node.Name)
 	}
 
 	daemonSet, err := clientset.AppsV1().DaemonSets("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
@@ -263,6 +274,7 @@ func testTomcatSessions(t *testing.T) {
 			startTime,
 			endTime,
 			60,
+			nodeNames,
 		)
 		if err != nil {
 			t.Errorf("Failed to get metric maximum: %v", err)
@@ -365,6 +377,7 @@ func testTomcatRejectedSessions(t *testing.T) {
 			startTime,
 			endTime,
 			60,
+			nodeNames,
 		)
 		if err != nil {
 			t.Errorf("Failed to get metric maximum: %v", err)
