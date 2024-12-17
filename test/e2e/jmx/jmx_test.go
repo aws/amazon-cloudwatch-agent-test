@@ -7,8 +7,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"net/http"
 	"os"
 	"os/exec"
@@ -20,6 +18,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 func init() {
