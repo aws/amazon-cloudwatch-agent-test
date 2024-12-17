@@ -26,27 +26,17 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-type TestConfig struct {
-	metricTests []func(*testing.T)
-}
-
-var testRegistry = map[string]TestConfig{
+var testRegistry = map[string][]func(*testing.T){
 	"jvm_tomcat.json": {
-		metricTests: []func(*testing.T){
-			testTomcatMetrics,
-			testTomcatSessions,
-		},
+		testTomcatMetrics,
+		testTomcatSessions,
 	},
 	"kafka.json": {
-		metricTests: []func(*testing.T){
-			testKafkaMetrics,
-		},
+		testKafkaMetrics,
 	},
 	"containerinsights.json": {
-		metricTests: []func(*testing.T){
-			testContainerInsightsMetrics,
-			testTomcatRejectedSessions,
-		},
+		testContainerInsightsMetrics,
+		testTomcatRejectedSessions,
 	},
 }
 
@@ -182,13 +172,13 @@ func TestMetrics(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 	configFile := filepath.Base(env.AgentConfig)
 
-	config, exists := testRegistry[configFile]
+	tests, exists := testRegistry[configFile]
 	if !exists {
 		t.Skipf("No tests registered for config file: %s", configFile)
 		return
 	}
 
-	for _, testFunc := range config.metricTests {
+	for _, testFunc := range tests {
 		testFunc(t)
 	}
 }
