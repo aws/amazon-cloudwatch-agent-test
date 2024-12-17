@@ -106,41 +106,6 @@ func ValidateSampleCount(metricName, namespace string, dimensions []types.Dimens
 	return false
 }
 
-func ValidateSampleCountFloat(metricName, namespace string, dimensions []types.Dimension,
-	startTime time.Time, endTime time.Time,
-	lowerBoundInclusive float64, upperBoundInclusive float64, periodInSeconds int32) bool {
-
-	metricStatsInput := cloudwatch.GetMetricStatisticsInput{
-		MetricName: aws.String(metricName),
-		Namespace:  aws.String(namespace),
-		StartTime:  aws.Time(startTime),
-		EndTime:    aws.Time(endTime),
-		Period:     aws.Int32(periodInSeconds),
-		Dimensions: dimensions,
-		Statistics: []types.Statistic{types.StatisticSampleCount},
-	}
-	data, err := CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
-	if err != nil {
-		return false
-	}
-
-	var dataPoints float64
-	log.Printf("These are the data points: %v", data)
-	log.Printf("These are the data points: %v", data.Datapoints)
-
-	for _, datapoint := range data.Datapoints {
-		dataPoints += *datapoint.SampleCount
-	}
-	log.Printf("Number of datapoints for start time %v with endtime %v and period %d is %.3f is inclusive between %.3f and %.3f",
-		startTime, endTime, periodInSeconds, dataPoints, lowerBoundInclusive, upperBoundInclusive)
-
-	if lowerBoundInclusive <= dataPoints && dataPoints <= upperBoundInclusive {
-		return true
-	}
-
-	return false
-}
-
 func GetMetricStatistics(
 	metricName string,
 	namespace string,
@@ -167,6 +132,68 @@ func GetMetricStatistics(
 	}
 
 	return CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
+}
+
+func GetMetricMaximum(
+	metricName string,
+	namespace string,
+	startTime time.Time,
+	endTime time.Time,
+	periodInSeconds int32,
+) (float64, error) {
+	// List metrics without any dimension filter to see what's available
+	listMetricsInput := cloudwatch.ListMetricsInput{
+		MetricName:     aws.String(metricName),
+		Namespace:      aws.String(namespace),
+		RecentlyActive: "PT3H",
+	}
+
+	metrics, err := CwmClient.ListMetrics(ctx, &listMetricsInput)
+	if err != nil {
+		return 0, err
+	}
+	if len(metrics.Metrics) == 0 {
+		return 0, fmt.Errorf("no metrics found for %s", metricName)
+	}
+
+	// Log all available metrics and their dimensions
+	for _, metric := range metrics.Metrics {
+		log.Printf("Found metric: %s", *metric.MetricName)
+		for _, dim := range metric.Dimensions {
+			log.Printf("  Dimension: %s = %s", *dim.Name, *dim.Value)
+		}
+	}
+
+	// Use the dimensions from the first matching metric
+	dimensions := metrics.Metrics[0].Dimensions
+
+	data, err := GetMetricStatistics(
+		metricName,
+		namespace,
+		dimensions,
+		startTime,
+		endTime,
+		periodInSeconds,
+		[]types.Statistic{types.StatisticMaximum},
+		nil,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(data.Datapoints) == 0 {
+		return 0, fmt.Errorf("no datapoints found for metric %s", metricName)
+	}
+
+	maxValue := float64(0)
+	for _, datapoint := range data.Datapoints {
+		if *datapoint.Maximum > maxValue {
+			maxValue = *datapoint.Maximum
+		}
+	}
+	log.Printf("Maximum value found: %v", maxValue)
+
+	return maxValue, nil
 }
 
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics

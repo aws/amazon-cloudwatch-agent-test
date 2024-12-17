@@ -258,23 +258,24 @@ func testTomcatSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(10 * time.Minute)
+		time.Sleep(5 * time.Minute)
 
-		startTime := time.Now().Add(-15 * time.Minute)
+		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
 
-		hasActiveSessions := awsservice.ValidateSampleCountFloat(
+		maxSessions, err := awsservice.GetMetricMaximum(
 			"tomcat.sessions",
 			"JVM_TOMCAT_E2E",
-			nil,
 			startTime,
 			endTime,
-			0.01,
-			1000,
 			60,
 		)
+		if err != nil {
+			t.Errorf("Failed to get metric maximum: %v", err)
+			return
+		}
 
-		if !hasActiveSessions {
+		if maxSessions == 0 {
 			t.Error("Expected non-zero tomcat.sessions after applying traffic")
 		}
 	})
@@ -359,23 +360,24 @@ func testTomcatRejectedSessions(t *testing.T) {
 			}
 		}
 
-		time.Sleep(10 * time.Minute)
+		time.Sleep(5 * time.Minute)
 
-		startTime := time.Now().Add(-15 * time.Minute)
+		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
 
-		hasActiveSessions := awsservice.ValidateSampleCountFloat(
+		maxRejectedSessions, err := awsservice.GetMetricMaximum(
 			"catalina_manager_rejectedsessions",
 			"ContainerInsights/Prometheus",
-			nil,
 			startTime,
 			endTime,
-			0.01,
-			1000,
 			60,
 		)
+		if err != nil {
+			t.Errorf("Failed to get metric maximum: %v", err)
+			return
+		}
 
-		if !hasActiveSessions {
+		if maxRejectedSessions == 0 {
 			t.Error("Expected non-zero catalina_manager_rejectedsessions after applying traffic")
 		}
 	})
