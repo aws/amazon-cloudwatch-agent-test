@@ -43,6 +43,9 @@ var testRegistry = map[string][]func(*testing.T){
 
 func TestMain(m *testing.M) {
 	flag.Parse()
+	if flag.Lookup("test.run").Value.String() == "NO_MATCH" {
+		os.Exit(0)
+	}
 	env := environment.GetEnvironmentMetaData()
 
 	if env.Region != "us-west-2" {
