@@ -284,6 +284,13 @@ func testTomcatSessions(t *testing.T) {
 		if maxSessions == 0 {
 			t.Error("Expected non-zero tomcat.sessions after applying traffic")
 		}
+
+		deleteCmd := exec.Command("kubectl", "delete", "svc", "tomcat-service")
+		if output, err := deleteCmd.CombinedOutput(); err != nil {
+			t.Logf("Warning: Failed to delete load balancer service: %v\nOutput: %s", err, output)
+		} else {
+			t.Log("Successfully deleted load balancer service")
+		}
 	})
 }
 
@@ -386,6 +393,13 @@ func testTomcatRejectedSessions(t *testing.T) {
 
 		if maxRejectedSessions == 0 {
 			t.Error("Expected non-zero catalina_manager_rejectedsessions after applying traffic")
+		}
+
+		deleteCmd := exec.Command("kubectl", "delete", "svc", "tomcat-service")
+		if output, err := deleteCmd.CombinedOutput(); err != nil {
+			t.Logf("Warning: Failed to delete load balancer service: %v\nOutput: %s", err, output)
+		} else {
+			t.Log("Successfully deleted load balancer service")
 		}
 	})
 }
