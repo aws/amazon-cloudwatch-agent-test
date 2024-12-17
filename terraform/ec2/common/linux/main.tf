@@ -59,16 +59,16 @@ resource "aws_instance" "cwagent" {
   user_data = <<-EOT
     #!/bin/bash
     # Disable password authentication for SSH
-    sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+    sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
     
     # Disable challenge-response authentication for SSH
-    sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+    sudo sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
     
     # Disable keyboard-interactive authentication for SSH
-    sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
+    sudo sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
 
     # Restart SSH service to apply changes
-    systemctl restart sshd
+    sudo systemctl restart sshd
   EOT
 
   metadata_options {
