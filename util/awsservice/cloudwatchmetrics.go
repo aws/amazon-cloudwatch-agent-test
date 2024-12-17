@@ -156,43 +156,38 @@ func GetMetricMaximum(
 		return 0, fmt.Errorf("no metrics found for %s", metricName)
 	}
 
-	// Log all available metrics and their dimensions
+	maxValue := float64(0)
+	// Iterate through all metrics found
 	for _, metric := range metrics.Metrics {
 		log.Printf("Found metric: %s", *metric.MetricName)
-		for _, dim := range metric.Dimensions {
-			log.Printf("  Dimension: %s = %s", *dim.Name, *dim.Value)
+		data, err := GetMetricStatistics(
+			metricName,
+			namespace,
+			metric.Dimensions,
+			startTime,
+			endTime,
+			periodInSeconds,
+			[]types.Statistic{types.StatisticMaximum},
+			nil,
+		)
+		if err != nil {
+			log.Printf("Error getting statistics for metric with dimensions %v: %v", metric.Dimensions, err)
+			continue // Continue with next metric if this one fails
+		}
+
+		// Check datapoints for this metric
+		for _, datapoint := range data.Datapoints {
+			if *datapoint.Maximum > maxValue {
+				maxValue = *datapoint.Maximum
+			}
 		}
 	}
 
-	// Use the dimensions from the first matching metric
-	dimensions := metrics.Metrics[0].Dimensions
-
-	data, err := GetMetricStatistics(
-		metricName,
-		namespace,
-		dimensions,
-		startTime,
-		endTime,
-		periodInSeconds,
-		[]types.Statistic{types.StatisticMaximum},
-		nil,
-	)
-	if err != nil {
-		return 0, err
+	if maxValue == 0 {
+		return 0, fmt.Errorf("no valid datapoints found for metric %s", metricName)
 	}
 
-	if len(data.Datapoints) == 0 {
-		return 0, fmt.Errorf("no datapoints found for metric %s", metricName)
-	}
-
-	maxValue := float64(0)
-	for _, datapoint := range data.Datapoints {
-		if *datapoint.Maximum > maxValue {
-			maxValue = *datapoint.Maximum
-		}
-	}
-	log.Printf("Maximum value found: %v", maxValue)
-
+	log.Printf("Maximum value found across all metrics: %v", maxValue)
 	return maxValue, nil
 }
 
