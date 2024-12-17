@@ -27,6 +27,12 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
+const (
+	NAMESPACE_JVM_TOMCAT        = "JVM_TOMCAT_E2E"
+	NAMESPACE_KAFKA             = "KAFKA_E2E"
+	NAMESPACE_CONTAINERINSIGHTS = "ContainerInsights/Prometheus"
+)
+
 var testRegistry = map[string][]func(*testing.T){
 	"jvm_tomcat.json": {
 		testTomcatMetrics,
@@ -204,29 +210,29 @@ func testTomcatMetrics(t *testing.T) {
 			name      string
 			namespace string
 		}{
-			{"tomcat.traffic", "JVM_TOMCAT_E2E"},
-			{"jvm.classes.loaded", "JVM_TOMCAT_E2E"},
-			{"jvm.gc.collections.count", "JVM_TOMCAT_E2E"},
-			{"jvm.gc.collections.elapsed", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.heap.init", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.heap.max", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.heap.used", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.heap.committed", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.nonheap.init", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.nonheap.max", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.nonheap.used", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.nonheap.committed", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.pool.init", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.pool.max", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.pool.used", "JVM_TOMCAT_E2E"},
-			{"jvm.memory.pool.committed", "JVM_TOMCAT_E2E"},
-			{"jvm.threads.count", "JVM_TOMCAT_E2E"},
-			{"tomcat.sessions", "JVM_TOMCAT_E2E"},
-			{"tomcat.errors", "JVM_TOMCAT_E2E"},
-			{"tomcat.request_count", "JVM_TOMCAT_E2E"},
-			{"tomcat.max_time", "JVM_TOMCAT_E2E"},
-			{"tomcat.processing_time", "JVM_TOMCAT_E2E"},
-			{"tomcat.threads", "JVM_TOMCAT_E2E"},
+			{"tomcat.traffic", NAMESPACE_JVM_TOMCAT},
+			{"jvm.classes.loaded", NAMESPACE_JVM_TOMCAT},
+			{"jvm.gc.collections.count", NAMESPACE_JVM_TOMCAT},
+			{"jvm.gc.collections.elapsed", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.heap.init", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.heap.max", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.heap.used", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.heap.committed", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.nonheap.init", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.nonheap.max", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.nonheap.used", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.nonheap.committed", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.pool.init", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.pool.max", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.pool.used", NAMESPACE_JVM_TOMCAT},
+			{"jvm.memory.pool.committed", NAMESPACE_JVM_TOMCAT},
+			{"jvm.threads.count", NAMESPACE_JVM_TOMCAT},
+			{"tomcat.sessions", NAMESPACE_JVM_TOMCAT},
+			{"tomcat.errors", NAMESPACE_JVM_TOMCAT},
+			{"tomcat.request_count", NAMESPACE_JVM_TOMCAT},
+			{"tomcat.max_time", NAMESPACE_JVM_TOMCAT},
+			{"tomcat.processing_time", NAMESPACE_JVM_TOMCAT},
+			{"tomcat.threads", NAMESPACE_JVM_TOMCAT},
 		}
 
 		for _, metric := range metricsToCheck {
@@ -270,7 +276,7 @@ func testTomcatSessions(t *testing.T) {
 
 		maxSessions, err := awsservice.GetMetricMaximum(
 			"tomcat.sessions",
-			"JVM_TOMCAT_E2E",
+			NAMESPACE_JVM_TOMCAT,
 			startTime,
 			endTime,
 			60,
@@ -300,9 +306,9 @@ func testKafkaMetrics(t *testing.T) {
 			name      string
 			namespace string
 		}{
-			{"kafka.consumer.fetch-rate", "KAFKA_E2E"},
-			{"kafka.consumer.total.bytes-consumed-rate", "KAFKA_E2E"},
-			{"kafka.consumer.total.records-consumed-rate", "KAFKA_E2E"},
+			{"kafka.consumer.fetch-rate", NAMESPACE_KAFKA},
+			{"kafka.consumer.total.bytes-consumed-rate", NAMESPACE_KAFKA},
+			{"kafka.consumer.total.records-consumed-rate", NAMESPACE_KAFKA},
 		}
 
 		for _, metric := range metricsToCheck {
@@ -319,24 +325,24 @@ func testContainerInsightsMetrics(t *testing.T) {
 			name      string
 			namespace string
 		}{
-			{"jvm_classes_loaded", "ContainerInsights/Prometheus"},
-			{"jvm_threads_current", "ContainerInsights/Prometheus"},
-			{"jvm_threads_daemon", "ContainerInsights/Prometheus"},
-			{"java_lang_operatingsystem_totalswapspacesize", "ContainerInsights/Prometheus"},
-			{"java_lang_operatingsystem_systemcpuload", "ContainerInsights/Prometheus"},
-			{"java_lang_operatingsystem_processcpuload", "ContainerInsights/Prometheus"},
-			{"java_lang_operatingsystem_freeswapspacesize", "ContainerInsights/Prometheus"},
-			{"java_lang_operatingsystem_totalphysicalmemorysize", "ContainerInsights/Prometheus"},
-			{"java_lang_operatingsystem_freephysicalmemorysize", "ContainerInsights/Prometheus"},
-			{"java_lang_operatingsystem_openfiledescriptorcount", "ContainerInsights/Prometheus"},
-			{"java_lang_operatingsystem_availableprocessors", "ContainerInsights/Prometheus"},
-			{"jvm_memory_bytes_used", "ContainerInsights/Prometheus"},
-			{"jvm_memory_pool_bytes_used", "ContainerInsights/Prometheus"},
-			{"catalina_manager_activesessions", "ContainerInsights/Prometheus"},
-			{"catalina_manager_rejectedsessions", "ContainerInsights/Prometheus"},
-			{"catalina_globalrequestprocessor_requestcount", "ContainerInsights/Prometheus"},
-			{"catalina_globalrequestprocessor_errorcount", "ContainerInsights/Prometheus"},
-			{"catalina_globalrequestprocessor_processingtime", "ContainerInsights/Prometheus"},
+			{"jvm_classes_loaded", NAMESPACE_CONTAINERINSIGHTS},
+			{"jvm_threads_current", NAMESPACE_CONTAINERINSIGHTS},
+			{"jvm_threads_daemon", NAMESPACE_CONTAINERINSIGHTS},
+			{"java_lang_operatingsystem_totalswapspacesize", NAMESPACE_CONTAINERINSIGHTS},
+			{"java_lang_operatingsystem_systemcpuload", NAMESPACE_CONTAINERINSIGHTS},
+			{"java_lang_operatingsystem_processcpuload", NAMESPACE_CONTAINERINSIGHTS},
+			{"java_lang_operatingsystem_freeswapspacesize", NAMESPACE_CONTAINERINSIGHTS},
+			{"java_lang_operatingsystem_totalphysicalmemorysize", NAMESPACE_CONTAINERINSIGHTS},
+			{"java_lang_operatingsystem_freephysicalmemorysize", NAMESPACE_CONTAINERINSIGHTS},
+			{"java_lang_operatingsystem_openfiledescriptorcount", NAMESPACE_CONTAINERINSIGHTS},
+			{"java_lang_operatingsystem_availableprocessors", NAMESPACE_CONTAINERINSIGHTS},
+			{"jvm_memory_bytes_used", NAMESPACE_CONTAINERINSIGHTS},
+			{"jvm_memory_pool_bytes_used", NAMESPACE_CONTAINERINSIGHTS},
+			{"catalina_manager_activesessions", NAMESPACE_CONTAINERINSIGHTS},
+			{"catalina_manager_rejectedsessions", NAMESPACE_CONTAINERINSIGHTS},
+			{"catalina_globalrequestprocessor_requestcount", NAMESPACE_CONTAINERINSIGHTS},
+			{"catalina_globalrequestprocessor_errorcount", NAMESPACE_CONTAINERINSIGHTS},
+			{"catalina_globalrequestprocessor_processingtime", NAMESPACE_CONTAINERINSIGHTS},
 		}
 
 		for _, metric := range metricsToCheck {
@@ -380,7 +386,7 @@ func testTomcatRejectedSessions(t *testing.T) {
 
 		maxRejectedSessions, err := awsservice.GetMetricMaximum(
 			"catalina_manager_rejectedsessions",
-			"ContainerInsights/Prometheus",
+			NAMESPACE_CONTAINERINSIGHTS,
 			startTime,
 			endTime,
 			60,
