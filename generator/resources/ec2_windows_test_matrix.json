@@ -28,5 +28,17 @@
     "instanceType":"t3a.medium",
     "ami": "cloudwatch-agent-integration-test-win-2022*",
     "useSSM": true
+  },
+  {
+    "os": "win-2025",
+    "instanceType":"t3a.medium",
+    "ami": "cloudwatch-agent-integration-test-win-2025*",
+    "useSSM": false
+  },
+  {
+    "os": "win-2025",
+    "instanceType":"t3a.medium",
+    "ami": "cloudwatch-agent-integration-test-win-2025*",
+    "useSSM": true
   }
 ]
