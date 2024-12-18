@@ -134,14 +134,14 @@ func GetMetricStatistics(
 	return CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
 }
 
-func GetMetricMaximum(
+func CheckMetricAboveZero(
 	metricName string,
 	namespace string,
 	startTime time.Time,
 	endTime time.Time,
 	periodInSeconds int32,
 	nodeNames []string,
-) (float64, error) {
+) (bool, error) {
 	listMetricsInput := cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
 		Namespace:      aws.String(namespace),
@@ -150,13 +150,12 @@ func GetMetricMaximum(
 
 	metrics, err := CwmClient.ListMetrics(ctx, &listMetricsInput)
 	if err != nil {
-		return 0, err
+		return false, err
 	}
 	if len(metrics.Metrics) == 0 {
-		return 0, fmt.Errorf("no metrics found for %s", metricName)
+		return false, fmt.Errorf("no metrics found for %s", metricName)
 	}
 
-	maxValue := float64(0)
 	for _, metric := range metrics.Metrics {
 		var nodeNameMatch bool
 		var nodeName string
@@ -174,7 +173,7 @@ func GetMetricMaximum(
 		}
 
 		if nodeNameMatch {
-			log.Printf("Found metric: %s for node: %s", *metric.MetricName, nodeName)
+			log.Printf("Checking metric: %s for node: %s", *metric.MetricName, nodeName)
 			data, err := GetMetricStatistics(
 				metricName,
 				namespace,
@@ -191,19 +190,15 @@ func GetMetricMaximum(
 			}
 
 			for _, datapoint := range data.Datapoints {
-				if *datapoint.Maximum > maxValue {
-					maxValue = *datapoint.Maximum
+				if *datapoint.Maximum > 0 {
+					log.Printf("Found value above zero for node: %s", nodeName)
+					return true, nil
 				}
 			}
 		}
 	}
 
-	if maxValue == 0 {
-		return 0, fmt.Errorf("no valid datapoints found for metric %s", metricName)
-	}
-
-	log.Printf("Maximum value found across specified nodes: %v", maxValue)
-	return maxValue, nil
+	return false, nil
 }
 
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics

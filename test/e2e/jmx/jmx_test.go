@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -88,7 +89,6 @@ func ApplyHelm(env *environment.MetaData) error {
 	helm := []string{
 		"helm", "upgrade", "--install", "amazon-cloudwatch-observability",
 		filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability"),
-		"--values", filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability", "values.yaml"),
 		"--set", fmt.Sprintf("clusterName=%s", env.EKSClusterName),
 		"--set", fmt.Sprintf("region=%s", env.Region),
 		"--set", fmt.Sprintf("agent.image.repository=%s", env.CloudwatchAgentRepository),
@@ -138,55 +138,33 @@ func ApplyHelm(env *environment.MetaData) error {
 
 func TestResources(t *testing.T) {
 	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
-	if err != nil {
-		t.Fatalf("Error building kubeconfig: %v", err)
-	}
+	require.NoError(t, err, "Error building kubeconfig")
 
 	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		t.Fatalf("Error creating Kubernetes client: %v", err)
-	}
+	require.NoError(t, err, "Error building kubeconfig")
 
 	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		t.Fatalf("Error listing nodes: %v", err)
-	}
+	require.NoError(t, err, "Error listing nodes")
 
 	for _, node := range nodes.Items {
 		nodeNames = append(nodeNames, node.Name)
 	}
 
 	daemonSet, err := clientset.AppsV1().DaemonSets("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-	if err != nil {
-		t.Errorf("Error getting CloudWatch Agent DaemonSet: %v", err)
-	}
-	if daemonSet == nil {
-		t.Error("CloudWatch Agent DaemonSet not found")
-	}
+	require.NoError(t, err, "Error getting CloudWatch Agent DaemonSet")
+	require.NotNil(t, daemonSet, "CloudWatch Agent DaemonSet not found")
 
 	configMap, err := clientset.CoreV1().ConfigMaps("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-	if err != nil {
-		t.Errorf("Error getting CloudWatch Agent ConfigMap: %v", err)
-	}
-	if configMap == nil {
-		t.Error("CloudWatch Agent ConfigMap not found")
-	}
+	require.NoError(t, err, "Error getting CloudWatch Agent ConfigMap")
+	require.NotNil(t, configMap, "CloudWatch Agent ConfigMap not found")
 
 	service, err := clientset.CoreV1().Services("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-	if err != nil {
-		t.Errorf("Error getting CloudWatch Agent Service: %v", err)
-	}
-	if service == nil {
-		t.Error("CloudWatch Agent Service not found")
-	}
+	require.NoError(t, err, "Error getting CloudWatch Agent Service")
+	require.NotNil(t, service, "CloudWatch Agent Service not found")
 
 	serviceAccount, err := clientset.CoreV1().ServiceAccounts("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-	if err != nil {
-		t.Errorf("Error getting CloudWatch Agent Service Account: %v", err)
-	}
-	if serviceAccount == nil {
-		t.Error("CloudWatch Agent Service Account not found")
-	}
+	require.NoError(t, err, "Error getting CloudWatch Agent Service Account")
+	require.NotNil(t, serviceAccount, "CloudWatch Agent Service Account not found")
 }
 
 func TestMetrics(t *testing.T) {
@@ -206,38 +184,35 @@ func TestMetrics(t *testing.T) {
 
 func testTomcatMetrics(t *testing.T) {
 	t.Run("verify_jvm_tomcat_metrics", func(t *testing.T) {
-		metricsToCheck := []struct {
-			name      string
-			namespace string
-		}{
-			{"tomcat.traffic", NAMESPACE_JVM_TOMCAT},
-			{"jvm.classes.loaded", NAMESPACE_JVM_TOMCAT},
-			{"jvm.gc.collections.count", NAMESPACE_JVM_TOMCAT},
-			{"jvm.gc.collections.elapsed", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.heap.init", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.heap.max", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.heap.used", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.heap.committed", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.nonheap.init", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.nonheap.max", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.nonheap.used", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.nonheap.committed", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.pool.init", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.pool.max", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.pool.used", NAMESPACE_JVM_TOMCAT},
-			{"jvm.memory.pool.committed", NAMESPACE_JVM_TOMCAT},
-			{"jvm.threads.count", NAMESPACE_JVM_TOMCAT},
-			{"tomcat.sessions", NAMESPACE_JVM_TOMCAT},
-			{"tomcat.errors", NAMESPACE_JVM_TOMCAT},
-			{"tomcat.request_count", NAMESPACE_JVM_TOMCAT},
-			{"tomcat.max_time", NAMESPACE_JVM_TOMCAT},
-			{"tomcat.processing_time", NAMESPACE_JVM_TOMCAT},
-			{"tomcat.threads", NAMESPACE_JVM_TOMCAT},
+		metricsToCheck := []string{
+			"tomcat.traffic",
+			"jvm.classes.loaded",
+			"jvm.gc.collections.count",
+			"jvm.gc.collections.elapsed",
+			"jvm.memory.heap.init",
+			"jvm.memory.heap.max",
+			"jvm.memory.heap.used",
+			"jvm.memory.heap.committed",
+			"jvm.memory.nonheap.init",
+			"jvm.memory.nonheap.max",
+			"jvm.memory.nonheap.used",
+			"jvm.memory.nonheap.committed",
+			"jvm.memory.pool.init",
+			"jvm.memory.pool.max",
+			"jvm.memory.pool.used",
+			"jvm.memory.pool.committed",
+			"jvm.threads.count",
+			"tomcat.sessions",
+			"tomcat.errors",
+			"tomcat.request_count",
+			"tomcat.max_time",
+			"tomcat.processing_time",
+			"tomcat.threads",
 		}
 
 		for _, metric := range metricsToCheck {
-			t.Run(metric.name, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric.name, metric.namespace, nil, 5, 1*time.Minute)
+			t.Run(metric, func(t *testing.T) {
+				awsservice.ValidateMetricWithTest(t, metric, metric, nil, 5, 1*time.Minute)
 			})
 		}
 	})
@@ -274,7 +249,7 @@ func testTomcatSessions(t *testing.T) {
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
 
-		maxSessions, err := awsservice.GetMetricMaximum(
+		aboveZero, err := awsservice.CheckMetricAboveZero(
 			"tomcat.sessions",
 			NAMESPACE_JVM_TOMCAT,
 			startTime,
@@ -283,11 +258,11 @@ func testTomcatSessions(t *testing.T) {
 			nodeNames,
 		)
 		if err != nil {
-			t.Errorf("Failed to get metric maximum: %v", err)
+			t.Errorf("Failed to check metric above zero: %v", err)
 			return
 		}
 
-		if maxSessions == 0 {
+		if !aboveZero {
 			t.Error("Expected non-zero tomcat.sessions after applying traffic")
 		}
 
@@ -302,18 +277,15 @@ func testTomcatSessions(t *testing.T) {
 
 func testKafkaMetrics(t *testing.T) {
 	t.Run("verify_kafka_metrics", func(t *testing.T) {
-		metricsToCheck := []struct {
-			name      string
-			namespace string
-		}{
-			{"kafka.consumer.fetch-rate", NAMESPACE_KAFKA},
-			{"kafka.consumer.total.bytes-consumed-rate", NAMESPACE_KAFKA},
-			{"kafka.consumer.total.records-consumed-rate", NAMESPACE_KAFKA},
+		metricsToCheck := []string{
+			"kafka.consumer.fetch-rate",
+			"kafka.consumer.total.bytes-consumed-rate",
+			"kafka.consumer.total.records-consumed-rate",
 		}
 
 		for _, metric := range metricsToCheck {
-			t.Run(metric.name, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric.name, metric.namespace, nil, 5, 1*time.Minute)
+			t.Run(metric, func(t *testing.T) {
+				awsservice.ValidateMetricWithTest(t, metric, NAMESPACE_KAFKA, nil, 5, 1*time.Minute)
 			})
 		}
 	})
@@ -321,33 +293,30 @@ func testKafkaMetrics(t *testing.T) {
 
 func testContainerInsightsMetrics(t *testing.T) {
 	t.Run("verify_containerinsights_metrics", func(t *testing.T) {
-		metricsToCheck := []struct {
-			name      string
-			namespace string
-		}{
-			{"jvm_classes_loaded", NAMESPACE_CONTAINERINSIGHTS},
-			{"jvm_threads_current", NAMESPACE_CONTAINERINSIGHTS},
-			{"jvm_threads_daemon", NAMESPACE_CONTAINERINSIGHTS},
-			{"java_lang_operatingsystem_totalswapspacesize", NAMESPACE_CONTAINERINSIGHTS},
-			{"java_lang_operatingsystem_systemcpuload", NAMESPACE_CONTAINERINSIGHTS},
-			{"java_lang_operatingsystem_processcpuload", NAMESPACE_CONTAINERINSIGHTS},
-			{"java_lang_operatingsystem_freeswapspacesize", NAMESPACE_CONTAINERINSIGHTS},
-			{"java_lang_operatingsystem_totalphysicalmemorysize", NAMESPACE_CONTAINERINSIGHTS},
-			{"java_lang_operatingsystem_freephysicalmemorysize", NAMESPACE_CONTAINERINSIGHTS},
-			{"java_lang_operatingsystem_openfiledescriptorcount", NAMESPACE_CONTAINERINSIGHTS},
-			{"java_lang_operatingsystem_availableprocessors", NAMESPACE_CONTAINERINSIGHTS},
-			{"jvm_memory_bytes_used", NAMESPACE_CONTAINERINSIGHTS},
-			{"jvm_memory_pool_bytes_used", NAMESPACE_CONTAINERINSIGHTS},
-			{"catalina_manager_activesessions", NAMESPACE_CONTAINERINSIGHTS},
-			{"catalina_manager_rejectedsessions", NAMESPACE_CONTAINERINSIGHTS},
-			{"catalina_globalrequestprocessor_requestcount", NAMESPACE_CONTAINERINSIGHTS},
-			{"catalina_globalrequestprocessor_errorcount", NAMESPACE_CONTAINERINSIGHTS},
-			{"catalina_globalrequestprocessor_processingtime", NAMESPACE_CONTAINERINSIGHTS},
+		metricsToCheck := []string{
+			"jvm_classes_loaded",
+			"jvm_threads_current",
+			"jvm_threads_daemon",
+			"java_lang_operatingsystem_totalswapspacesize",
+			"java_lang_operatingsystem_systemcpuload",
+			"java_lang_operatingsystem_processcpuload",
+			"java_lang_operatingsystem_freeswapspacesize",
+			"java_lang_operatingsystem_totalphysicalmemorysize",
+			"java_lang_operatingsystem_freephysicalmemorysize",
+			"java_lang_operatingsystem_openfiledescriptorcount",
+			"java_lang_operatingsystem_availableprocessors",
+			"jvm_memory_bytes_used",
+			"jvm_memory_pool_bytes_used",
+			"catalina_manager_activesessions",
+			"catalina_manager_rejectedsessions",
+			"catalina_globalrequestprocessor_requestcount",
+			"catalina_globalrequestprocessor_errorcount",
+			"catalina_globalrequestprocessor_processingtime",
 		}
 
 		for _, metric := range metricsToCheck {
-			t.Run(metric.name, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric.name, metric.namespace, nil, 5, 1*time.Minute)
+			t.Run(metric, func(t *testing.T) {
+				awsservice.ValidateMetricWithTest(t, metric, NAMESPACE_CONTAINERINSIGHTS, nil, 5, 1*time.Minute)
 			})
 		}
 	})
@@ -384,7 +353,7 @@ func testTomcatRejectedSessions(t *testing.T) {
 		startTime := time.Now().Add(-5 * time.Minute)
 		endTime := time.Now()
 
-		maxRejectedSessions, err := awsservice.GetMetricMaximum(
+		aboveZero, err := awsservice.CheckMetricAboveZero(
 			"catalina_manager_rejectedsessions",
 			NAMESPACE_CONTAINERINSIGHTS,
 			startTime,
@@ -393,11 +362,11 @@ func testTomcatRejectedSessions(t *testing.T) {
 			nodeNames,
 		)
 		if err != nil {
-			t.Errorf("Failed to get metric maximum: %v", err)
+			t.Errorf("Failed to check metric above zero: %v", err)
 			return
 		}
 
-		if maxRejectedSessions == 0 {
+		if !aboveZero {
 			t.Error("Expected non-zero catalina_manager_rejectedsessions after applying traffic")
 		}
 

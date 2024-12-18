@@ -248,8 +248,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 }
 
 var testTypeToTestConfigE2E = map[string][]testConfig{
-	"eks_e2e": {
+	"eks_e2e_jmx": {
 		{testDir: "../../../test/e2e/jmx"},
+	},
+	"eks_e2e_prometheus": {
+		{testDir: "../../../test/e2e/prometheus"},
 	},
 }
 
