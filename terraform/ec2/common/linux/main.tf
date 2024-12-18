@@ -55,6 +55,21 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids               = [module.basic_components.security_group]
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
+  # Provide a user_data script to disable SSH password authentication
+  user_data = <<-EOT
+    #!/bin/bash
+    # Disable password authentication for SSH
+    sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+    
+    # Disable challenge-response authentication for SSH
+    sudo sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+    
+    # Disable keyboard-interactive authentication for SSH
+    sudo sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
+
+    # Restart SSH service to apply changes
+    sudo systemctl restart sshd
+  EOT
 
   metadata_options {
     http_endpoint = "enabled"
