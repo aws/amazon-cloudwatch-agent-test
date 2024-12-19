@@ -134,6 +134,73 @@ func GetMetricStatistics(
 	return CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
 }
 
+func CheckMetricAboveZero(
+	metricName string,
+	namespace string,
+	startTime time.Time,
+	endTime time.Time,
+	periodInSeconds int32,
+	nodeNames []string,
+) (bool, error) {
+	listMetricsInput := cloudwatch.ListMetricsInput{
+		MetricName:     aws.String(metricName),
+		Namespace:      aws.String(namespace),
+		RecentlyActive: "PT3H",
+	}
+
+	metrics, err := CwmClient.ListMetrics(ctx, &listMetricsInput)
+	if err != nil {
+		return false, err
+	}
+	if len(metrics.Metrics) == 0 {
+		return false, fmt.Errorf("no metrics found for %s", metricName)
+	}
+
+	for _, metric := range metrics.Metrics {
+		var nodeNameMatch bool
+		var nodeName string
+		for _, dim := range metric.Dimensions {
+			if *dim.Name == "k8s.node.name" {
+				nodeName = *dim.Value
+				for _, name := range nodeNames {
+					if nodeName == name {
+						nodeNameMatch = true
+						break
+					}
+				}
+				break
+			}
+		}
+
+		if nodeNameMatch {
+			log.Printf("Checking metric: %s for node: %s", *metric.MetricName, nodeName)
+			data, err := GetMetricStatistics(
+				metricName,
+				namespace,
+				metric.Dimensions,
+				startTime,
+				endTime,
+				periodInSeconds,
+				[]types.Statistic{types.StatisticMaximum},
+				nil,
+			)
+			if err != nil {
+				log.Printf("Error getting statistics for metric with dimensions %v: %v", metric.Dimensions, err)
+				continue
+			}
+
+			for _, datapoint := range data.Datapoints {
+				if *datapoint.Maximum > 0 {
+					log.Printf("Found value above zero for node: %s", nodeName)
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
+}
+
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
 func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
 	getMetricDataInput := cloudwatch.GetMetricDataInput{

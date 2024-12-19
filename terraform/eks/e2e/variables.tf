@@ -21,6 +21,16 @@ variable "nodes" {
   default = 1
 }
 
+variable "ami_type" {
+  type = string
+  default = "AL2_x86_64"
+}
+
+variable "instance_type" {
+  type = string
+  default = "t3a.medium"
+}
+
 variable "helm_charts_branch" {
   type    = string
   default = "main"
