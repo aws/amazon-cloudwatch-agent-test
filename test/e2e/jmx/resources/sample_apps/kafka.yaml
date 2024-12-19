@@ -80,7 +80,7 @@ spec:
             - name: KAFKA_LISTENERS
               value: "PLAINTEXT://:9092"
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://:9092"
+              value: "PLAINTEXT://kafka-service:9092"
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
               value: "1"
 ---
@@ -106,10 +106,7 @@ spec:
         - name: kafka-producer
           image: public.ecr.aws/l9b8e0i6/kafka:latest
           command: ["/bin/sh"]
-          args: ["-c", "while true; do echo 'Producing message'; kafka-console-producer.sh --broker-list kafka-service:9092 --topic test-topic | 'Test message'; sleep 5; done"]
-          env:
-            - name: KAFKA_BROKER_LIST
-              value: "kafka-service:9092"
+          args: ["-c", "while true; do echo 'Test message' | kafka-console-producer.sh --broker-list kafka-service:9092 --topic test-topic; sleep 5; done"]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -134,6 +131,3 @@ spec:
           image: public.ecr.aws/l9b8e0i6/kafka:latest
           command: ["/bin/sh"]
           args: ["-c", "kafka-console-consumer.sh --bootstrap-server kafka-service:9092 --topic test-topic --from-beginning"]
-          env:
-            - name: KAFKA_BROKER_LIST
-              value: "kafka-service:9092"

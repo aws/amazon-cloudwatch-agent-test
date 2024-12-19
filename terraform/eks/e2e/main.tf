@@ -144,7 +144,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     when = destroy
     command = <<-EOT
-      echo "Running cleanup before destruction"
+      echo "Running cleanup for K8s resources"
       go test -timeout 15m -v ${self.triggers.test_dir} \
       -destroy=true \
       -region=${self.triggers.region} \

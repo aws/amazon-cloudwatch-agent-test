@@ -80,7 +80,19 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestResources(t *testing.T) {
+func TestAll(t *testing.T) {
+	t.Run("Resources", func(t *testing.T) {
+		testResources(t)
+	})
+
+	if !t.Failed() {
+		t.Run("Metrics", func(t *testing.T) {
+			testMetrics(t)
+		})
+	}
+}
+
+func testResources(t *testing.T) {
 	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
 	require.NoError(t, err, "Error building kubeconfig")
 
@@ -108,7 +120,7 @@ func TestResources(t *testing.T) {
 	require.NotNil(t, serviceAccount, "CloudWatch Agent Service Account not found")
 }
 
-func TestMetrics(t *testing.T) {
+func testMetrics(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 	configFile := filepath.Base(env.AgentConfig)
 
@@ -126,7 +138,6 @@ func TestMetrics(t *testing.T) {
 func testTomcatMetrics(t *testing.T) {
 	t.Run("verify_jvm_tomcat_metrics", func(t *testing.T) {
 		metricsToCheck := []string{
-			"tomcat.traffic",
 			"jvm.classes.loaded",
 			"jvm.gc.collections.count",
 			"jvm.gc.collections.elapsed",
@@ -143,6 +154,7 @@ func testTomcatMetrics(t *testing.T) {
 			"jvm.memory.pool.used",
 			"jvm.memory.pool.committed",
 			"jvm.threads.count",
+			"tomcat.traffic",
 			"tomcat.sessions",
 			"tomcat.errors",
 			"tomcat.request_count",
@@ -153,7 +165,7 @@ func testTomcatMetrics(t *testing.T) {
 
 		for _, metric := range metricsToCheck {
 			t.Run(metric, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric, metric, nil, 5, 1*time.Minute)
+				awsservice.ValidateMetricWithTest(t, metric, "JVM_TOMCAT_E2E", nil, 5, 30*time.Second)
 			})
 		}
 	})
@@ -161,7 +173,7 @@ func testTomcatMetrics(t *testing.T) {
 
 func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
-		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
+		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-n", "test", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
 		output, err := cmd.CombinedOutput()
 		require.NoError(t, err, "Error getting LoadBalancer URL")
 
@@ -198,6 +210,17 @@ func testTomcatSessions(t *testing.T) {
 func testKafkaMetrics(t *testing.T) {
 	t.Run("verify_kafka_metrics", func(t *testing.T) {
 		metricsToCheck := []string{
+			"kafka.message.count",
+			"kafka.request.count",
+			"kafka.request.failed",
+			"kafka.request.time.total",
+			"kafka.request.time.50p",
+			"kafka.request.time.99p",
+			"kafka.request.time.avg",
+			"kafka.producer.io-wait-time-ns-avg",
+			"kafka.producer.outgoing-byte-rate",
+			"kafka.producer.request-rate",
+			"kafka.producer.response-rate",
 			"kafka.consumer.fetch-rate",
 			"kafka.consumer.total.bytes-consumed-rate",
 			"kafka.consumer.total.records-consumed-rate",
@@ -205,7 +228,7 @@ func testKafkaMetrics(t *testing.T) {
 
 		for _, metric := range metricsToCheck {
 			t.Run(metric, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric, "KAFKA_E2E", nil, 5, 1*time.Minute)
+				awsservice.ValidateMetricWithTest(t, metric, "KAFKA_E2E", nil, 5, 30*time.Second)
 			})
 		}
 	})
@@ -236,7 +259,7 @@ func testContainerInsightsMetrics(t *testing.T) {
 
 		for _, metric := range metricsToCheck {
 			t.Run(metric, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric, "ContainerInsights/Prometheus", nil, 5, 1*time.Minute)
+				awsservice.ValidateMetricWithTest(t, metric, "ContainerInsights/Prometheus", nil, 5, 30*time.Second)
 			})
 		}
 	})
@@ -244,7 +267,7 @@ func testContainerInsightsMetrics(t *testing.T) {
 
 func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
-		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
+		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-n", "test", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
 		output, err := cmd.CombinedOutput()
 		require.NoError(t, err, "Error getting LoadBalancer URL")
 
