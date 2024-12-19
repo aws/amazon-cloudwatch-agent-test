@@ -7,7 +7,7 @@
     UpgradeCode='c537c936-91b3-4270-94d7-e128acfc3e86'
     Language='1033'
     Codepage='1252'
-    Version='1.4.37902'
+    Version='<version>'
     Manufacturer='Amazon.com, Inc.'>
 
     <Package Id='*'
@@ -90,23 +90,16 @@
                 ErrorControl="normal"
                 Vital="yes"
             >
-                <ServiceDependency Id="Tcpip"/>
-                <ServiceDependency Id="Dhcp"/>
-                <ServiceDependency Id="Dnscache"/>
-                <ServiceConfig 
-                FirstFailureActionType="restart" 
-                SecondFailureActionType="restart" 
-                ThirdFailureActionType="restart" 
-                ResetPeriodInDays="1" 
-                RestartServiceDelayInSeconds="2" 
-                xmlns="http://schemas.microsoft.com/wix/UtilExtension"/>
+                <ServiceDependency Id="LanmanServer"/>
+                <ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" ResetPeriodInDays="1" RestartServiceDelayInSeconds="2" xmlns="http://schemas.microsoft.com/wix/UtilExtension"/>
+                <ServiceConfig OnInstall="yes" OnReinstall="yes" FailureActionsWhen="failedToStopOrReturnedError"/>
             </ServiceInstall>
             <ServiceControl
                 Id="StartService"
-                Start="install"
                 Stop="both"
                 Remove="uninstall"
                 Name="AmazonCloudWatchAgent"
+                Wait="yes"
             />
         </Component>
         <Component Id='AgentEXE' Guid='d98c86be-b6c8-4f24-84a5-03b08bd6e7f2' Win64='yes'>
