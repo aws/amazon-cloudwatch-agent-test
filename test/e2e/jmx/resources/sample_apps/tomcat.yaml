@@ -1,7 +1,13 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: test
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: tomcat-service
+  namespace: test
 spec:
   type: LoadBalancer
   selector:
@@ -13,7 +19,8 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tomcat-deployment
+  name: tomcat
+  namespace: test
 spec:
   replicas: 1
   selector:
@@ -30,6 +37,6 @@ spec:
     spec:
       containers:
         - name: tomcat-container
-          image: public.ecr.aws/o5o6y1v9/tomcat:latest
+          image: public.ecr.aws/l9b8e0i6/tomcat:latest
           ports:
             - containerPort: 8080

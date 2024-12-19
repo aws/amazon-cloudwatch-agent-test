@@ -22,17 +22,12 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
-
-const (
-	NAMESPACE_JVM_TOMCAT        = "JVM_TOMCAT_E2E"
-	NAMESPACE_KAFKA             = "KAFKA_E2E"
-	NAMESPACE_CONTAINERINSIGHTS = "ContainerInsights/Prometheus"
-)
 
 var testRegistry = map[string][]func(*testing.T){
 	"jvm_tomcat.json": {
@@ -57,83 +52,32 @@ func TestMain(m *testing.M) {
 	}
 	env := environment.GetEnvironmentMetaData()
 
-	if env.Region != "us-west-2" {
-		if err := awsservice.ConfigureAWSClients(env.Region); err != nil {
-			fmt.Printf("Failed to reconfigure AWS clients: %v\n", err)
+	if env.Destroy {
+		if err := common.DestroyResources(env); err != nil {
+			fmt.Printf("Failed to delete helm resources: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("AWS clients reconfigured to use region: %s\n", env.Region)
-	} else {
-		fmt.Printf("Using default testing region: us-west-2\n")
+		os.Exit(0)
 	}
 
-	fmt.Println("Starting Helm installation...")
-	if err := ApplyHelm(env); err != nil {
-		fmt.Printf("Failed to apply Helm: %v\n", err)
+	if err := common.InitializeEnvironment(env); err != nil {
+		fmt.Printf("Failed to initialize environment: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("Waiting for metrics to propagate...")
-	time.Sleep(5 * time.Minute)
+	eksInstances, err := awsservice.GetEKSInstances(env.EKSClusterName)
+	if err != nil || len(eksInstances) == 0 {
+		fmt.Printf("Failed to get EKS instances: %v", err)
+		os.Exit(1)
+	}
+
+	for _, instance := range eksInstances {
+		if instance.InstanceName != nil {
+			nodeNames = append(nodeNames, *instance.InstanceName)
+		}
+	}
 
 	os.Exit(m.Run())
-}
-
-func ApplyHelm(env *environment.MetaData) error {
-	updateKubeconfig := exec.Command("aws", "eks", "update-kubeconfig", "--name", env.EKSClusterName)
-	output, err := updateKubeconfig.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to update kubeconfig: %w\nOutput: %s", err, output)
-	}
-
-	helm := []string{
-		"helm", "upgrade", "--install", "amazon-cloudwatch-observability",
-		filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability"),
-		"--set", fmt.Sprintf("clusterName=%s", env.EKSClusterName),
-		"--set", fmt.Sprintf("region=%s", env.Region),
-		"--set", fmt.Sprintf("agent.image.repository=%s", env.CloudwatchAgentRepository),
-		"--set", fmt.Sprintf("agent.image.tag=%s", env.CloudwatchAgentTag),
-		"--set", fmt.Sprintf("agent.image.repositoryDomainMap.public=%s", env.CloudwatchAgentRepositoryURL),
-		"--set", fmt.Sprintf("manager.image.repository=%s", env.CloudwatchAgentOperatorRepository),
-		"--set", fmt.Sprintf("manager.image.tag=%s", env.CloudwatchAgentOperatorTag),
-		"--set", fmt.Sprintf("manager.image.repositoryDomainMap.public=%s", env.CloudwatchAgentOperatorRepositoryURL),
-		"--namespace", "amazon-cloudwatch",
-		"--create-namespace",
-	}
-
-	if env.AgentConfig != "" {
-		agentConfigContent, err := os.ReadFile(env.AgentConfig)
-		if err != nil {
-			return fmt.Errorf("failed to read agent config file: %w", err)
-		}
-		helm = append(helm, "--set-json", fmt.Sprintf("agent.config=%s", string(agentConfigContent)))
-	}
-
-	helmUpgrade := exec.Command(helm[0], helm[1:]...)
-	helmUpgrade.Stdout = os.Stdout
-	helmUpgrade.Stderr = os.Stderr
-	if err := helmUpgrade.Run(); err != nil {
-		return fmt.Errorf("failed to install Helm release: %w", err)
-	}
-
-	fmt.Println("Waiting for CloudWatch Agent Operator to initialize...")
-	time.Sleep(300 * time.Second)
-
-	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
-
-	apply := exec.Command("kubectl", "apply", "-f", env.SampleApp)
-	output, err = apply.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to apply sample app: %w\nOutput: %s", err, output)
-	}
-
-	wait := exec.Command("kubectl", "wait", "--for=condition=available", "--timeout=300s", fmt.Sprintf("deployment/%s", deploymentName), "-n", "default")
-	output, err = wait.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to wait for deployment %s: %w\nOutput: %s", deploymentName, err, output)
-	}
-
-	return nil
 }
 
 func TestResources(t *testing.T) {
@@ -141,14 +85,7 @@ func TestResources(t *testing.T) {
 	require.NoError(t, err, "Error building kubeconfig")
 
 	clientset, err := kubernetes.NewForConfig(config)
-	require.NoError(t, err, "Error building kubeconfig")
-
-	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	require.NoError(t, err, "Error listing nodes")
-
-	for _, node := range nodes.Items {
-		nodeNames = append(nodeNames, node.Name)
-	}
+	require.NoError(t, err, "Error creating clientset")
 
 	daemonSet, err := clientset.AppsV1().DaemonSets("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
 	require.NoError(t, err, "Error getting CloudWatch Agent DaemonSet")
@@ -157,6 +94,10 @@ func TestResources(t *testing.T) {
 	configMap, err := clientset.CoreV1().ConfigMaps("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
 	require.NoError(t, err, "Error getting CloudWatch Agent ConfigMap")
 	require.NotNil(t, configMap, "CloudWatch Agent ConfigMap not found")
+
+	cwConfig, exists := configMap.Data["cwagentconfig.json"]
+	require.True(t, exists, "cwagentconfig.json not found in ConfigMap")
+	require.Contains(t, cwConfig, `"jmx"`, "JMX configuration not found in cwagentconfig.json")
 
 	service, err := clientset.CoreV1().Services("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
 	require.NoError(t, err, "Error getting CloudWatch Agent Service")
@@ -222,14 +163,10 @@ func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
 		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
 		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("Error getting LoadBalancer URL: %v", err)
-		}
+		require.NoError(t, err, "Error getting LoadBalancer URL")
 
 		lbURL := strings.Trim(string(output), "'")
-		if lbURL == "" {
-			t.Fatal("LoadBalancer URL failed to format")
-		}
+		require.NotEmpty(t, lbURL, "LoadBalancer URL failed to format")
 
 		for i := 0; i < 5; i++ {
 			resp, err := http.Get(fmt.Sprintf("http://%s/webapp/index.jsp", lbURL))
@@ -237,11 +174,7 @@ func testTomcatSessions(t *testing.T) {
 				t.Logf("Request attempt %d failed: %v", i+1, err)
 				continue
 			}
-			err = resp.Body.Close()
-			if err != nil {
-				t.Errorf("Failed to close response body: %v", err)
-				return
-			}
+			require.NoError(t, resp.Body.Close(), "Failed to close response body")
 		}
 
 		time.Sleep(5 * time.Minute)
@@ -251,27 +184,14 @@ func testTomcatSessions(t *testing.T) {
 
 		aboveZero, err := awsservice.CheckMetricAboveZero(
 			"tomcat.sessions",
-			NAMESPACE_JVM_TOMCAT,
+			"JVM_TOMCAT_E2E",
 			startTime,
 			endTime,
 			60,
 			nodeNames,
 		)
-		if err != nil {
-			t.Errorf("Failed to check metric above zero: %v", err)
-			return
-		}
-
-		if !aboveZero {
-			t.Error("Expected non-zero tomcat.sessions after applying traffic")
-		}
-
-		deleteCmd := exec.Command("kubectl", "delete", "svc", "tomcat-service")
-		if output, err := deleteCmd.CombinedOutput(); err != nil {
-			t.Logf("Warning: Failed to delete load balancer service: %v\nOutput: %s", err, output)
-		} else {
-			t.Log("Successfully deleted load balancer service")
-		}
+		require.NoError(t, err, "Failed to check metric above zero")
+		require.True(t, aboveZero, "Expected non-zero tomcat.sessions after applying traffic")
 	})
 }
 
@@ -285,7 +205,7 @@ func testKafkaMetrics(t *testing.T) {
 
 		for _, metric := range metricsToCheck {
 			t.Run(metric, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric, NAMESPACE_KAFKA, nil, 5, 1*time.Minute)
+				awsservice.ValidateMetricWithTest(t, metric, "KAFKA_E2E", nil, 5, 1*time.Minute)
 			})
 		}
 	})
@@ -316,7 +236,7 @@ func testContainerInsightsMetrics(t *testing.T) {
 
 		for _, metric := range metricsToCheck {
 			t.Run(metric, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric, NAMESPACE_CONTAINERINSIGHTS, nil, 5, 1*time.Minute)
+				awsservice.ValidateMetricWithTest(t, metric, "ContainerInsights/Prometheus", nil, 5, 1*time.Minute)
 			})
 		}
 	})
@@ -326,14 +246,10 @@ func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
 		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
 		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("Error getting LoadBalancer URL: %v", err)
-		}
+		require.NoError(t, err, "Error getting LoadBalancer URL")
 
 		lbURL := strings.Trim(string(output), "'")
-		if lbURL == "" {
-			t.Fatal("LoadBalancer URL failed to format")
-		}
+		require.NotEmpty(t, lbURL, "LoadBalancer URL failed to format")
 
 		for i := 0; i < 5; i++ {
 			resp, err := http.Get(fmt.Sprintf("http://%s/webapp/index.jsp", lbURL))
@@ -341,11 +257,7 @@ func testTomcatRejectedSessions(t *testing.T) {
 				t.Logf("Request attempt %d failed: %v", i+1, err)
 				continue
 			}
-			err = resp.Body.Close()
-			if err != nil {
-				t.Errorf("Failed to close response body: %v", err)
-				return
-			}
+			require.NoError(t, resp.Body.Close(), "Failed to close response body")
 		}
 
 		time.Sleep(5 * time.Minute)
@@ -355,26 +267,13 @@ func testTomcatRejectedSessions(t *testing.T) {
 
 		aboveZero, err := awsservice.CheckMetricAboveZero(
 			"catalina_manager_rejectedsessions",
-			NAMESPACE_CONTAINERINSIGHTS,
+			"ContainerInsights/Prometheus",
 			startTime,
 			endTime,
 			60,
 			nodeNames,
 		)
-		if err != nil {
-			t.Errorf("Failed to check metric above zero: %v", err)
-			return
-		}
-
-		if !aboveZero {
-			t.Error("Expected non-zero catalina_manager_rejectedsessions after applying traffic")
-		}
-
-		deleteCmd := exec.Command("kubectl", "delete", "svc", "tomcat-service")
-		if output, err := deleteCmd.CombinedOutput(); err != nil {
-			t.Logf("Warning: Failed to delete load balancer service: %v\nOutput: %s", err, output)
-		} else {
-			t.Log("Successfully deleted load balancer service")
-		}
+		require.NoError(t, err, "Failed to check metric above zero")
+		require.True(t, aboveZero, "Expected non-zero catalina_manager_rejectedsessions after applying traffic")
 	})
 }

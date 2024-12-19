@@ -1,7 +1,13 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: test
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: zookeeper-service
+  namespace: test
 spec:
   selector:
     app: zookeeper
@@ -12,7 +18,8 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: zookeeper-deployment
+  name: zookeeper
+  namespace: test
 spec:
   replicas: 1
   selector:
@@ -25,7 +32,7 @@ spec:
     spec:
       containers:
         - name: zookeeper
-          image: wurstmeister/zookeeper:latest
+          image: public.ecr.aws/l9b8e0i6/zookeeper:latest
           ports:
             - containerPort: 2181
           env:
@@ -36,6 +43,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kafka-service
+  namespace: test
 spec:
   selector:
     app: kafka
@@ -46,7 +54,8 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kafka-deployment
+  name: kafka
+  namespace: test
 spec:
   replicas: 1
   selector:
@@ -56,10 +65,13 @@ spec:
     metadata:
       labels:
         app: kafka
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+        cloudwatch.aws.amazon.com/inject-jmx-kafka: "true"
     spec:
       containers:
         - name: kafka
-          image: wurstmeister/kafka:latest
+          image: public.ecr.aws/l9b8e0i6/kafka:latest
           ports:
             - containerPort: 9092
           env:
@@ -76,6 +88,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kafka-producer
+  namespace: test
 spec:
   replicas: 1
   selector:
@@ -85,10 +98,13 @@ spec:
     metadata:
       labels:
         app: kafka-producer
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+        cloudwatch.aws.amazon.com/inject-jmx-kafka-producer: "true"
     spec:
       containers:
         - name: kafka-producer
-          image: wurstmeister/kafka:latest
+          image: public.ecr.aws/l9b8e0i6/kafka:latest
           command: ["/bin/sh"]
           args: ["-c", "while true; do echo 'Producing message'; kafka-console-producer.sh --broker-list kafka-service:9092 --topic test-topic | 'Test message'; sleep 5; done"]
           env:
@@ -99,6 +115,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kafka-consumer
+  namespace: test
 spec:
   replicas: 1
   selector:
@@ -114,7 +131,7 @@ spec:
     spec:
       containers:
         - name: kafka-consumer
-          image: wurstmeister/kafka:latest
+          image: public.ecr.aws/l9b8e0i6/kafka:latest
           command: ["/bin/sh"]
           args: ["-c", "kafka-console-consumer.sh --bootstrap-server kafka-service:9092 --topic test-topic --from-beginning"]
           env:
