@@ -85,7 +85,6 @@ func ApplyResources(env *environment.MetaData) error {
 		return fmt.Errorf("failed to wait for operator deployment: %w\nOutput: %s", err, output)
 	}
 
-	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
 	apply := exec.Command("kubectl", "apply", "-f", env.SampleApp)
 	output, err = apply.CombinedOutput()
 	if err != nil {
@@ -93,6 +92,7 @@ func ApplyResources(env *environment.MetaData) error {
 	}
 
 	fmt.Println("Waiting for Sample Application to initialize...")
+	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
 	wait = exec.Command("kubectl", "wait", "--for=condition=available", "--timeout=300s", fmt.Sprintf("deployment/%s", deploymentName), "-n", "test")
 	output, err = wait.CombinedOutput()
 	if err != nil {
