@@ -136,7 +136,7 @@ spec:
         - name: kafka-producer
           image: public.ecr.aws/l9b8e0i6/kafka:latest
           command: ["/bin/sh"]
-          args: ["-c", "while true; do echo message | kafka-console-producer.sh --topic quickstart-events --bootstrap-server kafka-service:9092; sleep 5; done"]
+          args: ["-c", "yes | nohup kafka-console-producer.sh --topic quickstart-events --bootstrap-server kafka-service:9092"]
 ---
 apiVersion: apps/v1
 kind: Deployment

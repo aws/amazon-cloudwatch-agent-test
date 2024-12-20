@@ -18,7 +18,6 @@
           "measurement": [
             "kafka.producer.io-wait-time-ns-avg",
             "kafka.producer.outgoing-byte-rate",
-            "kafka.producer.request-rate",
             "kafka.producer.response-rate"
           ]
         },

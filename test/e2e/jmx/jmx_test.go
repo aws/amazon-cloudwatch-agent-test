@@ -48,13 +48,14 @@ var testResourcesRegistry = []func(*testing.T){
 }
 
 var nodeNames []string
+var env *environment.MetaData
 
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if flag.Lookup("test.run").Value.String() == "NO_MATCH" {
 		os.Exit(0)
 	}
-	env := environment.GetEnvironmentMetaData()
+	env = environment.GetEnvironmentMetaData()
 
 	if env.Destroy {
 		if err := common.DestroyResources(env); err != nil {
@@ -135,7 +136,6 @@ func testJMXResources(t *testing.T) {
 }
 
 func testMetrics(t *testing.T) {
-	env := environment.GetEnvironmentMetaData()
 	configFile := filepath.Base(env.AgentConfig)
 
 	tests, exists := testMetricsRegistry[configFile]
@@ -234,13 +234,12 @@ func testKafkaMetrics(t *testing.T) {
 			"kafka.request.time.50p",
 			"kafka.request.time.99p",
 			"kafka.request.time.avg",
-			"kafka.producer.io-wait-time-ns-avg",
-			"kafka.producer.outgoing-byte-rate",
-			"kafka.producer.request-rate",
-			"kafka.producer.response-rate",
 			"kafka.consumer.fetch-rate",
 			"kafka.consumer.total.bytes-consumed-rate",
 			"kafka.consumer.total.records-consumed-rate",
+			"kafka.producer.io-wait-time-ns-avg",
+			"kafka.producer.outgoing-byte-rate",
+			"kafka.producer.response-rate",
 		}
 
 		for _, metric := range metricsToCheck {
