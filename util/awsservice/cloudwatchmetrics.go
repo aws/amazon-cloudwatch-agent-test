@@ -134,6 +134,81 @@ func GetMetricStatistics(
 	return CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
 }
 
+func CheckMetricAboveZero(
+	metricName string,
+	namespace string,
+	startTime time.Time,
+	endTime time.Time,
+	periodInSeconds int32,
+	nodeNames []string,
+	containerInsights bool,
+) (bool, error) {
+	metrics, err := CwmClient.ListMetrics(ctx, &cloudwatch.ListMetricsInput{
+		MetricName:     aws.String(metricName),
+		Namespace:      aws.String(namespace),
+		RecentlyActive: "PT3H",
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	if len(metrics.Metrics) == 0 {
+		return false, fmt.Errorf("no metrics found for %s", metricName)
+	}
+
+	for _, metric := range metrics.Metrics {
+		// Skip node name check if containerInsights is true
+		if !containerInsights {
+			var nodeNameMatch bool
+			var nodeName string
+			for _, dim := range metric.Dimensions {
+				if *dim.Name == "k8s.node.name" {
+					nodeName = *dim.Value
+					for _, name := range nodeNames {
+						if nodeName == name {
+							nodeNameMatch = true
+							break
+						}
+					}
+					break
+				}
+			}
+			if !nodeNameMatch {
+				continue
+			}
+			log.Printf("Checking metric: %s for node: %s", *metric.MetricName, nodeName)
+		}
+
+		data, err := GetMetricStatistics(
+			metricName,
+			namespace,
+			metric.Dimensions,
+			startTime,
+			endTime,
+			periodInSeconds,
+			[]types.Statistic{types.StatisticMaximum},
+			nil,
+		)
+
+		if err != nil {
+			log.Printf("Error getting statistics for metric with dimensions %v: %v", metric.Dimensions, err)
+			continue
+		}
+
+		for _, datapoint := range data.Datapoints {
+			if *datapoint.Maximum > 0 {
+				if !containerInsights {
+					log.Printf("Found value above zero")
+				}
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
 func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
 	getMetricDataInput := cloudwatch.GetMetricDataInput{
