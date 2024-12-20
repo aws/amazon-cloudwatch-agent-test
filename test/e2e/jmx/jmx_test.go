@@ -30,8 +30,9 @@ import (
 //------------------------------------------------------------------------------
 
 const (
-	wait     = 5 * time.Minute
-	interval = 30 * time.Second
+	shortWait = 5 * time.Minute
+	longWait  = 10 * time.Minute
+	interval  = 30 * time.Second
 )
 
 var (
@@ -145,7 +146,7 @@ func testMetrics(t *testing.T) {
 	tests := testMetricsRegistry[configFile]
 
 	fmt.Println("waiting for metrics to propagate...")
-	time.Sleep(wait)
+	time.Sleep(longWait)
 
 	for _, testFunc := range tests {
 		testFunc(t)
@@ -258,7 +259,7 @@ func testTomcatMetrics(t *testing.T) {
 func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
 		generateTraffic(t)
-		time.Sleep(wait)
+		time.Sleep(shortWait)
 		verifyMetricAboveZero(t, "tomcat.sessions", "JVM_TOMCAT_E2E")
 	})
 }
@@ -311,7 +312,7 @@ func testContainerInsightsMetrics(t *testing.T) {
 func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
 		generateTraffic(t)
-		time.Sleep(wait)
+		time.Sleep(shortWait)
 		verifyMetricAboveZero(t, "catalina_manager_rejectedsessions", "ContainerInsights/Prometheus")
 	})
 }
@@ -347,7 +348,7 @@ func generateTraffic(t *testing.T) {
 }
 
 func verifyMetricAboveZero(t *testing.T, metricName, namespace string) {
-	startTime := time.Now().Add(-wait)
+	startTime := time.Now().Add(-shortWait)
 	endTime := time.Now()
 
 	aboveZero, err := awsservice.CheckMetricAboveZero(
