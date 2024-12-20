@@ -260,7 +260,7 @@ func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
 		generateTraffic(t)
 		time.Sleep(shortWait)
-		verifyMetricAboveZero(t, "tomcat.sessions", "JVM_TOMCAT_E2E")
+		verifyMetricAboveZero(t, "tomcat.sessions", "JVM_TOMCAT_E2E", false)
 	})
 }
 
@@ -313,7 +313,7 @@ func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
 		generateTraffic(t)
 		time.Sleep(shortWait)
-		verifyMetricAboveZero(t, "catalina_manager_rejectedsessions", "ContainerInsights/Prometheus")
+		verifyMetricAboveZero(t, "catalina_manager_rejectedsessions", "ContainerInsights/Prometheus", true)
 	})
 }
 
@@ -347,7 +347,7 @@ func generateTraffic(t *testing.T) {
 	}
 }
 
-func verifyMetricAboveZero(t *testing.T, metricName, namespace string) {
+func verifyMetricAboveZero(t *testing.T, metricName, namespace string, containerinsights bool) {
 	startTime := time.Now().Add(-shortWait)
 	endTime := time.Now()
 
@@ -358,6 +358,7 @@ func verifyMetricAboveZero(t *testing.T, metricName, namespace string) {
 		endTime,
 		60,
 		nodeNames,
+		containerinsights,
 	)
 	require.NoError(t, err, "Failed to check metric above zero")
 	require.True(t, aboveZero, fmt.Sprintf("Expected non-zero %s after applying traffic", metricName))
