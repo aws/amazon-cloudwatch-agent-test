@@ -142,20 +142,21 @@ func CheckMetricAboveZero(
 	periodInSeconds int32,
 	nodeNames []string,
 ) (bool, error) {
-	listMetricsInput := cloudwatch.ListMetricsInput{
+	metrics, err := CwmClient.ListMetrics(ctx, &cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
 		Namespace:      aws.String(namespace),
 		RecentlyActive: "PT3H",
-	}
+	})
 
-	metrics, err := CwmClient.ListMetrics(ctx, &listMetricsInput)
 	if err != nil {
 		return false, err
 	}
+
 	if len(metrics.Metrics) == 0 {
 		return false, fmt.Errorf("no metrics found for %s", metricName)
 	}
 
+	// Make sure to only check metrics that match node names
 	for _, metric := range metrics.Metrics {
 		var nodeNameMatch bool
 		var nodeName string
@@ -184,6 +185,7 @@ func CheckMetricAboveZero(
 				[]types.Statistic{types.StatisticMaximum},
 				nil,
 			)
+
 			if err != nil {
 				log.Printf("Error getting statistics for metric with dimensions %v: %v", metric.Dimensions, err)
 				continue
