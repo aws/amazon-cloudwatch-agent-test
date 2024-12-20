@@ -206,7 +206,7 @@ func testJMXResources(t *testing.T, clientset *kubernetes.Clientset) {
 			"OTEL_TRACES_EXPORTER":                   "none",
 			"OTEL_AWS_JMX_EXPORTER_METRICS_ENDPOINT": "http://cloudwatch-agent.amazon-cloudwatch:4314/v1/metrics",
 			"OTEL_JMX_TARGET_SYSTEM":                 jmxTargetSystem,
-			"JAVA_TOOL_OPTIONS":                      "-javaagent:/otel-auto-instrumentation-java/javaagent.jar",
+			"JAVA_TOOL_OPTIONS":                      " -javaagent:/otel-auto-instrumentation-java/javaagent.jar",
 		}
 
 		for _, container := range pods.Items[0].Spec.Containers {
