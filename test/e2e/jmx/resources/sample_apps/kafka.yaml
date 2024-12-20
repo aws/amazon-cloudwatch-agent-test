@@ -106,7 +106,7 @@ spec:
         - name: kafka-producer
           image: public.ecr.aws/l9b8e0i6/kafka:latest
           command: ["/bin/sh"]
-          args: ["-c", "while true; do echo 'Test message' | kafka-console-producer.sh --broker-list kafka-service:9092 --topic test-topic; sleep 5; done"]
+          args: ["-c", "while true; do echo 'message' | kafka-console-producer.sh --topic quickstart-events --bootstrap-server kafka-service:9092; sleep 5; done"]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -130,4 +130,4 @@ spec:
         - name: kafka-consumer
           image: public.ecr.aws/l9b8e0i6/kafka:latest
           command: ["/bin/sh"]
-          args: ["-c", "kafka-console-consumer.sh --bootstrap-server kafka-service:9092 --topic test-topic --from-beginning"]
+          args: ["-c", "kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server kafka-service:9092"]
