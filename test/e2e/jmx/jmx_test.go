@@ -347,7 +347,7 @@ func generateTraffic(t *testing.T) {
 	}
 }
 
-func verifyMetricAboveZero(t *testing.T, metricName, namespace string, containerinsights bool) {
+func verifyMetricAboveZero(t *testing.T, metricName, namespace string, containerInsights bool) {
 	startTime := time.Now().Add(-shortWait)
 	endTime := time.Now()
 
@@ -358,7 +358,7 @@ func verifyMetricAboveZero(t *testing.T, metricName, namespace string, container
 		endTime,
 		60,
 		nodeNames,
-		containerinsights,
+		containerInsights,
 	)
 	require.NoError(t, err, "Failed to check metric above zero")
 	require.True(t, aboveZero, fmt.Sprintf("Expected non-zero %s after applying traffic", metricName))
