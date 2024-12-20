@@ -77,7 +77,6 @@ func ApplyResources(env *environment.MetaData) error {
 	}
 
 	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
-
 	apply := exec.Command("kubectl", "apply", "-f", env.SampleApp)
 	output, err = apply.CombinedOutput()
 	if err != nil {

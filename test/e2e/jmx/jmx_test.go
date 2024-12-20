@@ -43,7 +43,8 @@ var testMetricsRegistry = map[string][]func(*testing.T){
 	},
 }
 
-var testResourcesRegistry = []func(*testing.T){
+var testResourcesRegistry = []func(*testing.T, *kubernetes.Clientset){
+	testAgentResources,
 	testJMXResources,
 }
 
@@ -100,19 +101,19 @@ func TestAll(t *testing.T) {
 func testResources(t *testing.T) {
 	tests := testResourcesRegistry
 
+	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
+	require.NoError(t, err, "Error building kubeconfig")
+
+	clientset, err := kubernetes.NewForConfig(config)
+	require.NoError(t, err, "Error creating clientset")
+
 	for _, testFunc := range tests {
-		testFunc(t)
+		testFunc(t, clientset)
 	}
 }
 
-func testJMXResources(t *testing.T) {
-	t.Run("verify_jmx_resources", func(t *testing.T) {
-		config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
-		require.NoError(t, err, "Error building kubeconfig")
-
-		clientset, err := kubernetes.NewForConfig(config)
-		require.NoError(t, err, "Error creating clientset")
-
+func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
+	t.Run("verify_agent_resources", func(t *testing.T) {
 		daemonSet, err := clientset.AppsV1().DaemonSets("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
 		require.NoError(t, err, "Error getting CloudWatch Agent DaemonSet")
 		require.NotNil(t, daemonSet, "CloudWatch Agent DaemonSet not found")
@@ -135,14 +136,50 @@ func testJMXResources(t *testing.T) {
 	})
 }
 
+func testJMXResources(t *testing.T, clientset *kubernetes.Clientset) {
+	t.Run("verify_jmx_resources", func(t *testing.T) {
+		deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
+		pods, err := clientset.CoreV1().Pods("test").List(context.TODO(), metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("app=%s", deploymentName),
+			FieldSelector: "status.phase=Running",
+		})
+		require.NoError(t, err, "Error getting pods for deployment")
+		require.NotEmpty(t, pods.Items, "No pods found for deployment")
+
+		var jmxTargetSystem string
+		switch filepath.Base(env.AgentConfig) {
+		case "jvm_tomcat.json", "containerinsights.json":
+			jmxTargetSystem = "jvm,tomcat"
+		case "kafka.json":
+			jmxTargetSystem = "kafka"
+		}
+
+		requiredEnvVars := map[string]string{
+			"OTEL_EXPORTER_OTLP_PROTOCOL":            "http/protobuf",
+			"OTEL_METRICS_EXPORTER":                  "none",
+			"OTEL_LOGS_EXPORTER":                     "none",
+			"OTEL_TRACES_EXPORTER":                   "none",
+			"OTEL_AWS_JMX_EXPORTER_METRICS_ENDPOINT": "http://cloudwatch-agent.amazon-cloudwatch:4314/v1/metrics",
+			"OTEL_JMX_TARGET_SYSTEM":                 jmxTargetSystem,
+			"JAVA_TOOL_OPTIONS":                      "-javaagent:/otel-auto-instrumentation-java/javaagent.jar",
+		}
+
+		for _, container := range pods.Items[0].Spec.Containers {
+			for _, envVar := range container.Env {
+				if expectedValue, exists := requiredEnvVars[envVar.Name]; exists {
+					require.Equal(t, expectedValue, envVar.Value, fmt.Sprintf("Unexpected value for environment variable %s in container %s", envVar.Name, container.Name))
+					delete(requiredEnvVars, envVar.Name)
+				}
+			}
+		}
+
+		require.Empty(t, requiredEnvVars, "Not all required environment variables were found in the pod")
+	})
+}
+
 func testMetrics(t *testing.T) {
 	configFile := filepath.Base(env.AgentConfig)
-
-	tests, exists := testMetricsRegistry[configFile]
-	if !exists {
-		t.Skipf("No tests registered for config file: %s", configFile)
-		return
-	}
+	tests := testMetricsRegistry[configFile]
 
 	fmt.Println("Waiting for metrics to propagate...")
 	time.Sleep(10 * time.Minute)
