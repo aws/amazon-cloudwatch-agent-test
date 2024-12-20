@@ -199,7 +199,7 @@ func CheckMetricAboveZero(
 		for _, datapoint := range data.Datapoints {
 			if *datapoint.Maximum > 0 {
 				if !containerInsights {
-					log.Printf("Found value above zero for node: %s", metric.Dimensions[0].Value)
+					log.Printf("Found value above zero for node: %s", *metric.Dimensions[0].Value)
 				}
 				return true, nil
 			}
