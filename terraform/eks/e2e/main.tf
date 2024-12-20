@@ -145,7 +145,7 @@ resource "null_resource" "validator" {
     when    = destroy
     command = <<-EOT
       echo "Running cleanup for K8s resources"
-      go test -timeout 15m -v ${self.triggers.test_dir} \
+      go test -timeout 30m -v ${self.triggers.test_dir} \
       -destroy=true \
       -region=${self.triggers.region} \
       -eksClusterName=${self.triggers.cluster_name} \
