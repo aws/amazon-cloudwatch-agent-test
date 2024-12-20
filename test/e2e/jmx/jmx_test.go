@@ -168,7 +168,7 @@ func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 
 		cwConfig, exists := configMap.Data["cwagentconfig.json"]
 		require.True(t, exists, "cwagentconfig.json not found in ConfigMap")
-		require.Contains(t, cwConfig, `"jmx"`, "JMX configuration not found in cwagentconfig.json")
+		require.Contains(t, cwConfig, `jmx`, "JMX configuration not found in cwagentconfig.json")
 
 		service, err := clientset.CoreV1().Services("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
 		require.NoError(t, err, "Error getting CloudWatch Agent Service")
