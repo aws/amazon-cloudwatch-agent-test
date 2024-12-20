@@ -141,6 +141,7 @@ func CheckMetricAboveZero(
 	endTime time.Time,
 	periodInSeconds int32,
 	nodeNames []string,
+	containerInsights bool,
 ) (bool, error) {
 	metrics, err := CwmClient.ListMetrics(ctx, &cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
@@ -156,46 +157,51 @@ func CheckMetricAboveZero(
 		return false, fmt.Errorf("no metrics found for %s", metricName)
 	}
 
-	// Make sure to only check metrics that match node names
 	for _, metric := range metrics.Metrics {
-		var nodeNameMatch bool
-		var nodeName string
-		for _, dim := range metric.Dimensions {
-			if *dim.Name == "k8s.node.name" {
-				nodeName = *dim.Value
-				for _, name := range nodeNames {
-					if nodeName == name {
-						nodeNameMatch = true
-						break
+		// Skip node name check if containerInsights is true
+		if !containerInsights {
+			var nodeNameMatch bool
+			var nodeName string
+			for _, dim := range metric.Dimensions {
+				if *dim.Name == "k8s.node.name" {
+					nodeName = *dim.Value
+					for _, name := range nodeNames {
+						if nodeName == name {
+							nodeNameMatch = true
+							break
+						}
 					}
+					break
 				}
-				break
 			}
-		}
-
-		if nodeNameMatch {
-			log.Printf("Checking metric: %s for node: %s", *metric.MetricName, nodeName)
-			data, err := GetMetricStatistics(
-				metricName,
-				namespace,
-				metric.Dimensions,
-				startTime,
-				endTime,
-				periodInSeconds,
-				[]types.Statistic{types.StatisticMaximum},
-				nil,
-			)
-
-			if err != nil {
-				log.Printf("Error getting statistics for metric with dimensions %v: %v", metric.Dimensions, err)
+			if !nodeNameMatch {
 				continue
 			}
+			log.Printf("Checking metric: %s for node: %s", *metric.MetricName, nodeName)
+		}
 
-			for _, datapoint := range data.Datapoints {
-				if *datapoint.Maximum > 0 {
-					log.Printf("Found value above zero for node: %s", nodeName)
-					return true, nil
+		data, err := GetMetricStatistics(
+			metricName,
+			namespace,
+			metric.Dimensions,
+			startTime,
+			endTime,
+			periodInSeconds,
+			[]types.Statistic{types.StatisticMaximum},
+			nil,
+		)
+
+		if err != nil {
+			log.Printf("Error getting statistics for metric with dimensions %v: %v", metric.Dimensions, err)
+			continue
+		}
+
+		for _, datapoint := range data.Datapoints {
+			if *datapoint.Maximum > 0 {
+				if !containerInsights {
+					log.Printf("Found value above zero for node: %s", metric.Dimensions[0].Value)
 				}
+				return true, nil
 			}
 		}
 	}
