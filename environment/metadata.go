@@ -47,7 +47,7 @@ type MetaData struct {
 	AmpWorkspaceId                              string
 	Region                                      string
 	K8sVersion                                  string
-	Destroy										bool
+	Destroy                                     bool
 	HelmChartsBranch                            string
 	CloudwatchAgentRepository                   string
 	CloudwatchAgentTag                          string

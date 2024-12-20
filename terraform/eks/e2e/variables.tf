@@ -22,12 +22,12 @@ variable "nodes" {
 }
 
 variable "ami_type" {
-  type = string
+  type    = string
   default = "AL2_x86_64"
 }
 
 variable "instance_type" {
-  type = string
+  type    = string
   default = "t3a.medium"
 }
 

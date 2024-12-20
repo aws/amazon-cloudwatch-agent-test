@@ -111,8 +111,8 @@ resource "null_resource" "validator" {
 
   triggers = {
     cluster_name = aws_eks_cluster.this.name
-    region = var.region
-    test_dir = var.test_dir
+    region       = var.region
+    test_dir     = var.test_dir
   }
 
   provisioner "local-exec" {
@@ -142,7 +142,7 @@ resource "null_resource" "validator" {
   }
 
   provisioner "local-exec" {
-    when = destroy
+    when    = destroy
     command = <<-EOT
       echo "Running cleanup for K8s resources"
       go test -timeout 15m -v ${self.triggers.test_dir} \

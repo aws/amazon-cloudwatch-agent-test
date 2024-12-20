@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package common
 
 import (
@@ -6,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -22,13 +24,10 @@ func InitializeEnvironment(env *environment.MetaData) error {
 		fmt.Printf("Using default testing region: us-west-2\n")
 	}
 
-	fmt.Println("Starting Helm installation...")
+	fmt.Println("Applying K8s resources...")
 	if err := ApplyResources(env); err != nil {
-		return fmt.Errorf("failed to apply Helm: %v", err)
+		return fmt.Errorf("failed to apply K8s resources: %v", err)
 	}
-
-	fmt.Println("Waiting for metrics to propagate...")
-	time.Sleep(5 * time.Minute)
 
 	return nil
 }
@@ -43,7 +42,6 @@ func ApplyResources(env *environment.MetaData) error {
 	helm := []string{
 		"helm", "upgrade", "--install", "amazon-cloudwatch-observability",
 		filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability"),
-		"--values", filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability", "values.yaml"),
 		"--set", fmt.Sprintf("clusterName=%s", env.EKSClusterName),
 		"--set", fmt.Sprintf("region=%s", env.Region),
 		"--set", fmt.Sprintf("agent.image.repository=%s", env.CloudwatchAgentRepository),
@@ -87,7 +85,7 @@ func ApplyResources(env *environment.MetaData) error {
 	}
 
 	fmt.Println("Waiting for Sample Application to initialize...")
-	wait = exec.Command("kubectl", "wait", "--for=condition=available", "--timeout=60s", fmt.Sprintf("deployment/%s", deploymentName), "-n", "test")
+	wait = exec.Command("kubectl", "wait", "--for=condition=available", "--timeout=300s", fmt.Sprintf("deployment/%s", deploymentName), "-n", "test")
 	output, err = wait.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to wait for deployment %s: %w\nOutput: %s", deploymentName, err, output)

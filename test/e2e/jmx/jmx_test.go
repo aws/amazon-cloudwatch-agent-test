@@ -29,7 +29,7 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-var testRegistry = map[string][]func(*testing.T){
+var testMetricsRegistry = map[string][]func(*testing.T){
 	"jvm_tomcat.json": {
 		testTomcatMetrics,
 		testTomcatSessions,
@@ -43,6 +43,10 @@ var testRegistry = map[string][]func(*testing.T){
 	},
 }
 
+var testResourcesRegistry = []func(*testing.T){
+	testJMXResources,
+}
+
 var nodeNames []string
 
 func TestMain(m *testing.M) {
@@ -54,7 +58,7 @@ func TestMain(m *testing.M) {
 
 	if env.Destroy {
 		if err := common.DestroyResources(env); err != nil {
-			fmt.Printf("Failed to delete helm resources: %v\n", err)
+			fmt.Printf("Failed to delete kubernetes resources: %v\n", err)
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -93,42 +97,55 @@ func TestAll(t *testing.T) {
 }
 
 func testResources(t *testing.T) {
-	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
-	require.NoError(t, err, "Error building kubeconfig")
+	tests := testResourcesRegistry
 
-	clientset, err := kubernetes.NewForConfig(config)
-	require.NoError(t, err, "Error creating clientset")
+	for _, testFunc := range tests {
+		testFunc(t)
+	}
+}
 
-	daemonSet, err := clientset.AppsV1().DaemonSets("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-	require.NoError(t, err, "Error getting CloudWatch Agent DaemonSet")
-	require.NotNil(t, daemonSet, "CloudWatch Agent DaemonSet not found")
+func testJMXResources(t *testing.T) {
+	t.Run("verify_jmx_resources", func(t *testing.T) {
+		config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
+		require.NoError(t, err, "Error building kubeconfig")
 
-	configMap, err := clientset.CoreV1().ConfigMaps("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-	require.NoError(t, err, "Error getting CloudWatch Agent ConfigMap")
-	require.NotNil(t, configMap, "CloudWatch Agent ConfigMap not found")
+		clientset, err := kubernetes.NewForConfig(config)
+		require.NoError(t, err, "Error creating clientset")
 
-	cwConfig, exists := configMap.Data["cwagentconfig.json"]
-	require.True(t, exists, "cwagentconfig.json not found in ConfigMap")
-	require.Contains(t, cwConfig, `"jmx"`, "JMX configuration not found in cwagentconfig.json")
+		daemonSet, err := clientset.AppsV1().DaemonSets("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
+		require.NoError(t, err, "Error getting CloudWatch Agent DaemonSet")
+		require.NotNil(t, daemonSet, "CloudWatch Agent DaemonSet not found")
 
-	service, err := clientset.CoreV1().Services("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-	require.NoError(t, err, "Error getting CloudWatch Agent Service")
-	require.NotNil(t, service, "CloudWatch Agent Service not found")
+		configMap, err := clientset.CoreV1().ConfigMaps("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
+		require.NoError(t, err, "Error getting CloudWatch Agent ConfigMap")
+		require.NotNil(t, configMap, "CloudWatch Agent ConfigMap not found")
 
-	serviceAccount, err := clientset.CoreV1().ServiceAccounts("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-	require.NoError(t, err, "Error getting CloudWatch Agent Service Account")
-	require.NotNil(t, serviceAccount, "CloudWatch Agent Service Account not found")
+		cwConfig, exists := configMap.Data["cwagentconfig.json"]
+		require.True(t, exists, "cwagentconfig.json not found in ConfigMap")
+		require.Contains(t, cwConfig, `"jmx"`, "JMX configuration not found in cwagentconfig.json")
+
+		service, err := clientset.CoreV1().Services("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
+		require.NoError(t, err, "Error getting CloudWatch Agent Service")
+		require.NotNil(t, service, "CloudWatch Agent Service not found")
+
+		serviceAccount, err := clientset.CoreV1().ServiceAccounts("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
+		require.NoError(t, err, "Error getting CloudWatch Agent Service Account")
+		require.NotNil(t, serviceAccount, "CloudWatch Agent Service Account not found")
+	})
 }
 
 func testMetrics(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 	configFile := filepath.Base(env.AgentConfig)
 
-	tests, exists := testRegistry[configFile]
+	tests, exists := testMetricsRegistry[configFile]
 	if !exists {
 		t.Skipf("No tests registered for config file: %s", configFile)
 		return
 	}
+
+	fmt.Println("Waiting for metrics to propagate...")
+	time.Sleep(10 * time.Minute)
 
 	for _, testFunc := range tests {
 		testFunc(t)
