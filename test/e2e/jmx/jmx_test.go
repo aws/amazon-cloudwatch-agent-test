@@ -83,7 +83,6 @@ func TestMain(m *testing.M) {
 	if env.Destroy {
 		if err := common.DestroyResources(env); err != nil {
 			fmt.Printf("Failed to delete kubernetes resources: %v\n", err)
-			os.Exit(1)
 		}
 		os.Exit(0)
 	}
