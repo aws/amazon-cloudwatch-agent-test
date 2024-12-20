@@ -25,9 +25,23 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-func init() {
-	environment.RegisterEnvironmentMetaDataFlags()
-}
+//------------------------------------------------------------------------------
+// Constants and Variables
+//------------------------------------------------------------------------------
+
+const (
+	wait     = 5 * time.Minute
+	interval = 30 * time.Second
+)
+
+var (
+	nodeNames []string
+	env       *environment.MetaData
+)
+
+//------------------------------------------------------------------------------
+// Test Registry Maps
+//------------------------------------------------------------------------------
 
 var testMetricsRegistry = map[string][]func(*testing.T){
 	"jvm_tomcat.json": {
@@ -48,16 +62,24 @@ var testResourcesRegistry = []func(*testing.T, *kubernetes.Clientset){
 	testJMXResources,
 }
 
-var nodeNames []string
-var env *environment.MetaData
+//------------------------------------------------------------------------------
+// Test Setup
+//------------------------------------------------------------------------------
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
 
 func TestMain(m *testing.M) {
 	flag.Parse()
+
+	// Added this to prevent running tests when we pass in "NO_MATCH"
 	if flag.Lookup("test.run").Value.String() == "NO_MATCH" {
 		os.Exit(0)
 	}
 	env = environment.GetEnvironmentMetaData()
 
+	// Destroy K8s resources if terraform destroy
 	if env.Destroy {
 		if err := common.DestroyResources(env); err != nil {
 			fmt.Printf("Failed to delete kubernetes resources: %v\n", err)
@@ -66,11 +88,13 @@ func TestMain(m *testing.M) {
 		os.Exit(0)
 	}
 
+	// Configure AWS clients and create K8s resources
 	if err := common.InitializeEnvironment(env); err != nil {
 		fmt.Printf("Failed to initialize environment: %v\n", err)
 		os.Exit(1)
 	}
 
+	// Get names of nodes so they can be used as dimensions to check for metrics
 	eksInstances, err := awsservice.GetEKSInstances(env.EKSClusterName)
 	if err != nil || len(eksInstances) == 0 {
 		fmt.Printf("Failed to get EKS instances: %v", err)
@@ -86,11 +110,16 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+//------------------------------------------------------------------------------
+// Main Test Functions
+//------------------------------------------------------------------------------
+
 func TestAll(t *testing.T) {
 	t.Run("Resources", func(t *testing.T) {
 		testResources(t)
 	})
 
+	// Don't run metric tests if resource tests fail
 	if !t.Failed() {
 		t.Run("Metrics", func(t *testing.T) {
 			testMetrics(t)
@@ -111,6 +140,22 @@ func testResources(t *testing.T) {
 		testFunc(t, clientset)
 	}
 }
+
+func testMetrics(t *testing.T) {
+	configFile := filepath.Base(env.AgentConfig)
+	tests := testMetricsRegistry[configFile]
+
+	fmt.Println("waiting for metrics to propagate...")
+	time.Sleep(wait)
+
+	for _, testFunc := range tests {
+		testFunc(t)
+	}
+}
+
+//------------------------------------------------------------------------------
+// Resource Test Functions
+//------------------------------------------------------------------------------
 
 func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 	t.Run("verify_agent_resources", func(t *testing.T) {
@@ -177,21 +222,13 @@ func testJMXResources(t *testing.T, clientset *kubernetes.Clientset) {
 	})
 }
 
-func testMetrics(t *testing.T) {
-	configFile := filepath.Base(env.AgentConfig)
-	tests := testMetricsRegistry[configFile]
-
-	fmt.Println("Waiting for metrics to propagate...")
-	time.Sleep(10 * time.Minute)
-
-	for _, testFunc := range tests {
-		testFunc(t)
-	}
-}
+//------------------------------------------------------------------------------
+// Metric Test Functions
+//------------------------------------------------------------------------------
 
 func testTomcatMetrics(t *testing.T) {
 	t.Run("verify_jvm_tomcat_metrics", func(t *testing.T) {
-		metricsToCheck := []string{
+		validateMetrics(t, []string{
 			"jvm.classes.loaded",
 			"jvm.gc.collections.count",
 			"jvm.gc.collections.elapsed",
@@ -215,55 +252,21 @@ func testTomcatMetrics(t *testing.T) {
 			"tomcat.max_time",
 			"tomcat.processing_time",
 			"tomcat.threads",
-		}
-
-		for _, metric := range metricsToCheck {
-			t.Run(metric, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric, "JVM_TOMCAT_E2E", nil, 5, 30*time.Second)
-			})
-		}
+		}, "JVM_TOMCAT_E2E")
 	})
 }
 
 func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
-		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-n", "test", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
-		output, err := cmd.CombinedOutput()
-		require.NoError(t, err, "Error getting LoadBalancer URL")
-
-		lbURL := strings.Trim(string(output), "'")
-		require.NotEmpty(t, lbURL, "LoadBalancer URL failed to format")
-
-		for i := 0; i < 5; i++ {
-			resp, err := http.Get(fmt.Sprintf("http://%s/webapp/index.jsp", lbURL))
-			if err != nil {
-				t.Logf("Request attempt %d failed: %v", i+1, err)
-				continue
-			}
-			require.NoError(t, resp.Body.Close(), "Failed to close response body")
-		}
-
-		time.Sleep(5 * time.Minute)
-
-		startTime := time.Now().Add(-5 * time.Minute)
-		endTime := time.Now()
-
-		aboveZero, err := awsservice.CheckMetricAboveZero(
-			"tomcat.sessions",
-			"JVM_TOMCAT_E2E",
-			startTime,
-			endTime,
-			60,
-			nodeNames,
-		)
-		require.NoError(t, err, "Failed to check metric above zero")
-		require.True(t, aboveZero, "Expected non-zero tomcat.sessions after applying traffic")
+		generateTraffic(t)
+		time.Sleep(wait)
+		verifyMetricAboveZero(t, "tomcat.sessions", "JVM_TOMCAT_E2E")
 	})
 }
 
 func testKafkaMetrics(t *testing.T) {
 	t.Run("verify_kafka_metrics", func(t *testing.T) {
-		metricsToCheck := []string{
+		validateMetrics(t, []string{
 			"kafka.message.count",
 			"kafka.request.count",
 			"kafka.request.failed",
@@ -277,19 +280,13 @@ func testKafkaMetrics(t *testing.T) {
 			"kafka.producer.io-wait-time-ns-avg",
 			"kafka.producer.outgoing-byte-rate",
 			"kafka.producer.response-rate",
-		}
-
-		for _, metric := range metricsToCheck {
-			t.Run(metric, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric, "KAFKA_E2E", nil, 5, 30*time.Second)
-			})
-		}
+		}, "KAFKA_E2E")
 	})
 }
 
 func testContainerInsightsMetrics(t *testing.T) {
 	t.Run("verify_containerinsights_metrics", func(t *testing.T) {
-		metricsToCheck := []string{
+		validateMetrics(t, []string{
 			"jvm_classes_loaded",
 			"jvm_threads_current",
 			"jvm_threads_daemon",
@@ -308,48 +305,60 @@ func testContainerInsightsMetrics(t *testing.T) {
 			"catalina_globalrequestprocessor_requestcount",
 			"catalina_globalrequestprocessor_errorcount",
 			"catalina_globalrequestprocessor_processingtime",
-		}
-
-		for _, metric := range metricsToCheck {
-			t.Run(metric, func(t *testing.T) {
-				awsservice.ValidateMetricWithTest(t, metric, "ContainerInsights/Prometheus", nil, 5, 30*time.Second)
-			})
-		}
+		}, "ContainerInsights/Prometheus")
 	})
 }
 
 func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
-		cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-n", "test", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
-		output, err := cmd.CombinedOutput()
-		require.NoError(t, err, "Error getting LoadBalancer URL")
-
-		lbURL := strings.Trim(string(output), "'")
-		require.NotEmpty(t, lbURL, "LoadBalancer URL failed to format")
-
-		for i := 0; i < 5; i++ {
-			resp, err := http.Get(fmt.Sprintf("http://%s/webapp/index.jsp", lbURL))
-			if err != nil {
-				t.Logf("Request attempt %d failed: %v", i+1, err)
-				continue
-			}
-			require.NoError(t, resp.Body.Close(), "Failed to close response body")
-		}
-
-		time.Sleep(5 * time.Minute)
-
-		startTime := time.Now().Add(-5 * time.Minute)
-		endTime := time.Now()
-
-		aboveZero, err := awsservice.CheckMetricAboveZero(
-			"catalina_manager_rejectedsessions",
-			"ContainerInsights/Prometheus",
-			startTime,
-			endTime,
-			60,
-			nodeNames,
-		)
-		require.NoError(t, err, "Failed to check metric above zero")
-		require.True(t, aboveZero, "Expected non-zero catalina_manager_rejectedsessions after applying traffic")
+		generateTraffic(t)
+		time.Sleep(wait)
+		verifyMetricAboveZero(t, "catalina_manager_rejectedsessions", "ContainerInsights/Prometheus")
 	})
+}
+
+//------------------------------------------------------------------------------
+// Helper Functions
+//------------------------------------------------------------------------------
+
+func validateMetrics(t *testing.T, metrics []string, namespace string) {
+	for _, metric := range metrics {
+		t.Run(metric, func(t *testing.T) {
+			awsservice.ValidateMetricWithTest(t, metric, namespace, nil, 5, interval)
+		})
+	}
+}
+
+func generateTraffic(t *testing.T) {
+	cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-n", "test", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "Error getting LoadBalancer URL")
+
+	lbURL := strings.Trim(string(output), "'")
+	require.NotEmpty(t, lbURL, "LoadBalancer URL failed to format")
+
+	for i := 0; i < 5; i++ {
+		resp, err := http.Get(fmt.Sprintf("http://%s/webapp/index.jsp", lbURL))
+		if err != nil {
+			t.Logf("Request attempt %d failed: %v", i+1, err)
+			continue
+		}
+		require.NoError(t, resp.Body.Close(), "Failed to close response body")
+	}
+}
+
+func verifyMetricAboveZero(t *testing.T, metricName, namespace string) {
+	startTime := time.Now().Add(-wait)
+	endTime := time.Now()
+
+	aboveZero, err := awsservice.CheckMetricAboveZero(
+		metricName,
+		namespace,
+		startTime,
+		endTime,
+		60,
+		nodeNames,
+	)
+	require.NoError(t, err, "Failed to check metric above zero")
+	require.True(t, aboveZero, fmt.Sprintf("Expected non-zero %s after applying traffic", metricName))
 }

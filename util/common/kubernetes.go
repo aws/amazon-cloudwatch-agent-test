@@ -14,6 +14,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
+//------------------------------------------------------------------------------
+// Environment Setup
+//------------------------------------------------------------------------------
+
 func InitializeEnvironment(env *environment.MetaData) error {
 	if env.Region != "us-west-2" {
 		if err := awsservice.ConfigureAWSClients(env.Region); err != nil {
@@ -32,6 +36,10 @@ func InitializeEnvironment(env *environment.MetaData) error {
 	return nil
 }
 
+//------------------------------------------------------------------------------
+// K8s Resource Management Functions
+//------------------------------------------------------------------------------
+
 func ApplyResources(env *environment.MetaData) error {
 	updateKubeconfig := exec.Command("aws", "eks", "update-kubeconfig", "--name", env.EKSClusterName)
 	output, err := updateKubeconfig.CombinedOutput()
@@ -39,6 +47,7 @@ func ApplyResources(env *environment.MetaData) error {
 		return fmt.Errorf("failed to update kubeconfig: %w\nOutput: %s", err, output)
 	}
 
+	fmt.Println("Installing Helm release...")
 	helm := []string{
 		"helm", "upgrade", "--install", "amazon-cloudwatch-observability",
 		filepath.Join("..", "..", "..", "terraform", "eks", "e2e", "helm-charts", "charts", "amazon-cloudwatch-observability"),
@@ -102,13 +111,16 @@ func DestroyResources(env *environment.MetaData) error {
 
 	var errors []error
 
+	fmt.Println("Deleting test namespace...")
 	deleteCmd := exec.Command("kubectl", "delete", "namespace", "test", "--timeout=60s")
 	output, err = deleteCmd.CombinedOutput()
-	// Note that we don't want to consider not finding the namespace to be an error since that's the outcome we want.
+
+	// We don't want to consider not finding the namespace to be an error since that's the outcome we want
 	if err != nil && !strings.Contains(string(output), "not found") {
 		errors = append(errors, fmt.Errorf("failed to delete test namespace: %w\nOutput: %s", err, output))
 	}
 
+	fmt.Println("Uninstalling Helm release...")
 	helm := []string{
 		"helm", "uninstall", "amazon-cloudwatch-observability", "--namespace", "amazon-cloudwatch",
 	}
