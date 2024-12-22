@@ -1,0 +1,16 @@
+{
+  "metrics": {
+    "namespace": "KAFKA_E2E",
+    "metrics_collected": {
+      "jmx": {
+        "kafka-consumer": {
+          "measurement": [
+            "kafka.consumer.total.records-consumed-rate",
+            "kafka.consumer.total.bytes-consumed-rate",
+            "kafka.consumer.fetch-rate"
+          ]
+        }
+      }
+    }
+  }
+}
