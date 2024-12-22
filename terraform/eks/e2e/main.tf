@@ -39,10 +39,10 @@ resource "aws_eks_node_group" "this" {
     min_size     = var.nodes
   }
 
-  ami_type       = "AL2_x86_64"
+  ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
-  instance_types = ["t3a.medium"]
+  instance_types = [var.instance_type]
 
   depends_on = [
     aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
@@ -50,6 +50,15 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy
   ]
+}
+
+resource "aws_security_group_rule" "nodeport_inbound" {
+  type              = "ingress"
+  from_port         = 30080
+  to_port           = 30080
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
 }
 
 resource "aws_iam_role" "node_role" {
@@ -109,6 +118,12 @@ resource "null_resource" "helm_charts" {
 resource "null_resource" "validator" {
   depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, null_resource.helm_charts]
 
+  triggers = {
+    cluster_name = aws_eks_cluster.this.name
+    region       = var.region
+    test_dir     = var.test_dir
+  }
+
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating K8s resources and metrics"
@@ -132,6 +147,19 @@ resource "null_resource" "validator" {
       ${var.otel_config != "" ? "-otel_config=\"${var.test_dir}/${var.otel_config}\"" : ""} \
       ${var.prometheus_config != "" ? "-prometheus_config=\"${var.test_dir}/${var.prometheus_config}\"" : ""} \
       -sample_app="${var.test_dir}/${var.sample_app}"
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      echo "Running cleanup for K8s resources"
+      go test -timeout 30m -v ${self.triggers.test_dir} \
+      -destroy=true \
+      -region=${self.triggers.region} \
+      -eksClusterName=${self.triggers.cluster_name} \
+      -computeType=EKS \
+      -eksDeploymentStrategy=DAEMON
     EOT
   }
 }
