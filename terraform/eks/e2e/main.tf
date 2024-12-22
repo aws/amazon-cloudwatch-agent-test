@@ -52,6 +52,15 @@ resource "aws_eks_node_group" "this" {
   ]
 }
 
+resource "aws_security_group_rule" "nodeport_inbound" {
+  type              = "ingress"
+  from_port         = 30080
+  to_port           = 30080
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
+}
+
 resource "aws_iam_role" "node_role" {
   name = "${local.cluster_name}-Worker-Role-${module.common.testing_id}"
 

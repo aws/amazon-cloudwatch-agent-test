@@ -330,15 +330,15 @@ func validateMetrics(t *testing.T, metrics []string, namespace string) {
 }
 
 func generateTraffic(t *testing.T) {
-	cmd := exec.Command("kubectl", "get", "svc", "tomcat-service", "-n", "test", "-o", "jsonpath='{.status.loadBalancer.ingress[0].hostname}'")
+	cmd := exec.Command("kubectl", "get", "nodes", "-o", "jsonpath='{.items[0].status.addresses[?(@.type==\"ExternalIP\")].address}'")
 	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "Error getting LoadBalancer URL")
+	require.NoError(t, err, "Error getting node external IP")
 
-	lbURL := strings.Trim(string(output), "'")
-	require.NotEmpty(t, lbURL, "LoadBalancer URL failed to format")
+	nodeIP := strings.Trim(string(output), "'")
+	require.NotEmpty(t, nodeIP, "Node IP failed to format")
 
 	for i := 0; i < 5; i++ {
-		resp, err := http.Get(fmt.Sprintf("http://%s/webapp/index.jsp", lbURL))
+		resp, err := http.Get(fmt.Sprintf("http://%s:30080/webapp/index.jsp", nodeIP))
 		if err != nil {
 			t.Logf("Request attempt %d failed: %v", i+1, err)
 			continue
