@@ -1,0 +1,63 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memcached-sample
+  labels:
+    app: memcached
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memcached
+  template:
+    metadata:
+      labels:
+        app: memcached
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9150"
+    spec:
+      containers:
+        - name: memcached
+          image: docker.io/bitnami/memcached:1.6.33
+          ports:
+            - containerPort: 11211
+          resources:
+            limits:
+              cpu: 150m
+              memory: 192Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+        - name: metrics
+          image: docker.io/bitnami/memcached-exporter:0.15.0
+          ports:
+            - containerPort: 9150
+          resources:
+            limits:
+              cpu: 150m
+              memory: 192Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memcached-service
+  labels:
+    app: memcached
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9150"
+spec:
+  selector:
+    app: memcached
+  ports:
+    - name: memcache
+      port: 11211
+      targetPort: 11211
+    - name: metrics
+      port: 9150
+      targetPort: 9150
