@@ -20,6 +20,7 @@ import (
 
 const (
 	Wait     = 5 * time.Minute
+	LongWait = 10 * time.Minute
 	interval = 30 * time.Second
 )
 
