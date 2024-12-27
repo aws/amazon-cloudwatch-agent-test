@@ -19,7 +19,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 //------------------------------------------------------------------------------
@@ -73,14 +72,14 @@ func TestMain(m *testing.M) {
 
 	// Destroy K8s resources if terraform destroy
 	if env.Destroy {
-		if err := common.DestroyResources(env); err != nil {
+		if err := e2e.DestroyResources(env); err != nil {
 			fmt.Printf("Failed to delete kubernetes resources: %v\n", err)
 		}
 		os.Exit(0)
 	}
 
 	// Configure AWS clients and create K8s resources
-	if err := common.InitializeEnvironment(env); err != nil {
+	if err := e2e.InitializeEnvironment(env); err != nil {
 		fmt.Printf("Failed to initialize environment: %v\n", err)
 		os.Exit(1)
 	}
