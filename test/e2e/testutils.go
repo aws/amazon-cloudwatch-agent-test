@@ -110,3 +110,20 @@ func GenerateTraffic(t *testing.T) {
 		require.NoError(t, resp.Body.Close(), "Failed to close response body")
 	}
 }
+
+func VerifyMetricAboveZero(t *testing.T, metricName string, nodeNames []string, namespace string, containerInsights bool) {
+	startTime := time.Now().Add(-Wait)
+	endTime := time.Now()
+
+	aboveZero, err := awsservice.CheckMetricAboveZero(
+		metricName,
+		namespace,
+		startTime,
+		endTime,
+		60,
+		nodeNames,
+		containerInsights,
+	)
+	require.NoError(t, err, "Failed to check metric above zero")
+	require.True(t, aboveZero, fmt.Sprintf("Expected non-zero %s after applying traffic", metricName))
+}
