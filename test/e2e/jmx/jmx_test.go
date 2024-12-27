@@ -270,6 +270,6 @@ func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
 		e2e.GenerateTraffic(t)
 		time.Sleep(e2e.Wait)
-		e2e.VerifyMetricAboveZero(t, "catalina_manager_rejectedsessions", nodeNames,"ContainerInsights/Prometheus", true)
+		e2e.VerifyMetricAboveZero(t, "catalina_manager_rejectedsessions", nodeNames, "ContainerInsights/Prometheus", true)
 	})
 }
