@@ -18,12 +18,7 @@ variable "cluster_name" {
 
 variable "nodes" {
   type    = number
-  default = 1
-}
-
-variable "ami_type" {
-  type    = string
-  default = "AL2_x86_64"
+  default = 2
 }
 
 variable "instance_type" {

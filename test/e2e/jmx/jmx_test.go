@@ -4,35 +4,27 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 //------------------------------------------------------------------------------
-// Constants and Variables
+// Variables
 //------------------------------------------------------------------------------
-
-const (
-	wait     = 5 * time.Minute
-	interval = 30 * time.Second
-)
 
 var (
 	nodeNames []string
@@ -145,7 +137,7 @@ func testMetrics(t *testing.T) {
 	tests := testMetricsRegistry[configFile]
 
 	fmt.Println("waiting for metrics to propagate...")
-	time.Sleep(wait)
+	time.Sleep(e2e.Wait)
 
 	for _, testFunc := range tests {
 		testFunc(t)
@@ -158,37 +150,13 @@ func testMetrics(t *testing.T) {
 
 func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 	t.Run("verify_agent_resources", func(t *testing.T) {
-		daemonSet, err := clientset.AppsV1().DaemonSets("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-		require.NoError(t, err, "Error getting CloudWatch Agent DaemonSet")
-		require.NotNil(t, daemonSet, "CloudWatch Agent DaemonSet not found")
-
-		configMap, err := clientset.CoreV1().ConfigMaps("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-		require.NoError(t, err, "Error getting CloudWatch Agent ConfigMap")
-		require.NotNil(t, configMap, "CloudWatch Agent ConfigMap not found")
-
-		cwConfig, exists := configMap.Data["cwagentconfig.json"]
-		require.True(t, exists, "cwagentconfig.json not found in ConfigMap")
-		require.Contains(t, cwConfig, `jmx`, "JMX configuration not found in cwagentconfig.json")
-
-		service, err := clientset.CoreV1().Services("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-		require.NoError(t, err, "Error getting CloudWatch Agent Service")
-		require.NotNil(t, service, "CloudWatch Agent Service not found")
-
-		serviceAccount, err := clientset.CoreV1().ServiceAccounts("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
-		require.NoError(t, err, "Error getting CloudWatch Agent Service Account")
-		require.NotNil(t, serviceAccount, "CloudWatch Agent Service Account not found")
+		e2e.VerifyAgentResources(t, clientset, "jmx")
 	})
 }
 
 func testJMXResources(t *testing.T, clientset *kubernetes.Clientset) {
 	t.Run("verify_jmx_resources", func(t *testing.T) {
 		deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
-		pods, err := clientset.CoreV1().Pods("test").List(context.TODO(), metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("app=%s", deploymentName),
-			FieldSelector: "status.phase=Running",
-		})
-		require.NoError(t, err, "Error getting pods for deployment")
-		require.NotEmpty(t, pods.Items, "No pods found for deployment")
 
 		var jmxTargetSystem string
 		switch filepath.Base(env.AgentConfig) {
@@ -208,16 +176,7 @@ func testJMXResources(t *testing.T, clientset *kubernetes.Clientset) {
 			"JAVA_TOOL_OPTIONS":                      " -javaagent:/otel-auto-instrumentation-java/javaagent.jar",
 		}
 
-		for _, container := range pods.Items[0].Spec.Containers {
-			for _, envVar := range container.Env {
-				if expectedValue, exists := requiredEnvVars[envVar.Name]; exists {
-					require.Equal(t, expectedValue, envVar.Value, fmt.Sprintf("Unexpected value for environment variable %s in container %s", envVar.Name, container.Name))
-					delete(requiredEnvVars, envVar.Name)
-				}
-			}
-		}
-
-		require.Empty(t, requiredEnvVars, "Not all required environment variables were found in the pod")
+		e2e.VerifyPodEnvironment(t, clientset, deploymentName, requiredEnvVars)
 	})
 }
 
@@ -227,7 +186,7 @@ func testJMXResources(t *testing.T, clientset *kubernetes.Clientset) {
 
 func testTomcatMetrics(t *testing.T) {
 	t.Run("verify_jvm_tomcat_metrics", func(t *testing.T) {
-		validateMetrics(t, []string{
+		e2e.ValidateMetrics(t, []string{
 			"jvm.classes.loaded",
 			"jvm.gc.collections.count",
 			"jvm.gc.collections.elapsed",
@@ -257,15 +216,15 @@ func testTomcatMetrics(t *testing.T) {
 
 func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
-		generateTraffic(t)
-		time.Sleep(wait)
+		e2e.GenerateTraffic(t)
+		time.Sleep(e2e.Wait)
 		verifyMetricAboveZero(t, "tomcat.sessions", "JVM_TOMCAT_E2E", false)
 	})
 }
 
 func testKafkaMetrics(t *testing.T) {
 	t.Run("verify_kafka_metrics", func(t *testing.T) {
-		validateMetrics(t, []string{
+		e2e.ValidateMetrics(t, []string{
 			"kafka.message.count",
 			"kafka.request.count",
 			"kafka.request.failed",
@@ -285,7 +244,7 @@ func testKafkaMetrics(t *testing.T) {
 
 func testContainerInsightsMetrics(t *testing.T) {
 	t.Run("verify_containerinsights_metrics", func(t *testing.T) {
-		validateMetrics(t, []string{
+		e2e.ValidateMetrics(t, []string{
 			"jvm_classes_loaded",
 			"jvm_threads_current",
 			"jvm_threads_daemon",
@@ -310,8 +269,8 @@ func testContainerInsightsMetrics(t *testing.T) {
 
 func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
-		generateTraffic(t)
-		time.Sleep(wait)
+		e2e.GenerateTraffic(t)
+		time.Sleep(e2e.Wait)
 		verifyMetricAboveZero(t, "catalina_manager_rejectedsessions", "ContainerInsights/Prometheus", true)
 	})
 }
@@ -320,34 +279,8 @@ func testTomcatRejectedSessions(t *testing.T) {
 // Helper Functions
 //------------------------------------------------------------------------------
 
-func validateMetrics(t *testing.T, metrics []string, namespace string) {
-	for _, metric := range metrics {
-		t.Run(metric, func(t *testing.T) {
-			awsservice.ValidateMetricWithTest(t, metric, namespace, nil, 5, interval)
-		})
-	}
-}
-
-func generateTraffic(t *testing.T) {
-	cmd := exec.Command("kubectl", "get", "nodes", "-o", "jsonpath='{.items[0].status.addresses[?(@.type==\"ExternalIP\")].address}'")
-	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "Error getting node external IP")
-
-	nodeIP := strings.Trim(string(output), "'")
-	require.NotEmpty(t, nodeIP, "Node IP failed to format")
-
-	for i := 0; i < 5; i++ {
-		resp, err := http.Get(fmt.Sprintf("http://%s:30080/webapp/index.jsp", nodeIP))
-		if err != nil {
-			t.Logf("Request attempt %d failed: %v", i+1, err)
-			continue
-		}
-		require.NoError(t, resp.Body.Close(), "Failed to close response body")
-	}
-}
-
 func verifyMetricAboveZero(t *testing.T, metricName, namespace string, containerInsights bool) {
-	startTime := time.Now().Add(-wait)
+	startTime := time.Now().Add(-e2e.Wait)
 	endTime := time.Now()
 
 	aboveZero, err := awsservice.CheckMetricAboveZero(

@@ -39,7 +39,7 @@ resource "aws_eks_node_group" "this" {
     min_size     = var.nodes
   }
 
-  ami_type       = var.ami_type
+  ami_type       = "AL2_x86_64"
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
   instance_types = [var.instance_type]
@@ -155,7 +155,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Running cleanup for K8s resources"
       go test -timeout 30m -v ${self.triggers.test_dir} \
-      -destroy=true \
+      -destroy \
       -region=${self.triggers.region} \
       -eksClusterName=${self.triggers.cluster_name} \
       -computeType=EKS \
