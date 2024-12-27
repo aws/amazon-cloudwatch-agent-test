@@ -122,6 +122,7 @@ resource "null_resource" "validator" {
     cluster_name = aws_eks_cluster.this.name
     region       = var.region
     test_dir     = var.test_dir
+    eks_deployment_strategy = var.eks_deployment_strategy
   }
 
   provisioner "local-exec" {
@@ -132,7 +133,7 @@ resource "null_resource" "validator" {
       -k8s_version=${var.k8s_version} \
       -eksClusterName=${aws_eks_cluster.this.name} \
       -computeType=EKS \
-      -eksDeploymentStrategy=DAEMON \
+      -eksDeploymentStrategy=${var.eks_deployment_strategy} \
       -helm_charts_branch=${var.helm_charts_branch} \
       -cloudwatch_agent_repository=${var.cloudwatch_agent_repository} \
       -cloudwatch_agent_tag=${var.cloudwatch_agent_tag} \
@@ -159,7 +160,7 @@ resource "null_resource" "validator" {
       -region=${self.triggers.region} \
       -eksClusterName=${self.triggers.cluster_name} \
       -computeType=EKS \
-      -eksDeploymentStrategy=DAEMON
+      -eksDeploymentStrategy=${self.triggers.eks_deployment_strategy}
     EOT
   }
 }
