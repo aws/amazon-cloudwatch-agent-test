@@ -8,17 +8,17 @@ import "strings"
 type EKSDeploymentType string
 
 const (
-	DAEMON  EKSDeploymentType = "DAEMON"
-	REPLICA EKSDeploymentType = "REPLICA"
-	SIDECAR EKSDeploymentType = "SIDECAR"
+	DAEMON   EKSDeploymentType = "DAEMON"
+	REPLICA  EKSDeploymentType = "REPLICA"
+	SIDECAR  EKSDeploymentType = "SIDECAR"
 	STATEFUL EKSDeploymentType = "STATEFUL"
 )
 
 var (
 	eksDeploymentTypes = map[string]EKSDeploymentType{
-		"DAEMON":  DAEMON,
-		"REPLICA": REPLICA,
-		"SIDECAR": SIDECAR,
+		"DAEMON":   DAEMON,
+		"REPLICA":  REPLICA,
+		"SIDECAR":  SIDECAR,
 		"STATEFUL": STATEFUL,
 	}
 )

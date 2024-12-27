@@ -119,9 +119,9 @@ resource "null_resource" "validator" {
   depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, null_resource.helm_charts]
 
   triggers = {
-    cluster_name = aws_eks_cluster.this.name
-    region       = var.region
-    test_dir     = var.test_dir
+    cluster_name            = aws_eks_cluster.this.name
+    region                  = var.region
+    test_dir                = var.test_dir
     eks_deployment_strategy = var.eks_deployment_strategy
   }
 

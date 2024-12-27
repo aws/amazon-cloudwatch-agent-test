@@ -1,17 +1,22 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package e2e
 
 import (
 	"context"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 //------------------------------------------------------------------------------

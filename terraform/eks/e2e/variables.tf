@@ -107,6 +107,6 @@ variable "sample_app" {
 }
 
 variable "eks_deployment_strategy" {
-  type = string
+  type    = string
   default = "DAEMON"
 }
