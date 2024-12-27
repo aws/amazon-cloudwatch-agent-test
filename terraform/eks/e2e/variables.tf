@@ -21,6 +21,11 @@ variable "nodes" {
   default = 2
 }
 
+variable "ami_type" {
+  type    = string
+  default = "AL2_x86_64"
+}
+
 variable "instance_type" {
   type    = string
   default = "t3a.medium"

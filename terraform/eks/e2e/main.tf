@@ -39,7 +39,7 @@ resource "aws_eks_node_group" "this" {
     min_size     = var.nodes
   }
 
-  ami_type       = "AL2_x86_64"
+  ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
   instance_types = [var.instance_type]
