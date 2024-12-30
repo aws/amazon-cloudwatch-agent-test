@@ -47,6 +47,7 @@ type MetaData struct {
 	AmpWorkspaceId                              string
 	Region                                      string
 	K8sVersion                                  string
+	Destroy                                     bool
 	HelmChartsBranch                            string
 	CloudwatchAgentRepository                   string
 	CloudwatchAgentTag                          string
@@ -87,6 +88,7 @@ type MetaDataStrings struct {
 	AmpWorkspaceId                              string
 	Region                                      string
 	K8sVersion                                  string
+	Destroy                                     bool
 	HelmChartsBranch                            string
 	CloudwatchAgentRepository                   string
 	CloudwatchAgentTag                          string
@@ -136,6 +138,7 @@ func registerEKSData(d *MetaDataStrings) {
 func registerEKSE2ETestData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.Region), "region", "", "AWS region")
 	flag.StringVar(&(dataString.K8sVersion), "k8s_version", "", "Kubernetes version")
+	flag.BoolVar(&(dataString.Destroy), "destroy", false, "Whether to run in destroy mode (true/false)")
 	flag.StringVar(&(dataString.HelmChartsBranch), "helm_charts_branch", "", "Helm charts branch")
 	flag.StringVar(&(dataString.CloudwatchAgentRepository), "cloudwatch_agent_repository", "", "CloudWatch Agent repository")
 	flag.StringVar(&(dataString.CloudwatchAgentTag), "cloudwatch_agent_tag", "", "CloudWatch Agent tag")
@@ -318,6 +321,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.AmpWorkspaceId = registeredMetaDataStrings.AmpWorkspaceId
 	metaDataStorage.Region = registeredMetaDataStrings.Region
 	metaDataStorage.K8sVersion = registeredMetaDataStrings.K8sVersion
+	metaDataStorage.Destroy = registeredMetaDataStrings.Destroy
 	metaDataStorage.HelmChartsBranch = registeredMetaDataStrings.HelmChartsBranch
 	metaDataStorage.CloudwatchAgentRepository = registeredMetaDataStrings.CloudwatchAgentRepository
 	metaDataStorage.CloudwatchAgentTag = registeredMetaDataStrings.CloudwatchAgentTag

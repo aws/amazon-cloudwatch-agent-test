@@ -134,6 +134,55 @@ func GetMetricStatistics(
 	return CwmClient.GetMetricStatistics(ctx, &metricStatsInput)
 }
 
+func CheckMetricAboveZero(
+	metricName string,
+	namespace string,
+	startTime time.Time,
+	endTime time.Time,
+	periodInSeconds int32,
+) (bool, error) {
+	metrics, err := CwmClient.ListMetrics(ctx, &cloudwatch.ListMetricsInput{
+		MetricName:     aws.String(metricName),
+		Namespace:      aws.String(namespace),
+		RecentlyActive: "PT3H",
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	if len(metrics.Metrics) == 0 {
+		return false, fmt.Errorf("no metrics found for %s", metricName)
+	}
+
+	for _, metric := range metrics.Metrics {
+		data, err := GetMetricStatistics(
+			metricName,
+			namespace,
+			metric.Dimensions,
+			startTime,
+			endTime,
+			periodInSeconds,
+			[]types.Statistic{types.StatisticMaximum},
+			nil,
+		)
+
+		if err != nil {
+			log.Printf("Error getting statistics for metric with dimensions %v: %v", metric.Dimensions, err)
+			continue
+		}
+
+		for _, datapoint := range data.Datapoints {
+			if *datapoint.Maximum > 0 {
+				log.Printf("Found value above zero")
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
 // GetMetricData takes the metric name, metric dimension and metric namespace and return the query metrics
 func GetMetricData(metricDataQueries []types.MetricDataQuery, startTime, endTime time.Time) (*cloudwatch.GetMetricDataOutput, error) {
 	getMetricDataInput := cloudwatch.GetMetricDataInput{

@@ -8,20 +8,22 @@ import "strings"
 type EKSDeploymentType string
 
 const (
-	DAEMON  EKSDeploymentType = "DAEMON"
-	REPLICA EKSDeploymentType = "REPLICA"
-	SIDECAR EKSDeploymentType = "SIDECAR"
+	DAEMON   EKSDeploymentType = "DAEMON"
+	REPLICA  EKSDeploymentType = "REPLICA"
+	SIDECAR  EKSDeploymentType = "SIDECAR"
+	STATEFUL EKSDeploymentType = "STATEFUL"
 )
 
 var (
-	ecsDeploymentTypes = map[string]EKSDeploymentType{
-		"DAEMON":  DAEMON,
-		"REPLICA": REPLICA,
-		"SIDECAR": SIDECAR,
+	eksDeploymentTypes = map[string]EKSDeploymentType{
+		"DAEMON":   DAEMON,
+		"REPLICA":  REPLICA,
+		"SIDECAR":  SIDECAR,
+		"STATEFUL": STATEFUL,
 	}
 )
 
 func FromString(str string) (EKSDeploymentType, bool) {
-	c, ok := ecsDeploymentTypes[strings.ToUpper(str)]
+	c, ok := eksDeploymentTypes[strings.ToUpper(str)]
 	return c, ok
 }

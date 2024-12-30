@@ -18,7 +18,17 @@ variable "cluster_name" {
 
 variable "nodes" {
   type    = number
-  default = 1
+  default = 2
+}
+
+variable "ami_type" {
+  type    = string
+  default = "AL2_x86_64"
+}
+
+variable "instance_type" {
+  type    = string
+  default = "t3a.medium"
 }
 
 variable "helm_charts_branch" {
@@ -94,4 +104,9 @@ variable "prometheus_config" {
 variable "sample_app" {
   type    = string
   default = ""
+}
+
+variable "eks_deployment_strategy" {
+  type    = string
+  default = "DAEMON"
 }
