@@ -144,7 +144,7 @@ func CheckMetricAboveZero(
 	metrics, err := CwmClient.ListMetrics(ctx, &cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
 		Namespace:      aws.String(namespace),
-		RecentlyActive: "PT5M",
+		RecentlyActive: "PT3H",
 	})
 
 	if err != nil {
