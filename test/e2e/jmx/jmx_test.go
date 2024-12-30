@@ -18,7 +18,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 //------------------------------------------------------------------------------
@@ -26,7 +25,6 @@ import (
 //------------------------------------------------------------------------------
 
 var (
-	nodeNames []string
 	env       *environment.MetaData
 )
 
@@ -82,19 +80,6 @@ func TestMain(m *testing.M) {
 	if err := e2e.InitializeEnvironment(env); err != nil {
 		fmt.Printf("Failed to initialize environment: %v\n", err)
 		os.Exit(1)
-	}
-
-	// Get names of nodes so they can be used as dimensions to check for metrics
-	eksInstances, err := awsservice.GetEKSInstances(env.EKSClusterName)
-	if err != nil || len(eksInstances) == 0 {
-		fmt.Printf("Failed to get EKS instances: %v", err)
-		os.Exit(1)
-	}
-
-	for _, instance := range eksInstances {
-		if instance.InstanceName != nil {
-			nodeNames = append(nodeNames, *instance.InstanceName)
-		}
 	}
 
 	os.Exit(m.Run())
@@ -217,7 +202,7 @@ func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
 		e2e.GenerateTraffic(t)
 		time.Sleep(e2e.Wait)
-		e2e.VerifyMetricAboveZero(t, "tomcat.sessions", nodeNames, "JVM_TOMCAT_E2E", false)
+		e2e.VerifyMetricAboveZero(t, "tomcat.sessions", "JVM_TOMCAT_E2E")
 	})
 }
 
@@ -270,6 +255,6 @@ func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
 		e2e.GenerateTraffic(t)
 		time.Sleep(e2e.Wait)
-		e2e.VerifyMetricAboveZero(t, "catalina_manager_rejectedsessions", nodeNames, "ContainerInsights/Prometheus", true)
+		e2e.VerifyMetricAboveZero(t, "catalina_manager_rejectedsessions", "ContainerInsights/Prometheus")
 	})
 }

@@ -140,13 +140,11 @@ func CheckMetricAboveZero(
 	startTime time.Time,
 	endTime time.Time,
 	periodInSeconds int32,
-	nodeNames []string,
-	containerInsights bool,
 ) (bool, error) {
 	metrics, err := CwmClient.ListMetrics(ctx, &cloudwatch.ListMetricsInput{
 		MetricName:     aws.String(metricName),
 		Namespace:      aws.String(namespace),
-		RecentlyActive: "PT3H",
+		RecentlyActive: "PT5M",
 	})
 
 	if err != nil {
@@ -158,28 +156,6 @@ func CheckMetricAboveZero(
 	}
 
 	for _, metric := range metrics.Metrics {
-		// Skip node name check if containerInsights is true
-		if !containerInsights {
-			var nodeNameMatch bool
-			var nodeName string
-			for _, dim := range metric.Dimensions {
-				if *dim.Name == "k8s.node.name" {
-					nodeName = *dim.Value
-					for _, name := range nodeNames {
-						if nodeName == name {
-							nodeNameMatch = true
-							break
-						}
-					}
-					break
-				}
-			}
-			if !nodeNameMatch {
-				continue
-			}
-			log.Printf("Checking metric: %s for node: %s", *metric.MetricName, nodeName)
-		}
-
 		data, err := GetMetricStatistics(
 			metricName,
 			namespace,
@@ -198,9 +174,7 @@ func CheckMetricAboveZero(
 
 		for _, datapoint := range data.Datapoints {
 			if *datapoint.Maximum > 0 {
-				if !containerInsights {
-					log.Printf("Found value above zero")
-				}
+				log.Printf("Found value above zero")
 				return true, nil
 			}
 		}
