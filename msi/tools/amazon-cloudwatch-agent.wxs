@@ -103,7 +103,6 @@
             </ServiceInstall>
             <ServiceControl
                 Id="StartService"
-                Start="install"
                 Stop="both"
                 Remove="uninstall"
                 Name="AmazonCloudWatchAgent"
