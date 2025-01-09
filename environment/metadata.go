@@ -40,6 +40,7 @@ type MetaData struct {
 	EKSClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
+	InstanceArn                                 string
 	InstanceId                                  string
 	InstancePlatform                            string
 	AgentStartCommand                           string
@@ -81,6 +82,7 @@ type MetaDataStrings struct {
 	EKSClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
+	InstanceArn                                 string
 	InstanceId                                  string
 	InstancePlatform                            string
 	AgentStartCommand                           string
@@ -177,6 +179,10 @@ func fillComputeType(e *MetaData, data *MetaDataStrings) {
 
 func registerAssumeRoleArn(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.AssumeRoleArn), "assumeRoleArn", "", "Arn for assume role to be used")
+}
+
+func registerInstanceArn(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.InstanceArn), "instanceArn", "", "ec2 instance ARN that is being used by a test")
 }
 
 func registerInstanceId(dataString *MetaDataStrings) {
@@ -289,6 +295,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerExcludedTests(registeredMetaDataStrings)
 	registerProxyUrl(registeredMetaDataStrings)
 	registerAssumeRoleArn(registeredMetaDataStrings)
+	registerInstanceArn(registeredMetaDataStrings)
 	registerInstanceId(registeredMetaDataStrings)
 	registerInstancePlatform(registeredMetaDataStrings)
 	registerAgentStartCommand(registeredMetaDataStrings)
