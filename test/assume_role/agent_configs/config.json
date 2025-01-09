@@ -7,7 +7,7 @@
     "logfile": ""
   },
   "metrics": {
-    "namespace": "AgentAssumeRoleTest",
+    "namespace": "AssumeRoleTest",
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },
