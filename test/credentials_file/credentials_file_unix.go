@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package assume_role
+package credentials_file
 
 import (
 	"log"
@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	namespace = "AssumeRoleTest"
+	namespace = "CredentialsFileTest"
 	credsDir  = "/tmp/.aws"
 )
 
@@ -28,11 +28,11 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-type RoleTestRunner struct {
+type CredentialsFileTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-func (t RoleTestRunner) Validate() status.TestGroupResult {
+func (t CredentialsFileTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -45,7 +45,7 @@ func (t RoleTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *RoleTestRunner) validateMetric(metricName string) status.TestResult {
+func (t *CredentialsFileTestRunner) validateMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -72,19 +72,19 @@ func (t *RoleTestRunner) validateMetric(metricName string) status.TestResult {
 	return testResult
 }
 
-func (t RoleTestRunner) GetTestName() string {
+func (t CredentialsFileTestRunner) GetTestName() string {
 	return namespace
 }
 
-func (t RoleTestRunner) GetAgentConfigFileName() string {
+func (t CredentialsFileTestRunner) GetAgentConfigFileName() string {
 	return "config.json"
 }
 
-func (t RoleTestRunner) GetMeasuredMetrics() []string {
+func (t CredentialsFileTestRunner) GetMeasuredMetrics() []string {
 	return metric.CpuMetrics
 }
 
-func (t *RoleTestRunner) SetupBeforeAgentRun() error {
+func (t *CredentialsFileTestRunner) SetupBeforeAgentRun() error {
 	err := common.RunCommands(getCommands(environment.GetEnvironmentMetaData().AssumeRoleArn))
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func (t *RoleTestRunner) SetupBeforeAgentRun() error {
 	return t.SetUpConfig()
 }
 
-var _ test_runner.ITestRunner = (*RoleTestRunner)(nil)
+var _ test_runner.ITestRunner = (*CredentialsFileTestRunner)(nil)
 
 func getCommands(roleArn string) []string {
 	return []string{
