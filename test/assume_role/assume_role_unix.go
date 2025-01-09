@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	namespace            = "AgentAssumeRoleTest" // should match whats in agent config file
+	namespace            = "AssumeRoleTest" // should match whats in agent config file
 	agentConfigDirectory = "agent_configs"
 )
 
