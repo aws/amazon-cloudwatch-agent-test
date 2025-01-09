@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package assume_role
+package credentials_file
 
 import (
 	"testing"
@@ -13,10 +13,10 @@ import (
 )
 
 func TestAssumeRole(t *testing.T) {
-	runner := test_runner.TestRunner{TestRunner: &RoleTestRunner{test_runner.BaseTestRunner{}}}
+	runner := test_runner.TestRunner{TestRunner: &CredentialsFileTestRunner{test_runner.BaseTestRunner{}}}
 	result := runner.Run()
 	if result.GetStatus() != status.SUCCESSFUL {
-		t.Fatal("Assume Role Test failed")
+		t.Fatal("Credentials File Test failed")
 		result.Print()
 	}
 }
