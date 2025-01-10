@@ -8,9 +8,7 @@ package assume_role
 import (
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
-	"strings"
+	"os/exec"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
@@ -20,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
@@ -91,15 +90,8 @@ func (t *RoleTestRunner) SetupBeforeAgentRun() error {
 
 	err := setupEnvironmentVariables()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to setup environment variables: %w", err)
 	}
-
-	agentConfigPath := filepath.Join(agentConfigDirectory, t.AgentConfig.ConfigFileName)
-	err = replacePlaceholder(agentConfigPath, environment.GetEnvironmentMetaData().AssumeRoleArn)
-	if err != nil {
-		return err
-	}
-
 	return t.SetUpConfig()
 }
 
@@ -132,55 +124,14 @@ func Validate(assumeRoleArn string) error {
 
 func setupEnvironmentVariables() error {
 
-	f, err := os.OpenFile("/etc/systemd/system/amazon-cloudwatch-agent.service", os.O_TRUNC, 0755)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	common.CopyFile("amazon-cloudwatch-agent.service", "/etc/systemd/system/amazon-cloudwatch-agent.service")
 
-	_, err = f.WriteString(fmt.Sprintf(`
-# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: MIT
-
-# Location: /etc/systemd/system/amazon-cloudwatch-agent.service
-# systemctl enable amazon-cloudwatch-agent
-# systemctl start amazon-cloudwatch-agent
-# systemctl | grep amazon-cloudwatch-agent
-# https://www.freedesktop.org/software/systemd/man/systemd.unit.html
-
-[Unit]
-Description=Amazon CloudWatch Agent
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
-KillMode=process
-Restart=on-failure
-RestartSec=60s
-Environment="AMZ_SOURCE_ACCOUNT=506463145083"
-Environment="AMZ_SOURCE_ARN=%s"
-
-[Install]
-WantedBy=multi-user.target
-	`, environment.GetEnvironmentMetaData().InstanceArn))
-	return err
-}
-
-func replacePlaceholder(filename, newValue string) error {
-	// Read the entire file
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-
-	// Replace the placeholder with new value
-	newContent := strings.Replace(string(content), "PLACEHOLDER", newValue, -1)
-
-	// Write back to the file
-	err = os.WriteFile(filename, []byte(newContent), 0644)
-	if err != nil {
-		return err
+	// Test runner does not have sudo permissions, but it can execute sudo commands
+	// Use sed to update the PLACEHOLDER value instead of using built-ins
+	sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' %s", environment.GetEnvironmentMetaData().InstanceArn, "/etc/systemd/system/amazon-cloudwatch-agent.service")
+	cmd := exec.Command("bash", "-c", sedCmd)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s", err)
 	}
 
 	return nil
