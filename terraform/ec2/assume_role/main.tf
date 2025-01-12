@@ -34,63 +34,6 @@ locals {
   binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
 }
 
-#####################################################################
-# Generate IAM Assume Role for Credentials
-#####################################################################
-resource "aws_iam_role" "assume_role" {
-  name               = "cwa-integ-assume-role-${module.common.testing_id}"
-  assume_role_policy = data.aws_iam_policy_document.assume_role_trust_policy.json
-}
-
-data "aws_iam_policy_document" "assume_role_trust_policy" {
-  statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
-    principals {
-      identifiers = [module.basic_components.role_arn]
-      type        = "AWS"
-    }
-  }
-}
-
-data "aws_iam_policy_document" "assume_role_policy_doc" {
-  statement {
-    effect = "Allow"
-    actions = [
-      "cloudwatch:PutMetricData",
-      "cloudwatch:ListMetrics",
-      "cloudwatch:GetMetricStatistics",
-      "cloudwatch:GetMetricData",
-      "logs:PutRetentionPolicy",
-      "logs:PutLogEvents",
-      "logs:GetLogEvents",
-      "logs:DescribeLogStreams",
-      "logs:DescribeLogGroups",
-      "logs:DeleteLogStream",
-      "logs:DeleteLogGroup",
-      "logs:CreateLogStream",
-      "logs:CreateLogGroup",
-      "ssm:List*",
-      "ssm:Get*",
-      "ssm:Describe*",
-      "s3:PutObject",
-      "s3:ListBucket",
-      "s3:GetObjectAcl",
-      "s3:GetObject",
-    ]
-    resources = ["*"]
-  }
-}
-
-resource "aws_iam_policy" "assume_role_policy" {
-  name   = "cwa-integ-assume-role-policy-${module.common.testing_id}"
-  policy = data.aws_iam_policy_document.assume_role_policy_doc.json
-}
-
-resource "aws_iam_role_policy_attachment" "assume_role_policy_attachment" {
-  role       = aws_iam_role.assume_role.name
-  policy_arn = aws_iam_policy.assume_role_policy.arn
-}
 
 #####################################################################
 # Generate EC2 Instance and execute test commands
@@ -112,9 +55,104 @@ resource "aws_instance" "cwagent" {
   tags = {
     Name = "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
   }
-
-  depends_on = [aws_iam_role.assume_role]
 }
+
+#####################################################################
+# Generate IAM Roles for Credentials
+#####################################################################
+
+locals {
+  roles = {
+    no_context_keys = {
+      name = "no_context_keys"
+      condition = {}
+    }
+    source_arn_key = {
+      name = "source_arn_key"
+      condition = {
+        "aws:SourceArn" = aws_instance.cwagent.arn
+      }
+    }
+    source_account_key = {
+      name = "source_account_key"
+      condition = {
+        "aws:SourceAccount" = "506463145083"
+      }
+    }
+    all_context_keys = {
+      name = "all_context_keys"
+      condition = {
+        "aws:SourceArn" = aws_instance.cwagent.arn
+        "aws:SourceAccount" = "506463145083"
+      }
+    }
+  }
+}
+
+resource "aws_iam_role" "roles" {
+  for_each = local.roles
+
+  name = "cwa-integ-assume-role-${module.common.testing_id}-${each.value.name}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = module.basic_components.role_arn
+        }
+        Condition = length(each.value.condition) > 0 ? {
+          StringEquals = each.value.condition
+        } : {}
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "cloudwatch_policy" {
+  for_each = aws_iam_role.roles
+
+  name = "${each.value.name}_policy"
+  role = each.value.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "cloudwatch:PutMetricData",
+          "cloudwatch:ListMetrics",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:GetMetricData",
+          "logs:PutRetentionPolicy",
+          "logs:PutLogEvents",
+          "logs:GetLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups",
+          "logs:DeleteLogStream",
+          "logs:DeleteLogGroup",
+          "logs:CreateLogStream",
+          "logs:CreateLogGroup",
+          "ssm:List*",
+          "ssm:Get*",
+          "ssm:Describe*",
+          "s3:PutObject",
+          "s3:ListBucket",
+          "s3:GetObjectAcl",
+          "s3:GetObject"
+        ]
+        Effect = "Allow"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+#####################################################################
+# Run the integration test
+#####################################################################
 
 resource "null_resource" "integration_test_setup" {
   connection {
@@ -139,7 +177,8 @@ resource "null_resource" "integration_test_setup" {
   }
 
   depends_on = [
-    aws_instance.cwagent,
+    aws_iam_role.roles,
+    aws_iam_role_policy.cloudwatch_policy
   ]
 }
 
