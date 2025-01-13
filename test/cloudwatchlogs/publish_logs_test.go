@@ -279,17 +279,22 @@ func TestResourceMetrics(t *testing.T) {
 	// Set up the test environment
 	instanceId := awsservice.GetInstanceId()
 	configPath := "resources/config_log_resource.json"
+	logFile, err2 := os.Create(logFilePath)
+	if err2 != nil {
+		t.Fatalf("Error occurred creating log file for writing: %v", err2)
+	}
+	defer logFile.Close()
+	defer os.Remove(logFilePath)
 	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
 
 	// Start the CloudWatch agent with the resource metrics configuration
 	common.CopyFile(configPath, configOutputPath)
 	start := time.Now()
 	common.StartAgent(configOutputPath, true, false)
-
-	// Wait for metrics to be collected and sent
+	time.Sleep(2 * time.Minute)
+	writeLogLines(t, logFile, 100)
 	time.Sleep(2 * time.Minute)
 
-	// Stop the agent
 	common.StopAgent()
 	end := time.Now()
 
