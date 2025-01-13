@@ -13,7 +13,7 @@ import (
 )
 
 func TestAssumeRole(t *testing.T) {
-	runner := test_runner.TestRunner{TestRunner: &RoleTestRunner{test_runner.BaseTestRunner{}}}
+	runner := test_runner.TestRunner{TestRunner: &AssumeRoleTestRunner{test_runner.BaseTestRunner{}}}
 	result := runner.Run()
 	if result.GetStatus() != status.SUCCESSFUL {
 		t.Fatal("Assume Role Test failed")

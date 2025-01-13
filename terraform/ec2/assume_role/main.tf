@@ -64,23 +64,23 @@ resource "aws_instance" "cwagent" {
 locals {
   roles = {
     no_context_keys = {
-      name = "no_context_keys"
+      suffix = ""
       condition = {}
     }
     source_arn_key = {
-      name = "source_arn_key"
+      suffix = "-source_arn_key"
       condition = {
         "aws:SourceArn" = aws_instance.cwagent.arn
       }
     }
     source_account_key = {
-      name = "source_account_key"
+      suffix = "-source_account_key"
       condition = {
         "aws:SourceAccount" = "506463145083"
       }
     }
     all_context_keys = {
-      name = "all_context_keys"
+      suffix = "-all_context_keys"
       condition = {
         "aws:SourceArn" = aws_instance.cwagent.arn
         "aws:SourceAccount" = "506463145083"
@@ -92,7 +92,7 @@ locals {
 resource "aws_iam_role" "roles" {
   for_each = local.roles
 
-  name = "cwa-integ-assume-role-${module.common.testing_id}-${each.value.name}"
+  name = "cwa-integ-assume-role-${module.common.testing_id}${each.value.suffix}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -200,7 +200,7 @@ resource "null_resource" "integration_test_run" {
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "echo assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
+      "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
       "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -v"
     ]
   }
