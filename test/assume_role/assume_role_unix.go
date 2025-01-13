@@ -202,7 +202,25 @@ func (t AssumeRoleTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *AssumeRoleTestRunner) SetupBeforeAgentRun() error {
+	err := t.setupAgentConfig()
+	if err != nil {
+		return fmt.Errorf("failed to setup agent config: %w", err)
+	}
 	return t.SetUpConfig()
+}
+
+func (t *AssumeRoleTestRunner) setupAgentConfig() error {
+	// The default agent config file conatins a PLACEHOLDER value which should be replaced with the ARN of the role
+	// that the agent should assume. The ARN is not known until runtime. Test runner does not have sudo permissions,
+	// but it can execute sudo commands. Use sed to update the PLACEHOLDER value instead of using built-ins
+	common.CopyFile("agent_configs/config.json", configOutputPath)
+	sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' %s", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
+	cmd := exec.Command("bash", "-c", sedCmd)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s", err)
+	}
+
+	return nil
 }
 
 var _ test_runner.ITestRunner = (*AssumeRoleTestRunner)(nil)
@@ -294,7 +312,6 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) validateAccessDenied() status.TestG
 }
 
 func (t *ConfusedDeputyAssumeRoleTestRunner) SetupBeforeAgentRun() error {
-
 	err := t.setupAgentConfig()
 	if err != nil {
 		return fmt.Errorf("failed to setup agent config: %w", err)
@@ -306,21 +323,6 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) SetupBeforeAgentRun() error {
 	}
 
 	return t.SetUpConfig()
-}
-
-func (t *ConfusedDeputyAssumeRoleTestRunner) setupAgentConfig() error {
-
-	// The default agent config file conatins a PLACEHOLDER value which should be replaced with the ARN of the role
-	// that the agent should assume. The ARN is not known until runtime. Test runner does not have sudo permissions,
-	// but it can execute sudo commands. Use sed to update the PLACEHOLDER value instead of using built-ins
-	common.CopyFile("agent_configs/config.json", configOutputPath)
-	sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' %s", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
-	cmd := exec.Command("bash", "-c", sedCmd)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s", err)
-	}
-
-	return nil
 }
 
 func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
