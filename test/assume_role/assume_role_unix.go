@@ -337,7 +337,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 	if t.useIncorrectSourceArn {
 		common.CopyFile("service_configs/incorrect_source_account.service", "/etc/systemd/system/amazon-cloudwatch-agent.service")
 	} else {
-		common.CopyFile("amazon-cloudwatch-agent.service", "/etc/systemd/system/amazon-cloudwatch-agent.service")
+		common.CopyFile("service_configs/amazon-cloudwatch-agent.service", "/etc/systemd/system/amazon-cloudwatch-agent.service")
 	}
 
 	if !t.setSourceAccountEnvVar {
