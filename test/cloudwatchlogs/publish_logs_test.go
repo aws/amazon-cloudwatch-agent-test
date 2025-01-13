@@ -6,6 +6,7 @@
 package cloudwatchlogs
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -272,6 +273,65 @@ func TestLogGroupClass(t *testing.T) {
 			assert.True(t, awsservice.IsLogGroupExists(param.logGroupName, param.logGroupClass))
 		})
 	}
+}
+
+func TestResourceMetrics(t *testing.T) {
+	// Set up the test environment
+	instanceId := awsservice.GetInstanceId()
+	configPath := "resources/config_log_resource.json"
+	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+
+	// Start the CloudWatch agent with the resource metrics configuration
+	common.CopyFile(configPath, configOutputPath)
+	start := time.Now()
+	common.StartAgent(configOutputPath, true, false)
+
+	// Wait for metrics to be collected and sent
+	time.Sleep(2 * time.Minute)
+
+	// Stop the agent
+	common.StopAgent()
+	end := time.Now()
+
+	err := awsservice.ValidateLogs(
+		instanceId,
+		instanceId,
+		&start,
+		&end,
+		func(events []types.OutputLogEvent) error {
+			// Check if the entity exists and has the correct attributes
+			found := false
+			for _, event := range events {
+				var logEntry map[string]interface{}
+				if err := json.Unmarshal([]byte(*event.Message), &logEntry); err != nil {
+					continue // Skip invalid JSON
+				}
+
+				if metrics, ok := logEntry["Metrics"].(map[string]interface{}); ok {
+					for metricName := range metrics {
+						if strings.HasPrefix(metricName, "cpu_usage_") {
+							found = true
+							// Check for resource attributes
+							assert.Equal(t, "AWS::EC2::Instance", logEntry["ResourceType"])
+							assert.Equal(t, "AWS::Resource", logEntry["Type"])
+							assert.Equal(t, instanceId, logEntry["Identifier"])
+							if accountId, ok := logEntry["AwsAccountId"]; ok {
+								assert.NotEmpty(t, accountId)
+							}
+							return nil
+						}
+					}
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("no CPU usage metric found for the instance")
+			}
+			return nil
+		},
+	)
+
+	assert.NoError(t, err, "Failed to validate logs")
 }
 
 func writeLogLines(t *testing.T, f *os.File, iterations int) {
