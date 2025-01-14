@@ -215,7 +215,8 @@ func (t *AssumeRoleTestRunner) setupAgentConfig() error {
 	// but it can execute sudo commands. Use sed to update the PLACEHOLDER value instead of using built-ins
 	common.CopyFile("agent_configs/config.json", configOutputPath)
 	fmt.Printf("Replacing PLACEHOLDER with %s in %s\n", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
-	sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' %s", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
+	// Use | delimiter since / will be in the ARN
+	sedCmd := fmt.Sprintf("sudo sed -i 's|PLACEHOLDER|%s|g' %s", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
 	fmt.Printf("sed command: %s\n", sedCmd)
 	cmd := exec.Command("bash", "-c", sedCmd)
 	output, err := cmd.Output()
@@ -364,8 +365,8 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w; command output: %s", err, string(output))
 		}
 	} else {
-		// Replace PLACEHOLDER value in the AMZ_SOURCE_ARN line
-		sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' /etc/systemd/system/amazon-cloudwatch-agent.service", environment.GetEnvironmentMetaData().InstanceArn)
+		// Replace PLACEHOLDER value in the AMZ_SOURCE_ARN line. Use | delimiter since / will be in the ARN
+		sedCmd := fmt.Sprintf("sudo sed -i 's|PLACEHOLDER|%s|g' /etc/systemd/system/amazon-cloudwatch-agent.service", environment.GetEnvironmentMetaData().InstanceArn)
 		fmt.Printf("sed command: %s\n", sedCmd)
 		cmd := exec.Command("bash", "-c", sedCmd)
 		output, err := cmd.Output()
