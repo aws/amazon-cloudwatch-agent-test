@@ -216,6 +216,7 @@ func (t *AssumeRoleTestRunner) setupAgentConfig() error {
 	common.CopyFile("agent_configs/config.json", configOutputPath)
 	fmt.Printf("Replacing PLACEHOLDER with %s in %s\n", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
 	sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' %s", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
+	fmt.Printf("sed command: %s\n", sedCmd)
 	cmd := exec.Command("bash", "-c", sedCmd)
 	output, err := cmd.Output()
 	if err != nil {
@@ -345,6 +346,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 	if !t.setSourceAccountEnvVar {
 		// Remove the line with AMZ_SOURCE_ACCOUNT
 		sedCmd := "sed -i '/AMZ_SOURCE_ACCOUNT/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
+		fmt.Printf("sed command: %s\n", sedCmd)
 		cmd := exec.Command("bash", "-c", sedCmd)
 		output, err := cmd.Output()
 		if err != nil {
@@ -355,6 +357,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 	if !t.setSourceArnEnvVar {
 		// Remove the line with AMZ_SOURCE_ARN
 		sedCmd := "sed -i '/AMZ_SOURCE_ARN/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
+		fmt.Printf("sed command: %s\n", sedCmd)
 		cmd := exec.Command("bash", "-c", sedCmd)
 		output, err := cmd.Output()
 		if err != nil {
@@ -363,6 +366,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 	} else {
 		// Replace PLACEHOLDER value in the AMZ_SOURCE_ARN line
 		sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' /etc/systemd/system/amazon-cloudwatch-agent.service", environment.GetEnvironmentMetaData().InstanceArn)
+		fmt.Printf("sed command: %s\n", sedCmd)
 		cmd := exec.Command("bash", "-c", sedCmd)
 		output, err := cmd.Output()
 		if err != nil {
