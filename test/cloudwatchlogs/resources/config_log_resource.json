@@ -17,15 +17,6 @@
                     "usage_idle"
                 ],
                 "metrics_collection_interval": 10
-            },
-            "memory": {
-                "metrics_collection_interval": 10,
-                "measurement": [
-                    "mem_used",
-                    "mem_free",
-                    "mem_cached",
-                    "mem_available"
-                ]
             }
         },
         "append_dimensions": {
