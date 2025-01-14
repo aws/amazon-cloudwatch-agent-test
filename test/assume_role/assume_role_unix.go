@@ -219,7 +219,7 @@ func (t *AssumeRoleTestRunner) setupAgentConfig() error {
 	cmd := exec.Command("bash", "-c", sedCmd)
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s; command output: %s", err, output)
+		return fmt.Errorf("failed replace PLACEHOLDER value: %s; command output: %s", err, string(output))
 	}
 
 	return nil
@@ -346,8 +346,9 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 		// Remove the line with AMZ_SOURCE_ACCOUNT
 		sedCmd := "sed -i '/AMZ_SOURCE_ACCOUNT/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
 		cmd := exec.Command("bash", "-c", sedCmd)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s", err)
+		output, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("failed replace PLACEHOLDER value: %w; command output: %s", err, string(output))
 		}
 	}
 
@@ -355,15 +356,17 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 		// Remove the line with AMZ_SOURCE_ARN
 		sedCmd := "sed -i '/AMZ_SOURCE_ARN/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
 		cmd := exec.Command("bash", "-c", sedCmd)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s", err)
+		output, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w; command output: %s", err, string(output))
 		}
 	} else {
 		// Replace PLACEHOLDER value in the AMZ_SOURCE_ARN line
-		sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' /opt/aws/amazon-cloudwatch-agent/etc/", environment.GetEnvironmentMetaData().InstanceArn)
+		sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' /etc/systemd/system/amazon-cloudwatch-agent.service", environment.GetEnvironmentMetaData().InstanceArn)
 		cmd := exec.Command("bash", "-c", sedCmd)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s", err)
+		output, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w; command output: %s", err, string(output))
 		}
 	}
 
