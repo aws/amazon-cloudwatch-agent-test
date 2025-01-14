@@ -346,7 +346,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 
 	if !t.setSourceAccountEnvVar {
 		// Remove the line with AMZ_SOURCE_ACCOUNT
-		sedCmd := "sed -i '/AMZ_SOURCE_ACCOUNT/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
+		sedCmd := "sudo sed -i '/AMZ_SOURCE_ACCOUNT/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
 		fmt.Printf("sed command: %s\n", sedCmd)
 		cmd := exec.Command("bash", "-c", sedCmd)
 		output, err := cmd.Output()
@@ -357,7 +357,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 
 	if !t.setSourceArnEnvVar {
 		// Remove the line with AMZ_SOURCE_ARN
-		sedCmd := "sed -i '/AMZ_SOURCE_ARN/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
+		sedCmd := "sudo sed -i '/AMZ_SOURCE_ARN/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
 		fmt.Printf("sed command: %s\n", sedCmd)
 		cmd := exec.Command("bash", "-c", sedCmd)
 		output, err := cmd.Output()
