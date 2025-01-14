@@ -1,7 +1,9 @@
 {
   "agent": {
     "metrics_collection_interval": 15,
-    "role_arn": "PLACEHOLDER",
+    "credentials": {
+      "role_arn": "PLACEHOLDER"
+    },
     "run_as_user": "root",
     "debug": true,
     "logfile": ""
