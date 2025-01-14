@@ -5,6 +5,7 @@
         "debug": true
     },
     "metrics": {
+        "namespace": "EntityTest",
         "metrics_collected": {
             "cpu": {
                 "resources": [
