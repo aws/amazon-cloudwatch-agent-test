@@ -24,6 +24,11 @@
             "InstanceId": "${aws:InstanceId}",
             "InstanceType": "${aws:InstanceType}",
             "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+        },
+        "resource": {
+            "enabled": true,
+            "resource_plugin": "cpu",
+            "metric_collection_interval": 10
         }
     },
     "logs": {
