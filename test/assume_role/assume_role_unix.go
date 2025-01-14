@@ -214,9 +214,9 @@ func (t *AssumeRoleTestRunner) setupAgentConfig() error {
 	// that the agent should assume. The ARN is not known until runtime. Test runner does not have sudo permissions,
 	// but it can execute sudo commands. Use sed to update the PLACEHOLDER value instead of using built-ins
 	common.CopyFile("agent_configs/config.json", configOutputPath)
-	fmt.Printf("Replacing PLACEHOLDER with %s in %s\n", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
+	fmt.Printf("Replacing PLACEHOLDER with %s in %s\n", environment.GetEnvironmentMetaData().AssumeRoleArn, configOutputPath)
 	// Use | delimiter since / will be in the ARN
-	sedCmd := fmt.Sprintf("sudo sed -i 's|PLACEHOLDER|%s|g' %s", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
+	sedCmd := fmt.Sprintf("sudo sed -i 's|PLACEHOLDER|%s|g' %s", environment.GetEnvironmentMetaData().AssumeRoleArn, configOutputPath)
 	fmt.Printf("sed command: %s\n", sedCmd)
 	cmd := exec.Command("bash", "-c", sedCmd)
 	output, err := cmd.Output()
