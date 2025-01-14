@@ -13,9 +13,13 @@
                 "measurement": [
                     "cpu_usage_idle",
                     "cpu_usage_nice",
-                    "cpu_usage_guest"
+                    "cpu_usage_guest",
+                    "usage_idle"
                 ],
                 "metrics_collection_interval": 10
+            },
+            "resource": {
+                "enabled": true
             }
         },
         "append_dimensions": {
