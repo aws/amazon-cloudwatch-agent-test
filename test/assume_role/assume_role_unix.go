@@ -214,10 +214,15 @@ func (t *AssumeRoleTestRunner) setupAgentConfig() error {
 	// that the agent should assume. The ARN is not known until runtime. Test runner does not have sudo permissions,
 	// but it can execute sudo commands. Use sed to update the PLACEHOLDER value instead of using built-ins
 	common.CopyFile("agent_configs/config.json", configOutputPath)
+	fmt.Printf("Replacing PLACEHOLDER with %s in %s\n", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
 	sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' %s", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
 	cmd := exec.Command("bash", "-c", sedCmd)
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s", err)
+		output, outputErr := cmd.Output()
+		if outputErr != nil {
+			return fmt.Errorf("failed to update amazon-cloudwatch-agent.config file: %s; unable to retrieve command output: %w", err, outputErr)
+		}
+		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s; output: %s", err, output)
 	}
 
 	return nil
