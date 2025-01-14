@@ -222,7 +222,7 @@ func (t *AssumeRoleTestRunner) setupAgentConfig() error {
 		if outputErr != nil {
 			return fmt.Errorf("failed to update amazon-cloudwatch-agent.config file: %s; unable to retrieve command output: %w", err, outputErr)
 		}
-		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s; output: %s", err, output)
+		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s; command soutput: %s", err, output)
 	}
 
 	return nil
