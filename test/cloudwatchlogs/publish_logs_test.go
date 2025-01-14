@@ -285,7 +285,7 @@ func TestResourceMetrics(t *testing.T) {
 	}
 	defer logFile.Close()
 	defer os.Remove(logFilePath)
-	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+	// defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
 
 	// Start the CloudWatch agent with the resource metrics configuration
 	common.CopyFile(configPath, configOutputPath)
