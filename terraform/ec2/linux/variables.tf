@@ -18,7 +18,7 @@ variable "ssh_key_name" {
 
 variable "ami" {
   type    = string
-  default = "cloudwatch-agent-integration-test-ubuntu*"
+  default = "CWA_SELinux_AL2023*"
 }
 
 variable "ssh_key_value" {
