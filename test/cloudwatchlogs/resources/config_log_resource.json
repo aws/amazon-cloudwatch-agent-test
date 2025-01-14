@@ -17,9 +17,6 @@
                     "usage_idle"
                 ],
                 "metrics_collection_interval": 10
-            },
-            "resource": {
-                "enabled": true
             }
         },
         "append_dimensions": {
