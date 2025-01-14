@@ -321,6 +321,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.CaCertPath = registeredMetaDataStrings.CaCertPath
 	metaDataStorage.ProxyUrl = registeredMetaDataStrings.ProxyUrl
 	metaDataStorage.AssumeRoleArn = registeredMetaDataStrings.AssumeRoleArn
+	metaDataStorage.InstanceArn = registeredMetaDataStrings.InstanceArn
 	metaDataStorage.InstanceId = registeredMetaDataStrings.InstanceId
 	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
