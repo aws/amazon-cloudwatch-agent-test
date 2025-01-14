@@ -17,6 +17,15 @@
                     "usage_idle"
                 ],
                 "metrics_collection_interval": 10
+            },
+            "memory": {
+                "metrics_collection_interval": 10,
+                "measurement": [
+                    "mem_used",
+                    "mem_free",
+                    "mem_cached",
+                    "mem_available"
+                ]
             }
         },
         "append_dimensions": {
@@ -24,11 +33,6 @@
             "InstanceId": "${aws:InstanceId}",
             "InstanceType": "${aws:InstanceType}",
             "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
-        },
-        "resource": {
-            "enabled": true,
-            "resource_plugin": "cpu",
-            "metric_collection_interval": 10
         }
     },
     "logs": {
