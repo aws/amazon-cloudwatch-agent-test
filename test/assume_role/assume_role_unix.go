@@ -217,12 +217,9 @@ func (t *AssumeRoleTestRunner) setupAgentConfig() error {
 	fmt.Printf("Replacing PLACEHOLDER with %s in %s\n", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
 	sedCmd := fmt.Sprintf("sudo sed -i 's/PLACEHOLDER/%s/g' %s", environment.GetEnvironmentMetaData().InstanceArn, configOutputPath)
 	cmd := exec.Command("bash", "-c", sedCmd)
-	if err := cmd.Run(); err != nil {
-		output, outputErr := cmd.Output()
-		if outputErr != nil {
-			return fmt.Errorf("failed to update amazon-cloudwatch-agent.config file: %s; unable to retrieve command output: %w", err, outputErr)
-		}
-		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s; command soutput: %s", err, output)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to update amazon-cloudwatch-agent.service file: %s; command output: %s", err, output)
 	}
 
 	return nil
