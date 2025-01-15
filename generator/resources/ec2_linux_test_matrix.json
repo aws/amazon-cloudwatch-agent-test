@@ -11,17 +11,6 @@
     "family": "linux"
   },
   {
-    "os": "al2",
-    "username": "ec2-user",
-    "instanceType":"m7g.medium",
-    "installAgentCommand": "go run ./install/install_agent.go rpm",
-    "ami": "CWA_SELinux_AL2023*",
-    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
-    "arc": "arm64",
-    "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
-  },
-  {
     "os": "al2023",
     "username": "ec2-user",
     "instanceType":"t3a.medium",
@@ -29,17 +18,6 @@
     "ami": "CWA_SELinux_AL2023*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
-    "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
-  },
-  {
-    "os": "al2023",
-    "username": "ec2-user",
-    "instanceType":"m6g.medium",
-    "installAgentCommand": "go run ./install/install_agent.go rpm",
-    "ami": "CWA_SELinux_AL2023*",
-    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
-    "arc": "arm64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
     "family": "linux"
   }
