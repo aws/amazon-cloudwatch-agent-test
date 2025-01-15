@@ -64,7 +64,7 @@ resource "aws_instance" "cwagent" {
 locals {
   roles = {
     no_context_keys = {
-      suffix = ""
+      suffix    = ""
       condition = {}
     }
     source_arn_key = {
@@ -82,7 +82,7 @@ locals {
     all_context_keys = {
       suffix = "-all_context_keys"
       condition = {
-        "aws:SourceArn" = aws_instance.cwagent.arn
+        "aws:SourceArn"     = aws_instance.cwagent.arn
         "aws:SourceAccount" = "506463145083"
       }
     }
@@ -143,7 +143,7 @@ resource "aws_iam_role_policy" "cloudwatch_policy" {
           "s3:GetObjectAcl",
           "s3:GetObject"
         ]
-        Effect = "Allow"
+        Effect   = "Allow"
         Resource = "*"
       }
     ]
