@@ -86,6 +86,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
+      "sudo setenforce 1",
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
