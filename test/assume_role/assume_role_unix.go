@@ -25,7 +25,6 @@ import (
 )
 
 const (
-	namespace        = "AssumeRoleTest" // should match whats in agent config file
 	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 )
 
@@ -52,15 +51,16 @@ var (
 		{
 			TestRunner: &AssumeRoleTestRunner{
 				BaseTestRunner: test_runner.BaseTestRunner{},
+				name:           "AssumeRoleTest",
 			},
 		},
 		{
 			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
 					BaseTestRunner: test_runner.BaseTestRunner{},
+					roleSuffix:     "-source_arn_key",
+					name:           "SourceArnKeyOnlyTest",
 				},
-				name:                   "confused deputy env w/ sourceArn role",
-				roleSuffix:             "-source_arn_key",
 				setSourceArnEnvVar:     true,
 				setSourceAccountEnvVar: true,
 			},
@@ -69,9 +69,9 @@ var (
 			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
 					BaseTestRunner: test_runner.BaseTestRunner{},
+					roleSuffix:     "-source_account_key",
+					name:           "SourceAccountKeyOnlyTest",
 				},
-				name:                   "confused deputy env w/ sourceAccount role",
-				roleSuffix:             "-source_account_key",
 				setSourceArnEnvVar:     true,
 				setSourceAccountEnvVar: true,
 			},
@@ -80,9 +80,9 @@ var (
 			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
 					BaseTestRunner: test_runner.BaseTestRunner{},
+					roleSuffix:     "-all_context_keys",
+					name:           "AllKeysTest",
 				},
-				name:                   "confused deputy env w/ all keys role",
-				roleSuffix:             "-all_context_keys",
 				setSourceArnEnvVar:     true,
 				setSourceAccountEnvVar: true,
 			},
@@ -91,9 +91,9 @@ var (
 			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
 					BaseTestRunner: test_runner.BaseTestRunner{},
+					roleSuffix:     "-source_arn_key",
+					name:           "MissingSourceArnEnvTest",
 				},
-				name:                    "confused deputy env, only source arn",
-				roleSuffix:              "-source_arn_key",
 				setSourceArnEnvVar:      true,
 				expectAssumeRoleFailure: true,
 			},
@@ -102,9 +102,9 @@ var (
 			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
 					BaseTestRunner: test_runner.BaseTestRunner{},
+					roleSuffix:     "-source_account_key",
+					name:           "MissingSourceAccountEnvTest",
 				},
-				name:                    "confused deputy env, only source account",
-				roleSuffix:              "-source_account_key",
 				setSourceAccountEnvVar:  true,
 				expectAssumeRoleFailure: true,
 			},
@@ -113,9 +113,9 @@ var (
 			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
 					BaseTestRunner: test_runner.BaseTestRunner{},
+					roleSuffix:     "-all_context_keys",
+					name:           "ContextKeyMismatchAccountTest",
 				},
-				name:                     "confused deputy env, mismatch account",
-				roleSuffix:               "-all_context_keys",
 				setSourceArnEnvVar:       true,
 				setSourceAccountEnvVar:   true,
 				useInorrectSourceAccount: true,
@@ -126,9 +126,9 @@ var (
 			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
 					BaseTestRunner: test_runner.BaseTestRunner{},
+					roleSuffix:     "-all_context_keys",
+					name:           "ContextKeyMismatchArnTest",
 				},
-				name:                    "confused deputy env, mismatch arn",
-				roleSuffix:              "-all_context_keys",
 				setSourceArnEnvVar:      true,
 				useIncorrectSourceArn:   true,
 				setSourceAccountEnvVar:  true,
@@ -147,19 +147,28 @@ func (suite *AssumeRoleTestSuite) TestAllInSuite() {
 
 type AssumeRoleTestRunner struct {
 	test_runner.BaseTestRunner
+
+	name string
+
+	// terraform will create several roles which all share a base name and have a unique prefix. the base ARN is passed
+	// in via command line parameter, and the other roles can be referenced by appending a suffix to the base ARN
+	roleSuffix string
 }
 
 func (t AssumeRoleTestRunner) Validate() status.TestGroupResult {
+	return status.TestGroupResult{
+		Name:        t.GetTestName(),
+		TestResults: t.validateMetrics(),
+	}
+}
+
+func (t AssumeRoleTestRunner) validateMetrics() []status.TestResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateMetric(metricName)
 	}
-
-	return status.TestGroupResult{
-		Name:        t.GetTestName(),
-		TestResults: testResults,
-	}
+	return testResults
 }
 
 func (t *AssumeRoleTestRunner) validateMetric(metricName string) status.TestResult {
@@ -168,13 +177,13 @@ func (t *AssumeRoleTestRunner) validateMetric(metricName string) status.TestResu
 		Status: status.FAILED,
 	}
 
-	dims := getDimensions(environment.GetEnvironmentMetaData().InstanceId)
+	dims := getDimensions()
 	if len(dims) == 0 {
 		return testResult
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(t.GetTestName(), metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 
 	log.Printf("metric values are %v", values)
 	if err != nil {
@@ -190,11 +199,11 @@ func (t *AssumeRoleTestRunner) validateMetric(metricName string) status.TestResu
 }
 
 func (t AssumeRoleTestRunner) GetTestName() string {
-	return namespace
+	return t.name
 }
 
 func (t AssumeRoleTestRunner) GetAgentConfigFileName() string {
-	return "config.json"
+	return "agent_configs/config.json"
 }
 
 func (t AssumeRoleTestRunner) GetMeasuredMetrics() []string {
@@ -202,26 +211,35 @@ func (t AssumeRoleTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *AssumeRoleTestRunner) SetupBeforeAgentRun() error {
-	err := t.setupAgentConfig()
-	if err != nil {
-		return fmt.Errorf("failed to setup agent config: %w", err)
-	}
-	return t.SetUpConfig()
+	return t.setupAgentConfig()
+}
+
+func (t *AssumeRoleTestRunner) getRoleArn() string {
+	// Role ARN used by these tests assume a basic role name (given by the AssumeRoleArn environment metadata) with
+	// and optional suffix
+	return environment.GetEnvironmentMetaData().AssumeRoleArn + t.roleSuffix
 }
 
 func (t *AssumeRoleTestRunner) setupAgentConfig() error {
-	// The default agent config file conatins a PLACEHOLDER value which should be replaced with the ARN of the role
+
+	fmt.Printf("Role ARN: %s\n", t.getRoleArn())
+	fmt.Printf("Metric namespace: %s\n", t.GetTestName())
+
+	// The default agent config file conatins a ROLE_ARN_PLACEHOLDER value which should be replaced with the ARN of the role
 	// that the agent should assume. The ARN is not known until runtime. Test runner does not have sudo permissions,
-	// but it can execute sudo commands. Use sed to update the PLACEHOLDER value instead of using built-ins
-	common.CopyFile("agent_configs/config.json", configOutputPath)
-	fmt.Printf("Replacing PLACEHOLDER with %s in %s\n", environment.GetEnvironmentMetaData().AssumeRoleArn, configOutputPath)
-	// Use | delimiter since / will be in the ARN
-	sedCmd := fmt.Sprintf("sudo sed -i 's|PLACEHOLDER|%s|g' %s", environment.GetEnvironmentMetaData().AssumeRoleArn, configOutputPath)
-	fmt.Printf("sed command: %s\n", sedCmd)
+	// but it can execute sudo commands. Use sed to update the ROLE_ARN_PLACEHOLDER value instead of using built-ins
+	common.CopyFile(t.AgentConfig.ConfigFileName, configOutputPath)
+
+	sedCmd := fmt.Sprintf("sudo sed -i 's|ROLE_ARN_PLACEHOLDER|%s|g' %s", t.getRoleArn(), configOutputPath)
 	cmd := exec.Command("bash", "-c", sedCmd)
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed replace PLACEHOLDER value: %s; command output: %s", err, string(output))
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed replace ROLE_ARN_PLACEHOLDER value: %w", err)
+	}
+
+	sedCmd = fmt.Sprintf("sudo sed -i 's|NAMESPACE_PLACEHOLDER|%s|g' %s", t.GetTestName(), configOutputPath)
+	cmd = exec.Command("bash", "-c", sedCmd)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed replace NAMESPACE_PLACEHOLDER value: %w", err)
 	}
 
 	return nil
@@ -229,7 +247,7 @@ func (t *AssumeRoleTestRunner) setupAgentConfig() error {
 
 var _ test_runner.ITestRunner = (*AssumeRoleTestRunner)(nil)
 
-func getDimensions(_ string) []types.Dimension {
+func getDimensions() []types.Dimension {
 	env := environment.GetEnvironmentMetaData()
 	factory := dimension.GetDimensionFactory(*env)
 	dims, failed := factory.GetDimensions([]dimension.Instruction{
@@ -250,83 +268,137 @@ func getDimensions(_ string) []types.Dimension {
 	return dims
 }
 
-func Validate(assumeRoleArn string) error {
-	return nil
-}
-
 type ConfusedDeputyAssumeRoleTestRunner struct {
 	AssumeRoleTestRunner
 
-	name                     string
-	roleSuffix               string
-	setSourceArnEnvVar       bool
-	useIncorrectSourceArn    bool
+	setSourceArnEnvVar    bool
+	useIncorrectSourceArn bool
+
 	setSourceAccountEnvVar   bool
 	useInorrectSourceAccount bool
-	expectAssumeRoleFailure  bool
+
+	expectAssumeRoleFailure bool
+}
+
+func (t *ConfusedDeputyAssumeRoleTestRunner) GetTestName() string {
+	return t.name
 }
 
 func (t *ConfusedDeputyAssumeRoleTestRunner) Validate() status.TestGroupResult {
 
-	if t.expectAssumeRoleFailure {
-		return t.validateAccessDenied()
+	result := status.TestGroupResult{
+		Name: t.GetTestName(),
 	}
 
+	if t.expectAssumeRoleFailure {
+		result.TestResults = append(result.TestResults, t.validateNoMetrics()...)
+		result.TestResults = append(result.TestResults, t.validateAccessDenied())
+	} else {
+		result.TestResults = append(result.TestResults, t.validateMetrics()...)
+		result.TestResults = append(result.TestResults, t.validateFoundConfusedDeputyHeaders())
+	}
+
+	return result
+}
+
+func (t *ConfusedDeputyAssumeRoleTestRunner) validateNoMetrics() []status.TestResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateMetric(metricName)
+		testResults[i] = t.validateMetricMissing(metricName)
 	}
-
-	return status.TestGroupResult{
-		Name:        t.GetTestName(),
-		TestResults: testResults,
-	}
+	return testResults
 }
 
-func (t *ConfusedDeputyAssumeRoleTestRunner) validateAccessDenied() status.TestGroupResult {
-	// Check for accsess denied error in the agent log
-	content, err := os.ReadFile(common.AgentLogFile)
-	if err != nil {
-		return status.TestGroupResult{
-			Name:        t.GetTestName(),
-			TestResults: []status.TestResult{},
-		}
-	}
+func (t *AssumeRoleTestRunner) validateMetricMissing(metricName string) status.TestResult {
 	testResult := status.TestResult{
-		Name:   "accessDenied",
+		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	// FOR DEBUGGING ONLY
-	fmt.Println("validateAccessDenied agent log content")
-	fmt.Println(string(content))
+	dims := getDimensions()
+	if len(dims) == 0 {
+		return testResult
+	}
 
-	if strings.Contains(string(content), "AccessDenied") {
-		fmt.Println("Found 'AccessDenied' in the file")
+	fetcher := metric.MetricValueFetcher{}
+	values, err := fetcher.Fetch(t.GetTestName(), metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+	if err != nil {
+		return testResult
+	}
+
+	// fetcher should return no data as the agent should not be able to assume the role it was given
+	// If there are values, then something went wrong
+	if len(values) > 0 {
+		return testResult
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func (t *ConfusedDeputyAssumeRoleTestRunner) validateAccessDenied() status.TestResult {
+
+	testResult := status.TestResult{
+		Name:   "access_denied",
+		Status: status.FAILED,
+	}
+
+	// Check for accsess denied error in the agent log
+	content, err := os.ReadFile(common.AgentLogFile)
+	if err != nil {
+		return testResult
+	}
+
+	if strings.Contains(string(content), fmt.Sprintf("not authorized to perform: sts:AssumeRole on resource: %s", t.getRoleArn())) {
+		fmt.Println("Found 'not authorized to perform...' in the file")
 		testResult.Status = status.SUCCESSFUL
+	} else {
+		fmt.Println("Did not find 'not authorized to perform...' in the file")
+		testResult.Status = status.FAILED
 	}
 
-	return status.TestGroupResult{
-		Name: t.GetTestName(),
-		TestResults: []status.TestResult{
-			testResult,
-		},
+	return testResult
+}
+
+func (t *ConfusedDeputyAssumeRoleTestRunner) validateFoundConfusedDeputyHeaders() status.TestResult {
+	// To double check that the agent was actually using confused deputy headers in the assume role calls,
+	// check for the informational debug output in the log file. This is a bit frivolous since it relies on the
+	// logging functionality of the agent, so it could be removed if it causes problems
+	testResult := status.TestResult{
+		Name:   "confused_deputy_headers",
+		Status: status.FAILED,
 	}
+
+	content, err := os.ReadFile(common.AgentLogFile)
+	if err != nil {
+		return testResult
+	}
+
+	if strings.Contains(string(content), "Found confused deputy header environment variables") {
+		fmt.Println("Found 'confused deputy header variables' in the logs")
+		testResult.Status = status.SUCCESSFUL
+	} else {
+		fmt.Println("Did not find 'confused deputy header variables' in the file")
+		testResult.Status = status.FAILED
+	}
+
+	return testResult
 }
 
 func (t *ConfusedDeputyAssumeRoleTestRunner) SetupBeforeAgentRun() error {
-	err := t.setupAgentConfig()
-	if err != nil {
-		return fmt.Errorf("failed to setup agent config: %w", err)
-	}
-
-	err = t.setupEnvironmentVariables()
+	err := t.setupEnvironmentVariables()
 	if err != nil {
 		return fmt.Errorf("failed to setup environment variables: %w", err)
 	}
 
-	return t.SetUpConfig()
+	// Clear out log file since we'll need to check the logs on each run and we don't want logs from another test
+	// being checked
+	err = t.clearLogFile()
+	if err != nil {
+		return fmt.Errorf("failed to clear log file: %w", err)
+	}
+	return t.setupAgentConfig()
 }
 
 func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
@@ -345,35 +417,65 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 	}
 
 	if !t.setSourceAccountEnvVar {
-		// Remove the line with AMZ_SOURCE_ACCOUNT
+		fmt.Println("Removing AMZ_SOURCE_ACCOUNT from service file")
+
 		sedCmd := "sudo sed -i '/AMZ_SOURCE_ACCOUNT/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
-		fmt.Printf("sed command: %s\n", sedCmd)
 		cmd := exec.Command("bash", "-c", sedCmd)
-		output, err := cmd.Output()
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed remove PLACEHOLDER value: %w", err)
+		}
+
+		err := t.daemonReload()
 		if err != nil {
-			return fmt.Errorf("failed replace PLACEHOLDER value: %w; command output: %s", err, string(output))
+			return err
 		}
 	}
 
 	if !t.setSourceArnEnvVar {
-		// Remove the line with AMZ_SOURCE_ARN
+		fmt.Println("Removing AMZ_SOURCE_ARN from service file")
+
 		sedCmd := "sudo sed -i '/AMZ_SOURCE_ARN/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
-		fmt.Printf("sed command: %s\n", sedCmd)
 		cmd := exec.Command("bash", "-c", sedCmd)
-		output, err := cmd.Output()
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to remove AMZ_SOURCE_ARN value: %w", err)
+		}
+
+		err := t.daemonReload()
 		if err != nil {
-			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w; command output: %s", err, string(output))
+			return err
 		}
 	} else {
-		// Replace PLACEHOLDER value in the AMZ_SOURCE_ARN line. Use | delimiter since / will be in the ARN
+		fmt.Printf("AMZ_SOURCE_ARN: %s\n", environment.GetEnvironmentMetaData().InstanceArn)
+
 		sedCmd := fmt.Sprintf("sudo sed -i 's|PLACEHOLDER|%s|g' /etc/systemd/system/amazon-cloudwatch-agent.service", environment.GetEnvironmentMetaData().InstanceArn)
-		fmt.Printf("sed command: %s\n", sedCmd)
 		cmd := exec.Command("bash", "-c", sedCmd)
-		output, err := cmd.Output()
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w", err)
+		}
+
+		err := t.daemonReload()
 		if err != nil {
-			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w; command output: %s", err, string(output))
+			return err
 		}
 	}
 
+	return nil
+}
+
+func (t *ConfusedDeputyAssumeRoleTestRunner) daemonReload() error {
+	cmd := exec.Command("sudo", "systemctl", "daemon-reload")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to daemon-reload: %w; command output: %s", err, string(output))
+	}
+	return nil
+}
+
+func (t *ConfusedDeputyAssumeRoleTestRunner) clearLogFile() error {
+	cmd := exec.Command("sudo", "rm", common.AgentLogFile)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to clear log file: %w; command output: %s", err, string(output))
+	}
 	return nil
 }
