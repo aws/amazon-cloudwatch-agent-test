@@ -58,7 +58,7 @@ resource "aws_eks_node_group" "this" {
 resource "aws_eks_addon" "pod_identity_addon" {
   cluster_name = aws_eks_cluster.this.name
   addon_name   = "eks-pod-identity-agent"
-  depends_on = [aws_eks_node_group.this]
+  depends_on   = [aws_eks_node_group.this]
 }
 
 # EKS Node IAM Role
@@ -124,11 +124,11 @@ resource "aws_iam_role_policy_attachment" "pod_CloudWatchAgentServerPolicy" {
 }
 
 resource "aws_eks_pod_identity_association" "association" {
-  cluster_name = aws_eks_cluster.this.name
-  namespace = "amazon-cloudwatch"
+  cluster_name    = aws_eks_cluster.this.name
+  namespace       = "amazon-cloudwatch"
   service_account = "cloudwatch-agent"
-  role_arn = aws_iam_role.pod-identity-role.arn
-  depends_on = [aws_eks_cluster.this]
+  role_arn        = aws_iam_role.pod-identity-role.arn
+  depends_on      = [aws_eks_cluster.this]
 }
 
 # TODO: these security groups be created once and then reused
