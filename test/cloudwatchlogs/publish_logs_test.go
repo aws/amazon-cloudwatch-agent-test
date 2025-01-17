@@ -402,6 +402,7 @@ func makeListEntitiesRequest() {
 		return
 	}
 
+	fmt.Sprintf("%T", respBody)
 	fmt.Printf("Response Status: %s\n", resp.Status)
 	fmt.Printf("Response Body: %s\n", string(respBody))
 
