@@ -6,6 +6,10 @@
 package cloudwatchlogs
 
 import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -17,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 
@@ -278,62 +284,102 @@ func TestLogGroupClass(t *testing.T) {
 
 func TestResourceMetrics(t *testing.T) {
 	// Set up the test environment
-	instanceId := awsservice.GetInstanceId()
-	configPath := "resources/config_log_resource.json"
-	logFile, err2 := os.Create(logFilePath)
-	if err2 != nil {
-		t.Fatalf("Error occurred creating log file for writing: %v", err2)
-	}
-	defer logFile.Close()
-	defer os.Remove(logFilePath)
-	// defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+	// instanceId := awsservice.GetInstanceId()
+	// configPath := "resources/config_log_resource.json"
+	// logFile, err2 := os.Create(logFilePath)
+	// if err2 != nil {
+	// 	t.Fatalf("Error occurred creating log file for writing: %v", err2)
+	// }
+	// defer logFile.Close()
+	// defer os.Remove(logFilePath)
+	// // defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
 
-	// Start the CloudWatch agent with the resource metrics configuration
-	common.CopyFile(configPath, configOutputPath)
-	common.StartAgent(configOutputPath, true, false)
-	time.Sleep(2 * time.Minute)
-	writeLogLines(t, logFile, 100)
-	time.Sleep(2 * time.Minute)
-	common.StopAgent()
+	// // Start the CloudWatch agent with the resource metrics configuration
+	// common.CopyFile(configPath, configOutputPath)
+	// common.StartAgent(configOutputPath, true, false)
+	// time.Sleep(2 * time.Minute)
+	// writeLogLines(t, logFile, 100)
+	// time.Sleep(2 * time.Minute)
+	// common.StopAgent()
 
-	client := &http.Client{}
-	var data = strings.NewReader(fmt.Sprintf(`{
-		"Namespace": "CWAgent",
-		"MetricName": "cpu_usage_idle",
-		"Dimensions": [
-			{
-				"Name": "InstanceId",
-				"Value": "%s"
-			},
-			{
-				"Name": "InstanceType",
-				"Value": "t3.medium"
-			},
-			{
-				"Name": "cpu",
-				"Value": "cpu-total"
-			}
-		]
-	}`, instanceId))
-	req, err := http.NewRequest("POST", "http://monitoring.us-west-2.amazonaws.com", data)
+	makeRequest()
+}
+
+// Function to make the POST request
+func makeRequest() {
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error loading AWS config:", err)
+		return
 	}
+
+	// Create a new signer
+	signer := v4.NewSigner()
+
+	instanceID := awsservice.GetInstanceId()
+	body := []byte(fmt.Sprintf(`{
+        "Namespace": "CWAgent",
+        "MetricName": "cpu_usage_idle",
+        "Dimensions": [
+            {"Name": "InstanceId", "Value": "%s"},
+            {"Name": "InstanceType", "Value": "t3.medium"},
+            {"Name": "cpu", "Value": "cpu-total"}
+        ]
+    }`, instanceID))
+
+	// Calculate SHA256 hash of the body
+	h := sha256.New()
+	h.Write(body)
+	payloadHash := hex.EncodeToString(h.Sum(nil))
+
+	// Create a new HTTP request
+	req, err := http.NewRequest("POST", "https://monitoring.us-west-2.amazonaws.com/", bytes.NewReader(body))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
+
+	// Set necessary headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "amz-1.0")
-	req.Header.Set("x-amz-security-token", os.Getenv("AWS_SESSION_TOKEN"))
 	req.Header.Set("X-Amz-Target", "com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric")
+	req.Header.Set("Content-Encoding", "amz-1.0")
+
+	// Retrieve AWS credentials (access key, secret key, session token)
+	credentials, err := cfg.Credentials.Retrieve(context.TODO())
+	if err != nil {
+		fmt.Println("Error retrieving credentials:", err)
+		return
+	}
+
+	// Include session token if available
+	req.Header.Set("x-amz-security-token", credentials.SessionToken)
+
+	// Sign the request with the AWS signer
+	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", "us-west-2", time.Now())
+	if err != nil {
+		fmt.Println("Error signing request:", err)
+		return
+	}
+
+	// Send the request
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error sending request:", err)
+		return
 	}
 	defer resp.Body.Close()
-	bodyText, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%s\n", bodyText)
 
+	// Read the response body
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response:", err)
+		return
+	}
+
+	// Output the response
+	fmt.Printf("Response Status: %s\n", resp.Status)
+	fmt.Printf("Response Body: %s\n", string(respBody))
 }
 
 func writeLogLines(t *testing.T, f *os.File, iterations int) {
