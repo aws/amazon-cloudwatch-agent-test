@@ -6,6 +6,7 @@
 package cloudwatchlogs
 
 import (
+	"assert"
 	"bytes"
 	"context"
 	"crypto/sha256"
