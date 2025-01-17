@@ -297,24 +297,24 @@ func TestResourceMetrics(t *testing.T) {
 	common.StopAgent()
 
 	client := &http.Client{}
-	var data = strings.NewReader(`{
-    "Namespace": "CWAgent",
-    "MetricName": "cpu_usage_idle",
-    "Dimensions": [
-      {
-        "Name": "InstanceId",
-        "Value": "i-0106f297bd439545b"
-      },
-      {
-        "Name": "InstanceType",
-        "Value": "t3.medium"
-      },
-      {
-        "Name": "cpu",
-        "Value": "cpu-total"
-      }
-    ]
-  }`)
+	var data = strings.NewReader(fmt.Sprintf(`{
+		"Namespace": "CWAgent",
+		"MetricName": "cpu_usage_idle",
+		"Dimensions": [
+			{
+				"Name": "InstanceId",
+				"Value": "%s"
+			},
+			{
+				"Name": "InstanceType",
+				"Value": "t3.medium"
+			},
+			{
+				"Name": "cpu",
+				"Value": "cpu-total"
+			}
+		]
+	}`, instanceId))
 	req, err := http.NewRequest("POST", "http://monitoring.us-west-2.amazonaws.com", data)
 	if err != nil {
 		log.Fatal(err)
