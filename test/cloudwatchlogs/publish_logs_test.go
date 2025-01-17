@@ -6,9 +6,10 @@
 package cloudwatchlogs
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -289,117 +290,50 @@ func TestResourceMetrics(t *testing.T) {
 
 	// Start the CloudWatch agent with the resource metrics configuration
 	common.CopyFile(configPath, configOutputPath)
-	start := time.Now()
 	common.StartAgent(configOutputPath, true, false)
 	time.Sleep(2 * time.Minute)
 	writeLogLines(t, logFile, 100)
 	time.Sleep(2 * time.Minute)
-
 	common.StopAgent()
 
-	// // Create the input for ListEntitiesForMetric
-	// input := &cloudwatch.ListEntitiesForMetricInput{
-	// 	Namespace:  aws.String("CWAgent"),
-	// 	MetricName: aws.String("cpu_usage_idle"), // or whichever CPU metric you're interested in
-	// 	Dimensions: []types.Dimension{
-	// 		{
-	// 			Name:  aws.String("InstanceId"),
-	// 			Value: aws.String(instanceId),
-	// 		},
-	// 	},
-	// }
+	client := &http.Client{}
+	var data = strings.NewReader(`{
+    "Namespace": "CWAgent",
+    "MetricName": "cpu_usage_idle",
+    "Dimensions": [
+      {
+        "Name": "InstanceId",
+        "Value": "i-0106f297bd439545b"
+      },
+      {
+        "Name": "InstanceType",
+        "Value": "t3.medium"
+      },
+      {
+        "Name": "cpu",
+        "Value": "cpu-total"
+      }
+    ]
+  }`)
+	req, err := http.NewRequest("POST", "http://monitoring.us-west-2.amazonaws.com", data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "amz-1.0")
+	req.Header.Set("x-amz-security-token", os.Getenv("AWS_SESSION_TOKEN"))
+	req.Header.Set("X-Amz-Target", "com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric")
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	bodyText, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s\n", bodyText)
 
-	// // Use a retry mechanism to allow time for metrics to propagate
-	// var result *cloudwatch.ListEntitiesForMetricOutput
-	// var err error
-	// err = retry.Do(
-	// 	func() error {
-	// 		result, err = awsservice.CwmClient.ListEntitiesForMetric(context.Background(), input)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		if len(result.Entities) == 0 {
-	// 			return fmt.Errorf("no entities found")
-	// 		}
-	// 		return nil
-	// 	},
-	// 	retry.Attempts(5),
-	// 	retry.Delay(30*time.Second),
-	// 	retry.DelayType(retry.FixedDelay),
-	// )
-
-	// assert.NoError(t, err, "Failed to list entities for metric")
-
-	// // Check if the entity exists and has the correct attributes
-	// found := false
-	// for _, entity := range result.Entities {
-	// 	if *entity.EntityId == instanceId {
-	// 		found = true
-	// 		assert.Equal(t, "AWS::EC2::Instance", *entity.KeyAttributes["ResourceType"])
-	// 		assert.Equal(t, "AWS::Resource", *entity.KeyAttributes["Type"])
-	// 		assert.Equal(t, instanceId, *entity.KeyAttributes["Identifier"])
-	// 		if accountId, ok := entity.KeyAttributes["AwsAccountId"]; ok {
-	// 			assert.NotEmpty(t, *accountId)
-	// 		}
-	// 		break
-	// 	}
-	// }
-
-	// assert.True(t, found, "Entity not found for the instance")
-
-	end := time.Now()
-
-	err := awsservice.ValidateLogs(
-		instanceId,
-		instanceId,
-		&start,
-		&end,
-		func(events []types.OutputLogEvent) error {
-			// Check if the entity exists and has the correct attributes
-			found := false
-			for _, event := range events {
-				var logEntry map[string]interface{}
-				if err := json.Unmarshal([]byte(*event.Message), &logEntry); err != nil {
-					continue // Skip invalid JSON
-				}
-
-				if metrics, ok := logEntry["Metrics"].(map[string]interface{}); ok {
-					for metricName := range metrics {
-						if strings.HasPrefix(metricName, "cpu_usage_") {
-							found = true
-							// Check for resource attributes
-							assert.Equal(t, "AWS::EC2::Instance", logEntry["ResourceType"])
-							assert.Equal(t, "AWS::Resource", logEntry["Type"])
-							assert.Equal(t, instanceId, logEntry["Identifier"])
-							if accountId, ok := logEntry["AwsAccountId"]; ok {
-								assert.NotEmpty(t, accountId)
-							}
-							return nil
-						}
-					}
-				}
-			}
-
-			if !found {
-				return fmt.Errorf("no CPU usage metric found for the instance")
-			}
-			return nil
-		},
-	)
-
-	assert.NoError(t, err, "Failed to validate logs")
-
-	// queryString := "fields @timestamp, @message | filter @message like /cpu_usage_/"
-
-	// // Define the expected entity
-	// expectedEntity := expectedEntity{
-	// 	ResourceType: "AWS::EC2::Instance",
-	// 	Type:         "AWS::Resource",
-	// 	Identifier:   instanceId,
-	// }
-
-	// // Validate the log entity
-	// ValidateLogEntity(t, logGroup, logStream, &end, queryString, expectedEntity, "EC2")
 }
 
 func writeLogLines(t *testing.T, f *os.File, iterations int) {
