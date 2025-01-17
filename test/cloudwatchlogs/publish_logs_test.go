@@ -366,8 +366,6 @@ func TestResourceMetrics(t *testing.T) {
 	assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
 }
 
-
-
 // trying to replicate this curl command essentially:
 // curl -i -X POST monitoring.us-west-2.amazonaws.com -H 'Content-Type: application/json' \
 //   -H 'Content-Encoding: amz-1.0' \
