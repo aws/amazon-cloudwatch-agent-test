@@ -6,13 +6,13 @@
 package cloudwatchlogs
 
 import (
-	"assert"
 	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"json"
 	"log"
 	"net/http"
 	"os"
@@ -357,14 +357,14 @@ func TestResourceMetrics(t *testing.T) {
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&response)
-	require.NoError(t, err, "Error parsing JSON response")
+	assert.NoError(t, err, "Error parsing JSON response")
 
 	// Verify the KeyAttributes
-	require.NotEmpty(t, response.Entities, "No entities found in the response")
+	assert.NotEmpty(t, response.Entities, "No entities found in the response")
 	entity := response.Entities[0]
 	assert.Equal(t, "AWS::Resource", entity.KeyAttributes.Type, "Unexpected Type in KeyAttributes")
 	assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType, "Unexpected ResourceType in KeyAttributes")
-	assert.Equal(t, instanceID, entity.KeyAttributes.Identifier, "Unexpected Identifier in KeyAttributes")
+	assert.Equal(t, instanceId, entity.KeyAttributes.Identifier, "Unexpected Identifier in KeyAttributes")
 }
 
 
