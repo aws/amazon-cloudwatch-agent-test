@@ -59,24 +59,7 @@ resource "null_resource" "integration_test_setup" {
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      "echo 1-hereeeee",
       var.install_agent,
-      "echo 1.5-hereeeee",
-      "cd ..",
-      "echo 2-hereeeee",
-      "sudo chown -R ec2-user:ec2-user /home/ec2-user/amazon-cloudwatch-agent-sepolicy",
-      "git config --global --add safe.directory /home/ec2-user/amazon-cloudwatch-agent-sepolicy",
-      "git config --global --add safe.directory '*'",
-      "git clone https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
-      "echo 3-hereeeee",
-      "echo cloning-selinux-repo",
-      "cd amazon-cloudwatch-agent-sepolicy",
-      "chmod +x ./amazon_cloudwatch_agent.sh",
-      "sudo ./amazon_cloudwatch_agent.sh",
-      "sudo systemctl restart amazon-cloudwatch-agent",
-      "sudo systemctl status amazon-cloudwatch-agent",
-      "cd ../amazon-cloudwatch-agent-test"
-
     ]
   }
 
