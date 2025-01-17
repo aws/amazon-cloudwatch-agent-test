@@ -5,7 +5,6 @@
         "debug": true
     },
     "metrics": {
-        "namespace": "EntityTest",
         "metrics_collected": {
             "cpu": {
                 "resources": [
@@ -28,7 +27,7 @@
         },
         "append_dimensions": {
             "InstanceId": "${aws:InstanceId}",
-            "AwsAccountId": "${aws:AccountId}"
+            "InstanceType": "${aws:InstanceType}"
         }
     },
     "logs": {
