@@ -364,6 +364,12 @@ func TestResourceMetrics(t *testing.T) {
 	assert.Equal(t, "AWS::Resource", entity.KeyAttributes.Type)
 	assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType)
 	assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
+
+	log.Printf("Entity: %+v\n", entity)
+	log.Printf("Type: %s\n", entity.KeyAttributes.Type)
+	log.Printf("ResourceType: %s\n", entity.KeyAttributes.ResourceType)
+	log.Printf("Identifier: %s\n", entity.KeyAttributes.Identifier)
+
 }
 
 // trying to replicate this curl command essentially:
