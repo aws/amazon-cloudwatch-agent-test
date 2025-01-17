@@ -290,7 +290,7 @@ func TestResourceMetrics(t *testing.T) {
 
 	defer logFile.Close()
 	defer os.Remove(logFilePath)
-	// defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
 
 	// start agent and write metrics and logs
 	common.CopyFile(configPath, configOutputPath)
@@ -317,6 +317,20 @@ func TestResourceMetrics(t *testing.T) {
 	h := sha256.New()
 	h.Write(body)
 	payloadHash := hex.EncodeToString(h.Sum(nil))
+
+	// essentially trying to convert this curl command:
+
+	// curl -i -X POST monitoring.us-west-2.amazonaws.com -H 'Content-Type: application/json' \
+	//   -H 'Content-Encoding: amz-1.0' \
+	//   --user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
+	//   -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
+	//   --aws-sigv4 "aws:amz:us-west-2:monitoring" \
+	//   -H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
+	//   -d '{
+	//     "Namespace": "CWAgent",
+	//     "MetricName": "cpu_usage_idle",
+	//     "Dimensions": [{"Name": "InstanceId", "Value": "i-0123456789012"}, { "Name": "cpu", "Value": "cpu-total"}]
+	//   }'
 
 	// build the request
 	req, err := http.NewRequest("POST", "https://monitoring.us-west-2.amazonaws.com/", bytes.NewReader(body))
@@ -364,32 +378,6 @@ func TestResourceMetrics(t *testing.T) {
 	assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType)
 	assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
 }
-
-// trying to replicate this curl command essentially:
-// curl -i -X POST monitoring.us-west-2.amazonaws.com -H 'Content-Type: application/json' \
-//   -H 'Content-Encoding: amz-1.0' \
-//   --user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
-//   -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
-//   --aws-sigv4 "aws:amz:us-west-2:monitoring" \
-//   -H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
-//   -d '{
-//     "Namespace": "CWAgent",
-//     "MetricName": "cpu_usage_idle",
-//     "Dimensions": [
-//       {
-//         "Name": "InstanceId",
-//         "Value": "i-0123456789012"
-//       },
-//       {
-//         "Name": "InstanceType",
-//         "Value": "t3.medium"
-//       },
-//       {
-//         "Name": "cpu",
-//         "Value": "cpu-total"
-//       }
-//     ]
-//   }'
 
 func writeLogLines(t *testing.T, f *os.File, iterations int) {
 	log.Printf("Writing %d lines to %s", iterations*len(logLineIds), f.Name())
