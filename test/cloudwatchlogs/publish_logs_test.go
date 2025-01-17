@@ -283,26 +283,87 @@ func TestLogGroupClass(t *testing.T) {
 }
 
 func TestResourceMetrics(t *testing.T) {
-	// Set up the test environment
-	// instanceId := awsservice.GetInstanceId()
-	// configPath := "resources/config_log_resource.json"
-	// logFile, err2 := os.Create(logFilePath)
-	// if err2 != nil {
-	// 	t.Fatalf("Error occurred creating log file for writing: %v", err2)
-	// }
-	// defer logFile.Close()
-	// defer os.Remove(logFilePath)
-	// // defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+	instanceId := awsservice.GetInstanceId()
+	configPath := "resources/config_log_resource.json"
+	logFile, err := os.Create(logFilePath)
+	assert.noError(t, err, "Error occurred creating log file for writing")
 
-	// // Start the CloudWatch agent with the resource metrics configuration
-	// common.CopyFile(configPath, configOutputPath)
-	// common.StartAgent(configOutputPath, true, false)
-	// time.Sleep(2 * time.Minute)
-	// writeLogLines(t, logFile, 100)
-	// time.Sleep(2 * time.Minute)
-	// common.StopAgent()
+	defer logFile.Close()
+	defer os.Remove(logFilePath)
+	// defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
 
-	makeListEntitiesRequest()
+	// start agent and write metrics and logs
+	common.CopyFile(configPath, configOutputPath)
+	common.StartAgent(configOutputPath, true, false)
+	time.Sleep(2 * time.Minute)
+	writeLogLines(t, logFile, 100)
+	time.Sleep(2 * time.Minute)
+	common.StopAgent()
+
+	// this section builds, signs, and sends the request
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
+	assert.noError(t, err)
+	signer := v4.NewSigner()
+
+	body := []byte(fmt.Sprintf(`{
+        "Namespace": "CWAgent",
+        "MetricName": "cpu_usage_idle",
+        "Dimensions": [
+            {"Name": "InstanceId", "Value": "%s"},
+            {"Name": "InstanceType", "Value": "t3.medium"},
+            {"Name": "cpu", "Value": "cpu-total"}
+        ]
+    }`, instanceId))
+
+	h := sha256.New()
+	h.Write(body)
+	payloadHash := hex.EncodeToString(h.Sum(nil))
+
+	// build the request
+	req, err := http.NewRequest("POST", "https://monitoring.us-west-2.amazonaws.com/", bytes.NewReader(body))
+	assert.noError(t, err, "Error creating request")
+
+	// set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Amz-Target", "com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric")
+	req.Header.Set("Content-Encoding", "amz-1.0")
+
+	// set creds
+	credentials, err := cfg.Credentials.Retrieve(context.TODO())
+	assert.noError(t, err, "Error getting credentials")
+
+	req.Header.Set("x-amz-security-token", credentials.SessionToken)
+
+	// sign the request
+	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", "us-west-2", time.Now())
+	assert.noError(t, err, "Error signing the request")
+
+	// send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	assert.noError(t, err, "Error sending the request")
+	defer resp.Body.Close()
+
+	// parse and verify the response
+	var response struct {
+		Entities []struct {
+			KeyAttributes struct {
+				Type         string `json:"Type"`
+				ResourceType string `json:"ResourceType"`
+				Identifier   string `json:"Identifier"`
+			} `json:"KeyAttributes"`
+		} `json:"Entities"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	require.NoError(t, err, "Error parsing JSON response")
+
+	// Verify the KeyAttributes
+	require.NotEmpty(t, response.Entities, "No entities found in the response")
+	entity := response.Entities[0]
+	assert.Equal(t, "AWS::Resource", entity.KeyAttributes.Type, "Unexpected Type in KeyAttributes")
+	assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType, "Unexpected ResourceType in KeyAttributes")
+	assert.Equal(t, instanceID, entity.KeyAttributes.Identifier, "Unexpected Identifier in KeyAttributes")
 }
 
 
@@ -334,7 +395,7 @@ func TestResourceMetrics(t *testing.T) {
 //   }'
 
 // Function to build and sign the ListEntitiesForMetric POST request
-func makeListEntitiesRequest() {
+func makeListEntitiesForMetricRequest() {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
 	if err != nil {
 		fmt.Println("Error loading AWS config:", err)
@@ -358,19 +419,19 @@ func makeListEntitiesRequest() {
 	h.Write(body)
 	payloadHash := hex.EncodeToString(h.Sum(nil))
 
-	// Create a new HTTP request
+	// build the request
 	req, err := http.NewRequest("POST", "https://monitoring.us-west-2.amazonaws.com/", bytes.NewReader(body))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
 		return
 	}
 
-	// Set necessary headers
+	// headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Amz-Target", "com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric")
 	req.Header.Set("Content-Encoding", "amz-1.0")
 
-	// Retrieve AWS credentials (access key, secret key, session token)
+	// creds
 	credentials, err := cfg.Credentials.Retrieve(context.TODO())
 	if err != nil {
 		fmt.Println("Error retrieving credentials:", err)
@@ -379,14 +440,14 @@ func makeListEntitiesRequest() {
 
 	req.Header.Set("x-amz-security-token", credentials.SessionToken)
 
-	// Sign the request with the AWS signer
+	// sign the request
 	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", "us-west-2", time.Now())
 	if err != nil {
 		fmt.Println("Error signing request:", err)
 		return
 	}
 
-	// Send the request
+	// send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -394,35 +455,6 @@ func makeListEntitiesRequest() {
 		return
 	}
 	defer resp.Body.Close()
-
-	// Read the response body
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response:", err)
-		return
-	}
-
-	log.Printf("%T", respBody)
-	fmt.Printf("Response Status: %s\n", resp.Status)
-	fmt.Printf("Response Body: %s\n", string(respBody))
-
-	// for i, entity := range responseObj.Entities {
-    //     fmt.Printf("Checking Entity %d:\n", i+1)
-    //     if entity.KeyAttributes.Type != "AWS::Resource" {
-    //         fmt.Printf("  Unexpected Type: %s\n", entity.KeyAttributes.Type)
-    //     }
-    //     if entity.KeyAttributes.ResourceType != "AWS::EC2::Instance" {
-    //         fmt.Printf("  Unexpected ResourceType: %s\n", entity.KeyAttributes.ResourceType)
-    //     }
-    //     if entity.KeyAttributes.Identifier != "i-0106f297bd439545b" {
-    //         fmt.Printf("  Unexpected Identifier: %s\n", entity.KeyAttributes.Identifier)
-    //     }
-    //     if entity.KeyAttributes.Type == "AWS::Resource" &&
-    //        entity.KeyAttributes.ResourceType == "AWS::EC2::Instance" &&
-    //        entity.KeyAttributes.Identifier == "i-0106f297bd439545b" {
-    //         fmt.Println("  Entity matches expected format")
-    //     }
-    // }
 }
 
 func writeLogLines(t *testing.T, f *os.File, iterations int) {
