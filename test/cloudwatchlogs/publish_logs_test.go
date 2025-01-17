@@ -12,7 +12,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -287,7 +286,7 @@ func TestResourceMetrics(t *testing.T) {
 	instanceId := awsservice.GetInstanceId()
 	configPath := "resources/config_log_resource.json"
 	logFile, err := os.Create(logFilePath)
-	assert.noError(t, err, "Error occurred creating log file for writing")
+	assert.NoError(t, err, "Error occurred creating log file for writing")
 
 	defer logFile.Close()
 	defer os.Remove(logFilePath)
@@ -303,7 +302,7 @@ func TestResourceMetrics(t *testing.T) {
 
 	// this section builds, signs, and sends the request
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
-	assert.noError(t, err)
+	assert.NoError(t, err)
 	signer := v4.NewSigner()
 
 	body := []byte(fmt.Sprintf(`{
@@ -322,7 +321,7 @@ func TestResourceMetrics(t *testing.T) {
 
 	// build the request
 	req, err := http.NewRequest("POST", "https://monitoring.us-west-2.amazonaws.com/", bytes.NewReader(body))
-	assert.noError(t, err, "Error creating request")
+	assert.NoError(t, err, "Error creating request")
 
 	// set headers
 	req.Header.Set("Content-Type", "application/json")
@@ -331,18 +330,18 @@ func TestResourceMetrics(t *testing.T) {
 
 	// set creds
 	credentials, err := cfg.Credentials.Retrieve(context.TODO())
-	assert.noError(t, err, "Error getting credentials")
+	assert.NoError(t, err, "Error getting credentials")
 
 	req.Header.Set("x-amz-security-token", credentials.SessionToken)
 
 	// sign the request
 	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", "us-west-2", time.Now())
-	assert.noError(t, err, "Error signing the request")
+	assert.NoError(t, err, "Error signing the request")
 
 	// send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	assert.noError(t, err, "Error sending the request")
+	assert.NoError(t, err, "Error sending the request")
 	defer resp.Body.Close()
 
 	// parse and verify the response
@@ -362,9 +361,9 @@ func TestResourceMetrics(t *testing.T) {
 	// Verify the KeyAttributes
 	assert.NotEmpty(t, response.Entities, "No entities found in the response")
 	entity := response.Entities[0]
-	assert.Equal(t, "AWS::Resource", entity.KeyAttributes.Type, "Unexpected Type in KeyAttributes")
-	assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType, "Unexpected ResourceType in KeyAttributes")
-	assert.Equal(t, instanceId, entity.KeyAttributes.Identifier, "Unexpected Identifier in KeyAttributes")
+	assert.Equal(t, "AWS::Resource", entity.KeyAttributes.Type)
+	assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType)
+	assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
 }
 
 
