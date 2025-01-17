@@ -13,6 +13,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksdeploymenttype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark/eks_resources"
@@ -31,7 +32,9 @@ type EKSDaemonTestRunner struct {
 
 func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	var testResults []status.TestResult
-	testResults = append(testResults, metric.ValidateMetrics(e.env, "", eks_resources.GetExpectedDimsToMetrics(e.env))...)
+	if e.env.EksDeploymentStrategy != eksdeploymenttype.PODIDENTITY {
+		testResults = append(testResults, metric.ValidateMetrics(e.env, "", eks_resources.GetExpectedDimsToMetrics(e.env))...)
+	}
 	metrics := e.GetMeasuredMetrics()
 	for _, name := range metrics {
 		testResults = append(testResults, e.validateInstanceMetrics(name))

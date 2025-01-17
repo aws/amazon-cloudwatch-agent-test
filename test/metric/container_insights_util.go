@@ -145,11 +145,30 @@ func validateMetricsAvailability(dims string, expected []string, actual map[stri
 func compareMetrics(expected []string, actual map[string][][]types.Dimension) bool {
 	if len(expected) != len(actual) {
 		log.Printf("the count of fetched metrics do not match with expected count: expected-%v, actual-%v\n", len(expected), len(actual))
+
+		expectedSet := make(map[string]struct{})
+		for _, key := range expected {
+			expectedSet[key] = struct{}{}
+		}
+
+		for key := range actual {
+			if _, exists := expectedSet[key]; !exists {
+				log.Printf("Unexpected metric in actual output : %s\n", key)
+			}
+		}
+
+		// Find missing metrics in expected output
+		for _, key := range expected {
+			if _, exists := actual[key]; !exists {
+				log.Printf("Missing metric in actual output: %s\n", key)
+			}
+		}
 		return false
 	}
 
 	for _, key := range expected {
 		if _, ok := actual[key]; !ok {
+			log.Printf("Missing metric in actual: %s\n", key)
 			return false
 		}
 	}
