@@ -310,7 +310,6 @@ func TestResourceMetrics(t *testing.T) {
         "MetricName": "cpu_usage_idle",
         "Dimensions": [
             {"Name": "InstanceId", "Value": "%s"},
-            {"Name": "InstanceType", "Value": "t3.medium"},
             {"Name": "cpu", "Value": "cpu-total"}
         ]
     }`, instanceId))
@@ -364,12 +363,6 @@ func TestResourceMetrics(t *testing.T) {
 	assert.Equal(t, "AWS::Resource", entity.KeyAttributes.Type)
 	assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType)
 	assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
-
-	log.Printf("Entity: %+v\n", entity)
-	log.Printf("Type: %s\n", entity.KeyAttributes.Type)
-	log.Printf("ResourceType: %s\n", entity.KeyAttributes.ResourceType)
-	log.Printf("Identifier: %s\n", entity.KeyAttributes.Identifier)
-
 }
 
 // trying to replicate this curl command essentially:
@@ -397,69 +390,6 @@ func TestResourceMetrics(t *testing.T) {
 //       }
 //     ]
 //   }'
-
-// Function to build and sign the ListEntitiesForMetric POST request
-func makeListEntitiesForMetricRequest() {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
-	if err != nil {
-		fmt.Println("Error loading AWS config:", err)
-		return
-	}
-
-	signer := v4.NewSigner()
-
-	instanceID := awsservice.GetInstanceId()
-	body := []byte(fmt.Sprintf(`{
-        "Namespace": "CWAgent",
-        "MetricName": "cpu_usage_idle",
-        "Dimensions": [
-            {"Name": "InstanceId", "Value": "%s"},
-            {"Name": "InstanceType", "Value": "t3.medium"},
-            {"Name": "cpu", "Value": "cpu-total"}
-        ]
-    }`, instanceID))
-
-	h := sha256.New()
-	h.Write(body)
-	payloadHash := hex.EncodeToString(h.Sum(nil))
-
-	// build the request
-	req, err := http.NewRequest("POST", "https://monitoring.us-west-2.amazonaws.com/", bytes.NewReader(body))
-	if err != nil {
-		fmt.Println("Error creating request:", err)
-		return
-	}
-
-	// headers
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Amz-Target", "com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric")
-	req.Header.Set("Content-Encoding", "amz-1.0")
-
-	// creds
-	credentials, err := cfg.Credentials.Retrieve(context.TODO())
-	if err != nil {
-		fmt.Println("Error retrieving credentials:", err)
-		return
-	}
-
-	req.Header.Set("x-amz-security-token", credentials.SessionToken)
-
-	// sign the request
-	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", "us-west-2", time.Now())
-	if err != nil {
-		fmt.Println("Error signing request:", err)
-		return
-	}
-
-	// send the request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return
-	}
-	defer resp.Body.Close()
-}
 
 func writeLogLines(t *testing.T, f *os.File, iterations int) {
 	log.Printf("Writing %d lines to %s", iterations*len(logLineIds), f.Name())
