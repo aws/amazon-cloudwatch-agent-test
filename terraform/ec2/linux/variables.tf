@@ -18,7 +18,7 @@ variable "ssh_key_name" {
 
 variable "ami" {
   type    = string
-  default = "CWA_SELinux_AL2023*"
+  default = "CWA_SELinux_AL2023v2"
 }
 
 variable "ssh_key_value" {
