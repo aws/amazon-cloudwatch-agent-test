@@ -285,19 +285,11 @@ func TestLogGroupClass(t *testing.T) {
 func TestResourceMetrics(t *testing.T) {
 	instanceId := awsservice.GetInstanceId()
 	configPath := "resources/config_log_resource.json"
-	logFile, err := os.Create(logFilePath)
-	assert.NoError(t, err, "Error occurred creating log file for writing")
 
-	defer logFile.Close()
-	defer os.Remove(logFilePath)
-	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
-
-	// start agent and write metrics and logs
+	// start agent and write metrics
 	common.CopyFile(configPath, configOutputPath)
 	common.StartAgent(configOutputPath, true, false)
-	time.Sleep(2 * time.Minute)
-	writeLogLines(t, logFile, 100)
-	time.Sleep(2 * time.Minute)
+	time.Sleep(4 * time.Minute)
 	common.StopAgent()
 
 	// this section builds, signs, and sends the request

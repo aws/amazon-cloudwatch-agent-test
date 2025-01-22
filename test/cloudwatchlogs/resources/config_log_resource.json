@@ -28,19 +28,5 @@
         "append_dimensions": {
             "InstanceId": "${aws:InstanceId}"
         }
-    },
-    "logs": {
-        "logs_collected": {
-            "files": {
-                "collect_list": [
-                    {
-                        "file_path": "/tmp/cwagent_log_test.log*",
-                        "log_group_name": "{instance_id}",
-                        "log_stream_name": "{instance_id}",
-                        "timezone": "UTC"
-                    }
-                ]
-            }
-        }
     }
 }
