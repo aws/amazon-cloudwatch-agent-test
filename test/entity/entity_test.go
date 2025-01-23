@@ -249,7 +249,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 func TestResourceMetrics(t *testing.T) {
 	instanceId := awsservice.GetInstanceId()
 	configPath := "resources/config_metrics_resource.json"
-	configOutputPath := "resources/config_metrics_resource.json" // can remove?
+	configOutputPath := "resources/config_metrics_resource2.json" // can remove?
 
 	// start agent and write metrics
 	common.CopyFile(configPath, configOutputPath)
