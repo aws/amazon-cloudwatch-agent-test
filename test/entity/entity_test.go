@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -335,39 +334,15 @@ func TestResourceMetrics(t *testing.T) {
 	// assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType)
 	// assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
 
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response:", err)
-		return
+	expectedEntity := expectedEntity{
+		entityType:   "AWS::Resource",
+		platformType: "AWS::EC2::Instance",
+		instanceId:   instanceId,
 	}
-
-	fmt.Printf("Response Status: %s\n", resp.Status)
-fmt.Printf("Response Headers:\n")
-for key, values := range resp.Header {
-    for _, value := range values {
-        fmt.Printf("%s: %s\n", key, value)
-    }
-}
-fmt.Printf("Response Body:\n%s\n", string(respBody))
-
-	log.Printf("Response Body: %s\n", string(respBody))
-	log.Print(entity)
-
-	// expectedEntity := expectedEntity{
-    //     entityType:   "AWS::Resource",
-    //     name:         instanceId,
-    //     environment:  "", // Add the expected environment if applicable
-    //     platformType: "AWS::EC2::Instance",
-    //     instanceId:   instanceId,
-    // }
-
-    // validator := NewEntityValidator("EC2", expectedEntity)
-
-    // // Validate each field
-    // validator.ValidateField(entityType, entity.KeyAttributes.Type, t)
-    // validator.ValidateField(entityName, entity.KeyAttributes.Identifier, t)
-    // validator.ValidateField(entityPlatform, entity.KeyAttributes.ResourceType, t)
-    // validator.ValidateField(entityInstanceId, entity.KeyAttributes.Identifier, t)
+	validator := NewEntityValidator("EC2", expectedEntity)
+	validator.ValidateField(entityType, entity.KeyAttributes.Type, t)
+	validator.ValidateField(entityPlatform, entity.KeyAttributes.ResourceType, t)
+	validator.ValidateField(entityInstanceId, entity.KeyAttributes.Identifier, t)
 
 }
 
