@@ -334,8 +334,7 @@ func TestResourceMetrics(t *testing.T) {
 	// assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType)
 	// assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
 
-	log.Print(resp.Body)
-	log.Print(entity)
+	log.Print(response)
 
 	// expectedEntity := expectedEntity{
     //     entityType:   "AWS::Resource",
