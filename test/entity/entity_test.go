@@ -4,13 +4,21 @@
 package entity
 
 import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/stretchr/testify/assert"
 
@@ -235,6 +243,95 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 			ValidateLogEntity(t, appLogGroup, podApplicationLogStream, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
 		})
 	}
+}
+
+func TestResourceMetrics(t *testing.T) {
+	instanceId := awsservice.GetInstanceId()
+	configPath := "resources/config_metrics_resource.json"
+
+	// start agent and write metrics
+	common.CopyFile(configPath, configOutputPath)
+	common.StartAgent(configOutputPath, true, false)
+	time.Sleep(4 * time.Minute)
+	common.StopAgent()
+
+	// this section builds, signs, and sends the request
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
+	assert.NoError(t, err)
+	signer := v4.NewSigner()
+
+	body := []byte(fmt.Sprintf(`{
+        "Namespace": "CWAgent",
+        "MetricName": "cpu_usage_idle",
+        "Dimensions": [
+            {"Name": "InstanceId", "Value": "%s"},
+            {"Name": "cpu", "Value": "cpu-total"}
+        ]
+    }`, instanceId))
+
+	h := sha256.New()
+	h.Write(body)
+	payloadHash := hex.EncodeToString(h.Sum(nil))
+
+	// essentially trying to convert this curl command:
+
+	// curl -i -X POST monitoring.us-west-2.amazonaws.com -H 'Content-Type: application/json' \
+	//   -H 'Content-Encoding: amz-1.0' \
+	//   --user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
+	//   -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
+	//   --aws-sigv4 "aws:amz:us-west-2:monitoring" \
+	//   -H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
+	//   -d '{
+	//     "Namespace": "CWAgent",
+	//     "MetricName": "cpu_usage_idle",
+	//     "Dimensions": [{"Name": "InstanceId", "Value": "i-0123456789012"}, { "Name": "cpu", "Value": "cpu-total"}]
+	//   }'
+
+	// build the request
+	req, err := http.NewRequest("POST", "https://monitoring.us-west-2.amazonaws.com/", bytes.NewReader(body))
+	assert.NoError(t, err, "Error creating request")
+
+	// set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Amz-Target", "com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric")
+	req.Header.Set("Content-Encoding", "amz-1.0")
+
+	// set creds
+	credentials, err := cfg.Credentials.Retrieve(context.TODO())
+	assert.NoError(t, err, "Error getting credentials")
+
+	req.Header.Set("x-amz-security-token", credentials.SessionToken)
+
+	// sign the request
+	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", "us-west-2", time.Now())
+	assert.NoError(t, err, "Error signing the request")
+
+	// send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	assert.NoError(t, err, "Error sending the request")
+	defer resp.Body.Close()
+
+	// parse and verify the response
+	var response struct {
+		Entities []struct {
+			KeyAttributes struct {
+				Type         string `json:"Type"`
+				ResourceType string `json:"ResourceType"`
+				Identifier   string `json:"Identifier"`
+			} `json:"KeyAttributes"`
+		} `json:"Entities"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	assert.NoError(t, err, "Error parsing JSON response")
+
+	// Verify the KeyAttributes
+	assert.NotEmpty(t, response.Entities, "No entities found in the response")
+	entity := response.Entities[0]
+	assert.Equal(t, "AWS::Resource", entity.KeyAttributes.Type)
+	assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType)
+	assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
 }
 
 // ValidateLogEntity performs the entity validation for PutLogEvents.
