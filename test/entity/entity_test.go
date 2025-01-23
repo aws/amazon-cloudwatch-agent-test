@@ -24,6 +24,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
@@ -248,6 +249,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 func TestResourceMetrics(t *testing.T) {
 	instanceId := awsservice.GetInstanceId()
 	configPath := "resources/config_metrics_resource.json"
+	configOutputPath := "resources/config_metrics_resource.json" // can remove?
 
 	// start agent and write metrics
 	common.CopyFile(configPath, configOutputPath)
