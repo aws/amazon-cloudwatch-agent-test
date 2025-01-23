@@ -8,7 +8,6 @@ package cloudwatchlogs
 import (
 	"fmt"
 	"log"
-
 	"os"
 	"path/filepath"
 	"strconv"

@@ -29,6 +29,7 @@ import (
 
 const (
 	sleepForFlush = 240 * time.Second
+	region = "us-west-2"
 
 	entityType        = "@entity.KeyAttributes.Type"
 	entityName        = "@entity.KeyAttributes.Name"
@@ -254,11 +255,11 @@ func TestResourceMetrics(t *testing.T) {
 	// start agent and write metrics
 	common.CopyFile(configPath, configOutputPath)
 	common.StartAgent(configOutputPath, true, false)
-	time.Sleep(4 * time.Minute)
+	time.Sleep(sleepForFlush)
 	common.StopAgent()
 
 	// this section builds, signs, and sends the request
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
 	assert.NoError(t, err)
 	signer := v4.NewSigner()
 
@@ -290,7 +291,7 @@ func TestResourceMetrics(t *testing.T) {
 	//   }'
 
 	// build the request
-	req, err := http.NewRequest("POST", "https://monitoring.us-west-2.amazonaws.com/", bytes.NewReader(body))
+	req, err := http.NewRequest("POST", "https://monitoring."+region+".amazonaws.com/", bytes.NewReader(body))
 	assert.NoError(t, err, "Error creating request")
 
 	// set headers
@@ -305,7 +306,7 @@ func TestResourceMetrics(t *testing.T) {
 	req.Header.Set("x-amz-security-token", credentials.SessionToken)
 
 	// sign the request
-	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", "us-west-2", time.Now())
+	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", region, time.Now())
 	assert.NoError(t, err, "Error signing the request")
 
 	// send the request
