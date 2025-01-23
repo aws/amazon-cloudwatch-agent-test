@@ -259,7 +259,8 @@ func TestResourceMetrics(t *testing.T) {
 			{"Name": "cpu", "Value": "cpu-total"}
 		]
 	}`, instanceId))
-	req = BuildListEntitiesForMetricRequest(requestBody, region)
+	req, err := common.BuildListEntitiesForMetricRequest(requestBody, region)
+	assert.NoError(t, err, "Error building ListEntitiesForMetric request")
 
 	// send the request
 	client := &http.Client{}
