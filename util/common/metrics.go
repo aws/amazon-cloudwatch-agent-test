@@ -25,9 +25,8 @@ import (
 	"collectd.org/network"
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/aws/aws-sdk-go-v2/config"
-	v4 "github.com/aws/aws-sdk-go/aws/signer/v4"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
-	"github.com/stretchr/testify/assert"
 )
 
 const SleepDuration = 5 * time.Second
@@ -369,9 +368,11 @@ func SendEMFMetrics(metricPerInterval int, metricLogGroup, metricNamespace strin
 //	    "MetricName": "cpu_usage_idle",
 //	    "Dimensions": [{"Name": "InstanceId", "Value": "i-0123456789012"}, { "Name": "cpu", "Value": "cpu-total"}]
 //	  }'
-func BuildListEntitiesForMetricRequest(body []byte, region string) {
+func BuildListEntitiesForMetricRequest(body []byte, region string) (*http.Request, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	signer := v4.NewSigner()
 	h := sha256.New()
 
@@ -380,7 +381,9 @@ func BuildListEntitiesForMetricRequest(body []byte, region string) {
 
 	// build the request
 	req, err := http.NewRequest("POST", "https://monitoring."+region+".amazonaws.com/", bytes.NewReader(body))
-	assert.NoError(t, err, "Error creating request")
+	if err != nil {
+		return nil, err
+	}
 
 	// set headers
 	req.Header.Set("Content-Type", "application/json")
@@ -389,13 +392,17 @@ func BuildListEntitiesForMetricRequest(body []byte, region string) {
 
 	// set creds
 	credentials, err := cfg.Credentials.Retrieve(context.TODO())
-	assert.NoError(t, err, "Error getting credentials")
+	if err != nil {
+		return nil, err
+	}
 
 	req.Header.Set("x-amz-security-token", credentials.SessionToken)
 
 	// sign the request
 	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", region, time.Now())
-	assert.NoError(t, err, "Error signing the request")
+	if err != nil {
+		return nil, err
+	}
 
-	return req
+	return req, nil
 }
