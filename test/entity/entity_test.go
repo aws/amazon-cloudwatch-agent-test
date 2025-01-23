@@ -335,6 +335,7 @@ func TestResourceMetrics(t *testing.T) {
 	// assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
 
 	log.Print(resp.Body)
+	log.Print(entity)
 
 	// expectedEntity := expectedEntity{
     //     entityType:   "AWS::Resource",
