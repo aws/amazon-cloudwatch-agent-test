@@ -4,10 +4,6 @@
 package entity
 
 import (
-	"bytes"
-	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -18,8 +14,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -256,56 +250,16 @@ func TestResourceMetrics(t *testing.T) {
 	time.Sleep(sleepForFlush)
 	common.StopAgent()
 
-	// this section builds, signs, and sends the request
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
-	assert.NoError(t, err)
-	signer := v4.NewSigner()
-
-	body := []byte(fmt.Sprintf(`{
-        "Namespace": "CWAgent",
-        "MetricName": "cpu_usage_idle",
-        "Dimensions": [
-            {"Name": "InstanceId", "Value": "%s"},
-            {"Name": "cpu", "Value": "cpu-total"}
-        ]
-    }`, instanceId))
-
-	h := sha256.New()
-	h.Write(body)
-	payloadHash := hex.EncodeToString(h.Sum(nil))
-
-	// essentially trying to convert this curl command:
-
-	// curl -i -X POST monitoring.us-west-2.amazonaws.com -H 'Content-Type: application/json' \
-	//   -H 'Content-Encoding: amz-1.0' \
-	//   --user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
-	//   -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
-	//   --aws-sigv4 "aws:amz:us-west-2:monitoring" \
-	//   -H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
-	//   -d '{
-	//     "Namespace": "CWAgent",
-	//     "MetricName": "cpu_usage_idle",
-	//     "Dimensions": [{"Name": "InstanceId", "Value": "i-0123456789012"}, { "Name": "cpu", "Value": "cpu-total"}]
-	//   }'
-
-	// build the request
-	req, err := http.NewRequest("POST", "https://monitoring."+region+".amazonaws.com/", bytes.NewReader(body))
-	assert.NoError(t, err, "Error creating request")
-
-	// set headers
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Amz-Target", "com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric")
-	req.Header.Set("Content-Encoding", "amz-1.0")
-
-	// set creds
-	credentials, err := cfg.Credentials.Retrieve(context.TODO())
-	assert.NoError(t, err, "Error getting credentials")
-
-	req.Header.Set("x-amz-security-token", credentials.SessionToken)
-
-	// sign the request
-	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", region, time.Now())
-	assert.NoError(t, err, "Error signing the request")
+	// build ListEntitiesForMetric request:
+	requestBody := []byte(fmt.Sprintf(`{
+		"Namespace": "CWAgent",
+		"MetricName": "cpu_usage_idle",
+		"Dimensions": [
+			{"Name": "InstanceId", "Value": "%s"},
+			{"Name": "cpu", "Value": "cpu-total"}
+		]
+	}`, instanceId))
+	req = BuildListEntitiesForMetricRequest(requestBody, region)
 
 	// send the request
 	client := &http.Client{}
@@ -328,22 +282,18 @@ func TestResourceMetrics(t *testing.T) {
 	assert.NoError(t, err, "Error parsing JSON response")
 
 	// Verify the KeyAttributes
-	assert.NotEmpty(t, response.Entities, "No entities found in the response")
-	entity := response.Entities[0]
-	// assert.Equal(t, "AWS::Resource", entity.KeyAttributes.Type)
-	// assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType)
-	// assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
-
 	expectedEntity := expectedEntity{
 		entityType:   "AWS::Resource",
 		platformType: "AWS::EC2::Instance",
 		instanceId:   instanceId,
 	}
+	assert.NotEmpty(t, response.Entities, "No entities found in the response")
+
+	entity := response.Entities[0]
 	validator := NewEntityValidator("EC2", expectedEntity)
 	validator.ValidateField(entityType, entity.KeyAttributes.Type, t)
 	validator.ValidateField(entityPlatform, entity.KeyAttributes.ResourceType, t)
 	validator.ValidateField(entityInstanceId, entity.KeyAttributes.Identifier, t)
-
 }
 
 // ValidateLogEntity performs the entity validation for PutLogEvents.
