@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	
+
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 
