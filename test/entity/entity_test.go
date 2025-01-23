@@ -341,6 +341,15 @@ func TestResourceMetrics(t *testing.T) {
 		return
 	}
 
+	fmt.Printf("Response Status: %s\n", resp.Status)
+fmt.Printf("Response Headers:\n")
+for key, values := range resp.Header {
+    for _, value := range values {
+        fmt.Printf("%s: %s\n", key, value)
+    }
+}
+fmt.Printf("Response Body:\n%s\n", string(respBody))
+
 	log.Printf("Response Body: %s\n", string(respBody))
 	log.Print(entity)
 
