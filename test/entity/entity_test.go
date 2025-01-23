@@ -334,7 +334,13 @@ func TestResourceMetrics(t *testing.T) {
 	// assert.Equal(t, "AWS::EC2::Instance", entity.KeyAttributes.ResourceType)
 	// assert.Equal(t, instanceId, entity.KeyAttributes.Identifier)
 
-	log.Print(response)
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response:", err)
+		return
+	}
+
+	log.Printf("Response Body: %s\n", string(respBody))
 	log.Print(entity)
 
 	// expectedEntity := expectedEntity{
