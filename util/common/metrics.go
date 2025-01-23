@@ -24,8 +24,8 @@ import (
 	"collectd.org/exec"
 	"collectd.org/network"
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/aws/aws-sdk-go-v2/config"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
 )
 
