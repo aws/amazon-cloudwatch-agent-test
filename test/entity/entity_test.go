@@ -301,14 +301,14 @@ func TestResourceMetrics2(t *testing.T) {
 	instanceId := awsservice.GetInstanceId()
 
 	testCases := map[string]struct {
-        configPath      string
-        requestBody     []byte
-		platform 	string
-        expectedEntity  expectedEntity
-    }{
-        "ResourceMetrics/CPU": {
-            configPath: filepath.Join("resources", "config_metrics_resource.json"),
-            requestBody: []byte(fmt.Sprintf(`{
+		configPath     string
+		requestBody    []byte
+		platform       string
+		expectedEntity expectedEntity
+	}{
+		"ResourceMetrics/CPU": {
+			configPath: filepath.Join("resources", "config_metrics_resource.json"),
+			requestBody: []byte(fmt.Sprintf(`{
                 "Namespace": "CWAgent",
                 "MetricName": "cpu_usage_idle",
                 "Dimensions": [
@@ -317,13 +317,13 @@ func TestResourceMetrics2(t *testing.T) {
                 ]
             }`, instanceId)),
 			platform: "EC2",
-            expectedEntity: expectedEntity{
-                entityType:   "AWS::Resource",
-                platformType: "AWS::EC2::Instance",
-                instanceId:   instanceId,
-            },
-        },
-    }
+			expectedEntity: expectedEntity{
+				entityType:   "AWS::Resource",
+				platformType: "AWS::EC2::Instance",
+				instanceId:   instanceId,
+			},
+		},
+	}
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
