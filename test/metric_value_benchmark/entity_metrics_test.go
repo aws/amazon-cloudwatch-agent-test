@@ -72,7 +72,6 @@ func (t *EntityMetricsTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *EntityMetricsTestRunner) validateTestCase(name string, testCase struct {
-	configPath     string
 	requestBody    []byte
 	expectedEntity expectedEntity
 }) status.TestResult {
