@@ -11,11 +11,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 type EntityMetricsTestRunner struct {
