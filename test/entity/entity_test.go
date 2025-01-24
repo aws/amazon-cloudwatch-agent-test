@@ -243,62 +243,6 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 
 func TestResourceMetrics(t *testing.T) {
 	instanceId := awsservice.GetInstanceId()
-	configPath := "resources/config_metrics_resource.json"
-
-	// start agent and write metrics
-	common.StartAgent(configPath, true, false)
-	time.Sleep(sleepForFlush)
-	common.StopAgent()
-
-	// build ListEntitiesForMetric request:
-	requestBody := []byte(fmt.Sprintf(`{
-		"Namespace": "CWAgent",
-		"MetricName": "cpu_usage_idle",
-		"Dimensions": [
-			{"Name": "InstanceId", "Value": "%s"},
-			{"Name": "cpu", "Value": "cpu-total"}
-		]
-	}`, instanceId))
-	req, err := common.BuildListEntitiesForMetricRequest(requestBody, region)
-	assert.NoError(t, err, "Error building ListEntitiesForMetric request")
-
-	// send the request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	assert.NoError(t, err, "Error sending the request")
-	defer resp.Body.Close()
-
-	// parse and verify the response
-	var response struct {
-		Entities []struct {
-			KeyAttributes struct {
-				Type         string `json:"Type"`
-				ResourceType string `json:"ResourceType"`
-				Identifier   string `json:"Identifier"`
-			} `json:"KeyAttributes"`
-		} `json:"Entities"`
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	assert.NoError(t, err, "Error parsing JSON response")
-
-	// Verify the KeyAttributes
-	expectedEntity := expectedEntity{
-		entityType:   "AWS::Resource",
-		platformType: "AWS::EC2::Instance",
-		instanceId:   instanceId,
-	}
-	assert.NotEmpty(t, response.Entities, "No entities found in the response")
-
-	entity := response.Entities[0]
-	validator := NewEntityValidator("EC2", expectedEntity)
-	validator.ValidateField(entityType, entity.KeyAttributes.Type, t)
-	validator.ValidateField(entityPlatform, entity.KeyAttributes.ResourceType, t)
-	validator.ValidateField(entityInstanceId, entity.KeyAttributes.Identifier, t)
-}
-
-func TestResourceMetrics2(t *testing.T) {
-	instanceId := awsservice.GetInstanceId()
 
 	testCases := map[string]struct {
 		configPath     string
