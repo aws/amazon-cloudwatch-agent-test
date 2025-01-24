@@ -89,6 +89,16 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 				Env: *env,
 			}
 			eksTestRunners = append(eksTestRunners, &eksDeploymentTestRunner)
+		case eksdeploymenttype.PODIDENTITY:
+			eksDaemonTestRunner := test_runner.EKSTestRunner{
+				Runner: &EKSDaemonTestRunner{BaseTestRunner: test_runner.BaseTestRunner{
+					DimensionFactory: factory,
+				},
+					env: env,
+				},
+				Env: *env,
+			}
+			eksTestRunners = append(eksTestRunners, &eksDaemonTestRunner)
 		}
 	}
 	return eksTestRunners
