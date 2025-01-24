@@ -12,7 +12,8 @@
             "log_group_name": "standard-with-specification-{instance_id}",
             "log_stream_name": "{instance_id}",
             "timezone": "UTC",
-            "log_group_class": "STANDARD"
+            "log_group_class": "STANDARD",
+            "retention_in_days": 7
           }
         ]
       }

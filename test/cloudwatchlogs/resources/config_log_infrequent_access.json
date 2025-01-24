@@ -12,7 +12,8 @@
             "log_group_name": "infrequent_access-{instance_id}",
             "log_stream_name": "{instance_id}",
             "timezone": "UTC",
-            "log_group_class": "INFREQUENT_ACCESS"
+            "log_group_class": "INFREQUENT_ACCESS",
+            "retention_in_days": 7
           }
         ]
       }
