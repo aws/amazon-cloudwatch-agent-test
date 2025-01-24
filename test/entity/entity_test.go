@@ -4,10 +4,8 @@
 package entity
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -18,7 +16,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
@@ -237,74 +234,6 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 			// check CWL to ensure we got the expected entities in the log group
 			queryString := fmt.Sprintf("fields @message, @entity.KeyAttributes.Type, @entity.KeyAttributes.Name, @entity.KeyAttributes.Environment, @entity.Attributes.PlatformType, @entity.Attributes.EKS.Cluster, @entity.Attributes.K8s.Node, @entity.Attributes.K8s.Namespace, @entity.Attributes.K8s.Workload, @entity.Attributes.AWS.ServiceNameSource, @entity.Attributes.EC2.InstanceId | filter @logStream == \"%s\"", podApplicationLogStream)
 			ValidateLogEntity(t, appLogGroup, podApplicationLogStream, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
-		})
-	}
-}
-
-func TestResourceMetrics(t *testing.T) {
-	instanceId := awsservice.GetInstanceId()
-
-	testCases := map[string]struct {
-		configPath     string
-		requestBody    []byte
-		platform       string
-		expectedEntity expectedEntity
-	}{
-		"ResourceMetrics/CPU": {
-			configPath: filepath.Join("resources", "config_metrics_resource.json"),
-			requestBody: []byte(fmt.Sprintf(`{
-                "Namespace": "CWAgent",
-                "MetricName": "cpu_usage_idle",
-                "Dimensions": [
-                    {"Name": "InstanceId", "Value": "%s"},
-                    {"Name": "cpu", "Value": "cpu-total"}
-                ]
-            }`, instanceId)),
-			platform: "EC2",
-			expectedEntity: expectedEntity{
-				entityType:   "AWS::Resource",
-				platformType: "AWS::EC2::Instance",
-				instanceId:   instanceId,
-			},
-		},
-	}
-
-	for name, testCase := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// start agent and write metrics
-			common.StartAgent(testCase.configPath, true, false)
-			time.Sleep(sleepForFlush)
-			common.StopAgent()
-
-			req, err := common.BuildListEntitiesForMetricRequest(testCase.requestBody, region)
-			assert.NoError(t, err, "Error building ListEntitiesForMetric request")
-
-			// send the request
-			client := &http.Client{}
-			resp, err := client.Do(req)
-			assert.NoError(t, err, "Error sending the request")
-			defer resp.Body.Close()
-
-			// parse and verify the response
-			var response struct {
-				Entities []struct {
-					KeyAttributes struct {
-						Type         string `json:"Type"`
-						ResourceType string `json:"ResourceType"`
-						Identifier   string `json:"Identifier"`
-					} `json:"KeyAttributes"`
-				} `json:"Entities"`
-			}
-
-			err = json.NewDecoder(resp.Body).Decode(&response)
-			assert.NoError(t, err, "Error parsing JSON response")
-
-			assert.NotEmpty(t, response.Entities, "No entities found in the response")
-			entity := response.Entities[0]
-			validator := NewEntityValidator(testCase.platform, testCase.expectedEntity)
-			validator.ValidateField(entityType, entity.KeyAttributes.Type, t)
-			validator.ValidateField(entityPlatform, entity.KeyAttributes.ResourceType, t)
-			validator.ValidateField(entityInstanceId, entity.KeyAttributes.Identifier, t)
 		})
 	}
 }

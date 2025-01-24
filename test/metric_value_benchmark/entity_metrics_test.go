@@ -1,0 +1,142 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+//go:build !windows
+
+package metric_value_benchmark
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+)
+
+type EntityMetricsTestRunner struct {
+	test_runner.BaseTestRunner
+}
+
+var _ test_runner.ITestRunner = (*EntityMetricsTestRunner)(nil)
+
+type expectedEntity struct {
+	entityType   string
+	resourceType string
+	instanceId   string
+}
+
+const (
+	region        = "us-west-2"
+	sleepForFlush = 4 * time.Minute
+)
+
+func (t *EntityMetricsTestRunner) Validate() status.TestGroupResult {
+	instanceId := awsservice.GetInstanceId()
+
+	testCases := map[string]struct {
+		requestBody    []byte
+		expectedEntity expectedEntity
+	}{
+		"ResourceMetrics/CPU": {
+			requestBody: []byte(fmt.Sprintf(`{
+                "Namespace": "CWAgent",
+                "MetricName": "cpu_usage_idle",
+                "Dimensions": [
+                    {"Name": "InstanceId", "Value": "%s"},
+                    {"Name": "cpu", "Value": "cpu-total"}
+                ]
+            }`, instanceId)),
+			expectedEntity: expectedEntity{
+				entityType:   "AWS::Resource",
+				resourceType: "AWS::EC2::Instance",
+				instanceId:   instanceId,
+			},
+		},
+	}
+
+	var testResults []status.TestResult
+
+	for name, testCase := range testCases {
+		testResult := t.validateTestCase(name, testCase)
+		testResults = append(testResults, testResult)
+	}
+
+	return status.TestGroupResult{
+		Name:        t.GetTestName(),
+		TestResults: testResults,
+	}
+}
+
+func (t *EntityMetricsTestRunner) validateTestCase(name string, testCase struct {
+	configPath     string
+	requestBody    []byte
+	expectedEntity expectedEntity
+}) status.TestResult {
+	testResult := status.TestResult{
+		Name:   name,
+		Status: status.FAILED,
+	}
+
+	// start agent and write metrics
+	common.StartAgent(testCase.configPath, true, false)
+	time.Sleep(sleepForFlush)
+	common.StopAgent()
+
+	req, err := common.BuildListEntitiesForMetricRequest(testCase.requestBody, region)
+	if err != nil {
+		return testResult
+	}
+
+	// send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return testResult
+	}
+	defer resp.Body.Close()
+
+	// parse and verify the response
+	var response struct {
+		Entities []struct {
+			KeyAttributes struct {
+				Type         string `json:"Type"`
+				ResourceType string `json:"ResourceType"`
+				Identifier   string `json:"Identifier"`
+			} `json:"KeyAttributes"`
+		} `json:"Entities"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return testResult
+	}
+
+	if len(response.Entities) == 0 {
+		return testResult
+	}
+
+	entity := response.Entities[0]
+	if entity.KeyAttributes.Type != testCase.expectedEntity.entityType ||
+		entity.KeyAttributes.ResourceType != testCase.expectedEntity.resourceType ||
+		entity.KeyAttributes.Identifier != testCase.expectedEntity.instanceId {
+		return testResult
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func (t *EntityMetricsTestRunner) GetTestName() string {
+	return "EntityMetrics"
+}
+
+func (t *EntityMetricsTestRunner) GetAgentConfigFileName() string {
+	return "entity_metrics.json"
+}
+
+func (t *EntityMetricsTestRunner) GetMeasuredMetrics() []string {
+	return []string{"cpu-total"}
+}
