@@ -20,7 +20,6 @@ import (
 
 const (
 	sleepForFlush = 240 * time.Second
-	region        = "us-west-2"
 
 	entityType        = "@entity.KeyAttributes.Type"
 	entityName        = "@entity.KeyAttributes.Name"
