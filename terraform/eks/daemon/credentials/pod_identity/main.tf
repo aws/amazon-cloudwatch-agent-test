@@ -254,7 +254,6 @@ resource "null_resource" "update_image" {
     command = <<-EOT
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
       kubectl set image deployment/amazon-cloudwatch-observability-controller-manager -n amazon-cloudwatch manager=public.ecr.aws/cloudwatch-agent/cloudwatch-agent-operator:latest
-      kubectl set image daemonset/fluent-bit -n amazon-cloudwatch fluent-bit=506463145083.dkr.ecr.us-west-2.amazonaws.com/fluent-bit-test:latest
       sleep 10
     EOT
   }
@@ -314,7 +313,7 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating CloudWatch Agent and FluentBit with pod identity credential"
+      echo "Validating CloudWatch Agent with pod identity credential"
       cd ../../../../..
       go test ./test/metric_value_benchmark -timeout 1h -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=PODIDENTITY -instanceId=${data.aws_instance.eks_node_detail.instance_id} &&
       go test ./test/fluent -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
