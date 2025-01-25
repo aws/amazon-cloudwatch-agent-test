@@ -252,8 +252,7 @@ func TestLogGroupClass(t *testing.T) {
 			// add instance id to ensure that running integration tests concurrently doesn't cause tests
 			// to operate and validate with the same log groups and lead to flaky results
 			logGroupName := param.logGroupName + "-" + instanceId
-			log.Print(logGroupName)
-			//defer awsservice.DeleteLogGroupAndStream(logGroupName, instanceId)
+			defer awsservice.DeleteLogGroupAndStream(logGroupName, instanceId)
 			common.DeleteFile(common.AgentLogFile)
 			common.TouchFile(common.AgentLogFile)
 
