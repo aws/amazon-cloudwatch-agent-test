@@ -30,8 +30,7 @@ type expectedEntity struct {
 }
 
 const (
-	region        = "us-west-2"
-	sleepForFlush = 4 * time.Minute
+	region = "us-west-2"
 )
 
 func (t *EntityMetricsTestRunner) Validate() status.TestGroupResult {
@@ -79,11 +78,6 @@ func (t *EntityMetricsTestRunner) validateTestCase(name string, testCase struct 
 		Name:   name,
 		Status: status.FAILED,
 	}
-
-	// start agent and write metrics
-	common.StartAgent(testCase.configPath, true, false)
-	time.Sleep(sleepForFlush)
-	common.StopAgent()
 
 	req, err := common.BuildListEntitiesForMetricRequest(testCase.requestBody, region)
 	if err != nil {
@@ -138,4 +132,8 @@ func (t *EntityMetricsTestRunner) GetAgentConfigFileName() string {
 
 func (t *EntityMetricsTestRunner) GetMeasuredMetrics() []string {
 	return []string{"cpu-total"}
+}
+
+func (t *EntityMetricsTestRunner) GetAgentRunDuration() time.Duration {
+	return 4 * time.Minute
 }
