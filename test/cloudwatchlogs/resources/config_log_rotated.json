@@ -11,7 +11,8 @@
             "file_path": "/tmp/rotate_me.log*",
             "log_group_name": "{instance_id}",
             "log_stream_name": "{instance_id}Rotated",
-            "timezone": "UTC"
+            "timezone": "UTC",
+            "retention_in_days": 7
           }
         ]
       }
