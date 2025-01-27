@@ -122,21 +122,21 @@ func (t *EntityMetricsTestRunner) validateTestCase(name string, testCase struct 
 		entity.KeyAttributes.Identifier != testCase.expectedEntity.instanceId {
 
 		log.Printf("Entity mismatch for test case '%s':\n"+
-        "Expected:\n"+
-        "  Type: %s\n"+
-        "  ResourceType: %s\n"+
-        "  InstanceId: %s\n"+
-        "Got:\n"+
-        "  Type: %s\n"+
-        "  ResourceType: %s\n"+
-        "  InstanceId: %s",
-        name,
-        testCase.expectedEntity.entityType,
-        testCase.expectedEntity.resourceType,
-        testCase.expectedEntity.instanceId,
-        entity.KeyAttributes.Type,
-        entity.KeyAttributes.ResourceType,
-        entity.KeyAttributes.Identifier)
+			"Expected:\n"+
+			"  Type: %s\n"+
+			"  ResourceType: %s\n"+
+			"  InstanceId: %s\n"+
+			"Got:\n"+
+			"  Type: %s\n"+
+			"  ResourceType: %s\n"+
+			"  InstanceId: %s",
+			name,
+			testCase.expectedEntity.entityType,
+			testCase.expectedEntity.resourceType,
+			testCase.expectedEntity.instanceId,
+			entity.KeyAttributes.Type,
+			entity.KeyAttributes.ResourceType,
+			entity.KeyAttributes.Identifier)
 		return testResult
 	}
 
