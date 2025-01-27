@@ -8,6 +8,7 @@ package metric_value_benchmark
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -81,6 +82,7 @@ func (t *EntityMetricsTestRunner) validateTestCase(name string, testCase struct 
 
 	req, err := common.BuildListEntitiesForMetricRequest(testCase.requestBody, region)
 	if err != nil {
+		log.Printf("Failed to build ListEntitiesForMetric request for test case '%s': %v", name, err)
 		return testResult
 	}
 
@@ -88,6 +90,7 @@ func (t *EntityMetricsTestRunner) validateTestCase(name string, testCase struct 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("Failed to send request for test case '%s': %v", name, err)
 		return testResult
 	}
 	defer resp.Body.Close()
@@ -104,10 +107,12 @@ func (t *EntityMetricsTestRunner) validateTestCase(name string, testCase struct 
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		log.Printf("Failed to decode response for test case '%s': %v", name, err)
 		return testResult
 	}
 
 	if len(response.Entities) == 0 {
+		log.Printf("Response contains no entities for test case '%s'", name)
 		return testResult
 	}
 
@@ -115,6 +120,23 @@ func (t *EntityMetricsTestRunner) validateTestCase(name string, testCase struct 
 	if entity.KeyAttributes.Type != testCase.expectedEntity.entityType ||
 		entity.KeyAttributes.ResourceType != testCase.expectedEntity.resourceType ||
 		entity.KeyAttributes.Identifier != testCase.expectedEntity.instanceId {
+
+		log.Printf("Entity mismatch for test case '%s':\n"+
+        "Expected:\n"+
+        "  Type: %s\n"+
+        "  ResourceType: %s\n"+
+        "  InstanceId: %s\n"+
+        "Got:\n"+
+        "  Type: %s\n"+
+        "  ResourceType: %s\n"+
+        "  InstanceId: %s",
+        name,
+        testCase.expectedEntity.entityType,
+        testCase.expectedEntity.resourceType,
+        testCase.expectedEntity.instanceId,
+        entity.KeyAttributes.Type,
+        entity.KeyAttributes.ResourceType,
+        entity.KeyAttributes.Identifier)
 		return testResult
 	}
 
