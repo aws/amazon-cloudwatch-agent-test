@@ -90,6 +90,7 @@ resource "null_resource" "integration_test_run" {
       "echo enforcing mode on",
       "sudo rm -r amazon-cloudwatch-agent-sepolicy",
       "git clone https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
+      "sleep 10",
       "cd amazon-cloudwatch-agent-sepolicy",
       "ls",
       "pwd",
