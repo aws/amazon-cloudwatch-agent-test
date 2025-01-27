@@ -395,7 +395,10 @@ func TestLogGroupClass(t *testing.T) {
 
 	for _, param := range cloudWatchLogGroupClassTestParameters {
 		t.Run(param.testName, func(t *testing.T) {
-			defer awsservice.DeleteLogGroupAndStream(param.logGroupName, instanceId)
+			// add instance id to ensure that running integration tests concurrently doesn't cause tests
+			// to operate and validate with the same log groups and lead to flaky results
+			logGroupName := param.logGroupName + "-" + instanceId
+			defer awsservice.DeleteLogGroupAndStream(logGroupName, instanceId)
 			common.DeleteFile(common.AgentLogFile)
 			common.TouchFile(common.AgentLogFile)
 
@@ -415,7 +418,7 @@ func TestLogGroupClass(t *testing.T) {
 			}
 			t.Logf("Agent logs %s", string(agentLog))
 
-			assert.True(t, awsservice.IsLogGroupExists(param.logGroupName, param.logGroupClass))
+			assert.True(t, awsservice.IsLogGroupExists(logGroupName, param.logGroupClass))
 		})
 	}
 }
