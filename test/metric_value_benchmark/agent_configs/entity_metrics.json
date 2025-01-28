@@ -1,0 +1,32 @@
+{
+    "agent": {
+        "metrics_collection_interval": 10,
+        "run_as_user": "root",
+        "debug": true
+    },
+    "metrics": {
+        "metrics_collected": {
+            "cpu": {
+                "resources": [
+                    "*"
+                ],
+                "measurement": [
+                    "cpu_usage_idle",
+                    "cpu_usage_nice",
+                    "cpu_usage_guest"
+                ],
+                "metrics_collection_interval": 10
+            },
+            "memory": {
+                "metrics_collection_interval": 10,
+                "measurement": [
+                    "mem_used",
+                    "mem_free"
+                ]
+            }
+        },
+        "append_dimensions": {
+            "InstanceId": "${aws:InstanceId}"
+        }
+    }
+}
