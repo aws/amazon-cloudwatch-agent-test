@@ -88,6 +88,7 @@ resource "null_resource" "integration_test_run" {
       "echo prepare environment",
       "sudo setenforce 0",
       "echo enforcing mode on",
+      "sudo yum install -y audit --allowerasing",
       "sudo systemctl start auditd",
       "sudo systemctl enable auditd",
       "sudo ausearch -m AVC,USER_AVC -ts recent",
