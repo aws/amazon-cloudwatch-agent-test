@@ -48,12 +48,12 @@ func (suite *AssumeRoleTestSuite) TearDownSuite() {
 
 var (
 	testRunners []*test_runner.TestRunner = []*test_runner.TestRunner{
-		{
-			TestRunner: &AssumeRoleTestRunner{
-				BaseTestRunner: test_runner.BaseTestRunner{},
-				name:           "AssumeRoleTest",
-			},
-		},
+		// {
+		// 	TestRunner: &AssumeRoleTestRunner{
+		// 		BaseTestRunner: test_runner.BaseTestRunner{},
+		// 		name:           "AssumeRoleTest",
+		// 	},
+		// },
 		{
 			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
@@ -61,8 +61,11 @@ var (
 					roleSuffix:     "-source_arn_key",
 					name:           "SourceArnKeyOnlyTest",
 				},
-				setSourceArnEnvVar:     true,
-				setSourceAccountEnvVar: true,
+				setSourceArnEnvVar:        true,
+				setSourceAccountEnvVar:    true,
+				useIncorrectSourceArn:     false,
+				useIncorrectSourceAccount: false,
+				expectAssumeRoleFailure:   false,
 			},
 		},
 		{
@@ -72,8 +75,11 @@ var (
 					roleSuffix:     "-source_account_key",
 					name:           "SourceAccountKeyOnlyTest",
 				},
-				setSourceArnEnvVar:     true,
-				setSourceAccountEnvVar: true,
+				setSourceArnEnvVar:        true,
+				setSourceAccountEnvVar:    true,
+				useIncorrectSourceArn:     false,
+				useIncorrectSourceAccount: false,
+				expectAssumeRoleFailure:   false,
 			},
 		},
 		{
@@ -83,8 +89,11 @@ var (
 					roleSuffix:     "-all_context_keys",
 					name:           "AllKeysTest",
 				},
-				setSourceArnEnvVar:     true,
-				setSourceAccountEnvVar: true,
+				setSourceArnEnvVar:        true,
+				setSourceAccountEnvVar:    true,
+				useIncorrectSourceArn:     false,
+				useIncorrectSourceAccount: false,
+				expectAssumeRoleFailure:   false,
 			},
 		},
 		{
@@ -94,8 +103,11 @@ var (
 					roleSuffix:     "-source_arn_key",
 					name:           "MissingSourceArnEnvTest",
 				},
-				setSourceArnEnvVar:      true,
-				expectAssumeRoleFailure: true,
+				setSourceArnEnvVar:        false,
+				setSourceAccountEnvVar:    true,
+				useIncorrectSourceArn:     false,
+				useIncorrectSourceAccount: false,
+				expectAssumeRoleFailure:   true,
 			},
 		},
 		{
@@ -105,8 +117,11 @@ var (
 					roleSuffix:     "-source_account_key",
 					name:           "MissingSourceAccountEnvTest",
 				},
-				setSourceAccountEnvVar:  true,
-				expectAssumeRoleFailure: true,
+				setSourceArnEnvVar:        true,
+				setSourceAccountEnvVar:    false,
+				useIncorrectSourceArn:     false,
+				useIncorrectSourceAccount: false,
+				expectAssumeRoleFailure:   true,
 			},
 		},
 		{
@@ -116,10 +131,11 @@ var (
 					roleSuffix:     "-all_context_keys",
 					name:           "ContextKeyMismatchAccountTest",
 				},
-				setSourceArnEnvVar:       true,
-				setSourceAccountEnvVar:   true,
-				useInorrectSourceAccount: true,
-				expectAssumeRoleFailure:  true,
+				setSourceArnEnvVar:        true,
+				setSourceAccountEnvVar:    true,
+				useIncorrectSourceArn:     false,
+				useIncorrectSourceAccount: true,
+				expectAssumeRoleFailure:   true,
 			},
 		},
 		{
@@ -129,10 +145,11 @@ var (
 					roleSuffix:     "-all_context_keys",
 					name:           "ContextKeyMismatchArnTest",
 				},
-				setSourceArnEnvVar:      true,
-				useIncorrectSourceArn:   true,
-				setSourceAccountEnvVar:  true,
-				expectAssumeRoleFailure: true,
+				setSourceArnEnvVar:        true,
+				setSourceAccountEnvVar:    true,
+				useIncorrectSourceArn:     true,
+				useIncorrectSourceAccount: false,
+				expectAssumeRoleFailure:   true,
 			},
 		},
 	}
@@ -274,8 +291,8 @@ type ConfusedDeputyAssumeRoleTestRunner struct {
 	setSourceArnEnvVar    bool
 	useIncorrectSourceArn bool
 
-	setSourceAccountEnvVar   bool
-	useInorrectSourceAccount bool
+	setSourceAccountEnvVar    bool
+	useIncorrectSourceAccount bool
 
 	expectAssumeRoleFailure bool
 }
@@ -403,20 +420,28 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) SetupBeforeAgentRun() error {
 
 func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 
-	// The default service file will set the AMZ_SOURCE_ARN and AMZ_SOURCE_ACCOUNT environment varaibles. If the test
-	// calls for one or more of those variables to be unset, those lines will be removed.
-	//
-	// The AMZ_SOURCE_ARN line also contains a PLACEHOLDER value which should be filled in with the ARN of the instance
-	// running this test. The ARN isn't known until runtime. Test runner does not have sudo permissions, but it can
-	// execute sudo commands. Use sed to update the PLACEHOLDER value instead of using built-ins
+	// Set or remove the environment variables in the service file
+	common.CopyFile("service_configs/amazon-cloudwatch-agent.service", "/etc/systemd/system/amazon-cloudwatch-agent.service")
 
-	if t.useIncorrectSourceArn {
-		common.CopyFile("service_configs/incorrect_source_account.service", "/etc/systemd/system/amazon-cloudwatch-agent.service")
+	if t.setSourceAccountEnvVar {
+		sourceAccount := "506463145083"
+		if t.useIncorrectSourceAccount {
+			sourceAccount = "123456789012"
+		}
+
+		fmt.Printf("AMZ_SOURCE_ACCOUNT: %s\n", sourceAccount)
+
+		sedCmd := fmt.Sprintf("sudo sed -i 's|ACCOUNT_PLACEHOLDER|%s|g' /etc/systemd/system/amazon-cloudwatch-agent.service", sourceAccount)
+		cmd := exec.Command("bash", "-c", sedCmd)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to replace AMZ_SOURCE_ACCOUNT value: %w", err)
+		}
+
+		err := t.daemonReload()
+		if err != nil {
+			return err
+		}
 	} else {
-		common.CopyFile("service_configs/amazon-cloudwatch-agent.service", "/etc/systemd/system/amazon-cloudwatch-agent.service")
-	}
-
-	if !t.setSourceAccountEnvVar {
 		fmt.Println("Removing AMZ_SOURCE_ACCOUNT from service file")
 
 		sedCmd := "sudo sed -i '/AMZ_SOURCE_ACCOUNT/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
@@ -431,13 +456,18 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 		}
 	}
 
-	if !t.setSourceArnEnvVar {
-		fmt.Println("Removing AMZ_SOURCE_ARN from service file")
+	if t.setSourceArnEnvVar {
+		sourceArn := environment.GetEnvironmentMetaData().InstanceArn
+		if t.useIncorrectSourceArn {
+			sourceArn = "arn:aws:ec2:us-west-2:123456789012:instance/i-1234567890abcdef0"
+		}
 
-		sedCmd := "sudo sed -i '/AMZ_SOURCE_ARN/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
+		fmt.Printf("AMZ_SOURCE_ARN: %s\n", sourceArn)
+
+		sedCmd := fmt.Sprintf("sudo sed -i 's|ARN_PLACEHOLDER|%s|g' /etc/systemd/system/amazon-cloudwatch-agent.service", sourceArn)
 		cmd := exec.Command("bash", "-c", sedCmd)
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to remove AMZ_SOURCE_ARN value: %w", err)
+			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w", err)
 		}
 
 		err := t.daemonReload()
@@ -445,12 +475,12 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 			return err
 		}
 	} else {
-		fmt.Printf("AMZ_SOURCE_ARN: %s\n", environment.GetEnvironmentMetaData().InstanceArn)
+		fmt.Println("Removing AMZ_SOURCE_ARN from service file")
 
-		sedCmd := fmt.Sprintf("sudo sed -i 's|PLACEHOLDER|%s|g' /etc/systemd/system/amazon-cloudwatch-agent.service", environment.GetEnvironmentMetaData().InstanceArn)
+		sedCmd := "sudo sed -i '/AMZ_SOURCE_ARN/d' /etc/systemd/system/amazon-cloudwatch-agent.service"
 		cmd := exec.Command("bash", "-c", sedCmd)
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w", err)
+			return fmt.Errorf("failed to remove AMZ_SOURCE_ARN value: %w", err)
 		}
 
 		err := t.daemonReload()

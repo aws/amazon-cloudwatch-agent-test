@@ -17,8 +17,8 @@ ExecStart=/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
 KillMode=process
 Restart=on-failure
 RestartSec=60s
-Environment="AMZ_SOURCE_ACCOUNT=506463145083"
-Environment="AMZ_SOURCE_ARN=PLACEHOLDER"
+Environment="AMZ_SOURCE_ACCOUNT=ACCOUNT_PLACEHOLDER"
+Environment="AMZ_SOURCE_ARN=ARN_PLACEHOLDER"
 
 [Install]
 WantedBy=multi-user.target
