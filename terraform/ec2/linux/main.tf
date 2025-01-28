@@ -86,7 +86,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
-      "sudo setenforce 0",
+      "sudo setenforce 1",
       "echo enforcing mode on",
       "sudo yum install -y audit --allowerasing",
       "sudo systemctl start auditd",
