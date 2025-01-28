@@ -19,8 +19,19 @@ resource "null_resource" "integration_test_reboot" {
   # Prepare Integration Test
   provisioner "remote-exec" {
     inline = [
-      "echo reboot instance",
-      "sudo shutdown -r now &",
+#       "echo reboot instance",
+#       "sudo shutdown -r now &",
+
+      # Wait for tests to complete
+      "echo 'Waiting for all tests to complete...'",
+      "while [ ! -f /tmp/tests_complete ]; do sleep 10; done",
+
+      # Add the delay
+      "echo 'Delaying reboot for ${var.reboot_delay} seconds...'",
+      "sleep ${var.reboot_delay}",
+
+      # Execute reboot
+      "sudo reboot"
     ]
   }
 }
