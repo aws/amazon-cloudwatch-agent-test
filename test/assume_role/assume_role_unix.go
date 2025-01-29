@@ -537,11 +537,6 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to replace AMZ_SOURCE_ACCOUNT value: %w", err)
 		}
-
-		err := t.daemonReload()
-		if err != nil {
-			return err
-		}
 	} else {
 		log.Println("Removing AMZ_SOURCE_ACCOUNT from service file")
 
@@ -549,11 +544,6 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 		cmd := exec.Command("bash", "-c", sedCmd)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed remove PLACEHOLDER value: %w", err)
-		}
-
-		err := t.daemonReload()
-		if err != nil {
-			return err
 		}
 	}
 
@@ -571,10 +561,6 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w", err)
 		}
 
-		err := t.daemonReload()
-		if err != nil {
-			return err
-		}
 	} else {
 		log.Println("Removing AMZ_SOURCE_ARN from service file")
 
@@ -583,11 +569,11 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to remove AMZ_SOURCE_ARN value: %w", err)
 		}
+	}
 
-		err := t.daemonReload()
-		if err != nil {
-			return err
-		}
+	err := t.daemonReload()
+	if err != nil {
+		return err
 	}
 
 	return nil
