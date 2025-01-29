@@ -48,12 +48,6 @@ func (suite *AssumeRoleTestSuite) TearDownSuite() {
 
 var (
 	testRunners []*test_runner.TestRunner = []*test_runner.TestRunner{
-		// {
-		// 	TestRunner: &AssumeRoleTestRunner{
-		// 		BaseTestRunner: test_runner.BaseTestRunner{},
-		// 		name:           "AssumeRoleTest",
-		// 	},
-		// },
 		{
 			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
@@ -424,7 +418,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 	common.CopyFile("service_configs/amazon-cloudwatch-agent.service", "/etc/systemd/system/amazon-cloudwatch-agent.service")
 
 	if t.setSourceAccountEnvVar {
-		sourceAccount := "506463145083"
+		sourceAccount := environment.GetEnvironmentMetaData().AccountId
 		if t.useIncorrectSourceAccount {
 			sourceAccount = "123456789012"
 		}

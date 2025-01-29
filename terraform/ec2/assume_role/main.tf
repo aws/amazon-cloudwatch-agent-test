@@ -11,6 +11,12 @@ module "basic_components" {
   region = var.region
 }
 
+data "aws_caller_identity" "account_id" {}
+
+output "account_id" {
+  value = data.aws_caller_identity.account_id.account_id
+}
+
 #####################################################################
 # Generate EC2 Key Pair for log in access to EC2
 #####################################################################
@@ -202,7 +208,7 @@ resource "null_resource" "integration_test_run" {
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
       "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"
     ]
   }
 
@@ -219,3 +225,5 @@ data "aws_ami" "latest" {
     values = [var.ami]
   }
 }
+
+

@@ -63,6 +63,7 @@ type MetaData struct {
 	PrometheusConfig                            string
 	OtelConfig                                  string
 	SampleApp                                   string
+	AccountId                                   string
 }
 
 type MetaDataStrings struct {
@@ -105,6 +106,7 @@ type MetaDataStrings struct {
 	PrometheusConfig                            string
 	OtelConfig                                  string
 	SampleApp                                   string
+	AccountId                                   string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -282,6 +284,10 @@ func registerAmpWorkspaceId(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.AmpWorkspaceId), "ampWorkspaceId", "", "workspace Id for Amazon Managed Prometheus (AMP)")
 }
 
+func registerAccountId(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.AccountId), "accountId", "", "AWS account Id")
+}
+
 func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerComputeType(registeredMetaDataStrings)
 	registerECSData(registeredMetaDataStrings)
@@ -300,6 +306,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerInstancePlatform(registeredMetaDataStrings)
 	registerAgentStartCommand(registeredMetaDataStrings)
 	registerAmpWorkspaceId(registeredMetaDataStrings)
+	registerAccountId(registeredMetaDataStrings)
 
 	return registeredMetaDataStrings
 }
@@ -344,6 +351,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.PrometheusConfig = registeredMetaDataStrings.PrometheusConfig
 	metaDataStorage.OtelConfig = registeredMetaDataStrings.OtelConfig
 	metaDataStorage.SampleApp = registeredMetaDataStrings.SampleApp
+	metaDataStorage.AccountId = registeredMetaDataStrings.AccountId
 
 	return metaDataStorage
 }
