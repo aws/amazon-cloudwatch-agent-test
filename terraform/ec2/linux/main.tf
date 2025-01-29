@@ -86,7 +86,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
-      "sudo setenforce 1",
+      "sudo setenforce 0",
       "echo enforcing mode on",
       "pwd",
       "sudo rm -r amazon-cloudwatch-agent-sepolicy",
