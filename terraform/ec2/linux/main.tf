@@ -56,7 +56,18 @@ resource "null_resource" "integration_test_setup" {
   provisioner "remote-exec" {
     inline = [
       "echo sha ${var.cwa_github_sha}",
-      "sudo cloud-init status --wait",
+
+        # Add logging before cloud-init wait
+        "echo 'Checking cloud-init logs before wait...'",
+        "cat /var/log/cloud-init.log",
+        "cat /var/log/cloud-init-output.log",
+
+      "sudo cloud-init status --wait --debug",
+
+          # Check logs after
+          "echo 'Cloud-init complete, checking final status'",
+          "cat /var/log/cloud-init.log",
+
       "echo clone and install agent",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
@@ -102,6 +113,5 @@ resource "null_resource" "integration_test_run" {
 
   depends_on = [
     null_resource.integration_test_setup,
-    module.reboot_common,
   ]
 }
