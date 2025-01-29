@@ -25,7 +25,7 @@ module "reboot_common" {
   cwagent_public_ip     = module.linux_common.cwagent_public_ip
   user                  = var.user
 
-  reboot_delay          = 300  # 5 minutes delay
+  reboot_delay          = 600  # 10 minutes delay
 
   depends_on = [
     null_resource.integration_test_setup,
