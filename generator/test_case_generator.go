@@ -54,8 +54,7 @@ type testConfig struct {
 }
 
 const (
-	testTypeKeyEc2Linux   = "ec2_linux"
-	testTypeKeyEc2SELinux = "ec2_selinux"
+	testTypeKeyEc2Linux = "ec2_linux"
 )
 
 // you can't have a const map in golang
