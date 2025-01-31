@@ -36,6 +36,12 @@ variable "install_agent" {
   type        = string
   default     = "go run ./install/install_agent.go rpm"
 }
+
+variable "ca_cert_path" {
+  type    = string
+  default = ""
+}
+
 variable "arc" {
   type    = string
   default = "amd64"
@@ -49,6 +55,11 @@ variable "arc" {
 variable "binary_name" {
   type    = string
   default = ""
+}
+
+variable "local_stack_host_name" {
+  type    = string
+  default = "localhost.localstack.cloud"
 }
 
 variable "s3_bucket" {
@@ -84,6 +95,11 @@ variable "github_test_repo_branch" {
 variable "is_canary" {
   type    = bool
   default = false
+}
+
+variable "excluded_tests" {
+  type    = string
+  default = ""
 }
 
 variable "plugin_tests" {
