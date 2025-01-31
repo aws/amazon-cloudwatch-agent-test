@@ -131,9 +131,14 @@ resource "null_resource" "integration_test_setup" {
       "sudo cloud-init status --wait",
       "echo clone and install agent",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "echo clone successful in /creds directory",
       "cd amazon-cloudwatch-agent-test",
+      "echo running aws s3 cp s3://${local.binary_uri} .",
       "aws s3 cp s3://${local.binary_uri} .",
+      "echo aws s3 cp successful",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
+
+      "echo installing agent",
       var.install_agent,
     ]
   }

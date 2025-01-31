@@ -36,7 +36,7 @@ locals {
   // list of test that require instance reboot
   reboot_required_tests = tolist(["./test/restart"])
 }
-
+// s3://cloudwatch-agent-integration-bucket/integration-test/binary/8d8b2611b80f86728d0f8c65be57cdfeb587d8fc/linux/arm64/amazon-cloudwatch-agent.deb
 #####################################################################
 # Execute tests
 #####################################################################
