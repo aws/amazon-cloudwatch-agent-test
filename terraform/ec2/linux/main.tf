@@ -110,7 +110,7 @@ resource "null_resource" "wait_for_instance" {
   }
 
   depends_on = [
-    module.linux_common.aws_instance.cwagent
+    module.linux_common
   ]
 }
 
