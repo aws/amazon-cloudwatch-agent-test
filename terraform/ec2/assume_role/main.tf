@@ -82,14 +82,14 @@ locals {
     source_account_key = {
       suffix = "-source_account_key"
       condition = {
-        "aws:SourceAccount" = "506463145083"
+        "aws:SourceAccount" = data.aws_caller_identity.account_id.account_id
       }
     }
     all_context_keys = {
       suffix = "-all_context_keys"
       condition = {
         "aws:SourceArn"     = aws_instance.cwagent.arn
-        "aws:SourceAccount" = "506463145083"
+        "aws:SourceAccount" = data.aws_caller_identity.account_id.account_id
       }
     }
   }
@@ -174,7 +174,6 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
       "echo clone and install agent",
-      "rm -rf amazon-cloudwatch-agent-test",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${local.binary_uri} .",
@@ -201,14 +200,13 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
-      "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
       "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"
     ]
   }
 

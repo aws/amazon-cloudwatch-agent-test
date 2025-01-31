@@ -468,6 +468,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) validateFoundConfusedDeputyHeaders(
 			if isStsAssumeRoleRequest && checkForConfusedDeputyHeaders(httpDebugLog) {
 				log.Println("Found confused deputy headers in the HTTP debug log")
 				testResult.Status = status.SUCCESSFUL
+				return testResult
 			}
 
 			// Reset the search
@@ -511,10 +512,8 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) SetupBeforeAgentRun() error {
 
 	// Clear out log file since we'll need to check the logs on each run and we don't want logs from another test
 	// being checked
-	err = t.clearLogFile()
-	if err != nil {
-		return fmt.Errorf("failed to clear log file: %w", err)
-	}
+	common.RecreateAgentLogfile(common.AgentLogFile)
+
 	return t.setupAgentConfig()
 }
 
