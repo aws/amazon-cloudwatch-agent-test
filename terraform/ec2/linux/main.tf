@@ -47,6 +47,9 @@ resource "null_resource" "integration_test_setup" {
     private_key = module.linux_common.private_key_content
     host        = module.linux_common.cwagent_public_ip
     timeout     = "5m"
+
+    retries = 5
+    retry_interval = "30s"
   }
 
   # Prepare Integration Test
