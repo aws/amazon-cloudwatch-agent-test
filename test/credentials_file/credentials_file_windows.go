@@ -4,7 +4,7 @@
 //go:build windows
 // +build windows
 
-package assume_role
+package credentials_file
 
 import (
 	"log"
