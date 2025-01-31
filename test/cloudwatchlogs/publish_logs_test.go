@@ -6,6 +6,7 @@
 package cloudwatchlogs
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -15,7 +16,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -29,9 +34,18 @@ const (
 	logLineId2                    = "bar"
 	logFilePath                   = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
 	sleepForFlush                 = 20 * time.Second            // default flush interval is 5 seconds
+	sleepForExtendedFlush         = 180 * time.Second           // increase flush time for the two main tests
+	retryWaitTime                 = 30 * time.Second
 	configPathAutoRemoval         = "resources/config_auto_removal.json"
 	standardLogGroupClass         = "STANDARD"
 	infrequentAccessLogGroupClass = "INFREQUENT_ACCESS"
+
+	entityType        = "@entity.KeyAttributes.Type"
+	entityName        = "@entity.KeyAttributes.Name"
+	entityEnvironment = "@entity.KeyAttributes.Environment"
+	entityPlatform    = "@entity.Attributes.PlatformType"
+	entityInstanceId  = "@entity.Attributes.EC2.InstanceId"
+	queryString       = "fields @message, @entity.KeyAttributes.Type, @entity.KeyAttributes.Name, @entity.KeyAttributes.Environment, @entity.Attributes.PlatformType, @entity.Attributes.EC2.InstanceId"
 )
 
 var (
@@ -70,6 +84,7 @@ var (
 			logGroupClass: types.LogGroupClassInfrequentAccess,
 		},
 	}
+	resourceNotFoundException *types.ResourceNotFoundException
 )
 
 type writeToCloudWatchTestInput struct {
@@ -119,9 +134,9 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			// ensure that there is enough time from the "start" time and the first log line,
 			// so we don't miss it in the GetLogEvents call
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			writeLogLines(t, f, param.iterations)
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			common.StopAgent()
 			end := time.Now()
 
@@ -135,6 +150,128 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 				awsservice.AssertNoDuplicateLogs(),
 			)
 			assert.NoError(t, err)
+		})
+	}
+}
+
+// TestWriteLogsWithEntityInfo writes logs and validates that the
+// log events are associated with entities from CloudWatch Logs
+func TestWriteLogsWithEntityInfo(t *testing.T) {
+	instanceId := awsservice.GetInstanceId()
+	log.Printf("Found instance id %s", instanceId)
+
+	// Define tags to create for EC2 test case
+	tagsToCreate := []ec2Types.Tag{
+		{
+			Key:   aws.String("service"),
+			Value: aws.String("service-test"),
+		},
+	}
+
+	testCases := map[string]struct {
+		agentConfigPath string
+		iterations      int
+		useEC2Tag       bool
+		expectedEntity  common.ExpectedEntity
+	}{
+		"IAMRole": {
+			agentConfigPath: filepath.Join("resources", "config_log.json"),
+			iterations:      1000,
+			expectedEntity: common.ExpectedEntity{
+				EntityType:   "Service",
+				Name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
+				Environment:  "ec2:default",
+				PlatformType: "AWS::EC2",
+				InstanceId:   instanceId,
+			},
+		},
+		"ServiceInConfig": {
+			agentConfigPath: filepath.Join("resources", "config_log_service_name.json"),
+			iterations:      1000,
+			expectedEntity: common.ExpectedEntity{
+				EntityType:   "Service",
+				Name:         "service-in-config",     //should match the service.name value in the config file
+				Environment:  "environment-in-config", //should match the deployment.environment value in the config file
+				PlatformType: "AWS::EC2",
+				InstanceId:   instanceId,
+			},
+		},
+		"EC2Tags": {
+			agentConfigPath: filepath.Join("resources", "config_log.json"),
+			iterations:      1000,
+			useEC2Tag:       true,
+			expectedEntity: common.ExpectedEntity{
+				EntityType:   "Service",
+				Name:         "service-test", //should match the value in tagsToCreate
+				Environment:  "ec2:default",
+				PlatformType: "AWS::EC2",
+				InstanceId:   instanceId,
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Cleanup(func() {
+				// delete the log group/stream after each test case
+				awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+
+				// delete EC2 tags added to the instance for the test
+				if testCase.useEC2Tag {
+					input := &ec2.DeleteTagsInput{
+						Resources: []string{instanceId},
+						Tags:      tagsToCreate,
+					}
+					_, err := awsservice.Ec2Client.DeleteTags(context.TODO(), input)
+					assert.NoError(t, err)
+					// Add a short delay to ensure tag deletion propagates
+					time.Sleep(5 * time.Second)
+				}
+			})
+			if testCase.useEC2Tag {
+				// enable instance metadata tags
+				modifyInput := &ec2.ModifyInstanceMetadataOptionsInput{
+					InstanceId:           aws.String(instanceId),
+					InstanceMetadataTags: ec2Types.InstanceMetadataTagsStateEnabled,
+				}
+				_, modifyErr := awsservice.Ec2Client.ModifyInstanceMetadataOptions(context.TODO(), modifyInput)
+				assert.NoError(t, modifyErr)
+
+				input := &ec2.CreateTagsInput{
+					Resources: []string{instanceId},
+					Tags:      tagsToCreate,
+				}
+				_, createErr := awsservice.Ec2Client.CreateTags(context.TODO(), input)
+				assert.NoError(t, createErr)
+			}
+			id := uuid.New()
+			f, err := os.Create(logFilePath + "-" + id.String())
+			if err != nil {
+				t.Fatalf("Error occurred creating log file for writing: %v", err)
+			}
+
+			// Defer file closing and removal with error handling
+			defer func() {
+				if err := f.Close(); err != nil {
+					t.Errorf("Error occurred closing log file: %v", err)
+				}
+				if err := os.Remove(logFilePath + "-" + id.String()); err != nil {
+					t.Errorf("Error occurred removing log file: %v", err)
+				}
+			}()
+
+			common.DeleteFile(common.AgentLogFile)
+			common.TouchFile(common.AgentLogFile)
+
+			common.CopyFile(testCase.agentConfigPath, configOutputPath)
+
+			common.StartAgent(configOutputPath, true, false)
+			time.Sleep(sleepForExtendedFlush)
+			writeLogLines(t, f, testCase.iterations)
+			time.Sleep(sleepForExtendedFlush)
+			common.StopAgent()
+			end := time.Now()
+
+			common.ValidateLogEntity(t, instanceId, instanceId, &end, queryString, testCase.expectedEntity, "EC2")
 		})
 	}
 }
