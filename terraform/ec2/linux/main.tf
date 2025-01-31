@@ -65,6 +65,7 @@ resource "null_resource" "integration_test_setup" {
 
   depends_on = [
     module.linux_common,
+    null_resource.wait_for_instance
   ]
 }
 
@@ -102,3 +103,14 @@ resource "null_resource" "integration_test_run" {
     module.reboot_common,
   ]
 }
+
+resource "null_resource" "wait_for_instance" {
+  provisioner "local-exec" {
+    command = "sleep 60"  # Wait for instance to fully initialize
+  }
+
+  depends_on = [
+    module.linux_common.aws_instance.cwagent
+  ]
+}
+
