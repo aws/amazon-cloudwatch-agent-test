@@ -36,7 +36,6 @@ locals {
   // list of test that require instance reboot
   reboot_required_tests = tolist(["./test/restart"])
 }
-// s3://cloudwatch-agent-integration-bucket/integration-test/binary/8d8b2611b80f86728d0f8c65be57cdfeb587d8fc/linux/arm64/amazon-cloudwatch-agent.deb
 #####################################################################
 # Execute tests
 #####################################################################
@@ -47,19 +46,82 @@ resource "null_resource" "integration_test_setup" {
     user        = var.user
     private_key = module.linux_common.private_key_content
     host        = module.linux_common.cwagent_public_ip
+    timeout     = "5m"
   }
 
   # Prepare Integration Test
   provisioner "remote-exec" {
     inline = [
-      "echo sha ${var.cwa_github_sha}",
+      # Initial setup
+      "echo '=== Starting Integration Test Setup ==='",
+      "echo 'Setup starting at: '$(date)",
+      "echo 'Running as user: '$(whoami)",
+
+      # System status
+      "echo '=== System Status ==='",
+      "echo 'Disk Space:'",
+      "df -h",
+      "echo 'Memory Status:'",
+      "free -m",
+      "echo 'System Info:'",
+      "uname -a",
+
+      # GitHub info
+      "echo '=== GitHub Information ==='",
+      "echo 'SHA: ${var.cwa_github_sha}'",
+      "echo 'Repo: ${var.github_test_repo}'",
+      "echo 'Branch: ${var.github_test_repo_branch}'",
+
+      # Cloud-init status
+      "echo '=== Checking cloud-init status ==='",
       "sudo cloud-init status --wait",
-      "echo clone and install agent",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "sudo cloud-init status --long",
+
+      # Repository clone
+      "echo '=== Cloning Test Repository ==='",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} && echo 'Clone successful' || echo 'Clone failed'",
+
+      # Directory verification
+      "echo '=== Directory Status ==='",
       "cd amazon-cloudwatch-agent-test",
-      "aws s3 cp s3://${local.binary_uri} .",
+      "echo 'Current directory: '$(pwd)",
+      "echo 'Directory contents:'",
+      "ls -la",
+
+      # Binary download
+      "echo '=== Downloading Agent Binary ==='",
+      "echo 'Binary URI: ${local.binary_uri}'",
+      "aws s3 cp s3://${local.binary_uri} . && echo 'Download successful' || echo 'Download failed'",
+
+      # Environment setup
+      "echo '=== Environment Setup ==='",
+      "echo 'Original PATH: '$PATH",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
+      "echo 'Updated PATH: '$PATH",
+
+      # Tool verification
+      "echo '=== Tool Verification ==='",
+      "echo 'Checking required tools...'",
+      "for cmd in go git aws; do",
+      "  if command -v $cmd &> /dev/null; then",
+      "    echo \"$cmd found at: $(which $cmd)\"",
+      "  else",
+      "    echo \"$cmd not found\"",
+      "  fi",
+      "done",
+
+      # Agent installation
+      "echo '=== Installing CloudWatch Agent ==='",
+      "echo 'Starting agent installation...'",
       var.install_agent,
+      "echo 'Agent installation complete'",
+
+      # Final status
+      "echo '=== Setup Complete ==='",
+      "echo 'Setup completed at: '$(date)",
+      "echo 'Final directory contents:'",
+      "ls -la",
+      "echo 'Process complete'"
     ]
   }
 
@@ -68,6 +130,7 @@ resource "null_resource" "integration_test_setup" {
     null_resource.wait_for_instance
   ]
 }
+
 
 module "amp" {
   count           = length(regexall("/amp", var.test_dir)) > 0 ? 1 : 0
