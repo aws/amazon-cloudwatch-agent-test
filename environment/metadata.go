@@ -40,6 +40,7 @@ type MetaData struct {
 	EKSClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
+	InstanceArn                                 string
 	InstanceId                                  string
 	InstancePlatform                            string
 	AgentStartCommand                           string
@@ -62,6 +63,7 @@ type MetaData struct {
 	PrometheusConfig                            string
 	OtelConfig                                  string
 	SampleApp                                   string
+	AccountId                                   string
 }
 
 type MetaDataStrings struct {
@@ -81,6 +83,7 @@ type MetaDataStrings struct {
 	EKSClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
+	InstanceArn                                 string
 	InstanceId                                  string
 	InstancePlatform                            string
 	AgentStartCommand                           string
@@ -103,6 +106,7 @@ type MetaDataStrings struct {
 	PrometheusConfig                            string
 	OtelConfig                                  string
 	SampleApp                                   string
+	AccountId                                   string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -177,6 +181,10 @@ func fillComputeType(e *MetaData, data *MetaDataStrings) {
 
 func registerAssumeRoleArn(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.AssumeRoleArn), "assumeRoleArn", "", "Arn for assume role to be used")
+}
+
+func registerInstanceArn(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.InstanceArn), "instanceArn", "", "ec2 instance ARN that is being used by a test")
 }
 
 func registerInstanceId(dataString *MetaDataStrings) {
@@ -276,6 +284,10 @@ func registerAmpWorkspaceId(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.AmpWorkspaceId), "ampWorkspaceId", "", "workspace Id for Amazon Managed Prometheus (AMP)")
 }
 
+func registerAccountId(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.AccountId), "accountId", "", "AWS account Id")
+}
+
 func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerComputeType(registeredMetaDataStrings)
 	registerECSData(registeredMetaDataStrings)
@@ -289,10 +301,12 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerExcludedTests(registeredMetaDataStrings)
 	registerProxyUrl(registeredMetaDataStrings)
 	registerAssumeRoleArn(registeredMetaDataStrings)
+	registerInstanceArn(registeredMetaDataStrings)
 	registerInstanceId(registeredMetaDataStrings)
 	registerInstancePlatform(registeredMetaDataStrings)
 	registerAgentStartCommand(registeredMetaDataStrings)
 	registerAmpWorkspaceId(registeredMetaDataStrings)
+	registerAccountId(registeredMetaDataStrings)
 
 	return registeredMetaDataStrings
 }
@@ -314,6 +328,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.CaCertPath = registeredMetaDataStrings.CaCertPath
 	metaDataStorage.ProxyUrl = registeredMetaDataStrings.ProxyUrl
 	metaDataStorage.AssumeRoleArn = registeredMetaDataStrings.AssumeRoleArn
+	metaDataStorage.InstanceArn = registeredMetaDataStrings.InstanceArn
 	metaDataStorage.InstanceId = registeredMetaDataStrings.InstanceId
 	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
@@ -336,6 +351,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.PrometheusConfig = registeredMetaDataStrings.PrometheusConfig
 	metaDataStorage.OtelConfig = registeredMetaDataStrings.OtelConfig
 	metaDataStorage.SampleApp = registeredMetaDataStrings.SampleApp
+	metaDataStorage.AccountId = registeredMetaDataStrings.AccountId
 
 	return metaDataStorage
 }
