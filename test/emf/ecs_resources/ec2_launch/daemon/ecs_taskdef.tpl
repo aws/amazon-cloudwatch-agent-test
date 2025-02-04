@@ -61,7 +61,7 @@
     {
         "name": "emf_container",
         "links":  ["cloudwatch_agent"],
-        "image": "506463145083.dkr.ecr.us-west-2.amazonaws.com/cwagent-integration-test:ubuntu-socat-2.0.0-2",
+        "image": "506463145083.dkr.ecr.us-west-2.amazonaws.com/cwagent-integration-test:linux-amd64",
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
