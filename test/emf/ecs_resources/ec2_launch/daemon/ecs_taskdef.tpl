@@ -74,7 +74,7 @@
         "entryPoint": [
             "/bin/sh",
             "-c",
-            "while true; do CURRENT_TIME=\"$(date +%s%3N)\";  CLUSTER_NAME=\"$(curl $${ECS_CONTAINER_METADATA_URI_V4}/task | sed -n 's|.*\\\"Cluster\\\": *\\\"\\([^\\\"]*\\)\\\".*|\\1|p')\"; echo '{\"_aws\":{\"Timestamp\":'\"$${CURRENT_TIME}\"',\"LogGroupName\":\"EMFECSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFECSNameSpace\",\"Dimensions\":[[\"Type\",\"ClusterName\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"ClusterName\": \"'$${CLUSTER_NAME}'\"}' | nc -u -v -w 0 cloudwatch_agent 25888; sleep 60; done"
+            "while true; do CURRENT_TIME=\"$(date +%s%3N)\";  CLUSTER_NAME=\"$(wget -vO- $${ECS_CONTAINER_METADATA_URI_V4}/task | sed -n 's|.*\\\"Cluster\\\": *\\\"\\([^\\\"]*\\)\\\".*|\\1|p')\"; echo '{\"_aws\":{\"Timestamp\":'\"$${CURRENT_TIME}\"',\"LogGroupName\":\"EMFECSLogGroup\",\"CloudWatchMetrics\":[{\"Namespace\":\"EMFECSNameSpace\",\"Dimensions\":[[\"Type\",\"ClusterName\"]],\"Metrics\":[{\"Name\":\"EMFCounter\",\"Unit\":\"Count\"}]}]},\"Type\":\"Counter\",\"EMFCounter\":5, \"ClusterName\": \"'$${CLUSTER_NAME}'\"}' | nc -u -v -w 0 cloudwatch_agent 25888; sleep 60; done"
         ]
     }
 ]
