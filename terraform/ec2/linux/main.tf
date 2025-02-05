@@ -32,7 +32,7 @@ module "reboot_common" {
 
 locals {
   // Canary downloads latest binary. Integration test downloads binary connect to git hash.
-  binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
+  binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.agent_s3_path_linux}/linux/${var.arc}/${var.binary_name}"
   // list of test that require instance reboot
   reboot_required_tests = tolist(["./test/restart"])
 }
