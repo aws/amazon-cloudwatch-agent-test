@@ -4,16 +4,19 @@
 variable "agent_s3_path_linux" {
   description = "base s3 path for the linux flavor of the agent"
   type        = string
+  default     = ""
 }
 
 variable "agent_s3_path_mac" {
   description = "base s3 path for the linux flavor of the agent"
   type        = string
+  default     = ""
 }
 
 variable "agent_s3_path_windows" {
   description = "base s3 path for the linux flavor of the agent"
   type        = string
+  default     = ""
 }
 
 variable "region" {
