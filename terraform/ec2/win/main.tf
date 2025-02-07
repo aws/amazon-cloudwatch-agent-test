@@ -11,6 +11,10 @@ module "basic_components" {
   region = var.region
 }
 
+locals {
+  binary_uri = "${var.agent_s3_path_windows}/amazon-cloudwatch-agent.msi"
+}
+
 #####################################################################
 # Generate EC2 Key Pair for log in access to EC2
 #####################################################################
@@ -100,7 +104,7 @@ resource "null_resource" "integration_test_setup_agent" {
   # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
+      "aws s3 cp ${local.binary_uri} .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
     ]
   }

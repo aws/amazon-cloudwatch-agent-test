@@ -1,6 +1,12 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+variable "agent_s3_path_windows" {
+  description = "base s3 path for the linux flavor of the agent"
+  type        = string
+  default     = ""
+}
+
 variable "region" {
   type    = string
   default = "us-west-2"

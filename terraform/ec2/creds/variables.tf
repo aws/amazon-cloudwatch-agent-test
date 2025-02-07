@@ -18,7 +18,6 @@ variable "agent_s3_path_windows" {
   type        = string
   default     = ""
 }
-
 variable "region" {
   type    = string
   default = "us-west-2"
