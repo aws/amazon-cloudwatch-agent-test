@@ -91,6 +91,7 @@ resource "null_resource" "integration_test_run" {
       "${var.is_selinux_test ? "cd amazon-cloudwatch-agent-sepolicy && sudo chmod +x amazon_cloudwatch_agent.sh && sudo ./amazon_cloudwatch_agent.sh" : "echo Skipping SELinux setup"}",
       "sleep 10",
       "echo getenforce",
+      "sudo getenforce",
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
