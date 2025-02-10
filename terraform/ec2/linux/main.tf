@@ -91,8 +91,8 @@ resource "null_resource" "integration_test_run" {
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent-test",
+      "nohup bash -c 'while true; do sudo shutdown -c; sleep 60; done' >/dev/null 2>&1 &",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "sudo shutdown -c",
       var.pre_test_setup,
       "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v",
     ]
