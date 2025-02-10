@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -23,6 +24,8 @@ import (
 	"collectd.org/exec"
 	"collectd.org/network"
 	"github.com/DataDog/datadog-go/statsd"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
 )
 
@@ -349,4 +352,57 @@ func SendEMFMetrics(metricPerInterval int, metricLogGroup, metricNamespace strin
 		}
 	}
 
+}
+
+// This function builds and signs an ListEntitiesForMetric call, essentially trying to replicate this curl command:
+//
+//	curl -i -X POST monitoring.us-west-2.amazonaws.com -H 'Content-Type: application/json' \
+//	  -H 'Content-Encoding: amz-1.0' \
+//	  --user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
+//	  -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
+//	  --aws-sigv4 "aws:amz:us-west-2:monitoring" \
+//	  -H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
+//	  -d '{
+//		   // sample request body:
+//	    "Namespace": "CWAgent",
+//	    "MetricName": "cpu_usage_idle",
+//	    "Dimensions": [{"Name": "InstanceId", "Value": "i-0123456789012"}, { "Name": "cpu", "Value": "cpu-total"}]
+//	  }'
+func BuildListEntitiesForMetricRequest(body []byte, region string) (*http.Request, error) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+	if err != nil {
+		return nil, err
+	}
+	signer := v4.NewSigner()
+	h := sha256.New()
+
+	h.Write(body)
+	payloadHash := hex.EncodeToString(h.Sum(nil))
+
+	// build the request
+	req, err := http.NewRequest("POST", "https://monitoring."+region+".amazonaws.com/", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	// set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Amz-Target", "com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric")
+	req.Header.Set("Content-Encoding", "amz-1.0")
+
+	// set creds
+	credentials, err := cfg.Credentials.Retrieve(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("x-amz-security-token", credentials.SessionToken)
+
+	// sign the request
+	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "monitoring", region, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }

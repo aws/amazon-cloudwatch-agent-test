@@ -11,19 +11,9 @@ variable "test_dir" {
   default = "./test/metric_value_benchmark"
 }
 
-variable "cwagent_image_repo" {
-  type    = string
-  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
-}
-
-variable "cwagent_image_tag" {
-  type    = string
-  default = "latest"
-}
-
 variable "k8s_version" {
   type    = string
-  default = "1.32"
+  default = "1.30"
 }
 
 variable "ami_type" {
@@ -34,4 +24,19 @@ variable "ami_type" {
 variable "instance_type" {
   type    = string
   default = "t3a.medium"
+}
+
+variable "helm_chart_branch" {
+  type    = string
+  default = "main"
+}
+
+variable "cwagent_image_repo" {
+  type    = string
+  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
+}
+
+variable "cwagent_image_tag" {
+  type    = string
+  default = "latest"
 }

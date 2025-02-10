@@ -13,6 +13,10 @@ output "cwagent_id" {
   value = aws_instance.cwagent.id
 }
 
+output "cwagent_arn" {
+  value = aws_instance.cwagent.arn
+}
+
 output "proxy_instance_proxy_ip" {
   value = module.proxy_instance.proxy_ip
 }

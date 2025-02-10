@@ -23,7 +23,7 @@ variable "cwagent_image_tag" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.24"
+  default = "1.32"
 }
 
 // ami_type and instance_type can be used to test ARM node group
