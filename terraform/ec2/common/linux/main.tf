@@ -71,10 +71,6 @@ resource "aws_instance" "cwagent" {
     sudo systemctl restart sshd
   EOT
 
-  root_block_device {
-    volume_size = 64
-  }
-
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
