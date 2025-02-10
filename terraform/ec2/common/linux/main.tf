@@ -56,6 +56,10 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
 
+  root_block_device {
+    volume_size = 64
+  }
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
