@@ -200,6 +200,11 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
+      "sudo setenforce 0",
+      "echo enforcing mode on",
+      "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
+      "sudo systemctl start auditd",
+      "sudo systemctl enable auditd",
       "${var.is_selinux_test ? "sudo setenforce 1" : "echo SELinux not enforced"}",
       "${var.is_selinux_test ? "for i in {1..3}; do git clone https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git && break || sleep 5; done" : "echo SELinux test not enabled"}",
       "${var.is_selinux_test ? "cd amazon-cloudwatch-agent-sepolicy && sudo chmod +x amazon_cloudwatch_agent.sh && sudo ./amazon_cloudwatch_agent.sh" : "echo Skipping SELinux setup"}",
@@ -210,7 +215,9 @@ resource "null_resource" "integration_test_run" {
       "cd ~/amazon-cloudwatch-agent-test",
       "echo run sanity test && go test ./test/sanity -p 1 -v",
       "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v",
+      "sudo ausearch -m AVC,USER_AVC -ts recent | audit2allow -M custom_policy",
+      "cat custom_policy.te"
     ]
   }
 
