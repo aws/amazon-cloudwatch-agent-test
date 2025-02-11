@@ -9,9 +9,10 @@
         "collect_list": [
           {
             "file_path": "/tmp/cwagent_log_test.log",
-            "log_group_name": "standard-no-specification",
+            "log_group_name": "standard-no-specification-{instance_id}",
             "log_stream_name": "{instance_id}",
-            "timezone": "UTC"
+            "timezone": "UTC",
+            "retention_in_days": 7
           }
         ]
       }

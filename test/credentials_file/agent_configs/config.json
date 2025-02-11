@@ -1,15 +1,12 @@
 {
   "agent": {
     "metrics_collection_interval": 15,
-    "credentials": {
-      "role_arn": "ROLE_ARN_PLACEHOLDER"
-    },
     "run_as_user": "root",
     "debug": true,
-    "aws_sdk_log_level": "LogDebugWithHTTPBody"
+    "logfile": ""
   },
   "metrics": {
-    "namespace": "NAMESPACE_PLACEHOLDER",
+    "namespace": "CredentialsFileTest",
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },
