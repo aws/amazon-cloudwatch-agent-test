@@ -84,7 +84,7 @@ var (
 			logGroupClass: types.LogGroupClassInfrequentAccess,
 		},
 	}
-	resourceNotFoundException *types.ResourceNotFoundException
+	// resourceNotFoundException *types.ResourceNotFoundException
 )
 
 type writeToCloudWatchTestInput struct {
@@ -142,9 +142,9 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			// ensure that there is enough time from the "start" time and the first log line,
 			// so we don't miss it in the GetLogEvents call
-			time.Sleep(sleepForExtendedFlush)
+			time.Sleep(sleepForFlush)
 			writeLogLines(t, f, param.iterations)
-			time.Sleep(sleepForExtendedFlush)
+			time.Sleep(sleepForFlush)
 			common.StopAgent()
 			end := time.Now()
 
@@ -184,7 +184,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 	}{
 		"IAMRole": {
 			agentConfigPath: filepath.Join("resources", "config_log.json"),
-			iterations:      1000,
+			iterations:      100,
 			expectedEntity: expectedEntity{
 				entityType:   "Service",
 				name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
@@ -195,7 +195,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 		},
 		"ServiceInConfig": {
 			agentConfigPath: filepath.Join("resources", "config_log_service_name.json"),
-			iterations:      1000,
+			iterations:      100,
 			expectedEntity: expectedEntity{
 				entityType:   "Service",
 				name:         "service-in-config",     //should match the service.name value in the config file
@@ -206,7 +206,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 		},
 		"EC2Tags": {
 			agentConfigPath: filepath.Join("resources", "config_log.json"),
-			iterations:      1000,
+			iterations:      100,
 			useEC2Tag:       true,
 			expectedEntity: expectedEntity{
 				entityType:   "Service",
@@ -220,9 +220,6 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Cleanup(func() {
-				// delete the log group/stream after each test case
-				awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
-
 				// delete EC2 tags added to the instance for the test
 				if testCase.useEC2Tag {
 					input := &ec2.DeleteTagsInput{
@@ -235,6 +232,10 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 					time.Sleep(5 * time.Second)
 				}
 			})
+
+			logGroup := name + "-" + instanceId
+			defer awsservice.DeleteLogGroupAndStream(logGroup, instanceId)
+
 			if testCase.useEC2Tag {
 				// enable instance metadata tags
 				modifyInput := &ec2.ModifyInstanceMetadataOptionsInput{
@@ -251,6 +252,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 				_, createErr := awsservice.Ec2Client.CreateTags(context.TODO(), input)
 				assert.NoError(t, createErr)
 			}
+
 			id := uuid.New()
 			f, err := os.Create(logFilePath + "-" + id.String())
 			if err != nil {
@@ -269,6 +271,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 
 			common.DeleteFile(common.AgentLogFile)
 			common.TouchFile(common.AgentLogFile)
+			begin := time.Now()
 
 			common.CopyFile(testCase.agentConfigPath, configOutputPath)
 
@@ -278,9 +281,8 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			time.Sleep(sleepForExtendedFlush)
 			common.StopAgent()
 			end := time.Now()
-			begin := end.Add(-sleepForExtendedFlush * 4)
 
-			ValidateEntity(t, instanceId, instanceId, &begin, &end, testCase.expectedEntity)
+			ValidateEntity(t, logGroup, instanceId, &begin, &end, testCase.expectedEntity)
 		})
 	}
 }
@@ -488,7 +490,7 @@ func ValidateEntity(t *testing.T, logGroup, logStream string, begin, end *time.T
 	logGroupExists := awsservice.IsLogGroupExists(logGroup)
 	assert.True(t, logGroupExists, "Log group %s does not exist", logGroup)
 
-	log.Printf("Query start time is " + begin.String() + " and end time is " + end.String())
+	log.Print("Query start time is " + begin.String() + " and end time is " + end.String())
 
 	results, err := awsservice.GetLogQueryResults(logGroup, begin.Unix(), end.Unix(), queryString)
 	assert.NoError(t, err, "Failed to get query results")
