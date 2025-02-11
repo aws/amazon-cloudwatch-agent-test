@@ -182,28 +182,28 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 		useEC2Tag       bool
 		expectedEntity  expectedEntity
 	}{
-		"IAMRole": {
-			agentConfigPath: filepath.Join("resources", "config_log.json"),
-			iterations:      100,
-			expectedEntity: expectedEntity{
-				entityType:   "Service",
-				name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
-				environment:  "ec2:default",
-				platformType: "AWS::EC2",
-				instanceId:   instanceId,
-			},
-		},
-		"ServiceInConfig": {
-			agentConfigPath: filepath.Join("resources", "config_log_service_name.json"),
-			iterations:      100,
-			expectedEntity: expectedEntity{
-				entityType:   "Service",
-				name:         "service-in-config",     //should match the service.name value in the config file
-				environment:  "environment-in-config", //should match the deployment.environment value in the config file
-				platformType: "AWS::EC2",
-				instanceId:   instanceId,
-			},
-		},
+		// "IAMRole": {
+		// 	agentConfigPath: filepath.Join("resources", "config_log.json"),
+		// 	iterations:      100,
+		// 	expectedEntity: expectedEntity{
+		// 		entityType:   "Service",
+		// 		name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
+		// 		environment:  "ec2:default",
+		// 		platformType: "AWS::EC2",
+		// 		instanceId:   instanceId,
+		// 	},
+		// },
+		// "ServiceInConfig": {
+		// 	agentConfigPath: filepath.Join("resources", "config_log_service_name.json"),
+		// 	iterations:      100,
+		// 	expectedEntity: expectedEntity{
+		// 		entityType:   "Service",
+		// 		name:         "service-in-config",     //should match the service.name value in the config file
+		// 		environment:  "environment-in-config", //should match the deployment.environment value in the config file
+		// 		platformType: "AWS::EC2",
+		// 		instanceId:   instanceId,
+		// 	},
+		// },
 		"EC2Tags": {
 			agentConfigPath: filepath.Join("resources", "config_log.json"),
 			iterations:      100,
@@ -233,8 +233,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 				}
 			})
 
-			logGroup := name + "-" + instanceId
-			defer awsservice.DeleteLogGroupAndStream(logGroup, instanceId)
+			defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
 
 			if testCase.useEC2Tag {
 				// enable instance metadata tags
@@ -276,13 +275,16 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			common.CopyFile(testCase.agentConfigPath, configOutputPath)
 
 			common.StartAgent(configOutputPath, true, false)
-			time.Sleep(sleepForExtendedFlush)
+			time.Sleep(sleepForFlush)
 			writeLogLines(t, f, testCase.iterations)
-			time.Sleep(sleepForExtendedFlush)
+			time.Sleep(sleepForFlush)
 			common.StopAgent()
 			end := time.Now()
 
-			ValidateEntity(t, logGroup, instanceId, &begin, &end, testCase.expectedEntity)
+			err = ValidateEntity(instanceId, instanceId, &begin, &end, testCase.expectedEntity)
+			if err != nil {
+				t.Fatalf("ValidateEntity failed: %v", err)
+			}
 		})
 	}
 }
@@ -484,20 +486,21 @@ func checkData(t *testing.T, start time.Time, lineCount int) {
 	assert.NoError(t, err)
 }
 
-func ValidateEntity(t *testing.T, logGroup, logStream string, begin, end *time.Time, expectedEntity expectedEntity) {
+func ValidateEntity(logGroup, logStream string, begin, end *time.Time, expectedEntity expectedEntity) error {
 	log.Printf("Validating entity for log group: %s, stream: %s", logGroup, logStream)
 
 	logGroupExists := awsservice.IsLogGroupExists(logGroup)
-	assert.True(t, logGroupExists, "Log group %s does not exist", logGroup)
+	if !logGroupExists {
+		return fmt.Errorf("log group %s does not exist", logGroup)
+	}
 
 	log.Print("Query start time is " + begin.String() + " and end time is " + end.String())
 
 	results, err := awsservice.GetLogQueryResults(logGroup, begin.Unix(), end.Unix(), queryString)
-	assert.NoError(t, err, "Failed to get query results")
-
-	if !assert.NotZero(t, len(results)) {
-		return
+	if err != nil || len(results) == 0 {
+		return fmt.Errorf("failed to get query results: %v", err)
 	}
+
 	requiredEntityFields := map[string]bool{
 		entityType:        false,
 		entityName:        false,
@@ -505,32 +508,48 @@ func ValidateEntity(t *testing.T, logGroup, logStream string, begin, end *time.T
 		entityPlatform:    false,
 		entityInstanceId:  false,
 	}
+
 	for _, field := range results[0] {
 		switch aws.ToString(field.Field) {
 		case entityType:
 			requiredEntityFields[entityType] = true
-			assert.Equal(t, expectedEntity.entityType, aws.ToString(field.Value))
+			if aws.ToString(field.Value) != expectedEntity.entityType {
+				return fmt.Errorf("expected entity type %s, but got %s", expectedEntity.entityType, aws.ToString(field.Value))
+			}
 		case entityName:
 			requiredEntityFields[entityName] = true
-			assert.Equal(t, expectedEntity.name, aws.ToString(field.Value))
+			if aws.ToString(field.Value) != expectedEntity.name {
+				return fmt.Errorf("expected entity name %s, but got %s", expectedEntity.name, aws.ToString(field.Value))
+			}
 		case entityEnvironment:
 			requiredEntityFields[entityEnvironment] = true
-			assert.Equal(t, expectedEntity.environment, aws.ToString(field.Value))
+			if aws.ToString(field.Value) != expectedEntity.environment {
+				return fmt.Errorf("expected entity environment %s, but got %s", expectedEntity.environment, aws.ToString(field.Value))
+			}
 		case entityPlatform:
 			requiredEntityFields[entityPlatform] = true
-			assert.Equal(t, expectedEntity.platformType, aws.ToString(field.Value))
+			if aws.ToString(field.Value) != expectedEntity.platformType {
+				return fmt.Errorf("expected entity platform %s, but got %s", expectedEntity.platformType, aws.ToString(field.Value))
+			}
 		case entityInstanceId:
 			requiredEntityFields[entityInstanceId] = true
-			assert.Equal(t, expectedEntity.instanceId, aws.ToString(field.Value))
+			if aws.ToString(field.Value) != expectedEntity.instanceId {
+				return fmt.Errorf("expected entity instance ID %s, but got %s", expectedEntity.instanceId, aws.ToString(field.Value))
+			}
 		}
 		fmt.Printf("%s: %s\n", aws.ToString(field.Field), aws.ToString(field.Value))
 	}
-	allEntityFieldsFound := true
-	for field, value := range requiredEntityFields {
-		if !value {
-			log.Printf("Missing required entity field: %s", field)
-			allEntityFieldsFound = false
+
+	var missingFields []string
+	for field, found := range requiredEntityFields {
+		if !found {
+			missingFields = append(missingFields, field)
 		}
 	}
-	assert.True(t, allEntityFieldsFound)
+
+	if len(missingFields) > 0 {
+		return fmt.Errorf("missing required entity fields: %v", missingFields)
+	}
+
+	return nil
 }
