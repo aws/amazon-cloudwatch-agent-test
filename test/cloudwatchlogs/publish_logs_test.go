@@ -206,7 +206,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 		// },
 		"EC2Tags": {
 			agentConfigPath: filepath.Join("resources", "config_log.json"),
-			iterations:      100,
+			iterations:      1000,
 			useEC2Tag:       true,
 			expectedEntity: expectedEntity{
 				entityType:   "Service",
@@ -275,9 +275,9 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			common.CopyFile(testCase.agentConfigPath, configOutputPath)
 
 			common.StartAgent(configOutputPath, true, false)
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			writeLogLines(t, f, testCase.iterations)
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			common.StopAgent()
 			end := time.Now()
 
