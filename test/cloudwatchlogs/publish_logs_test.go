@@ -84,7 +84,6 @@ var (
 			logGroupClass: types.LogGroupClassInfrequentAccess,
 		},
 	}
-	// resourceNotFoundException *types.ResourceNotFoundException
 )
 
 type writeToCloudWatchTestInput struct {
@@ -275,9 +274,9 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			common.CopyFile(testCase.agentConfigPath, configOutputPath)
 
 			common.StartAgent(configOutputPath, true, false)
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			writeLogLines(t, f, testCase.iterations)
-			time.Sleep(sleepForFlush)
+			time.Sleep(sleepForExtendedFlush)
 			common.StopAgent()
 			end := time.Now()
 
