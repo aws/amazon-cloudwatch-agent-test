@@ -497,8 +497,12 @@ func ValidateEntity(logGroup, logStream string, begin, end *time.Time, expectedE
 	log.Print("Query start time is " + begin.String() + " and end time is " + end.String())
 
 	results, err := awsservice.GetLogQueryResults(logGroup, begin.Unix(), end.Unix(), queryString)
-	if err != nil || len(results) == 0 {
+	if err != nil {
 		return fmt.Errorf("failed to get query results: %v", err)
+	}
+
+	if len(results) == 0 {
+		return fmt.Errorf("results returned from query are empty")
 	}
 
 	requiredEntityFields := map[string]bool{
