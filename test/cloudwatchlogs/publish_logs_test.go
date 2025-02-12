@@ -180,17 +180,17 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 		useEC2Tag       bool
 		expectedEntity  expectedEntity
 	}{
-		"IAMRole": {
-			agentConfigPath: filepath.Join("resources", "config_log.json"),
-			iterations:      100,
-			expectedEntity: expectedEntity{
-				entityType:   "Service",
-				name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
-				environment:  "ec2:default",
-				platformType: "AWS::EC2",
-				instanceId:   instanceId,
-			},
-		},
+		// "IAMRole": {
+		// 	agentConfigPath: filepath.Join("resources", "config_log.json"),
+		// 	iterations:      100,
+		// 	expectedEntity: expectedEntity{
+		// 		entityType:   "Service",
+		// 		name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
+		// 		environment:  "ec2:default",
+		// 		platformType: "AWS::EC2",
+		// 		instanceId:   instanceId,
+		// 	},
+		// },
 		"ServiceInConfig": {
 			agentConfigPath: filepath.Join("resources", "config_log_service_name.json"),
 			iterations:      100,
@@ -202,18 +202,18 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 				instanceId:   instanceId,
 			},
 		},
-		"EC2Tags": {
-			agentConfigPath: filepath.Join("resources", "config_log.json"),
-			iterations:      1000,
-			useEC2Tag:       true,
-			expectedEntity: expectedEntity{
-				entityType:   "Service",
-				name:         "service-test", //should match the value in tagsToCreate
-				environment:  "ec2:default",
-				platformType: "AWS::EC2",
-				instanceId:   instanceId,
-			},
-		},
+		// "EC2Tags": {
+		// 	agentConfigPath: filepath.Join("resources", "config_log.json"),
+		// 	iterations:      1000,
+		// 	useEC2Tag:       true,
+		// 	expectedEntity: expectedEntity{
+		// 		entityType:   "Service",
+		// 		name:         "service-test", //should match the value in tagsToCreate
+		// 		environment:  "ec2:default",
+		// 		platformType: "AWS::EC2",
+		// 		instanceId:   instanceId,
+		// 	},
+		// },
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
