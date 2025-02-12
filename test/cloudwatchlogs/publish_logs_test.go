@@ -34,8 +34,7 @@ const (
 	logLineId2                    = "bar"
 	logFilePath                   = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
 	sleepForFlush                 = 20 * time.Second            // default flush interval is 5 seconds
-	sleepForExtendedFlush         = 180 * time.Second           // increase flush time for the two main tests
-	retryWaitTime                 = 30 * time.Second
+	sleepForExtendedFlush         = 180 * time.Second           // increase flush time for the logs entity test
 	configPathAutoRemoval         = "resources/config_auto_removal.json"
 	standardLogGroupClass         = "STANDARD"
 	infrequentAccessLogGroupClass = "INFREQUENT_ACCESS"
