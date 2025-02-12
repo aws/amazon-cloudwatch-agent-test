@@ -181,7 +181,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 		expectedEntity  expectedEntity
 	}{
 		"IAMRole": {
-			agentConfigPath: filepath.Join("resources", "config_log.json"),
+			agentConfigPath: filepath.Join("resources", "1.json"),
 			iterations:      1000,
 			expectedEntity: expectedEntity{
 				entityType:   "Service",
@@ -192,7 +192,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			},
 		},
 		"ServiceInConfig": {
-			agentConfigPath: filepath.Join("resources", "config_log_service_name.json"),
+			agentConfigPath: filepath.Join("resources", "2.json"),
 			iterations:      1000,
 			expectedEntity: expectedEntity{
 				entityType:   "Service",
@@ -203,7 +203,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			},
 		},
 		"EC2Tags": {
-			agentConfigPath: filepath.Join("resources", "config_log.json"),
+			agentConfigPath: filepath.Join("resources", "3.json"),
 			iterations:      1000,
 			useEC2Tag:       true,
 			expectedEntity: expectedEntity{
@@ -231,7 +231,8 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 				}
 			})
 
-			defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
+			logGroup := name + "-" + instanceId
+			defer awsservice.DeleteLogGroupAndStream(logGroup, instanceId)
 
 			if testCase.useEC2Tag {
 				// enable instance metadata tags
@@ -279,7 +280,7 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 			common.StopAgent()
 			end := time.Now()
 
-			err = ValidateEntity(instanceId, instanceId, &begin, &end, testCase.expectedEntity)
+			err = ValidateEntity(logGroup, instanceId, &begin, &end, testCase.expectedEntity)
 			if err != nil {
 				t.Fatalf("ValidateEntity failed: %v", err)
 			}
