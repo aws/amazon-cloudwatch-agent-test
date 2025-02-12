@@ -200,6 +200,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
+      "echo checking if this is newwwwww",
       "sudo setenforce 0",
       "echo enforcing mode on",
       "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
