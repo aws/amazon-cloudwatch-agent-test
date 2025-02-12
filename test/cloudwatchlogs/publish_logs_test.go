@@ -181,28 +181,28 @@ func TestWriteLogsWithEntityInfo(t *testing.T) {
 		useEC2Tag       bool
 		expectedEntity  expectedEntity
 	}{
-		// "IAMRole": {
-		// 	agentConfigPath: filepath.Join("resources", "config_log.json"),
-		// 	iterations:      100,
-		// 	expectedEntity: expectedEntity{
-		// 		entityType:   "Service",
-		// 		name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
-		// 		environment:  "ec2:default",
-		// 		platformType: "AWS::EC2",
-		// 		instanceId:   instanceId,
-		// 	},
-		// },
-		// "ServiceInConfig": {
-		// 	agentConfigPath: filepath.Join("resources", "config_log_service_name.json"),
-		// 	iterations:      100,
-		// 	expectedEntity: expectedEntity{
-		// 		entityType:   "Service",
-		// 		name:         "service-in-config",     //should match the service.name value in the config file
-		// 		environment:  "environment-in-config", //should match the deployment.environment value in the config file
-		// 		platformType: "AWS::EC2",
-		// 		instanceId:   instanceId,
-		// 	},
-		// },
+		"IAMRole": {
+			agentConfigPath: filepath.Join("resources", "config_log.json"),
+			iterations:      100,
+			expectedEntity: expectedEntity{
+				entityType:   "Service",
+				name:         "cwa-e2e-iam-role", //should match the name of the IAM role used in our testing
+				environment:  "ec2:default",
+				platformType: "AWS::EC2",
+				instanceId:   instanceId,
+			},
+		},
+		"ServiceInConfig": {
+			agentConfigPath: filepath.Join("resources", "config_log_service_name.json"),
+			iterations:      100,
+			expectedEntity: expectedEntity{
+				entityType:   "Service",
+				name:         "service-in-config",     //should match the service.name value in the config file
+				environment:  "environment-in-config", //should match the deployment.environment value in the config file
+				platformType: "AWS::EC2",
+				instanceId:   instanceId,
+			},
+		},
 		"EC2Tags": {
 			agentConfigPath: filepath.Join("resources", "config_log.json"),
 			iterations:      1000,
