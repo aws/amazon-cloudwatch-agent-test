@@ -191,6 +191,14 @@ resource "helm_release" "aws_observability" {
     name  = "region"
     value = "us-west-2"
   }
+  set {
+    name  = "fluentbit.image.repository"
+    value = "506463145083.dkr.ecr.us-west-2.amazonaws.com/fluent-bit-test"
+  }
+  set {
+    name  = "fluentbit.image.tag"
+    value = "resourceEntityDataplaneHostLogs"
+  }
   depends_on = [
     aws_eks_cluster.this,
     aws_eks_node_group.this,
@@ -230,6 +238,9 @@ resource "kubernetes_pod" "log_generator" {
   metadata {
     name      = "log-generator"
     namespace = "default"
+    labels = {
+      app = "dataplane-test"  # Add this label for dataplane logs identification
+    }
   }
 
   spec {
@@ -237,10 +248,38 @@ resource "kubernetes_pod" "log_generator" {
       name  = "log-generator"
       image = "busybox"
 
-      # Run shell script that generate a log line every second
+      # Generate both dataplane and host logs
       command = ["/bin/sh", "-c"]
-      args    = ["while true; do echo \"Log entry at $(date)\"; sleep 1; done"]
+      args    = [<<-EOT
+        while true; do
+          # Dataplane log
+          echo '{"kubernetes": {"pod_name": "dataplane-test", "namespace_name": "default"}, "log": "Dataplane log entry at '$(date)'"}';
+          # Host log
+          echo "Host log entry at $(date)" >> /host/var/log/host-test.log;
+          sleep 1;
+        done
+        EOT
+      ]
+
+      # Add volume mount for host logs
+      volume_mount {
+        name = "host-logs"
+        mount_path = "/host/var/log"
+      }
+
+      security_context {
+        privileged = true  # Needed to write to host filesystem
+      }
     }
+
+    # Add volume for host logs
+    volume {
+      name = "host-logs"
+      host_path {
+        path = "/var/log"
+      }
+    }
+
     restart_policy = "Always"
   }
 }

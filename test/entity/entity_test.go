@@ -6,7 +6,6 @@ package entity
 import (
 	"fmt"
 	"log"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -35,6 +34,7 @@ const (
 
 	// Constants for possible vaues for entity attributes
 	eksServiceEntityType                   = "Service"
+	eksResourceEntityTtpe                  = "Resource"
 	entityEKSPlatform                      = "AWS::EKS"
 	k8sDefaultNamespace                    = "default"
 	entityServiceNameSourceInstrumentation = "Instrumentation"
@@ -158,14 +158,11 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 	end := time.Now()
 
 	testCases := map[string]struct {
-		agentConfigPath string
-		podName         string
-		useEC2Tag       bool
-		expectedEntity  expectedEntity
+		podName        string
+		expectedEntity expectedEntity
 	}{
 		"Entity/K8sWorkloadServiceNameSource": {
-			agentConfigPath: filepath.Join("resources", "compass_default_log.json"),
-			podName:         "log-generator",
+			podName: "log-generator",
 			expectedEntity: expectedEntity{
 				entityType:        eksServiceEntityType,
 				name:              "log-generator",
@@ -180,8 +177,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 			},
 		},
 		"Entity/InstrumentationServiceNameSource": {
-			agentConfigPath: filepath.Join("resources", "compass_default_log.json"),
-			podName:         "petclinic-instrumentation-default-env",
+			podName: "petclinic-instrumentation-default-env",
 			expectedEntity: expectedEntity{
 				entityType: eksServiceEntityType,
 				// This service name comes from OTEL_SERVICE_NAME which is
@@ -198,8 +194,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 			},
 		},
 		"Entity/InstrumentationServiceNameSourceCustomEnvironment": {
-			agentConfigPath: filepath.Join("resources", "compass_default_log.json"),
-			podName:         "petclinic-instrumentation-custom-env",
+			podName: "petclinic-instrumentation-custom-env",
 			expectedEntity: expectedEntity{
 				entityType: eksServiceEntityType,
 				// This service name comes from OTEL_SERVICE_NAME which is
@@ -213,6 +208,33 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 				eksCluster:        env.EKSClusterName,
 				instanceId:        env.InstanceId,
 				serviceNameSource: entityServiceNameSourceInstrumentation,
+			},
+		},
+		"Entity/DataplaneLogEntity": {
+			podName: "log-generator", // Changed to match the actual pod name
+			expectedEntity: expectedEntity{
+				entityType:   eksResourceEntityTtpe,
+				name:         "dataplane-test",
+				environment:  "eks:" + env.EKSClusterName + "/" + k8sDefaultNamespace,
+				platformType: entityEKSPlatform,
+				k8sWorkload:  "log-generator", // Changed to match the actual pod name
+				k8sNode:      *instancePrivateDNS,
+				k8sNamespace: k8sDefaultNamespace,
+				eksCluster:   env.EKSClusterName,
+				instanceId:   env.InstanceId,
+			},
+		},
+
+		"Entity/HostLogEntity": {
+			podName: "log-generator", // Changed to match the actual pod name
+			expectedEntity: expectedEntity{
+				entityType:   eksResourceEntityTtpe,
+				name:         *instancePrivateDNS,
+				environment:  "eks:" + env.EKSClusterName,
+				platformType: entityEKSPlatform,
+				k8sNode:      *instancePrivateDNS,
+				eksCluster:   env.EKSClusterName,
+				instanceId:   env.InstanceId,
 			},
 		},
 	}
