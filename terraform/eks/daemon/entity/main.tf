@@ -239,7 +239,7 @@ resource "kubernetes_pod" "log_generator" {
     name      = "log-generator"
     namespace = "default"
     labels = {
-      app = "dataplane-test"  # Add this label for dataplane logs identification
+      app = "dataplane-test"
     }
   }
 
@@ -250,7 +250,7 @@ resource "kubernetes_pod" "log_generator" {
 
       # Generate both dataplane and host logs
       command = ["/bin/sh", "-c"]
-      args    = [<<-EOT
+      args = [<<-EOT
         while true; do
           # Dataplane log
           echo '{"kubernetes": {"pod_name": "dataplane-test", "namespace_name": "default"}, "log": "Dataplane log entry at '$(date)'"}';
@@ -263,12 +263,12 @@ resource "kubernetes_pod" "log_generator" {
 
       # Add volume mount for host logs
       volume_mount {
-        name = "host-logs"
+        name       = "host-logs"
         mount_path = "/host/var/log"
       }
 
       security_context {
-        privileged = true  # Needed to write to host filesystem
+        privileged = true # Needed to write to host filesystem
       }
     }
 
