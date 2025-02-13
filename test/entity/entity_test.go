@@ -34,7 +34,7 @@ const (
 
 	// Constants for possible vaues for entity attributes
 	eksServiceEntityType                   = "Service"
-	eksResourceEntityTtpe                  = "Resource"
+	eksResourceEntityType                  = "Resource"
 	entityEKSPlatform                      = "AWS::EKS"
 	k8sDefaultNamespace                    = "default"
 	entityServiceNameSourceInstrumentation = "Instrumentation"
@@ -213,7 +213,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 		"Entity/DataplaneLogEntity": {
 			podName: "log-generator", // Changed to match the actual pod name
 			expectedEntity: expectedEntity{
-				entityType:   eksResourceEntityTtpe,
+				entityType:   eksResourceEntityType,
 				name:         "dataplane-test",
 				environment:  "eks:" + env.EKSClusterName + "/" + k8sDefaultNamespace,
 				platformType: entityEKSPlatform,
@@ -228,7 +228,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 		"Entity/HostLogEntity": {
 			podName: "log-generator", // Changed to match the actual pod name
 			expectedEntity: expectedEntity{
-				entityType:   eksResourceEntityTtpe,
+				entityType:   eksResourceEntityType,
 				name:         *instancePrivateDNS,
 				environment:  "eks:" + env.EKSClusterName,
 				platformType: entityEKSPlatform,
