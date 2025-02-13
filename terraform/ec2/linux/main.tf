@@ -86,12 +86,13 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
-      "sudo setenforce 1",
+      "sudo setenforce 0",
       "sudo rm -r amazon-cloudwatch-agent-sepolicy",
-      "${var.is_selinux_test ? "sudo setenforce 1" : "echo SELinux not enforced"}",
+      "${var.is_selinux_test ? "sudo setenforce 0" : "echo SELinux not enforced"}",
       "${var.is_selinux_test ? "for i in {1..3}; do git clone https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git && break || sleep 5; done" : "echo SELinux test not enabled"}",
       "${var.is_selinux_test ? "cd amazon-cloudwatch-agent-sepolicy && sudo chmod +x amazon_cloudwatch_agent.sh && sudo ./amazon_cloudwatch_agent.sh" : "echo Skipping SELinux setup"}",
       "sleep 10",
+      "git checkout NegativeTest",
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
