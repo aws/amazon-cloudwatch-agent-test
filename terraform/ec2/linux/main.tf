@@ -94,7 +94,7 @@ resource "null_resource" "integration_test_run" {
       "sudo rm -r amazon-cloudwatch-agent-sepolicy",
       "${var.is_selinux_test ? "sudo setenforce 0" : "echo SELinux not enforced"}",
       "${var.is_selinux_test ? "for i in {1..3}; do git clone https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git && break || sleep 5; done" : "echo SELinux test not enabled"}",
-      "${var.is_selinux_test ? "cd amazon-cloudwatch-agent-sepolicy && git checkout NegativeTest && sudo chmod +x amazon_cloudwatch_agent.sh && sudo ./amazon_cloudwatch_agent.sh" : "echo Skipping SELinux setup"}",
+      "${var.is_selinux_test ? "cd amazon-cloudwatch-agent-sepolicy && git checkout NegativeTest &&  cat amazon_cloudwatch_agent.te && sudo chmod +x amazon_cloudwatch_agent.sh && sudo ./amazon_cloudwatch_agent.sh" : "echo Skipping SELinux setup"}",
       "sleep 10",
       "echo NegativeTest",
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
