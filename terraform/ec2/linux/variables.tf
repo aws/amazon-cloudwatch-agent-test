@@ -62,6 +62,11 @@ variable "local_stack_host_name" {
   default = "localhost.localstack.cloud"
 }
 
+variable "is_selinux_test" {
+  type    = bool
+  default = false
+}
+
 variable "s3_bucket" {
   type    = string
   default = ""
