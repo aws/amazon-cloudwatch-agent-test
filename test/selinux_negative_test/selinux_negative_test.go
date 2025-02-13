@@ -49,13 +49,9 @@ func startAgent(t *testing.T) (string, string) {
 func verifyLogStreamDoesNotExist(t *testing.T, logGroupName string) {
 	logStreams := awsservice.GetLogStreamNames(logGroupName)
 	require.Len(t, logStreams, 0)
-
-	t.Logf("No log stream was created for log group '%s', as expected.", logGroupName)
 }
 
 func verifyLogStreamDoesExist(t *testing.T, logGroupName string) {
 	logStreams := awsservice.GetLogStreamNames(logGroupName)
 	require.Greater(t, len(logStreams), 0)
-
-	t.Logf("Log stream was successfully created for log group '%s', as expected.", logGroupName)
 }
