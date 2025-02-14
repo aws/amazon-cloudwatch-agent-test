@@ -138,7 +138,6 @@ func init() {
 // TestPutLogEventEntityEKS checks if entity is emitted correctly in EKS
 // through FluentBit
 func TestPutLogEventEntityEKS(t *testing.T) {
-	begin := time.Now()
 	var instancePrivateDNS *string
 
 	env := environment.GetEnvironmentMetaData()
@@ -286,19 +285,19 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 			assert.NotEmpty(t, podApplicationLogStream)
 			// check CWL to ensure we got the expected entities in the log group
 			queryString := fmt.Sprintf("fields @message, @entity.KeyAttributes.Type, @entity.KeyAttributes.Name, @entity.KeyAttributes.Environment, @entity.Attributes.PlatformType, @entity.Attributes.EKS.Cluster, @entity.Attributes.K8s.Node, @entity.Attributes.K8s.Namespace, @entity.Attributes.K8s.Workload, @entity.Attributes.AWS.ServiceNameSource, @entity.Attributes.EC2.InstanceId | filter @logStream == \"%s\"", podApplicationLogStream)
-			ValidateLogEntity(t, testCase.appLogGroup, podApplicationLogStream, &begin, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
+			ValidateLogEntity(t, testCase.appLogGroup, podApplicationLogStream, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
 		})
 	}
 }
 
 // ValidateLogEntity performs the entity validation for PutLogEvents.
-func ValidateLogEntity(t *testing.T, logGroup, logStream string, begin2, end *time.Time, queryString string, expectedEntity expectedEntity, entityPlatformType string) {
+func ValidateLogEntity(t *testing.T, logGroup, logStream string, end *time.Time, queryString string, expectedEntity expectedEntity, entityPlatformType string) {
 	log.Printf("Checking log group/stream: %s/%s", logGroup, logStream)
 	if !awsservice.IsLogGroupExists(logGroup) {
 		t.Fatalf("application log group used for entity validation doesn't exist: %s", logGroup)
 	}
 
-	begin := (*begin2).Add(-10 * time.Minute)
+	begin := end.Add(-15 * time.Minute)
 	log.Printf("Start time is %s and end time is %s", begin.String(), end.String())
 
 	result, err := awsservice.GetLogQueryResults(logGroup, begin.Unix(), end.Unix(), queryString)
