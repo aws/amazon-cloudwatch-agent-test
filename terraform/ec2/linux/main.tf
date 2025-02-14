@@ -84,24 +84,16 @@ resource "null_resource" "integration_test_run" {
 
   provisioner "remote-exec" {
     inline = concat(
-      # Base setup commands/Debugging
       [
         "echo Preparing environment...",
-        "sudo setenforce 0",
-        "echo Enforcing mode on",
-        "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
-        "sudo systemctl start auditd",
-        "sudo systemctl enable auditd",
-        "sudo rm -rf amazon-cloudwatch-agent-sepolicy"
       ],
 
       # SELinux test setup (if enabled)
         var.is_selinux_test ? [
+        "sudo setenforce 1",
         "echo Running SELinux test setup...",
-        "sudo setenforce 0",
         "git clone --branch ${var.selinux_branch} https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
         "cd amazon-cloudwatch-agent-sepolicy",
-        "cat amazon_cloudwatch_agent.te",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh"
       ] : [
@@ -110,9 +102,6 @@ resource "null_resource" "integration_test_run" {
 
       # General testing setup
       [
-        "echo Below is the selinux_branch",
-        "echo ${var.selinux_branch}",
-        "git branch",
         "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
         "export AWS_REGION=${var.region}",
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
@@ -126,13 +115,6 @@ resource "null_resource" "integration_test_run" {
         # Integration test execution
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
       ],
-
-      # SELinux audit analysis
-      [
-        "echo Generating SELinux audit report...",
-        "sudo ausearch -m AVC,USER_AVC -ts 15:00 -te now | audit2allow -M custom_policy_output",
-        "cat custom_policy.te"
-      ]
     )
   }
 

@@ -5,7 +5,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"os/exec"
 	"testing"
-	"time"
 )
 
 func init() {
@@ -30,7 +29,6 @@ func verifyXrayTestPasses(t *testing.T) {
 		"cwaCommitSha="+env.CwaCommitSha, "-caCertPath="+env.CaCertPath, "-instanceId="+env.InstanceId)
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "Failed xray test %s", output)
-	time.Sleep(10 * time.Second) // Wait for the agent to apply the new configuration
 }
 
 func verifyRunAsUserTestFails(t *testing.T) {
@@ -41,6 +39,7 @@ func verifyRunAsUserTestFails(t *testing.T) {
 	_, err := cmd.CombinedOutput()
 	require.Error(t, err)
 
+	//Verifies selinux denial
 	avcCheckCmd := exec.Command("sudo", "ausearch", "-m", "AVC,USER_AVC", "-ts", "recent")
 	output, avcErr := avcCheckCmd.CombinedOutput()
 	require.NoError(t, avcErr, "Failed to check SELinux logs")
