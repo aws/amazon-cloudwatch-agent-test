@@ -40,4 +40,9 @@ func verifyRunAsUserTestFails(t *testing.T) {
 		"cwaCommitSha="+env.CwaCommitSha, "-caCertPath="+env.CaCertPath, "-instanceId="+env.InstanceId)
 	_, err := cmd.CombinedOutput()
 	require.Error(t, err)
+
+	avcCheckCmd := exec.Command("sudo", "ausearch", "-m", "AVC,USER_AVC", "-ts", "recent")
+	output, avcErr := avcCheckCmd.CombinedOutput()
+	require.NoError(t, avcErr, "Failed to check SELinux logs")
+	require.Contains(t, string(output), "denied", "Expected SELinux to deny the action but no denial found")
 }
