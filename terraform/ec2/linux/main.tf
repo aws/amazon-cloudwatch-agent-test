@@ -82,20 +82,40 @@ resource "null_resource" "integration_test_run" {
     host        = module.linux_common.cwagent_public_ip
   }
 
-  #Run sanity check and integration test
   provisioner "remote-exec" {
-    inline = [
-      "echo prepare environment",
-      "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
-      "export AWS_REGION=${var.region}",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      "echo run integration test",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
-      "echo run sanity test && go test ./test/sanity -p 1 -v",
-      var.pre_test_setup,
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v",
-    ]
+    inline = concat(
+      [
+        "echo Preparing environment...",
+      ],
+
+      # SELinux test setup (if enabled)
+        var.is_selinux_test ? [
+        "sudo setenforce 1",
+        "echo Running SELinux test setup...",
+        "git clone --branch ${var.selinux_branch} https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
+        "cd amazon-cloudwatch-agent-sepolicy",
+        "sudo chmod +x amazon_cloudwatch_agent.sh",
+        "sudo ./amazon_cloudwatch_agent.sh"
+      ] : [
+        "echo SELinux test not enabled"
+      ],
+
+      # General testing setup
+      [
+        "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
+        "export AWS_REGION=${var.region}",
+        "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
+        "echo Running integration test...",
+        "cd ~/amazon-cloudwatch-agent-test",
+        "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
+        "echo Running sanity test...",
+        "go test ./test/sanity -p 1 -v",
+        var.pre_test_setup,
+
+        # Integration test execution
+        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
+      ],
+    )
   }
 
   depends_on = [

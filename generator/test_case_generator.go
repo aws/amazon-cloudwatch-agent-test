@@ -37,6 +37,7 @@ type matrixRow struct {
 	ExcludedTests       string `json:"excludedTests"`
 	MetadataEnabled     string `json:"metadataEnabled"`
 	MaxAttempts         int    `json:"max_attempts"`
+	SELinuxBranch       string `json:"selinux_branch"`
 }
 
 type testConfig struct {
@@ -45,6 +46,7 @@ type testConfig struct {
 	testDir       string
 	terraformDir  string
 	instanceType  string
+	selinuxBranch string
 	runMockServer bool
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
@@ -54,7 +56,8 @@ type testConfig struct {
 }
 
 const (
-	testTypeKeyEc2Linux = "ec2_linux"
+	testTypeKeyEc2Linux   = "ec2_linux"
+	testTypeKeyEc2SELinux = "ec2_selinux"
 )
 
 // you can't have a const map in golang
@@ -119,6 +122,70 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{
 			testDir: "./test/agent_otel_merging",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/assume_role",
+			terraformDir: "terraform/ec2/assume_role",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+	},
+	testTypeKeyEc2SELinux: {
+		{testDir: "./test/ca_bundle"},
+		{testDir: "./test/cloudwatchlogs"},
+		{
+			testDir: "./test/metrics_number_dimension",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir:     "./test/emf_concurrent",
+			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
+			maxAttempts: 1,
+		},
+		{testDir: "./test/metric_value_benchmark"},
+		{testDir: "./test/run_as_user"},
+		{testDir: "./test/collection_interval"},
+		{testDir: "./test/metric_dimension"},
+		{testDir: "./test/restart"},
+		{testDir: "./test/xray"},
+		{
+			testDir:       "./test/xray_selinux_restrictions",
+			selinuxBranch: "xray",
+		},
+		{testDir: "./test/otlp"},
+		// skipping FIPS test as the test cannot be verified
+		// neither ssh nor SSM works after a reboot once FIPS is enabled
+		//{
+		//	testDir: "./test/fips",
+		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		//},
+		{
+			testDir: "./test/lvm",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/proxy",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/ssl_cert",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir:      "./test/credentials_file",
+			terraformDir: "terraform/ec2/creds",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/amp",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/agent_otel_merging",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/selinux_negative_test",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 		{
@@ -340,11 +407,15 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
+			if testConfig.selinuxBranch == "" {
+				testConfig.selinuxBranch = "main"
+			}
 			row := matrixRow{
-				TestDir:      testConfig.testDir,
-				TestType:     testType,
-				TerraformDir: testConfig.terraformDir,
-				MaxAttempts:  testConfig.maxAttempts,
+				TestDir:       testConfig.testDir,
+				SELinuxBranch: testConfig.selinuxBranch,
+				TestType:      testType,
+				TerraformDir:  testConfig.terraformDir,
+				MaxAttempts:   testConfig.maxAttempts,
 			}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
