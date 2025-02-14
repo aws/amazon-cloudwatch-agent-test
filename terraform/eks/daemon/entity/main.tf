@@ -238,9 +238,6 @@ resource "kubernetes_pod" "log_generator" {
   metadata {
     name      = "log-generator"
     namespace = "default"
-    labels = {
-      app = "dataplane-test"
-    }
   }
 
   spec {
@@ -248,18 +245,9 @@ resource "kubernetes_pod" "log_generator" {
       name  = "log-generator"
       image = "busybox"
 
-      # Generate both dataplane and host logs
+      # Run shell script that generate a log line every second
       command = ["/bin/sh", "-c"]
-      args = [<<-EOT
-        while true; do
-          # Dataplane log
-          echo '{"kubernetes": {"pod_name": "dataplane-test", "namespace_name": "default"}, "log": "Dataplane log entry at '$(date)'"}';
-          # Host log
-          echo "Host log entry at $(date)" >> /host/var/log/host-test.log;
-          sleep 1;
-        done
-        EOT
-      ]
+      args    = ["while true; do echo \"Log entry at $(date)\"; sleep 1; done"]
 
       # Add volume mount for host logs
       volume_mount {

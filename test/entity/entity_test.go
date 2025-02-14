@@ -255,7 +255,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 			// Different log stream matching logic based on the test case
 			switch name {
 			case "Entity/HostLogEntity":
-				// Host logs use log streams with "HOST_NAME."
+				// Host logs: look for log streams with "HOST_NAME."
 				for _, streamName := range logStreamNames {
 					if strings.HasPrefix(streamName, fmt.Sprintf("%s.", *instancePrivateDNS)) {
 						podApplicationLogStream = streamName
@@ -264,7 +264,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 					}
 				}
 			case "Entity/DataplaneLogEntity":
-				// For dataplane logs, look for streams with HOST_NAME-
+				// Dataplane logs: look for log streams with "HOST_NAME-""
 				for _, streamName := range logStreamNames {
 					if strings.HasPrefix(streamName, fmt.Sprintf("%s-", *instancePrivateDNS)) {
 						podApplicationLogStream = streamName

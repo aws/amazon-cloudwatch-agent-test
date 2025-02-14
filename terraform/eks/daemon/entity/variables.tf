@@ -40,13 +40,3 @@ variable "cwagent_image_tag" {
   type    = string
   default = "latest"
 }
-
-variable "fluentbit_image_repo" {
-  type    = string
-  default = "506463145083.dkr.ecr.us-west-2.amazonaws.com/fluent-bit-test"
-}
-
-variable "fluentbit_image_tag" {
-  type    = string
-  default = "resourceEntityDataplaneHostLogs"
-}
