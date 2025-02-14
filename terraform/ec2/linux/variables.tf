@@ -82,6 +82,11 @@ variable "test_dir" {
   default = ""
 }
 
+variable "selinux_branch" {
+  type    = string
+  default = "main"
+}
+
 variable "cwa_github_sha" {
   type    = string
   default = ""

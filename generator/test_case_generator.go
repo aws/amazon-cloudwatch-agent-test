@@ -37,6 +37,7 @@ type matrixRow struct {
 	ExcludedTests       string `json:"excludedTests"`
 	MetadataEnabled     string `json:"metadataEnabled"`
 	MaxAttempts         int    `json:"max_attempts"`
+	SELinuxBranch       string `json:"selinux_branch"`
 }
 
 type testConfig struct {
@@ -45,6 +46,7 @@ type testConfig struct {
 	testDir       string
 	terraformDir  string
 	instanceType  string
+	selinuxBranch string
 	runMockServer bool
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
@@ -146,6 +148,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
+		{
+			testDir:       "./test/xrayOnlyPolicy",
+			selinuxBranch: "xray",
+		},
 		{testDir: "./test/otlp"},
 		// skipping FIPS test as the test cannot be verified
 		// neither ssh nor SSM works after a reboot once FIPS is enabled
@@ -401,11 +407,15 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
+			if testConfig.selinuxBranch == "" {
+				testConfig.selinuxBranch = "main"
+			}
 			row := matrixRow{
-				TestDir:      testConfig.testDir,
-				TestType:     testType,
-				TerraformDir: testConfig.terraformDir,
-				MaxAttempts:  testConfig.maxAttempts,
+				TestDir:       testConfig.testDir,
+				SELinuxBranch: testConfig.selinuxBranch,
+				TestType:      testType,
+				TerraformDir:  testConfig.terraformDir,
+				MaxAttempts:   testConfig.maxAttempts,
 			}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
