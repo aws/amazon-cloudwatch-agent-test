@@ -149,7 +149,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{
-			testDir:       "./test/xrayOnlyPolicy",
+			testDir:       "./test/xray_selinux_restrictions",
 			selinuxBranch: "xray",
 		},
 		{testDir: "./test/otlp"},
