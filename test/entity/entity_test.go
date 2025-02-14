@@ -160,6 +160,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 	testCases := map[string]struct {
 		podName        string
 		expectedEntity expectedEntity
+		appLogGroup    string
 	}{
 		"Entity/K8sWorkloadServiceNameSource": {
 			podName: "log-generator",
@@ -175,6 +176,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 				instanceId:        env.InstanceId,
 				serviceNameSource: entityServiceNameSourceK8sWorkload,
 			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "application"),
 		},
 		"Entity/InstrumentationServiceNameSource": {
 			podName: "petclinic-instrumentation-default-env",
@@ -192,6 +194,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 				instanceId:        env.InstanceId,
 				serviceNameSource: entityServiceNameSourceInstrumentation,
 			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "application"),
 		},
 		"Entity/InstrumentationServiceNameSourceCustomEnvironment": {
 			podName: "petclinic-instrumentation-custom-env",
@@ -209,24 +212,26 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 				instanceId:        env.InstanceId,
 				serviceNameSource: entityServiceNameSourceInstrumentation,
 			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "application"),
 		},
 		"Entity/DataplaneLogEntity": {
-			podName: "log-generator", // Changed to match the actual pod name
+			podName: "log-generator",
 			expectedEntity: expectedEntity{
 				entityType:   eksResourceEntityType,
 				name:         "dataplane-test",
 				environment:  "eks:" + env.EKSClusterName + "/" + k8sDefaultNamespace,
 				platformType: entityEKSPlatform,
-				k8sWorkload:  "log-generator", // Changed to match the actual pod name
+				k8sWorkload:  "log-generator",
 				k8sNode:      *instancePrivateDNS,
 				k8sNamespace: k8sDefaultNamespace,
 				eksCluster:   env.EKSClusterName,
 				instanceId:   env.InstanceId,
 			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "dataplane"),
 		},
 
 		"Entity/HostLogEntity": {
-			podName: "log-generator", // Changed to match the actual pod name
+			podName: "log-generator",
 			expectedEntity: expectedEntity{
 				entityType:   eksResourceEntityType,
 				name:         *instancePrivateDNS,
@@ -236,25 +241,40 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 				eksCluster:   env.EKSClusterName,
 				instanceId:   env.InstanceId,
 			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "host"),
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			var podApplicationLogStream string
 
-			appLogGroup := fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "application")
-			logStreamNames := awsservice.GetLogStreamNames(appLogGroup)
+			logStreamNames := awsservice.GetLogStreamNames(testCase.appLogGroup)
 			assert.NotZero(t, len(logStreamNames))
-			for _, streamName := range logStreamNames {
-				if strings.Contains(streamName, testCase.podName) {
-					podApplicationLogStream = streamName
-					log.Printf("Found log stream %s that matches pattern %s", streamName, testCase.podName)
+
+			if name == "Entity/HostLogEntity" {
+				// Host logs use log streams with "HOST_NAME."
+				for _, streamName := range logStreamNames {
+					if strings.HasPrefix(streamName, fmt.Sprintf("%s.", *instancePrivateDNS)) {
+						podApplicationLogStream = streamName
+						log.Printf("Found host log stream %s", streamName)
+						break
+					}
+				}
+			} else {
+				// logic for application and dataplane logs (both use HOST_NAME-)
+				for _, streamName := range logStreamNames {
+					if strings.Contains(streamName, testCase.podName) {
+						podApplicationLogStream = streamName
+						log.Printf("Found log stream %s that matches pattern %s", streamName, testCase.podName)
+						break
+					}
 				}
 			}
+
 			assert.NotEmpty(t, podApplicationLogStream)
 			// check CWL to ensure we got the expected entities in the log group
 			queryString := fmt.Sprintf("fields @message, @entity.KeyAttributes.Type, @entity.KeyAttributes.Name, @entity.KeyAttributes.Environment, @entity.Attributes.PlatformType, @entity.Attributes.EKS.Cluster, @entity.Attributes.K8s.Node, @entity.Attributes.K8s.Namespace, @entity.Attributes.K8s.Workload, @entity.Attributes.AWS.ServiceNameSource, @entity.Attributes.EC2.InstanceId | filter @logStream == \"%s\"", podApplicationLogStream)
-			ValidateLogEntity(t, appLogGroup, podApplicationLogStream, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
+			ValidateLogEntity(t, testCase.appLogGroup, podApplicationLogStream, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
 		})
 	}
 }
