@@ -249,25 +249,22 @@ resource "kubernetes_pod" "log_generator" {
       command = ["/bin/sh", "-c"]
       args    = ["while true; do echo \"Log entry at $(date)\"; sleep 1; done"]
 
-      # Add volume mount for host logs
       volume_mount {
         name       = "host-logs"
         mount_path = "/host/var/log"
       }
 
       security_context {
-        privileged = true # Needed to write to host filesystem
+        privileged = true
       }
     }
 
-    # Add volume for host logs
     volume {
       name = "host-logs"
       host_path {
         path = "/var/log"
       }
     }
-
     restart_policy = "Always"
   }
 }
