@@ -78,8 +78,8 @@ variable "test_name" {
 }
 
 variable "selinux_branch" {
-  type    = bool
-  default = false
+  type    = string
+  default = "main"
 }
 
 variable "test_dir" {

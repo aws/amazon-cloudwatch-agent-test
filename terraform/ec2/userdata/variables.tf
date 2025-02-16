@@ -15,9 +15,10 @@ variable "is_selinux_test" {
   type    = bool
   default = false
 }
+
 variable "selinux_branch" {
-  type    = bool
-  default = false
+  type    = string
+  default = "main"
 }
 
 

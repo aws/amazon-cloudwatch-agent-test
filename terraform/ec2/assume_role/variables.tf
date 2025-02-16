@@ -12,8 +12,8 @@ variable "is_selinux_test" {
 }
 
 variable "selinux_branch" {
-  type    = bool
-  default = false
+  type    = string
+  default = "main"
 }
 
 variable "ec2_instance_type" {
