@@ -136,6 +136,12 @@ data "aws_ami" "latest" {
 
   filter {
     name   = "name"
-    values = [var.ami]
+    values = ["CWA_SELinux_AL2023v2"]
+  }
+
+  filter {
+    name   = "description"
+    values = ["Updated version of AMI"]
   }
 }
+
