@@ -42,7 +42,6 @@ func startAgent(t *testing.T) (string, string) {
 
 	require.NoError(t, common.StartAgent(updatedConfigPath, true, false))
 
-	time.Sleep(10 * time.Second)
 	return logGroupName, workingLogGroupName
 }
 

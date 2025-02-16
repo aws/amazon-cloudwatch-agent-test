@@ -153,31 +153,41 @@ resource "null_resource" "integration_test_run" {
 
   #Run sanity check and integration test
   provisioner "remote-exec" {
-    inline = [
-      "echo prepare environment",
-      "sudo setenforce 1",
-      "sudo getenforce",
-      "echo enforcing mode on",
-      "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
-      "sudo systemctl start auditd",
-      "sudo systemctl enable auditd",
-      "sudo rm -r amazon-cloudwatch-agent-sepolicy",
-      "${var.is_selinux_test ? "sudo setenforce 1" : "echo SELinux not enforced"}",
-      "${var.is_selinux_test ? "for i in {1..3}; do git clone https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git && break || sleep 5; done" : "echo SELinux test not enabled"}",
-      "${var.is_selinux_test ? "cd amazon-cloudwatch-agent-sepolicy && sudo chmod +x amazon_cloudwatch_agent.sh && sudo ./amazon_cloudwatch_agent.sh" : "echo Skipping SELinux setup"}",
-      "sleep 10",
-      "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
-      "export AWS_REGION=${var.region}",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      "echo run integration test",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "echo assume role arn is ${aws_iam_role.assume_role.arn}",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id} -v",
-      "sudo ausearch -m AVC,USER_AVC -ts 15:00 -te now | audit2allow -M custom_policy",
-      "cat custom_policy.te",
-      "sudo tail -n 1000 /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
-    ]
+
+
+
+    inline = concat(
+      [
+        "echo Preparing environment...",
+      ],
+
+      # SELinux test setup (if enabled)
+        var.is_selinux_test ? [
+        "sudo setenforce 1",
+        "echo Running SELinux test setup...",
+        "git clone --branch ${var.selinux_branch} https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
+        "cd amazon-cloudwatch-agent-sepolicy",
+        "sudo chmod +x amazon_cloudwatch_agent.sh",
+        "sudo ./amazon_cloudwatch_agent.sh"
+      ] : [
+        "echo SELinux test not enabled"
+      ],
+
+      # General testing setup
+      [
+        "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
+        "export AWS_REGION=${var.region}",
+        "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
+        "echo run integration test",
+        "cd ~/amazon-cloudwatch-agent-test",
+        "echo run sanity test && go test ./test/sanity -p 1 -v",
+        "echo assume role arn is ${aws_iam_role.assume_role.arn}",
+        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id} -v",
+        "sudo ausearch -m AVC,USER_AVC -ts 15:00 -te now | audit2allow -M custom_policy",
+        "cat custom_policy.te",
+        "sudo tail -n 1000 /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+      ],
+    )
   }
 
   depends_on = [

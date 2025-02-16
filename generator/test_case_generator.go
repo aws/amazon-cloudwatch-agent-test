@@ -148,6 +148,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
+		{testDir: "./test/selinux_negative_test"},
 		{
 			testDir:       "./test/xray_selinux_restrictions",
 			selinuxBranch: "xray",
@@ -182,10 +183,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{
 			testDir: "./test/agent_otel_merging",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/selinux_negative_test",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 		{

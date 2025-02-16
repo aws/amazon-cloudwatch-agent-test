@@ -77,6 +77,11 @@ variable "test_name" {
   default = ""
 }
 
+variable "selinux_branch" {
+  type    = bool
+  default = false
+}
+
 variable "test_dir" {
   type    = string
   default = ""

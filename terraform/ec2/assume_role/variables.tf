@@ -11,6 +11,11 @@ variable "is_selinux_test" {
   default = false
 }
 
+variable "selinux_branch" {
+  type    = bool
+  default = false
+}
+
 variable "ec2_instance_type" {
   type    = string
   default = "t3a.medium"

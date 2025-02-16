@@ -15,6 +15,11 @@ variable "is_selinux_test" {
   type    = bool
   default = false
 }
+variable "selinux_branch" {
+  type    = bool
+  default = false
+}
+
 
 variable "ssh_key_name" {
   type    = string
