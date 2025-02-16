@@ -1,4 +1,8 @@
 {
+    "agent": {
+        "debug": true,
+        "aws_sdk_log_level": "LogDebugWithHTTPBody"
+    },
     "metrics": {
         "namespace": "MetricValueBenchmarkTest",
         "append_dimensions": {

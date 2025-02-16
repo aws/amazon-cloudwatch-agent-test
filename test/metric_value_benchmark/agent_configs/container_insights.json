@@ -1,7 +1,9 @@
 {
   "agent": {
     "region": "us-west-2",
-    "metrics_collection_interval": 10
+    "metrics_collection_interval": 10,
+    "debug": true,
+    "aws_sdk_log_level": "LogDebugWithHTTPBody"
   },
   "logs": {
     "metrics_collected": {

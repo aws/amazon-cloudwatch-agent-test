@@ -2,7 +2,8 @@
     "agent": {
         "metrics_collection_interval": 10,
         "run_as_user": "root",
-        "debug": true
+        "debug": true,
+        "aws_sdk_log_level": "LogDebugWithHTTPBody"
     },
     "metrics": {
         "metrics_collected": {

@@ -1,6 +1,8 @@
 {
     "agent": {
-        "metrics_collection_interval": 10
+        "metrics_collection_interval": 10,
+        "debug": true,
+        "aws_sdk_log_level": "LogDebugWithHTTPBody"
     },
     "metrics": {
         "force_flush_interval": 5,

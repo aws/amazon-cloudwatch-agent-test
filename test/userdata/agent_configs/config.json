@@ -2,6 +2,7 @@
   "agent": {
     "metrics_collection_interval": 15,
     "debug": true,
+    "aws_sdk_log_level": "LogDebugWithHTTPBody",
     "logfile": ""
   },
   "metrics": {

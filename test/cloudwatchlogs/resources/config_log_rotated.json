@@ -1,7 +1,8 @@
 {
   "agent": {
     "run_as_user": "root",
-    "debug": true
+    "debug": true,
+    "aws_sdk_log_level": "LogDebugWithHTTPBody"
   },
   "logs": {
     "logs_collected": {
