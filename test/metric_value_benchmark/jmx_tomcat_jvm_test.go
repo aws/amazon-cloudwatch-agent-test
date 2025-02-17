@@ -55,9 +55,9 @@ func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
-	log.Println("Collecting java version info:")
-	out, _ := common.RunCommand("java -version")
-	log.Printf("java -version:\n%s", out)
+	log.Println("Checking Java version:")
+	javaVersion, _ := common.RunCommand("java -version 2>&1")
+	log.Printf("Java version:\n%s", javaVersion)
 
 	log.Println("Setting up JVM and Tomcat with JMX enabled...")
 	startJMXCommands := []string{
