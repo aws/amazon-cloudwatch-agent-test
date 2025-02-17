@@ -203,7 +203,7 @@ resource "null_resource" "integration_test_setup" {
       "cd amazon-cloudwatch-agent-test",
       # Add retry logic for Go dependencies in China region
       "${var.region == "cn-north-1" ? "echo 'Downloading Go dependencies with retry...'" : ""}",
-      "${var.region == "cn-north-1" ? "for i in {1..3}; do echo 'Attempt $i to download dependencies' && go mod download -x && break || sleep 10; done" : ""}"
+      "${var.region == "cn-north-1" ? "for i in {1..3}; do echo 'Attempt $i to download dependencies' && go mod download -x && break || sleep 10; done" : ""},
       "aws s3 cp s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
