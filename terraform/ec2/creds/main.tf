@@ -162,14 +162,14 @@ resource "null_resource" "integration_test_run" {
       ],
 
       # SELinux test setup (if enabled)
-        var.is_selinux_test ? [
+      var.is_selinux_test ? [
         "sudo setenforce 1",
         "echo Running SELinux test setup...",
         "git clone --branch ${var.selinux_branch} https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
         "cd amazon-cloudwatch-agent-sepolicy",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh"
-      ] : [
+        ] : [
         "echo SELinux test not enabled"
       ],
 
