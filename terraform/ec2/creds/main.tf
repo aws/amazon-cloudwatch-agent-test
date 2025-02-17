@@ -153,7 +153,7 @@ resource "null_resource" "integration_test_setup" {
       "${var.region == "cn-north-1" ? "echo 'Configuring Go proxy for China region...'" : ""}",
       "${var.region == "cn-north-1" ? "go env -w GO111MODULE=on" : ""}",
       "${var.region == "cn-north-1" ? "go env -w GOPROXY=https://goproxy.cn,direct" : ""}",
-      "${var.region == "cn-north-1" ? "go env -w GOSUMDB=sum.golang.google.cn", : ""}",
+      "${var.region == "cn-north-1" ? "go env -w GOSUMDB=sum.golang.google.cn" : ""}",
       "${var.region == "cn-north-1" ? "echo 'Current Go proxy settings:' && go env GOPROXY" : ""}",
       "echo clone and install agent",
       "git clone --depth 1 --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
