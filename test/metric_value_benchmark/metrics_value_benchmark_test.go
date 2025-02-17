@@ -21,7 +21,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
-const namespace = "MetricValueBenchmarkTest"
+const (
+	namespace = "MetricValueBenchmarkTest"
+	maxRetries        = 10
+	retryWaitSeconds  = 30
+)
+
 
 type MetricBenchmarkTestSuite struct {
 	suite.Suite

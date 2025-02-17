@@ -27,14 +27,36 @@ var _ test_runner.ITestRunner = (*JMXTomcatJVMTestRunner)(nil)
 func (t *JMXTomcatJVMTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
+
+	// Wait for initial metrics emission
+	time.Sleep(time.Duration(retryWaitSeconds) * time.Second)
+
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateJMXMetric(metricName)
+		testResults[i] = t.validateJMXMetricWithRetry(metricName)
 	}
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
+}
+
+func (t *JMXTomcatJVMTestRunner) validateJMXMetricWithRetry(metricName string) status.TestResult {
+	var result status.TestResult
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		result = t.validateJMXMetric(metricName)
+		if result.Status == status.SUCCESSFUL {
+			return result
+		}
+
+		if attempt < maxRetries-1 {
+			log.Printf("Retry %d for metric %s", attempt+1, metricName)
+			time.Sleep(time.Duration(retryWaitSeconds) * time.Second)
+		}
+	}
+
+	return result
 }
 
 func (t *JMXTomcatJVMTestRunner) GetTestName() string {
@@ -60,7 +82,7 @@ func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
 		"nohup java -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=2030 " +
 			"-Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false " +
 			"-Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.rmi.port=2030 " +
-			"-Dcom.sun.management.jmxremote.host=0.0.0.0 -Djava.rmi.server.hostname=0.0.0.0 " +
+			"-Dcom.sun.management.jmxremote.host=0.0.0.0 -Djava.rmi.server.hostname=******* " +
 			"-Dserver.port=8090 -Dspring.application.admin.enabled=true " +
 			"-Dserver.tomcat.mbeanregistry.enabled=true -Dmanagement.endpoints.jmx.exposure.include=* " +
 			"-XX:+UseConcMarkSweepGC -verbose:gc " +
