@@ -131,65 +131,65 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 	},
 	testTypeKeyEc2SELinux: {
-		//{testDir: "./test/ca_bundle"},
-		//{testDir: "./test/cloudwatchlogs"},
-		//{
-		//	testDir: "./test/metrics_number_dimension",
-		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		//},
-		//{
-		//	testDir:     "./test/emf_concurrent",
-		//	targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
-		//	maxAttempts: 1,
-		//},
-		//{testDir: "./test/metric_value_benchmark"},
-		//{testDir: "./test/run_as_user"},
-		//{testDir: "./test/collection_interval"},
-		//{testDir: "./test/metric_dimension"},
-		//{testDir: "./test/restart"},
-		//{testDir: "./test/xray"},
+		{testDir: "./test/ca_bundle"},
+		{testDir: "./test/cloudwatchlogs"},
+		{
+			testDir: "./test/metrics_number_dimension",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir:     "./test/emf_concurrent",
+			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
+			maxAttempts: 1,
+		},
+		{testDir: "./test/metric_value_benchmark"},
+		{testDir: "./test/run_as_user"},
+		{testDir: "./test/collection_interval"},
+		{testDir: "./test/metric_dimension"},
+		{testDir: "./test/restart"},
+		{testDir: "./test/xray"},
 		{testDir: "./test/selinux_negative_test"},
-		//{
-		//	testDir:       "./test/xray_selinux_restrictions",
-		//	selinuxBranch: "xray",
-		//},
-		//{testDir: "./test/otlp"},
+		{
+			testDir:       "./test/xray_selinux_restrictions",
+			selinuxBranch: "xray",
+		},
+		{testDir: "./test/otlp"},
 		// skipping FIPS test as the test cannot be verified
 		// neither ssh nor SSM works after a reboot once FIPS is enabled
 		//{
 		//	testDir: "./test/fips",
 		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
 		//},
-		//{
-		//	testDir: "./test/lvm",
-		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		//},
-		//{
-		//	testDir: "./test/proxy",
-		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		//},
-		//{
-		//	testDir: "./test/ssl_cert",
-		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		//},
-		//{
-		//	testDir:      "./test/credentials_file",
-		//	terraformDir: "terraform/ec2/creds",
-		//	targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		//},
-		//{
-		//	testDir: "./test/amp",
-		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		//},
-		//{
-		//	testDir: "./test/agent_otel_merging",
-		//	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		//},
-		//{
-		//	testDir:      "./test/assume_role",
-		//	terraformDir: "terraform/ec2/assume_role",
-		//	targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		//},
+		{
+			testDir: "./test/lvm",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/proxy",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/ssl_cert",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir:      "./test/credentials_file",
+			terraformDir: "terraform/ec2/creds",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/amp",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/agent_otel_merging",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/assume_role",
+			terraformDir: "terraform/ec2/assume_role",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
