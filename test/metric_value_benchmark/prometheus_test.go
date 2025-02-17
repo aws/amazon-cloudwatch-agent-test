@@ -8,7 +8,6 @@ package metric_value_benchmark
 import (
 	_ "embed"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
@@ -55,35 +54,14 @@ prometheus_test_histogram_bucket{include="yes",le="+Inf",prom_type="histogram"} 
 func (t *PrometheusTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
-
-	// Wait for initial metrics emission
-	time.Sleep(time.Duration(retryWaitSeconds) * time.Second)
-
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validatePrometheusMetricWithRetry(metricName)
+		testResults[i] = t.validatePrometheusMetric(metricName)
 	}
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
-}
-
-func (t *PrometheusTestRunner) validatePrometheusMetricWithRetry(metricName string) status.TestResult {
-	var result status.TestResult
-
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		result = t.validatePrometheusMetric(metricName)
-		if result.Status == status.SUCCESSFUL {
-			return result
-		}
-
-		if attempt < maxRetries-1 {
-			time.Sleep(time.Duration(retryWaitSeconds) * time.Second)
-		}
-	}
-
-	return result
 }
 
 func (t *PrometheusTestRunner) GetTestName() string {

@@ -27,36 +27,14 @@ var _ test_runner.ITestRunner = (*JMXTomcatJVMTestRunner)(nil)
 func (t *JMXTomcatJVMTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
-
-	// Wait for initial metrics emission
-	time.Sleep(time.Duration(retryWaitSeconds) * time.Second)
-
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateJMXMetricWithRetry(metricName)
+		testResults[i] = t.validateJMXMetric(metricName)
 	}
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
 		TestResults: testResults,
 	}
-}
-
-func (t *JMXTomcatJVMTestRunner) validateJMXMetricWithRetry(metricName string) status.TestResult {
-	var result status.TestResult
-
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		result = t.validateJMXMetric(metricName)
-		if result.Status == status.SUCCESSFUL {
-			return result
-		}
-
-		if attempt < maxRetries-1 {
-			log.Printf("Retry %d for metric %s", attempt+1, metricName)
-			time.Sleep(time.Duration(retryWaitSeconds) * time.Second)
-		}
-	}
-
-	return result
 }
 
 func (t *JMXTomcatJVMTestRunner) GetTestName() string {
@@ -72,12 +50,17 @@ func (t *JMXTomcatJVMTestRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
+	// Run any base setup first
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
 	}
 
-	log.Println("set up jvm and tomcat")
+	log.Println("Collecting java version info:")
+	out, _ := common.RunCommand("java -version")
+	log.Printf("java -version:\n%s", out)
+
+	log.Println("Setting up JVM and Tomcat with JMX enabled...")
 	startJMXCommands := []string{
 		"nohup java -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=2030 " +
 			"-Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false " +
@@ -93,6 +76,9 @@ func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
 	if err != nil {
 		return err
 	}
+
+	log.Println("Waiting 20 seconds for Tomcat/JMX to initialize...")
+	time.Sleep(20 * time.Second)
 	return nil
 }
 
@@ -143,13 +129,14 @@ func (t *JMXTomcatJVMTestRunner) validateJMXMetric(metricName string) status.Tes
 
 	fetcher := metric.MetricValueFetcher{}
 	values, err := fetcher.Fetch(jmxNamespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
-	log.Printf("metric values are %v", values)
+	log.Printf("[DEBUG] Fetched values for %s: %v", metricName, values)
 	if err != nil {
-		log.Printf("err: %v\n", err)
+		log.Printf("[ERROR] Failed to fetch metric %s: %v", metricName, err)
 		return testResult
 	}
 
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, -1) {
+		log.Printf("[ERROR] Metric %s did not meet expected value threshold", metricName)
 		return testResult
 	}
 
