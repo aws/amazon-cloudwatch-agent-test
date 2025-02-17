@@ -110,6 +110,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		ec2TestRunners = []*test_runner.TestRunner{
 			{TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &JMXTomcatJVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+		}
 	}
 	return ec2TestRunners
 }
