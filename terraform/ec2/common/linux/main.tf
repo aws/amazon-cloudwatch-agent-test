@@ -60,10 +60,10 @@ resource "aws_instance" "cwagent" {
     #!/bin/bash
     # Disable password authentication for SSH
     sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-    
+
     # Disable challenge-response authentication for SSH
     sudo sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
-    
+
     # Disable keyboard-interactive authentication for SSH
     sudo sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
 
@@ -136,12 +136,6 @@ data "aws_ami" "latest" {
 
   filter {
     name   = "name"
-    values = ["CWA_SELinux_AL2023v2"]
-  }
-
-  filter {
-    name   = "description"
-    values = ["Updated version of AMI"]
+    values = [var.ami]
   }
 }
-

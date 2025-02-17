@@ -182,10 +182,7 @@ resource "null_resource" "integration_test_run" {
         "cd ~/amazon-cloudwatch-agent-test",
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "echo assume role arn is ${aws_iam_role.assume_role.arn}",
-        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id} -v",
-        "sudo ausearch -m AVC,USER_AVC -ts 15:00 -te now | audit2allow -M custom_policy",
-        "cat custom_policy.te",
-        "sudo tail -n 1000 /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id} -v"
       ],
     )
   }
