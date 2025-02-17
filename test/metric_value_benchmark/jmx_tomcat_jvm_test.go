@@ -50,7 +50,6 @@ func (t *JMXTomcatJVMTestRunner) GetAgentRunDuration() time.Duration {
 }
 
 func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
-	// Run any base setup first
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
@@ -129,14 +128,14 @@ func (t *JMXTomcatJVMTestRunner) validateJMXMetric(metricName string) status.Tes
 
 	fetcher := metric.MetricValueFetcher{}
 	values, err := fetcher.Fetch(jmxNamespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
-	log.Printf("[DEBUG] Fetched values for %s: %v", metricName, values)
+	log.Printf("Fetched values for %s: %v", metricName, values)
 	if err != nil {
-		log.Printf("[ERROR] Failed to fetch metric %s: %v", metricName, err)
+		log.Printf("Failed to fetch metric %s: %v", metricName, err)
 		return testResult
 	}
 
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, -1) {
-		log.Printf("[ERROR] Metric %s did not meet expected value threshold", metricName)
+		log.Printf("Metric %s did not meet expected value threshold", metricName)
 		return testResult
 	}
 
