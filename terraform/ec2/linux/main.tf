@@ -104,7 +104,8 @@ resource "null_resource" "integration_test_run" {
         "git branch",
         "cat amazon_cloudwatch_agent.te",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
-        "sudo ./amazon_cloudwatch_agent.sh"
+        "sudo ./amazon_cloudwatch_agent.sh",
+        "cd .."
       ] : [
         "echo SELinux test not enabled"
       ],
