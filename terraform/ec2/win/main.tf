@@ -230,7 +230,7 @@ resource "null_resource" "integration_test_run_validator" {
       "powershell.exe -Command \"Start-Sleep -s 60\"",
       "powershell.exe -Command \"Invoke-WebRequest -Uri http://localhost:9404 -UseBasicParsing\"",
       "set AWS_REGION=${var.region}",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "git clone --depth 1 --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "go test ./test/sanity -p 1 -v",
       "cd ..",

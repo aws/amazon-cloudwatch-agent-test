@@ -103,7 +103,7 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
 resource "null_resource" "helm_charts" {
   provisioner "local-exec" {
     command = <<-EOT
-      git clone https://github.com/aws-observability/helm-charts.git helm-charts
+      git clone --depth 1 https://github.com/aws-observability/helm-charts.git helm-charts
       cd helm-charts
       git checkout ${var.helm_charts_branch}
     EOT
