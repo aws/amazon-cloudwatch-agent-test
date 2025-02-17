@@ -82,7 +82,7 @@ func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
 		"nohup java -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=2030 " +
 			"-Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false " +
 			"-Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.rmi.port=2030 " +
-			"-Dcom.sun.management.jmxremote.host=0.0.0.0 -Djava.rmi.server.hostname=******* " +
+			"-Dcom.sun.management.jmxremote.host=0.0.0.0 -Djava.rmi.server.hostname=0.0.0.0 " +
 			"-Dserver.port=8090 -Dspring.application.admin.enabled=true " +
 			"-Dserver.tomcat.mbeanregistry.enabled=true -Dmanagement.endpoints.jmx.exposure.include=* " +
 			"-XX:+UseConcMarkSweepGC -verbose:gc " +
