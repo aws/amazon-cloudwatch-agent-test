@@ -37,7 +37,7 @@ func startAgent(t *testing.T) (string, string) {
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${WORKING_LOG_GROUP}", workingLogGroupName)
 
 	updatedConfigPath := common.ConfigOutputPath
-	err = os.WriteFile(updatedConfigPath, []byte(updatedConfigContent), 0644)
+	err = os.WriteFile(updatedConfigPath, []byte(updatedConfigContent), os.ModePerm)
 	require.NoError(t, err)
 
 	require.NoError(t, common.StartAgent(updatedConfigPath, true, false))
