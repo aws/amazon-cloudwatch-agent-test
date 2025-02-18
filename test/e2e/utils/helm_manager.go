@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // HelmManager handles Helm operations.
@@ -20,6 +21,9 @@ func (h *HelmManager) InstallOrUpdate(releaseName, chartPath string, values map[
 
 	// Convert values map to --set flags
 	for key, value := range values {
+		if value.(string) == "" {
+			continue
+		}
 		args = append(args, "--set", fmt.Sprintf("%s=%v", key, value))
 	}
 
@@ -27,7 +31,8 @@ func (h *HelmManager) InstallOrUpdate(releaseName, chartPath string, values map[
 	helmCmd.Stdout = os.Stdout
 	helmCmd.Stderr = os.Stderr
 	if err := helmCmd.Run(); err != nil {
-		return fmt.Errorf("failed to install/update Helm release: %w", err)
+		return fmt.Errorf("failed to install/update Helm release: %w \n %s", err,
+			strings.Join(helmCmd.Args, " "))
 	}
 
 	return nil
