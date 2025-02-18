@@ -6,7 +6,11 @@
 package metric
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -14,6 +18,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
@@ -102,21 +107,107 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 		return testResult
 	}
 
-	output, err := common.RunCommand(`curl -i -X POST monitoring.us-west-2.amazonaws.com \
+	err = ValidateStatsdEntity()
+	if err != nil {
+		return testResult
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func ValidateStatsdEntity() error {
+	// build request
+	instanceId := awsservice.GetInstanceId()
+	requestBody := []byte(fmt.Sprintf(`{
+	 "Namespace": "MetricValueBenchmarkTest",
+     "MetricName": "statsd_timing_3",
+     "Dimensions":
+	 	[{
+        	"Name": "InstanceId",
+        	"Value": "%s"
+		},
+        {
+            "Name": "key",
+            "Value": "value"
+        },
+        {
+			"Name": "metric_type",
+			"Value": "timing"
+		}]
+	}`, instanceId))
+
+	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
+	if err != nil {
+		return err
+	}
+
+	// send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Read and print response status
+	fmt.Printf("Response Status: %s\n", resp.Status)
+
+	// Read and print response headers
+	fmt.Println("Response Headers:")
+	for key, values := range resp.Header {
+		fmt.Printf("%s: %v\n", key, values)
+	}
+
+	// Read and print response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %v", err)
+	}
+	fmt.Printf("Response Body: %s\n", string(body))
+
+	// parse and verify the response
+	var response struct {
+		Entities []struct {
+			KeyAttributes struct {
+				Type        string `json:"Type"`
+				Environment string `json:"Environment"`
+				Name        string `json:"Name"`
+			} `json:"KeyAttributes"`
+		} `json:"Entities"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return err
+	}
+
+	_, err = common.RunCommand(fmt.Sprintf(`curl -i -X POST monitoring.us-west-2.amazonaws.com \
 	-H 'Content-Type: application/json' \
 	-H 'Content-Encoding: amz-1.0' \
 	--user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
 	-H "x-amz-security-token: $AWS_SESSION_TOKEN" \
 	--aws-sigv4 "aws:amz:us-west-2:monitoring" \
 	-H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
-	-d '{}'`)
+	-d '{
+		"Namespace": "MetricValueBenchmarkTest",
+		"MetricName": "statsd_timing_3",
+		"Dimensions": [{
+				"Name": "InstanceId",
+				"Value": "%s"
+			},
+			{
+				"Name": "key",
+				"Value": "value"
+			},
+			{
+				"Name": "metric_type",
+				"Value": "timing"
+			}]
+	}'`, instanceId))
 
 	if err != nil {
-		return testResult
+		return err
 	}
 
-	log.Printf(output)
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+	return nil
 }

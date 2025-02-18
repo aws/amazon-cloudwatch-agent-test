@@ -114,37 +114,53 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 
-	instanceId := awsservice.GetInstanceId()
+	err = t.ValidateCollectDEntity()
+	if err != nil {
+		return testResult
+	}
 
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func (t *CollectDTestRunner) ValidateCollectDEntity() error {
+	// build request
+	instanceId := awsservice.GetInstanceId()
 	requestBody := []byte(fmt.Sprintf(`{
 	 "Namespace": "MetricValueBenchmarkTest",
-     "MetricName": "statsd_timing_3",
-     "Dimensions": [{
-             "Name": "InstanceId",
-             "Value": "%s"
-         },
-         {
-             "Name": "key",
-             "Value": "value"
-         },
-         {
-             "Name": "metric_type",
-             "Value": "timing"
-         }]
-}`, instanceId))
+     "MetricName": "collectd_counter_1_value",
+     "Dimensions":
+	 	[{
+        	"Name": "InstanceId",
+        	"Value": "%s"
+		},
+        {
+			"Name": "type",
+			"Value": "counter"
+		}]
+	}`, instanceId))
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
 	if err != nil {
-		return testResult
+		return err
 	}
 
 	// send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return testResult
+		return err
 	}
 	defer resp.Body.Close()
+
+	// Read and print response status
+	fmt.Printf("Response Status: %s\n", resp.Status)
+
+	// Read and print response headers
+	fmt.Println("Response Headers:")
+	for key, values := range resp.Header {
+		fmt.Printf("%s: %v\n", key, values)
+	}
 
 	// parse and verify the response
 	var response struct {
@@ -158,11 +174,10 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return testResult
+		return err
 	}
-	log.Printf("%v", response.Entities)
 
-	output, err := common.RunCommand(fmt.Sprintf(`curl -i -X POST monitoring.us-west-2.amazonaws.com \
+	_, err = common.RunCommand(fmt.Sprintf(`curl -i -X POST monitoring.us-west-2.amazonaws.com \
 	-H 'Content-Type: application/json' \
 	-H 'Content-Encoding: amz-1.0' \
 	--user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
@@ -171,24 +186,22 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 	-H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
 	-d '{
 		"Namespace": "MetricValueBenchmarkTest",
-		"MetricName": "statsd_timing_3",
+		"MetricName": "collectd_counter_1_value",
 		"Dimensions": [{
 				"Name": "InstanceId",
 				"Value": "%s"
 			},
 			{
-				"Name": "key",
-				"Value": "value"
-			},
-			{
-				"Name": "metric_type",
-				"Value": "timing"
+				"Name": "type",
+				"Value": "counter"
 			}]
 	}'`, instanceId))
-	log.Printf(output)
 
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (t *CollectDTestRunner) GetAgentRunDuration() time.Duration {
