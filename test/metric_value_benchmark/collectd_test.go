@@ -6,7 +6,10 @@
 package metric_value_benchmark
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -15,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
@@ -110,19 +114,77 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 
-	output, err := common.RunCommand(`curl -i -X POST monitoring.us-west-2.amazonaws.com \
+	instanceId := awsservice.GetInstanceId()
+
+	requestBody := []byte(fmt.Sprintf(`{
+	 "Namespace": "MetricValueBenchmarkTest",
+     "MetricName": "statsd_timing_3",
+     "Dimensions": [{
+             "Name": "InstanceId",
+             "Value": "%s"
+         },
+         {
+             "Name": "key",
+             "Value": "value"
+         },
+         {
+             "Name": "metric_type",
+             "Value": "timing"
+         }]
+}`, instanceId))
+
+	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
+	if err != nil {
+		return testResult
+	}
+
+	// send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return testResult
+	}
+	defer resp.Body.Close()
+
+	// parse and verify the response
+	var response struct {
+		Entities []struct {
+			KeyAttributes struct {
+				Type        string `json:"Type"`
+				Environment string `json:"Environment"`
+				Name        string `json:"Name"`
+			} `json:"KeyAttributes"`
+		} `json:"Entities"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return testResult
+	}
+	log.Printf("%v", response.Entities)
+
+	output, err := common.RunCommand(fmt.Sprintf(`curl -i -X POST monitoring.us-west-2.amazonaws.com \
 	-H 'Content-Type: application/json' \
 	-H 'Content-Encoding: amz-1.0' \
 	--user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
 	-H "x-amz-security-token: $AWS_SESSION_TOKEN" \
 	--aws-sigv4 "aws:amz:us-west-2:monitoring" \
 	-H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
-	-d '{}'`)
-
-	if err != nil {
-		return testResult
-	}
-
+	-d '{
+		"Namespace": "MetricValueBenchmarkTest",
+		"MetricName": "statsd_timing_3",
+		"Dimensions": [{
+				"Name": "InstanceId",
+				"Value": "%s"
+			},
+			{
+				"Name": "key",
+				"Value": "value"
+			},
+			{
+				"Name": "metric_type",
+				"Value": "timing"
+			}]
+	}'`, instanceId))
 	log.Printf(output)
 
 	testResult.Status = status.SUCCESSFUL
