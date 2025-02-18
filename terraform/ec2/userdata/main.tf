@@ -94,9 +94,6 @@ resource "null_resource" "integration_test" {
         "sudo chmod 777 ~/amazon-cloudwatch-agent-test/test/sanity/resources/verifyUnixCtlScript.sh",
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"
-        "sudo ausearch -m AVC,USER_AVC -ts 15:00 -te now | audit2allow -M custom_policy",
-        "cat custom_policy.te",
-        "sudo tail -n 1000 /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
       ],
     )
   }
