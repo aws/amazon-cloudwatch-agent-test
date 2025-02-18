@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
@@ -100,6 +101,22 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	if !IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedSampleCount)) {
 		return testResult
 	}
+
+	output, err := common.RunCommand(`curl -i -X POST monitoring.us-west-2.amazonaws.com \
+	-H 'Content-Type: application/json' \
+	-H 'Content-Encoding: amz-1.0' \
+	--user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
+	-H "x-amz-security-token: $AWS_SESSION_TOKEN" \
+	--aws-sigv4 "aws:amz:us-west-2:monitoring" \
+	-H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
+	-d '{}'`)
+
+	if err != nil {
+		return testResult
+	}
+
+	log.Printf(output)
+
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
