@@ -372,7 +372,7 @@ func (t AmpTestRunner) SetupAfterAgentRun() error {
 
 	// OTLP source has some special setup after the agent starts
 	if t.source == SourceOtlp {
-		setupOtlp()
+		return setupOtlp()
 	}
 
 	return nil
