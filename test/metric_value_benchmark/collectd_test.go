@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -70,6 +71,11 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 			Value: dimension.UnknownDimensionValue(),
 		},
 	}
+	split := strings.Split(metricName, "_")
+	if len(split) != 4 {
+		log.Printf("unexpected metric name format, %s", metricName)
+	}
+	metricType := split[1]
 	switch metricName {
 	case "collectd_counter_1_value":
 		instructions = append(instructions, dimension.Instruction{
@@ -115,7 +121,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 
-	err = t.ValidateCollectDEntity()
+	err = t.ValidateCollectDEntity(metricName, metricType)
 	if err != nil {
 		return testResult
 	}
@@ -124,12 +130,12 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 	return testResult
 }
 
-func (t *CollectDTestRunner) ValidateCollectDEntity() error {
+func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType string) error {
 	// build request
 	instanceId := awsservice.GetInstanceId()
 	requestBody := []byte(fmt.Sprintf(`{
 		"Namespace": "MetricValueBenchmarkTest",
-		"MetricName": "collectd_counter_1_value",
+		"MetricName": "%s",
 		"Dimensions": [
 			{
 				"Name": "InstanceId",
@@ -137,10 +143,10 @@ func (t *CollectDTestRunner) ValidateCollectDEntity() error {
 			},
 			{
 				"Name": "type",
-				"Value": "counter"
+				"Value": "%s"
 			}
 		]
-	}`, instanceId))
+	}`, metricName, instanceId, metricType))
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
 	if err != nil {
