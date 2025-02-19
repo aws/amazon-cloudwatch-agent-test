@@ -47,7 +47,7 @@
     "os": "debian-12",
     "username": "admin",
     "instanceType": "c6g.large",
-    "installAgentCommand": "/snap/bin/go run ./install/install_agent.go deb",
+    "installAgentCommand": "go run ./install/install_agent.go deb",
     "ami": "cloudwatch-agent-integration-test-debian-12-arm64*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
     "arc": "arm64",
