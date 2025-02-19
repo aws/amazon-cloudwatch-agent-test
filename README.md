@@ -1,8 +1,6 @@
-## Amazon CloudWatch Agent Test
+# Amazon CloudWatch Agent Test
 
-Be sure to:
-
-* Edit your repository description on GitHub
+This repository contains related testing code for the [Amazon CloudWatch Agent](https://github.com/aws/amazon-cloudwatch-agent).
 
 ## Security
 
