@@ -36,11 +36,9 @@ func startAgent(t *testing.T) (string, string) {
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${LOG_GROUP_NAME}", logGroupName)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${WORKING_LOG_GROUP}", workingLogGroupName)
 
-	updatedConfigPath := common.ConfigOutputPath
-	err = os.WriteFile(updatedConfigPath, []byte(updatedConfigContent), os.ModePerm)
-	require.NoError(t, err)
-
-	require.NoError(t, common.StartAgent(updatedConfigPath, true, false))
+	common.CopyFile(filepath.Join("agent_configs", "config.json"), common.ConfigOutputPath)
+	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
+	time.Sleep(10 * time.Second) // Wait for the agent to start properly
 
 	return logGroupName, workingLogGroupName
 }
