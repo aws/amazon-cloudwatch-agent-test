@@ -49,7 +49,7 @@ const (
 )
 
 // NOTE: this should match with append_dimensions under metrics in agent config
-var append_dims = map[string]string{
+var appendDims = map[string]string{
 	"d1": "foo",
 	"d2": "bar",
 }
@@ -177,7 +177,7 @@ func (t *AmpTestRunner) validateHostMetrics() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateMetric(metricName, dims, true)
+		testResults[i] = t.validateMetric(metricName, dims, false, true)
 	}
 
 	return status.TestGroupResult{
@@ -191,51 +191,12 @@ func (t *AmpTestRunner) validatePrometheusMetrics() status.TestGroupResult {
 	dims := []types.Dimension{}
 
 	metricsToFetch := t.GetMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch)+1)
+	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateMetric(metricName, dims, false)
+		testResults[i] = t.validateMetric(metricName, dims, false, false)
 	}
 
-	query := buildPrometheusHistogramQuery("prometheus_test_histogram")
-	fmt.Printf("query: %s\n", query)
-	res, err := queryAMPMetrics(metadata.AmpWorkspaceId, query)
-	if err != nil {
-		fmt.Printf("failed to fetch metric values from AMP for %s: %s\n", "prometheus_test_histogram", err)
-	}
-	fmt.Printf("res: %s\n", res)
-	var responseJson AMPResponse
-	err = json.Unmarshal(res, &responseJson)
-	if err != nil {
-		fmt.Printf("failed to unmarshal AMP response: %s\n", err)
-	}
-
-	if len(responseJson.Data.Result) == 0 {
-		fmt.Printf("AMP metric values are missing for %s\n", "prometheus_test_histogram")
-	}
-
-	fmt.Printf("%+v\n", responseJson)
-
-	metricVals := []float64{}
-	for _, dataResult := range responseJson.Data.Result {
-		if len(dataResult.Value) < 1 {
-			continue
-		}
-		// metric value is returned as a tuple of timestamp and value (ec. '"value": [1721843955, "26"]')
-		val, _ := strconv.ParseFloat(dataResult.Value[1].(string), 64)
-		metricVals = append(metricVals, val)
-	}
-
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue("prometheus_test_histogram", metricVals, 0) {
-		testResults[len(testResults)-1] = status.TestResult{
-			Name:   "prometheus_test_histogram",
-			Status: status.FAILED,
-		}
-	} else {
-		testResults[len(testResults)-1] = status.TestResult{
-			Name:   "prometheus_test_histogram",
-			Status: status.SUCCESSFUL,
-		}
-	}
+	testResults = append(testResults, t.validateMetric("prometheus_test_histogram", []types.Dimension{}, true, false))
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -244,54 +205,16 @@ func (t *AmpTestRunner) validatePrometheusMetrics() status.TestGroupResult {
 }
 
 func (t *AmpTestRunner) validateOtlpMetrics() status.TestGroupResult {
+
 	dims := []types.Dimension{}
 
 	metricsToFetch := t.GetMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch)+1)
+	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateMetric(metricName, dims, false)
+		testResults[i] = t.validateMetric(metricName, dims, false, false)
 	}
 
-	query := buildPrometheusHistogramQuery("my_cumulative_histogram")
-	fmt.Printf("query: %s\n", query)
-	res, err := queryAMPMetrics(metadata.AmpWorkspaceId, query)
-	if err != nil {
-		fmt.Printf("failed to fetch metric values from AMP for %s: %s\n", "my_cumulative_histogram", err)
-	}
-	fmt.Printf("res: %s\n", res)
-	var responseJson AMPResponse
-	err = json.Unmarshal(res, &responseJson)
-	if err != nil {
-		fmt.Printf("failed to unmarshal AMP response: %s\n", err)
-	}
-
-	if len(responseJson.Data.Result) == 0 {
-		fmt.Printf("AMP metric values are missing for %s\n", "my_cumulative_histogram")
-	}
-
-	fmt.Printf("%+v\n", responseJson)
-
-	metricVals := []float64{}
-	for _, dataResult := range responseJson.Data.Result {
-		if len(dataResult.Value) < 1 {
-			continue
-		}
-		// metric value is returned as a tuple of timestamp and value (ec. '"value": [1721843955, "26"]')
-		val, _ := strconv.ParseFloat(dataResult.Value[1].(string), 64)
-		metricVals = append(metricVals, val)
-	}
-
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue("my_cumulative_histogram", metricVals, 0) {
-		testResults[len(testResults)-1] = status.TestResult{
-			Name:   "my_cumulative_histogram",
-			Status: status.FAILED,
-		}
-	} else {
-		testResults[len(testResults)-1] = status.TestResult{
-			Name:   "my_cumulative_histogram",
-			Status: status.SUCCESSFUL,
-		}
-	}
+	testResults = append(testResults, t.validateMetric("my_cumulative_histogram", []types.Dimension{}, true, false))
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -299,36 +222,41 @@ func (t *AmpTestRunner) validateOtlpMetrics() status.TestGroupResult {
 	}
 }
 
-func (t *AmpTestRunner) validateMetric(metricName string, dims []types.Dimension, shouldHaveAppendDimensions bool) status.TestResult {
+func (t *AmpTestRunner) validateMetric(metricName string, dims []types.Dimension, histogramMetric bool, shouldHaveAppendDimensions bool) status.TestResult {
 
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
 
-	query := buildPrometheusQuery(metricName, dims)
+	var query string
+	if histogramMetric {
+		query = buildPrometheusQuery(ampHistogramQueryTemplate, metricName, dims)
+	} else {
+		query = buildPrometheusQuery(ampQueryTemplate, metricName, dims)
+	}
 	fmt.Printf("query: %s\n", query)
+
 	res, err := queryAMPMetrics(metadata.AmpWorkspaceId, query)
 	if err != nil {
 		fmt.Printf("failed to fetch metric values from AMP for %s: %s\n", metricName, err)
 		return testResult
 	}
-	fmt.Printf("res: %s\n", res)
-	var responseJson AMPResponse
-	err = json.Unmarshal(res, &responseJson)
+
+	var responseJSON AMPResponse
+	err = json.Unmarshal(res, &responseJSON)
 	if err != nil {
 		fmt.Printf("failed to unmarshal AMP response: %s\n", err)
 		return testResult
 	}
-
-	if len(responseJson.Data.Result) == 0 {
+	if len(responseJSON.Data.Result) == 0 {
 		fmt.Printf("AMP metric values are missing for %s\n", metricName)
 		return testResult
 	}
 
 	foundAppendDimMetric := true
 	metricVals := []float64{}
-	for _, dataResult := range responseJson.Data.Result {
+	for _, dataResult := range responseJSON.Data.Result {
 		if len(dataResult.Value) < 1 {
 			continue
 		}
@@ -360,7 +288,6 @@ func (t *AmpTestRunner) validateMetric(metricName string, dims []types.Dimension
 			fmt.Println("failed with fewer metric values than expected")
 			return testResult
 		}
-
 	}
 
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, metricVals, 0) {
@@ -482,7 +409,7 @@ func getDimensions() []types.Dimension {
 	return dims
 }
 
-func buildPrometheusQuery(metricName string, dims []types.Dimension) string {
+func buildPrometheusQuery(template string, metricName string, dims []types.Dimension) string {
 	dimsStr := ""
 	for _, dim := range dims {
 		dimsStr = fmt.Sprintf("%s%s=\"%s\", ", dimsStr, *dim.Name, *dim.Value)
@@ -490,15 +417,11 @@ func buildPrometheusQuery(metricName string, dims []types.Dimension) string {
 	if len(dimsStr) > 0 {
 		dimsStr = dimsStr[:len(dimsStr)-1]
 	}
-	return fmt.Sprintf(ampQueryTemplate, metricName, "{"+dimsStr+"}")
+	return fmt.Sprintf(template, metricName, "{"+dimsStr+"}")
 }
 
-func buildPrometheusHistogramQuery(metricName string) string {
-	return fmt.Sprintf(ampHistogramQueryTemplate, metricName)
-}
-
-func queryAMPMetrics(wsId string, q string) ([]byte, error) {
-	url := fmt.Sprintf("https://aps-workspaces.%s.amazonaws.com/workspaces/%s/api/v1/query?query=%s", awsConfig.Region, wsId, q)
+func queryAMPMetrics(wsID string, q string) ([]byte, error) {
+	url := fmt.Sprintf("https://aps-workspaces.%s.amazonaws.com/workspaces/%s/api/v1/query?query=%s", awsConfig.Region, wsID, q)
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
 		return nil, err
@@ -518,10 +441,10 @@ func queryAMPMetrics(wsId string, q string) ([]byte, error) {
 }
 
 func matchDimensions(labels map[string]interface{}) bool {
-	if len(append_dims) > len(labels) {
+	if len(appendDims) > len(labels) {
 		return false
 	}
-	for k, v := range append_dims {
+	for k, v := range appendDims {
 		if lv, found := labels[k]; !found || lv != v {
 			return false
 		}
