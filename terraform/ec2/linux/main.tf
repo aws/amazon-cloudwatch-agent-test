@@ -89,14 +89,24 @@ resource "null_resource" "integration_test_run" {
       ],
 
       # SELinux test setup (if enabled)
-      var.is_selinux_test ? [
-        "sudo setenforce 1", //Enforcing mode
+        var.is_selinux_test ? [
+        "sudo setenforce 1",
         "echo Running SELinux test setup...",
+        "sudo rm -r amazon-cloudwatch-agent-sepolicy",
         "git clone --branch ${var.selinux_branch} https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
+        "echo Below is the branch name for selinux",
         "cd amazon-cloudwatch-agent-sepolicy",
+        "git reset --hard",
+        "git pull",
         "chmod +x ./amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh",
-        ] : [
+        "sudo systemctl restart amazon-cloudwatch-agent",
+        "git branch",
+        "cat amazon_cloudwatch_agent.te",
+        "sudo chmod +x amazon_cloudwatch_agent.sh",
+        "sudo ./amazon_cloudwatch_agent.sh",
+        "cd .."
+      ] : [
         "echo SELinux test not enabled"
       ],
 
@@ -113,6 +123,9 @@ resource "null_resource" "integration_test_run" {
         var.pre_test_setup,
 
         # Integration test execution
+        "echo below is the either Permissive/Enforcing",
+        "getenforce",
+        "ps -efZ | grep amazon-cloudwatch-agent",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
       ],
     )
