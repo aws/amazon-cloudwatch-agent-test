@@ -6,7 +6,6 @@
 package metric_value_benchmark
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -57,6 +56,10 @@ func (t *CollectDTestRunner) SetupAfterAgentRun() error {
 
 func (t *CollectDTestRunner) GetMeasuredMetrics() []string {
 	return []string{"collectd_gauge_1_value", "collectd_counter_1_value"}
+}
+
+func (t *CollectDTestRunner) GetExpectedEntity() string {
+	return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
 }
 
 func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.TestResult {
@@ -171,25 +174,15 @@ func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType strin
 	}
 
 	// Read and print response body
-	body, err := io.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response body: %v", err)
 	}
-	fmt.Printf("Response Body: %s\n", string(body))
 
-	// parse and verify the response
-	var response struct {
-		Entities []struct {
-			KeyAttributes struct {
-				Type        string `json:"Type"`
-				Environment string `json:"Environment"`
-				Name        string `json:"Name"`
-			} `json:"KeyAttributes"`
-		} `json:"Entities"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return err
+	if t.GetExpectedEntity() != string(responseBody) {
+		fmt.Printf("Response Body: %s\n", string(responseBody))
+		fmt.Printf("Expected Entity: %s\n", t.GetExpectedEntity())
+		return fmt.Errorf("Response body doesn't match expected entity")
 	}
 	return nil
 }
