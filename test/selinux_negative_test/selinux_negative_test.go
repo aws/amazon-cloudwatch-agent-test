@@ -1,7 +1,6 @@
 package selinux_negative_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -26,43 +25,38 @@ func TestSelinuxNegativeTest(t *testing.T) {
 }
 
 func startAgent(t *testing.T) (string, string) {
-	logGroupName := fmt.Sprintf("/aws/cloudwatch/shadow-%d", time.Now().UnixNano())         // Log group that shouldn't work
-	workingLogGroupName := fmt.Sprintf("/aws/cloudwatch/working-%d", time.Now().UnixNano()) // Log group that should work
+	// Generate random large numbers
+	randomNumber := rand.Int63() // Generates a random int64 number
+
+	logGroupName := fmt.Sprintf("/aws/cloudwatch/shadow-%d", randomNumber)         // Log group that shouldn't work
+	workingLogGroupName := fmt.Sprintf("/aws/cloudwatch/working-%d", randomNumber) // Log group that should work
 
 	configFilePath := filepath.Join("agent_configs", "config.json")
 	configContent, err := os.ReadFile(configFilePath)
-	require.NoError(t, err, "Failed to read config file")
+	require.NoError(t, err)
 
 	updatedConfigContent := string(configContent)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${LOG_GROUP_NAME}", logGroupName)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${WORKING_LOG_GROUP}", workingLogGroupName)
 
-	updatedConfigPath := common.ConfigOutputPath
+	// Print updated JSON before writing
+	fmt.Println("Updated Config Content (Before Writing to File):")
+	fmt.Println(updatedConfigContent)
 
-	// Debugging: Print the resolved file path
-	fmt.Println("Writing config to:", updatedConfigPath)
+	// Write back to agent_configs/config.json
+	err = os.WriteFile(configFilePath, []byte(updatedConfigContent), 0644)
+	require.NoError(t, err)
 
-	// Ensure the target directory exists
-	dir := filepath.Dir(updatedConfigPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		require.NoError(t, err, "Failed to create config directory")
-	}
+	// Print the final content to verify correctness
+	finalConfigContent, err := os.ReadFile(configFilePath)
+	require.NoError(t, err)
 
-	if !json.Valid([]byte(updatedConfigContent)) {
-		t.Fatalf("Invalid JSON detected in config: %s", updatedConfigContent)
-	}
+	fmt.Println("Final Config Content in agent_configs/config.json:")
+	fmt.Println(string(finalConfigContent))
 
-	// Write the updated JSON config file
-	err = os.WriteFile(updatedConfigPath, []byte(updatedConfigContent), 0644)
-	require.NoError(t, err, "Failed to write updated config file")
-
-	// Debugging: Confirm file contents after writing
-	writtenContent, err := os.ReadFile(updatedConfigPath)
-	require.NoError(t, err, "Failed to verify written config file")
-	fmt.Println("Written config content:", string(writtenContent))
-
-	// Start the agent using the updated config
-	require.NoError(t, common.StartAgent(updatedConfigPath, true, false), "Failed to start agent")
+	// Start the agent using the updated config file
+	require.NoError(t, common.StartAgent(configFilePath, true, false))
+	time.Sleep(10 * time.Second) // Wait for the agent to start properly
 
 	return logGroupName, workingLogGroupName
 }
