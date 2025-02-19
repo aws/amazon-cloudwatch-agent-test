@@ -44,13 +44,14 @@ func startAgent(t *testing.T) (string, string) {
 	err = json.Indent(&prettyJSON, []byte(updatedConfigContent), "", "  ")
 	require.NoError(t, err)
 
-	fmt.Println("Updated Config Content:")
+	fmt.Println("Updated Config Content (Before Writing to Output Path):")
 	fmt.Println(prettyJSON.String())
 
-	// Copy the updated config file
-	common.CopyFile(filepath.Join("agent_configs", "config.json"), common.ConfigOutputPath)
+	// Write the updated config to the output path
+	err = os.WriteFile(common.ConfigOutputPath, []byte(updatedConfigContent), 0644)
+	require.NoError(t, err)
 
-	// Read and print the config from the output path
+	// Read and print the final config from the output path
 	finalConfigContent, err := os.ReadFile(common.ConfigOutputPath)
 	require.NoError(t, err)
 
