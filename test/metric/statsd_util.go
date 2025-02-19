@@ -6,7 +6,6 @@
 package metric
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -117,6 +116,10 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	return testResult
 }
 
+func GetExpectedEntity() string {
+	return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+}
+
 func ValidateStatsdEntity(metricName, metricType string) error {
 	// build request
 	instanceId := awsservice.GetInstanceId()
@@ -162,31 +165,15 @@ func ValidateStatsdEntity(metricName, metricType string) error {
 	}
 
 	// Read and print response body
-	body, err := io.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response body: %v", err)
 	}
-	fmt.Printf("Response Body: %s\n", string(body))
 
-	log.Print("here")
-
-	// parse and verify the response
-	var response struct {
-		Entities []struct {
-			KeyAttributes struct {
-				Type        string `json:"Type"`
-				Environment string `json:"Environment"`
-				Name        string `json:"Name"`
-			} `json:"KeyAttributes"`
-		} `json:"Entities"`
+	if GetExpectedEntity() != string(responseBody) {
+		fmt.Printf("Response Body: %s\n", string(responseBody))
+		fmt.Printf("Expected Entity: %s\n", GetExpectedEntity())
+		return fmt.Errorf("Response body doesn't match expected entity")
 	}
-
-	log.Print("here2")
-
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return err
-	}
-
-	log.Print("here3")
 	return nil
 }

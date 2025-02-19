@@ -126,6 +126,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 
 	err = t.ValidateCollectDEntity(metricName, metricType)
 	if err != nil {
+		fmt.Printf("validate returned an error collectd")
 		return testResult
 	}
 
@@ -179,11 +180,15 @@ func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType strin
 		return fmt.Errorf("error reading response body: %v", err)
 	}
 
+	fmt.Printf("here2collectd")
+
 	if t.GetExpectedEntity() != string(responseBody) {
 		fmt.Printf("Response Body: %s\n", string(responseBody))
 		fmt.Printf("Expected Entity: %s\n", t.GetExpectedEntity())
 		return fmt.Errorf("Response body doesn't match expected entity")
 	}
+
+	fmt.Printf("here3collectd")
 	return nil
 }
 
