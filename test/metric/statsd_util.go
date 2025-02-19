@@ -120,21 +120,22 @@ func ValidateStatsdEntity() error {
 	// build request
 	instanceId := awsservice.GetInstanceId()
 	requestBody := []byte(fmt.Sprintf(`{
-	 "Namespace": "MetricValueBenchmarkTest",
-     "MetricName": "statsd_timing_3",
-     "Dimensions":
-	 	[{
-        	"Name": "InstanceId",
-        	"Value": "%s"
-		},
-        {
-            "Name": "key",
-            "Value": "value"
-        },
-        {
-			"Name": "metric_type",
-			"Value": "timing"
-		}]
+		"Namespace": "MetricValueBenchmarkTest",
+		"MetricName": "statsd_timing_3",
+		"Dimensions": [
+			{
+				"Name": "InstanceId",
+				"Value": "%s"
+			},
+			{
+				"Name": "key",
+				"Value": "value"
+			},
+			{
+				"Name": "metric_type",
+				"Value": "timing"
+			}
+		]
 	}`, instanceId))
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
@@ -180,34 +181,5 @@ func ValidateStatsdEntity() error {
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return err
 	}
-
-	_, err = common.RunCommand(fmt.Sprintf(`curl -i -X POST monitoring.us-west-2.amazonaws.com \
-	-H 'Content-Type: application/json' \
-	-H 'Content-Encoding: amz-1.0' \
-	--user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
-	-H "x-amz-security-token: $AWS_SESSION_TOKEN" \
-	--aws-sigv4 "aws:amz:us-west-2:monitoring" \
-	-H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
-	-d '{
-		"Namespace": "MetricValueBenchmarkTest",
-		"MetricName": "statsd_timing_3",
-		"Dimensions": [{
-				"Name": "InstanceId",
-				"Value": "%s"
-			},
-			{
-				"Name": "key",
-				"Value": "value"
-			},
-			{
-				"Name": "metric_type",
-				"Value": "timing"
-			}]
-	}'`, instanceId))
-
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

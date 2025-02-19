@@ -8,6 +8,7 @@ package metric_value_benchmark
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -127,17 +128,18 @@ func (t *CollectDTestRunner) ValidateCollectDEntity() error {
 	// build request
 	instanceId := awsservice.GetInstanceId()
 	requestBody := []byte(fmt.Sprintf(`{
-	 "Namespace": "MetricValueBenchmarkTest",
-     "MetricName": "collectd_counter_1_value",
-     "Dimensions":
-	 	[{
-        	"Name": "InstanceId",
-        	"Value": "%s"
-		},
-        {
-			"Name": "type",
-			"Value": "counter"
-		}]
+		"Namespace": "MetricValueBenchmarkTest",
+		"MetricName": "collectd_counter_1_value",
+		"Dimensions": [
+			{
+				"Name": "InstanceId",
+				"Value": "%s"
+			},
+			{
+				"Name": "type",
+				"Value": "counter"
+			}
+		]
 	}`, instanceId))
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
@@ -162,6 +164,13 @@ func (t *CollectDTestRunner) ValidateCollectDEntity() error {
 		fmt.Printf("%s: %v\n", key, values)
 	}
 
+	// Read and print response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %v", err)
+	}
+	fmt.Printf("Response Body: %s\n", string(body))
+
 	// parse and verify the response
 	var response struct {
 		Entities []struct {
@@ -176,31 +185,6 @@ func (t *CollectDTestRunner) ValidateCollectDEntity() error {
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return err
 	}
-
-	_, err = common.RunCommand(fmt.Sprintf(`curl -i -X POST monitoring.us-west-2.amazonaws.com \
-	-H 'Content-Type: application/json' \
-	-H 'Content-Encoding: amz-1.0' \
-	--user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
-	-H "x-amz-security-token: $AWS_SESSION_TOKEN" \
-	--aws-sigv4 "aws:amz:us-west-2:monitoring" \
-	-H 'X-Amz-Target: com.amazonaws.cloudwatch.v2013_01_16.CloudWatchVersion20130116.ListEntitiesForMetric' \
-	-d '{
-		"Namespace": "MetricValueBenchmarkTest",
-		"MetricName": "collectd_counter_1_value",
-		"Dimensions": [{
-				"Name": "InstanceId",
-				"Value": "%s"
-			},
-			{
-				"Name": "type",
-				"Value": "counter"
-			}]
-	}'`, instanceId))
-
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
