@@ -108,7 +108,6 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 
 	err = ValidateStatsdEntity(metricName, metricType)
 	if err != nil {
-		log.Print("here4")
 		return testResult
 	}
 
@@ -144,30 +143,21 @@ func ValidateStatsdEntity(metricName, metricType string) error {
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
 	if err != nil {
-		return err
+		return fmt.Errorf("Error building the ListEntitiesForMetric request %v", err)
 	}
 
 	// send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error sending the ListEntitiesForMetric request %v", err)
 	}
 	defer resp.Body.Close()
-
-	// Read and print response status
-	fmt.Printf("Response Status: %s\n", resp.Status)
-
-	// Read and print response headers
-	fmt.Println("Response Headers:")
-	for key, values := range resp.Header {
-		fmt.Printf("%s: %v\n", key, values)
-	}
 
 	// Read and print response body
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error reading response body: %v", err)
+		return fmt.Errorf("Error reading response body: %v", err)
 	}
 
 	if GetExpectedEntity() != string(responseBody) {

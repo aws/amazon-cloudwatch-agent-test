@@ -126,7 +126,6 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 
 	err = t.ValidateCollectDEntity(metricName, metricType)
 	if err != nil {
-		fmt.Printf("validate returned an error collectd")
 		return testResult
 	}
 
@@ -154,33 +153,22 @@ func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType strin
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
 	if err != nil {
-		return err
+		return fmt.Errorf("Error building the ListEntitiesForMetric request %v", err)
 	}
 
 	// send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error sending the ListEntitiesForMetric request %v", err)
 	}
 	defer resp.Body.Close()
-
-	// Read and print response status
-	fmt.Printf("Response Status: %s\n", resp.Status)
-
-	// Read and print response headers
-	fmt.Println("Response Headers:")
-	for key, values := range resp.Header {
-		fmt.Printf("%s: %v\n", key, values)
-	}
 
 	// Read and print response body
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error reading response body: %v", err)
+		return fmt.Errorf("Error reading response body: %v", err)
 	}
-
-	fmt.Printf("here2collectd")
 
 	if t.GetExpectedEntity() != string(responseBody) {
 		fmt.Printf("Response Body: %s\n", string(responseBody))
@@ -188,7 +176,6 @@ func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType strin
 		return fmt.Errorf("Response body doesn't match expected entity")
 	}
 
-	fmt.Printf("here3collectd")
 	return nil
 }
 
