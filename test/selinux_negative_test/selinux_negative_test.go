@@ -19,6 +19,7 @@ func init() {
 
 func TestSelinuxNegativeTest(t *testing.T) {
 	logGroupName, workingLogGroupName := startAgent(t)
+
 	time.Sleep(2 * time.Minute)
 	verifyLogStreamDoesExist(t, workingLogGroupName) // This should have a log stream
 	verifyLogStreamDoesNotExist(t, logGroupName)     // This should not have a log stream
@@ -36,6 +37,10 @@ func startAgent(t *testing.T) (string, string) {
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${LOG_GROUP_NAME}", logGroupName)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${WORKING_LOG_GROUP}", workingLogGroupName)
 
+	fmt.Println("Updated Config Content (First 500 chars):")
+	fmt.Println(updatedConfigContent)
+
+	//printing
 	common.CopyFile(filepath.Join("agent_configs", "config.json"), common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
 	time.Sleep(10 * time.Second) // Wait for the agent to start properly
