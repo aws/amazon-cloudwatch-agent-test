@@ -20,7 +20,7 @@ func init() {
 func TestSelinuxNegativeTest(t *testing.T) {
 	logGroupName, workingLogGroupName := startAgent(t)
 
-	time.Sleep(2 * time.Minute)
+	time.Sleep(3 * time.Minute)
 	verifyLogStreamDoesExist(t, workingLogGroupName) // This should have a log stream
 	verifyLogStreamDoesNotExist(t, logGroupName)     // This should not have a log stream
 }
