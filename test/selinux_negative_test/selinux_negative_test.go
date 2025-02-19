@@ -1,8 +1,6 @@
 package selinux_negative_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -39,26 +37,9 @@ func startAgent(t *testing.T) (string, string) {
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${LOG_GROUP_NAME}", logGroupName)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${WORKING_LOG_GROUP}", workingLogGroupName)
 
-	// Pretty print JSON
-	var prettyJSON bytes.Buffer
-	err = json.Indent(&prettyJSON, []byte(updatedConfigContent), "", "  ")
-	require.NoError(t, err)
-
-	fmt.Println("Updated Config Content (Before Writing to Output Path):")
-	fmt.Println(prettyJSON.String())
-
-	// Write the updated config to the output path
 	err = os.WriteFile(common.ConfigOutputPath, []byte(updatedConfigContent), 0644)
 	require.NoError(t, err)
 
-	// Read and print the final config from the output path
-	finalConfigContent, err := os.ReadFile(common.ConfigOutputPath)
-	require.NoError(t, err)
-
-	fmt.Println("Final Config Content in Output Path:")
-	fmt.Println(string(finalConfigContent))
-
-	fmt.Println()
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
 	time.Sleep(10 * time.Second) // Wait for the agent to start properly
 
