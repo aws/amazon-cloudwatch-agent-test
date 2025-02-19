@@ -11,7 +11,7 @@ import (
 )
 
 func InitializeEnvironment(env *environment.MetaData) error {
-	k8ctl := utils.NewK8CtlManager(env) // or "oc" if needed
+	k8ctl := utils.NewK8CtlManager(env)
 	helm := utils.NewHelmManager()
 
 	if env.ComputeType == computetype.EKS {
@@ -52,6 +52,9 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 		"manager.image.repository":                 env.CloudwatchAgentOperatorRepository,
 		"manager.image.tag":                        env.CloudwatchAgentOperatorTag,
 		"manager.image.repositoryDomainMap.public": env.CloudwatchAgentOperatorRepositoryURL,
+	}
+	if env.ComputeType == computetype.ROSA {
+		values["k8sMode"] = string(computetype.ROSA)
 	}
 
 	if env.AgentConfig != "" {
