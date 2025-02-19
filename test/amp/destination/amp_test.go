@@ -132,11 +132,11 @@ func (suite *AmpTestSuite) TestAllInSuite() {
 	var err error
 	awsConfig, err = config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))
 	if err != nil {
-		fmt.Println("There was an error trying to load default config: ", err)
+		log.Println("There was an error trying to load default config: ", err)
 	}
 	awsCreds, err = awsConfig.Credentials.Retrieve(ctx)
 	if err != nil {
-		fmt.Println("There was an error trying to load credentials: ", err)
+		log.Println("There was an error trying to load credentials: ", err)
 	}
 
 	for _, testRunner := range testRunners {
@@ -188,15 +188,18 @@ func (t *AmpTestRunner) validateHostMetrics() status.TestGroupResult {
 
 func (t *AmpTestRunner) validatePrometheusMetrics() status.TestGroupResult {
 
+	// we do not support appending dimensions to prometheus metrics
 	dims := []types.Dimension{}
 
-	metricsToFetch := t.getPrometheusMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
+	standardMetrics, histogramMetrics := t.getPrometheusMetrics()
+	testResults := make([]status.TestResult, len(standardMetrics)+len(histogramMetrics))
+	for i, metricName := range standardMetrics {
 		testResults[i] = t.validateStandardMetric(metricName, dims, false)
 	}
 
-	testResults = append(testResults, t.validateHistogramMetric("prometheus_test_histogram"))
+	for i, metricName := range histogramMetrics {
+		testResults[i+len(standardMetrics)] = t.validateHistogramMetric(metricName)
+	}
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -206,15 +209,17 @@ func (t *AmpTestRunner) validatePrometheusMetrics() status.TestGroupResult {
 
 func (t *AmpTestRunner) validateOtlpMetrics() status.TestGroupResult {
 
-	dims := []types.Dimension{}
+	dims := getDimensions()
 
-	metricsToFetch := t.getOtlpMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
+	standardMetrics, histogramMetrics := t.getOtlpMetrics()
+	testResults := make([]status.TestResult, len(standardMetrics)+len(histogramMetrics))
+	for i, metricName := range standardMetrics {
 		testResults[i] = t.validateStandardMetric(metricName, dims, false)
 	}
 
-	testResults = append(testResults, t.validateHistogramMetric("my_cumulative_histogram"))
+	for i, metricName := range histogramMetrics {
+		testResults[i+len(standardMetrics)] = t.validateHistogramMetric(metricName)
+	}
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -238,15 +243,15 @@ func (t *AmpTestRunner) validateMetric(queryTemplate string, metricName string, 
 	}
 
 	query := buildPrometheusQuery(queryTemplate, metricName, dims)
-	fmt.Printf("querying metrics for %s using the following query\n%s\n", metricName, query)
+	log.Printf("querying metrics for %s using the following query\n%s\n", metricName, query)
 
 	responseJSON, err := queryAMPMetrics(metadata.AmpWorkspaceId, query)
 	if err != nil {
-		fmt.Printf("failed to fetch metric values from AMP for %s: %s\n", metricName, err)
+		log.Printf("failed to fetch metric values from AMP for %s: %s\n", metricName, err)
 		return testResult
 	}
 	if len(responseJSON.Data.Result) == 0 {
-		fmt.Printf("failed because AMP metric values are missing for %s\n", metricName)
+		log.Printf("failed because AMP metric values are missing for %s\n", metricName)
 		return testResult
 	}
 
@@ -271,17 +276,17 @@ func (t *AmpTestRunner) validateMetric(queryTemplate string, metricName string, 
 		// at least 2 metrics are expected with 1 set of aggregation_dimensions
 		// 1 non-aggregated + 1 aggregated minimum
 		if len(metricVals) < 2 {
-			fmt.Println("failed with fewer metric values than expected")
+			log.Println("failed with fewer metric values than expected")
 			return testResult
 		}
 
 		if !foundAppendDimMetric {
-			fmt.Println("failed with missing append_dimensions")
+			log.Println("failed with missing append_dimensions")
 			return testResult
 		}
 	} else {
 		if len(metricVals) < 1 {
-			fmt.Println("failed with fewer metric values than expected")
+			log.Println("failed with fewer metric values than expected")
 			return testResult
 		}
 	}
@@ -303,13 +308,7 @@ func (t AmpTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t AmpTestRunner) GetMeasuredMetrics() []string {
-	if t.source == SourcePrometheus {
-		return t.getPrometheusMetrics()
-	} else if t.source == SourceHost {
-		return t.getHostMetrics()
-	} else if t.source == SourceOtlp {
-		return t.getOtlpMetrics()
-	}
+	// dummy function to satisfy the interface
 	return []string{}
 }
 
@@ -322,18 +321,22 @@ func (t AmpTestRunner) getHostMetrics() []string {
 	}
 }
 
-func (t AmpTestRunner) getPrometheusMetrics() []string {
+func (t AmpTestRunner) getPrometheusMetrics() ([]string, []string) {
 	return []string{
-		"prometheus_test_counter",
-		"prometheus_test_summary",
-	}
+			"prometheus_test_counter",
+			"prometheus_test_summary",
+		}, []string{
+			"prometheus_test_histogram",
+		}
 }
 
-func (t AmpTestRunner) getOtlpMetrics() []string {
+func (t AmpTestRunner) getOtlpMetrics() ([]string, []string) {
 	return []string{
-		"my_gauge",
-		"my_cumulative_counter",
-	}
+			"my_gauge",
+			"my_cumulative_counter",
+		}, []string{
+			"my_cumulative_histogram",
+		}
 }
 
 func (t AmpTestRunner) SetupBeforeAgentRun() error {
