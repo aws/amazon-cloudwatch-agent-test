@@ -72,8 +72,10 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 	}
 
 	// Apply sample app
-	if err := k8ctl.ApplyResource(env.SampleApp); err != nil {
-		return err
+	if env.SampleApp != "" {
+		if err := k8ctl.ApplyResource(env.SampleApp); err != nil {
+			return err
+		}
 	}
 
 	return nil
