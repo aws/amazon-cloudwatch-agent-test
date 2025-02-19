@@ -33,6 +33,17 @@
     "family": "linux"
   },
   {
+    "os": "debian-11",
+    "username": "admin",
+    "instanceType": "c6g.large",
+    "installAgentCommand": "/snap/bin/go run ./install/install_agent.go deb",
+    "ami": "cloudwatch-agent-integration-test-debian-11-arm64*",
+    "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
+    "arc": "arm64",
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux"
+  },
+  {
     "os": "debian-12",
     "username": "admin",
     "instanceType": "c6g.large",
@@ -71,6 +82,17 @@
     "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-x86-al2023*",
+    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
+  },
+  {
+    "os": "ol7",
+    "username": "ec2-user",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
+    "ami": "cloudwatch-agent-integration-test-ol7*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",

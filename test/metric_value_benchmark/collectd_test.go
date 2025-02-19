@@ -134,7 +134,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 }
 
 func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType string) error {
-	// build request
+	// build the ListEntitiesForMetric request
 	instanceId := awsservice.GetInstanceId()
 	requestBody := []byte(fmt.Sprintf(`{
 		"Namespace": "MetricValueBenchmarkTest",
@@ -164,7 +164,6 @@ func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType strin
 	}
 	defer resp.Body.Close()
 
-	// Read and print response body
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("Error reading response body: %v", err)
