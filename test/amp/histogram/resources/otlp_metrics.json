@@ -27,9 +27,9 @@
           },
           "metrics": [
             {
-              "name": "my.counter",
+              "name": "my.delta.counter",
               "unit": "1",
-              "description": "I am a Counter",
+              "description": "I am a Delta Counter",
               "sum": {
                 "aggregationTemporality": 1,
                 "isMonotonic": true,
@@ -40,7 +40,31 @@
                     "timeUnixNano": START_TIME,
                     "attributes": [
                       {
-                        "key": "my.counter.attr",
+                        "key": "my.delta.counter.attr",
+                        "value": {
+                          "stringValue": "some value"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "my.cumulative.counter",
+              "unit": "1",
+              "description": "I am a Cumulative Counter",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "asDouble": 5,
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "attributes": [
+                      {
+                        "key": "my.cumulative.counter.attr",
                         "value": {
                           "stringValue": "some value"
                         }
@@ -72,9 +96,9 @@
               }
             },
             {
-              "name": "my.histogram",
+              "name": "my.delta.histogram",
               "unit": "1",
-              "description": "I am a Histogram",
+              "description": "I am a Delta Histogram",
               "histogram": {
                 "aggregationTemporality": 1,
                 "dataPoints": [
@@ -89,7 +113,7 @@
                     "max": 2,
                     "attributes": [
                       {
-                        "key": "my.histogram.attr",
+                        "key": "my.delta.histogram.attr",
                         "value": {
                           "stringValue": "some value"
                         }
@@ -100,9 +124,37 @@
               }
             },
             {
-              "name": "my.exponential.histogram",
+              "name": "my.cumulative.histogram",
               "unit": "1",
-              "description": "I am an Exponential Histogram",
+              "description": "I am a Cumulative Histogram",
+              "histogram": {
+                "aggregationTemporality": 2,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "count": 2,
+                    "sum": 2,
+                    "bucketCounts": [1,1],
+                    "explicitBounds": [1],
+                    "min": 0,
+                    "max": 2,
+                    "attributes": [
+                      {
+                        "key": "my.cumulative.histogram.attr",
+                        "value": {
+                          "stringValue": "some value"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "my.delta.exponential.histogram",
+              "unit": "1",
+              "description": "I am an Delta Exponential Histogram",
               "exponentialHistogram": {
                 "aggregationTemporality": 1,
                 "dataPoints": [
@@ -123,6 +175,39 @@
                     "attributes": [
                       {
                         "key": "my.exponential.histogram.attr",
+                        "value": {
+                          "stringValue": "some value"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "my.cumulative.exponential.histogram",
+              "unit": "1",
+              "description": "I am an Cumulative Exponential Histogram",
+              "exponentialHistogram": {
+                "aggregationTemporality": 2,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "count": 3,
+                    "sum": 10,
+                    "scale": 0,
+                    "zeroCount": 1,
+                    "positive": {
+                      "offset": 1,
+                      "bucketCounts": [0,2]
+                    },
+                    "min": 0,
+                    "max": 5,
+                    "zeroThreshold": 0,
+                    "attributes": [
+                      {
+                        "key": "my.cumulative.exponential.histogram.attr",
                         "value": {
                           "stringValue": "some value"
                         }
