@@ -169,10 +169,15 @@ func (t AmpTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *AmpTestRunner) validateHostMetrics() status.TestGroupResult {
+	// NOTE: dims must match aggregation_dimensions from agent config to fetch metrics.
+	// the idea is to fetch all metrics including non-aggregated metrics with matching dim set
+	// then validate if the returned list of metrics include metrics (non-aggregated) with append_dimensions as labels
+	dims := getDimensions()
+
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateMetric(metricName)
+		testResults[i] = t.validateMetric(metricName, dims, true)
 	}
 
 	return status.TestGroupResult{
@@ -183,10 +188,12 @@ func (t *AmpTestRunner) validateHostMetrics() status.TestGroupResult {
 
 func (t *AmpTestRunner) validatePrometheusMetrics() status.TestGroupResult {
 
+	dims := []types.Dimension{}
+
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch)+1)
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateMetric(metricName)
+		testResults[i] = t.validateMetric(metricName, dims, false)
 	}
 
 	query := buildPrometheusHistogramQuery("prometheus_test_histogram")
@@ -237,10 +244,53 @@ func (t *AmpTestRunner) validatePrometheusMetrics() status.TestGroupResult {
 }
 
 func (t *AmpTestRunner) validateOtlpMetrics() status.TestGroupResult {
+	dims := []types.Dimension{}
+
 	metricsToFetch := t.GetMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
+	testResults := make([]status.TestResult, len(metricsToFetch)+1)
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateMetric(metricName)
+		testResults[i] = t.validateMetric(metricName, dims, false)
+	}
+
+	query := buildPrometheusHistogramQuery("my_cumulative_histogram")
+	fmt.Printf("query: %s\n", query)
+	res, err := queryAMPMetrics(metadata.AmpWorkspaceId, query)
+	if err != nil {
+		fmt.Printf("failed to fetch metric values from AMP for %s: %s\n", "my_cumulative_histogram", err)
+	}
+	fmt.Printf("res: %s\n", res)
+	var responseJson AMPResponse
+	err = json.Unmarshal(res, &responseJson)
+	if err != nil {
+		fmt.Printf("failed to unmarshal AMP response: %s\n", err)
+	}
+
+	if len(responseJson.Data.Result) == 0 {
+		fmt.Printf("AMP metric values are missing for %s\n", "my_cumulative_histogram")
+	}
+
+	fmt.Printf("%+v\n", responseJson)
+
+	metricVals := []float64{}
+	for _, dataResult := range responseJson.Data.Result {
+		if len(dataResult.Value) < 1 {
+			continue
+		}
+		// metric value is returned as a tuple of timestamp and value (ec. '"value": [1721843955, "26"]')
+		val, _ := strconv.ParseFloat(dataResult.Value[1].(string), 64)
+		metricVals = append(metricVals, val)
+	}
+
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue("my_cumulative_histogram", metricVals, 0) {
+		testResults[len(testResults)-1] = status.TestResult{
+			Name:   "my_cumulative_histogram",
+			Status: status.FAILED,
+		}
+	} else {
+		testResults[len(testResults)-1] = status.TestResult{
+			Name:   "my_cumulative_histogram",
+			Status: status.SUCCESSFUL,
+		}
 	}
 
 	return status.TestGroupResult{
@@ -249,19 +299,11 @@ func (t *AmpTestRunner) validateOtlpMetrics() status.TestGroupResult {
 	}
 }
 
-func (t *AmpTestRunner) validateMetric(metricName string) status.TestResult {
+func (t *AmpTestRunner) validateMetric(metricName string, dims []types.Dimension, shouldHaveAppendDimensions bool) status.TestResult {
 
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
-	}
-
-	// NOTE: dims must match aggregation_dimensions from agent config to fetch metrics.
-	// the idea is to fetch all metrics including non-aggregated metrics with matching dim set
-	// then validate if the returned list of metrics include metrics (non-aggregated) with append_dimensions as labels
-	dims := getDimensions()
-	if len(dims) == 0 {
-		return testResult
 	}
 
 	query := buildPrometheusQuery(metricName, dims)
@@ -271,6 +313,7 @@ func (t *AmpTestRunner) validateMetric(metricName string) status.TestResult {
 		fmt.Printf("failed to fetch metric values from AMP for %s: %s\n", metricName, err)
 		return testResult
 	}
+	fmt.Printf("res: %s\n", res)
 	var responseJson AMPResponse
 	err = json.Unmarshal(res, &responseJson)
 	if err != nil {
@@ -295,15 +338,29 @@ func (t *AmpTestRunner) validateMetric(metricName string) status.TestResult {
 
 		// metrics with more labels than fetched dims must be non-aggregated metrics which include append_dimensions as labels
 		if len(dataResult.Metric) > len(dims) {
+			// doesnt work for otlp/prometheus where we don't append dimensionsm
 			foundAppendDimMetric = foundAppendDimMetric && matchDimensions(dataResult.Metric)
 		}
 	}
 
-	// at least 2 metrics are expected with 1 set of aggregation_dimensions
-	// 1 non-aggregated + 1 aggregated minimum
-	if len(metricVals) < 2 || !foundAppendDimMetric {
-		fmt.Println("failed with less metric values than expected or missing append_dimensions")
-		return testResult
+	if shouldHaveAppendDimensions {
+		// at least 2 metrics are expected with 1 set of aggregation_dimensions
+		// 1 non-aggregated + 1 aggregated minimum
+		if len(metricVals) < 2 {
+			fmt.Println("failed with fewer metric values than expected")
+			return testResult
+		}
+
+		if !foundAppendDimMetric {
+			fmt.Println("failed with missing append_dimensions")
+			return testResult
+		}
+	} else {
+		if len(metricVals) < 1 {
+			fmt.Println("failed with fewer metric values than expected")
+			return testResult
+		}
+
 	}
 
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, metricVals, 0) {
@@ -347,13 +404,13 @@ func (t AmpTestRunner) getPrometheusMetrics() []string {
 	return []string{
 		"prometheus_test_counter",
 		"prometheus_test_summary",
-		"prometheus_test_histogram",
 	}
 }
 
 func (t AmpTestRunner) getOtlpMetrics() []string {
 	return []string{
 		"my_gauge",
+		"my_cumulative_counter",
 	}
 }
 
