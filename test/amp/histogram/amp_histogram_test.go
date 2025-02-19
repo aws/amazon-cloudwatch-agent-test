@@ -8,10 +8,12 @@ package amp
 import (
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -22,6 +24,7 @@ import (
 	sigv4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -30,6 +33,70 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
+
+const (
+	// template prometheus query for getting average of 3 min
+	ampQueryTemplate          = "avg_over_time(%s%s[3m])"
+	ampHistogramQueryTemplate = "quantile_over_time(0.5, %s_bucket[3m])"
+)
+
+type Source int
+
+const (
+	SourcePrometheus Source = iota
+	SourceOtlp
+	SourceHost
+)
+
+// NOTE: this should match with append_dimensions under metrics in agent config
+var append_dims = map[string]string{
+	"d1": "foo",
+	"d2": "bar",
+}
+
+var awsConfig aws.Config
+var awsCreds aws.Credentials
+var metadata *environment.MetaData
+
+//go:embed resources/prometheus.yaml
+var prometheusConfig string
+
+//go:embed resources/prometheus_metrics
+var prometheusMetrics string
+
+var (
+	testRunners []*test_runner.TestRunner = []*test_runner.TestRunner{
+		{
+			TestRunner: &AmpTestRunner{
+				source: SourceHost,
+				config: "host_config.json",
+				name:   "host",
+			},
+		},
+		{
+			TestRunner: &AmpTestRunner{
+				source: SourcePrometheus,
+				config: "prometheus_config.json",
+				name:   "prometheus",
+			},
+		},
+		{
+			TestRunner: &AmpTestRunner{
+				source: SourceOtlp,
+				config: "otlp_config.json",
+				name:   "otlp",
+			},
+		},
+	}
+)
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
+
+func TestAmpTestSuite(t *testing.T) {
+	suite.Run(t, new(AmpTestSuite))
+}
 
 type AMPResponse struct {
 	Status string
@@ -44,23 +111,22 @@ type AMPDataResult struct {
 	Value  []interface{}
 }
 
-const (
-	namespace = "AMPDestinationTest"
-	// template prometheus query for getting average of 3 min
-	ampQueryTemplate = "avg_over_time(%s%s[3m])"
-)
-
-// NOTE: this should match with append_dimensions under metrics in agent config
-var append_dims = map[string]string{
-	"d1": "foo",
-	"d2": "bar",
+type AmpTestSuite struct {
+	suite.Suite
+	test_runner.TestSuite
 }
 
-var awsConfig aws.Config
-var awsCreds aws.Credentials
+func (suite *AmpTestSuite) SetupSuite() {
+	log.Println(">>>> Starting AMP Test Suite")
+}
 
-func init() {
-	environment.RegisterEnvironmentMetaDataFlags()
+func (suite *AmpTestSuite) TearDownSuite() {
+	suite.Result.Print()
+	log.Println(">>>> Finished AMP Test Suite")
+}
+
+func (suite *AmpTestSuite) TestAllInSuite() {
+	metadata = environment.GetEnvironmentMetaData()
 
 	ctx := context.Background()
 	var err error
@@ -72,16 +138,39 @@ func init() {
 	if err != nil {
 		fmt.Println("There was an error trying to load credentials: ", err)
 	}
+
+	for _, testRunner := range testRunners {
+		suite.AddToSuiteResult(testRunner.Run())
+	}
+	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Assume Role Test Suite Failed")
 }
 
-type AmpHistogramTestRunner struct {
+type AmpTestRunner struct {
 	test_runner.BaseTestRunner
+
+	source Source
+	config string
+	name   string
 }
 
-func (t AmpHistogramTestRunner) Validate() status.TestGroupResult {
+func (t AmpTestRunner) Validate() status.TestGroupResult {
+	// wait for agent to push some metrics
+	time.Sleep(30 * time.Second)
+
+	if t.source == SourcePrometheus {
+		return t.validatePrometheusMetrics()
+	} else if t.source == SourceHost {
+		return t.validateHostMetrics()
+	} else if t.source == SourceOtlp {
+		return t.validateOtlpMetrics()
+	}
+
+	return status.TestGroupResult{}
+}
+
+func (t *AmpTestRunner) validateHostMetrics() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
-	time.Sleep(30 * time.Second)
 	for i, metricName := range metricsToFetch {
 		testResults[i] = t.validateMetric(metricName)
 	}
@@ -92,8 +181,75 @@ func (t AmpHistogramTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *AmpHistogramTestRunner) validateMetric(metricName string) status.TestResult {
-	env := environment.GetEnvironmentMetaData()
+func (t *AmpTestRunner) validatePrometheusMetrics() status.TestGroupResult {
+
+	metricsToFetch := t.GetMeasuredMetrics()
+	testResults := make([]status.TestResult, len(metricsToFetch)+1)
+	for i, metricName := range metricsToFetch {
+		testResults[i] = t.validateMetric(metricName)
+	}
+
+	query := buildPrometheusHistogramQuery("prometheus_test_histogram")
+	fmt.Printf("query: %s\n", query)
+	res, err := queryAMPMetrics(metadata.AmpWorkspaceId, query)
+	if err != nil {
+		fmt.Printf("failed to fetch metric values from AMP for %s: %s\n", "prometheus_test_histogram", err)
+	}
+	fmt.Printf("res: %s\n", res)
+	var responseJson AMPResponse
+	err = json.Unmarshal(res, &responseJson)
+	if err != nil {
+		fmt.Printf("failed to unmarshal AMP response: %s\n", err)
+	}
+
+	if len(responseJson.Data.Result) == 0 {
+		fmt.Printf("AMP metric values are missing for %s\n", "prometheus_test_histogram")
+	}
+
+	fmt.Printf("%+v\n", responseJson)
+
+	metricVals := []float64{}
+	for _, dataResult := range responseJson.Data.Result {
+		if len(dataResult.Value) < 1 {
+			continue
+		}
+		// metric value is returned as a tuple of timestamp and value (ec. '"value": [1721843955, "26"]')
+		val, _ := strconv.ParseFloat(dataResult.Value[1].(string), 64)
+		metricVals = append(metricVals, val)
+	}
+
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue("prometheus_test_histogram", metricVals, 0) {
+		testResults[len(testResults)-1] = status.TestResult{
+			Name:   "prometheus_test_histogram",
+			Status: status.FAILED,
+		}
+	} else {
+		testResults[len(testResults)-1] = status.TestResult{
+			Name:   "prometheus_test_histogram",
+			Status: status.SUCCESSFUL,
+		}
+	}
+
+	return status.TestGroupResult{
+		Name:        t.GetTestName(),
+		TestResults: testResults,
+	}
+}
+
+func (t *AmpTestRunner) validateOtlpMetrics() status.TestGroupResult {
+	metricsToFetch := t.GetMeasuredMetrics()
+	testResults := make([]status.TestResult, len(metricsToFetch))
+	for i, metricName := range metricsToFetch {
+		testResults[i] = t.validateMetric(metricName)
+	}
+
+	return status.TestGroupResult{
+		Name:        t.GetTestName(),
+		TestResults: testResults,
+	}
+}
+
+func (t *AmpTestRunner) validateMetric(metricName string) status.TestResult {
 
 	testResult := status.TestResult{
 		Name:   metricName,
@@ -108,7 +264,9 @@ func (t *AmpHistogramTestRunner) validateMetric(metricName string) status.TestRe
 		return testResult
 	}
 
-	res, err := queryAMPMetrics(env.AmpWorkspaceId, buildPrometheusQuery(metricName, dims))
+	query := buildPrometheusQuery(metricName, dims)
+	fmt.Printf("query: %s\n", query)
+	res, err := queryAMPMetrics(metadata.AmpWorkspaceId, query)
 	if err != nil {
 		fmt.Printf("failed to fetch metric values from AMP for %s: %s\n", metricName, err)
 		return testResult
@@ -156,15 +314,27 @@ func (t *AmpHistogramTestRunner) validateMetric(metricName string) status.TestRe
 	return testResult
 }
 
-func (t AmpHistogramTestRunner) GetTestName() string {
-	return namespace
+func (t AmpTestRunner) GetTestName() string {
+	return t.name
 }
 
-func (t AmpHistogramTestRunner) GetAgentConfigFileName() string {
-	return "config.json"
+func (t AmpTestRunner) GetAgentConfigFileName() string {
+	return t.config
 }
 
-func (t AmpHistogramTestRunner) GetMeasuredMetrics() []string {
+func (t AmpTestRunner) GetMeasuredMetrics() []string {
+	if t.source == SourcePrometheus {
+		return t.getPrometheusMetrics()
+	} else if t.source == SourceHost {
+		return t.getHostMetrics()
+	} else if t.source == SourceOtlp {
+		return t.getOtlpMetrics()
+	}
+
+	return []string{}
+}
+
+func (t AmpTestRunner) getHostMetrics() []string {
 	return []string{
 		"CPU_USAGE_IDLE", "cpu_usage_nice", "cpu_usage_guest", "cpu_time_active", "cpu_usage_active",
 		"processes_blocked", "processes_dead", "processes_idle", "processes_paging", "processes_running",
@@ -173,8 +343,21 @@ func (t AmpHistogramTestRunner) GetMeasuredMetrics() []string {
 	}
 }
 
-func (t *AmpHistogramTestRunner) SetupBeforeAgentRun() error {
-	env := environment.GetEnvironmentMetaData()
+func (t AmpTestRunner) getPrometheusMetrics() []string {
+	return []string{
+		"prometheus_test_counter",
+		"prometheus_test_summary",
+		"prometheus_test_histogram",
+	}
+}
+
+func (t AmpTestRunner) getOtlpMetrics() []string {
+	return []string{
+		"my_gauge",
+	}
+}
+
+func (t AmpTestRunner) SetupBeforeAgentRun() error {
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
@@ -182,7 +365,7 @@ func (t *AmpHistogramTestRunner) SetupBeforeAgentRun() error {
 	// replace AMP workspace ID placeholder with a testing workspace ID from metadata
 	agentConfigPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
 	ampCommands := []string{
-		"sed -ie 's/{workspace_id}/" + env.AmpWorkspaceId + "/g' " + agentConfigPath,
+		"sed -ie 's/{workspace_id}/" + metadata.AmpWorkspaceId + "/g' " + agentConfigPath,
 		// use below to add JMX metrics then update agent config & GetMeasuredMetrics()
 		//"nohup java -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=2030 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.rmi.port=2030  -Dcom.sun.management.jmxremote.host=0.0.0.0  -Djava.rmi.server.hostname=0.0.0.0 -Dserver.port=8090 -Dspring.application.admin.enabled=true -jar jars/spring-boot-web-starter-tomcat.jar > /tmp/spring-boot-web-starter-tomcat-jar.txt 2>&1 &",
 	}
@@ -190,34 +373,40 @@ func (t *AmpHistogramTestRunner) SetupBeforeAgentRun() error {
 	if err != nil {
 		return err
 	}
+
+	// Prometheus source has some special setup before the agent starts
+	if t.source == SourcePrometheus {
+		err = t.setupPrometheus()
+		if err != nil {
+			return err
+		}
+	}
+
 	return t.SetUpConfig()
 }
 
-func (e *AmpHistogramTestRunner) SetupAfterAgentRun() error {
-	common.RunCommand("pwd")
-	cmd := `while true; export START_TIME=$(date +%s%N); do
-		cat ./resources/metrics/server_consumer.json | sed -e "s/START_TIME/$START_TIME/" > server_consumer.json;
-		curl -H 'Content-Type: application/json' -d @server_consumer.json -i http://127.0.0.1:4316/v1/metrics --verbose;
-		cat ./resources/metrics/client_producer.json | sed -e "s/START_TIME/$START_TIME/" > client_producer.json;
-		curl -H 'Content-Type: application/json' -d @client_producer.json -i http://127.0.0.1:4316/v1/metrics --verbose;
-		sleep 5; done`
-	return common.RunAsyncCommand(cmd)
+func (t AmpTestRunner) SetupAfterAgentRun() error {
+
+	// OTLP source has some special setup after the agent starts
+	if t.source == SourceOtlp {
+		return common.RunAsyncCommand("resources/otlp_pusher.sh")
+	}
+
+	return nil
 }
 
-func TestAmp(t *testing.T) {
-	runner := test_runner.TestRunner{TestRunner: &AmpHistogramTestRunner{
-		test_runner.BaseTestRunner{},
-	}}
-	result := runner.Run()
-	if result.GetStatus() != status.SUCCESSFUL {
-		t.Fatal("AMP Destination test failed")
-		result.Print()
+func (t AmpTestRunner) setupPrometheus() error {
+	startPrometheusCommands := []string{
+		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus_config.yaml\n%s\nEOF", prometheusConfig),
+		fmt.Sprintf("cat <<EOF | sudo tee /tmp/metrics\n%s\nEOF", prometheusMetrics),
+		"sudo python3 -m http.server 8101 --directory /tmp &> /dev/null &",
 	}
+
+	return common.RunCommands(startPrometheusCommands)
 }
 
 func getDimensions() []types.Dimension {
-	env := environment.GetEnvironmentMetaData()
-	factory := dimension.GetDimensionFactory(*env)
+	factory := dimension.GetDimensionFactory(*metadata)
 	dims, failed := factory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "InstanceId",
@@ -245,6 +434,10 @@ func buildPrometheusQuery(metricName string, dims []types.Dimension) string {
 		dimsStr = dimsStr[:len(dimsStr)-1]
 	}
 	return fmt.Sprintf(ampQueryTemplate, metricName, "{"+dimsStr+"}")
+}
+
+func buildPrometheusHistogramQuery(metricName string) string {
+	return fmt.Sprintf(ampHistogramQueryTemplate, metricName)
 }
 
 func queryAMPMetrics(wsId string, q string) ([]byte, error) {
@@ -279,4 +472,4 @@ func matchDimensions(labels map[string]interface{}) bool {
 	return true
 }
 
-var _ test_runner.ITestRunner = (*AmpHistogramTestRunner)(nil)
+var _ test_runner.ITestRunner = (*AmpTestRunner)(nil)
