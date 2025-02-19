@@ -6,6 +6,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/stretchr/testify/require"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
