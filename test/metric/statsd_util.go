@@ -6,7 +6,10 @@
 package metric
 
 import (
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -14,6 +17,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
@@ -100,6 +105,64 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	if !IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, float64(expectedSampleCount)) {
 		return testResult
 	}
+
+	err = ValidateStatsdEntity(metricName, metricType)
+	if err != nil {
+		return testResult
+	}
+
 	testResult.Status = status.SUCCESSFUL
 	return testResult
+}
+
+func GetExpectedEntity() string {
+	return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+}
+
+func ValidateStatsdEntity(metricName, metricType string) error {
+	// build the ListEntitiesForMetric request
+	instanceId := awsservice.GetInstanceId()
+	requestBody := []byte(fmt.Sprintf(`{
+		"Namespace": "MetricValueBenchmarkTest",
+		"MetricName": "%s",
+		"Dimensions": [
+			{
+				"Name": "InstanceId",
+				"Value": "%s"
+			},
+			{
+				"Name": "key",
+				"Value": "value"
+			},
+			{
+				"Name": "metric_type",
+				"Value": "%s"
+			}
+		]
+	}`, metricName, instanceId, metricType))
+
+	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
+	if err != nil {
+		return fmt.Errorf("Error building the ListEntitiesForMetric request %v", err)
+	}
+
+	// send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("Error sending the ListEntitiesForMetric request %v", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("Error reading response body: %v", err)
+	}
+
+	if GetExpectedEntity() != string(responseBody) {
+		fmt.Printf("Response Body: %s\n", string(responseBody))
+		fmt.Printf("Expected Entity: %s\n", GetExpectedEntity())
+		return fmt.Errorf("Response body doesn't match expected entity")
+	}
+	return nil
 }

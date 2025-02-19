@@ -6,7 +6,11 @@
 package metric_value_benchmark
 
 import (
+	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -15,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
@@ -53,6 +58,10 @@ func (t *CollectDTestRunner) GetMeasuredMetrics() []string {
 	return []string{"collectd_gauge_1_value", "collectd_counter_1_value"}
 }
 
+func (t *CollectDTestRunner) GetExpectedEntity() string {
+	return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+}
+
 func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
@@ -65,6 +74,11 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 			Value: dimension.UnknownDimensionValue(),
 		},
 	}
+	split := strings.Split(metricName, "_")
+	if len(split) != 4 {
+		log.Printf("unexpected metric name format, %s", metricName)
+	}
+	metricType := split[1]
 	switch metricName {
 	case "collectd_counter_1_value":
 		instructions = append(instructions, dimension.Instruction{
@@ -110,8 +124,58 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 
+	err = t.ValidateCollectDEntity(metricName, metricType)
+	if err != nil {
+		return testResult
+	}
+
 	testResult.Status = status.SUCCESSFUL
 	return testResult
+}
+
+func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType string) error {
+	// build the ListEntitiesForMetric request
+	instanceId := awsservice.GetInstanceId()
+	requestBody := []byte(fmt.Sprintf(`{
+		"Namespace": "MetricValueBenchmarkTest",
+		"MetricName": "%s",
+		"Dimensions": [
+			{
+				"Name": "InstanceId",
+				"Value": "%s"
+			},
+			{
+				"Name": "type",
+				"Value": "%s"
+			}
+		]
+	}`, metricName, instanceId, metricType))
+
+	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
+	if err != nil {
+		return fmt.Errorf("Error building the ListEntitiesForMetric request %v", err)
+	}
+
+	// send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("Error sending the ListEntitiesForMetric request %v", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("Error reading response body: %v", err)
+	}
+
+	if t.GetExpectedEntity() != string(responseBody) {
+		fmt.Printf("Response Body: %s\n", string(responseBody))
+		fmt.Printf("Expected Entity: %s\n", t.GetExpectedEntity())
+		return fmt.Errorf("Response body doesn't match expected entity")
+	}
+
+	return nil
 }
 
 func (t *CollectDTestRunner) GetAgentRunDuration() time.Duration {
