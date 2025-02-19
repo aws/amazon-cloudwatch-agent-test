@@ -107,8 +107,9 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 		return testResult
 	}
 
-	err = ValidateStatsdEntity()
+	err = ValidateStatsdEntity(metricName, metricType)
 	if err != nil {
+		log.Print("here4")
 		return testResult
 	}
 
@@ -116,12 +117,12 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	return testResult
 }
 
-func ValidateStatsdEntity() error {
+func ValidateStatsdEntity(metricName, metricType string) error {
 	// build request
 	instanceId := awsservice.GetInstanceId()
 	requestBody := []byte(fmt.Sprintf(`{
 		"Namespace": "MetricValueBenchmarkTest",
-		"MetricName": "statsd_timing_3",
+		"MetricName": "%s",
 		"Dimensions": [
 			{
 				"Name": "InstanceId",
@@ -133,10 +134,10 @@ func ValidateStatsdEntity() error {
 			},
 			{
 				"Name": "metric_type",
-				"Value": "timing"
+				"Value": "%s"
 			}
 		]
-	}`, instanceId))
+	}`, metricName, instanceId, metricType))
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
 	if err != nil {
@@ -167,6 +168,8 @@ func ValidateStatsdEntity() error {
 	}
 	fmt.Printf("Response Body: %s\n", string(body))
 
+	log.Print("here")
+
 	// parse and verify the response
 	var response struct {
 		Entities []struct {
@@ -178,8 +181,12 @@ func ValidateStatsdEntity() error {
 		} `json:"Entities"`
 	}
 
+	log.Print("here2")
+
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return err
 	}
+
+	log.Print("here3")
 	return nil
 }
