@@ -45,7 +45,7 @@ func startAgent(t *testing.T) (string, string) {
 	fmt.Println(updatedConfigContent)
 
 	// Write back to agent_configs/config.json
-	err = os.WriteFile(configFilePath, []byte(updatedConfigContent), 0644)
+	err = os.WriteFile(configFilePath, []byte(updatedConfigContent), 0777)
 	require.NoError(t, err)
 
 	// Print the final content to verify correctness
