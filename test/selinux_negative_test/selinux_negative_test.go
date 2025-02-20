@@ -39,12 +39,11 @@ func startAgent(t *testing.T) (string, string) {
 
 	originalConfigContent, err := os.ReadFile(configFilePath)
 	require.NoError(t, err)
-	log.Printf("Original config content length: %d", len(originalConfigContent))
+	log.Printf("Original config content:\n%s", string(originalConfigContent))
 
-	updatedConfigContent := string(originalConfigContent)
-	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${LOG_GROUP_NAME}", logGroupName)
+	updatedConfigContent := strings.ReplaceAll(string(originalConfigContent), "${LOG_GROUP_NAME}", logGroupName)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${WORKING_LOG_GROUP}", workingLogGroupName)
-	log.Printf("Updated config content length: %d", len(updatedConfigContent))
+	log.Printf("Updated config content:\n%s", updatedConfigContent)
 
 	err = os.WriteFile(configFilePath, []byte(updatedConfigContent), os.ModePerm)
 	require.NoError(t, err)
