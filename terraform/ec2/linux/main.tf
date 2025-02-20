@@ -55,12 +55,10 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
       "echo clone and install agent",
-      "echo 'Setting up Go proxy for China'",
-      "export GOPROXY=https://goproxy.cn,direct",
-      "export GO111MODULE=on",
-      "for i in {1..3}; do git clone --depth 1 --branch ${var.github_test_repo_branch} ${var.github_test_repo} && break || sleep 15; done",
+      "if [[ '${var.region}' == cn-* ]]; then echo 'setting up go proxy for China tests' && export GOPROXY=https://goproxy.cn,direct && export GO111MODULE=on; fi",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
-      "for i in {1..3}; do aws s3 cp s3://${local.binary_uri} . --region ${var.region} && break || sleep 15; done",
+      "aws s3 cp s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
     ]
@@ -89,9 +87,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
-      "echo 'setting up go proxy for China'",
-      "export GOPROXY=https://goproxy.cn,direct",
-      "export GO111MODULE=on",
+      "if [[ '${var.region}' == cn-* ]]; then echo 'setting up go proxy for China tests' && export GOPROXY=https://goproxy.cn,direct && export GO111MODULE=on; fi",
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
