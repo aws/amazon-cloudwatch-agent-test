@@ -104,6 +104,7 @@ resource "null_resource" "integration_test_run" {
         "git branch",
         "cat amazon_cloudwatch_agent.te",
         "cd ..",
+        "Below is the ps efz command",
         "ps -efZ | grep amazon-cloudwatch-agent"
       ] : [
         "echo SELinux test not enabled"
