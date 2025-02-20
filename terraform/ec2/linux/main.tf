@@ -97,6 +97,10 @@ resource "null_resource" "integration_test_run" {
         "sudo yum install selinux-policy-devel -y",
         "git clone --branch ${var.selinux_branch} https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
         "cd amazon-cloudwatch-agent-sepolicy",
+        "ls",
+        "echo above is ls",
+        "pwd",
+        "git log",
         "chmod +x ./amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh",
       ] : [
