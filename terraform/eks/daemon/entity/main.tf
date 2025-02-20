@@ -170,7 +170,7 @@ resource "null_resource" "clone_helm_chart" {
   provisioner "local-exec" {
     command = <<-EOT
       if [ ! -d "./helm-charts" ]; then
-        git clone  -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
+        git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
       fi
     EOT
   }
