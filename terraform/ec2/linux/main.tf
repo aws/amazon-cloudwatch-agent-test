@@ -104,8 +104,7 @@ resource "null_resource" "integration_test_run" {
         "git branch",
         "cat amazon_cloudwatch_agent.te",
         "cd ..",
-        "Below is the ps efz command",
-        "ps -efZ | grep amazon-cloudwatch-agent"
+
       ] : [
         "echo SELinux test not enabled"
       ],
@@ -126,7 +125,9 @@ resource "null_resource" "integration_test_run" {
         "echo below is the either Permissive/Enforcing",
         "getenforce",
         "ps -efZ | grep amazon-cloudwatch-agent",
-        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
+        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v",
+        "Below is the ps efz command",
+        "ps -efZ | grep amazon-cloudwatch-agent"
       ],
     )
   }
