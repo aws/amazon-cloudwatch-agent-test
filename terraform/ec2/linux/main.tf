@@ -93,8 +93,8 @@ resource "null_resource" "integration_test_run" {
         var.is_selinux_test ? [
         "sudo yum install amazon-cloudwatch-agent -y",
         "echo Running SELinux test setup...",
+        "sudo yum install selinux-policy selinux-policy-targeted selinux-policy-devel -y",
         "sudo setenforce 1",
-        "sudo yum install selinux-policy-devel -y",
         "git clone --branch ${var.selinux_branch} https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
         "cd amazon-cloudwatch-agent-sepolicy",
         "ls",
