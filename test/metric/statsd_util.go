@@ -167,9 +167,45 @@ func ValidateStatsdEntity(metricName, metricType, computeType string) error {
 			]
 		}`, metricName, instanceId, metricType))
 	case "EKS":
-		log.Panic("test")
+		clusterName := awsservice.Cluster
+		requestBody = []byte(fmt.Sprintf(`{
+			"Namespace": "StatsD/EKS",
+			"MetricName": "%s",
+			"Dimensions": [
+				{
+					"Name": "ClusterName",
+					"Value": "%s"
+				},
+				{
+					"Name": "key",
+					"Value": "value"
+				},
+				{
+					"Name": "metric_type",
+					"Value": "%s"
+				}
+			]
+		}`, metricName, instanceId, metricType))
 	case "ECS":
-		log.Panic("test")
+		instanceId := awsservice.GetInstanceId()
+		requestBody = []byte(fmt.Sprintf(`{
+			"Namespace": "StatsD/ECS",
+			"MetricName": "%s",
+			"Dimensions": [
+				{
+					"Name": "InstanceId",
+					"Value": "%s"
+				},
+				{
+					"Name": "key",
+					"Value": "value"
+				},
+				{
+					"Name": "metric_type",
+					"Value": "%s"
+				}
+			]
+		}`, metricName, instanceId, metricType))
 	}
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, region)
