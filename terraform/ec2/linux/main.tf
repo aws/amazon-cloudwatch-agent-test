@@ -89,7 +89,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
-      "echo 'setting up go proxy for China'"
+      "echo 'setting up go proxy for China'",
       "export GOPROXY=https://goproxy.cn,direct",
       "export GO111MODULE=on",
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
