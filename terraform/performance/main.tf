@@ -110,7 +110,7 @@ resource "null_resource" "validator_linux" {
   provisioner "remote-exec" {
     inline = [
       #mock server dependencies getting transfered.
-      "git clone  --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       var.run_mock_server ? "cd mockserver && sudo docker build -t mockserver . && cd .." : "echo skipping mock server build",
       var.run_mock_server ? "sudo docker run --name mockserver -d -p 8080:8080 -p 443:443  mockserver" : "echo skipping mock server run",
       "cp -r amazon-cloudwatch-agent-test/test/xray/resources /home/ec2-user/",

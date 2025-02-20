@@ -110,7 +110,7 @@ resource "null_resource" "integration_test" {
       #Download test repo
       "NONINTERACTIVE=1 brew install git",
       "echo clone test repo",
-      "git clone  --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
 
       # Install agent and validator binaries
       "echo Install agent and validator binaries",

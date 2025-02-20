@@ -52,7 +52,7 @@ resource "aws_instance" "integration-test" {
     inline = [
       "cloud-init status --wait",
       "clone the agent and start the localstack",
-      "git clone  --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "git reset --hard ${var.cwa_test_github_sha}",
       "echo set up ssl pem for localstack, then start localstack",
