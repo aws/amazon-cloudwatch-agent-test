@@ -26,7 +26,6 @@ func TestSelinuxNegativeTest(t *testing.T) {
 }
 
 func startAgent(t *testing.T) (string, string) {
-	// Generate random large numbers
 	randomNumber := rand.Int63()
 
 	logGroupName := fmt.Sprintf("/aws/cloudwatch/shadow-%d", randomNumber)
@@ -34,7 +33,6 @@ func startAgent(t *testing.T) (string, string) {
 
 	configFilePath := filepath.Join("agent_configs", "config.json")
 
-	// Read original config and create a backup
 	originalConfigContent, err := os.ReadFile(configFilePath)
 	require.NoError(t, err)
 
@@ -42,16 +40,13 @@ func startAgent(t *testing.T) (string, string) {
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${LOG_GROUP_NAME}", logGroupName)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${WORKING_LOG_GROUP}", workingLogGroupName)
 
-	// Write updated config
-	err = os.WriteFile(configFilePath, []byte(updatedConfigContent), 0777)
+	err = os.WriteFile(configFilePath, []byte(updatedConfigContent), os.ModePerm)
 	require.NoError(t, err)
 
-	// Start the agent
 	require.NoError(t, common.StartAgent(configFilePath, true, false))
 	time.Sleep(10 * time.Second) // Wait for the agent to start properly
 
-	// Restore the original config file after the test
-	err = os.WriteFile(configFilePath, originalConfigContent, 0777)
+	err = os.WriteFile(configFilePath, originalConfigContent, os.ModePerm)
 	require.NoError(t, err)
 
 	return logGroupName, workingLogGroupName
