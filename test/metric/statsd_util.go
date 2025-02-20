@@ -15,6 +15,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -25,6 +27,7 @@ const (
 	// Must match JSON config
 	statsdMetricsAggregationInterval = 30 * time.Second
 	statsdMetricsCollectionInterval  = 5 * time.Second
+	region                           = "us-west-2"
 )
 
 var (
@@ -106,7 +109,19 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 		return testResult
 	}
 
-	err = ValidateStatsdEntity(metricName, metricType)
+	env := environment.GetEnvironmentMetaData()
+	var computeType string
+
+	switch env.ComputeType {
+	case computetype.ECS:
+		computeType = "ECS"
+	case computetype.EKS:
+		computeType = "EKS"
+	default:
+		computeType = "EC2"
+	}
+
+	err = ValidateStatsdEntity(metricName, metricType, computeType)
 	if err != nil {
 		return testResult
 	}
@@ -115,33 +130,49 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	return testResult
 }
 
-func GetExpectedEntity() string {
-	return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+func GetExpectedEntity(computeType string) string {
+	switch computeType {
+	case "EC2":
+		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+	case "EKS":
+		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwagent-eks-Worker-Role-01234567890"}}]}`
+	case "ECS":
+		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:cwagent-integ-test-cluster-01234567890","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+	}
 }
 
-func ValidateStatsdEntity(metricName, metricType string) error {
+func ValidateStatsdEntity(metricName, metricType, computeType string) error {
 	// build the ListEntitiesForMetric request
-	instanceId := awsservice.GetInstanceId()
-	requestBody := []byte(fmt.Sprintf(`{
-		"Namespace": "MetricValueBenchmarkTest",
-		"MetricName": "%s",
-		"Dimensions": [
-			{
-				"Name": "InstanceId",
-				"Value": "%s"
-			},
-			{
-				"Name": "key",
-				"Value": "value"
-			},
-			{
-				"Name": "metric_type",
-				"Value": "%s"
-			}
-		]
-	}`, metricName, instanceId, metricType))
+	var requestBody []byte
 
-	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
+	switch computeType {
+	case "EC2":
+		instanceId := awsservice.GetInstanceId()
+		requestBody = []byte(fmt.Sprintf(`{
+			"Namespace": "MetricValueBenchmarkTest",
+			"MetricName": "%s",
+			"Dimensions": [
+				{
+					"Name": "InstanceId",
+					"Value": "%s"
+				},
+				{
+					"Name": "key",
+					"Value": "value"
+				},
+				{
+					"Name": "metric_type",
+					"Value": "%s"
+				}
+			]
+		}`, metricName, instanceId, metricType))
+	case "EKS":
+		log.Panic("test")
+	case "ECS":
+		log.Panic("test")
+	}
+
+	req, err := common.BuildListEntitiesForMetricRequest(requestBody, region)
 	if err != nil {
 		return fmt.Errorf("Error building the ListEntitiesForMetric request %v", err)
 	}
@@ -159,9 +190,9 @@ func ValidateStatsdEntity(metricName, metricType string) error {
 		return fmt.Errorf("Error reading response body: %v", err)
 	}
 
-	if GetExpectedEntity() != string(responseBody) {
+	if GetExpectedEntity(computeType) != string(responseBody) {
 		fmt.Printf("Response Body: %s\n", string(responseBody))
-		fmt.Printf("Expected Entity: %s\n", GetExpectedEntity())
+		fmt.Printf("Expected Entity: %s\n", GetExpectedEntity(computeType))
 		return fmt.Errorf("Response body doesn't match expected entity")
 	}
 	return nil
