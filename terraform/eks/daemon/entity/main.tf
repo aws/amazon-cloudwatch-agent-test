@@ -191,6 +191,14 @@ resource "helm_release" "aws_observability" {
     name  = "region"
     value = "us-west-2"
   }
+  set {
+    name  = "fluentbit.image.repository"
+    value = "506463145083.dkr.ecr.us-west-2.amazonaws.com/fluent-bit-test"
+  }
+  set {
+    name  = "fluentbit.image.tag"
+    value = "resourceEntityDataplaneHostLogs"
+  }
   depends_on = [
     aws_eks_cluster.this,
     aws_eks_node_group.this,
@@ -240,6 +248,22 @@ resource "kubernetes_pod" "log_generator" {
       # Run shell script that generate a log line every second
       command = ["/bin/sh", "-c"]
       args    = ["while true; do echo \"Log entry at $(date)\"; sleep 1; done"]
+
+      volume_mount {
+        name       = "host-logs"
+        mount_path = "/host/var/log"
+      }
+
+      security_context {
+        privileged = true
+      }
+    }
+
+    volume {
+      name = "host-logs"
+      host_path {
+        path = "/var/log"
+      }
     }
     restart_policy = "Always"
   }

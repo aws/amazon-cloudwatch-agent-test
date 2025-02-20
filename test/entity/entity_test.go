@@ -6,7 +6,6 @@ package entity
 import (
 	"fmt"
 	"log"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -35,6 +34,7 @@ const (
 
 	// Constants for possible vaues for entity attributes
 	eksServiceEntityType                   = "Service"
+	eksResourceEntityType                  = "Resource"
 	entityEKSPlatform                      = "AWS::EKS"
 	k8sDefaultNamespace                    = "default"
 	entityServiceNameSourceInstrumentation = "Instrumentation"
@@ -158,14 +158,12 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 	end := time.Now()
 
 	testCases := map[string]struct {
-		agentConfigPath string
-		podName         string
-		useEC2Tag       bool
-		expectedEntity  expectedEntity
+		podName        string
+		expectedEntity expectedEntity
+		appLogGroup    string
 	}{
 		"Entity/K8sWorkloadServiceNameSource": {
-			agentConfigPath: filepath.Join("resources", "compass_default_log.json"),
-			podName:         "log-generator",
+			podName: "log-generator",
 			expectedEntity: expectedEntity{
 				entityType:        eksServiceEntityType,
 				name:              "log-generator",
@@ -178,10 +176,10 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 				instanceId:        env.InstanceId,
 				serviceNameSource: entityServiceNameSourceK8sWorkload,
 			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "application"),
 		},
 		"Entity/InstrumentationServiceNameSource": {
-			agentConfigPath: filepath.Join("resources", "compass_default_log.json"),
-			podName:         "petclinic-instrumentation-default-env",
+			podName: "petclinic-instrumentation-default-env",
 			expectedEntity: expectedEntity{
 				entityType: eksServiceEntityType,
 				// This service name comes from OTEL_SERVICE_NAME which is
@@ -196,10 +194,10 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 				instanceId:        env.InstanceId,
 				serviceNameSource: entityServiceNameSourceInstrumentation,
 			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "application"),
 		},
 		"Entity/InstrumentationServiceNameSourceCustomEnvironment": {
-			agentConfigPath: filepath.Join("resources", "compass_default_log.json"),
-			podName:         "petclinic-instrumentation-custom-env",
+			podName: "petclinic-instrumentation-custom-env",
 			expectedEntity: expectedEntity{
 				entityType: eksServiceEntityType,
 				// This service name comes from OTEL_SERVICE_NAME which is
@@ -214,25 +212,80 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 				instanceId:        env.InstanceId,
 				serviceNameSource: entityServiceNameSourceInstrumentation,
 			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "application"),
+		},
+		"Entity/DataplaneLogEntity": {
+			podName: "log-generator",
+			expectedEntity: expectedEntity{
+				entityType:   eksResourceEntityType,
+				name:         "dataplane-test",
+				environment:  "eks:" + env.EKSClusterName + "/" + k8sDefaultNamespace,
+				platformType: entityEKSPlatform,
+				k8sWorkload:  "log-generator",
+				k8sNode:      *instancePrivateDNS,
+				k8sNamespace: k8sDefaultNamespace,
+				eksCluster:   env.EKSClusterName,
+				instanceId:   env.InstanceId,
+			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "dataplane"),
+		},
+
+		"Entity/HostLogEntity": {
+			podName: "log-generator",
+			expectedEntity: expectedEntity{
+				entityType:   eksResourceEntityType,
+				name:         *instancePrivateDNS,
+				environment:  "eks:" + env.EKSClusterName,
+				platformType: entityEKSPlatform,
+				k8sNode:      *instancePrivateDNS,
+				eksCluster:   env.EKSClusterName,
+				instanceId:   env.InstanceId,
+			},
+			appLogGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "host"),
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			var podApplicationLogStream string
 
-			appLogGroup := fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "application")
-			logStreamNames := awsservice.GetLogStreamNames(appLogGroup)
+			logStreamNames := awsservice.GetLogStreamNames(testCase.appLogGroup)
 			assert.NotZero(t, len(logStreamNames))
-			for _, streamName := range logStreamNames {
-				if strings.Contains(streamName, testCase.podName) {
-					podApplicationLogStream = streamName
-					log.Printf("Found log stream %s that matches pattern %s", streamName, testCase.podName)
+
+			// Different log stream matching logic based on the test case
+			switch name {
+			case "Entity/HostLogEntity":
+				// Host logs: look for log streams with "HOST_NAME."
+				for _, streamName := range logStreamNames {
+					if strings.HasPrefix(streamName, fmt.Sprintf("%s.", *instancePrivateDNS)) {
+						podApplicationLogStream = streamName
+						log.Printf("Found host log stream %s", streamName)
+						break
+					}
+				}
+			case "Entity/DataplaneLogEntity":
+				// Dataplane logs: look for log streams with "HOST_NAME-""
+				for _, streamName := range logStreamNames {
+					if strings.HasPrefix(streamName, fmt.Sprintf("%s-", *instancePrivateDNS)) {
+						podApplicationLogStream = streamName
+						log.Printf("Found dataplane log stream %s", streamName)
+						break
+					}
+				}
+			default:
+				// logic for application logs
+				for _, streamName := range logStreamNames {
+					if strings.Contains(streamName, testCase.podName) {
+						podApplicationLogStream = streamName
+						log.Printf("Found log stream %s that matches pattern %s", streamName, testCase.podName)
+						break
+					}
 				}
 			}
+
 			assert.NotEmpty(t, podApplicationLogStream)
 			// check CWL to ensure we got the expected entities in the log group
 			queryString := fmt.Sprintf("fields @message, @entity.KeyAttributes.Type, @entity.KeyAttributes.Name, @entity.KeyAttributes.Environment, @entity.Attributes.PlatformType, @entity.Attributes.EKS.Cluster, @entity.Attributes.K8s.Node, @entity.Attributes.K8s.Namespace, @entity.Attributes.K8s.Workload, @entity.Attributes.AWS.ServiceNameSource, @entity.Attributes.EC2.InstanceId | filter @logStream == \"%s\"", podApplicationLogStream)
-			ValidateLogEntity(t, appLogGroup, podApplicationLogStream, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
+			ValidateLogEntity(t, testCase.appLogGroup, podApplicationLogStream, &end, queryString, testCase.expectedEntity, string(env.ComputeType))
 		})
 	}
 }
@@ -244,7 +297,7 @@ func ValidateLogEntity(t *testing.T, logGroup, logStream string, end *time.Time,
 		t.Fatalf("application log group used for entity validation doesn't exist: %s", logGroup)
 	}
 
-	begin := end.Add(-2 * time.Minute)
+	begin := end.Add(-15 * time.Minute)
 	log.Printf("Start time is %s and end time is %s", begin.String(), end.String())
 
 	result, err := awsservice.GetLogQueryResults(logGroup, begin.Unix(), end.Unix(), queryString)
