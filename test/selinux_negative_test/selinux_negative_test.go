@@ -6,7 +6,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/stretchr/testify/require"
-	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -28,33 +27,22 @@ func TestSelinuxNegativeTest(t *testing.T) {
 
 func startAgent(t *testing.T) (string, string) {
 	randomNumber := rand.Int63()
-	log.Printf("Generated random number: %d", randomNumber)
-
 	logGroupName := fmt.Sprintf("/aws/cloudwatch/shadow-%d", randomNumber)
 	workingLogGroupName := fmt.Sprintf("/aws/cloudwatch/working-%d", randomNumber)
-	log.Printf("Log group names: logGroupName=%s, workingLogGroupName=%s", logGroupName, workingLogGroupName)
-
 	configFilePath := filepath.Join("agent_configs", "config.json")
-	log.Printf("Config file path: %s", configFilePath)
 
 	originalConfigContent, err := os.ReadFile(configFilePath)
 	require.NoError(t, err)
-	log.Printf("Original config content:\n%s", string(originalConfigContent))
 
 	updatedConfigContent := strings.ReplaceAll(string(originalConfigContent), "${LOG_GROUP_NAME}", logGroupName)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${WORKING_LOG_GROUP}", workingLogGroupName)
-	log.Printf("Updated config content:\n%s", updatedConfigContent)
 
 	err = os.WriteFile(configFilePath, []byte(updatedConfigContent), os.ModePerm)
 	require.NoError(t, err)
-	log.Println("Updated config file written successfully")
-
 	require.NoError(t, common.StartAgent(configFilePath, true, false))
-	log.Println("Agent started successfully")
 
 	err = os.WriteFile(configFilePath, originalConfigContent, os.ModePerm)
 	require.NoError(t, err)
-	log.Println("Restored original config file")
 
 	return logGroupName, workingLogGroupName
 }
