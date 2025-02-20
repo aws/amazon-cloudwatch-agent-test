@@ -44,7 +44,6 @@ func startAgent(t *testing.T) (string, string) {
 	require.NoError(t, err)
 
 	require.NoError(t, common.StartAgent(configFilePath, true, false))
-	time.Sleep(10 * time.Second) // Wait for the agent to start properly
 
 	err = os.WriteFile(configFilePath, originalConfigContent, os.ModePerm)
 	require.NoError(t, err)
