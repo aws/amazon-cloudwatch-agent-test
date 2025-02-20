@@ -27,36 +27,32 @@ func TestSelinuxNegativeTest(t *testing.T) {
 
 func startAgent(t *testing.T) (string, string) {
 	// Generate random large numbers
-	randomNumber := rand.Int63() // Generates a random int64 number
+	randomNumber := rand.Int63()
 
-	logGroupName := fmt.Sprintf("/aws/cloudwatch/shadow-%d", randomNumber)         // Log group that shouldn't work
-	workingLogGroupName := fmt.Sprintf("/aws/cloudwatch/working-%d", randomNumber) // Log group that should work
+	logGroupName := fmt.Sprintf("/aws/cloudwatch/shadow-%d", randomNumber)
+	workingLogGroupName := fmt.Sprintf("/aws/cloudwatch/working-%d", randomNumber)
 
 	configFilePath := filepath.Join("agent_configs", "config.json")
-	configContent, err := os.ReadFile(configFilePath)
+
+	// Read original config and create a backup
+	originalConfigContent, err := os.ReadFile(configFilePath)
 	require.NoError(t, err)
 
-	updatedConfigContent := string(configContent)
+	updatedConfigContent := string(originalConfigContent)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${LOG_GROUP_NAME}", logGroupName)
 	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${WORKING_LOG_GROUP}", workingLogGroupName)
 
-	// Print updated JSON before writing
-	fmt.Println("Updated Config Content (Before Writing to File):")
-	fmt.Println(updatedConfigContent)
-
+	// Write updated config
 	err = os.WriteFile(configFilePath, []byte(updatedConfigContent), 0777)
 	require.NoError(t, err)
 
-	// Print the final content to verify correctness
-	finalConfigContent, err := os.ReadFile(configFilePath)
-	require.NoError(t, err)
-
-	fmt.Println("Final Config Content in agent_configs/config.json:")
-	fmt.Println(string(finalConfigContent))
-
-	// Start the agent using the updated config file
+	// Start the agent
 	require.NoError(t, common.StartAgent(configFilePath, true, false))
 	time.Sleep(10 * time.Second) // Wait for the agent to start properly
+
+	// Restore the original config file after the test
+	err = os.WriteFile(configFilePath, originalConfigContent, 0777)
+	require.NoError(t, err)
 
 	return logGroupName, workingLogGroupName
 }
