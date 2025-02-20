@@ -91,20 +91,13 @@ resource "null_resource" "integration_test_run" {
 
       # SELinux test setup (if enabled)
         var.is_selinux_test ? [
-        "sudo setenforce 1",
         "echo Running SELinux test setup...",
-        "sudo rm -r amazon-cloudwatch-agent-sepolicy",
+        "sudo setenforce 1",
+        "sudo yum install selinux-policy-devel -y",
         "git clone --branch ${var.selinux_branch} https://github.com/Paramadon/amazon-cloudwatch-agent-sepolicy.git",
-        "echo Below is the branch name for selinux",
         "cd amazon-cloudwatch-agent-sepolicy",
-        "git reset --hard",
-        "git pull",
         "chmod +x ./amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh",
-        "git branch",
-        "cat amazon_cloudwatch_agent.te",
-        "cd ..",
-
       ] : [
         "echo SELinux test not enabled"
       ],
@@ -122,11 +115,7 @@ resource "null_resource" "integration_test_run" {
         var.pre_test_setup,
 
         # Integration test execution
-        "echo below is the either Permissive/Enforcing",
-        "getenforce",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v",
-        "Below is the ps efz command",
-        "ps -efZ | grep amazon-cloudwatch-agent"
       ],
     )
   }
