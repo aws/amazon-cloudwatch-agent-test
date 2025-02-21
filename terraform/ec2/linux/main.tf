@@ -89,7 +89,7 @@ resource "null_resource" "download_vendor_from_s3" {
       "go mod vendor",         # Sync dependencies from vendor directory
     ]
   }
-  # set to only run in CN region:
+  
   depends_on = [
     null_resource.integration_test_setup
   ]
