@@ -1,31 +1,71 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build !windows
-
 package main
 
 import (
+	"bytes"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
+	"encoding/json"
+	"net/http"
+
+)
+const(
+	owner = "aws"
+	repo ="amazon-cloudwatch-agent"
 )
 
-/*
-We can't use the standard cw agent version for the windows msi due to limitations in the wix tools builder for msi
+type GitTag struct {
+	Name string `json:"ref"`
+}
 
-	msi version is different from the agent original version because of the msi limit Product version must have a major version less than 256,
-	a minor version less than 256, and a build version less than 65536
-*/
-func main() {
-	log.Printf("Input %v", os.Args)
-	agentVersion := os.Args[1]
-	replaceFilePath := os.Args[2]
-	msiVersionKey := os.Args[3]
+func getTags() ([]string, error) {
+	// Construct the API URL for getting tags
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/git/refs/tags", owner, repo)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to fetch tags: %s", resp.Status)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var tags []GitTag
+	err = json.Unmarshal(body, &tags)
+	if err != nil {
+		return nil, err
+	}
+
+	var tagIds []string
+	for _, tag := range tags {
+		tagName := strings.Split(tag.Name,"/v")
+		// Remove the 'v' prefix
+		tagIds = append(tagIds, tagName[len(tagName)-1])
+	}
+
+	return tagIds, nil
+}
+// Converts agent version to MSI-compatible version.
+func agentVersionToMsi(agentVersion string) string {
 	split := strings.Split(agentVersion, ".")
+	if len(split) < 3 {
+		log.Fatalf("Invalid agent version format: %s", agentVersion)
+	}
+
 	major := split[0]
 	minor, err := strconv.ParseInt(split[1], 10, 64)
 	if err != nil {
@@ -38,14 +78,76 @@ func main() {
 	}
 	patch = patch % 65536
 	msiVersion := major + "." + strconv.FormatInt(minor, 10) + "." + strconv.FormatInt(patch, 10)
-	log.Printf("Msi version is %v", msiVersion)
-	replaceValue(replaceFilePath, msiVersionKey, msiVersion)
+	return msiVersion
 }
 
-func replaceValue(pathIn string, key string, value string) {
-	out, err := exec.Command("bash", "-c", "sed -i 's/"+key+"/'"+value+"'/g' "+pathIn).Output()
+// Converts MSI-compatible version back to the original agent version.
+func msiToAgentVersion(msiVersion string) string {
+	allTags, _:=getTags()
 
+	foundMsiVersion := "NOT FOUND"
+	for _ , tag := range allTags{
+		foundMsiVersion = agentVersionToMsi(tag)
+		if foundMsiVersion == msiVersion{
+			return tag
+		}
+
+	}
+	return foundMsiVersion
+}
+
+// Replaces a key in a file with a given value.
+func replaceValue(filePath, key, value string) {
+	fmt.Printf("Replacing %s with %s in %s file\n", key,value, filePath)
+	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Fatalf("Failed to read file: %v", err)
+	}
+
+	newContent := bytes.Replace(content, []byte(key), []byte(value), -1)
+
+	err = ioutil.WriteFile(filePath, newContent, 0644)
+	if err != nil {
+		log.Fatalf("Failed to write file: %v", err)
+	}
+}
+
+func main() {
+	// Define flags
+	reverseFlag := flag.Bool("reverse", false, "Convert MSI version back to agent version")
+	flag.Parse()
+
+	// Get positional arguments
+	args := flag.Args()
+
+	if len(args) < 1 {
+		log.Fatalf("Usage: %s <agentVersion/MSIVersion> [replaceFilePath] [msiVersionKey] [--reverse]", os.Args[0])
+	}
+
+	version := args[0]
+	var replaceFilePath, msiVersionKey string
+
+	if len(args) > 1 {
+		replaceFilePath = args[1]
+	}
+	if len(args) > 2 {
+		msiVersionKey = args[2]
+	}
+
+	// Check if we are reversing the conversion
+	var targetVersion string
+	if *reverseFlag {
+		agentVersion := msiToAgentVersion(version)
+		fmt.Println(agentVersion)
+		targetVersion = agentVersion
+
+	} else {
+		msiVersion := agentVersionToMsi(version)
+		fmt.Println(msiVersion)
+		targetVersion = msiVersion
+	}
+
+	if replaceFilePath != "" && msiVersionKey != "" {
+		replaceValue(replaceFilePath, msiVersionKey, targetVersion)
 	}
 }
