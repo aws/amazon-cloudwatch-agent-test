@@ -5,16 +5,15 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
-	"encoding/json"
-	"net/http"
-
 )
 const(
 	owner = "aws"
