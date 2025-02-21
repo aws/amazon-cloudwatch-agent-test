@@ -1,15 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-data "aws_ami" "latest_cwa_selinux" {
-  most_recent = true
-  owners      = ["self", "amazon"]  # Adjust this based on your AMI ownership needs
 
-  filter {
-    name   = "name"
-    values = ["CWA_SELinux_AL2023*"]
-  }
-}
 
 module "linux_common" {
   source = "../common/linux"
@@ -17,7 +9,7 @@ module "linux_common" {
   region            = var.region
   ec2_instance_type = var.ec2_instance_type
   ssh_key_name      = var.ssh_key_name
-  ami               = data.aws_ami.latest_cwa_selinux.id
+  ami               = var.ami
   ssh_key_value     = var.ssh_key_value
   user              = var.user
   arc               = var.arc
@@ -97,6 +89,7 @@ resource "null_resource" "integration_test_run" {
     inline = concat(
       [
         "echo Preparing environment...",
+        "sudo setenforce 0"
       ],
 
       # SELinux test setup (if enabled)
