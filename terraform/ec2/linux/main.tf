@@ -69,6 +69,28 @@ resource "null_resource" "integration_test_setup" {
   ]
 }
 
+# Download vendor Directory from S3 for CN region tests
+resource "null_resource" "download_vendor_from_s3" {
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = module.linux_common.private_key_content
+    host        = module.linux_common.cwagent_public_ip
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "echo Downloading vendor directory from S3...",
+      "aws s3 sync s3://${var.s3_integration_bucket}/vendor /home/${var.user}/vendor --delete",
+      "cd /home/${var.user}/amazon-cloudwatch-agent-test",
+      "export GO111MODULE=on", # Ensure Go uses modules
+      "go mod tidy",           # Clean up dependencies
+      "go mod vendor",         # Sync dependencies from vendor directory
+    ]
+  }
+  # set to only run in CN region:
+  depends_on = startswith(var.region, "cn-") ? [null_resource.integration_test_setup] : []
+}
+
 module "amp" {
   count           = length(regexall("/amp", var.test_dir)) > 0 ? 1 : 0
   source          = "terraform-aws-modules/managed-service-prometheus/aws"
@@ -83,7 +105,7 @@ resource "null_resource" "integration_test_run" {
     host        = module.linux_common.cwagent_public_ip
   }
 
-  #Run sanity check and integration test
+  # Run sanity check and integration test
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
@@ -102,6 +124,7 @@ resource "null_resource" "integration_test_run" {
 
   depends_on = [
     null_resource.integration_test_setup,
+    null_resource.download_vendor_from_s3,
     module.reboot_common,
   ]
 }
