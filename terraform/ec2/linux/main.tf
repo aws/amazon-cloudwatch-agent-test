@@ -70,6 +70,9 @@ resource "null_resource" "integration_test_setup" {
 
 # Download vendor Directory from S3 for CN region tests
 resource "null_resource" "download_vendor_from_s3" {
+  # set to only run in CN region
+  count = startswith(var.region, "cn-") ? 1 : 0
+
   connection {
     type        = "ssh"
     user        = var.user
@@ -87,7 +90,9 @@ resource "null_resource" "download_vendor_from_s3" {
     ]
   }
   # set to only run in CN region:
-  depends_on = startswith(var.region, "cn-") ? [null_resource.integration_test_setup] : []
+  depends_on = [
+    null_resource.integration_test_setup
+  ]
 }
 
 module "amp" {
