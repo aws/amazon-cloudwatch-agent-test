@@ -82,14 +82,14 @@ resource "null_resource" "download_vendor_from_s3" {
   provisioner "remote-exec" {
     inline = [
       "echo Downloading vendor directory from S3...",
-      "aws s3 sync s3://${var.s3_integration_bucket}/vendor /home/${var.user}/vendor --delete",
-      "cd /home/${var.user}/amazon-cloudwatch-agent-test",
-      "export GO111MODULE=on", # Ensure Go uses modules
-      "go mod tidy",           # Clean up dependencies
-      "go mod vendor",         # Sync dependencies from vendor directory
+      "aws s3 sync s3://${var.s3_bucket}/vendor /vendor --delete",
+      "cd amazon-cloudwatch-agent-test",
+      "export GO111MODULE=on",
+      "export GOFLAGS=-mod=vendor",
+      "echo 'Vendor directory copied from S3'"
     ]
   }
-  
+
   depends_on = [
     null_resource.integration_test_setup
   ]
