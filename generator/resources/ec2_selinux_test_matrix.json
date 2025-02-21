@@ -15,7 +15,7 @@
     "username": "ec2-user",
     "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
-    "ami": "CWA_SELinux_AL2023v2*",
+    "ami": "CloudwatchSelinuxAL2023*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
