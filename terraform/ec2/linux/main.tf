@@ -55,7 +55,6 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
       "echo clone and install agent",
-      "if [[ '${var.region}' == cn-* ]]; then echo 'setting up go proxy for China tests' && export GOPROXY=https://goproxy.cn,direct && export GO111MODULE=on; fi",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${local.binary_uri} .",
@@ -109,7 +108,6 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
-      "if [[ '${var.region}' == cn-* ]]; then echo 'setting up go proxy for China tests' && export GOPROXY=https://goproxy.cn,direct && export GO111MODULE=on; fi",
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
