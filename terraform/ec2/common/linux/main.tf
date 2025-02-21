@@ -136,6 +136,6 @@ data "aws_ami" "latest" {
 
   filter {
     name   = "name"
-    values = ["CWA_SELinux_AL2023v2"]
+    values = [var.ami]
   }
 }
