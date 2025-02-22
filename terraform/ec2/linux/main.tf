@@ -55,9 +55,9 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
       "echo clone and install agent",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "for i in {1..5}; do git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} && break || { echo 'Git clone failed, retrying...'; sleep 10; }; done",
       "cd amazon-cloudwatch-agent-test",
-      "aws s3 cp s3://${local.binary_uri} .",
+      "for i in {1..5}; do aws s3 cp s3://${local.binary_uri} . && break || { echo 'S3 download failed, retrying...'; sleep 10; }; done",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
     ]
@@ -83,7 +83,7 @@ resource "null_resource" "download_vendor_from_s3" {
     inline = [
       "echo Downloading vendor directory from S3...",
       "cd amazon-cloudwatch-agent-test",
-      "aws s3 sync s3://${var.s3_bucket}/integration-test/vendor ./vendor --delete",
+      "aws s3 sync s3://${var.s3_bucket}/integration-test/vendor ./vendor --delete --quiet",
       "ls -la ./vendor",
       "export GO111MODULE=on",
       "export GOFLAGS=-mod=vendor",
