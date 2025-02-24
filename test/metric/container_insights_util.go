@@ -230,10 +230,10 @@ func ValidateLogs(env *environment.MetaData) status.TestResult {
 						return "", fmt.Errorf("failed to unmarshal log file: %w", innerErr)
 					}
 
-					//log.Printf("eksClusterType is: %s", eksClusterType.Type)
 					jsonSchema, ok := eks_resources.EksClusterValidationMap[eksClusterType.Type]
 					if !ok {
-						return "", errors.New("invalid cluster type provided")
+						log.Println("invalid log type found for message", message)
+						return "", errors.New("invalid log type found")
 					}
 					return jsonSchema, nil
 				}),
