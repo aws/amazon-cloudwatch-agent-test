@@ -55,9 +55,9 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
       "echo clone and install agent",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "for i in {1..5}; do git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} && break || { echo 'Git clone failed, retrying...'; sleep 10; }; done",
       "cd amazon-cloudwatch-agent-test",
-      "aws s3 cp s3://${local.binary_uri} .",
+      "for i in {1..5}; do aws s3 cp s3://${local.binary_uri} . && break || { echo 'S3 download failed, retrying...'; sleep 10; }; done",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
     ]
@@ -65,6 +65,33 @@ resource "null_resource" "integration_test_setup" {
 
   depends_on = [
     module.linux_common,
+  ]
+}
+
+# Download vendor Directory from S3 for CN region tests
+resource "null_resource" "download_vendor_from_s3" {
+  # set to only run in CN region
+  count = startswith(var.region, "cn-") ? 1 : 0
+
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = module.linux_common.private_key_content
+    host        = module.linux_common.cwagent_public_ip
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "echo Downloading vendor directory from S3...",
+      "cd amazon-cloudwatch-agent-test",
+      "aws s3 sync s3://${var.s3_bucket}/integration-test/vendor/${var.cwa_github_sha} ./vendor --delete --quiet",
+      "export GO111MODULE=on",
+      "export GOFLAGS=-mod=vendor",
+      "echo 'Vendor directory copied from S3'"
+    ]
+  }
+
+  depends_on = [
+    null_resource.integration_test_setup
   ]
 }
 
@@ -82,7 +109,7 @@ resource "null_resource" "integration_test_run" {
     host        = module.linux_common.cwagent_public_ip
   }
 
-  #Run sanity check and integration test
+  # Run sanity check and integration test
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
@@ -100,6 +127,7 @@ resource "null_resource" "integration_test_run" {
 
   depends_on = [
     null_resource.integration_test_setup,
+    null_resource.download_vendor_from_s3,
     module.reboot_common,
   ]
 }
