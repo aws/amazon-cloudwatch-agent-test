@@ -83,7 +83,7 @@ resource "null_resource" "download_vendor_from_s3" {
     inline = [
       "echo Downloading vendor directory from S3...",
       "cd amazon-cloudwatch-agent-test",
-      "aws s3 sync s3://${var.s3_bucket}/integration-test/vendor ./vendor --delete --quiet",
+      "aws s3 sync s3://${var.s3_bucket}/integration-test/vendor/${var.cwa_github_sha} ./vendor --delete --quiet",
       "export GO111MODULE=on",
       "export GOFLAGS=-mod=vendor",
       "echo 'Vendor directory copied from S3'"
