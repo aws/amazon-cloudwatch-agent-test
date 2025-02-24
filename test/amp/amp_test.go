@@ -154,8 +154,6 @@ type AmpTestRunner struct {
 }
 
 func (t AmpTestRunner) Validate() status.TestGroupResult {
-	// wait for agent to push some metrics
-	time.Sleep(30 * time.Second)
 
 	if t.source == SourcePrometheus {
 		return t.validatePrometheusMetrics()
@@ -192,13 +190,13 @@ func (t *AmpTestRunner) validatePrometheusMetrics() status.TestGroupResult {
 	dims := []types.Dimension{}
 
 	standardMetrics, histogramMetrics := t.getPrometheusMetrics()
-	testResults := make([]status.TestResult, len(standardMetrics)+len(histogramMetrics))
-	for i, metricName := range standardMetrics {
-		testResults[i] = t.validateStandardMetric(metricName, dims, false)
+	testResults := make([]status.TestResult, 0, len(standardMetrics)+len(histogramMetrics))
+	for _, metricName := range standardMetrics {
+		testResults = append(testResults, t.validateStandardMetric(metricName, dims, false))
 	}
 
-	for i, metricName := range histogramMetrics {
-		testResults[i+len(standardMetrics)] = t.validateHistogramMetric(metricName)
+	for _, metricName := range histogramMetrics {
+		testResults = append(testResults, t.validateHistogramMetric(metricName))
 	}
 
 	return status.TestGroupResult{
@@ -258,7 +256,7 @@ func (t *AmpTestRunner) validateMetric(queryTemplate string, metricName string, 
 	foundAppendDimMetric := true
 	metricVals := []float64{}
 	for _, dataResult := range responseJSON.Data.Result {
-		if len(dataResult.Value) < 1 {
+		if len(dataResult.Value) == 0 {
 			continue
 		}
 		// metric value is returned as a tuple of timestamp and value (ec. '"value": [1721843955, "26"]')
@@ -285,7 +283,7 @@ func (t *AmpTestRunner) validateMetric(queryTemplate string, metricName string, 
 			return testResult
 		}
 	} else {
-		if len(metricVals) < 1 {
+		if len(metricVals) == 0 {
 			log.Println("failed with fewer metric values than expected")
 			return testResult
 		}
