@@ -194,6 +194,7 @@ func GenerateLogConfig(numberMonitoredLogs int, filePath string) error {
 		return err
 	}
 
+	log.Println("Inside of GeneratedLogConfig outputting final config \n", finalConfig)
 	err = os.WriteFile(filePath, finalConfig, 0644)
 	if err != nil {
 		return err
