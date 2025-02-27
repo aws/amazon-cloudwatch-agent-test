@@ -90,10 +90,12 @@ resource "null_resource" "download_test_repo_and_vendor_from_s3" {
   provisioner "remote-exec" {
     inline = [
       "echo Downloading cloned test repo from S3...",
-      "aws s3 sync s3://${var.s3_bucket}/integration-test/test-repo/${var.cwa_github_sha} ./amazon-cloudwatch-agent-test --delete --quiet",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/test-repo/${var.cwa_github_sha}.tar.gz ./amazon-cloudwatch-agent-test.tar.gz --quiet",
+      "tar -xzf amazon-cloudwatch-agent-test.tar.gz",
       "cd amazon-cloudwatch-agent-test",
       "echo Downloading vendor directory from S3...",
-      "aws s3 sync s3://${var.s3_bucket}/integration-test/vendor/${var.cwa_github_sha} ./vendor --delete --quiet",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/vendor/${var.cwa_github_sha}.tar.gz ./vendor.tar.gz --quiet",
+      "tar -xzf vendor.tar.gz"
       "export GO111MODULE=on",
       "export GOFLAGS=-mod=vendor",
       "echo 'Vendor directory copied from S3'"
