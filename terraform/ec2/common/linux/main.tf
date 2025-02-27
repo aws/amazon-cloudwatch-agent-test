@@ -55,15 +55,23 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids               = [module.basic_components.security_group]
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
+
+  # Specify the root volume size
+  root_block_device {
+    volume_size = 50  # 50 GB
+    volume_type = "gp2"
+    delete_on_termination = true
+  }
+
   # Provide a user_data script to disable SSH password authentication
   user_data = <<-EOT
     #!/bin/bash
     # Disable password authentication for SSH
     sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-    
+
     # Disable challenge-response authentication for SSH
     sudo sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
-    
+
     # Disable keyboard-interactive authentication for SSH
     sudo sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
 
