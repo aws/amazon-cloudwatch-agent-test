@@ -95,7 +95,7 @@ resource "null_resource" "download_test_repo_and_vendor_from_s3" {
       "cd amazon-cloudwatch-agent-test",
       "echo Downloading vendor directory from S3...",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/vendor/${var.cwa_github_sha}.tar.gz ./vendor.tar.gz --quiet",
-      "tar -xzf vendor.tar.gz"
+      "tar -xzf vendor.tar.gz",
       "export GO111MODULE=on",
       "export GOFLAGS=-mod=vendor",
       "echo 'Vendor directory copied from S3'"
