@@ -100,6 +100,8 @@ resource "null_resource" "integration_test_run" {
         "sudo setenforce 1",
         "echo below is either Permissive/Enforcing",
         "sudo getenforce",
+        "pwd",
+        "ls",
         "cd ../selinux_tmp_dir",
         "cat amazon_cloudwatch_agent.te",
         "chmod +x ./amazon_cloudwatch_agent.sh",
