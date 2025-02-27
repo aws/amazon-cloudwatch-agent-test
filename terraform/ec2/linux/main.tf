@@ -137,7 +137,7 @@ resource "null_resource" "integration_test_run" {
 
   depends_on = [
     null_resource.integration_test_setup,
-    null_resource.download_vendor_from_s3,
+    null_resource.download_test_repo_and_vendor_from_s3,
     module.reboot_common,
   ]
 }
