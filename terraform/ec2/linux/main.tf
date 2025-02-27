@@ -55,6 +55,13 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
       "echo clone and install agent",
+      "if [ ! -d amazon-cloudwatch-agent-test ]; then",
+      "echo 'Test repo not found, cloning...';",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "else",
+      "echo 'Test repo already exists, skipping clone.';",
+      "fi",
+
       "for i in {1..5}; do git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} && break || { echo 'Git clone failed, retrying...'; sleep 10; }; done",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${local.binary_uri} .",
@@ -65,11 +72,12 @@ resource "null_resource" "integration_test_setup" {
 
   depends_on = [
     module.linux_common,
+    null_resource.download_test_repo_and_vendor_from_s3,
   ]
 }
 
-# Download vendor Directory from S3 for CN region tests
-resource "null_resource" "download_vendor_from_s3" {
+# Download vendor directory and clone test repo from S3 for CN region tests
+resource "null_resource" "download_test_repo_and_vendor_from_s3" {
   # set to only run in CN region
   count = startswith(var.region, "cn-") ? 1 : 0
 
@@ -81,8 +89,10 @@ resource "null_resource" "download_vendor_from_s3" {
   }
   provisioner "remote-exec" {
     inline = [
-      "echo Downloading vendor directory from S3...",
+      "echo Downloading cloned test repo from S3..."
+      "aws s3 sync s3://${var.s3_bucket}/integration-test/test-repo/${var.cwa_github_sha} ./amazon-cloudwatch-agent-test --delete --quiet",
       "cd amazon-cloudwatch-agent-test",
+      "echo Downloading vendor directory from S3...",
       "aws s3 sync s3://${var.s3_bucket}/integration-test/vendor/${var.cwa_github_sha} ./vendor --delete --quiet",
       "export GO111MODULE=on",
       "export GOFLAGS=-mod=vendor",
@@ -91,7 +101,7 @@ resource "null_resource" "download_vendor_from_s3" {
   }
 
   depends_on = [
-    null_resource.integration_test_setup
+     module.linux_common,
   ]
 }
 
