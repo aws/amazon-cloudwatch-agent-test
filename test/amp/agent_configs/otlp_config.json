@@ -1,0 +1,31 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15,
+    "run_as_user": "root",
+    "debug": true
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "amp": {
+        "workspace_id": "{workspace_id}"
+      }
+    },
+    "metrics_collected": {
+      "otlp": {
+        "http_endpoint": "0.0.0.0:1234"
+      }
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "aggregation_dimensions": [
+      [
+        "InstanceId",
+        "InstanceType"
+      ]
+    ]
+  }
+}
