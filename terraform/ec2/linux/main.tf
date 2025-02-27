@@ -61,8 +61,6 @@ resource "null_resource" "integration_test_setup" {
       "else",
       "echo 'Test repo already exists, skipping clone.';",
       "fi",
-
-      "for i in {1..5}; do git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} && break || { echo 'Git clone failed, retrying...'; sleep 10; }; done",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
