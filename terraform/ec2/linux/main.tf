@@ -57,7 +57,7 @@ resource "null_resource" "integration_test_setup" {
       "echo clone and install agent",
       "for i in {1..5}; do git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} && break || { echo 'Git clone failed, retrying...'; sleep 10; }; done",
       "cd amazon-cloudwatch-agent-test",
-      "for i in {1..5}; do aws s3 cp s3://${local.binary_uri} . && break || { echo 'S3 download failed, retrying...'; sleep 10; }; done",
+      "aws s3 cp s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
     ]
