@@ -53,10 +53,10 @@ resource "aws_instance" "integration-test" {
       "cloud-init status --wait",
       "echo clone the agent and start the localstack",
       "if [ ! -d amazon-cloudwatch-agent-test ]; then",
-      "echo 'Test repo not found, cloning...';",
+      "echo 'Test repo not found, cloning...'",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "else",
-      "echo 'Test repo already exists, skipping clone.';",
+      "echo 'Test repo already exists, skipping clone.'",
       "fi",
       "cd amazon-cloudwatch-agent-test",
       "git reset --hard ${var.cwa_test_github_sha}",
@@ -87,7 +87,7 @@ resource "aws_instance" "integration-test" {
   ]
 }
 
-# Download test repo from S3 for CN startlocalstack step
+# Download test repo from S3 for StartLocalStackCN step
 resource "aws_instance" "download_test_repo_from_s3" {
   # set to only run in CN region
   count = startswith(var.region, "cn-") ? 1 : 0

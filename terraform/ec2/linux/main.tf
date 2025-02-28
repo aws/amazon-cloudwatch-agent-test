@@ -56,10 +56,10 @@ resource "null_resource" "integration_test_setup" {
       "sudo cloud-init status --wait",
       "echo clone ${var.github_test_repo} branch ${var.github_test_repo_branch} and install agent",
       "if [ ! -d amazon-cloudwatch-agent-test ]; then",
-      "echo 'Test repo not found, cloning...';",
+      "echo 'Test repo not found, cloning...'",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q",
       "else",
-      "echo 'Test repo already exists, skipping clone.';",
+      "echo 'Test repo already exists, skipping clone'",
       "fi",
       "cd amazon-cloudwatch-agent-test",
       "git rev-parse --short HEAD",
@@ -75,7 +75,7 @@ resource "null_resource" "integration_test_setup" {
   ]
 }
 
-# Download vendor directory and clone test repo from S3 for CN region tests
+# Download vendor directory and cloned test repo from S3 for CN region tests
 resource "null_resource" "download_test_repo_and_vendor_from_s3" {
   # set to only run in CN region
   count = startswith(var.region, "cn-") ? 1 : 0
