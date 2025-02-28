@@ -49,27 +49,37 @@ resource "aws_instance" "integration-test" {
   }
 
   provisioner "remote-exec" {
-    inline = [
-      "cloud-init status --wait",
-      "echo clone the agent and start the localstack",
-      "if [ ! -d amazon-cloudwatch-agent-test ]; then",
-      "echo 'Test repo not found, cloning...'",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "else",
-      "echo 'Test repo already exists, skipping clone.'",
-      "fi",
-      "cd amazon-cloudwatch-agent-test",
-      "git reset --hard ${var.cwa_test_github_sha}",
-      "echo set up ssl pem for localstack, then start localstack",
-      "cd ~/amazon-cloudwatch-agent-test/localstack/ls_tmp",
-      "openssl req -new -x509 -newkey rsa:2048 -sha256 -nodes -out snakeoil.pem -keyout snakeoil.key -config snakeoil.conf",
-      "cat snakeoil.key snakeoil.pem > server.test.pem",
-      "cat snakeoil.key > server.test.pem.key",
-      "cat snakeoil.pem > server.test.pem.crt",
-      "cd ~/amazon-cloudwatch-agent-test/localstack",
-      "docker-compose up -d --force-recreate",
-      "aws s3 cp ls_tmp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} --recursive"
-    ]
+    inline = concat(
+      # Run these commands first in the CN regions (downloads test repo from S3 for StartLocalStackCN step)
+      startswith(var.region, "cn-") ?
+      [
+        "echo Downloading cloned test repo from S3...",
+        "aws s3 cp s3://${var.s3_bucket}/integration-test/cloudwatch-agent-test-repo/${var.cwa_github_sha}.tar.gz ./amazon-cloudwatch-agent-test.tar.gz --quiet",
+        "mkdir amazon-cloudwatch-agent-test",
+        "tar -xzf amazon-cloudwatch-agent-test.tar.gz -C amazon-cloudwatch-agent-test",
+      ] : [],
+      # Common steps for all regions
+      [
+        "cloud-init status --wait",
+        "echo clone the agent and start the localstack",
+        "if [ ! -d amazon-cloudwatch-agent-test ]; then",
+        "echo 'Test repo not found, cloning...'",
+        "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+        "else",
+        "echo 'Test repo already exists, skipping clone.'",
+        "fi",
+        "cd amazon-cloudwatch-agent-test",
+        "git reset --hard ${var.cwa_test_github_sha}",
+        "echo set up ssl pem for localstack, then start localstack",
+        "cd ~/amazon-cloudwatch-agent-test/localstack/ls_tmp",
+        "openssl req -new -x509 -newkey rsa:2048 -sha256 -nodes -out snakeoil.pem -keyout snakeoil.key -config snakeoil.conf",
+        "cat snakeoil.key snakeoil.pem > server.test.pem",
+        "cat snakeoil.key > server.test.pem.key",
+        "cat snakeoil.pem > server.test.pem.crt",
+        "cd ~/amazon-cloudwatch-agent-test/localstack",
+        "docker-compose up -d --force-recreate",
+        "aws s3 cp ls_tmp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} --recursive"
+    ])
     connection {
       type        = "ssh"
       user        = "ec2-user"
@@ -81,46 +91,6 @@ resource "aws_instance" "integration-test" {
   tags = {
     Name = "LocalStackIntegrationTestInstance"
   }
-
-  depends_on = [
-    aws_instance.download_test_repo_from_s3,
-  ]
-}
-
-# Download test repo from S3 for StartLocalStackCN step
-resource "aws_instance" "download_test_repo_from_s3" {
-  # set to only run in CN region
-  count = startswith(var.region, "cn-") ? 1 : 0
-
-  ami                    = data.aws_ami.latest.id
-  instance_type          = var.ec2_instance_type
-  key_name               = local.ssh_key_name
-  iam_instance_profile   = module.basic_components.instance_profile
-  vpc_security_group_ids = [module.basic_components.security_group]
-
-  metadata_options {
-    http_endpoint = "enabled"
-    http_tokens   = "required"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "echo Downloading cloned test repo from S3...",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/cloudwatch-agent-test-repo/${var.cwa_github_sha}.tar.gz ./amazon-cloudwatch-agent-test.tar.gz --quiet",
-      "mkdir amazon-cloudwatch-agent-test",
-      "tar -xzf amazon-cloudwatch-agent-test.tar.gz -C amazon-cloudwatch-agent-test",
-    ]
-    connection {
-      type        = "ssh"
-      user        = "ec2-user"
-      private_key = local.private_key_content
-      host        = self.public_dns
-    }
-  }
-
-  depends_on = [
-    module.basic_components,
-  ]
 }
 
 data "aws_ami" "latest" {
