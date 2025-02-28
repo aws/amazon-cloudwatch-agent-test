@@ -88,7 +88,7 @@ resource "null_resource" "download_test_repo_and_vendor_from_s3" {
   provisioner "remote-exec" {
     inline = [
       "echo Downloading cloned test repo from S3...",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/test-repo/${var.cwa_github_sha}.tar.gz ./amazon-cloudwatch-agent-test.tar.gz --quiet",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/cloudwatch-agent-repo/${var.cwa_github_sha}.tar.gz ./amazon-cloudwatch-agent-test.tar.gz --quiet",
       "tar -xzf amazon-cloudwatch-agent-test.tar.gz",
       "cd amazon-cloudwatch-agent-test",
       "echo Downloading vendor directory from S3...",
