@@ -99,12 +99,6 @@ resource "null_resource" "download_test_repo_from_s3" {
       "mkdir amazon-cloudwatch-agent-test",
       "tar -xzf amazon-cloudwatch-agent-test.tar.gz -C amazon-cloudwatch-agent-test",
     ]
-    connection {
-      type        = "ssh"
-      user        = "ec2-user"
-      private_key = local.private_key_content
-      host        = self.public_dns
-    }
   }
 
   depends_on = [
