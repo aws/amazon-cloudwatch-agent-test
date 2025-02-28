@@ -2,15 +2,13 @@
   "agent": {
     "metrics_collection_interval": 15,
     "run_as_user": "root",
-    "debug": true,
-    "logfile": ""
+    "debug": true
   },
   "metrics": {
     "metrics_destinations": {
       "amp": {
         "workspace_id": "{workspace_id}"
-      },
-      "cloudwatch": {}
+      }
     },
     "metrics_collected": {
       "cpu": {

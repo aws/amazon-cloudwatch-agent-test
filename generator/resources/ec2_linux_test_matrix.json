@@ -110,18 +110,6 @@
     "family": "linux"
   },
   {
-    "os": "sles-12",
-    "username": "ec2-user",
-    "instanceType":"t3a.medium",
-    "installAgentCommand": "go run ./install/install_agent.go rpm",
-    "ami": "cloudwatch-agent-integration-test-sles-12*",
-    "caCertPath": "/etc/ssl/ca-bundle.pem",
-    "arc": "amd64",
-    "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux",
-    "excludedTests": "CollectD"
-  },
-  {
     "os": "sles-15",
     "username": "ec2-user",
     "instanceType":"t3a.medium",
