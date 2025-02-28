@@ -88,9 +88,20 @@ resource "aws_instance" "integration-test" {
 }
 
 # Download test repo from S3 for CN startlocalstack step
-resource "null_resource" "download_test_repo_from_s3" {
+resource "aws_instance" "download_test_repo_from_s3" {
   # set to only run in CN region
   count = startswith(var.region, "cn-") ? 1 : 0
+
+  ami                    = data.aws_ami.latest.id
+  instance_type          = var.ec2_instance_type
+  key_name               = local.ssh_key_name
+  iam_instance_profile   = module.basic_components.instance_profile
+  vpc_security_group_ids = [module.basic_components.security_group]
+
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
 
   provisioner "remote-exec" {
     inline = [
@@ -99,13 +110,18 @@ resource "null_resource" "download_test_repo_from_s3" {
       "mkdir amazon-cloudwatch-agent-test",
       "tar -xzf amazon-cloudwatch-agent-test.tar.gz -C amazon-cloudwatch-agent-test",
     ]
+    connection {
+      type        = "ssh"
+      user        = "ec2-user"
+      private_key = local.private_key_content
+      host        = self.public_dns
+    }
   }
 
   depends_on = [
     module.basic_components,
   ]
 }
-
 
 data "aws_ami" "latest" {
   most_recent = true
