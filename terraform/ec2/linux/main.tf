@@ -89,6 +89,7 @@ resource "null_resource" "download_test_repo_and_vendor_from_s3" {
     inline = [
       "echo Downloading cloned test repo from S3...",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/cloudwatch-agent-test-repo/${var.cwa_github_sha}.tar.gz ./amazon-cloudwatch-agent-test.tar.gz --quiet",
+      "mkdir amazon-cloudwatch-agent-test",
       "tar -xzf amazon-cloudwatch-agent-test.tar.gz -C amazon-cloudwatch-agent-test",
       "cd amazon-cloudwatch-agent-test",
       "echo Downloading vendor directory from S3...",
