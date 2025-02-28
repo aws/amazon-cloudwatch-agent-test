@@ -83,7 +83,7 @@ resource "aws_instance" "integration-test" {
   }
 
   depends_on = [
-    null_resource.download_test_repo_from_s3,
+    aws_instance.download_test_repo_from_s3,
   ]
 }
 
