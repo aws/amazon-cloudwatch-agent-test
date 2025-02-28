@@ -92,13 +92,6 @@ resource "null_resource" "download_test_repo_from_s3" {
   # set to only run in CN region
   count = startswith(var.region, "cn-") ? 1 : 0
 
-  connection {
-    type        = "ssh"
-    user        = "ec2-user"
-    private_key = local.private_key_content
-    host        = self.public_dns
-  }
-
   provisioner "remote-exec" {
     inline = [
       "echo Downloading cloned test repo from S3...",
@@ -106,6 +99,12 @@ resource "null_resource" "download_test_repo_from_s3" {
       "mkdir amazon-cloudwatch-agent-test",
       "tar -xzf amazon-cloudwatch-agent-test.tar.gz -C amazon-cloudwatch-agent-test",
     ]
+    connection {
+      type        = "ssh"
+      user        = "ec2-user"
+      private_key = local.private_key_content
+      host        = self.public_dns
+    }
   }
 
   depends_on = [
