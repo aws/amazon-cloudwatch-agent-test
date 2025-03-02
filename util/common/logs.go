@@ -4,17 +4,25 @@
 package common
 
 import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
 	"time"
 
 	"go.uber.org/multierr"
+
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 )
@@ -209,4 +217,53 @@ func getTempFolder() string {
 		return "C:/Users/Administrator/AppData/Local/Temp"
 	}
 	return "/tmp"
+}
+
+// This function builds and signs an ListEntitiesForLogGroup call. Essentially trying to replicate this curl command:
+//curl -i -X POST https://logs.us-west-2.amazonaws.com -H 'Content-Type: application/json' \
+// -H 'Content-Encoding: amz-1.0' --user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
+// -H "x-amz-security-token: $AWS_SESSION_TOKEN" --aws-sigv4 "aws:amz:us-west-2:logs" \
+// -H 'X-Amz-Target: Logs_20140328.ListEntitiesForLogGroup' -d '{"logGroupIdentifier": "sampleLogGroup"}'
+
+func BuildListEntitiesForLogGroup(logGroup, region string) (*http.Request, error) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+	if err != nil {
+		return nil, err
+	}
+
+	body := []byte(fmt.Sprintf(`{
+		"logGroupIdentifier": "%s"
+	}`, logGroup))
+
+	signer := v4.NewSigner()
+	h := sha256.New()
+	h.Write(body)
+	payloadHash := hex.EncodeToString(h.Sum(nil))
+
+	// build the request
+	req, err := http.NewRequest("POST", "https://logs."+region+".amazonaws.com/", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	// set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Amz-Target", "Logs_20140328.ListEntitiesForLogGroup")
+	req.Header.Set("Content-Encoding", "amz-1.0")
+
+	// set creds
+	credentials, err := cfg.Credentials.Retrieve(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("x-amz-security-token", credentials.SessionToken)
+
+	// sign the request
+	err = signer.SignHTTP(context.TODO(), credentials, req, payloadHash, "logs", region, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
