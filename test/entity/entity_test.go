@@ -233,7 +233,6 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 			},
 			logGroup: fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, "dataplane"),
 		},
-
 		"Entity/HostLogEntity": {
 			podName: "log-generator",
 			expectedEntity: expectedEntity{
@@ -250,6 +249,7 @@ func TestPutLogEventEntityEKS(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			log.Printf("asdfsdfdsfdsfds %v", name)
 			var podApplicationLogStream string
 
 			logStreamNames := awsservice.GetLogStreamNames(testCase.logGroup)
