@@ -19,10 +19,9 @@ import (
 	"runtime"
 	"time"
 
-	"go.uber.org/multierr"
-
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"go.uber.org/multierr"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 )
