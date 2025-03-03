@@ -148,6 +148,7 @@ func GetExpectedEntity(computeType, identifier string) string {
 	case "ECS":
 		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:cwagent-integ-test-cluster-01234567890","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
 	}
+	return ""
 }
 
 func ValidateStatsdEntity(metricName, metricType, computeType, identifier string) error {
