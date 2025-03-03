@@ -55,12 +55,47 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
       "echo clone ${var.github_test_repo} branch ${var.github_test_repo_branch} and install agent",
+      "if [ ! -d amazon-cloudwatch-agent-test ]; then",
+      "echo 'Test repo not found, cloning...'",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q",
+      "else",
+      "echo 'Test repo already exists, skipping clone'",
+      "fi",
       "cd amazon-cloudwatch-agent-test",
       "git rev-parse --short HEAD",
       "aws s3 cp --no-progress s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
+    ]
+  }
+
+  depends_on = [
+    module.linux_common,
+    null_resource.download_test_repo_and_vendor_from_s3,
+  ]
+}
+
+# Download vendor directory and cloned test repo from S3 for CN region tests
+resource "null_resource" "download_test_repo_and_vendor_from_s3" {
+  # set to only run in CN region
+  count = startswith(var.region, "cn-") ? 1 : 0
+
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = module.linux_common.private_key_content
+    host        = module.linux_common.cwagent_public_ip
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "echo Downloading cloned test repo from S3...",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/cloudwatch-agent-test-repo/${var.cwa_github_sha}.tar.gz ./amazon-cloudwatch-agent-test.tar.gz --quiet",
+      "mkdir amazon-cloudwatch-agent-test",
+      "tar -xzf amazon-cloudwatch-agent-test.tar.gz -C amazon-cloudwatch-agent-test",
+      "cd amazon-cloudwatch-agent-test",
+      "export GO111MODULE=on",
+      "export GOFLAGS=-mod=vendor",
+      "echo 'Vendor directory copied from S3'"
     ]
   }
 
@@ -83,7 +118,7 @@ resource "null_resource" "integration_test_run" {
     host        = module.linux_common.cwagent_public_ip
   }
 
-  #Run sanity check and integration test
+  # Run sanity check and integration test
   provisioner "remote-exec" {
     inline = [
       "echo prepare environment",
@@ -101,6 +136,7 @@ resource "null_resource" "integration_test_run" {
 
   depends_on = [
     null_resource.integration_test_setup,
+    null_resource.download_test_repo_and_vendor_from_s3,
     module.reboot_common,
   ]
 }
