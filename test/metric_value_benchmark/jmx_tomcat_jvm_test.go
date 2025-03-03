@@ -55,11 +55,13 @@ func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
-	log.Println("Checking Java version:")
-	javaVersion, _ := common.RunCommand("java -version 2>&1")
-	log.Printf("Java version:\n%s", javaVersion)
+	javaVersion, err := common.RunCommand("java -version 2>&1")
+	if err != nil {
+		return err
+	}
+	log.Printf(javaVersion)
 
-	log.Println("Setting up JVM and Tomcat with JMX enabled...")
+	log.Println("set up jvm and tomcat")
 	startJMXCommands := []string{
 		"nohup java -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=2030 " +
 			"-Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false " +
@@ -75,9 +77,6 @@ func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
 	if err != nil {
 		return err
 	}
-
-	log.Println("Waiting 20 seconds for Tomcat/JMX to initialize...")
-	time.Sleep(20 * time.Second)
 	return nil
 }
 
@@ -128,14 +127,13 @@ func (t *JMXTomcatJVMTestRunner) validateJMXMetric(metricName string) status.Tes
 
 	fetcher := metric.MetricValueFetcher{}
 	values, err := fetcher.Fetch(jmxNamespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
-	log.Printf("Fetched values for %s: %v", metricName, values)
+	log.Printf("metric values are %v", values)
 	if err != nil {
-		log.Printf("Failed to fetch metric %s: %v", metricName, err)
+		log.Printf("err: %v\n", err)
 		return testResult
 	}
 
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, -1) {
-		log.Printf("Metric %s did not meet expected value threshold", metricName)
 		return testResult
 	}
 
