@@ -144,9 +144,13 @@ func GetExpectedEntity(computeType, identifier string) string {
 	case "EC2":
 		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
 	case "EKS":
-		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwagent-eks-Worker-Role-01234567890"}}]}`
+		// we have the cluster name (passed in as the identifier) and are changing the format to match what's expected in the returned entity
+		name := strings.Replace(identifier, "cwagent-eks-integ", "cwagent-eks-Worker-Role", -1)
+		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"%s"}}]}`, name)
+		return expectedEntity
 	case "ECS":
-		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:cwagent-integ-test-cluster-01234567890","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:%s","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`, identifier)
+		return expectedEntity
 	}
 	return ""
 }
