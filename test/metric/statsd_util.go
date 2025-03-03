@@ -116,7 +116,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	switch env.ComputeType {
 	case computetype.ECS:
 		computeType = "ECS"
-		identifier = awsservice.GetInstanceId()
+		identifier = env.EcsClusterName
 	case computetype.EKS:
 		computeType = "EKS"
 		for _, dim := range dims {
@@ -197,7 +197,7 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 			]
 		}`, metricName, identifier, metricType))
 	case "ECS":
-		// identifier for this case is instance id
+		// identifier for this case is cluster name
 		requestBody = []byte(fmt.Sprintf(`{
 			"Namespace": "StatsD/ECS",
 			"MetricName": "%s",
