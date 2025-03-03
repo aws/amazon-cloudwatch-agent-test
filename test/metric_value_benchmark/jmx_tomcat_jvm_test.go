@@ -67,7 +67,7 @@ func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
 			"-Dcom.sun.management.jmxremote.host=0.0.0.0 -Djava.rmi.server.hostname=0.0.0.0 " +
 			"-Dserver.port=8090 -Dspring.application.admin.enabled=true " +
 			"-Dserver.tomcat.mbeanregistry.enabled=true -Dmanagement.endpoints.jmx.exposure.include=* " +
-			"-XX:+UseConcMarkSweepGC -verbose:gc " +
+			"-verbose:gc " +
 			"-jar jars/spring-boot-web-starter-tomcat.jar > /tmp/spring-boot-web-starter-tomcat-jar.txt 2>&1 &",
 	}
 
