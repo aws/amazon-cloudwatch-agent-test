@@ -111,17 +111,26 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 
 	env := environment.GetEnvironmentMetaData()
 	var computeType string
+	var identifier string
 
 	switch env.ComputeType {
 	case computetype.ECS:
 		computeType = "ECS"
+		identifier = awsservice.GetInstanceId()
 	case computetype.EKS:
 		computeType = "EKS"
+		for _, dim := range dims {
+			if *dim.Name == "ClusterName" {
+				identifier = *dim.Value
+				break
+			}
+		}
 	default:
 		computeType = "EC2"
+		identifier = awsservice.GetInstanceId()
 	}
 
-	err = ValidateStatsdEntity(metricName, metricType, computeType)
+	err = ValidateStatsdEntity(metricName, metricType, computeType, identifier)
 	if err != nil {
 		return testResult
 	}
@@ -130,7 +139,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	return testResult
 }
 
-func GetExpectedEntity(computeType string) string {
+func GetExpectedEntity(computeType, identifier string) string {
 	switch computeType {
 	case "EC2":
 		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
@@ -141,13 +150,13 @@ func GetExpectedEntity(computeType string) string {
 	}
 }
 
-func ValidateStatsdEntity(metricName, metricType, computeType string) error {
+func ValidateStatsdEntity(metricName, metricType, computeType, identifier string) error {
 	// build the ListEntitiesForMetric request
 	var requestBody []byte
 
 	switch computeType {
 	case "EC2":
-		instanceId := awsservice.GetInstanceId()
+		// identifier for this case is instance id
 		requestBody = []byte(fmt.Sprintf(`{
 			"Namespace": "MetricValueBenchmarkTest",
 			"MetricName": "%s",
@@ -165,9 +174,9 @@ func ValidateStatsdEntity(metricName, metricType, computeType string) error {
 					"Value": "%s"
 				}
 			]
-		}`, metricName, instanceId, metricType))
+		}`, metricName, identifier, metricType))
 	case "EKS":
-		clusterName := awsservice.Cluster
+		// identifier for this case is cluster name
 		requestBody = []byte(fmt.Sprintf(`{
 			"Namespace": "StatsD/EKS",
 			"MetricName": "%s",
@@ -185,9 +194,9 @@ func ValidateStatsdEntity(metricName, metricType, computeType string) error {
 					"Value": "%s"
 				}
 			]
-		}`, metricName, instanceId, metricType))
+		}`, metricName, identifier, metricType))
 	case "ECS":
-		instanceId := awsservice.GetInstanceId()
+		// identifier for this case is instance id
 		requestBody = []byte(fmt.Sprintf(`{
 			"Namespace": "StatsD/ECS",
 			"MetricName": "%s",
@@ -205,7 +214,7 @@ func ValidateStatsdEntity(metricName, metricType, computeType string) error {
 					"Value": "%s"
 				}
 			]
-		}`, metricName, instanceId, metricType))
+		}`, metricName, identifier, metricType))
 	}
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, region)
@@ -226,9 +235,9 @@ func ValidateStatsdEntity(metricName, metricType, computeType string) error {
 		return fmt.Errorf("Error reading response body: %v", err)
 	}
 
-	if GetExpectedEntity(computeType) != string(responseBody) {
+	if GetExpectedEntity(computeType, identifier) != string(responseBody) {
 		fmt.Printf("Response Body: %s\n", string(responseBody))
-		fmt.Printf("Expected Entity: %s\n", GetExpectedEntity(computeType))
+		fmt.Printf("Expected Entity: %s\n", GetExpectedEntity(computeType, identifier))
 		return fmt.Errorf("Response body doesn't match expected entity")
 	}
 	return nil
