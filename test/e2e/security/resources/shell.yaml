@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: amazon-cloudwatch
+  name: test-shell
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-shell
+  template:
+    metadata:
+      labels:
+        app: test-shell
+    spec:
+      serviceAccountName: cloudwatch-agent
+      containers:
+        - name: shell-container
+          image: bash:latest
+          command: ["/bin/sh", "-c", "apk add -U libcap && sleep 3600"]  # Keeps the container running
+          securityContext:
+            privileged: false
+            capabilities:
+              add:
+                - SYS_ADMIN  # Adding CAP_SYS_ADMIN capability

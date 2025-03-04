@@ -50,3 +50,14 @@ func (k *K8CtlManager) UpdateKubeConfig(clusterName string) error {
 	}
 	return nil
 }
+
+// ExecuteCommand runs a command inside a specified pod.
+func (k *K8CtlManager) ExecuteCommand(podName, namespace string, command []string) (string, error) {
+	cmdArgs := append([]string{"exec", podName, "-n", namespace, "--"}, command...)
+	cmd := exec.Command(k.Command, cmdArgs...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to execute command on pod %s: %w\nOutput: %s", podName, err, output)
+	}
+	return string(output), nil
+}

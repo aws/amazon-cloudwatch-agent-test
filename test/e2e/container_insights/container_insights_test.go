@@ -33,7 +33,7 @@ var (
 //------------------------------------------------------------------------------
 
 var testMetricsRegistry = map[string][]func(*testing.T){
-	"containerinsights.json": {
+	".": {
 		testContainerInsightsMetrics,
 	},
 }
@@ -111,7 +111,7 @@ func testMetrics(t *testing.T) {
 	configFile := filepath.Base(env.AgentConfig)
 	tests := testMetricsRegistry[configFile]
 
-	fmt.Println("waiting for metrics to propagate...")
+	fmt.Printf("waiting for metrics to propagate for %f minutes ...\n", e2e.Wait.Minutes())
 	time.Sleep(e2e.Wait)
 
 	for _, testFunc := range tests {
@@ -136,8 +136,11 @@ func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 func testContainerInsightsMetrics(t *testing.T) {
 	var testResults []status.TestResult
 	testResults = append(testResults, metric.ValidateMetrics(env, "", eks_resources.GetExpectedDimsToMetrics(env))...)
+	for _, result := range testResults {
 
-	t.Run("verify_containerinsights_metrics", func(t *testing.T) {
-		eks_resources.GetExpectedDimsToMetrics(env)
-	})
+		if result.Status == status.FAILED {
+			t.Errorf("%s test group failed\n", result.Name)
+		}
+		//fmt.Printf("%s test group succeeded\n", result.Name)
+	}
 }

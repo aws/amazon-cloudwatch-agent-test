@@ -6,6 +6,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -60,6 +61,9 @@ func VerifyPodEnvironment(t *testing.T, clientset *kubernetes.Clientset, deploym
 }
 
 func VerifyAgentResources(t *testing.T, clientset *kubernetes.Clientset, configKeyword string) {
+	deployment, err := clientset.AppsV1().Deployments("amazon-cloudwatch").Get(context.TODO(), "test-shell", metav1.GetOptions{})
+	require.NoError(t, err, "Error getting deployment")
+	require.NotNil(t, deployment, "Test shell deployment not found")
 	daemonSet, err := clientset.AppsV1().DaemonSets("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
 	require.NoError(t, err, "Error getting CloudWatch Agent DaemonSet")
 	require.NotNil(t, daemonSet, "CloudWatch Agent DaemonSet not found")
@@ -79,6 +83,14 @@ func VerifyAgentResources(t *testing.T, clientset *kubernetes.Clientset, configK
 	serviceAccount, err := clientset.CoreV1().ServiceAccounts("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
 	require.NoError(t, err, "Error getting CloudWatch Agent Service Account")
 	require.NotNil(t, serviceAccount, "CloudWatch Agent Service Account not found")
+}
+func GetPodList(t *testing.T, clientset *kubernetes.Clientset, namespace string, name string) v1.PodList {
+	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app=%s", name),
+	})
+	require.NoError(t, err, "Error getting Pods")
+	return *pods
+
 }
 
 //------------------------------------------------------------------------------

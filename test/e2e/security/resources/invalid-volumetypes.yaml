@@ -1,0 +1,64 @@
+# local-storage.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /mnt/data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: topology.kubernetes.io/zone
+              operator: In
+              values:
+                - us-east-1  # Replace with your availability zone
+            - key: node-role.kubernetes.io/worker
+              operator: Exists
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: amazon-cloudwatch
+  name: volume-test-invalid
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: volume-test-invalid
+  template:
+    metadata:
+      labels:
+        app: volume-test-invalid
+    spec:
+      serviceAccountName: cloudwatch-agent
+      containers:
+        - name: shell-container
+          image: bash:latest
+          command: ["/bin/sh", "-c", "apk add -U libcap && sleep 3600"]
+          securityContext:
+            privileged: false
+            capabilities:
+              add:
+                - SYS_ADMIN
+          volumeMounts:
+            - name: local-volume
+              mountPath: /data
+      volumes:
+        - name: local-volume
+          persistentVolumeClaim:
+            claimName: local-pvc

@@ -2,7 +2,6 @@ package rosa
 
 import (
 	"encoding/json"
-	"flag"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,17 +11,7 @@ import (
 var clusterName string
 
 func init() {
-	flag.StringVar(&clusterName, "cluster-name", "", "Name of the cluster to test")
-}
-
-func TestMain(m *testing.M) {
-	flag.Parse()
-
-	if clusterName == "" {
-		panic("Cluster name must be provided using -cluster-name flag")
-	}
-
-	os.Exit(m.Run())
+	//flag.StringVar(&clusterName, "cluster-name", "", "Name of the cluster to test")
 }
 
 func TestRosaCluster(t *testing.T) {
