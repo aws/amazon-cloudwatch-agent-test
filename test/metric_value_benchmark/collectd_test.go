@@ -169,10 +169,9 @@ func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType strin
 		return fmt.Errorf("Error reading response body: %v", err)
 	}
 
-	if t.GetExpectedEntity() != string(responseBody) {
-		fmt.Printf("Response Body: %s\n", string(responseBody))
-		fmt.Printf("Expected Entity: %s\n", t.GetExpectedEntity())
-		return fmt.Errorf("Response body doesn't match expected entity")
+	expectedEntity := t.GetExpectedEntity()
+	if expectedEntity != string(responseBody) {
+		return fmt.Errorf("Response body doesn't match expected entity\nResponse Body: %s\nExpected Entity: %s\n", string(responseBody), expectedEntity)
 	}
 
 	return nil

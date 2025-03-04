@@ -110,13 +110,15 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	}
 
 	env := environment.GetEnvironmentMetaData()
+	// identifier is what is needed for the ListEntitiesForMetric API call
+	// instance id (EC2 and ECS) or cluster name (EKS)
 	var identifier string
 
 	switch env.ComputeType {
-	case computetype.EKS:
-		identifier = env.EKSClusterName
 	case computetype.EC2:
 		identifier = awsservice.GetInstanceId()
+	case computetype.EKS:
+		identifier = env.EKSClusterName
 	case computetype.ECS:
 		for _, dim := range dims {
 			if *dim.Name == "InstanceId" {
@@ -142,7 +144,6 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 
 	switch computeType {
 	case "EC2":
-		// identifier for this case is instance id
 		requestBody = []byte(fmt.Sprintf(`{
 			"Namespace": "MetricValueBenchmarkTest",
 			"MetricName": "%s",
@@ -162,7 +163,6 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 			]
 		}`, metricName, identifier, metricType))
 	case "EKS":
-		// identifier for this case is cluster name
 		requestBody = []byte(fmt.Sprintf(`{
 			"Namespace": "StatsD/EKS",
 			"MetricName": "%s",
@@ -182,7 +182,6 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 			]
 		}`, metricName, identifier, metricType))
 	case "ECS":
-		// identifier for this case is instance id
 		requestBody = []byte(fmt.Sprintf(`{
 			"Namespace": "StatsD/ECS",
 			"MetricName": "%s",
