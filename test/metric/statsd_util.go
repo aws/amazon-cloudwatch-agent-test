@@ -128,8 +128,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 		return testResult
 	}
 
-	err = ValidateStatsdEntity(metricName, metricType, string(env.ComputeType), identifier)
-	if err != nil {
+	if err := ValidateStatsdEntity(metricName, metricType, string(env.ComputeType), identifier); err != nil {
 		return testResult
 	}
 
@@ -223,10 +222,12 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 	}
 
 	expectedEntity, err := GetExpectedEntity(computeType)
+	if err != nil {
+		return fmt.Errorf("Error getting the expected entity: %v", err)
+	}
+
 	if expectedEntity != string(responseBody) {
-		fmt.Printf("Response Body: %s\n", string(responseBody))
-		fmt.Printf("Expected Entity: %s\n", expectedEntity)
-		return fmt.Errorf("Response body doesn't match expected entity")
+		return fmt.Errorf("Response body doesn't match expected entity\nResponse Body: %s\nExpected Entity: %s\n", string(responseBody), expectedEntity)
 	}
 	return nil
 }
