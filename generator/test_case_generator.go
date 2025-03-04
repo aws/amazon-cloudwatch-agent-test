@@ -373,7 +373,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			if row.Os != "" {
 				row.TestName = row.Os + ":" + row.TestName
 			}
-			if row.TestType != "" {
+			if row.TestType != "" && row.Os == "" {
 				row.TestName = row.TestType + ":" + row.TestName
 			}
 			if testConfig.instanceType != "" {
