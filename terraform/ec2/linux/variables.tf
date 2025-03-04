@@ -102,6 +102,13 @@ variable "github_test_repo_branch" {
   default = "main"
 }
 
+
+variable "github_token" {
+  description = "GitHub Personal Access Token"
+  type        = string
+  sensitive   = true
+}
+
 variable "is_canary" {
   type    = bool
   default = false
