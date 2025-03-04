@@ -135,12 +135,12 @@ func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 
 func testContainerInsightsMetrics(t *testing.T) {
 	var testResults []status.TestResult
+
 	testResults = append(testResults, metric.ValidateMetrics(env, "", eks_resources.GetExpectedDimsToMetrics(env))...)
 	for _, result := range testResults {
 
 		if result.Status == status.FAILED {
 			t.Errorf("%s test group failed\n", result.Name)
 		}
-		//fmt.Printf("%s test group succeeded\n", result.Name)
 	}
 }

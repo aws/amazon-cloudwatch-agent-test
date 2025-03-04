@@ -5,6 +5,7 @@ package eks_resources
 
 import (
 	_ "embed"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
@@ -116,7 +117,6 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_status_pending",
 			"pod_cpu_utilization",
 			"node_filesystem_inodes",
-			"node_diskio_io_service_bytes_total",
 			"node_status_condition_memory_pressure",
 			"container_cpu_utilization",
 			"service_number_of_running_pods",
@@ -127,7 +127,6 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_status_succeeded",
 			"namespace_number_of_running_pods",
 			"pod_memory_reserved_capacity",
-			"node_diskio_io_serviced_total",
 			"pod_network_rx_bytes",
 			"node_status_capacity_pods",
 			"pod_status_unknown",
@@ -252,12 +251,10 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"node_status_condition_memory_pressure",
 			"node_memory_limit",
 			"node_memory_reserved_capacity",
-			"node_diskio_io_serviced_total",
 			"node_status_condition_pid_pressure",
 			"node_filesystem_inodes",
 			"node_cpu_usage_total",
 			"node_number_of_running_pods",
-			"node_diskio_io_service_bytes_total",
 			"node_status_capacity_pods",
 			"node_filesystem_inodes_free",
 			"node_cpu_utilization",
@@ -307,6 +304,18 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 	if env.InstancePlatform == "windows" {
 		ExpectedDimsToMetrics["ClusterName"] = append(ExpectedDimsToMetrics["ClusterName"],
 			"container_filesystem_usage", "container_filesystem_available", "container_filesystem_utilization")
+	}
+
+	if env.ComputeType != computetype.ROSA { //diskio is not supported in rosa
+		ExpectedDimsToMetrics["ClusterName"] = append(ExpectedDimsToMetrics["ClusterName"],
+			"node_diskio_io_service_bytes_total",
+			"node_diskio_io_serviced_total",
+		)
+		ExpectedDimsToMetrics["ClusterName-InstanceId-NodeName"] = append(ExpectedDimsToMetrics["ClusterName-InstanceId-NodeName"],
+			"node_diskio_io_serviced_total",
+			"node_diskio_io_service_bytes_total",
+
+		)
 	}
 
 	return ExpectedDimsToMetrics
