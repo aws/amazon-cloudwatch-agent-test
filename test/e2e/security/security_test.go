@@ -4,8 +4,10 @@
 package security
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path/filepath"
 	"slices"
@@ -48,6 +50,7 @@ var testMetricsRegistry = map[string][]func(*testing.T){
 }
 
 var testResourcesRegistry = []func(*testing.T, *kubernetes.Clientset){
+	testShellResources,
 	testAgentResources,
 	testAgentValidVolumeMountAccess,
 	testAgentInvalidVolumeMountAccess,
@@ -138,10 +141,16 @@ func testMetrics(t *testing.T) {
 	}
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Resource Test Functions
-//------------------------------------------------------------------------------
-
+// ------------------------------------------------------------------------------
+func testShellResources(t *testing.T, clientset *kubernetes.Clientset) {
+	t.Run("verify_test_container_resources", func(t *testing.T) {
+		deployment, err := clientset.AppsV1().Deployments("amazon-cloudwatch").Get(context.TODO(), "test-shell", metav1.GetOptions{})
+		require.NoError(t, err, "Error getting deployment")
+		require.NotNil(t, deployment, "Test shell deployment not found")
+	})
+}
 func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 	t.Run("verify_agent_resources", func(t *testing.T) {
 		e2e.VerifyAgentResources(t, clientset, "")
