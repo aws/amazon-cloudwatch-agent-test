@@ -64,11 +64,6 @@ func TestMain(m *testing.M) {
 		os.Exit(0)
 	}
 
-	// Configure AWS clients and create K8s resources
-	if err := e2e.InitializeEnvironment(env); err != nil {
-		fmt.Printf("Failed to initialize environment: %v\n", err)
-		os.Exit(1)
-	}
 	k8sCtl = utils.NewK8CtlManager(env)
 
 	os.Exit(m.Run())
