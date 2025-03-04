@@ -41,6 +41,7 @@ var (
 		"statsd_timing_6",
 	}
 	StatsdMetricValues = []float64{1000, 2000, 3000, 4000, 5000, 6000}
+	env                = environment.GetEnvironmentMetaData()
 )
 
 func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimensionKey string, metricName string, expectedValue float64, runDuration time.Duration, sendInterval time.Duration) status.TestResult {
@@ -109,22 +110,28 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 		return testResult
 	}
 
-	env := environment.GetEnvironmentMetaData()
 	var computeType string
 	var identifier string
 
 	switch env.ComputeType {
 	case computetype.ECS:
 		computeType = "ECS"
-		identifier = env.EcsClusterName
-	case computetype.EKS:
-		computeType = "EKS"
 		for _, dim := range dims {
-			if *dim.Name == "ClusterName" {
+			if *dim.Name == "InstanceId" {
 				identifier = *dim.Value
 				break
 			}
 		}
+		identifier = env.InstanceId
+	case computetype.EKS:
+		computeType = "EKS"
+		// for _, dim := range dims {
+		// 	if *dim.Name == "ClusterName" {
+		// 		identifier = *dim.Value
+		// 		break
+		// 	}
+		// }
+		identifier = env.EKSClusterName
 	default:
 		computeType = "EC2"
 		identifier = awsservice.GetInstanceId()
@@ -139,17 +146,17 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	return testResult
 }
 
-func GetExpectedEntity(computeType, identifier string) string {
+func GetExpectedEntity(computeType string) string {
 	switch computeType {
 	case "EC2":
 		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
 	case "EKS":
 		// we have the cluster name (passed in as the identifier) and are changing the format to match what's expected in the returned entity
-		name := strings.Replace(identifier, "cwagent-eks-integ", "cwagent-eks-Worker-Role", -1)
+		name := strings.Replace(env.EKSClusterName, "cwagent-eks-integ", "cwagent-eks-Worker-Role", -1)
 		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"%s"}}]}`, name)
 		return expectedEntity
 	case "ECS":
-		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:%s","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`, identifier)
+		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:%s","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`, env.EcsClusterName)
 		return expectedEntity
 	}
 	return ""
@@ -240,10 +247,15 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 		return fmt.Errorf("Error reading response body: %v", err)
 	}
 
-	if GetExpectedEntity(computeType, identifier) != string(responseBody) {
+	if GetExpectedEntity(computeType) != string(responseBody) {
 		fmt.Printf("Response Body: %s\n", string(responseBody))
-		fmt.Printf("Expected Entity: %s\n", GetExpectedEntity(computeType, identifier))
+		fmt.Printf("Expected Entity: %s\n", GetExpectedEntity(computeType))
 		return fmt.Errorf("Response body doesn't match expected entity")
 	}
 	return nil
 }
+
+// Compute Type      API call        	Validate Entity
+// EC2 			 	 instance id		None
+// EKS				 cluster name		cluster name
+// ECS				 instance id		cluster name
