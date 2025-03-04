@@ -6,10 +6,12 @@
 package metric_value_benchmark
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -25,6 +27,21 @@ import (
 
 type CollectDTestRunner struct {
 	test_runner.BaseTestRunner
+}
+type Entity struct {
+	Type          string        `json:"__type"`
+	Attributes    Attributes    `json:"Attributes"`
+	KeyAttributes KeyAttributes `json:"KeyAttributes"`
+}
+
+type Attributes struct {
+	ServiceNameSource string `json:"AWS.ServiceNameSource"`
+}
+
+type KeyAttributes struct {
+	Environment string `json:"Environment"`
+	Type        string `json:"Type"`
+	Name        string `json:"Name"`
 }
 
 var _ test_runner.ITestRunner = (*CollectDTestRunner)(nil)
@@ -58,8 +75,17 @@ func (t *CollectDTestRunner) GetMeasuredMetrics() []string {
 	return []string{"collectd_gauge_1_value", "collectd_counter_1_value"}
 }
 
-func (t *CollectDTestRunner) GetExpectedEntity() string {
-	return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+func (t *CollectDTestRunner) GetExpectedEntity() []Entity {
+	return []Entity{
+		{
+			Type: "com.amazonaws.observability#Entity",
+			KeyAttributes: KeyAttributes{
+				Environment: "ec2:default",
+				Type:        "Service",
+				Name:        "cwa-e2e-iam-role",
+			},
+		},
+	}
 }
 
 func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.TestResult {
@@ -170,8 +196,15 @@ func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType strin
 	}
 
 	expectedEntity := t.GetExpectedEntity()
-	if expectedEntity != string(responseBody) {
-		return fmt.Errorf("Response body doesn't match expected entity\nResponse Body: %s\nExpected Entity: %s\n", string(responseBody), expectedEntity)
+
+	var actualEntities []Entity
+	if err := json.Unmarshal(responseBody, &actualEntities); err != nil {
+		return fmt.Errorf("Error unmarshaling response body: %v", err)
+	}
+
+	if !reflect.DeepEqual(expectedEntity, actualEntities) {
+		return fmt.Errorf("Actual entity doesn't match expected entity\nActual Entity: %+v\nExpected Entity: %+v\n",
+			actualEntities, expectedEntity)
 	}
 
 	return nil

@@ -243,43 +243,18 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 		return fmt.Errorf("Error getting the expected entity: %v", err)
 	}
 
-	// if expectedEntity != string(responseBody) {
-	// 	return fmt.Errorf("Response body doesn't match expected entity\nResponse Body: %s\nExpected Entity: %s\n", string(responseBody), expectedEntity)
-	// }
-
-	var actualEntity struct {
-		Entities []Entity `json:"Entities"`
-	}
-	if err := json.Unmarshal(responseBody, &actualEntity); err != nil {
+	var actualEntities []Entity
+	if err := json.Unmarshal(responseBody, &actualEntities); err != nil {
 		return fmt.Errorf("Error unmarshaling response body: %v", err)
 	}
 
-	if !reflect.DeepEqual(expectedEntity, actualEntity.Entities) {
+	if !reflect.DeepEqual(expectedEntity, actualEntities) {
 		return fmt.Errorf("Actual entity doesn't match expected entity\nActual Entity: %+v\nExpected Entity: %+v\n",
-			actualEntity.Entities, expectedEntity)
+			actualEntities, expectedEntity)
 	}
 
 	return nil
 }
-
-// func GetExpectedEntity(computeType string) (string, error) {
-// 	env := environment.GetEnvironmentMetaData()
-// 	switch computeType {
-// 	case "EC2":
-// 		expectedEntity := `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
-// 		return expectedEntity, nil
-// 	case "EKS":
-// 		// modify the cluster name to match what's expected in the entity
-// 		name := strings.Replace(env.EKSClusterName, "cwagent-eks-integ", "cwagent-eks-Worker-Role", -1)
-// 		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"%s"}}]}`, name)
-// 		return expectedEntity, nil
-// 	case "ECS":
-// 		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:%s","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`, env.EcsClusterName)
-// 		return expectedEntity, nil
-// 	default:
-// 		return "", fmt.Errorf("Unexpected compute type while fetching the expected entity")
-// 	}
-// }
 
 func GetExpectedEntity(computeType string) ([]Entity, error) {
 	env := environment.GetEnvironmentMetaData()
