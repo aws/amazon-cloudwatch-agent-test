@@ -41,7 +41,6 @@ var (
 		"statsd_timing_6",
 	}
 	StatsdMetricValues = []float64{1000, 2000, 3000, 4000, 5000, 6000}
-	env                = environment.GetEnvironmentMetaData()
 )
 
 func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimensionKey string, metricName string, expectedValue float64, runDuration time.Duration, sendInterval time.Duration) status.TestResult {
@@ -113,6 +112,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	var computeType string
 	var identifier string
 
+	env := environment.GetEnvironmentMetaData()
 	switch env.ComputeType {
 	case computetype.ECS:
 		computeType = "ECS"
@@ -147,6 +147,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 }
 
 func GetExpectedEntity(computeType string) string {
+	env := environment.GetEnvironmentMetaData()
 	switch computeType {
 	case "EC2":
 		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
