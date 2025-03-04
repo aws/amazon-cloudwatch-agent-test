@@ -109,51 +109,32 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 		return testResult
 	}
 
-	var computeType string
+	env := environment.GetEnvironmentMetaData()
 	var identifier string
 
-	env := environment.GetEnvironmentMetaData()
 	switch env.ComputeType {
+	case computetype.EKS:
+		identifier = env.EKSClusterName
+	case computetype.EC2:
+		identifier = awsservice.GetInstanceId()
 	case computetype.ECS:
-		computeType = "ECS"
 		for _, dim := range dims {
 			if *dim.Name == "InstanceId" {
 				identifier = *dim.Value
 				break
 			}
 		}
-	case computetype.EKS:
-		computeType = "EKS"
-		identifier = env.EKSClusterName
 	default:
-		computeType = "EC2"
-		identifier = awsservice.GetInstanceId()
+		return testResult
 	}
 
-	err = ValidateStatsdEntity(metricName, metricType, computeType, identifier)
+	err = ValidateStatsdEntity(metricName, metricType, string(env.ComputeType), identifier)
 	if err != nil {
 		return testResult
 	}
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
-}
-
-func GetExpectedEntity(computeType string) string {
-	env := environment.GetEnvironmentMetaData()
-	switch computeType {
-	case "EC2":
-		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
-	case "EKS":
-		// modify the cluster name to match what's expected in the entity
-		name := strings.Replace(env.EKSClusterName, "cwagent-eks-integ", "cwagent-eks-Worker-Role", -1)
-		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"%s"}}]}`, name)
-		return expectedEntity
-	case "ECS":
-		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:%s","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`, env.EcsClusterName)
-		return expectedEntity
-	}
-	return ""
 }
 
 func ValidateStatsdEntity(metricName, metricType, computeType, identifier string) error {
@@ -241,10 +222,30 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 		return fmt.Errorf("Error reading response body: %v", err)
 	}
 
-	if GetExpectedEntity(computeType) != string(responseBody) {
+	expectedEntity, err := GetExpectedEntity(computeType)
+	if expectedEntity != string(responseBody) {
 		fmt.Printf("Response Body: %s\n", string(responseBody))
-		fmt.Printf("Expected Entity: %s\n", GetExpectedEntity(computeType))
+		fmt.Printf("Expected Entity: %s\n", expectedEntity)
 		return fmt.Errorf("Response body doesn't match expected entity")
 	}
 	return nil
+}
+
+func GetExpectedEntity(computeType string) (string, error) {
+	env := environment.GetEnvironmentMetaData()
+	switch computeType {
+	case "EC2":
+		expectedEntity := `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+		return expectedEntity, nil
+	case "EKS":
+		// modify the cluster name to match what's expected in the entity
+		name := strings.Replace(env.EKSClusterName, "cwagent-eks-integ", "cwagent-eks-Worker-Role", -1)
+		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"%s"}}]}`, name)
+		return expectedEntity, nil
+	case "ECS":
+		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:%s","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`, env.EcsClusterName)
+		return expectedEntity, nil
+	default:
+		return "", fmt.Errorf("Unexpected compute type while fetching the expected entity")
+	}
 }
