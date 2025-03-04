@@ -10,12 +10,14 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/exp/slices"
 )
 
 type matrixRow struct {
+	TestName            string `json:"testName"`
 	TestDir             string `json:"test_dir"`
 	Os                  string `json:"os"`
 	Family              string `json:"family"`
@@ -319,7 +321,24 @@ func main() {
 		}
 	}
 }
+func generateTestName(test_directory string) string {
+	parts := strings.Split(test_directory, "/")
 
+	// Remove empty parts caused by leading `../`
+	var cleaned []string
+	for _, part := range parts {
+		if part != "" && part != "." && part != ".." {
+			cleaned = append(cleaned, part)
+		}
+	}
+
+	// Reorder: move the first element to the end
+	if len(cleaned) > 1 {
+		cleaned = append(cleaned[1:], cleaned[0])
+	}
+
+	return strings.Join(cleaned, "-")
+}
 func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrixRow {
 	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
 
@@ -341,6 +360,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
 			row := matrixRow{
+				TestName:     generateTestName(testConfig.testDir),
 				TestDir:      testConfig.testDir,
 				TestType:     testType,
 				TerraformDir: testConfig.terraformDir,
@@ -350,7 +370,9 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			if err != nil {
 				log.Panicf("can't decode map test %v to metric line struct with error %v", testConfig, err)
 			}
-
+			if row.Os != "" {
+				row.TestName = row.Os + ":" + row.TestName
+			}
 			if testConfig.instanceType != "" {
 				row.InstanceType = testConfig.instanceType
 			}
