@@ -261,6 +261,11 @@ var testTypeToTestConfigE2E = map[string][]testConfig{
 	"eks_e2e_jmx": {
 		{testDir: "../../../test/e2e/jmx"},
 	},
+	"rosa_e2e_cluster": {
+		//{testDir: "../../../test/e2e/jmx"},
+		{testDir: "../../../test/e2e/security"},
+		{testDir: "../../../test/e2e/container_insights"},
+	},
 }
 
 type partition struct {
