@@ -2,72 +2,134 @@ package rosa
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e/utils"
+	"github.com/stretchr/testify/require"
 )
 
-var clusterName string
+//------------------------------------------------------------------------------
+// Variables
+//------------------------------------------------------------------------------
+
+var (
+	env    *environment.MetaData
+	k8sCtl *utils.K8CtlManager
+)
+
+//------------------------------------------------------------------------------
+// Test Registry Maps
+//------------------------------------------------------------------------------
+
+var testPrerequisitesRegistry = []func(*testing.T){
+	testRosaCliInstalled,
+	testOcCliInstalled,
+}
+
+var testClusterRegistry = []func(*testing.T){
+	testLoginStatus,
+	testNodeStatus,
+	testCoreServices,
+}
+
+//------------------------------------------------------------------------------
+// Test Setup
+//------------------------------------------------------------------------------
 
 func init() {
-	//flag.StringVar(&clusterName, "cluster-name", "", "Name of the cluster to test")
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-func TestRosaCluster(t *testing.T) {
-	t.Logf("Testing cluster: %s", clusterName)
+func TestMain(m *testing.M) {
+	flag.Parse()
 
-	// Track prerequisite failures
-	prerequisitesPassed := true
+	// Added this to prevent running tests when we pass in "NO_MATCH"
+	if flag.Lookup("test.run").Value.String() == "NO_MATCH" {
+		os.Exit(0)
+	}
+	env = environment.GetEnvironmentMetaData()
 
-	t.Run("ROSA CLI Installation", func(t *testing.T) {
-		if !testRosaCliInstalled(t) {
-			prerequisitesPassed = false
+	// Destroy K8s resources if terraform destroy
+	if env.Destroy {
+		if err := e2e.DestroyResources(env); err != nil {
+			fmt.Printf("Failed to delete kubernetes resources: %v\n", err)
 		}
-	})
-	t.Run("OC CLI Installation", func(t *testing.T) {
-		if !testOcCliInstalled(t) {
-			prerequisitesPassed = false
-		}
-	})
-
-	if !prerequisitesPassed {
-		t.Log("Skipping cluster tests due to failed prerequisites")
-		return
+		os.Exit(0)
 	}
 
-	t.Run("Login Status", testLoginStatus)
-	t.Run("Node Status", testNodeStatus)
-	t.Run("Core Services", testCoreServices)
+	// Configure AWS clients and create K8s resources
+	if err := e2e.InitializeEnvironment(env); err != nil {
+		fmt.Printf("Failed to initialize environment: %v\n", err)
+		os.Exit(1)
+	}
+	k8sCtl = utils.NewK8CtlManager(env)
+
+	os.Exit(m.Run())
 }
 
-func testRosaCliInstalled(t *testing.T) bool {
+//------------------------------------------------------------------------------
+// Main Test Functions
+//------------------------------------------------------------------------------
+
+func TestRosaCluster(t *testing.T) {
+	t.Run("Prerequisites", func(t *testing.T) {
+		testPrerequisites(t)
+	})
+
+	// Don't run cluster tests if prerequisites fail
+	if !t.Failed() {
+		t.Run("Cluster Tests", func(t *testing.T) {
+			testCluster(t)
+		})
+	}
+}
+
+func testPrerequisites(t *testing.T) {
+	for _, testFunc := range testPrerequisitesRegistry {
+		testFunc(t)
+	}
+}
+
+func testCluster(t *testing.T) {
+	for _, testFunc := range testClusterRegistry {
+		testFunc(t)
+	}
+}
+
+//------------------------------------------------------------------------------
+// Prerequisite Test Functions
+//------------------------------------------------------------------------------
+
+func testRosaCliInstalled(t *testing.T) {
 	cmd := exec.Command("rosa", "version")
 	cmd.Env = os.Environ()
 	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Errorf("ROSA CLI not found: %v\n%s", err, output)
-		return false
-	}
-
+	require.NoErrorf(t, err, "ROSA CLI not found: %v\n%s", err, string(output))
 	version := strings.TrimSpace(string(output))
+	require.NotNil(t, version)
 	t.Logf("ROSA CLI version: %s", version)
-	return true
 }
 
-func testOcCliInstalled(t *testing.T) bool {
+func testOcCliInstalled(t *testing.T) {
 	cmd := exec.Command("oc", "version")
 	cmd.Env = os.Environ()
 	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Errorf("OpenShift CLI (oc) not found: %v\n%s", err, output)
-		return false
-	}
-
+	require.NoErrorf(t, err, "OC CLI not found: %v\n%s", err, string(output))
 	version := strings.TrimSpace(string(output))
+	require.NotNil(t, version)
 	t.Logf("OpenShift CLI version: %s", version)
-	return true
 }
+
+//------------------------------------------------------------------------------
+// Cluster Test Functions
+//------------------------------------------------------------------------------
 
 func testLoginStatus(t *testing.T) {
 	cmd := exec.Command("oc", "whoami")
@@ -146,7 +208,8 @@ func testCoreServices(t *testing.T) {
 
 			for _, pod := range pods.Items {
 				if pod.Status.Phase != "Running" {
-					t.Errorf("Pod %s in %s is not running (status: %s)", pod.Metadata.Name, namespace, pod.Status.Phase)
+					t.Errorf("Pod %s in %s is not running (status: %s)",
+						pod.Metadata.Name, namespace, pod.Status.Phase)
 				}
 			}
 		})
