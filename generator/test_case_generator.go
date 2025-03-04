@@ -265,8 +265,8 @@ var testTypeToTestConfigE2E = map[string][]testConfig{
 	},
 	"rosa_e2e_cluster": {
 		//{testDir: "../../../test/e2e/jmx"},
-		{testDir: "../../../test/e2e/security"},
-		{testDir: "../../../test/e2e/container_insights"},
+		{testDir: "test/e2e/security"},
+		{testDir: "test/e2e/container_insights"},
 	},
 }
 
