@@ -122,15 +122,8 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 				break
 			}
 		}
-		identifier = env.InstanceId
 	case computetype.EKS:
 		computeType = "EKS"
-		// for _, dim := range dims {
-		// 	if *dim.Name == "ClusterName" {
-		// 		identifier = *dim.Value
-		// 		break
-		// 	}
-		// }
 		identifier = env.EKSClusterName
 	default:
 		computeType = "EC2"
@@ -152,7 +145,7 @@ func GetExpectedEntity(computeType string) string {
 	case "EC2":
 		return `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
 	case "EKS":
-		// we have the cluster name (passed in as the identifier) and are changing the format to match what's expected in the returned entity
+		// modify the cluster name to match what's expected in the entity
 		name := strings.Replace(env.EKSClusterName, "cwagent-eks-integ", "cwagent-eks-Worker-Role", -1)
 		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"%s"}}]}`, name)
 		return expectedEntity
@@ -209,7 +202,7 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 			]
 		}`, metricName, identifier, metricType))
 	case "ECS":
-		// identifier for this case is cluster name
+		// identifier for this case is instance id
 		requestBody = []byte(fmt.Sprintf(`{
 			"Namespace": "StatsD/ECS",
 			"MetricName": "%s",
@@ -255,8 +248,3 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 	}
 	return nil
 }
-
-// Compute Type      API call        	Validate Entity
-// EC2 			 	 instance id		None
-// EKS				 cluster name		cluster name
-// ECS				 instance id		cluster name
