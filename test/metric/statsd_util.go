@@ -6,10 +6,12 @@
 package metric
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -42,6 +44,22 @@ var (
 	}
 	StatsdMetricValues = []float64{1000, 2000, 3000, 4000, 5000, 6000}
 )
+
+type Entity struct {
+	Type          string        `json:"__type"`
+	Attributes    Attributes    `json:"Attributes"`
+	KeyAttributes KeyAttributes `json:"KeyAttributes"`
+}
+
+type Attributes struct {
+	ServiceNameSource string `json:"AWS.ServiceNameSource"`
+}
+
+type KeyAttributes struct {
+	Environment string `json:"Environment"`
+	Type        string `json:"Type"`
+	Name        string `json:"Name"`
+}
 
 func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimensionKey string, metricName string, expectedValue float64, runDuration time.Duration, sendInterval time.Duration) status.TestResult {
 	testResult := status.TestResult{
@@ -225,27 +243,81 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 		return fmt.Errorf("Error getting the expected entity: %v", err)
 	}
 
-	if expectedEntity != string(responseBody) {
-		return fmt.Errorf("Response body doesn't match expected entity\nResponse Body: %s\nExpected Entity: %s\n", string(responseBody), expectedEntity)
+	// if expectedEntity != string(responseBody) {
+	// 	return fmt.Errorf("Response body doesn't match expected entity\nResponse Body: %s\nExpected Entity: %s\n", string(responseBody), expectedEntity)
+	// }
+
+	var actualEntity struct {
+		Entities []Entity `json:"Entities"`
 	}
+	if err := json.Unmarshal(responseBody, &actualEntity); err != nil {
+		return fmt.Errorf("Error unmarshaling response body: %v", err)
+	}
+
+	if !reflect.DeepEqual(expectedEntity, actualEntity.Entities) {
+		return fmt.Errorf("Actual entity doesn't match expected entity\nActual Entity: %+v\nExpected Entity: %+v\n",
+			actualEntity.Entities, expectedEntity)
+	}
+
 	return nil
 }
 
-func GetExpectedEntity(computeType string) (string, error) {
+// func GetExpectedEntity(computeType string) (string, error) {
+// 	env := environment.GetEnvironmentMetaData()
+// 	switch computeType {
+// 	case "EC2":
+// 		expectedEntity := `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
+// 		return expectedEntity, nil
+// 	case "EKS":
+// 		// modify the cluster name to match what's expected in the entity
+// 		name := strings.Replace(env.EKSClusterName, "cwagent-eks-integ", "cwagent-eks-Worker-Role", -1)
+// 		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"%s"}}]}`, name)
+// 		return expectedEntity, nil
+// 	case "ECS":
+// 		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:%s","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`, env.EcsClusterName)
+// 		return expectedEntity, nil
+// 	default:
+// 		return "", fmt.Errorf("Unexpected compute type while fetching the expected entity")
+// 	}
+// }
+
+func GetExpectedEntity(computeType string) ([]Entity, error) {
 	env := environment.GetEnvironmentMetaData()
+
+	// Base entity that's common across all types
+	entity := Entity{
+		Type: "com.amazonaws.observability#Entity",
+		KeyAttributes: KeyAttributes{
+			Type: "Service",
+		},
+	}
+
 	switch computeType {
 	case "EC2":
-		expectedEntity := `{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ClientIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`
-		return expectedEntity, nil
+		entity.Attributes = Attributes{
+			ServiceNameSource: "ClientIamRole",
+		}
+		entity.KeyAttributes.Environment = "ec2:default"
+		entity.KeyAttributes.Name = "cwa-e2e-iam-role"
+
 	case "EKS":
-		// modify the cluster name to match what's expected in the entity
 		name := strings.Replace(env.EKSClusterName, "cwagent-eks-integ", "cwagent-eks-Worker-Role", -1)
-		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ec2:default","Type":"Service","Name":"%s"}}]}`, name)
-		return expectedEntity, nil
+		entity.Attributes = Attributes{
+			ServiceNameSource: "ServerIamRole",
+		}
+		entity.KeyAttributes.Environment = "ec2:default"
+		entity.KeyAttributes.Name = name
+
 	case "ECS":
-		expectedEntity := fmt.Sprintf(`{"Entities":[{"__type":"com.amazonaws.observability#Entity","Attributes":{"AWS.ServiceNameSource":"ServerIamRole"},"KeyAttributes":{"Environment":"ecs:%s","Type":"Service","Name":"cwa-e2e-iam-role"}}]}`, env.EcsClusterName)
-		return expectedEntity, nil
+		entity.Attributes = Attributes{
+			ServiceNameSource: "ServerIamRole",
+		}
+		entity.KeyAttributes.Environment = fmt.Sprintf("ecs:%s", env.EcsClusterName)
+		entity.KeyAttributes.Name = "cwa-e2e-iam-role"
+
 	default:
-		return "", fmt.Errorf("Unexpected compute type while fetching the expected entity")
+		return nil, fmt.Errorf("Unexpected compute type while fetching the expected entity")
 	}
+
+	return []Entity{entity}, nil
 }
