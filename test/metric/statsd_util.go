@@ -238,14 +238,17 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 		return fmt.Errorf("Error reading response body: %v", err)
 	}
 
+	var actualEntities struct {
+		Entities []Entity `json:"Entities"`
+	}
+
+	if err := json.Unmarshal(responseBody, &actualEntities); err != nil {
+		return fmt.Errorf("Error unmarshaling response body: %v", err)
+	}
+
 	expectedEntity, err := GetExpectedEntity(computeType)
 	if err != nil {
 		return fmt.Errorf("Error getting the expected entity: %v", err)
-	}
-
-	var actualEntities []Entity
-	if err := json.Unmarshal(responseBody, &actualEntities); err != nil {
-		return fmt.Errorf("Error unmarshaling response body: %v", err)
 	}
 
 	if !reflect.DeepEqual(expectedEntity, actualEntities) {
