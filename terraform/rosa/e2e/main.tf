@@ -84,12 +84,12 @@ module "hcp" {
 
   create_oidc            = true
   create_account_roles   = true
-  account_role_prefix    = "rosa-role"
+  account_role_prefix    = local.cluster_name
   create_operator_roles  = true
-  operator_role_prefix   = "rosa-operator-role"
+  operator_role_prefix   = local.cluster_name
   create_admin_user = true
 
-  aws_billing_account_id     = var.billing_account_id  # New addition 🚀
+  aws_billing_account_id     = var.billing_account_id
   ec2_metadata_http_tokens   = "required"
 
   depends_on = [time_sleep.wait_60_seconds]
