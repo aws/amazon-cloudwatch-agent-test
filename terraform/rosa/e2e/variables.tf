@@ -73,8 +73,8 @@ variable "private_cluster" {
 #VPC Info
 variable "vpc_name" {
   type        = string
+  default     = null
   description = "VPC Name"
-  default     = "tf-qs-vpc"
 }
 
 variable "vpc_cidr_block" {
@@ -104,8 +104,7 @@ variable "single_nat_gateway" {
 #AWS Info
 variable "aws_region" {
   type    = string
-  #   default = "us-west-2"
-  default = "us-east-1"
+  default = "us-west-2"
 }
 
 variable "default_aws_tags" {

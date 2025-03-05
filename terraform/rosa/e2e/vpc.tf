@@ -18,7 +18,7 @@ module "vpc" {
   version = "5.1.2"
 
   count = var.create_vpc ? 1 : 0
-  name  = var.vpc_name
+  name  = coalesce(var.vpc_name,"${local.cluster_name}-vpc")
   cidr  = var.vpc_cidr_block
 
   azs             = local.region_azs
