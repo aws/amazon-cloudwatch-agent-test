@@ -32,9 +32,12 @@ func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 	// Stop sender.
 	close(done)
 	metricsToFetch := t.GetMeasuredMetrics()
-	results := make([]status.TestResult, len(metricsToFetch))
+	results := make([]status.TestResult, len(metricsToFetch)*2)
 	for i, metricName := range metricsToFetch {
-		results[i] = metric.ValidateStatsdMetric(t.DimensionFactory, namespace, "InstanceId", metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), send_interval)
+		// First test result is for metric validation
+		results[i*2] = metric.ValidateStatsdMetric(t.DimensionFactory, namespace, "InstanceId", metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), send_interval)
+		// Second test result is for the entity validation associated with the metric
+		results[i*2+1] = metric.ValidateStatsdEntity(t.DimensionFactory, namespace, "InstanceId", metricName)
 	}
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),

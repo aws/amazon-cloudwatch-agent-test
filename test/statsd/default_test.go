@@ -24,7 +24,7 @@ type StatsDRunner struct {
 
 func (t *StatsDRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
+	testResults := make([]status.TestResult, len(metricsToFetch)*2)
 
 	// ECS taskdef with portMappings has some delays before getting metrics from statsd container
 	if strings.Contains(t.testName, "ECS") {
@@ -32,15 +32,20 @@ func (t *StatsDRunner) Validate() status.TestGroupResult {
 	}
 
 	for i, metricName := range metricsToFetch {
-		var testResult status.TestResult
+		var metricTestResult status.TestResult
+		var entityTestResult status.TestResult
+
 		for j := 0; j < testRetryCount; j++ {
-			testResult = metric.ValidateStatsdMetric(t.DimensionFactory, t.GetTestName(), t.dimensionKey, metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), 1*time.Second)
-			if testResult.Status == status.SUCCESSFUL {
-				break
+			if metricTestResult.Status != status.SUCCESSFUL {
+				metricTestResult = metric.ValidateStatsdMetric(t.DimensionFactory, t.GetTestName(), t.dimensionKey, metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), 1*time.Second)
+				testResults[i*2] = metricTestResult
+			}
+			if entityTestResult.Status != status.SUCCESSFUL {
+				entityTestResult = metric.ValidateStatsdEntity(t.DimensionFactory, namespace, "InstanceId", metricName)
+				testResults[i*2+1] = entityTestResult
 			}
 			time.Sleep(15 * time.Second)
 		}
-		testResults[i] = testResult
 	}
 
 	return status.TestGroupResult{

@@ -60,6 +60,10 @@ type KeyAttributes struct {
 	Type        string `json:"Type"`
 	Name        string `json:"Name"`
 }
+type Dimension struct {
+	Name  string
+	Value string
+}
 
 func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimensionKey string, metricName string, expectedValue float64, runDuration time.Duration, sendInterval time.Duration) status.TestResult {
 	testResult := status.TestResult{
@@ -76,11 +80,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 			Value: dimension.ExpectedDimensionValue{Value: aws.String("value")},
 		},
 	}
-	split := strings.Split(metricName, "_")
-	if len(split) != 3 {
-		log.Printf("unexpected metric name format, %s", metricName)
-	}
-	metricType := split[1]
+	metricType := GetMetricType(metricName)
 	instructions = append(instructions, dimension.Instruction{
 		// CWA adds this metric_type dimension.
 		Key:   "metric_type",
@@ -127,115 +127,91 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 		return testResult
 	}
 
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func ValidateStatsdEntity(dimFactory dimension.Factory, namespace, dimensionKey, metricName string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   metricName,
+		Status: status.FAILED,
+	}
+
+	instructions := []dimension.Instruction{
+		{
+			Key:   dimensionKey,
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "key",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("value")},
+		},
+	}
+
 	env := environment.GetEnvironmentMetaData()
-	// identifier is what is needed for the ListEntitiesForMetric API call
-	// instance id (EC2 and ECS) or cluster name (EKS)
-	var identifier string
+	dims, failed := dimFactory.GetDimensions(instructions)
+	if len(failed) > 0 {
+		return testResult
+	}
+	metricType := GetMetricType(metricName)
+
+	// build the ListEntitiesForMetric request
+	var dimensions []Dimension
 
 	switch env.ComputeType {
 	case computetype.EC2:
-		identifier = awsservice.GetInstanceId()
+		dimensions = []Dimension{
+			{Name: "InstanceId", Value: awsservice.GetInstanceId()},
+			{Name: "key", Value: "value"},
+			{Name: "metric_type", Value: metricType},
+		}
 	case computetype.EKS:
-		identifier = env.EKSClusterName
+		dimensions = []Dimension{
+			{Name: "ClusterName", Value: env.EKSClusterName},
+			{Name: "key", Value: "value"},
+			{Name: "metric_type", Value: metricType},
+		}
 	case computetype.ECS:
+		var instanceId string
 		for _, dim := range dims {
 			if *dim.Name == "InstanceId" {
-				identifier = *dim.Value
+				instanceId = *dim.Value
 				break
 			}
+		}
+		dimensions = []Dimension{
+			{Name: "InstanceId", Value: instanceId},
+			{Name: "key", Value: "value"},
+			{Name: "metric_type", Value: metricType},
 		}
 	default:
 		return testResult
 	}
 
-	if err := ValidateStatsdEntity(metricName, metricType, string(env.ComputeType), identifier); err != nil {
+	requestBody, err := buildRequestBody(namespace, metricName, dimensions)
+	if err != nil {
 		return testResult
-	}
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
-}
-
-func ValidateStatsdEntity(metricName, metricType, computeType, identifier string) error {
-	// build the ListEntitiesForMetric request
-	var requestBody []byte
-
-	switch computeType {
-	case "EC2":
-		requestBody = []byte(fmt.Sprintf(`{
-			"Namespace": "MetricValueBenchmarkTest",
-			"MetricName": "%s",
-			"Dimensions": [
-				{
-					"Name": "InstanceId",
-					"Value": "%s"
-				},
-				{
-					"Name": "key",
-					"Value": "value"
-				},
-				{
-					"Name": "metric_type",
-					"Value": "%s"
-				}
-			]
-		}`, metricName, identifier, metricType))
-	case "EKS":
-		requestBody = []byte(fmt.Sprintf(`{
-			"Namespace": "StatsD/EKS",
-			"MetricName": "%s",
-			"Dimensions": [
-				{
-					"Name": "ClusterName",
-					"Value": "%s"
-				},
-				{
-					"Name": "key",
-					"Value": "value"
-				},
-				{
-					"Name": "metric_type",
-					"Value": "%s"
-				}
-			]
-		}`, metricName, identifier, metricType))
-	case "ECS":
-		requestBody = []byte(fmt.Sprintf(`{
-			"Namespace": "StatsD/ECS",
-			"MetricName": "%s",
-			"Dimensions": [
-				{
-					"Name": "InstanceId",
-					"Value": "%s"
-				},
-				{
-					"Name": "key",
-					"Value": "value"
-				},
-				{
-					"Name": "metric_type",
-					"Value": "%s"
-				}
-			]
-		}`, metricName, identifier, metricType))
 	}
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, region)
 	if err != nil {
-		return fmt.Errorf("Error building the ListEntitiesForMetric request %v", err)
+		log.Printf("Error building the ListEntitiesForMetric request %v", err)
+		return testResult
 	}
 
 	// send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("Error sending the ListEntitiesForMetric request %v", err)
+		log.Printf("Error sending the ListEntitiesForMetric request %v", err)
+		return testResult
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("Error reading response body: %v", err)
+		log.Printf("Error reading response body: %v", err)
+		return testResult
 	}
 
 	var actualEntities struct {
@@ -243,20 +219,24 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 	}
 
 	if err := json.Unmarshal(responseBody, &actualEntities); err != nil {
-		return fmt.Errorf("Error unmarshaling response body: %v", err)
+		log.Printf("Error unmarshaling response body: %v", err)
+		return testResult
 	}
 
-	expectedEntity, err := GetExpectedEntity(computeType)
+	expectedEntity, err := GetExpectedEntity(string(env.ComputeType))
+
 	if err != nil {
-		return fmt.Errorf("Error getting the expected entity: %v", err)
+		log.Printf("Error getting the expected entity: %v", err)
+		return testResult
 	}
 
 	if !reflect.DeepEqual(expectedEntity, actualEntities.Entities) {
-		return fmt.Errorf("Actual entity doesn't match expected entity\nActual Entity: %+v\nExpected Entity: %+v\n",
-			actualEntities, expectedEntity)
+		log.Printf("Actual entity doesn't match expected entity\nActual Entity: %+v\nExpected Entity: %+v\n", actualEntities, expectedEntity)
+		return testResult
 	}
 
-	return nil
+	testResult.Status = status.SUCCESSFUL
+	return testResult
 }
 
 func GetExpectedEntity(computeType string) ([]Entity, error) {
@@ -298,4 +278,32 @@ func GetExpectedEntity(computeType string) ([]Entity, error) {
 	}
 
 	return []Entity{entity}, nil
+}
+
+func GetMetricType(metricName string) string {
+	split := strings.Split(metricName, "_")
+	if len(split) != 3 {
+		log.Printf("unexpected metric name format, %s", metricName)
+	}
+	metricType := split[1]
+	return metricType
+}
+
+func buildRequestBody(namespace, metricName string, dimensions []Dimension) ([]byte, error) {
+	request := struct {
+		Namespace  string      `json:"Namespace"`
+		MetricName string      `json:"MetricName"`
+		Dimensions []Dimension `json:"Dimensions"`
+	}{
+		Namespace:  namespace,
+		MetricName: metricName,
+		Dimensions: dimensions,
+	}
+
+	jsonBytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonBytes, nil
 }
