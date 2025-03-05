@@ -48,9 +48,12 @@ var _ test_runner.ITestRunner = (*CollectDTestRunner)(nil)
 
 func (t *CollectDTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
+	testResults := make([]status.TestResult, len(metricsToFetch)*2)
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validateCollectDMetric(metricName)
+		// First test result is for metric validation
+		testResults[i*2] = t.validateCollectDMetric(metricName)
+		// Second test result is for the entity validation associated with the metric
+		testResults[i*2+1] = t.validateCollectDEntity(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -100,11 +103,7 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 			Value: dimension.UnknownDimensionValue(),
 		},
 	}
-	split := strings.Split(metricName, "_")
-	if len(split) != 4 {
-		log.Printf("unexpected metric name format, %s", metricName)
-	}
-	metricType := split[1]
+
 	switch metricName {
 	case "collectd_counter_1_value":
 		instructions = append(instructions, dimension.Instruction{
@@ -150,18 +149,19 @@ func (t *CollectDTestRunner) validateCollectDMetric(metricName string) status.Te
 		return testResult
 	}
 
-	err = t.ValidateCollectDEntity(metricName, metricType)
-	if err != nil {
-		return testResult
-	}
-
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
 
-func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType string) error {
+func (t *CollectDTestRunner) validateCollectDEntity(metricName string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   fmt.Sprintf("%s_entity", metricName),
+		Status: status.FAILED,
+	}
 	// build the ListEntitiesForMetric request
+	metricType := t.GetMetricType(metricName)
 	instanceId := awsservice.GetInstanceId()
+
 	requestBody := []byte(fmt.Sprintf(`{
 		"Namespace": "MetricValueBenchmarkTest",
 		"MetricName": "%s",
@@ -179,39 +179,54 @@ func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType strin
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
 	if err != nil {
-		return fmt.Errorf("Error building the ListEntitiesForMetric request %v", err)
+		log.Printf("Error building the ListEntitiesForMetric request %v", err)
+		return testResult
 	}
 
 	// send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("Error sending the ListEntitiesForMetric request %v", err)
+		log.Printf("Error sending the ListEntitiesForMetric request %v", err)
+		return testResult
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("Error reading response body: %v", err)
+		log.Printf("Error reading response body: %v", err)
+		return testResult
 	}
 
 	var actualEntities struct {
 		Entities []Entity `json:"Entities"`
 	}
 	if err := json.Unmarshal(responseBody, &actualEntities); err != nil {
-		return fmt.Errorf("Error unmarshaling response body: %v", err)
+		log.Printf("Error unmarshaling response body: %v", err)
+		return testResult
 	}
 
 	expectedEntity := t.GetExpectedEntity()
 
 	if !reflect.DeepEqual(expectedEntity, actualEntities.Entities) {
-		return fmt.Errorf("Actual entity doesn't match expected entity\nActual Entity: %+v\nExpected Entity: %+v\n",
+		log.Printf("Actual entity doesn't match expected entity\nActual Entity: %+v\nExpected Entity: %+v\n",
 			actualEntities, expectedEntity)
+		return testResult
 	}
 
-	return nil
+	testResult.Status = status.SUCCESSFUL
+	return testResult
 }
 
 func (t *CollectDTestRunner) GetAgentRunDuration() time.Duration {
 	return time.Minute
+}
+
+func (t *CollectDTestRunner) GetMetricType(metricName string) string {
+	split := strings.Split(metricName, "_")
+	if len(split) != 4 {
+		log.Printf("unexpected metric name format, %s", metricName)
+	}
+	metricType := split[1]
+	return metricType
 }
