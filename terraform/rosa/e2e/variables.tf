@@ -1,112 +1,115 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
-variable "region" {
-  type    = string
-  default = "us-west-2"
+#
+# Copyright (c) 2023 Red Hat, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+variable "openshift_version" {
+  type        = string
+  default     = "4.14.20"
+  description = "Desired version of OpenShift for the cluster, for example '4.14.20'. If version is greater than the currently running version, an upgrade will be scheduled."
 }
 
-variable "k8s_version" {
-  type    = string
-  default = "1.31"
+variable "create_vpc" {
+  type        = bool
+  description = "If you would like to create a new VPC, set this value to 'true'. If you do not want to create a new VPC, set this value to 'false'."
+  default = true
 }
 
+variable "billing_account_id" {
+  type        = string
+  description = "Red Hat Billing Account ID for the ROSA subscription."
+}
+
+# ROSA Cluster info
 variable "cluster_name" {
-  type    = string
-  default = "cwagent-monitoring-config-e2e-eks"
+  default     = null
+  type        = string
+  description = "The name of the ROSA cluster to create"
 }
 
-variable "nodes" {
-  type    = number
-  default = 2
+variable "additional_tags" {
+  default = {
+    Terraform   = "true"
+    Environment = "dev"
+  }
+  description = "Additional AWS resource tags"
+  type        = map(string)
 }
 
-variable "ami_type" {
-  type    = string
-  default = "AL2_x86_64"
+variable "multi_az" {
+  type        = bool
+  description = "Multi AZ Cluster for High Availability"
+  default     = false
 }
 
-variable "instance_type" {
-  type    = string
-  default = "t3a.medium"
+variable "worker_node_replicas" {
+  default     = 3
+  description = "Number of worker nodes to provision. Single zone clusters need at least 2 nodes, multizone clusters need at least 3 nodes"
+  type        = number
 }
 
-variable "helm_charts_branch" {
-  type    = string
-  default = "main"
+variable "aws_subnet_ids" {
+  type        = list(any)
+  description = "A list of either the public or public + private subnet IDs to use for the cluster blocks to use for the cluster"
+  default     = ["subnet-01234567890abcdef", "subnet-01234567890abcdef", "subnet-01234567890abcdef"]
 }
 
-variable "cloudwatch_agent_repository" {
-  type    = string
-  default = "cloudwatch-agent"
+variable "private_cluster" {
+  type        = bool
+  description = "If you want to create a private cluster, set this value to 'true'. If you want a publicly available cluster, set this value to 'false'."
+  default = false
 }
 
-variable "cloudwatch_agent_tag" {
-  type    = string
-  default = "latest"
+#VPC Info
+variable "vpc_name" {
+  type        = string
+  description = "VPC Name"
+  default     = "tf-qs-vpc"
 }
 
-variable "cloudwatch_agent_repository_url" {
-  type    = string
-  default = "public.ecr.aws/cloudwatch-agent"
+variable "vpc_cidr_block" {
+  type        = string
+  description = "value of the CIDR block to use for the VPC"
+  default     = "10.0.0.0/16"
 }
 
-variable "cloudwatch_agent_operator_repository" {
-  type    = string
-  default = "cloudwatch-agent-operator"
+variable "private_subnet_cidrs" {
+  type        = list(any)
+  description = "The CIDR blocks to use for the private subnets"
+  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 }
 
-variable "cloudwatch_agent_operator_tag" {
-  type    = string
-  default = "latest"
+variable "public_subnet_cidrs" {
+  type        = list(any)
+  description = "The CIDR blocks to use for the public subnets"
+  default     = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 }
 
-variable "cloudwatch_agent_operator_repository_url" {
-  type    = string
-  default = "public.ecr.aws/cloudwatch-agent"
+variable "single_nat_gateway" {
+  type        = bool
+  description = "Single NAT or per NAT for subnet"
+  default     = false
 }
 
-variable "cloudwatch_agent_target_allocator_repository" {
+#AWS Info
+variable "aws_region" {
   type    = string
-  default = "cloudwatch-agent-target-allocator"
+  #   default = "us-west-2"
+  default = "us-east-1"
 }
 
-variable "cloudwatch_agent_target_allocator_tag" {
-  type    = string
-  default = "latest"
-}
-
-variable "cloudwatch_agent_target_allocator_repository_url" {
-  type    = string
-  default = "public.ecr.aws/cloudwatch-agent"
-}
-
-variable "test_dir" {
-  type    = string
-  default = ""
-}
-
-variable "agent_config" {
-  type    = string
-  default = ""
-}
-
-variable "otel_config" {
-  type    = string
-  default = ""
-}
-
-variable "prometheus_config" {
-  type    = string
-  default = ""
-}
-
-variable "sample_app" {
-  type    = string
-  default = ""
-}
-
-variable "eks_deployment_strategy" {
-  type    = string
-  default = "DAEMON"
+variable "default_aws_tags" {
+  type        = map(string)
+  description = "Default tags for AWS"
+  default     = {}
 }
