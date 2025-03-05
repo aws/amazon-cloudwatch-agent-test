@@ -133,7 +133,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 
 func ValidateStatsdEntity(dimFactory dimension.Factory, namespace, dimensionKey, metricName string) status.TestResult {
 	testResult := status.TestResult{
-		Name:   metricName,
+		Name:   fmt.Sprintf("%s_entity", metricName),
 		Status: status.FAILED,
 	}
 
@@ -239,6 +239,26 @@ func ValidateStatsdEntity(dimFactory dimension.Factory, namespace, dimensionKey,
 	return testResult
 }
 
+func buildRequestBody(namespace, metricName string, dimensions []Dimension) ([]byte, error) {
+	request := struct {
+		Namespace  string      `json:"Namespace"`
+		MetricName string      `json:"MetricName"`
+		Dimensions []Dimension `json:"Dimensions"`
+	}{
+		Namespace:  namespace,
+		MetricName: metricName,
+		Dimensions: dimensions,
+	}
+
+	jsonBytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("request string: %s", jsonBytes)
+	return jsonBytes, nil
+}
+
 func GetExpectedEntity(computeType string) ([]Entity, error) {
 	env := environment.GetEnvironmentMetaData()
 
@@ -287,23 +307,4 @@ func GetMetricType(metricName string) string {
 	}
 	metricType := split[1]
 	return metricType
-}
-
-func buildRequestBody(namespace, metricName string, dimensions []Dimension) ([]byte, error) {
-	request := struct {
-		Namespace  string      `json:"Namespace"`
-		MetricName string      `json:"MetricName"`
-		Dimensions []Dimension `json:"Dimensions"`
-	}{
-		Namespace:  namespace,
-		MetricName: metricName,
-		Dimensions: dimensions,
-	}
-
-	jsonBytes, err := json.Marshal(request)
-	if err != nil {
-		return nil, err
-	}
-
-	return jsonBytes, nil
 }
