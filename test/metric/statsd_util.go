@@ -30,6 +30,9 @@ const (
 	statsdMetricsAggregationInterval = 30 * time.Second
 	statsdMetricsCollectionInterval  = 5 * time.Second
 	region                           = "us-west-2"
+	EKSNamespace                     = "StatsD/EKS"
+	ECSNamespace                     = "StatsD/ECS"
+	EC2Namespace                     = "MetricValueBenchmarkTest"
 )
 
 var (
@@ -131,7 +134,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	return testResult
 }
 
-func ValidateStatsdEntity(dimFactory dimension.Factory, namespace, dimensionKey, metricName string) status.TestResult {
+func ValidateStatsdEntity(dimFactory dimension.Factory, dimensionKey, metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   fmt.Sprintf("%s_entity", metricName),
 		Status: status.FAILED,
@@ -157,6 +160,7 @@ func ValidateStatsdEntity(dimFactory dimension.Factory, namespace, dimensionKey,
 
 	// build the ListEntitiesForMetric request
 	var dimensions []Dimension
+	var namespace string
 
 	switch env.ComputeType {
 	case computetype.EC2:
@@ -165,12 +169,14 @@ func ValidateStatsdEntity(dimFactory dimension.Factory, namespace, dimensionKey,
 			{Name: "key", Value: "value"},
 			{Name: "metric_type", Value: metricType},
 		}
+		namespace = EC2Namespace
 	case computetype.EKS:
 		dimensions = []Dimension{
 			{Name: "ClusterName", Value: env.EKSClusterName},
 			{Name: "key", Value: "value"},
 			{Name: "metric_type", Value: metricType},
 		}
+		namespace = EKSNamespace
 	case computetype.ECS:
 		var instanceId string
 		for _, dim := range dims {
@@ -184,6 +190,7 @@ func ValidateStatsdEntity(dimFactory dimension.Factory, namespace, dimensionKey,
 			{Name: "key", Value: "value"},
 			{Name: "metric_type", Value: metricType},
 		}
+		namespace = ECSNamespace
 	default:
 		return testResult
 	}
