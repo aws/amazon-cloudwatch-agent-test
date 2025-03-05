@@ -52,16 +52,10 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
 }
 
-resource "random_string" "random_name" {
-  length  = 6
-  special = false
-  upper   = false
-}
-
 locals {
   worker_node_replicas = var.multi_az ? 3 : 2
   # If cluster_name is not null, use that, otherwise generate a random cluster name
-  cluster_name = coalesce(var.cluster_name, "cwa-rosa-test-${random_string.random_name.result}")
+  cluster_name = coalesce(var.cluster_name, "cwa-rosa-test")
 }
 
 # The network validator requires an additional 60 seconds to validate Terraform clusters.
