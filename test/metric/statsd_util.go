@@ -251,7 +251,7 @@ func ValidateStatsdEntity(metricName, metricType, computeType, identifier string
 		return fmt.Errorf("Error getting the expected entity: %v", err)
 	}
 
-	if !reflect.DeepEqual(expectedEntity, actualEntities) {
+	if !reflect.DeepEqual(expectedEntity, actualEntities.Entities) {
 		return fmt.Errorf("Actual entity doesn't match expected entity\nActual Entity: %+v\nExpected Entity: %+v\n",
 			actualEntities, expectedEntity)
 	}

@@ -195,14 +195,16 @@ func (t *CollectDTestRunner) ValidateCollectDEntity(metricName, metricType strin
 		return fmt.Errorf("Error reading response body: %v", err)
 	}
 
-	expectedEntity := t.GetExpectedEntity()
-
-	var actualEntities []Entity
+	var actualEntities struct {
+		Entities []Entity `json:"Entities"`
+	}
 	if err := json.Unmarshal(responseBody, &actualEntities); err != nil {
 		return fmt.Errorf("Error unmarshaling response body: %v", err)
 	}
 
-	if !reflect.DeepEqual(expectedEntity, actualEntities) {
+	expectedEntity := t.GetExpectedEntity()
+
+	if !reflect.DeepEqual(expectedEntity, actualEntities.Entities) {
 		return fmt.Errorf("Actual entity doesn't match expected entity\nActual Entity: %+v\nExpected Entity: %+v\n",
 			actualEntities, expectedEntity)
 	}
