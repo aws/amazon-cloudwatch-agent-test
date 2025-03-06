@@ -1,3 +1,0 @@
-/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent    --  gen_context(system_u:object_r:amazon_cloudwatch_agent_exec_t,s0)
-/opt/aws/amazon-cloudwatch-agent(/.*)?       gen_context(system_u:object_r:amazon_cloudwatch_agent_exec_t,s0)
-/usr/lib/systemd/system/amazon-cloudwatch-agent.service    --  gen_context(system_u:object_r:amazon_cloudwatch_agent_exec_t,s0)
