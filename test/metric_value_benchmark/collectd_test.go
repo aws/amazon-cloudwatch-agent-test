@@ -245,7 +245,6 @@ func (t *CollectDTestRunner) buildRequestBody(namespace, metricName string, dime
 		return nil, err
 	}
 
-	log.Printf("request string: %s", jsonBytes)
 	return jsonBytes, nil
 }
 

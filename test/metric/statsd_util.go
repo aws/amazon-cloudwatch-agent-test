@@ -252,7 +252,6 @@ func buildRequestBody(namespace, metricName string, dimensions []Dimension) ([]b
 		return nil, err
 	}
 
-	log.Printf("request string: %s", jsonBytes)
 	return jsonBytes, nil
 }
 
