@@ -134,28 +134,13 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	return testResult
 }
 
-func ValidateStatsdEntity(dimFactory dimension.Factory, dimensionKey, metricName string) status.TestResult {
+func ValidateStatsdEntity(dimFactory dimension.Factory, metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   fmt.Sprintf("%s_entity", metricName),
 		Status: status.FAILED,
 	}
 
-	instructions := []dimension.Instruction{
-		{
-			Key:   dimensionKey,
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "key",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("value")},
-		},
-	}
-
 	env := environment.GetEnvironmentMetaData()
-	dims, failed := dimFactory.GetDimensions(instructions)
-	if len(failed) > 0 {
-		return testResult
-	}
 	metricType := GetMetricType(metricName)
 
 	// build the ListEntitiesForMetric request
@@ -178,13 +163,18 @@ func ValidateStatsdEntity(dimFactory dimension.Factory, dimensionKey, metricName
 		}
 		namespace = EKSNamespace
 	case computetype.ECS:
-		var instanceId string
-		for _, dim := range dims {
-			if *dim.Name == "InstanceId" {
-				instanceId = *dim.Value
-				break
-			}
+		instructions := []dimension.Instruction{
+			{
+				Key:   "InstanceId",
+				Value: dimension.UnknownDimensionValue(),
+			},
 		}
+		dims, failed := dimFactory.GetDimensions(instructions)
+		if len(failed) > 0 {
+			return testResult
+		}
+
+		instanceId := *dims[0].Value
 		dimensions = []Dimension{
 			{Name: "InstanceId", Value: instanceId},
 			{Name: "key", Value: "value"},

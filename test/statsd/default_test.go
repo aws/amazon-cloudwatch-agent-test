@@ -41,7 +41,7 @@ func (t *StatsDRunner) Validate() status.TestGroupResult {
 				testResults[i*2] = metricTestResult
 			}
 			if entityTestResult.Status != status.SUCCESSFUL {
-				entityTestResult = metric.ValidateStatsdEntity(t.DimensionFactory, "InstanceId", metricName)
+				entityTestResult = metric.ValidateStatsdEntity(t.DimensionFactory, metricName)
 				testResults[i*2+1] = entityTestResult
 			}
 			time.Sleep(15 * time.Second)

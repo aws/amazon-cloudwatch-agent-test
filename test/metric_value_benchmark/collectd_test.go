@@ -44,6 +44,15 @@ type KeyAttributes struct {
 	Name        string `json:"Name"`
 }
 
+type Dimension struct {
+	Name  string
+	Value string
+}
+
+const (
+	metricNamespace = "MetricValueBenchmarkTest"
+)
+
 var _ test_runner.ITestRunner = (*CollectDTestRunner)(nil)
 
 func (t *CollectDTestRunner) Validate() status.TestGroupResult {
@@ -162,20 +171,18 @@ func (t *CollectDTestRunner) validateCollectDEntity(metricName string) status.Te
 	metricType := t.GetMetricType(metricName)
 	instanceId := awsservice.GetInstanceId()
 
-	requestBody := []byte(fmt.Sprintf(`{
-		"Namespace": "MetricValueBenchmarkTest",
-		"MetricName": "%s",
-		"Dimensions": [
-			{
-				"Name": "InstanceId",
-				"Value": "%s"
-			},
-			{
-				"Name": "type",
-				"Value": "%s"
-			}
-		]
-	}`, metricName, instanceId, metricType))
+	dimensions := []Dimension{
+		{
+			Name:  "InstanceId",
+			Value: instanceId,
+		},
+		{
+			Name:  "type",
+			Value: metricType,
+		},
+	}
+
+	requestBody, err := t.buildRequestBody(metricNamespace, metricName, dimensions)
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
 	if err != nil {
@@ -220,6 +227,26 @@ func (t *CollectDTestRunner) validateCollectDEntity(metricName string) status.Te
 
 func (t *CollectDTestRunner) GetAgentRunDuration() time.Duration {
 	return time.Minute
+}
+
+func (t *CollectDTestRunner) buildRequestBody(namespace, metricName string, dimensions []Dimension) ([]byte, error) {
+	request := struct {
+		Namespace  string      `json:"Namespace"`
+		MetricName string      `json:"MetricName"`
+		Dimensions []Dimension `json:"Dimensions"`
+	}{
+		Namespace:  namespace,
+		MetricName: metricName,
+		Dimensions: dimensions,
+	}
+
+	jsonBytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("request string: %s", jsonBytes)
+	return jsonBytes, nil
 }
 
 func (t *CollectDTestRunner) GetMetricType(metricName string) string {

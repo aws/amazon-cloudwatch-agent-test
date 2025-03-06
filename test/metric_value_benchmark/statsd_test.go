@@ -37,7 +37,7 @@ func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 		// First test result is for metric validation
 		results[i*2] = metric.ValidateStatsdMetric(t.DimensionFactory, namespace, "InstanceId", metricName, metric.StatsdMetricValues[i], t.GetAgentRunDuration(), send_interval)
 		// Second test result is for the entity validation associated with the metric
-		results[i*2+1] = metric.ValidateStatsdEntity(t.DimensionFactory, "InstanceId", metricName)
+		results[i*2+1] = metric.ValidateStatsdEntity(t.DimensionFactory, metricName)
 	}
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
