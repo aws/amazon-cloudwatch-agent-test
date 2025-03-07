@@ -101,7 +101,6 @@ resource "null_resource" "integration_test_run" {
         "echo below is either Permissive/Enforcing",
         "sudo getenforce",
         "sudo rm -r amazon-cloudwatch-agent-selinux",
-        "echo cloning repo",
         "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "cat amazon_cloudwatch_agent.te",
@@ -122,7 +121,6 @@ resource "null_resource" "integration_test_run" {
         "echo Running sanity test...",
         "go test ./test/sanity -p 1 -v",
         var.pre_test_setup,
-        "sudo setenforce 1",
         # Integration test execution
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
       ],
