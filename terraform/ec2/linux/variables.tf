@@ -62,6 +62,11 @@ variable "local_stack_host_name" {
   default = "localhost.localstack.cloud"
 }
 
+variable "is_selinux_test" {
+  type    = bool
+  default = false
+}
+
 variable "s3_bucket" {
   type    = string
   default = ""
@@ -77,6 +82,11 @@ variable "test_dir" {
   default = ""
 }
 
+variable "selinux_branch" {
+  type    = string
+  default = "main"
+}
+
 variable "cwa_github_sha" {
   type    = string
   default = ""
@@ -90,6 +100,13 @@ variable "github_test_repo" {
 variable "github_test_repo_branch" {
   type    = string
   default = "main"
+}
+
+
+variable "github_token" {
+  description = "GitHub Personal Access Token"
+  type        = string
+  sensitive   = true
 }
 
 variable "is_canary" {
