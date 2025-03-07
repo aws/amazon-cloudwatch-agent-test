@@ -131,6 +131,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		if env.Region == "us-west-2" {
 			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
 		}
+	}
 	return ec2TestRunners
 }
 
