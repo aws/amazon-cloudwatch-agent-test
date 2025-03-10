@@ -85,6 +85,7 @@ module "hcp" {
 
   aws_billing_account_id     = var.billing_account_id
   ec2_metadata_http_tokens   = "required"
+  compute_machine_type = var.instance_type
 
   depends_on = [time_sleep.wait_60_seconds]
 }

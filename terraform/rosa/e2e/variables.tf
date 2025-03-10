@@ -100,7 +100,11 @@ variable "single_nat_gateway" {
   description = "Single NAT or per NAT for subnet"
   default     = false
 }
-
+variable "instance_type" {
+  type = string
+  description = "Compute instance type for the cluster, default to m5.xlarge"
+  default = "m5.xlarge"
+}
 #AWS Info
 variable "aws_region" {
   type    = string
