@@ -48,8 +48,8 @@ type testConfig struct {
 	testDir       string
 	terraformDir  string
 	instanceType  string
-	selinuxBranch string
 	runMockServer bool
+	selinuxBranch string
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
 	targets map[string]map[string]struct{}
@@ -426,10 +426,11 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			if testConfig.selinuxBranch == "" {
 				testConfig.selinuxBranch = "main"
 			}
-			row := matrixRow{
 
-				TestDir:       testConfig.testDir,
+			row := matrixRow{
+				TestName:      generateTestName(testConfig.testDir),
 				SELinuxBranch: testConfig.selinuxBranch,
+				TestDir:       testConfig.testDir,
 				TestType:      testType,
 				TerraformDir:  testConfig.terraformDir,
 				MaxAttempts:   testConfig.maxAttempts,
