@@ -109,27 +109,28 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
 			{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &DiskTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &NetStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &CPUTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &MemTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &ProcStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &DiskIOTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &NetTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &EthtoolTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &SwapTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &RenameSSMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &JMXTomcatJVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &JMXKafkaTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &DiskTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &NetStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &CPUTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &MemTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &ProcStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &DiskIOTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &NetTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &EthtoolTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &SwapTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &RenameSSMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &JMXTomcatJVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &JMXKafkaTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 
 		// Only add EntityMetricsTestRunner if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
 		if env.Region == "us-west-2" {
-			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
+			// ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
+			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &CollectDEntityTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
 		}
 	}
 	return ec2TestRunners
