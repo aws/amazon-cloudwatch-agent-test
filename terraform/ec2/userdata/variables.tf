@@ -11,6 +11,17 @@ variable "ec2_instance_type" {
   default = "t3a.medium"
 }
 
+variable "is_selinux_test" {
+  type    = bool
+  default = false
+}
+
+variable "selinux_branch" {
+  type    = string
+  default = "main"
+}
+
+
 variable "ssh_key_name" {
   type    = string
   default = ""

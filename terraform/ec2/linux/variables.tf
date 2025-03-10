@@ -62,6 +62,11 @@ variable "local_stack_host_name" {
   default = "localhost.localstack.cloud"
 }
 
+variable "is_selinux_test" {
+  type    = bool
+  default = false
+}
+
 variable "s3_bucket" {
   type    = string
   default = ""
@@ -75,6 +80,11 @@ variable "test_name" {
 variable "test_dir" {
   type    = string
   default = ""
+}
+
+variable "selinux_branch" {
+  type    = string
+  default = "main"
 }
 
 variable "cwa_github_sha" {
