@@ -124,7 +124,7 @@ resource "null_resource" "integration_test_run" {
       ],
 
       # SELinux test setup (if enabled)
-        var.is_selinux_test ? [
+      var.is_selinux_test ? [
         "sudo yum install amazon-cloudwatch-agent -y",
         "echo Running SELinux test setup...",
         "sudo yum install selinux-policy selinux-policy-targeted selinux-policy-devel -y",
@@ -137,7 +137,7 @@ resource "null_resource" "integration_test_run" {
         "cat amazon_cloudwatch_agent.te",
         "chmod +x ./amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh",
-      ] : [
+        ] : [
         "echo SELinux test not enabled"
       ],
 

@@ -1,17 +1,22 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package selinux_negative_test
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-	"github.com/stretchr/testify/require"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 func init() {

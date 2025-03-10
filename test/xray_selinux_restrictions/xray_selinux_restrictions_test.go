@@ -1,10 +1,15 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package xray_selinux_restrictions
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/stretchr/testify/require"
 	"os/exec"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 func init() {
