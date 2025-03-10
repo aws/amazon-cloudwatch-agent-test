@@ -25,8 +25,9 @@ import (
 //------------------------------------------------------------------------------
 
 const (
-	Wait     = 5 * time.Minute
-	interval = 30 * time.Second
+	Wait                    = 5 * time.Minute
+	WaitForResourceCreation = 2 * time.Minute
+	interval                = 30 * time.Second
 )
 
 //------------------------------------------------------------------------------

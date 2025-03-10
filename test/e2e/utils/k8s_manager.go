@@ -30,9 +30,17 @@ func (k *K8CtlManager) ApplyResource(manifestPath string) error {
 	}
 	return nil
 }
+func (k *K8CtlManager) DeleteResource(manifestPath string) error {
+	cmd := exec.Command(k.Command, "delete", "-f", manifestPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to delete resource: %w\nOutput: %s", err, output)
+	}
+	return nil
+}
 
 // DeleteResource deletes a Kubernetes resource.
-func (k *K8CtlManager) DeleteResource(resourceType, resourceName, namespace string) error {
+func (k *K8CtlManager) DeleteSpecificResource(resourceType, resourceName, namespace string) error {
 	cmd := exec.Command(k.Command, "delete", resourceType, resourceName, "-n", namespace, "--timeout=60s")
 	output, err := cmd.CombinedOutput()
 	if err != nil && !strings.Contains(string(output), "not found") {
@@ -43,6 +51,9 @@ func (k *K8CtlManager) DeleteResource(resourceType, resourceName, namespace stri
 
 // UpdateKubeConfig updates the kubeconfig for an EKS cluster.
 func (k *K8CtlManager) UpdateKubeConfig(clusterName string) error {
+	if k.Command == "oc" {
+		return nil
+	}
 	cmd := exec.Command("aws", "eks", "update-kubeconfig", "--name", clusterName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -51,13 +62,21 @@ func (k *K8CtlManager) UpdateKubeConfig(clusterName string) error {
 	return nil
 }
 
-// ExecuteCommand runs a command inside a specified pod.
-func (k *K8CtlManager) ExecuteCommand(podName, namespace string, command []string) (string, error) {
+// ExecuteCommandOnPod runs a command inside a specified pod.
+func (k *K8CtlManager) ExecuteCommandOnPod(podName, namespace string, command []string) (string, error) {
 	cmdArgs := append([]string{"exec", podName, "-n", namespace, "--"}, command...)
 	cmd := exec.Command(k.Command, cmdArgs...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to execute command on pod %s: %w\nOutput: %s", podName, err, output)
+	}
+	return string(output), nil
+}
+func (k *K8CtlManager) Execute(cmdArgs []string) (string, error) {
+	cmd := exec.Command(k.Command, cmdArgs...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to execute command %s: %w\nOutput: %s", err, output)
 	}
 	return string(output), nil
 }

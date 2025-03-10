@@ -101,7 +101,7 @@ func testResources(t *testing.T) {
 
 	clientset, err := kubernetes.NewForConfig(config)
 	require.NoError(t, err, "Error creating clientset")
-
+	time.Sleep(e2e.WaitForResourceCreation)
 	for _, testFunc := range tests {
 		testFunc(t, clientset)
 	}

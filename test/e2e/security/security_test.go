@@ -123,7 +123,7 @@ func testResources(t *testing.T) {
 
 	clientset, err := kubernetes.NewForConfig(config)
 	require.NoError(t, err, "Error creating clientset")
-
+	time.Sleep(e2e.WaitForResourceCreation)
 	for _, testFunc := range tests {
 		testFunc(t, clientset)
 	}
@@ -160,24 +160,30 @@ func testAgentValidVolumeMountAccess(t *testing.T, clientset *kubernetes.Clients
 	t.Run("verify_volume_mount_access_valid_resources", func(t *testing.T) {
 		testManifestPath := filepath.Join("resources", "valid-volumetypes.yaml")
 		err := k8sCtl.ApplyResource(testManifestPath)
+		time.Sleep(e2e.WaitForResourceCreation)
 		require.NoError(t, err)
 		agentPods := e2e.GetPodList(t, clientset, AGENT_NAMESPACE, "volume-test-valid")
 		require.Len(t, agentPods.Items, 1, "Pod should be created")
+		err = k8sCtl.DeleteResource(testManifestPath)
+		require.NoError(t, err)
 	})
 }
 func testAgentInvalidVolumeMountAccess(t *testing.T, clientset *kubernetes.Clientset) {
 	t.Run("verify_volume_mount_access_invalid_resources", func(t *testing.T) {
 		testManifestPath := filepath.Join("resources", "invalid-volumetypes.yaml")
 		err := k8sCtl.ApplyResource(testManifestPath)
+		time.Sleep(e2e.WaitForResourceCreation)
 		require.NoError(t, err)
 		agentPods := e2e.GetPodList(t, clientset, AGENT_NAMESPACE, "volume-test-invalid")
 		require.Len(t, agentPods.Items, 0, "Pods shouldn't be created")
+		err = k8sCtl.DeleteResource(testManifestPath)
+		require.NoError(t, err)
 	})
 
 }
 
 //------------------------------------------------------------------------------
-// Metric Test Functions
+// Capability Test Functions
 //------------------------------------------------------------------------------
 
 func testCapabilities(t *testing.T) {
@@ -191,7 +197,7 @@ func testCapabilities(t *testing.T) {
 
 	testPod := agentPods.Items[0]
 	cmd := []string{"capsh", "--current"}
-	result, err := k8sCtl.ExecuteCommand(testPod.Name, AGENT_NAMESPACE, cmd)
+	result, err := k8sCtl.ExecuteCommandOnPod(testPod.Name, AGENT_NAMESPACE, cmd)
 	if err != nil {
 		require.NoError(t, err, "Failed to execute capsh command")
 	}
@@ -224,7 +230,7 @@ func testAgentPIDAccess(t *testing.T) {
 
 	testPod := agentPods.Items[0]
 	cmd := []string{"ps", "x"}
-	result, err := k8sCtl.ExecuteCommand(testPod.Name, AGENT_NAMESPACE, cmd)
+	result, err := k8sCtl.ExecuteCommandOnPod(testPod.Name, AGENT_NAMESPACE, cmd)
 	if err != nil {
 		require.NoError(t, err, "Failed to execute ps command")
 	}

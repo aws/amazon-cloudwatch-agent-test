@@ -82,15 +82,16 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 }
 
 func DestroyResources(env *environment.MetaData) error {
-	k8ctl := utils.NewK8CtlManager(env) // or "oc" if needed
+	k8ctl := utils.NewK8CtlManager(env)
 	helm := utils.NewHelmManager()
 	if err := k8ctl.UpdateKubeConfig(env.EKSClusterName); err != nil {
 		return err
 	}
 
-	// Delete test namespace
-	if err := k8ctl.DeleteResource("namespace", "test", ""); err != nil {
-		return err
+	if env.SampleApp != "" {
+		if err := k8ctl.DeleteResource(env.SampleApp); err != nil {
+			return err
+		}
 	}
 
 	// Uninstall Helm release
