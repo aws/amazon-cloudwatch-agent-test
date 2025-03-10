@@ -6,6 +6,7 @@ package awsservice
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -59,7 +60,13 @@ var (
 func init() {
 	ctx = context.Background()
 
-	err := ConfigureAWSClients("us-west-2")
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		// default to us-west-2
+		region = "us-west-2"
+	}
+
+	err := ConfigureAWSClients(region)
 	if err != nil {
 		fmt.Println("There was an error trying to configure the AWS clients: ", err)
 	}
