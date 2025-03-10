@@ -88,12 +88,12 @@ func TestMain(m *testing.M) {
 	}
 	k8sCtl = utils.NewK8CtlManager(env)
 
-	// Deploy test shell
-	testShellManifestPath := filepath.Join("resources", "shell.yaml")
-	if err := k8sCtl.ApplyResource(testShellManifestPath); err != nil {
-		fmt.Printf("Failed to initialize test shell: %v\n", err)
-		os.Exit(1)
-	}
+	//// Deploy test shell
+	//testShellManifestPath := filepath.Join("resources", "shell.yaml")
+	//if err := k8sCtl.ApplyResource(testShellManifestPath); err != nil {
+	//	fmt.Printf("Failed to initialize test shell: %v\n", err)
+	//	os.Exit(1)
+	//}
 
 	os.Exit(m.Run())
 }

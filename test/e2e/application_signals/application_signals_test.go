@@ -77,7 +77,7 @@ func TestMain(m *testing.M) {
 		}
 		os.Exit(0)
 	}
-
+	env.SampleApp = filepath.Join("resources", "appsignals_sample_app.yaml")
 	// Configure AWS clients and create K8s resources
 	if err := e2e.InitializeEnvironment(env); err != nil {
 		fmt.Printf("Failed to initialize environment: %v\n", err)
