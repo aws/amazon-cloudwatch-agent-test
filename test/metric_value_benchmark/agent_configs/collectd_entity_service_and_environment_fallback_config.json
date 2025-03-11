@@ -6,7 +6,7 @@
       "logfile": ""
     },
     "metrics": {
-      "namespace": "MetricValueBenchmarkTest",
+      "namespace": "CollectDEntityServiceEnvironmentFallbackTest",
       "append_dimensions": {
         "InstanceId": "${aws:InstanceId}"
       },

@@ -8,7 +8,7 @@
       "deployment.environment": "collectd-environment"
   },
   "metrics": {
-      "namespace": "MetricValueBenchmarkTest",
+      "namespace": "CollectDEntityCustomServiceEnvironmentTest",
       "append_dimensions": {
           "InstanceId": "${aws:InstanceId}"
       },

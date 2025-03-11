@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	metricNamespace = "MetricValueBenchmarkTest"
+	metricNamespace = "CollectDEntityCustomServiceEnvironmentTest"
 )
 
 type CollectDEntityCustomServiceAndEnvironmentRunner struct {

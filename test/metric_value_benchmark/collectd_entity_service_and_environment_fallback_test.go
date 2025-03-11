@@ -20,6 +20,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
+const (
+	testNamespace = "CollectDEntityServiceEnvironmentFallbackTest"
+)
+
 type CollectDEntityServiceAndEnvironmentFallback struct {
 	test_runner.BaseTestRunner
 }
@@ -62,7 +66,7 @@ func (t *CollectDEntityServiceAndEnvironmentFallback) ValidateCollectDEntity(met
 		Status: status.FAILED,
 	}
 
-	requestBody, err := metric.BuildRequestBody(metricNamespace, metricName)
+	requestBody, err := metric.BuildRequestBody(testNamespace, metricName)
 	if err != nil {
 		log.Printf("Error building the body for the ListEntitiesForMetric request %v", err)
 	}
