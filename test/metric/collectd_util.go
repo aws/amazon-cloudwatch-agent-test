@@ -34,7 +34,7 @@ type Dimension struct {
 	Value string
 }
 
-func BuildRequestBody(namespace, metricName string) ([]byte, error) {
+func BuildCollectDRequestBody(namespace, metricName string) ([]byte, error) {
 	metricType := GetCollectDMetricType(metricName)
 	instanceId := awsservice.GetInstanceId()
 

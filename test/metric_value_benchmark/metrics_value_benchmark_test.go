@@ -122,17 +122,21 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			// {TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &SwapTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			// {TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CollectDTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &RenameSSMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &JMXTomcatJVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &JMXKafkaTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &CollectDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 
 		// Only add entity related tests if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
 		if os.Getenv("AWS_REGION") == "us-west-2" {
-			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
+			ec2TestRunners = append(ec2TestRunners,
+				&test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				&test_runner.TestRunner{TestRunner: &CollectDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				&test_runner.TestRunner{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				&test_runner.TestRunner{TestRunner: &StatsDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				&test_runner.TestRunner{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			)
 		}
 	}
 	return ec2TestRunners

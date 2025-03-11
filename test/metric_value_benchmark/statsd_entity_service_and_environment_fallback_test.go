@@ -20,18 +20,18 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-type CollectDEntityServiceAndEnvironmentFallback struct {
+type StatsDEntityServiceAndEnvironmentFallback struct {
 	test_runner.BaseTestRunner
 }
 
-var _ test_runner.ITestRunner = (*CollectDEntityServiceAndEnvironmentFallback)(nil)
+var _ test_runner.ITestRunner = (*StatsDEntityServiceAndEnvironmentFallback)(nil)
 
-func (t *CollectDEntityServiceAndEnvironmentFallback) Validate() status.TestGroupResult {
+func (t *StatsDEntityServiceAndEnvironmentFallback) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 
 	for i, metricName := range metricsToFetch {
-		testResults[i] = t.ValidateCollectDEntity(metricName)
+		testResults[i] = t.ValidateStatsDEntity(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -40,31 +40,31 @@ func (t *CollectDEntityServiceAndEnvironmentFallback) Validate() status.TestGrou
 	}
 }
 
-func (t *CollectDEntityServiceAndEnvironmentFallback) GetTestName() string {
-	return "CollectDEntity - Service Name and Environment Fallback"
+func (t *StatsDEntityServiceAndEnvironmentFallback) GetTestName() string {
+	return "StatsD - Service Name and Environment Fallback"
 }
 
-func (t *CollectDEntityServiceAndEnvironmentFallback) GetAgentConfigFileName() string {
-	return "collectd_entity_service_and_environment_fallback_config.json"
+func (t *StatsDEntityServiceAndEnvironmentFallback) GetAgentConfigFileName() string {
+	return "statsd_entity_service_and_environment_fallback_config.json"
 }
 
-func (t *CollectDEntityServiceAndEnvironmentFallback) SetupAfterAgentRun() error {
-	return common.SendCollectDMetrics(2, time.Second, t.GetAgentRunDuration())
+func (t *StatsDEntityServiceAndEnvironmentFallback) SetupAfterAgentRun() error {
+	return common.SendStatsdMetrics(2, []string{}, time.Second, t.GetAgentRunDuration())
 }
 
-func (t *CollectDEntityServiceAndEnvironmentFallback) GetMeasuredMetrics() []string {
-	return []string{"collectd_gauge_1_value"}
+func (t *StatsDEntityServiceAndEnvironmentFallback) GetMeasuredMetrics() []string {
+	return []string{"statsd_timing_3"}
 }
 
-func (t *CollectDEntityServiceAndEnvironmentFallback) ValidateCollectDEntity(metricName string) status.TestResult {
+func (t *StatsDEntityServiceAndEnvironmentFallback) ValidateStatsDEntity(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   fmt.Sprintf("%s_entity", metricName),
 		Status: status.FAILED,
 	}
 
-	metricNamespace := "CollectDEntityServiceEnvironmentFallbackTest"
+	metricNamespace := "StatsDEntityServiceEnvironmentFallbackTest"
 
-	requestBody, err := metric.BuildCollectDRequestBody(metricNamespace, metricName)
+	requestBody, err := metric.BuildStatsDRequestBody(metricNamespace, metricName)
 	if err != nil {
 		log.Printf("Error building the body for the ListEntitiesForMetric request %v", err)
 	}
@@ -110,21 +110,21 @@ func (t *CollectDEntityServiceAndEnvironmentFallback) ValidateCollectDEntity(met
 	return testResult
 }
 
-func (t *CollectDEntityServiceAndEnvironmentFallback) GetAgentRunDuration() time.Duration {
+func (t *StatsDEntityServiceAndEnvironmentFallback) GetAgentRunDuration() time.Duration {
 	return time.Minute
 }
 
-func (t *CollectDEntityServiceAndEnvironmentFallback) GetExpectedEntity() []metric.Entity {
+func (t *StatsDEntityServiceAndEnvironmentFallback) GetExpectedEntity() []metric.Entity {
 	return []metric.Entity{
 		{
 			Type: "com.amazonaws.observability#Entity",
 			Attributes: metric.Attributes{
-				ServiceNameSource: "ClientIamRole",
+				ServiceNameSource: "UserConfiguration",
 			},
 			KeyAttributes: metric.KeyAttributes{
-				Environment: "ec2:default",
+				Environment: "statsd-environment",
 				Type:        "Service",
-				Name:        "cwa-e2e-iam-role",
+				Name:        "statsd-name",
 			},
 		},
 	}

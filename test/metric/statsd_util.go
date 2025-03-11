@@ -6,6 +6,7 @@
 package metric
 
 import (
+	"encoding/json"
 	"log"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 const (
@@ -50,11 +52,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 			Value: dimension.ExpectedDimensionValue{Value: aws.String("value")},
 		},
 	}
-	split := strings.Split(metricName, "_")
-	if len(split) != 3 {
-		log.Printf("unexpected metric name format, %s", metricName)
-	}
-	metricType := split[1]
+	metricType := GetStatsDMetricType(metricName)
 	instructions = append(instructions, dimension.Instruction{
 		// CWA adds this metric_type dimension.
 		Key:   "metric_type",
@@ -102,4 +100,41 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	}
 	testResult.Status = status.SUCCESSFUL
 	return testResult
+}
+
+func BuildStatsDRequestBody(namespace, metricName string) ([]byte, error) {
+	metricType := GetStatsDMetricType(metricName)
+	instanceId := awsservice.GetInstanceId()
+
+	dimensions := []Dimension{
+		{Name: "InstanceId", Value: instanceId},
+		{Name: "key", Value: "value"},
+		{Name: "metric_type", Value: metricType},
+	}
+
+	request := struct {
+		Namespace  string      `json:"Namespace"`
+		MetricName string      `json:"MetricName"`
+		Dimensions []Dimension `json:"Dimensions"`
+	}{
+		Namespace:  namespace,
+		MetricName: metricName,
+		Dimensions: dimensions,
+	}
+
+	jsonBytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonBytes, nil
+}
+
+func GetStatsDMetricType(metricName string) string {
+	split := strings.Split(metricName, "_")
+	if len(split) != 3 {
+		log.Printf("unexpected metric name format, %s", metricName)
+	}
+	metricType := split[1]
+	return metricType
 }

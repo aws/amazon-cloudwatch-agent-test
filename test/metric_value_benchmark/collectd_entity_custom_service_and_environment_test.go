@@ -20,10 +20,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-const (
-	metricNamespace = "CollectDEntityCustomServiceEnvironmentTest"
-)
-
 type CollectDEntityCustomServiceAndEnvironmentRunner struct {
 	test_runner.BaseTestRunner
 }
@@ -66,7 +62,9 @@ func (t *CollectDEntityCustomServiceAndEnvironmentRunner) ValidateCollectDEntity
 		Status: status.FAILED,
 	}
 
-	requestBody, err := metric.BuildRequestBody(metricNamespace, metricName)
+	metricNamespace := "CollectDEntityCustomServiceEnvironmentTest"
+
+	requestBody, err := metric.BuildCollectDRequestBody(metricNamespace, metricName)
 	if err != nil {
 		log.Printf("Error building the body for the ListEntitiesForMetric request %v", err)
 	}
