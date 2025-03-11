@@ -119,12 +119,12 @@ func (t *StatsDEntityCustomServiceAndEnvironmentRunner) GetExpectedEntity() []me
 		{
 			Type: "com.amazonaws.observability#Entity",
 			Attributes: metric.Attributes{
-				ServiceNameSource: "ClientIamRole",
+				ServiceNameSource: "UserConfiguration",
 			},
 			KeyAttributes: metric.KeyAttributes{
-				Environment: "ec2:default",
+				Environment: "statsd-environment",
 				Type:        "Service",
-				Name:        "cwa-e2e-iam-role",
+				Name:        "statsd-name",
 			},
 		},
 	}

@@ -53,7 +53,7 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) SetupAfterAgentRun() error {
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) GetMeasuredMetrics() []string {
-	return []string{"statsd_timing_3"}
+	return []string{"statsd_gauge_1"}
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) ValidateStatsDEntity(metricName string) status.TestResult {
@@ -118,13 +118,10 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) GetExpectedEntity() []metric
 	return []metric.Entity{
 		{
 			Type: "com.amazonaws.observability#Entity",
-			Attributes: metric.Attributes{
-				ServiceNameSource: "UserConfiguration",
-			},
 			KeyAttributes: metric.KeyAttributes{
-				Environment: "statsd-environment",
+				Environment: "ec2:default",
 				Type:        "Service",
-				Name:        "statsd-name",
+				Name:        "cwa-e2e-iam-role",
 			},
 		},
 	}

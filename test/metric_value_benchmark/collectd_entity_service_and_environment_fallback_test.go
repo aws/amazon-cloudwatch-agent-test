@@ -118,9 +118,6 @@ func (t *CollectDEntityServiceAndEnvironmentFallback) GetExpectedEntity() []metr
 	return []metric.Entity{
 		{
 			Type: "com.amazonaws.observability#Entity",
-			Attributes: metric.Attributes{
-				ServiceNameSource: "ClientIamRole",
-			},
 			KeyAttributes: metric.KeyAttributes{
 				Environment: "ec2:default",
 				Type:        "Service",
