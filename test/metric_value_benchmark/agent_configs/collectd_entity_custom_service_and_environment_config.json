@@ -4,11 +4,11 @@
       "run_as_user": "root",
       "debug": true,
       "logfile": "",
-      "service.name": "collectd-test-name",
-      "deployment.environment": "collectd-test-environment"
+      "service.name": "collectd-name",
+      "deployment.environment": "collectd-environment"
   },
   "metrics": {
-      "namespace": "CollectDEntity1",
+      "namespace": "MetricValueBenchmarkTest",
       "append_dimensions": {
           "InstanceId": "${aws:InstanceId}"
       },

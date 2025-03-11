@@ -13,6 +13,22 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
+type Entity struct {
+	Type          string        `json:"__type"`
+	Attributes    Attributes    `json:"Attributes"`
+	KeyAttributes KeyAttributes `json:"KeyAttributes"`
+}
+
+type Attributes struct {
+	ServiceNameSource string `json:"AWS.ServiceNameSource"`
+}
+
+type KeyAttributes struct {
+	Environment string `json:"Environment"`
+	Type        string `json:"Type"`
+	Name        string `json:"Name"`
+}
+
 type Dimension struct {
 	Name  string
 	Value string

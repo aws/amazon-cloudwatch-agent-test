@@ -20,17 +20,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-const (
-	metricNamespace = "MetricValueBenchmarkTest"
-)
-
-type CollectDEntityCustomServiceAndEnvironmentRunner struct {
+type CollectDEntityFallback struct {
 	test_runner.BaseTestRunner
 }
 
-var _ test_runner.ITestRunner = (*CollectDEntityCustomServiceAndEnvironmentRunner)(nil)
+var _ test_runner.ITestRunner = (*CollectDEntityFallback)(nil)
 
-func (t *CollectDEntityCustomServiceAndEnvironmentRunner) Validate() status.TestGroupResult {
+func (t *CollectDEntityFallback) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 
@@ -44,23 +40,23 @@ func (t *CollectDEntityCustomServiceAndEnvironmentRunner) Validate() status.Test
 	}
 }
 
-func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetTestName() string {
-	return "CollectDEntity - Custom Service Name and Environment"
+func (t *CollectDEntityFallback) GetTestName() string {
+	return "CollectDEntity - Service Name and Environment Fallback"
 }
 
-func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetAgentConfigFileName() string {
-	return "collectd_entity_custom_service_and_environment_config.json"
+func (t *CollectDEntityFallback) GetAgentConfigFileName() string {
+	return "collectd_entity_service_and_environment_fallback_config.json"
 }
 
-func (t *CollectDEntityCustomServiceAndEnvironmentRunner) SetupAfterAgentRun() error {
+func (t *CollectDEntityFallback) SetupAfterAgentRun() error {
 	return common.SendCollectDMetrics(2, time.Second, t.GetAgentRunDuration())
 }
 
-func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetMeasuredMetrics() []string {
+func (t *CollectDEntityFallback) GetMeasuredMetrics() []string {
 	return []string{"collectd_counter_1_value"}
 }
 
-func (t *CollectDEntityCustomServiceAndEnvironmentRunner) ValidateCollectDEntity(metricName string) status.TestResult {
+func (t *CollectDEntityFallback) ValidateCollectDEntity(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   fmt.Sprintf("%s_entity", metricName),
 		Status: status.FAILED,
@@ -112,21 +108,18 @@ func (t *CollectDEntityCustomServiceAndEnvironmentRunner) ValidateCollectDEntity
 	return testResult
 }
 
-func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetAgentRunDuration() time.Duration {
+func (t *CollectDEntityFallback) GetAgentRunDuration() time.Duration {
 	return time.Minute
 }
 
-func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetExpectedEntity() []metric.Entity {
+func (t *CollectDEntityFallback) GetExpectedEntity() []metric.Entity {
 	return []metric.Entity{
 		{
 			Type: "com.amazonaws.observability#Entity",
-			Attributes: metric.Attributes{
-				ServiceNameSource: "UserConfiguration",
-			},
 			KeyAttributes: metric.KeyAttributes{
-				Environment: "collectd-environment",
+				Environment: "ec2:default",
 				Type:        "Service",
-				Name:        "collectd-name",
+				Name:        "cwa-e2e-iam-role",
 			},
 		},
 	}
