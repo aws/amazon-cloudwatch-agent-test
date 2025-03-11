@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DataDog/datadog-go/statsd"
 	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
@@ -22,6 +23,7 @@ const (
 	// Must match JSON config
 	statsdMetricsAggregationInterval = 30 * time.Second
 	statsdMetricsCollectionInterval  = 5 * time.Second
+	send_interval                    = 10 * time.Millisecond
 )
 
 var (
@@ -35,6 +37,7 @@ var (
 		"statsd_timing_6",
 	}
 	StatsdMetricValues = []float64{1000, 2000, 3000, 4000, 5000, 6000}
+	Done               = make(chan bool)
 )
 
 func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimensionKey string, metricName string, expectedValue float64, runDuration time.Duration, sendInterval time.Duration) status.TestResult {
@@ -100,6 +103,43 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 	}
 	testResult.Status = status.SUCCESSFUL
 	return testResult
+}
+
+// sender will send statsd metric values with the specified names and values.
+func SendStatsdMetricsWithEntity() {
+	client, _ := statsd.New(
+		"127.0.0.1:8125",
+		statsd.WithMaxMessagesPerPayload(1),
+		statsd.WithoutTelemetry())
+	defer client.Close()
+	ticker := time.NewTicker(send_interval)
+	defer ticker.Stop()
+	tags := []string{"key:value"}
+	for {
+		select {
+		case <-Done:
+			return
+		case <-ticker.C:
+			for i, name := range StatsdMetricNames {
+				if strings.Contains(name, "counter") {
+					// Submit twice such that the sum is metricValues[i].
+					v := int64(StatsdMetricValues[i])
+					client.Count(name, v-500, tags, 1.0)
+					client.Count(name, 500, tags, 1.0)
+				} else if strings.Contains(name, "gauge") {
+					// Only the most recent gauge value matters.
+					client.Gauge(name, StatsdMetricValues[i], tags, 1.0)
+					client.Gauge(name, StatsdMetricValues[i]-500, tags, 1.0)
+				} else {
+					v := time.Millisecond * time.Duration(StatsdMetricValues[i])
+					v -= 100 * time.Millisecond
+					client.Timing(name, v, tags, 1.0)
+					v += 200 * time.Millisecond
+					client.Timing(name, v, tags, 1.0)
+				}
+			}
+		}
+	}
 }
 
 func BuildStatsDRequestBody(namespace, metricName string) ([]byte, error) {

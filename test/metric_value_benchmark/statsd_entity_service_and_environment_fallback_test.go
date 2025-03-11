@@ -49,7 +49,8 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) GetAgentConfigFileName() str
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) SetupAfterAgentRun() error {
-	return common.SendStatsdMetrics(2, []string{}, time.Second, t.GetAgentRunDuration())
+	metric.SendStatsdMetricsWithEntity()
+	return nil
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) GetMeasuredMetrics() []string {
@@ -118,6 +119,9 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) GetExpectedEntity() []metric
 	return []metric.Entity{
 		{
 			Type: "com.amazonaws.observability#Entity",
+			Attributes: metric.Attributes{
+				ServiceNameSource: "ClientIamRole",
+			},
 			KeyAttributes: metric.KeyAttributes{
 				Environment: "ec2:default",
 				Type:        "Service",

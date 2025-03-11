@@ -49,7 +49,8 @@ func (t *StatsDEntityCustomServiceAndEnvironmentRunner) GetAgentConfigFileName()
 }
 
 func (t *StatsDEntityCustomServiceAndEnvironmentRunner) SetupAfterAgentRun() error {
-	return common.SendStatsdMetrics(2, []string{}, time.Second, t.GetAgentRunDuration())
+	metric.SendStatsdMetricsWithEntity()
+	return nil
 }
 
 func (t *StatsDEntityCustomServiceAndEnvironmentRunner) GetMeasuredMetrics() []string {
