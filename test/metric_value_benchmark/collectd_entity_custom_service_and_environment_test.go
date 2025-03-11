@@ -65,7 +65,7 @@ func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetTestName() string {
 }
 
 func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetAgentConfigFileName() string {
-	return "collectd_entity_custom_service_and_environment_test.json"
+	return "collectd_entity_custom_service_and_environment_config.json"
 }
 
 func (t *CollectDEntityCustomServiceAndEnvironmentRunner) SetupAfterAgentRun() error {
