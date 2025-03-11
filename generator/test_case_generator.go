@@ -419,6 +419,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
+			//This is to have selinux negative test
 			if testConfig.selinuxBranch == "" {
 				testConfig.selinuxBranch = "main"
 			}

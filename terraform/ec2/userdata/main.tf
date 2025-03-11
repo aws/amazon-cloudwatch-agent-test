@@ -69,7 +69,8 @@ resource "null_resource" "integration_test" {
   provisioner "remote-exec" {
     inline = concat(
       [
-        "echo Preparing environment...",
+        "echo Getting Cloud-init Logs",
+        "sudo cat /var/log/cloud-init-output.log",
       ],
 
       # SELinux test setup (if enabled)
@@ -86,6 +87,7 @@ resource "null_resource" "integration_test" {
 
       # General testing setup
       [
+        "echo prepare environment",
         "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
         "export AWS_REGION=${var.region}",
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",

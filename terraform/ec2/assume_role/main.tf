@@ -206,6 +206,7 @@ resource "null_resource" "integration_test_run" {
         "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
         "sudo systemctl start auditd",
         "sudo systemctl enable auditd",
+
       ],
 
       # SELinux test setup (if enabled)
