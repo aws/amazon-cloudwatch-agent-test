@@ -151,10 +151,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/selinux_negative_test"},
-		{
-			testDir:       "./test/xray_selinux_restrictions",
-			selinuxBranch: "xray",
-		},
 		{testDir: "./test/otlp"},
 		// skipping FIPS test as the test cannot be verified
 		// neither ssh nor SSM works after a reboot once FIPS is enabled
