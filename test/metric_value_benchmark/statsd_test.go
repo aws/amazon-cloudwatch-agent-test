@@ -13,6 +13,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
+const (
+	send_interval = 10 * time.Millisecond
+)
+
 var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
 
 type StatsdTestRunner struct {
