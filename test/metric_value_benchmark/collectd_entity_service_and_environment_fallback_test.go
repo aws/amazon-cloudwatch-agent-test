@@ -20,13 +20,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-type CollectDEntityFallback struct {
+type CollectDEntityServiceAndEnvironmentFallback struct {
 	test_runner.BaseTestRunner
 }
 
-var _ test_runner.ITestRunner = (*CollectDEntityFallback)(nil)
+var _ test_runner.ITestRunner = (*CollectDEntityServiceAndEnvironmentFallback)(nil)
 
-func (t *CollectDEntityFallback) Validate() status.TestGroupResult {
+func (t *CollectDEntityServiceAndEnvironmentFallback) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 
@@ -40,23 +40,23 @@ func (t *CollectDEntityFallback) Validate() status.TestGroupResult {
 	}
 }
 
-func (t *CollectDEntityFallback) GetTestName() string {
+func (t *CollectDEntityServiceAndEnvironmentFallback) GetTestName() string {
 	return "CollectDEntity - Service Name and Environment Fallback"
 }
 
-func (t *CollectDEntityFallback) GetAgentConfigFileName() string {
+func (t *CollectDEntityServiceAndEnvironmentFallback) GetAgentConfigFileName() string {
 	return "collectd_entity_service_and_environment_fallback_config.json"
 }
 
-func (t *CollectDEntityFallback) SetupAfterAgentRun() error {
+func (t *CollectDEntityServiceAndEnvironmentFallback) SetupAfterAgentRun() error {
 	return common.SendCollectDMetrics(2, time.Second, t.GetAgentRunDuration())
 }
 
-func (t *CollectDEntityFallback) GetMeasuredMetrics() []string {
+func (t *CollectDEntityServiceAndEnvironmentFallback) GetMeasuredMetrics() []string {
 	return []string{"collectd_counter_1_value"}
 }
 
-func (t *CollectDEntityFallback) ValidateCollectDEntity(metricName string) status.TestResult {
+func (t *CollectDEntityServiceAndEnvironmentFallback) ValidateCollectDEntity(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   fmt.Sprintf("%s_entity", metricName),
 		Status: status.FAILED,
@@ -108,11 +108,11 @@ func (t *CollectDEntityFallback) ValidateCollectDEntity(metricName string) statu
 	return testResult
 }
 
-func (t *CollectDEntityFallback) GetAgentRunDuration() time.Duration {
+func (t *CollectDEntityServiceAndEnvironmentFallback) GetAgentRunDuration() time.Duration {
 	return time.Minute
 }
 
-func (t *CollectDEntityFallback) GetExpectedEntity() []metric.Entity {
+func (t *CollectDEntityServiceAndEnvironmentFallback) GetExpectedEntity() []metric.Entity {
 	return []metric.Entity{
 		{
 			Type: "com.amazonaws.observability#Entity",

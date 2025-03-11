@@ -108,7 +108,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
-			{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// {TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &DiskTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &NetStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
@@ -126,9 +126,11 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			// {TestRunner: &JMXTomcatJVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &JMXKafkaTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &CollectDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 
-		// Only add EntityMetricsTestRunner if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
+		// Only add entity related tests if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
+		log.Printf("env.region: %s", env.Region)
 		if env.Region == "us-west-2" {
 			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
 		}
