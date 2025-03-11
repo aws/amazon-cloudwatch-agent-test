@@ -53,7 +53,7 @@ func (t *CollectDEntityServiceAndEnvironmentFallback) SetupAfterAgentRun() error
 }
 
 func (t *CollectDEntityServiceAndEnvironmentFallback) GetMeasuredMetrics() []string {
-	return []string{"collectd_counter_1_value"}
+	return []string{"collectd_gauge_1_value"}
 }
 
 func (t *CollectDEntityServiceAndEnvironmentFallback) ValidateCollectDEntity(metricName string) status.TestResult {
@@ -116,6 +116,9 @@ func (t *CollectDEntityServiceAndEnvironmentFallback) GetExpectedEntity() []metr
 	return []metric.Entity{
 		{
 			Type: "com.amazonaws.observability#Entity",
+			Attributes: metric.Attributes{
+				ServiceNameSource: "ClientIamRole",
+			},
 			KeyAttributes: metric.KeyAttributes{
 				Environment: "ec2:default",
 				Type:        "Service",
