@@ -148,6 +148,7 @@ func BuildStatsDRequestBody(namespace, metricName string) ([]byte, error) {
 
 	dimensions := []Dimension{
 		{Name: "InstanceId", Value: instanceId},
+		{Name: "key", Value: "value"},
 		{Name: "metric_type", Value: metricType},
 	}
 
