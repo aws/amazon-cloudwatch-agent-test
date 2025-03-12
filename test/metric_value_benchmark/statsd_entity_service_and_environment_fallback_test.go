@@ -56,7 +56,7 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) SetupAfterAgentRun() error {
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) GetMeasuredMetrics() []string {
-	return []string{"statsd_gauge_1"}
+	return []string{"statsd_counter_1"}
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) ValidateStatsDEntity(metricName string) status.TestResult {
