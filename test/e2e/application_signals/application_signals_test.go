@@ -127,7 +127,7 @@ func testResources(t *testing.T) {
 
 	clientset, err := kubernetes.NewForConfig(config)
 	require.NoError(t, err, "Error creating clientset")
-	//time.Sleep(1 * time.Minute) // wait for resources to be created
+	time.Sleep(e2e.WaitForResourceCreation)
 	for _, testFunc := range tests {
 		testFunc(t, clientset)
 	}
@@ -138,7 +138,7 @@ func testMetrics(t *testing.T) {
 	tests := testMetricsRegistry[configFile]
 
 	fmt.Printf("waiting for metrics to propagate for %f minutes ...\n", e2e.Wait.Minutes())
-	//time.Sleep(10 * time.Minute) // we are checking a period of 10 minutes
+	time.Sleep(10 * time.Minute) // we are checking a period of 10 minutes
 
 	for _, testFunc := range tests {
 		testFunc(t)
