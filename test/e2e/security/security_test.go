@@ -88,13 +88,6 @@ func TestMain(m *testing.M) {
 	}
 	k8sCtl = utils.NewK8CtlManager(env)
 
-	//// Deploy test shell
-	//testShellManifestPath := filepath.Join("resources", "shell.yaml")
-	//if err := k8sCtl.ApplyResource(testShellManifestPath); err != nil {
-	//	fmt.Printf("Failed to initialize test shell: %v\n", err)
-	//	os.Exit(1)
-	//}
-
 	os.Exit(m.Run())
 }
 
@@ -132,9 +125,6 @@ func testResources(t *testing.T) {
 func testMetrics(t *testing.T) {
 	configFile := filepath.Base(env.AgentConfig)
 	tests := testMetricsRegistry[configFile]
-
-	fmt.Println("waiting for metrics to propagate...")
-	time.Sleep(1 * time.Minute)
 
 	for _, testFunc := range tests {
 		testFunc(t)
