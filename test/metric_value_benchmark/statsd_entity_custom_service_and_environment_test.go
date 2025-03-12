@@ -51,7 +51,7 @@ func (t *StatsDEntityCustomServiceAndEnvironmentRunner) GetAgentConfigFileName()
 }
 
 func (t *StatsDEntityCustomServiceAndEnvironmentRunner) SetupAfterAgentRun() error {
-	metric.SendStatsdMetricsWithEntity(t.done)
+	go metric.SendStatsdMetricsWithEntity(t.done)
 	return nil
 }
 
