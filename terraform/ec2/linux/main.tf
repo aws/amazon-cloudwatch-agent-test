@@ -131,7 +131,7 @@ resource "null_resource" "integration_test_run" {
         "sudo yum install amazon-cloudwatch-agent -y",
         "echo Running SELinux test setup...",
         "sudo yum install selinux-policy selinux-policy-targeted selinux-policy-devel -y",
-        "sudo setenforce 1",
+        "sudo setenforce 0",
         "echo below is either Permissive/Enforcing",
         "sudo getenforce",
         "sudo rm -r amazon-cloudwatch-agent-selinux",
