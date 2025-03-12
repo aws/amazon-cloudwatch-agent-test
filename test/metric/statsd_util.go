@@ -37,7 +37,6 @@ var (
 		"statsd_timing_6",
 	}
 	StatsdMetricValues = []float64{1000, 2000, 3000, 4000, 5000, 6000}
-	Done               = make(chan bool)
 )
 
 func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimensionKey string, metricName string, expectedValue float64, runDuration time.Duration, sendInterval time.Duration) status.TestResult {
@@ -106,7 +105,7 @@ func ValidateStatsdMetric(dimFactory dimension.Factory, namespace string, dimens
 }
 
 // sender will send statsd metric values with the specified names and values.
-func SendStatsdMetricsWithEntity() {
+func SendStatsdMetricsWithEntity(done chan bool) {
 	client, _ := statsd.New(
 		"127.0.0.1:8125",
 		statsd.WithMaxMessagesPerPayload(1),
@@ -117,7 +116,7 @@ func SendStatsdMetricsWithEntity() {
 	tags := []string{"key:value"}
 	for {
 		select {
-		case <-Done:
+		case <-done:
 			return
 		case <-ticker.C:
 			for i, name := range StatsdMetricNames {

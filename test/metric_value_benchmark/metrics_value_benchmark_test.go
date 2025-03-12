@@ -109,7 +109,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
-			{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
 			{TestRunner: &DiskTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &NetStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
@@ -134,8 +134,8 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 				&test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 				&test_runner.TestRunner{TestRunner: &CollectDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 				&test_runner.TestRunner{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-				&test_runner.TestRunner{TestRunner: &StatsDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-				&test_runner.TestRunner{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				&test_runner.TestRunner{TestRunner: &StatsDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
+				&test_runner.TestRunner{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
 			)
 		}
 	}

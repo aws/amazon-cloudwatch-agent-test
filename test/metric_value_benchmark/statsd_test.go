@@ -21,11 +21,12 @@ var _ test_runner.ITestRunner = (*StatsdTestRunner)(nil)
 
 type StatsdTestRunner struct {
 	test_runner.BaseTestRunner
+	done chan bool
 }
 
 func (t *StatsdTestRunner) Validate() status.TestGroupResult {
 	// Stop sender.
-	close(metric.Done)
+	close(t.done)
 	metricsToFetch := t.GetMeasuredMetrics()
 	results := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -51,7 +52,7 @@ func (t *StatsdTestRunner) GetAgentRunDuration() time.Duration {
 
 func (t *StatsdTestRunner) SetupAfterAgentRun() error {
 	// Send each metric once a second.
-	go metric.SendStatsdMetricsWithEntity()
+	go metric.SendStatsdMetricsWithEntity(t.done)
 	return nil
 }
 

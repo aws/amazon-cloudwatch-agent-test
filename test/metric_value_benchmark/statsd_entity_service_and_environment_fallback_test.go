@@ -22,11 +22,13 @@ import (
 
 type StatsDEntityServiceAndEnvironmentFallback struct {
 	test_runner.BaseTestRunner
+	done chan bool
 }
 
 var _ test_runner.ITestRunner = (*StatsDEntityServiceAndEnvironmentFallback)(nil)
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) Validate() status.TestGroupResult {
+	close(t.done)
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 
@@ -49,7 +51,7 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) GetAgentConfigFileName() str
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) SetupAfterAgentRun() error {
-	metric.SendStatsdMetricsWithEntity()
+	metric.SendStatsdMetricsWithEntity(t.done)
 	return nil
 }
 

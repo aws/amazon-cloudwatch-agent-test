@@ -22,11 +22,13 @@ import (
 
 type StatsDEntityCustomServiceAndEnvironmentRunner struct {
 	test_runner.BaseTestRunner
+	done chan bool
 }
 
 var _ test_runner.ITestRunner = (*StatsDEntityCustomServiceAndEnvironmentRunner)(nil)
 
 func (t *StatsDEntityCustomServiceAndEnvironmentRunner) Validate() status.TestGroupResult {
+	close(t.done)
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 
@@ -49,7 +51,7 @@ func (t *StatsDEntityCustomServiceAndEnvironmentRunner) GetAgentConfigFileName()
 }
 
 func (t *StatsDEntityCustomServiceAndEnvironmentRunner) SetupAfterAgentRun() error {
-	metric.SendStatsdMetricsWithEntity()
+	metric.SendStatsdMetricsWithEntity(t.done)
 	return nil
 }
 
