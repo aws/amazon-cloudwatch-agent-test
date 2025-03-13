@@ -11,6 +11,11 @@ variable "ec2_instance_type" {
   default = "t3a.medium"
 }
 
+variable "is_selinux_test" {
+  type    = bool
+  default = false
+}
+
 variable "ssh_key_name" {
   type    = string
   default = ""
@@ -70,6 +75,11 @@ variable "s3_bucket" {
 variable "test_name" {
   type    = string
   default = ""
+}
+
+variable "selinux_branch" {
+  type    = string
+  default = "main"
 }
 
 variable "test_dir" {
