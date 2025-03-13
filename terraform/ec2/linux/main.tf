@@ -57,8 +57,10 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
       "echo clone ${var.github_test_repo} branch ${var.github_test_repo_branch} and install agent",
-      "if [ ! -d amazon-cloudwatch-agent-test ]; then",
-      "echo 'Test repo not found, cloning...'",
+      # check for vendor directory specifically instead of overall test repo to avoid issues with SELinux
+      "if [ ! -d amazon-cloudwatch-agent-test/vendor ]; then",
+      "echo 'Vendor directory (test repo dependencies) not found, cloning...'",
+      "sudo rm -r amazon-cloudwatch-agent-test",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q",
       "else",
       "echo 'Test repo already exists, skipping clone'",
