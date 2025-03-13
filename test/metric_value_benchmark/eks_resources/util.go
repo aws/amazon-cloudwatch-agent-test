@@ -314,9 +314,96 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 		ExpectedDimsToMetrics["ClusterName-InstanceId-NodeName"] = append(ExpectedDimsToMetrics["ClusterName-InstanceId-NodeName"],
 			"node_diskio_io_serviced_total",
 			"node_diskio_io_service_bytes_total",
-
 		)
 	}
 
 	return ExpectedDimsToMetrics
+}
+
+func GetExpectedDimsToMetricsForEnhanced(env *environment.MetaData) map[string][]string {
+	var ExpectedDimsToMetricsForEnhanced = map[string][]string{
+		"ClusterName": {
+			"apiserver_storage_objects",
+			"apiserver_request_total",
+			"apiserver_request_duration_seconds",
+			"rest_client_request_duration_seconds",
+			"rest_client_requests_total",
+			"etcd_request_duration_seconds",
+			"apiserver_storage_size_bytes",
+			"apiserver_longrunning_requests",
+			"apiserver_current_inflight_requests",
+			"apiserver_admission_controller_admission_duration_seconds",
+			"apiserver_admission_webhook_admission_duration_seconds",
+			"apiserver_admission_step_admission_duration_seconds",
+			"apiserver_request_total_5xx",
+			"apiserver_storage_list_duration_seconds",
+			"apiserver_flowcontrol_request_concurrency_limit",
+			"apiserver_current_inqueue_requests",
+			"status_replicas_available",
+			"status_replicas_unavailable",
+			"replicas_desired",
+			"replicas_ready",
+		},
+		//"ClusterName-FullPodName-Namespace-PodName": {
+		//	"status_replicas_available",
+		//	"status_replicas_unavailable",
+		//	"replicas_desired",
+		//	"replicas_ready",
+		//},
+		"ClusterName-Namespace-PodName": {
+			"status_replicas_available",
+			"status_replicas_unavailable",
+			"replicas_desired",
+			"replicas_ready",
+		},
+		"ClusterName-resource": {
+			"apiserver_storage_objects",
+			"apiserver_longrunning_requests",
+			"apiserver_storage_list_duration_seconds",
+		},
+		"ClusterName-Namespace-Service": {
+			"pod_cpu_limit",
+			"pod_cpu_utilization_over_pod_limit",
+		},
+		//"ClusterName-code-verb": {
+		//	"apiserver_request_total",
+		//	"apiserver_request_total_5xx",
+		//},
+		//"ClusterName-verb": {
+		//	"apiserver_request_duration_seconds",
+		//},
+		//"ClusterName-operation": {
+		//	"apiserver_admission_controller_admission_duration_seconds",
+		//	"rest_client_request_duration_seconds",
+		//	"etcd_request_duration_seconds",
+		//},
+		//"ClusterName-InstanceId-NodeName": {
+		//	"pod_cpu_utilization_over_pod_limit",
+		//	"pod_cpu_limit",
+		//},
+		//"ClusterName-code-method": {
+		//	"rest_client_requests_total",
+		//},
+		//"ClusterName-endpoint": {
+		//	"apiserver_storage_size_bytes",
+		//},
+		//"ClusterName-request_kind": {
+		//	"apiserver_current_inflight_requests",
+		//	"apiserver_current_inqueue_requests",
+		//},
+		"ClusterName-name": {
+			"apiserver_admission_webhook_admission_duration_seconds",
+		},
+		//"ClusterName-group": {
+		//	"apiserver_requested_deprecated_apis",
+		//},
+		//"ClusterName-priority_level": {
+		//	"apiserver_flowcontrol_request_concurrency_limit",
+		//},
+		//"ClusterName-reason": {
+		//	"apiserver_flowcontrol_rejected_requests_total",
+		//},
+	}
+
+	return ExpectedDimsToMetricsForEnhanced
 }

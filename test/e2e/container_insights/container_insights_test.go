@@ -136,7 +136,18 @@ func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 func testContainerInsightsMetrics(t *testing.T) {
 	var testResults []status.TestResult
 
-	testResults = append(testResults, metric.ValidateMetrics(env, "", eks_resources.GetExpectedDimsToMetrics(env))...)
+	expectedMetrics := eks_resources.GetExpectedDimsToMetrics(env)
+	//Merge enhancedMetrics into combinedMetrics
+	for key, value := range eks_resources.GetExpectedDimsToMetricsForEnhanced(env) {
+		if existingValue, exists := expectedMetrics[key]; exists {
+			// If the key already exists, append the new metrics to the existing slice
+			expectedMetrics[key] = append(existingValue, value...)
+		} else {
+			// If the key doesn't exist, add it to the combined map
+			expectedMetrics[key] = value
+		}
+	}
+	testResults = append(testResults, metric.ValidateMetrics(env, "", expectedMetrics)...)
 	for _, result := range testResults {
 
 		if result.Status == status.FAILED {
