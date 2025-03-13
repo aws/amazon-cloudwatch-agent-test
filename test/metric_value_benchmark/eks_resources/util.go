@@ -336,13 +336,15 @@ func GetExpectedDimsToMetricsForEnhanced(env *environment.MetaData) map[string][
 			"apiserver_admission_webhook_admission_duration_seconds",
 			"apiserver_admission_step_admission_duration_seconds",
 			"apiserver_request_total_5xx",
-			"apiserver_storage_list_duration_seconds",
 			"apiserver_flowcontrol_request_concurrency_limit",
 			"apiserver_current_inqueue_requests",
 			"status_replicas_available",
 			"status_replicas_unavailable",
 			"replicas_desired",
 			"replicas_ready",
+			"container_filesystem_usage",
+			"container_filesystem_available",
+			"container_filesystem_utilization",
 		},
 		//"ClusterName-FullPodName-Namespace-PodName": {
 		//	"status_replicas_available",
@@ -359,7 +361,6 @@ func GetExpectedDimsToMetricsForEnhanced(env *environment.MetaData) map[string][
 		"ClusterName-resource": {
 			"apiserver_storage_objects",
 			"apiserver_longrunning_requests",
-			"apiserver_storage_list_duration_seconds",
 		},
 		"ClusterName-Namespace-Service": {
 			"pod_cpu_limit",
@@ -403,6 +404,14 @@ func GetExpectedDimsToMetricsForEnhanced(env *environment.MetaData) map[string][
 		//"ClusterName-reason": {
 		//	"apiserver_flowcontrol_rejected_requests_total",
 		//},
+	}
+	if env.ComputeType != computetype.ROSA { //apiserver_storage_list_duration_seconds
+		ExpectedDimsToMetricsForEnhanced["ClusterName"] = append(ExpectedDimsToMetricsForEnhanced["ClusterName"],
+			"apiserver_storage_list_duration_seconds",
+		)
+		ExpectedDimsToMetricsForEnhanced["ClusterName-resource"] = append(ExpectedDimsToMetricsForEnhanced["ClusterName-resource"],
+			"apiserver_storage_list_duration_seconds",
+		)
 	}
 
 	return ExpectedDimsToMetricsForEnhanced
