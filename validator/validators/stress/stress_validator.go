@@ -192,7 +192,7 @@ var (
 		"50000": {
 			"statsd": {
 				"procstat_cpu_usage":   float64(250),
-				"procstat_memory_rss":  float64(400000000),
+				"procstat_memory_rss":  float64(440000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(2000000000),
 				"procstat_memory_data": float64(600000000),
@@ -214,7 +214,7 @@ var (
 				"procstat_cpu_usage":   float64(400),
 				"procstat_memory_rss":  float64(800000000),
 				"procstat_memory_swap": float64(0),
-				"procstat_memory_vms":  float64(1650000000),
+				"procstat_memory_vms":  float64(1750000000),
 				"procstat_memory_data": float64(650000000),
 				"procstat_num_fds":     float64(200),
 				"net_bytes_sent":       float64(6900000),
@@ -306,10 +306,10 @@ var (
 				"Packets_Sent_Per_Sec": float64(6500),
 			},
 			"system": {
-				"procstat cpu_usage":   float64(30),
-				"procstat memory_rss":  float64(1100000000),
+				"procstat cpu_usage":   float64(39),
+				"procstat memory_rss":  float64(1200000000),
 				"procstat memory_vms":  float64(818000000),
-				"Bytes_Sent_Per_Sec":   float64(140000),
+				"Bytes_Sent_Per_Sec":   float64(170000),
 				"Packets_Sent_Per_Sec": float64(100),
 			},
 		},
