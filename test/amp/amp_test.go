@@ -120,12 +120,19 @@ func (suite *AmpTestSuite) SetupSuite() {
 	log.Println(">>>> Starting AMP Test Suite")
 }
 
-func (suite *AmpTestSuite) TearDownSuite() {
+func (t *AmpTestSuite) TearDownSuite() {
+	// Ensure any remaining resources are cleaned up
+	for _, testRunner := range testRunners {
+		if runner, ok := testRunner.TestRunner.(*AmpTestRunner); ok {
+			runner.RunCleanup()
+		}
+	}
+	
 	suite.Result.Print()
 	log.Println(">>>> Finished AMP Test Suite")
 }
 
-func (suite *AmpTestSuite) TestAllInSuite() {
+func (t *AmpTestSuite) TestAllInSuite() {
 	metadata = environment.GetEnvironmentMetaData()
 
 	ctx := context.Background()
@@ -142,7 +149,7 @@ func (suite *AmpTestSuite) TestAllInSuite() {
 	for _, testRunner := range testRunners {
 		suite.AddToSuiteResult(testRunner.Run())
 	}
-	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Assume Role Test Suite Failed")
+	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "AMP Test Suite Failed")
 }
 
 type AmpTestRunner struct {
@@ -337,14 +344,14 @@ func (t AmpTestRunner) getOtlpMetrics() ([]string, []string) {
 		}
 }
 
-func (t AmpTestRunner) SetupBeforeAgentRun() error {
+func (t *AmpTestRunner) SetupBeforeAgentRun() error {
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
 	}
 
 	// replace AMP workspace ID placeholder with a testing workspace ID from metadata
-	agentConfigPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
+	agentConfigPath := filepath.Join(agentConfigDirectory, t.GetAgentConfigFileName())
 	ampCommands := []string{
 		"sed -ie 's/{workspace_id}/" + metadata.AmpWorkspaceId + "/g' " + agentConfigPath,
 		// use below to add JMX metrics then update agent config & GetMeasuredMetrics()
@@ -361,16 +368,30 @@ func (t AmpTestRunner) SetupBeforeAgentRun() error {
 		if err != nil {
 			return fmt.Errorf("failed to setup prometheus: %w", err)
 		}
+		
+		// Register cleanup for Prometheus server
+		t.AddCleanup(func() error {
+			log.Printf("Cleaning up Prometheus server")
+			return common.RunCommand("pkill -f 'python3 -m http.server 8101' || true")
+		})
 	}
 
 	return t.SetUpConfig()
 }
 
-func (t AmpTestRunner) SetupAfterAgentRun() error {
-
+func (t *AmpTestRunner) SetupAfterAgentRun() error {
 	// OTLP source has some special setup after the agent starts
 	if t.source == SourceOtlp {
-		return setupOtlp()
+		err := setupOtlp()
+		if err != nil {
+			return err
+		}
+
+		// Register cleanup for OTLP pusher
+		t.AddCleanup(func() error {
+			log.Printf("Cleaning up OTLP pusher")
+			return common.RunCommand("pkill -f 'otlp_pusher.sh' || true")
+		})
 	}
 
 	return nil

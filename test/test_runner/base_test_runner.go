@@ -6,11 +6,14 @@
 package test_runner
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
@@ -46,6 +49,9 @@ type TestRunner struct {
 type BaseTestRunner struct {
 	DimensionFactory dimension.Factory
 	AgentConfig      AgentConfig
+	cleanup          *CleanupHandler
+	ctx              context.Context
+	cancelFunc       context.CancelFunc
 }
 
 type AgentConfig struct {
@@ -100,9 +106,48 @@ func (t *BaseTestRunner) SetAgentConfig(agentConfig AgentConfig) {
 	t.AgentConfig = agentConfig
 }
 
+// AddCleanup registers a cleanup function to be executed on test completion or cancellation
+func (t *BaseTestRunner) AddCleanup(fn func() error) {
+	if t.cleanup != nil {
+		t.cleanup.AddCleanup(fn)
+	}
+}
+
+// RunCleanup executes all registered cleanup functions
+func (t *BaseTestRunner) RunCleanup() {
+	if t.cleanup != nil {
+		t.cleanup.RunCleanup()
+	}
+}
+
 func (t *TestRunner) Run() status.TestGroupResult {
 	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)
+
+	// Create context with cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Set up signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		select {
+		case <-sigChan:
+			log.Printf("Received termination signal for test: %s", testName)
+			cancel()
+		case <-ctx.Done():
+			return
+		}
+	}()
+
+	// Initialize cleanup handler
+	if runner, ok := t.TestRunner.(*BaseTestRunner); ok {
+		runner.cleanup = &CleanupHandler{}
+		runner.ctx = ctx
+		runner.cancelFunc = cancel
+	}
+
 	testGroupResult, err := t.RunAgent()
 	if err == nil {
 		testGroupResult = t.TestRunner.Validate()
@@ -131,6 +176,15 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 		UseSSM:           t.TestRunner.UseSSM(),
 	}
 	t.TestRunner.SetAgentConfig(agentConfig)
+	
+	// Register cleanup for config file
+	if runner, ok := t.TestRunner.(*BaseTestRunner); ok && runner.cleanup != nil {
+		runner.cleanup.AddCleanup(func() error {
+			log.Printf("Cleaning up config file: %s", configOutputPath)
+			return common.DeleteFile(configOutputPath)
+		})
+	}
+	
 	err := t.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
@@ -148,6 +202,15 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
+	// Register agent stop in cleanup
+	if runner, ok := t.TestRunner.(*BaseTestRunner); ok && runner.cleanup != nil {
+		runner.cleanup.AddCleanup(func() error {
+			log.Printf("Stopping agent as part of cleanup")
+			common.StopAgent()
+			return nil
+		})
+	}
+
 	err = t.TestRunner.SetupAfterAgentRun()
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
@@ -157,12 +220,18 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	runningDuration := t.TestRunner.GetAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
-	common.StopAgent()
-
-	err = common.DeleteFile(configOutputPath)
-	if err != nil {
-		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %w", err)
+	
+	// Run cleanup in normal flow
+	if runner, ok := t.TestRunner.(*BaseTestRunner); ok && runner.cleanup != nil {
+		runner.cleanup.RunCleanup()
+	} else {
+		// Fallback to original behavior if cleanup handler not available
+		common.StopAgent()
+		err = common.DeleteFile(configOutputPath)
+		if err != nil {
+			testGroupResult.TestResults[0].Status = status.FAILED
+			return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %w", err)
+		}
 	}
 
 	return testGroupResult, nil
