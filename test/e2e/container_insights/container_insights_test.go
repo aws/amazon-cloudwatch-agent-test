@@ -18,9 +18,12 @@ import (
 	"time"
 )
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Variables
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+const (
+	TestRetryCount = 3
+)
 
 var (
 	env         *environment.MetaData
@@ -147,11 +150,14 @@ func testContainerInsightsMetrics(t *testing.T) {
 			expectedMetrics[key] = value
 		}
 	}
-	testResults = append(testResults, metric.ValidateMetrics(env, "", expectedMetrics)...)
-	for _, result := range testResults {
+	for j := 0; j < TestRetryCount; j++ {
+		testResults = append(testResults, metric.ValidateMetrics(env, "", expectedMetrics)...)
+		for _, result := range testResults {
 
-		if result.Status == status.FAILED {
-			t.Errorf("%s test group failed\n", result.Name)
+			if result.Status == status.FAILED {
+				t.Errorf("%s test group failed\n", result.Name)
+			}
 		}
+		time.Sleep(1 * time.Minute)
 	}
 }
