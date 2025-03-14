@@ -73,6 +73,9 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 	"ClusterName-InstanceId-NodeName": {
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
 	},
+	"ClusterName-InstanceId-InstanceType-NetworkInterfaceId-NodeName": {
+		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
+	},
 }
 
 type EfaTestSuite struct {
