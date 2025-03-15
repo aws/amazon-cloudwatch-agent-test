@@ -1,0 +1,24 @@
+{
+    "agent": {
+        "metrics_collection_interval": 15,
+        "run_as_user": "root",
+        "debug": true,
+        "logfile": "",
+        "service.name": "statsd-name",
+        "deployment.environment": "statsd-environment"
+    },
+    "metrics": {
+        "namespace": "StatsDEntityCustomServiceEnvironmentTest",
+        "append_dimensions": {
+            "InstanceId": "${aws:InstanceId}"
+        },
+        "metrics_collected": {
+            "statsd": {
+                "metrics_aggregation_interval": 30,
+                "metrics_collection_interval": 5,
+                "service_address": ":8125"
+            }
+        },
+        "force_flush_interval": 5
+    }
+}
