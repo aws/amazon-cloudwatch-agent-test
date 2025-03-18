@@ -7,6 +7,25 @@ import (
 	"strings"
 )
 
+// HelmValueType is a string-based enum for Helm value types
+type HelmValueType string
+
+// Enum values for HelmValueType
+const (
+	HelmValueText HelmValueType = "text" // Default
+	HelmValueJSON HelmValueType = "json"
+)
+
+// IsValid checks if the HelmValueType is a valid enum value
+func (hvt HelmValueType) IsValid() bool {
+	switch hvt {
+	case HelmValueText, HelmValueJSON:
+		return true
+	default:
+		return false
+	}
+}
+
 // HelmManager handles Helm operations.
 type HelmManager struct{}
 
@@ -15,16 +34,37 @@ func NewHelmManager() *HelmManager {
 	return &HelmManager{}
 }
 
+// HelmValue represents a Helm chart value with a type
+type HelmValue struct {
+	Value string        `json:"value"`
+	Type  HelmValueType `json:"type,omitempty"`
+}
+
+// NewHelmValue creates a new HelmValue with the given value and default text type
+func NewHelmValue(value string) HelmValue {
+	return HelmValue{
+		Value: value,
+		Type:  HelmValueText,
+	}
+}
+
 // InstallOrUpdate installs or upgrades a Helm release.
-func (h *HelmManager) InstallOrUpdate(releaseName, chartPath string, values map[string]any, namespace string) error {
+func (h *HelmManager) InstallOrUpdate(releaseName, chartPath string, values map[string]HelmValue, namespace string) error {
 	args := []string{"upgrade", "--install", releaseName, chartPath, "--namespace", namespace, "--create-namespace"}
 
 	// Convert values map to --set flags
 	for key, value := range values {
-		if value.(string) == "" {
+		if !value.Type.IsValid() {
+			return fmt.Errorf("invalid helm value type: %s for %s", value.Type, key)
+		}
+		if value.Value == "" {
 			continue
 		}
-		args = append(args, "--set", fmt.Sprintf("%s=%v", key, value))
+		setFlag := "--set"
+		if value.Type == HelmValueJSON {
+			setFlag = "--set-json"
+		}
+		args = append(args, setFlag, fmt.Sprintf("%s=%v", key, value.Value))
 	}
 
 	helmCmd := exec.Command("helm", args...)

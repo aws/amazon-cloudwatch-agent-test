@@ -43,23 +43,27 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 	//}
 
 	// Install Helm chart
-	values := map[string]any{
-		"clusterName":                              env.EKSClusterName,
-		"region":                                   env.Region,
-		"agent.image.repository":                   env.CloudwatchAgentRepository,
-		"agent.image.tag":                          env.CloudwatchAgentTag,
-		"agent.image.repositoryDomainMap.public":   env.CloudwatchAgentRepositoryURL,
-		"manager.image.repository":                 env.CloudwatchAgentOperatorRepository,
-		"manager.image.tag":                        env.CloudwatchAgentOperatorTag,
-		"manager.image.repositoryDomainMap.public": env.CloudwatchAgentOperatorRepositoryURL,
+	values := map[string]utils.HelmValue{
+		"clusterName":                              utils.NewHelmValue(env.EKSClusterName),
+		"region":                                   utils.NewHelmValue(env.Region),
+		"agent.image.repository":                   utils.NewHelmValue(env.CloudwatchAgentRepository),
+		"agent.image.tag":                          utils.NewHelmValue(env.CloudwatchAgentTag),
+		"agent.image.repositoryDomainMap.public":   utils.NewHelmValue(env.CloudwatchAgentRepositoryURL),
+		"manager.image.repository":                 utils.NewHelmValue(env.CloudwatchAgentOperatorRepository),
+		"manager.image.tag":                        utils.NewHelmValue(env.CloudwatchAgentOperatorTag),
+		"manager.image.repositoryDomainMap.public": utils.NewHelmValue(env.CloudwatchAgentOperatorRepositoryURL),
 	}
+
 	if env.ComputeType == computetype.ROSA {
-		values["k8sMode"] = string(computetype.ROSA)
+		values["k8sMode"] = utils.NewHelmValue(string(computetype.ROSA))
 	}
 
 	if env.AgentConfig != "" {
 		if agentConfigContent, err := os.ReadFile(env.AgentConfig); err == nil {
-			values["agent.config"] = string(agentConfigContent)
+			values["agent.config"] = utils.HelmValue{
+				Value: string(agentConfigContent),
+				Type:  utils.HelmValueJSON,
+			}
 		} else {
 			return fmt.Errorf("failed to read agent config file: %w", err)
 		}
