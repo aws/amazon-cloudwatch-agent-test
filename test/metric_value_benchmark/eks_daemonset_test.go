@@ -116,7 +116,7 @@ func (e *EKSDaemonTestRunner) GetAgentConfigFileName() string {
 }
 
 func (e *EKSDaemonTestRunner) GetAgentRunDuration() time.Duration {
-	return time.Minute * 3
+	return time.Minute * 10
 }
 
 func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
