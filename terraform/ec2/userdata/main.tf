@@ -80,7 +80,7 @@ resource "null_resource" "integration_test" {
         "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
-        "sudo ./amazon_cloudwatch_agent.sh"
+        "sudo ./amazon_cloudwatch_agent.sh -y"
         ] : [
         "echo SELinux test not enabled"
       ],
