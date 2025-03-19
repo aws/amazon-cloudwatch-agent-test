@@ -570,8 +570,13 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 
 		log.Printf("AMZ_SOURCE_ARN: %s\n", sourceArn)
 
+		log.Println("hi41")
 		sedCmd := fmt.Sprintf("sudo sed -i 's|ARN_PLACEHOLDER|%s|g' /etc/systemd/system/amazon-cloudwatch-agent.service", sourceArn)
+		log.Println("hi42")
+
 		cmd := exec.Command("bash", "-c", sedCmd)
+		log.Println("hi43")
+
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w", err)
 		}
