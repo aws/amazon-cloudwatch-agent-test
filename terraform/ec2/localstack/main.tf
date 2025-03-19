@@ -60,7 +60,6 @@ resource "aws_instance" "integration-test" {
         "echo Downloading LocalStack image from S3...",
         "aws s3 cp s3://${var.s3_bucket}/integration-test/localstack-0.13.0.tar . --quiet",
         "docker load < localstack-0.13.0.tar",
-        "docker tag localstack/localstack:latest localstack/localstack:0.13.0",
       ] : [],
       # Common steps for all regions
       [
