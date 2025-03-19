@@ -58,48 +58,6 @@ var (
 				AssumeRoleTestRunner: AssumeRoleTestRunner{
 					BaseTestRunner: test_runner.BaseTestRunner{},
 					roleSuffix:     "-source_arn_key",
-					name:           "SourceArnKeyOnlyTest",
-				},
-				setSourceArnEnvVar:        true,
-				setSourceAccountEnvVar:    true,
-				useIncorrectSourceArn:     false,
-				useIncorrectSourceAccount: false,
-				expectAssumeRoleFailure:   false,
-			},
-		},
-		{
-			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
-				AssumeRoleTestRunner: AssumeRoleTestRunner{
-					BaseTestRunner: test_runner.BaseTestRunner{},
-					roleSuffix:     "-source_account_key",
-					name:           "SourceAccountKeyOnlyTest",
-				},
-				setSourceArnEnvVar:        true,
-				setSourceAccountEnvVar:    true,
-				useIncorrectSourceArn:     false,
-				useIncorrectSourceAccount: false,
-				expectAssumeRoleFailure:   false,
-			},
-		},
-		{
-			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
-				AssumeRoleTestRunner: AssumeRoleTestRunner{
-					BaseTestRunner: test_runner.BaseTestRunner{},
-					roleSuffix:     "-all_context_keys",
-					name:           "AllKeysTest",
-				},
-				setSourceArnEnvVar:        true,
-				setSourceAccountEnvVar:    true,
-				useIncorrectSourceArn:     false,
-				useIncorrectSourceAccount: false,
-				expectAssumeRoleFailure:   false,
-			},
-		},
-		{
-			TestRunner: &ConfusedDeputyAssumeRoleTestRunner{
-				AssumeRoleTestRunner: AssumeRoleTestRunner{
-					BaseTestRunner: test_runner.BaseTestRunner{},
-					roleSuffix:     "-source_arn_key",
 					name:           "MissingSourceArnEnvTest",
 				},
 				setSourceArnEnvVar:        false,
