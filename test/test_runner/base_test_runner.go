@@ -138,6 +138,7 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	t.TestRunner.SetAgentConfig(agentConfig)
 	log.Println("hi12")
 
+	log.Println(t)
 	err := t.TestRunner.SetupBeforeAgentRun()
 	log.Println("hi123")
 
