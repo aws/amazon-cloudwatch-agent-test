@@ -26,7 +26,7 @@ import (
 
 type JMXKafkaTestRunner struct {
 	test_runner.BaseTestRunner
-	metadata *environment.MetaData
+	env *environment.MetaData
 }
 
 var _ test_runner.ITestRunner = (*JMXKafkaTestRunner)(nil)
