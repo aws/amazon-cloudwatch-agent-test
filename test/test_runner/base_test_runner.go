@@ -59,6 +59,8 @@ func (t *BaseTestRunner) SetupBeforeAgentRun() error {
 }
 
 func (t *BaseTestRunner) SetUpConfig() error {
+	log.Println("hi123")
+
 	agentConfigPath := filepath.Join(agentConfigDirectory, t.AgentConfig.ConfigFileName)
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
 	common.CopyFile(agentConfigPath, configOutputPath)
