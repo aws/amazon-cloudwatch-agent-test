@@ -134,14 +134,18 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	}
 	log.Println("hi1")
 	t.TestRunner.SetAgentConfig(agentConfig)
+	log.Println("hi12")
+
 	err := t.TestRunner.SetupBeforeAgentRun()
+	log.Println("hi123")
+
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
+	log.Println("hi2")
 
 	if t.TestRunner.UseSSM() {
-		log.Println("hi2")
 
 		err = common.StartAgent(t.TestRunner.SSMParameterName(), false, true)
 	} else {
