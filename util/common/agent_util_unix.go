@@ -177,21 +177,17 @@ func ReadAgentLogfile(logfile string) string {
 }
 
 func RecreateAgentLogfile(logfile string) {
-	log.Println("53")
+	log.Println("Starting log file recreation...")
 
-	out, err := exec.Command("bash", "-c",
-		fmt.Sprintf("sudo rm %s", logfile)).
-		Output()
-
-	log.Println("55")
+	cmd := exec.Command("bash", "-c", fmt.Sprintf("sudo rm -f %s", logfile))
+	out, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Println("56")
-
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Printf("Error removing logfile: %v, output: %s", err, string(out))
+		return
 	}
-	log.Println("55")
 
+	log.Println("Log file removed successfully.")
 }
 
 func RunShellScript(path string, args ...string) (string, error) {
