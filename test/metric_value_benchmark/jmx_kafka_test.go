@@ -7,14 +7,8 @@ package metric_value_benchmark
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"os"
 	"time"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -56,33 +50,6 @@ func (t *JMXKafkaTestRunner) GetAgentRunDuration() time.Duration {
 	return 2 * time.Minute
 }
 
-func downloadFromS3(bucket string, key string, destPath string) error {
-	sess := session.Must(session.NewSession())
-	s3Client := s3.New(sess)
-
-	result, err := s3Client.GetObject(&s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to download from S3 bucket %s, key %s: %v", bucket, key, err)
-	}
-	defer result.Body.Close()
-
-	outFile, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("failed to create file at %s: %v", destPath, err)
-	}
-	defer outFile.Close()
-
-	_, err = io.Copy(outFile, result.Body)
-	if err != nil {
-		return fmt.Errorf("failed to copy content to %s: %v", destPath, err)
-	}
-
-	return nil
-}
-
 func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
@@ -94,12 +61,12 @@ func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
 	kafkaArchive := "kafka_2.13-3.9.0.tgz"
 	zookeeperArchive := "apache-zookeeper-3.8.4-bin.tar.gz"
 
-	err = downloadFromS3(bucket, "kafka/"+kafkaArchive, kafkaArchive)
+	err = common.DownloadFromS3(bucket, "kafka/"+kafkaArchive, kafkaArchive)
 	if err != nil {
 		return fmt.Errorf("failed to download Kafka: %v", err)
 	}
 
-	err = downloadFromS3(bucket, "kafka/"+zookeeperArchive, zookeeperArchive)
+	err = common.DownloadFromS3(bucket, "kafka/"+zookeeperArchive, zookeeperArchive)
 	if err != nil {
 		return fmt.Errorf("failed to download Zookeeper: %v", err)
 	}
