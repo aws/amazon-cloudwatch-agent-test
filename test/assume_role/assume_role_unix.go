@@ -580,6 +580,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to replace AMZ_SOURCE_ARN value: %w", err)
 		}
+		log.Println("hi44")
 
 	} else {
 		log.Println("Removing AMZ_SOURCE_ARN from service file")
@@ -590,6 +591,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 			return fmt.Errorf("failed to remove AMZ_SOURCE_ARN value: %w", err)
 		}
 	}
+	log.Println("hi45")
 
 	err := t.daemonReload()
 	if err != nil {
@@ -600,7 +602,11 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 }
 
 func (t *ConfusedDeputyAssumeRoleTestRunner) daemonReload() error {
+	log.Println("hi46")
+
 	cmd := exec.Command("sudo", "systemctl", "daemon-reload")
+	log.Println("hi47")
+
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to daemon-reload: %w; command output: %s", err, string(output))
