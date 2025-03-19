@@ -139,6 +139,7 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	log.Println(t.TestRunner.GetMeasuredMetrics())
 	log.Println("hi12")
 
+
 	err := t.TestRunner.SetupBeforeAgentRun()
 
 	log.Println("hi123")

@@ -234,10 +234,13 @@ func (t AssumeRoleTestRunner) GetMeasuredMetrics() []string {
 
 func (t *AssumeRoleTestRunner) SetupBeforeAgentRun() error {
 	log.Println("yo2")
-
+	defer func() {
+		if r := recover(); r != nil {
+			log.Fatalf("Panic in SetupBeforeAgentRun: %v", r)
+		}
+	}()
 	return t.setupAgentConfig()
 }
-
 func (t *AssumeRoleTestRunner) getRoleArn() string {
 	// Role ARN used by these tests assume a basic role name (given by the AssumeRoleArn environment metadata) with
 	// and optional suffix
