@@ -7,19 +7,25 @@ package metric_value_benchmark
 
 import (
 	"fmt"
+	"io"
 	"log"
-	"strings"
+	"os"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 type JMXKafkaTestRunner struct {
 	test_runner.BaseTestRunner
+	metadata *environment.MetaData
 }
 
 var _ test_runner.ITestRunner = (*JMXKafkaTestRunner)(nil)
@@ -49,41 +55,72 @@ func (t *JMXKafkaTestRunner) GetAgentRunDuration() time.Duration {
 	return 2 * time.Minute
 }
 
+func downloadFromS3(bucket string, key string, destPath string) error {
+	sess := session.Must(session.NewSession())
+	s3Client := s3.New(sess)
+
+	result, err := s3Client.GetObject(&s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to download from S3: %v", err)
+	}
+	defer result.Body.Close()
+
+	outFile, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %v", err)
+	}
+	defer outFile.Close()
+
+	_, err = io.Copy(outFile, result.Body)
+	if err != nil {
+		return fmt.Errorf("failed to copy content: %v", err)
+	}
+
+	return nil
+}
+
 func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
 	}
 
-	log.Println("get latest kafka version")
-	version, err := common.RunCommand("curl https://dlcdn.apache.org/kafka/ | grep -oP \"\\d\\.\\d\\.\\d\" | tail -1")
+	bucket := t.metadata.Bucket
+
+	kafkaArchive := "kafka_2.13-3.9.0.tgz"
+	zookeeperArchive := "apache-zookeeper-3.8.4-bin.tar.gz"
+
+	err = downloadFromS3(bucket, "kafka/"+kafkaArchive, kafkaArchive)
 	if err != nil {
-		return fmt.Errorf("error getting latest kafka version: %v", err)
+		return fmt.Errorf("failed to download Kafka: %v", err)
 	}
-	version = strings.TrimSpace(version)
-	kafkaPackageName := fmt.Sprintf("kafka_2.13-%s", version)
+
+	err = downloadFromS3(bucket, "kafka/"+zookeeperArchive, zookeeperArchive)
+	if err != nil {
+		return fmt.Errorf("failed to download Zookeeper: %v", err)
+	}
 
 	log.Println("set up zookeeper and kafka")
 	startJMXCommands := []string{
-		fmt.Sprintf("curl https://dlcdn.apache.org/kafka/%s/%s.tgz -o %s.tgz", version, kafkaPackageName, kafkaPackageName),
-		fmt.Sprintf("tar -xzf %s.tgz", kafkaPackageName),
-		fmt.Sprintf("sudo mv %s kafka_2.13-latest", kafkaPackageName),
-		"echo 'export JMX_PORT=2000'|cat - kafka_2.13-latest/bin/kafka-server-start.sh > /tmp/kafka-server-start.sh && mv /tmp/kafka-server-start.sh kafka_2.13-latest/bin/kafka-server-start.sh",
-		"echo 'export JMX_PORT=2010'|cat - kafka_2.13-latest/bin/kafka-console-consumer.sh > /tmp/kafka-console-consumer.sh && mv /tmp/kafka-console-consumer.sh kafka_2.13-latest/bin/kafka-console-consumer.sh",
-		"echo 'export JMX_PORT=2020'|cat - kafka_2.13-latest/bin/kafka-console-producer.sh > /tmp/kafka-console-producer.sh && mv /tmp/kafka-console-producer.sh kafka_2.13-latest/bin/kafka-console-producer.sh",
-		"sudo chmod +x kafka_2.13-latest/bin/kafka-run-class.sh",
-		"sudo chmod +x kafka_2.13-latest/bin/kafka-server-start.sh",
-		"sudo chmod +x kafka_2.13-latest/bin/kafka-console-consumer.sh",
-		"sudo chmod +x kafka_2.13-latest/bin/kafka-console-producer.sh",
-		"(yes | nohup kafka_2.13-latest/bin/kafka-console-producer.sh --topic quickstart-events --bootstrap-server localhost:9092) > /tmp/kafka-console-producer-logs.txt 2>&1 &",
-		"kafka_2.13-latest/bin/kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server localhost:9092 > /tmp/kafka-console-consumer-logs.txt 2>&1 &",
-		"curl https://dlcdn.apache.org/zookeeper/zookeeper-3.8.4/apache-zookeeper-3.8.4-bin.tar.gz -o apache-zookeeper-3.8.4-bin.tar.gz",
-		"tar -xzf apache-zookeeper-3.8.4-bin.tar.gz",
+		fmt.Sprintf("tar -xzf %s", kafkaArchive),
+		"echo 'export JMX_PORT=2000'|cat - kafka_2.13-3.9.0/bin/kafka-server-start.sh > /tmp/kafka-server-start.sh && mv /tmp/kafka-server-start.sh kafka_2.13-3.9.0/bin/kafka-server-start.sh",
+		"echo 'export JMX_PORT=2010'|cat - kafka_2.13-3.9.0/bin/kafka-console-consumer.sh > /tmp/kafka-console-consumer.sh && mv /tmp/kafka-console-consumer.sh kafka_2.13-3.9.0/bin/kafka-console-consumer.sh",
+		"echo 'export JMX_PORT=2020'|cat - kafka_2.13-3.9.0/bin/kafka-console-producer.sh > /tmp/kafka-console-producer.sh && mv /tmp/kafka-console-producer.sh kafka_2.13-3.9.0/bin/kafka-console-producer.sh",
+		"sudo chmod +x kafka_2.13-3.9.0/bin/kafka-run-class.sh",
+		"sudo chmod +x kafka_2.13-3.9.0/bin/kafka-server-start.sh",
+		"sudo chmod +x kafka_2.13-3.9.0/bin/kafka-console-consumer.sh",
+		"sudo chmod +x kafka_2.13-3.9.0/bin/kafka-console-producer.sh",
+		"(yes | nohup kafka_2.13-3.9.0/bin/kafka-console-producer.sh --topic quickstart-events --bootstrap-server localhost:9092) > /tmp/kafka-console-producer-logs.txt 2>&1 &",
+		"kafka_2.13-3.9.0/bin/kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server localhost:9092 > /tmp/kafka-console-consumer-logs.txt 2>&1 &",
+		fmt.Sprintf("tar -xzf %s", zookeeperArchive),
 		"mkdir apache-zookeeper-3.8.4-bin/data",
 		"touch apache-zookeeper-3.8.4-bin/conf/zoo.cfg",
 		"echo -e 'tickTime = 2000\ndataDir = ../data\nclientPort = 2181\ninitLimit = 5\nsyncLimit = 2\n' >> apache-zookeeper-3.8.4-bin/conf/zoo.cfg",
 		"sudo apache-zookeeper-3.8.4-bin/bin/zkServer.sh start",
-		"sudo kafka_2.13-latest/bin/kafka-server-start.sh kafka_2.13-latest/config/server.properties > /tmp/kafka-server-start-logs.txt 2>&1 &",
+		"sudo kafka_2.13-3.9.0/bin/kafka-server-start.sh kafka_2.13-3.9.0/config/server.properties > /tmp/kafka-server-start-logs.txt 2>&1 &",
 	}
 
 	err = common.RunCommands(startJMXCommands)
