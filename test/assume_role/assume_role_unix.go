@@ -243,8 +243,13 @@ func (t *AssumeRoleTestRunner) getRoleArn() string {
 
 func (t *AssumeRoleTestRunner) setupAgentConfig() error {
 
+	log.Println("hi23")
+
 	log.Printf("Role ARN: %s\n", t.getRoleArn())
+	log.Println("hi34")
+
 	log.Printf("Metric namespace: %s\n", t.GetTestName())
+	log.Println("hi45")
 
 	// The default agent config file conatins a ROLE_ARN_PLACEHOLDER value which should be replaced with the ARN of the role
 	// that the agent should assume. The ARN is not known until runtime. Test runner does not have sudo permissions,
