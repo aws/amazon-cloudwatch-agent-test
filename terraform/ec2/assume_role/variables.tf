@@ -6,6 +6,16 @@ variable "region" {
   default = "us-west-2"
 }
 
+variable "is_selinux_test" {
+  type    = bool
+  default = false
+}
+
+variable "selinux_branch" {
+  type    = string
+  default = "main"
+}
+
 variable "ec2_instance_type" {
   type    = string
   default = "t3a.medium"

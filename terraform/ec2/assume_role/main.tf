@@ -198,17 +198,38 @@ resource "null_resource" "integration_test_run" {
 
   #Run sanity check and integration test
   provisioner "remote-exec" {
-    inline = [
-      "echo prepare environment",
-      "export AWS_REGION=${var.region}",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      "echo run integration test",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
-      "echo run sanity test && go test ./test/sanity -p 1 -v",
-      "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"
-    ]
+
+
+    inline = concat(
+      [
+        "echo Preparing environment...",
+        "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
+      ],
+
+      # SELinux test setup (if enabled)
+      var.is_selinux_test ? [
+        "sudo setenforce 1",
+        "echo Running SELinux test setup...",
+        "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
+        "cd amazon-cloudwatch-agent-selinux",
+        "sudo chmod +x amazon_cloudwatch_agent.sh",
+        "sudo ./amazon_cloudwatch_agent.sh"
+        ] : [
+        "echo SELinux test not enabled"
+      ],
+
+      # General testing setup
+      [
+        "export AWS_REGION=${var.region}",
+        "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
+        "echo run integration test",
+        "cd ~/amazon-cloudwatch-agent-test",
+        "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
+        "echo run sanity test && go test ./test/sanity -p 1 -v",
+        "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
+        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"
+      ],
+    )
   }
 
   depends_on = [
