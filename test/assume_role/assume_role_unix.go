@@ -594,9 +594,14 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) setupEnvironmentVariables() error {
 	log.Println("hi45")
 
 	err := t.daemonReload()
+	log.Println("hi49")
+
 	if err != nil {
+		log.Println("hi410")
+
 		return err
 	}
+	log.Println("hi411")
 
 	return nil
 }
@@ -608,6 +613,8 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) daemonReload() error {
 	log.Println("hi47")
 
 	output, err := cmd.Output()
+	log.Println("hi48")
+
 	if err != nil {
 		return fmt.Errorf("failed to daemon-reload: %w; command output: %s", err, string(output))
 	}
