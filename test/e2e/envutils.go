@@ -5,6 +5,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e/utils"
@@ -74,12 +77,18 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 		values, "amazon-cloudwatch"); err != nil {
 		return err
 	}
-
 	// Apply sample app
 	if env.SampleApp != "" {
 		if err := k8ctl.ApplyResource(env.SampleApp); err != nil {
 			return err
 		}
+	}
+	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
+
+	fmt.Println("Waiting for Sample Application to initialize...")
+	err := k8ctl.ConditionalWait("--for=condition=available", 300*time.Second, fmt.Sprintf("deployment/%s", deploymentName), "test")
+	if err != nil {
+		return err
 	}
 
 	return nil

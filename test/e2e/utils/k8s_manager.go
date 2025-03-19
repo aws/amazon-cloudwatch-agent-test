@@ -6,6 +6,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // K8CtlManager handles Kubernetes (kubectl or oc) operations.
@@ -79,4 +80,12 @@ func (k *K8CtlManager) Execute(cmdArgs []string) (string, error) {
 		return "", fmt.Errorf("failed to execute command %s: %w\nOutput: %s", err, output)
 	}
 	return string(output), nil
+}
+func (k *K8CtlManager) ConditionalWait(condition string, timeout time.Duration, resource string, namespace string) error {
+	wait := exec.Command(k.Command, "wait", condition, fmt.Sprintf("--timeout=%s", timeout.String()), resource, "-n", namespace)
+	output, err := wait.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to wait for %s: %w\nOutput: %s", resource, err, output)
+	}
+	return nil
 }
