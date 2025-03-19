@@ -42,6 +42,8 @@ type AssumeRoleTestSuite struct {
 
 func (suite *AssumeRoleTestSuite) SetupSuite() {
 	log.Println(">>>> Starting AssumeRoleTestSuite")
+	log.Printf("Testing with SOURCE_ACCOUNT: %s, SOURCE_ARN: %s", os.Getenv("AMZ_SOURCE_ACCOUNT"), os.Getenv("AMZ_SOURCE_ARN"))
+
 }
 
 func (suite *AssumeRoleTestSuite) TearDownSuite() {
@@ -195,18 +197,21 @@ func (t *AssumeRoleTestRunner) validateMetric(metricName string) status.TestResu
 
 	dims := getDimensions()
 	if len(dims) == 0 {
+		log.Printf("DEBUG: No dimensions found for metric %s", metricName)
 		return testResult
 	}
 
 	fetcher := metric.MetricValueFetcher{}
 	values, err := fetcher.Fetch(t.GetTestName(), metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 
-	log.Printf("metric values are %v", values)
+	log.Printf("DEBUG: Fetched metric values for %s: %v (error: %v)", metricName, values, err)
 	if err != nil {
+		log.Printf("ERROR: Failed to fetch metric %s: %v", metricName, err)
 		return testResult
 	}
 
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+		log.Printf("ERROR: Metric %s has unexpected values: %v", metricName, values)
 		return testResult
 	}
 

@@ -36,24 +36,26 @@ const (
 
 func CopyFile(pathIn string, pathOut string) {
 	log.Printf("Copy File %s to %s", pathIn, pathOut)
-	pathInAbs, err := filepath.Abs(pathIn)
 
+	pathInAbs, err := filepath.Abs(pathIn)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to get absolute path: %v", err)
 	}
 
-	log.Printf("File %s abs path %s", pathIn, pathInAbs)
-	cmd := exec.Command("bash", "-c", "sudo cp "+pathInAbs+" "+pathOut)
+	log.Printf("File %s absolute path: %s", pathIn, pathInAbs)
+
+	// Execute cp using argument-based command execution (avoiding shell injection risks)
+	cmd := exec.Command("sudo", "cp", pathInAbs, pathOut)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
-	err = cmd.Run()
-	if err != nil {
-		log.Fatalf("Error : %s | Error Code: %s | Out: %s", fmt.Sprint(err), stderr.String(), out.String())
+
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("Error copying file: %s | Stderr: %s | Stdout: %s", err, stderr.String(), out.String())
 	}
 
-	log.Printf("File : %s copied to : %s", pathIn, pathOut)
+	log.Printf("File successfully copied: %s -> %s", pathIn, pathOut)
 }
 
 func DeleteFile(filePathAbsolute string) error {
