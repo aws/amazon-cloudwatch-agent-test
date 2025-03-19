@@ -65,19 +65,19 @@ func downloadFromS3(bucket string, key string, destPath string) error {
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to download from S3: %v", err)
+		return fmt.Errorf("failed to download from S3 bucket %s, key %s: %v", bucket, key, err)
 	}
 	defer result.Body.Close()
 
 	outFile, err := os.Create(destPath)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %v", err)
+		return fmt.Errorf("failed to create file at %s: %v", destPath, err)
 	}
 	defer outFile.Close()
 
 	_, err = io.Copy(outFile, result.Body)
 	if err != nil {
-		return fmt.Errorf("failed to copy content: %v", err)
+		return fmt.Errorf("failed to copy content to %s: %v", destPath, err)
 	}
 
 	return nil
