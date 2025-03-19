@@ -137,7 +137,7 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	log.Println("hi1")
 	t.TestRunner.SetAgentConfig(agentConfig)
 	log.Println(t.TestRunner.GetMeasuredMetrics())
-	log.Println("hi12")
+	log.Println("hi12222")
 
 	if t.TestRunner == nil {
 		log.Fatal("TestRunner is nil!")
