@@ -126,15 +126,13 @@ resource "null_resource" "integration_test_run" {
     inline = concat(
       [
         "echo Preparing environment...",
-        "sudo setenforce 0",
-        "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
       ],
 
       # SELinux test setup (if enabled)
       var.is_selinux_test ? [
         "sudo yum install amazon-cloudwatch-agent -y",
         "echo Running SELinux test setup...",
-        "sudo yum install selinux-policy selinux-policy-targeted selinux-policy-devel -y",
+        "sudo yum install selinux-policy selinux-policy-targeted policycoreutils-python-utils selinux-policy-devel -y",
         "sudo setenforce 1",
         "echo below is either Permissive/Enforcing",
         "sudo getenforce",
@@ -143,7 +141,7 @@ resource "null_resource" "integration_test_run" {
         "cd amazon-cloudwatch-agent-selinux",
         "cat amazon_cloudwatch_agent.te",
         "chmod +x ./amazon_cloudwatch_agent.sh",
-        "sudo ./amazon_cloudwatch_agent.sh",
+        "sudo ./amazon_cloudwatch_agent.sh -y",
         ] : [
         "echo SELinux test not enabled"
       ],
