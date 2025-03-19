@@ -115,6 +115,8 @@ func (t *TestRunner) Run() status.TestGroupResult {
 }
 
 func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
+	log.Println("hi0")
+
 	testGroupResult := status.TestGroupResult{
 		Name: t.TestRunner.GetTestName(),
 		TestResults: []status.TestResult{
@@ -130,6 +132,7 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 		SSMParameterName: t.TestRunner.SSMParameterName(),
 		UseSSM:           t.TestRunner.UseSSM(),
 	}
+	log.Println("hi1")
 	t.TestRunner.SetAgentConfig(agentConfig)
 	err := t.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
@@ -138,15 +141,19 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	}
 
 	if t.TestRunner.UseSSM() {
+		log.Println("hi2")
+
 		err = common.StartAgent(t.TestRunner.SSMParameterName(), false, true)
 	} else {
 		err = common.StartAgent(configOutputPath, false, false)
 	}
+	log.Println("hi3")
 
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
 	}
+	log.Println("hi4")
 
 	err = t.TestRunner.SetupAfterAgentRun()
 	if err != nil {
