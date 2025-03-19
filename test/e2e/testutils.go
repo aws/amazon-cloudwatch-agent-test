@@ -7,9 +7,6 @@ import (
 	"context"
 	"fmt"
 	v1 "k8s.io/api/core/v1"
-	"net/http"
-	"os/exec"
-	"strings"
 	"testing"
 	"time"
 
@@ -25,8 +22,8 @@ import (
 //------------------------------------------------------------------------------
 
 const (
-	Wait                    = 10 * time.Second
-	WaitForResourceCreation = 2 * time.Second
+	Wait                    = 5 * time.Minute
+	WaitForResourceCreation = 2 * time.Minute
 	interval                = 30 * time.Second
 )
 
@@ -100,24 +97,6 @@ func ValidateMetrics(t *testing.T, metrics []string, namespace string) {
 		t.Run(metric, func(t *testing.T) {
 			awsservice.ValidateMetricWithTest(t, metric, namespace, nil, 5, interval)
 		})
-	}
-}
-
-func GenerateTraffic(t *testing.T) {
-	cmd := exec.Command("kubectl", "get", "nodes", "-o", "jsonpath='{.items[0].status.addresses[?(@.type==\"ExternalIP\")].address}'")
-	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "Error getting node external IP")
-
-	nodeIP := strings.Trim(string(output), "'")
-	require.NotEmpty(t, nodeIP, "Node IP failed to format")
-
-	for i := 0; i < 5; i++ {
-		resp, err := http.Get(fmt.Sprintf("http://%s:30080/webapp/index.jsp", nodeIP))
-		if err != nil {
-			t.Logf("Request attempt %d failed: %v", i+1, err)
-			continue
-		}
-		require.NoError(t, resp.Body.Close(), "Failed to close response body")
 	}
 }
 

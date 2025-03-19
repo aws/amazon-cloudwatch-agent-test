@@ -41,9 +41,9 @@ func InitializeEnvironment(env *environment.MetaData) error {
 
 func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *environment.MetaData) error {
 	// Update kubeconfig
-	//if err := k8ctl.UpdateKubeConfig(env.EKSClusterName); err != nil {
-	//	return err
-	//}
+	if err := k8ctl.UpdateKubeConfig(env.EKSClusterName); err != nil {
+		return err
+	}
 
 	// Install Helm chart
 	values := map[string]utils.HelmValue{
@@ -77,6 +77,11 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 		values, "amazon-cloudwatch"); err != nil {
 		return err
 	}
+	fmt.Println("Waiting for CloudWatch Agent Operator to initialize...")
+	err := k8ctl.ConditionalWait("--for=condition=available", 60*time.Second, "deployment/amazon-cloudwatch-observability-controller-manager", "amazon-cloudwatch")
+	if err != nil {
+		return err
+	}
 	// Apply sample app
 	if env.SampleApp != "" {
 		if err := k8ctl.ApplyResource(env.SampleApp); err != nil {
@@ -86,7 +91,7 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
 
 	fmt.Println("Waiting for Sample Application to initialize...")
-	err := k8ctl.ConditionalWait("--for=condition=available", 300*time.Second, fmt.Sprintf("deployment/%s", deploymentName), "test")
+	err = k8ctl.ConditionalWait("--for=condition=available", 300*time.Second, fmt.Sprintf("deployment/%s", deploymentName), "test")
 	if err != nil {
 		return err
 	}
