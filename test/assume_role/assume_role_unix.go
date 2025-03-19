@@ -528,9 +528,12 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) SetupBeforeAgentRun() error {
 
 	// Clear out log file since we'll need to check the logs on each run and we don't want logs from another test
 	// being checked
+	log.Println("51")
 	common.RecreateAgentLogfile(common.AgentLogFile)
+	log.Println("52")
 
 	return t.setupAgentConfig()
+
 }
 
 // setupEnvironmentVariables sets the agent's environment variables using the systemd service file

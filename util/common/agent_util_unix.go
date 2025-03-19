@@ -177,13 +177,21 @@ func ReadAgentLogfile(logfile string) string {
 }
 
 func RecreateAgentLogfile(logfile string) {
+	log.Println("53")
+
 	out, err := exec.Command("bash", "-c",
 		fmt.Sprintf("sudo rm %s", logfile)).
 		Output()
 
+	log.Println("55")
+
 	if err != nil {
+		log.Println("56")
+
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
+	log.Println("55")
+
 }
 
 func RunShellScript(path string, args ...string) (string, error) {
