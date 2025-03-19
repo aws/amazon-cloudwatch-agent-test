@@ -233,6 +233,8 @@ func (t AssumeRoleTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *AssumeRoleTestRunner) SetupBeforeAgentRun() error {
+	log.Println("yo2")
+
 	return t.setupAgentConfig()
 }
 
