@@ -136,10 +136,12 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	}
 	log.Println("hi1")
 	t.TestRunner.SetAgentConfig(agentConfig)
+	log.Println(*t)
 	log.Println("hi12")
 
 	log.Println(t.TestRunner.GetTestName())
 	err := t.TestRunner.SetupBeforeAgentRun()
+
 	log.Println("hi123")
 
 	if err != nil {
