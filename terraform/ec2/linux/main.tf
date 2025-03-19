@@ -126,14 +126,13 @@ resource "null_resource" "integration_test_run" {
     inline = concat(
       [
         "echo Preparing environment...",
-        "sudo setenforce 0",
-        "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
         "sudo systemctl start auditd",
         "sudo systemctl enable auditd",
       ],
 
       # SELinux test setup (if enabled)
       var.is_selinux_test ? [
+        "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
         "sudo yum install amazon-cloudwatch-agent -y",
         "echo Running SELinux test setup...",
         "sudo yum install selinux-policy selinux-policy-targeted selinux-policy-devel -y",
