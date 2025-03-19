@@ -228,6 +228,7 @@ func (t AssumeRoleTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t AssumeRoleTestRunner) GetMeasuredMetrics() []string {
+	log.Println("yo")
 	return metric.CpuMetrics
 }
 

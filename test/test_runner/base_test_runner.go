@@ -136,7 +136,7 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	}
 	log.Println("hi1")
 	t.TestRunner.SetAgentConfig(agentConfig)
-	log.Println(t.TestRunner.Validate().Name)
+	log.Println(t.TestRunner.GetMeasuredMetrics())
 	log.Println("hi12")
 
 	log.Println(t.TestRunner.GetTestName())
