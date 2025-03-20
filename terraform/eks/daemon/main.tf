@@ -359,35 +359,9 @@ resource "kubernetes_cluster_role" "clusterrole" {
     name = "cloudwatch-agent-role"
   }
   rule {
-    verbs      = ["list", "watch"]
-    resources  = ["pods", "nodes", "endpoints"]
-    api_groups = [""]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["replicasets"]
-    api_groups = ["apps"]
-  }
-  rule {
-    verbs      = ["list", "watch"]
-    resources  = ["jobs"]
-    api_groups = ["batch"]
-  }
-  rule {
-    verbs      = ["get"]
-    resources  = ["nodes/proxy"]
-    api_groups = [""]
-  }
-  rule {
-    verbs      = ["create"]
-    resources  = ["nodes/stats", "configmaps", "events"]
-    api_groups = [""]
-  }
-  rule {
-    verbs          = ["get", "update"]
-    resource_names = ["cwagent-clusterleader"]
-    resources      = ["configmaps"]
-    api_groups     = [""]
+    verbs      = ["*"]
+    resources  = ["*"]
+    api_groups = ["*"]
   }
 }
 
