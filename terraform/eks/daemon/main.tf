@@ -390,9 +390,9 @@ resource "kubernetes_cluster_role" "clusterrole" {
     api_groups     = [""]
   }
   rule {
-    verbs          = ["list", "watch", "get"]
-    resources      = ["endpointslices"]
-    api_groups     = ["discovery.k8s.io"]
+    verbs      = ["list", "watch", "get"]
+    resources  = ["endpointslices"]
+    api_groups = ["discovery.k8s.io"]
   }
 }
 
