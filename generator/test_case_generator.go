@@ -419,7 +419,6 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 				testConfig.selinuxBranch = "main"
 			}
 
-
 			row := matrixRow{
 				TestName:      generateTestName(testConfig.testDir),
 				SELinuxBranch: testConfig.selinuxBranch,
