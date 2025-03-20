@@ -51,6 +51,24 @@ func TestCollectionInterval(t *testing.T) {
 			lowerBoundInclusive: 1,
 			upperBoundInclusive: 3,
 		},
+		{
+			testDescription:     "Agent has 10s second collection interval",
+			dataInput:           "resources/agent_interval_10s.json",
+			lowerBoundInclusive: 11,
+			upperBoundInclusive: 13,
+		},
+		{
+			testDescription:     "Metric disk has 10s collection interval",
+			dataInput:           "resources/metric_interval_10s.json",
+			lowerBoundInclusive: 11,
+			upperBoundInclusive: 13,
+		},
+		{
+			testDescription:     "Agent has 60s collection interval, disk has 10s collection interval use disk collection interval",
+			dataInput:           "resources/metric_override_interval_10s.json",
+			lowerBoundInclusive: 11,
+			upperBoundInclusive: 13,
+		},
 	}
 
 	for _, parameter := range parameters {
