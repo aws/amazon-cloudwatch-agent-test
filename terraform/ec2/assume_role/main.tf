@@ -207,7 +207,7 @@ resource "null_resource" "integration_test_run" {
 
       # SELinux test setup (if enabled)
       var.is_selinux_test ? [
-        "sudo yum install -y audit policycoreutils-python-utils go --allowerasing",
+        "sudo yum install -y audit policycoreutils-python-utils go",
         "sudo setenforce 1",
         "echo Running SELinux test setup...",
         "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
