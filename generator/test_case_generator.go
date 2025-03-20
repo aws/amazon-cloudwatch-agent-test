@@ -393,7 +393,6 @@ func generateTestName(test_directory string) string {
 
 	return strings.Join(cleaned, "-")
 }
-
 func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrixRow {
 	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
 
