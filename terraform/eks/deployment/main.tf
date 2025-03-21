@@ -380,6 +380,11 @@ resource "kubernetes_cluster_role" "clusterrole" {
     verbs             = ["get"]
     non_resource_urls = ["/metrics"]
   }
+  rule {
+    verbs      = ["list", "watch", "get"]
+    resources  = ["endpointslices"]
+    api_groups = ["discovery.k8s.io"]
+  }
 }
 
 resource "kubernetes_cluster_role_binding" "rolebinding" {

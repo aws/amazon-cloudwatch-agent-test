@@ -438,6 +438,11 @@ resource "kubernetes_cluster_role" "clusterrole" {
     resources      = ["configmaps"]
     api_groups     = [""]
   }
+  rule {
+    verbs      = ["list", "watch", "get"]
+    resources  = ["endpointslices"]
+    api_groups = ["discovery.k8s.io"]
+  }
 }
 
 resource "kubernetes_cluster_role_binding" "rolebinding" {
