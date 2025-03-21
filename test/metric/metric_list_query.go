@@ -37,7 +37,14 @@ func (n *Fetcher) Fetch(namespace, metricName string, dimensions []types.Dimensi
 		listMetricInput.MetricName = aws.String(metricName)
 	}
 
-	log.Printf("Metric data input: namespace %v, name %v", namespace, metricName)
+	dimStr := ""
+	for _, dim := range dimensions {
+		dimStr += fmt.Sprintf("{Name: %s, Value: %s} ", *dim.Name, *dim.Value)
+	}
+	log.Printf("Metric data input: namespace %v, name %v, dimensions [%v]", namespace, metricName, dimStr)
+
+
+	// log.Printf("Metric data input: namespace %v, name %v", namespace, metricName)
 	var metrics []types.Metric
 	for {
 		// get a complete list of metrics with given dimensions
@@ -54,5 +61,13 @@ func (n *Fetcher) Fetch(namespace, metricName string, dimensions []types.Dimensi
 		listMetricInput.NextToken = nextToken
 	}
 	log.Printf("total number of metrics fetched: %v", len(metrics))
+
+	metricsJSON, err := json.MarshalIndent(metrics, "", "  ")
+	if err != nil {
+		log.Printf("Error marshalling metrics: %v", err)
+	} else {
+		log.Printf("Metric data input: %s", string(metricsJSON))
+	}
+
 	return metrics, nil
 }
