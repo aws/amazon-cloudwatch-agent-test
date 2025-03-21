@@ -62,12 +62,16 @@ func (n *Fetcher) Fetch(namespace, metricName string, dimensions []types.Dimensi
 	}
 	log.Printf("total number of metrics fetched: %v", len(metrics))
 
-	metricsJSON, err := json.MarshalIndent(metrics, "", "  ")
-	if err != nil {
-		log.Printf("Error marshalling metrics: %v", err)
-	} else {
-		log.Printf("Metric data input: %s", string(metricsJSON))
-	}
+    for i, metric := range metrics {
+        log.Printf("Metric %d:", i)
+        log.Printf("  Namespace: %v", *metric.Namespace)
+        log.Printf("  MetricName: %v", *metric.MetricName)
+        log.Printf("  Dimensions:")
+        for _, dim := range metric.Dimensions {
+            log.Printf("    - Name: %v, Value: %v", *dim.Name, *dim.Value)
+        }
+    }
+
 
 	return metrics, nil
 }
