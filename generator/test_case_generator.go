@@ -58,18 +58,45 @@ type testConfig struct {
 }
 
 const (
-	testTypeKeyEc2Linux = "ec2_linux"
+	testTypeKeyEc2Linux   = "ec2_linux"
 )
 
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
+	testTypeKeyEc2Linux: {
+		{testDir: "./test/metric_value_benchmark"}, // flaky
+		{
+			testDir:      "./test/userdata", //flaky
+			terraformDir: "terraform/ec2/userdata",
+			targets:      map[string]map[string]struct{}{"os": {"ol9": {}}},
+		},
+	},
+	"ec2_windows": {
+		{testDir: "../../../test/feature/windows"}, // flaky
+	},
+	"ec2_stress": {
+		{testDir: "../../test/stress/statsd"}, // flaky
+	},
+	"ec2_windows_stress": {
+		{testDir: "../../test/stress/windows/logs"}, // flaky
+	},
 	"eks_daemon": {
 		{
-			testDir:      "./test/metric_value_benchmark",
+			testDir:      "./test/metric_value_benchmark", // flaky
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+		},
+		{
+			testDir:      "./test/metric_value_benchmark", // flaky
 			terraformDir: "terraform/eks/daemon/windows/2019",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
-		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
+		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},          // flaky
+		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"}, //flaky
+		{
+			testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa", // flaky
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
 	},
 }
 
