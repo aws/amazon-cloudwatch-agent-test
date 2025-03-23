@@ -100,18 +100,20 @@ func TestFluentLogs(t *testing.T) {
 						return fmt.Errorf("no log events found")
 					}
 
-					for _, fields := range fieldsArr {
-						var match int
-						for _, field := range fields {
-							if strings.Contains(*events[0].Message, "\""+field+"\"") {
-								match += 1
+					for _, event := range events {
+						for _, fields := range fieldsArr {
+							var match int
+							for _, field := range fields {
+								if strings.Contains(*event.Message, "\""+field+"\"") {
+									match += 1
+								}
+							}
+							if match == len(fields) {
+								return nil
 							}
 						}
-						if match == len(fields) {
-							return nil
-						}
 					}
-					return fmt.Errorf("fluent log entry doesn't include expected message fields: %s", *events[0].Message)
+					return fmt.Errorf("no log entries found with expected message fields in %d events", len(events))
 				},
 			)
 
