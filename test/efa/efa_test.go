@@ -148,30 +148,12 @@ var _ test_runner.ITestRunner = (*EfaTestRunner)(nil)
 func (t *EfaTestRunner) Validate() status.TestGroupResult {
 	var testResults []status.TestResult
 	expectedDimsToMetrics := expectedDimsToMetricsIntegTest
-
-	maxRetries := 5
-	delay := 30 * time.Second
-	var finalResult status.TestGroupResult
-
-	for i := 0; i < maxRetries; i++ {
-		testResults = []status.TestResult{}
-
-		testResults = append(testResults, metric.ValidateMetrics(t.env, efaMetricIndicator, expectedDimsToMetrics)...)
-		testResults = append(testResults, metric.ValidateLogs(t.env))
-
-		finalResult = status.TestGroupResult{
-			Name:        t.GetTestName(),
-			TestResults: testResults,
-		}
-
-		if finalResult.GetStatus() == status.SUCCESSFUL {
-			return finalResult
-		}
-
-		log.Printf("EFA validation attempt %d failed, retrying in %v", i+1, delay)
-		time.Sleep(delay)
+	testResults = append(testResults, metric.ValidateMetrics(t.env, efaMetricIndicator, expectedDimsToMetrics)...)
+	testResults = append(testResults, metric.ValidateLogs(t.env))
+	return status.TestGroupResult{
+		Name:        t.GetTestName(),
+		TestResults: testResults,
 	}
-	return finalResult
 }
 
 func (t *EfaTestRunner) GetTestName() string {
@@ -183,7 +165,7 @@ func (t *EfaTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *EfaTestRunner) GetAgentRunDuration() time.Duration {
-	return 5 * time.Minute
+	return 3 * time.Minute
 }
 
 func (t *EfaTestRunner) GetMeasuredMetrics() []string {

@@ -39,6 +39,7 @@ var logGroupToKey = map[string][][]string{
 var logGroupToKeyWindows = map[string][][]string{
 	"dataplane": {
 		{"log", "file_name"},
+		{"log", "az", "ec2_instance_id"},
 		{"SourceName", "Message", "ComputerName"},
 	},
 	"host": {
@@ -61,8 +62,6 @@ func TestFluentLogs(t *testing.T) {
 		logGroupToKey = logGroupToKeyWindows
 	}
 
-	timeout := time.Now().Add(5 * time.Minute)
-
 	for group, fieldsArr := range logGroupToKey {
 		group = fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, group)
 
@@ -78,10 +77,11 @@ func TestFluentLogs(t *testing.T) {
 			t.Fatalf("fluent log group doesn't exist: %s", group)
 		}
 
-		var lastErr error
-		for time.Now().Before(timeout) {
+		maxRetries := 30
+		for retry := 0; retry < maxRetries; retry++ {
 			streams := awsservice.GetLogStreams(group)
 			if len(streams) == 0 {
+				t.Logf("No log streams found for %s, waiting... (attempt %d/%d)", group, retry+1, maxRetries)
 				time.Sleep(10 * time.Second)
 				continue
 			}
@@ -90,7 +90,7 @@ func TestFluentLogs(t *testing.T) {
 				group,
 				*(streams[0].LogStreamName),
 				nil,
-				&timeout,
+				nil,
 				awsservice.AssertLogsNotEmpty(),
 				func(events []types.OutputLogEvent) error {
 					// only 1 log message gets validated
@@ -100,21 +100,18 @@ func TestFluentLogs(t *testing.T) {
 						return fmt.Errorf("no log events found")
 					}
 
-					for _, event := range events {
-						for _, fields := range fieldsArr {
-							allFieldsFound := true
-							for _, field := range fields {
-								if !strings.Contains(*event.Message, "\""+field+"\"") {
-									allFieldsFound = false
-									break
-								}
-							}
-							if allFieldsFound {
-								return nil
+					for _, fields := range fieldsArr {
+						var match int
+						for _, field := range fields {
+							if strings.Contains(*events[0].Message, "\""+field+"\"") {
+								match += 1
 							}
 						}
+						if match == len(fields) {
+							return nil
+						}
 					}
-					return fmt.Errorf("fluent log entry doesn't include expected message fields")
+					return fmt.Errorf("fluent log entry doesn't include expected message fields: %s", *events[0].Message)
 				},
 			)
 
@@ -122,12 +119,12 @@ func TestFluentLogs(t *testing.T) {
 				break
 			}
 
-			lastErr = err
-			time.Sleep(10 * time.Second)
-		}
+			if retry == maxRetries-1 {
+				t.Fatalf("failed validation for log group %s: %v", group, err)
+			}
 
-		if lastErr != nil {
-			t.Fatalf("failed validation for log group %s: %v", group, lastErr)
+			t.Logf("Waiting for logs to appear in %s... (attempt %d/%d)", group, retry+1, maxRetries)
+			time.Sleep(10 * time.Second)
 		}
 	}
 
