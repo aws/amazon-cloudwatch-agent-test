@@ -93,6 +93,9 @@ func TestFluentLogs(t *testing.T) {
 				&timeout,
 				awsservice.AssertLogsNotEmpty(),
 				func(events []types.OutputLogEvent) error {
+					// only 1 log message gets validated
+					// log message must include expected fields, and there could be more than 1 set of expected fields per log
+
 					if len(events) == 0 {
 						return fmt.Errorf("no log events found")
 					}
