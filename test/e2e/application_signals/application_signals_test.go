@@ -1,4 +1,4 @@
-package container_insights
+package application_signals
 
 import (
 	"flag"
@@ -77,7 +77,7 @@ func TestMain(m *testing.M) {
 		}
 		os.Exit(0)
 	}
-	env.SampleApp = filepath.Join("resources", "appsignals_sample_app.yaml")
+
 	// Configure AWS clients and create K8s resources
 	if err := e2e.InitializeEnvironment(env); err != nil {
 		fmt.Printf("Failed to initialize environment: %v\n", err)
@@ -148,8 +148,7 @@ func testTraces(t *testing.T) {
 	configFile := filepath.Base(env.AgentConfig)
 	tests := testTracesRegistry[configFile]
 
-	fmt.Printf("waiting for traces to propagate for %f minutes ...\n", e2e.Wait.Minutes())
-	//time.Sleep(10 * time.Minute) // we are checking a period of 10 minutes
+	//since this is after metrics no need for wait
 
 	for _, testFunc := range tests {
 		testFunc(t)

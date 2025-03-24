@@ -320,8 +320,8 @@ var testTypeToTestConfigE2E = map[string][]testConfig{
 		{testDir: "../../../test/e2e/jmx"},
 	},
 	"rosa_e2e_cluster": {
+		{testDir: "test/e2e/container_insights"}, // container insights has to be the first one to run
 		//{testDir: "../../../test/e2e/jmx"},
-		{testDir: "test/e2e/container_insights"},
 		{testDir: "test/e2e/security",
 			sampleAppPath: "resources/shell.yaml"},
 		{testDir: "test/e2e/application_signals",

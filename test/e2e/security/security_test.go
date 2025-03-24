@@ -42,7 +42,7 @@ var (
 // Test Registry Maps
 //------------------------------------------------------------------------------
 
-var testMetricsRegistry = map[string][]func(*testing.T){
+var testAccessRegistry = map[string][]func(*testing.T){
 	".": {
 		testCapabilities,
 		testAgentPIDAccess,
@@ -124,7 +124,7 @@ func testResources(t *testing.T) {
 
 func testMetrics(t *testing.T) {
 	configFile := filepath.Base(env.AgentConfig)
-	tests := testMetricsRegistry[configFile]
+	tests := testAccessRegistry[configFile]
 
 	for _, testFunc := range tests {
 		testFunc(t)
