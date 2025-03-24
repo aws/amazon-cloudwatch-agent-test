@@ -6,3 +6,9 @@ output "cluster_id" {
 output "cluster_name" {
   value = local.cluster_name
 }
+
+# Output the ARN of the CloudWatch Agent IAM role
+output "cloudwatch_agent_role_arn" {
+  value       = local.cloudwatch_agent_role_arn
+  description = "ARN of the IAM role created for the CloudWatch agent"
+}

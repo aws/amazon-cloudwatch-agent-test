@@ -26,23 +26,6 @@ terraform {
   }
 }
 
-# Export token using the RHCS_TOKEN environment variable
-variable "rhcs_token" {
-}
-provider "rhcs" {
-  token = var.rhcs_token
-}
-
-provider "aws" {
-  region = var.aws_region
-  ignore_tags {
-    key_prefixes = ["kubernetes.io/"]
-  }
-  default_tags {
-    tags = var.default_aws_tags
-  }
-}
-
 data "aws_caller_identity" "current" {}
 data "aws_availability_zones" "available" {}
 
@@ -68,6 +51,7 @@ resource "time_sleep" "wait_60_seconds" {
 module "hcp" {
   source                 = "terraform-redhat/rosa-hcp/rhcs"
   version                = "1.6.5"
+  openshift_version      = var.openshift_version
 
   cluster_name           = local.cluster_name
   replicas               = local.worker_node_replicas
@@ -89,7 +73,6 @@ module "hcp" {
   depends_on = [time_sleep.wait_60_seconds]
 }
 
-
 ############################
 # HTPASSWD IDP
 ############################
@@ -98,7 +81,7 @@ resource "aws_secretsmanager_secret" "secret" {
   name = "${local.cluster_name}-htpasswd"
 
   tags = {
-    Environment = "Production"
+    Environment = "IntegrationTesting"
   }
 }
 resource "aws_secretsmanager_secret_version" "secret_version" {
@@ -114,14 +97,8 @@ resource "aws_secretsmanager_secret_version" "secret_version" {
 # Setup CWA IAM
 ############################
 
-
 locals {
   cloudwatch_agent_role_arn = lookup(module.hcp.account_roles_arn, "HCP-ROSA-Worker")
-}
-# Output the ARN of the CloudWatch Agent IAM role
-output "cloudwatch_agent_role_arn" {
-  value       = local.cloudwatch_agent_role_arn
-  description = "ARN of the IAM role created for the CloudWatch agent"
 }
 
 # Attach CloudWatchAgentServerPolicy to the role
