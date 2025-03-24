@@ -13,6 +13,7 @@ variable "ami_family" {
       status_command    = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status"
       connection_type   = "ssh"
       wait_cloud_init   = "for i in {1..300}; do [ ! -f /var/lib/cloud/instance/boot-finished ] && echo 'Waiting for cloud-init...'$i && sleep 1 || break; done"
+      sleep             = "sleep 15"
     }
     windows = {
       login_user        = "Administrator"
@@ -24,6 +25,7 @@ variable "ami_family" {
       status_command    = "powershell \"& 'C:/Program Files/Amazon/AmazonCloudWatchAgent/amazon-cloudwatch-agent-ctl.ps1' -a status\""
       connection_type   = "winrm"
       wait_cloud_init   = " "
+      sleep             = "Start-Sleep -Seconds 15"
     }
   }
 }

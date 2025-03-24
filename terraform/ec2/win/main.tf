@@ -230,7 +230,7 @@ resource "null_resource" "integration_test_run_validator" {
       "powershell.exe -Command \"Start-Sleep -s 60\"",
       "powershell.exe -Command \"Invoke-WebRequest -Uri http://localhost:9404 -UseBasicParsing\"",
       "set AWS_REGION=${var.region}",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "powershell.exe -Command \"$maxAttempts = 5; $attemptCount = 0; $delay = 2; while ($attemptCount -lt $maxAttempts) { try { git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}; Write-Host 'Git clone successful'; break; } catch { $attemptCount++; if ($attemptCount -lt $maxAttempts) { Write-Host \"Git clone attempt $attemptCount failed, retrying in $delay seconds...\"; Start-Sleep -Seconds $delay; $delay *= 2; } else { Write-Host 'All git clone attempts failed'; throw $_; } } }\"",
       "cd amazon-cloudwatch-agent-test",
       "go test ./test/sanity -p 1 -v",
       "cd ..",

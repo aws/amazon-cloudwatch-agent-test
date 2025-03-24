@@ -81,6 +81,7 @@ resource "aws_instance" "integration-test" {
         "cat snakeoil.pem > server.test.pem.crt",
         "cd ~/amazon-cloudwatch-agent-test/localstack",
         "docker-compose up -d --force-recreate",
+        "export AWS_MAX_ATTEMPTS=10",
         "aws s3 cp ls_tmp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} --recursive"
     ])
     connection {
