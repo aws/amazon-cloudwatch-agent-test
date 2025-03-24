@@ -129,7 +129,7 @@ resource "null_resource" "integration_test_run" {
       ],
 
       # SELinux test setup (if enabled)
-      var.is_selinux_test ? [
+        var.is_selinux_test ? [
         "sudo yum remove chronicled -y",
         "sudo yum install audit -y",
         "sudo systemctl start auditd",
@@ -141,12 +141,12 @@ resource "null_resource" "integration_test_run" {
         "echo below is either Permissive/Enforcing",
         "sudo getenforce",
         "sudo rm -r amazon-cloudwatch-agent-selinux",
-        "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
+        "git clone --branch ampLogFix https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "cat amazon_cloudwatch_agent.te",
         "chmod +x ./amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh -y",
-        ] : [
+      ] : [
         "echo SELinux test not enabled"
       ],
 
