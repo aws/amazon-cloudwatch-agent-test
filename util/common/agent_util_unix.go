@@ -8,11 +8,16 @@ package common
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
@@ -235,4 +240,31 @@ func ReplaceLocalStackHostName(pathIn string) {
 	if err != nil {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
+}
+
+func DownloadFromS3(bucket string, key string, destPath string) error {
+	sess := session.Must(session.NewSession())
+	s3Client := s3.New(sess)
+
+	result, err := s3Client.GetObject(&s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to download from S3 bucket %s, key %s: %v", bucket, key, err)
+	}
+	defer result.Body.Close()
+
+	outFile, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to create file at %s: %v", destPath, err)
+	}
+	defer outFile.Close()
+
+	_, err = io.Copy(outFile, result.Body)
+	if err != nil {
+		return fmt.Errorf("failed to copy content to %s: %v", destPath, err)
+	}
+
+	return nil
 }
