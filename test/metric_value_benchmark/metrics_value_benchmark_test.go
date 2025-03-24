@@ -8,6 +8,7 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"testing"
 
@@ -128,7 +129,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		}
 
 		// Only add EntityMetricsTestRunner if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
-		if env.Region == "us-west-2" {
+		if os.Getenv("AWS_REGION") == "us-west-2" {
 			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
 		}
 	}
