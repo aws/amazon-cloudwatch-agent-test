@@ -87,13 +87,14 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 		if err := k8ctl.ApplyResource(env.SampleApp); err != nil {
 			return err
 		}
-	}
-	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
 
-	fmt.Println("Waiting for Sample Application to initialize...")
-	err = k8ctl.ConditionalWait("--for=condition=available", 300*time.Second, fmt.Sprintf("deployment/%s", deploymentName), "test")
-	if err != nil {
-		return err
+		deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
+
+		fmt.Println("Waiting for Sample Application to initialize...")
+		err = k8ctl.ConditionalWait("--for=condition=available", 300*time.Second, fmt.Sprintf("deployment/%s", deploymentName), "test")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
