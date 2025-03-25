@@ -445,8 +445,8 @@ resource "null_resource" "windows-cwagent" {
       chmod +x kubectl
       sed 's+CW_TEST_IMAGE+${var.cwagent_image_repo}:${var.cwagent_image_tag}+' ./../../default_resources/cwagent-windows-daemonset.yaml | ./kubectl apply -f -
       sed -e 's+WINDOWS_SERVER_VERSION+${var.windows_os_version}+' -e 's+REPLICAS+1+' ./../../default_resources/test-sample-windows.yaml | ./kubectl apply -f -
-      ./kubectl rollout status daemonset cloudwatch-agent-windows -n amazon-cloudwatch --timeout 600s
-      ./kubectl rollout status deployment windows-test-deployment --timeout 600s
+      ./kubectl rollout status daemonset cloudwatch-agent-windows -n amazon-cloudwatch --timeout 1200s
+      ./kubectl rollout status deployment windows-test-deployment --timeout 1200s
     EOT
   }
 
@@ -522,6 +522,11 @@ resource "kubernetes_cluster_role" "clusterrole" {
     resource_names = ["cwagent-clusterleader"]
     resources      = ["configmaps"]
     api_groups     = [""]
+  }
+  rule {
+    verbs      = ["list", "watch", "get"]
+    resources  = ["endpointslices"]
+    api_groups = ["discovery.k8s.io"]
   }
 }
 
