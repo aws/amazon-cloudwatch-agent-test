@@ -81,6 +81,8 @@ func (h *HelmManager) InstallOrUpdate(releaseName, chartPath string, values map[
 // Uninstall removes a Helm release.
 func (h *HelmManager) Uninstall(releaseName, namespace string) error {
 	helmCmd := exec.Command("helm", "uninstall", releaseName, "--namespace", namespace)
+	helmCmd.Stdout = os.Stdout
+	helmCmd.Stderr = os.Stderr
 	if err := helmCmd.Run(); err != nil {
 		return fmt.Errorf("failed to uninstall Helm release: %w", err)
 	}

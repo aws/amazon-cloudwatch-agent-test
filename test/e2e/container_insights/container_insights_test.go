@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e/utils"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric_value_benchmark/eks_resources"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -26,9 +25,7 @@ const (
 )
 
 var (
-	env         *environment.MetaData
-	k8sCtl      *utils.K8CtlManager
-	helmManager *utils.HelmManager
+	env *environment.MetaData
 )
 
 //------------------------------------------------------------------------------
