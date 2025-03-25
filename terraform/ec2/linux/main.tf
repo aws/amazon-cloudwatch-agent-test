@@ -130,13 +130,20 @@ resource "null_resource" "integration_test_run" {
 
       # SELinux test setup (if enabled)
         var.is_selinux_test ? [
+        "sudo yum remove chronicled -y",
+        "sudo yum install audit -y",
+        "sudo systemctl start auditd",
+        "sudo systemctl enable auditd",
         "sudo yum install amazon-cloudwatch-agent -y",
         "echo Running SELinux test setup...",
         "sudo yum install selinux-policy selinux-policy-targeted policycoreutils-python-utils selinux-policy-devel -y",
         "sudo setenforce 1",
+        "echo below is either Permissive/Enforcing",
+        "sudo getenforce",
         "sudo rm -r amazon-cloudwatch-agent-selinux",
         "git clone --branch ampLogFix https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
+        "cat amazon_cloudwatch_agent.te",
         "chmod +x ./amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh -y",
       ] : [
@@ -156,6 +163,8 @@ resource "null_resource" "integration_test_run" {
         var.pre_test_setup,
         # Integration test execution
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v",
+        "sudo ausearch -m AVC,USER_AVC -ts recent -ts $(date --date='450 minutes ago' '+%H:%M:%S') | audit2allow -M custom_policy",
+        "cat custom_policy.te"
       ],
     )
   }
