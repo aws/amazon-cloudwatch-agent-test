@@ -24,7 +24,7 @@ func (m *DiskIOEBSTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := m.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, name := range metricsToFetch {
-		testResults[i] = m.validateDiskMetric(name)
+		testResults[i] = m.validateEBSMetric(name)
 	}
 
 	return status.TestGroupResult{
@@ -42,7 +42,7 @@ func (m *DiskIOEBSTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *DiskIOEBSTestRunner) GetAgentRunDuration() time.Duration {
-	return 2 * time.Minute
+	return 4 * time.Minute
 }
 
 func (m *DiskIOEBSTestRunner) GetMeasuredMetrics() []string {
@@ -61,17 +61,13 @@ func (m *DiskIOEBSTestRunner) GetMeasuredMetrics() []string {
 	}
 }
 
-func (m *DiskIOEBSTestRunner) validateDiskMetric(metricName string) status.TestResult {
+func (m *DiskIOEBSTestRunner) validateEBSMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
 	}
 
 	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "VolumeId",
-			Value: dimension.UnknownDimensionValue(),
-		},
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
