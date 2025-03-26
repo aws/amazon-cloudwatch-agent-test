@@ -74,7 +74,7 @@ func (k *K8CtlManager) Execute(cmdArgs []string) (string, error) {
 	cmd := exec.Command(k.Command, cmdArgs...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to execute command %s: %w\nOutput: %s", err, output)
+		return "", fmt.Errorf("failed to execute command %s:\nOutput: %s", err, output)
 	}
 	return string(output), nil
 }
