@@ -52,9 +52,6 @@ func (k *K8CtlManager) DeleteSpecificResource(resourceType, resourceName, namesp
 
 // UpdateKubeConfig updates the kubeconfig for an EKS cluster.
 func (k *K8CtlManager) UpdateKubeConfig(clusterName string) error {
-	if k.Command == "oc" {
-		return nil
-	}
 	cmd := exec.Command("aws", "eks", "update-kubeconfig", "--name", clusterName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
