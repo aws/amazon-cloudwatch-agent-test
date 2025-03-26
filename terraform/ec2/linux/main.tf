@@ -137,7 +137,7 @@ resource "null_resource" "integration_test_run" {
         "echo below is either Permissive/Enforcing",
         "sudo getenforce",
         "sudo rm -r amazon-cloudwatch-agent-selinux",
-        "git clone --branch ampLogFix https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
+        "git clone --branch AddPerm https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "cat amazon_cloudwatch_agent.te",
         "chmod +x ./amazon_cloudwatch_agent.sh",

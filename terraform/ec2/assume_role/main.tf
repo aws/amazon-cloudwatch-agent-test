@@ -210,7 +210,7 @@ resource "null_resource" "integration_test_run" {
         "sudo yum install -y audit policycoreutils-python-utils go",
         "sudo setenforce 1",
         "echo Running SELinux test setup...",
-        "git clone --branch ampLogFix https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
+        "git clone --branch AddPerm https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh -y"
