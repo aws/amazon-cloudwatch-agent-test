@@ -200,7 +200,6 @@ func testTomcatMetrics(t *testing.T) {
 
 func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
-		e2e.GenerateTraffic(t)
 		time.Sleep(e2e.Wait)
 		e2e.VerifyMetricAboveZero(t, "tomcat.sessions", "JVM_TOMCAT_E2E")
 	})
@@ -253,7 +252,6 @@ func testContainerInsightsMetrics(t *testing.T) {
 
 func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
-		e2e.GenerateTraffic(t)
 		time.Sleep(e2e.Wait)
 		e2e.VerifyMetricAboveZero(t, "catalina_manager_rejectedsessions", "ContainerInsights/Prometheus")
 	})
