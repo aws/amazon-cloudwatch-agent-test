@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 type DiskIOEBSTestRunner struct {
@@ -37,6 +38,14 @@ func (m *DiskIOEBSTestRunner) GetTestName() string {
 
 func (m *DiskIOEBSTestRunner) GetAgentConfigFileName() string {
 	return "diskio_ebs_config.json"
+}
+
+func (m *NetTestRunner) SetupBeforeAgentRun() error {
+	err := common.RunCommands([]string{"sudo setcap cap_sys_admin+ep /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent"})
+	if err != nil {
+		return err
+	}
+	return m.SetUpConfig()
 }
 
 // func (t *DiskIOEBSTestRunner) GetAgentRunDuration() time.Duration {
