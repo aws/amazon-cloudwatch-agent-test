@@ -1,11 +1,15 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package utils
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
 // K8CtlManager handles Kubernetes (kubectl or oc) operations.
