@@ -41,9 +41,9 @@ func (m *DiskIOEBSTestRunner) GetAgentConfigFileName() string {
 	return "diskio_ebs_config.json"
 }
 
-func (t *DiskIOEBSTestRunner) GetAgentRunDuration() time.Duration {
-	return 4 * time.Minute
-}
+// func (t *DiskIOEBSTestRunner) GetAgentRunDuration() time.Duration {
+// 	return 4 * time.Minute
+// }
 
 func (m *DiskIOEBSTestRunner) GetMeasuredMetrics() []string {
 	return []string{
