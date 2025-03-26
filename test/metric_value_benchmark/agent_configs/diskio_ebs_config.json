@@ -13,7 +13,7 @@
     "metrics_collected": {
       "diskio": {
         "resources": [
-          "*"
+          "nvme0n1"
         ],
         "measurement": [
             "ebs_total_read_ops",
