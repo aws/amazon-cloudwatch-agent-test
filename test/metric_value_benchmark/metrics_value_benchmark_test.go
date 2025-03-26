@@ -132,6 +132,11 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		if os.Getenv("AWS_REGION") == "us-west-2" {
 			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
 		}
+
+		// Only add the Disk IO EBS test if not running on SELinux
+		if !env.IsSELinux {
+			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &DiskIOEBSTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
+		}
 	}
 	return ec2TestRunners
 }

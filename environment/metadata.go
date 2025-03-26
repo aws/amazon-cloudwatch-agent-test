@@ -64,6 +64,7 @@ type MetaData struct {
 	OtelConfig                                  string
 	SampleApp                                   string
 	AccountId                                   string
+	IsSELinux                                   bool
 }
 
 type MetaDataStrings struct {
@@ -107,6 +108,7 @@ type MetaDataStrings struct {
 	OtelConfig                                  string
 	SampleApp                                   string
 	AccountId                                   string
+	IsSELinux                                   bool
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -288,6 +290,11 @@ func registerAccountId(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.AccountId), "accountId", "", "AWS account Id")
 }
 
+func registerSELinux(dataString *MetaDataStrings) {
+	flag.BoolVar(&(dataString.IsSELinux), "selinux", false, "Whether running using SELinux (true/false)")
+}
+
+
 func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerComputeType(registeredMetaDataStrings)
 	registerECSData(registeredMetaDataStrings)
@@ -307,6 +314,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerAgentStartCommand(registeredMetaDataStrings)
 	registerAmpWorkspaceId(registeredMetaDataStrings)
 	registerAccountId(registeredMetaDataStrings)
+	registerSELinux(registeredMetaDataStrings)
 
 	return registeredMetaDataStrings
 }
@@ -352,6 +360,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.OtelConfig = registeredMetaDataStrings.OtelConfig
 	metaDataStorage.SampleApp = registeredMetaDataStrings.SampleApp
 	metaDataStorage.AccountId = registeredMetaDataStrings.AccountId
+	metaDataStorage.IsSELinux = registeredMetaDataStrings.IsSELinux
 
 	return metaDataStorage
 }
