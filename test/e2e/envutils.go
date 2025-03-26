@@ -1,14 +1,17 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package e2e
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"os"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e/utils"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 func InitializeEnvironment(env *environment.MetaData) error {
