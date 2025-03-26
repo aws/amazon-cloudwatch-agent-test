@@ -40,7 +40,7 @@ func (m *DiskIOEBSTestRunner) GetAgentConfigFileName() string {
 	return "diskio_ebs_config.json"
 }
 
-func (m *NetTestRunner) SetupBeforeAgentRun() error {
+func (m *DiskIOEBSTestRunner) SetupBeforeAgentRun() error {
 	err := common.RunCommands([]string{"sudo setcap cap_sys_admin+ep /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent"})
 	if err != nil {
 		return err
