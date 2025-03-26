@@ -154,7 +154,7 @@ func (t *JMXKafkaTestRunner) validateJMXMetric(metricName string) status.TestRes
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(jmxNamespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch("MetricValueBenchmarkJMXTest", metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	log.Printf("metric values are %v", values)
 	if err != nil {
 		log.Printf("err: %v\n", err)
