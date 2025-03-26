@@ -5,6 +5,7 @@ package eks_resources
 
 import (
 	_ "embed"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
@@ -116,7 +117,6 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_status_pending",
 			"pod_cpu_utilization",
 			"node_filesystem_inodes",
-			"node_diskio_io_service_bytes_total",
 			"node_status_condition_memory_pressure",
 			"container_cpu_utilization",
 			"service_number_of_running_pods",
@@ -127,7 +127,6 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_status_succeeded",
 			"namespace_number_of_running_pods",
 			"pod_memory_reserved_capacity",
-			"node_diskio_io_serviced_total",
 			"pod_network_rx_bytes",
 			"node_status_capacity_pods",
 			"pod_status_unknown",
@@ -252,12 +251,10 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"node_status_condition_memory_pressure",
 			"node_memory_limit",
 			"node_memory_reserved_capacity",
-			"node_diskio_io_serviced_total",
 			"node_status_condition_pid_pressure",
 			"node_filesystem_inodes",
 			"node_cpu_usage_total",
 			"node_number_of_running_pods",
-			"node_diskio_io_service_bytes_total",
 			"node_status_capacity_pods",
 			"node_filesystem_inodes_free",
 			"node_cpu_utilization",
@@ -309,5 +306,113 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"container_filesystem_usage", "container_filesystem_available", "container_filesystem_utilization")
 	}
 
+	if env.ComputeType != computetype.ROSA { //diskio is not supported in rosa
+		ExpectedDimsToMetrics["ClusterName"] = append(ExpectedDimsToMetrics["ClusterName"],
+			"node_diskio_io_service_bytes_total",
+			"node_diskio_io_serviced_total",
+		)
+		ExpectedDimsToMetrics["ClusterName-InstanceId-NodeName"] = append(ExpectedDimsToMetrics["ClusterName-InstanceId-NodeName"],
+			"node_diskio_io_serviced_total",
+			"node_diskio_io_service_bytes_total",
+		)
+	}
+
 	return ExpectedDimsToMetrics
+}
+
+func GetExpectedDimsToMetricsForEnhanced(env *environment.MetaData) map[string][]string {
+	var ExpectedDimsToMetricsForEnhanced = map[string][]string{
+		"ClusterName": {
+			"apiserver_storage_objects",
+			"apiserver_request_total",
+			"apiserver_request_duration_seconds",
+			"rest_client_request_duration_seconds",
+			"rest_client_requests_total",
+			"etcd_request_duration_seconds",
+			"apiserver_storage_size_bytes",
+			"apiserver_longrunning_requests",
+			"apiserver_current_inflight_requests",
+			"apiserver_admission_controller_admission_duration_seconds",
+			"apiserver_admission_webhook_admission_duration_seconds",
+			"apiserver_admission_step_admission_duration_seconds",
+			"apiserver_request_total_5xx",
+			"apiserver_flowcontrol_request_concurrency_limit",
+			"apiserver_current_inqueue_requests",
+			"status_replicas_available",
+			"status_replicas_unavailable",
+			"replicas_desired",
+			"replicas_ready",
+			"container_filesystem_usage",
+			"container_filesystem_available",
+			"container_filesystem_utilization",
+		},
+		//"ClusterName-FullPodName-Namespace-PodName": {
+		//	"status_replicas_available",
+		//	"status_replicas_unavailable",
+		//	"replicas_desired",
+		//	"replicas_ready",
+		//},
+		"ClusterName-Namespace-PodName": {
+			"status_replicas_available",
+			"status_replicas_unavailable",
+			"replicas_desired",
+			"replicas_ready",
+		},
+		"ClusterName-resource": {
+			"apiserver_storage_objects",
+			"apiserver_longrunning_requests",
+		},
+		"ClusterName-Namespace-Service": {
+			"pod_cpu_limit",
+			"pod_cpu_utilization_over_pod_limit",
+		},
+		//"ClusterName-code-verb": {
+		//	"apiserver_request_total",
+		//	"apiserver_request_total_5xx",
+		//},
+		//"ClusterName-verb": {
+		//	"apiserver_request_duration_seconds",
+		//},
+		//"ClusterName-operation": {
+		//	"apiserver_admission_controller_admission_duration_seconds",
+		//	"rest_client_request_duration_seconds",
+		//	"etcd_request_duration_seconds",
+		//},
+		//"ClusterName-InstanceId-NodeName": {
+		//	"pod_cpu_utilization_over_pod_limit",
+		//	"pod_cpu_limit",
+		//},
+		//"ClusterName-code-method": {
+		//	"rest_client_requests_total",
+		//},
+		//"ClusterName-endpoint": {
+		//	"apiserver_storage_size_bytes",
+		//},
+		//"ClusterName-request_kind": {
+		//	"apiserver_current_inflight_requests",
+		//	"apiserver_current_inqueue_requests",
+		//},
+		"ClusterName-name": {
+			"apiserver_admission_webhook_admission_duration_seconds",
+		},
+		//"ClusterName-group": {
+		//	"apiserver_requested_deprecated_apis",
+		//},
+		//"ClusterName-priority_level": {
+		//	"apiserver_flowcontrol_request_concurrency_limit",
+		//},
+		//"ClusterName-reason": {
+		//	"apiserver_flowcontrol_rejected_requests_total",
+		//},
+	}
+	if env.ComputeType != computetype.ROSA { //apiserver_storage_list_duration_seconds
+		ExpectedDimsToMetricsForEnhanced["ClusterName"] = append(ExpectedDimsToMetricsForEnhanced["ClusterName"],
+			"apiserver_storage_list_duration_seconds",
+		)
+		ExpectedDimsToMetricsForEnhanced["ClusterName-resource"] = append(ExpectedDimsToMetricsForEnhanced["ClusterName-resource"],
+			"apiserver_storage_list_duration_seconds",
+		)
+	}
+
+	return ExpectedDimsToMetricsForEnhanced
 }

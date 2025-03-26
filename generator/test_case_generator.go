@@ -40,6 +40,7 @@ type matrixRow struct {
 	MetadataEnabled     string `json:"metadataEnabled"`
 	MaxAttempts         int    `json:"max_attempts"`
 	SELinuxBranch       string `json:"selinux_branch"`
+	SampleAppPath       string `json:"sample_app_path"`
 }
 
 type testConfig struct {
@@ -54,7 +55,8 @@ type testConfig struct {
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
 	targets map[string]map[string]struct{}
 	// maxAttempts limits the number of times a test will be run.
-	maxAttempts int
+	maxAttempts   int
+	sampleAppPath string
 }
 
 const (
@@ -317,6 +319,15 @@ var testTypeToTestConfigE2E = map[string][]testConfig{
 	"eks_e2e_jmx": {
 		{testDir: "../../../test/e2e/jmx"},
 	},
+	"rosa_e2e_cluster": {
+		{testDir: "test/e2e/container_insights"}, // container insights has to be the first one to run
+		//{testDir: "../../../test/e2e/jmx"},
+		{testDir: "test/e2e/security",
+			sampleAppPath: "resources/shell.yaml"},
+		{testDir: "test/e2e/application_signals",
+			sampleAppPath: "resources/appsignals_sample_app.yaml",
+		},
+	},
 }
 
 type partition struct {
@@ -443,7 +454,9 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			if len(ami) != 0 && !slices.Contains(ami, row.Ami) {
 				continue
 			}
-
+			if testConfig.sampleAppPath != "" {
+				row.SampleAppPath = testConfig.sampleAppPath
+			}
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}

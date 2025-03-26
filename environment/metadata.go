@@ -265,7 +265,7 @@ func fillExcludedTests(e *MetaData, data *MetaDataStrings) {
 }
 
 func fillEKSData(e *MetaData, data *MetaDataStrings) {
-	if e.ComputeType != computetype.EKS {
+	if e.ComputeType != computetype.EKS && e.ComputeType != computetype.ROSA {
 		return
 	}
 
