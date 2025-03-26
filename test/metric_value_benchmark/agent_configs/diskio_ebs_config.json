@@ -26,7 +26,7 @@
             "ebs_volume_performance_exceeded_tp",
             "ebs_ec2_instance_performance_exceeded_iops",
             "ebs_ec2_instance_performance_exceeded_tp",
-            "ebs_volume_queue_length",
+            "ebs_volume_queue_length"
         ],
         "metrics_collection_interval": 10
       }
