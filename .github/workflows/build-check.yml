@@ -22,10 +22,10 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
       - uses: actions/checkout@v3
-      - name: Setup Go 1.19
-        uses: actions/setup-go@v3
+      - name: Setup Go 1.22
+        uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.2
+          go-version: ~1.22.2
       - name: Lint Terraform
         if: runner.os == 'Linux'
         run: cd terraform && make check-fmt
