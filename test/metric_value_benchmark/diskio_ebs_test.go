@@ -48,10 +48,6 @@ func (m *DiskIOEBSTestRunner) SetupBeforeAgentRun() error {
 	return m.SetUpConfig()
 }
 
-// func (t *DiskIOEBSTestRunner) GetAgentRunDuration() time.Duration {
-// 	return 4 * time.Minute
-// }
-
 func (m *DiskIOEBSTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"diskio_ebs_total_read_ops",

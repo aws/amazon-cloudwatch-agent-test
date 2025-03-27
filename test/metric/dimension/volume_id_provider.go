@@ -6,15 +6,13 @@
 package dimension
 
 import (
-	"fmt"
 	"log"
-	"os"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 type VolumeIdDimensionProvider struct {
@@ -31,8 +29,7 @@ func (p *VolumeIdDimensionProvider) GetDimension(instruction Instruction) types.
 	if instruction.Key != "VolumeId" || instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}
-	// TOOD: Assumes nvme0 is the only device used
-	serial, err := GetVolumeSerial()
+	serial, err := common.GetAnyNvmeVolumeID()
 	if err != nil {
 		log.Print(err)
 		return types.Dimension{}
@@ -41,20 +38,6 @@ func (p *VolumeIdDimensionProvider) GetDimension(instruction Instruction) types.
 		Name:  aws.String("VolumeId"),
 		Value: aws.String(serial),
 	}
-}
-
-func GetVolumeSerial() (string, error) {
-	data, err := os.ReadFile(fmt.Sprintf("/sys/class/nvme/nvme0/serial"))
-	if err != nil {
-		return "", nil
-	}
-	trimmed := strings.TrimPrefix(cleanupString(string(data)), "vol")
-	return "vol-" + trimmed, nil
-}
-
-func cleanupString(input string) string {
-	// Some device info strings use fixed-width padding and/or end with a new line
-	return strings.TrimSpace(strings.TrimSuffix(input, "\n"))
 }
 
 func (p *VolumeIdDimensionProvider) Name() string {
