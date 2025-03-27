@@ -6,6 +6,8 @@
 package metric_value_benchmark
 
 import (
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -48,9 +50,9 @@ func (m *DiskIOEBSTestRunner) SetupBeforeAgentRun() error {
 	return m.SetUpConfig()
 }
 
-// func (t *DiskIOEBSTestRunner) GetAgentRunDuration() time.Duration {
-// 	return 4 * time.Minute
-// }
+func (t *DiskIOEBSTestRunner) GetAgentRunDuration() time.Duration {
+	return 4 * time.Minute
+}
 
 func (m *DiskIOEBSTestRunner) GetMeasuredMetrics() []string {
 	return []string{
