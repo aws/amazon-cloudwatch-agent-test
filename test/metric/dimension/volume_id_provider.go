@@ -38,7 +38,7 @@ func (p *VolumeIdDimensionProvider) GetDimension(instruction Instruction) types.
 		return types.Dimension{}
 	}
 	return types.Dimension{
-		Name:  aws.String("host"),
+		Name:  aws.String("VolumeId"),
 		Value: aws.String(serial),
 	}
 }
