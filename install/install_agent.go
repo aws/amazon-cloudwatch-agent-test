@@ -42,4 +42,13 @@ func main() {
 		}
 		time.Sleep(retryTime)
 	}
+	setCapCommand := "sudo setcap cap_sys_admin+ep /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent"
+	for i := 0; i < retryNumber; i++ {
+		out, err := exec.Command("bash", "-c", setCapCommand).Output()
+		log.Printf("Setcap command output %s, err %s", string(out), err)
+		if err == nil {
+			break
+		}
+		time.Sleep(retryTime)
+	}
 }
