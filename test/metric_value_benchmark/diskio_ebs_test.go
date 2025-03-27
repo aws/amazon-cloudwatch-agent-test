@@ -81,6 +81,10 @@ func (m *DiskIOEBSTestRunner) validateEBSMetric(metricName string) status.TestRe
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
 		},
+		{
+			Key:   "VolumeId",
+			Value: dimension.UnknownDimensionValue(),
+		},
 	})
 
 	if len(failed) > 0 {
