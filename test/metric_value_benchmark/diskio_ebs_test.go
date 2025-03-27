@@ -88,7 +88,7 @@ func (m *DiskIOEBSTestRunner) validateEBSMetric(metricName string) status.TestRe
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, metric.SUM, metric.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
