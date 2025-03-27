@@ -56,7 +56,7 @@ func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
-	bucket := "cloudwatch-agent-integration-bucket"
+	bucket := t.env.Bucket
 
 	kafkaArchive := "kafka_2.13-3.9.0.tgz"
 	zookeeperArchive := "apache-zookeeper-3.8.4-bin.tar.gz"
