@@ -79,7 +79,7 @@ variable "test_name" {
 
 variable "selinux_branch" {
   type    = string
-  default = "dominic-ebs"
+  default = "main"
 }
 
 variable "test_dir" {
