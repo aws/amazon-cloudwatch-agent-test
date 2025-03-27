@@ -48,7 +48,8 @@ func GetVolumeSerial() (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	return cleanupString(string(data)), nil
+	trimmed := strings.TrimPrefix(cleanupString(string(data)), "vol")
+	return "vol-" + trimmed, nil
 }
 
 func cleanupString(input string) string {
