@@ -116,7 +116,6 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			// {TestRunner: &MemTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &ProcStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &DiskIOTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &DiskIOEBSTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &NetTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &EthtoolTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
@@ -131,6 +130,11 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		// Only add EntityMetricsTestRunner if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
 		if env.Region == "us-west-2" {
 			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
+		}
+
+		// Only add the Disk IO EBS test if not running on SELinux
+		if !env.IsSELinux {
+			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &DiskIOEBSTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
 		}
 	}
 	return ec2TestRunners
