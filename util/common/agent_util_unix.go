@@ -243,7 +243,9 @@ func ReplaceLocalStackHostName(pathIn string) {
 }
 
 func DownloadFromS3(bucket string, key string, destPath string) error {
-	sess := session.Must(session.NewSession())
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String("us-west-2"), // Change to your actual region
+	}))
 	s3Client := s3.New(sess)
 
 	result, err := s3Client.GetObject(&s3.GetObjectInput{
