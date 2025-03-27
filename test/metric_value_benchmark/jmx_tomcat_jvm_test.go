@@ -46,7 +46,7 @@ func (t *JMXTomcatJVMTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *JMXTomcatJVMTestRunner) GetAgentRunDuration() time.Duration {
-	return 3 * time.Minute
+	return 1 * time.Second
 }
 
 func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
