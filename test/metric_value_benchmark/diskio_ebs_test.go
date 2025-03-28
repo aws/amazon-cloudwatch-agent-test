@@ -6,6 +6,8 @@
 package metric_value_benchmark
 
 import (
+	"log"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -43,7 +45,7 @@ func (m *DiskIOEBSTestRunner) GetAgentConfigFileName() string {
 func (m *DiskIOEBSTestRunner) SetupBeforeAgentRun() error {
 	err := common.RunCommands([]string{"sudo setcap cap_sys_admin+ep /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent"})
 	if err != nil {
-		return err
+		log.Printf("unable to setcap: %s", err)
 	}
 	return m.SetUpConfig()
 }
