@@ -318,7 +318,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 
 var testTypeToTestConfigE2E = map[string][]testConfig{
 	"eks_e2e_jmx": {
-		{testDir: "../../../test/e2e/jmx"},
+		{
+			testDir:      "../../../test/e2e/jmx",
+			terraformDir: "../../../terraform/e2e/jmx",
+		},
 	},
 }
 
@@ -378,6 +381,7 @@ func main() {
 		}
 	}
 }
+
 func generateTestName(testType string, test_directory string) string {
 	parts := strings.Split(test_directory, "/")
 

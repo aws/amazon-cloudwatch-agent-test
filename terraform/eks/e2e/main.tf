@@ -1,6 +1,3 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
 module "common" {
   source = "../../common"
 }
@@ -100,11 +97,14 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   role       = aws_iam_role.node_role.name
 }
 
+# Conditional resource for helm charts
 resource "null_resource" "helm_charts" {
+  count = var.eks_installation_type == "HELM_CHART" ? 1 : 0
+
   provisioner "local-exec" {
     command = <<-EOT
-      git clone https://github.com/aws-observability/helm-charts.git helm-charts
-      cd helm-charts
+      git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
+      cd ${path.module}/helm-charts
       git checkout ${var.helm_charts_branch}
     EOT
   }
@@ -115,19 +115,69 @@ resource "null_resource" "helm_charts" {
   }
 }
 
+# Conditional resource for EKS add-on
+resource "aws_eks_addon" "this" {
+  count = var.eks_installation_type == "EKS_ADDON" ? 1 : 0
+
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this
+  ]
+  addon_name           = var.addon_name
+  cluster_name         = aws_eks_cluster.this.name
+  configuration_values = file("${var.test_dir}/${var.agent_config}")
+}
+
 resource "null_resource" "validator" {
-  depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, null_resource.helm_charts]
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this,
+    null_resource.helm_charts,
+    aws_eks_addon.this
+  ]
 
   triggers = {
     cluster_name            = aws_eks_cluster.this.name
     region                  = var.region
     test_dir                = var.test_dir
     eks_deployment_strategy = var.eks_deployment_strategy
+    eks_installation_type   = var.eks_installation_type
   }
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating K8s resources and metrics"
+      echo "=== Starting Validation Process ==="
+      echo "=== Configuration Values ==="
+      echo "Test Directory: ${var.test_dir}"
+      echo "Region: ${var.region}"
+      echo "Kubernetes Version: ${var.k8s_version}"
+      echo "EKS Cluster Name: ${aws_eks_cluster.this.name}"
+      echo "Compute Type: EKS"
+      echo "EKS Installation Type: ${var.eks_installation_type}"
+      echo "EKS Deployment Strategy: ${var.eks_deployment_strategy}"
+
+      echo "=== CloudWatch Agent Configuration ==="
+      echo "Repository: ${var.cloudwatch_agent_repository}"
+      echo "Tag: ${var.cloudwatch_agent_tag}"
+      echo "Repository URL: ${var.cloudwatch_agent_repository_url}"
+
+      echo "=== Operator Configuration ==="
+      echo "Repository: ${var.cloudwatch_agent_operator_repository}"
+      echo "Tag: ${var.cloudwatch_agent_operator_tag}"
+      echo "Repository URL: ${var.cloudwatch_agent_operator_repository_url}"
+
+      echo "=== Target Allocator Configuration ==="
+      echo "Repository: ${var.cloudwatch_agent_target_allocator_repository}"
+      echo "Tag: ${var.cloudwatch_agent_target_allocator_tag}"
+      echo "Repository URL: ${var.cloudwatch_agent_target_allocator_repository_url}"
+
+      echo "=== Configuration Files ==="
+      echo "Agent Config: ${var.test_dir}/${var.agent_config}"
+      echo "OpenTelemetry Config: ${var.otel_config != "" ? "${var.test_dir}/${var.otel_config}" : "Not specified"}"
+      echo "Prometheus Config: ${var.prometheus_config != "" ? "${var.test_dir}/${var.prometheus_config}" : "Not specified"}"
+      echo "Sample App: ${var.test_dir}/${var.sample_app}"
+
+      echo "=== Starting Test Execution ==="
       go test -timeout 2h -v ${var.test_dir} \
       -region=${var.region} \
       -k8s_version=${var.k8s_version} \
@@ -147,20 +197,37 @@ resource "null_resource" "validator" {
       -agent_config="${var.test_dir}/${var.agent_config}" \
       ${var.otel_config != "" ? "-otel_config=\"${var.test_dir}/${var.otel_config}\"" : ""} \
       ${var.prometheus_config != "" ? "-prometheus_config=\"${var.test_dir}/${var.prometheus_config}\"" : ""} \
-      -sample_app="${var.test_dir}/${var.sample_app}"
+      -sample_app="${var.test_dir}/${var.sample_app}" \
+      -eks_installation_type=${var.eks_installation_type}
     EOT
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
-      echo "Running cleanup for K8s resources"
+      echo "=== Starting Cleanup Process ==="
+      echo "=== Cleanup Configuration ==="
+      echo "Test Directory: ${self.triggers.test_dir}"
+      echo "Region: ${self.triggers.region}"
+      echo "EKS Cluster Name: ${self.triggers.cluster_name}"
+      echo "Compute Type: EKS"
+      echo "EKS Installation Type: ${self.triggers.eks_installation_type}"
+      echo "EKS Deployment Strategy: ${self.triggers.eks_deployment_strategy}"
+
+      echo "=== Executing Cleanup ==="
       go test -timeout 30m -v ${self.triggers.test_dir} \
       -destroy \
+      -eks_installation_type=${self.triggers.eks_installation_type} \
       -region=${self.triggers.region} \
       -eksClusterName=${self.triggers.cluster_name} \
       -computeType=EKS \
       -eksDeploymentStrategy=${self.triggers.eks_deployment_strategy}
+
+      echo "=== Cleanup Complete ==="
     EOT
   }
+}
+
+output "eks_cluster_name" {
+  value = aws_eks_cluster.this.name
 }

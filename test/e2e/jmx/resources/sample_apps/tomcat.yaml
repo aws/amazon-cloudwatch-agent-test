@@ -68,7 +68,6 @@ spec:
         - name: k6-scripts
           configMap:
             name: k6-test-scripts
-
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -79,20 +78,18 @@ data:
   test.js: |
     import http from 'k6/http';
     import { check, sleep } from 'k6';
-
     export const options = {
         stages: [
             { duration: '10m', target: 1 } // 1 user for 10 mins
         ],
     };
-
     export default function () {
         const res = http.get('http://tomcat-service:80/webapp/index.jsp');
-        
+
         check(res, {
             'status is 200': (r) => r.status === 200,
             'response time < 500ms': (r) => r.timings.duration < 500,
         });
-        
+
         sleep(1); // Pause between iterations
     }
