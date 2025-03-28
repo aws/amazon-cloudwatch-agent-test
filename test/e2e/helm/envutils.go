@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package e2e
+package helm
 
 import (
 	"fmt"
@@ -70,12 +70,12 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 	}
 
 	if err := helm.InstallOrUpdate("amazon-cloudwatch-observability",
-		"../../../terraform/eks/e2e/helm-charts/charts/amazon-cloudwatch-observability",
+		"../../../../terraform/eks/e2e/helm/helm-charts/charts/amazon-cloudwatch-observability",
 		values, "amazon-cloudwatch"); err != nil {
 		return err
 	}
 	fmt.Println("Waiting for CloudWatch Agent Operator to initialize...")
-	err := k8ctl.ConditionalWait("--for=condition=available", 2*time.Minute, "deployment/amazon-cloudwatch-observability-controller-manager", "amazon-cloudwatch")
+	err := k8ctl.ConditionalWait("--for=condition=available", 4*time.Minute, "deployment/amazon-cloudwatch-observability-controller-manager", "amazon-cloudwatch")
 	if err != nil {
 		return err
 	}

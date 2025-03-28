@@ -11,4 +11,4 @@ terraform.*
 /test/**/final_*.yml
 coverage.txt
 generator/resources/*complete*.json
-terraform/eks/e2e/helm-charts
+terraform/eks/e2e/helm/helm-charts

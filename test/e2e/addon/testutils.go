@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package e2e
+package addon
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -78,14 +77,6 @@ func VerifyAgentResources(t *testing.T, clientset *kubernetes.Clientset, configK
 	serviceAccount, err := clientset.CoreV1().ServiceAccounts("amazon-cloudwatch").Get(context.TODO(), "cloudwatch-agent", metav1.GetOptions{})
 	require.NoError(t, err, "Error getting CloudWatch Agent Service Account")
 	require.NotNil(t, serviceAccount, "CloudWatch Agent Service Account not found")
-}
-func GetPodList(t *testing.T, clientset *kubernetes.Clientset, namespace string, name string) v1.PodList {
-	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=%s", name),
-	})
-	require.NoError(t, err, "Error getting Pods")
-	return *pods
-
 }
 
 //------------------------------------------------------------------------------
