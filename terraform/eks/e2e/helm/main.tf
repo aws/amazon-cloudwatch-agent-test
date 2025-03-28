@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source = "../../common"
+  source = "../../../common"
 }
 
 module "basic_components" {
-  source = "../../basic_components"
+  source = "../../../basic_components"
 }
 
 locals {
@@ -128,6 +128,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating K8s resources and metrics"
+      echo "test dir:${var.test_dir}"
       go test -timeout 2h -v ${var.test_dir} \
       -region=${var.region} \
       -k8s_version=${var.k8s_version} \
