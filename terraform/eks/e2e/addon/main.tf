@@ -100,56 +100,6 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   role       = aws_iam_role.node_role.name
 }
 
-# resource "null_resource" "validator" {
-#   depends_on = [aws_eks_cluster.this, aws_eks_node_group.this]
-#
-#   triggers = {
-#     cluster_name            = aws_eks_cluster.this.name
-#     region                  = var.region
-#     test_dir                = var.test_dir
-#     eks_deployment_strategy = var.eks_deployment_strategy
-#   }
-#
-#   provisioner "local-exec" {
-#     command = <<-EOT
-#       echo "Validating K8s resources and metrics"
-#       echo "test dir:${var.test_dir}"
-#
-#       go test -timeout 2h -v ${var.test_dir} \
-#       -region=${var.region} \
-#       -k8s_version=${var.k8s_version} \
-#       -eksClusterName=${aws_eks_cluster.this.name} \
-#       -computeType=EKS \
-#       -eksDeploymentStrategy=${var.eks_deployment_strategy} \
-#       -cloudwatch_agent_repository=${var.cloudwatch_agent_repository} \
-#       -cloudwatch_agent_tag=${var.cloudwatch_agent_tag} \
-#       -cloudwatch_agent_repository_url=${var.cloudwatch_agent_repository_url} \
-#       -cloudwatch_agent_operator_repository=${var.cloudwatch_agent_operator_repository} \
-#       -cloudwatch_agent_operator_tag=${var.cloudwatch_agent_operator_tag} \
-#       -cloudwatch_agent_operator_repository_url=${var.cloudwatch_agent_operator_repository_url} \
-#       -cloudwatch_agent_target_allocator_repository=${var.cloudwatch_agent_target_allocator_repository} \
-#       -cloudwatch_agent_target_allocator_tag=${var.cloudwatch_agent_target_allocator_tag} \
-#       -cloudwatch_agent_target_allocator_repository_url=${var.cloudwatch_agent_target_allocator_repository_url} \
-#       -agent_config="${var.test_dir}/${var.agent_config}" \
-#       ${var.otel_config != "" ? "-otel_config=\"${var.test_dir}/${var.otel_config}\"" : ""} \
-#       ${var.prometheus_config != "" ? "-prometheus_config=\"${var.test_dir}/${var.prometheus_config}\"" : ""} \
-#       -sample_app="${var.test_dir}/${var.sample_app}"
-#     EOT
-#   }
-#
-#   provisioner "local-exec" {
-#     when    = destroy
-#     command = <<-EOT
-#       echo "Running cleanup for K8s resources"
-#       go test -timeout 30m -v ${self.triggers.test_dir} \
-#       -destroy \
-#       -region=${self.triggers.region} \
-#       -eksClusterName=${self.triggers.cluster_name} \
-#       -computeType=EKS \
-#       -eksDeploymentStrategy=${self.triggers.eks_deployment_strategy}
-#     EOT
-#   }
-# }
 
 resource "null_resource" "validator" {
   depends_on = [
