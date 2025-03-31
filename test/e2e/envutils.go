@@ -75,7 +75,7 @@ func ApplyResources(k8ctl *utils.K8CtlManager, helm *utils.HelmManager, env *env
 		return err
 	}
 	fmt.Println("Waiting for CloudWatch Agent Operator to initialize...")
-	err := k8ctl.ConditionalWait("--for=condition=available", 60*time.Second, "deployment/amazon-cloudwatch-observability-controller-manager", "amazon-cloudwatch")
+	err := k8ctl.ConditionalWait("--for=condition=available", 2*time.Minute, "deployment/amazon-cloudwatch-observability-controller-manager", "amazon-cloudwatch")
 	if err != nil {
 		return err
 	}
