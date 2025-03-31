@@ -10,7 +10,6 @@ module "basic_components" {
 }
 locals {
   cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-monitoring-config-e2e-eks"
-  # aws_eks  = format("%s%s", "aws eks --region ${var.region}", var.beta ? " --endpoint ${var.beta_endpoint}" : "")
 
 }
 
