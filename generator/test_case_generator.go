@@ -299,10 +299,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
-		{
-			testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
+		//Skipping test until efa team implements fix
+		//{
+		//	testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
+		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//},
 		{
 			testDir: "./test/metric_value_benchmark", terraformDir: "terraform/eks/daemon/credentials/pod_identity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
