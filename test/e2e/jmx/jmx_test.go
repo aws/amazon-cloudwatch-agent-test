@@ -141,6 +141,7 @@ func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 func testJMXResources(t *testing.T, clientset *kubernetes.Clientset) {
 	t.Run("verify_jmx_resources", func(t *testing.T) {
 		deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
+		time.Sleep(e2e.WaitForResourceCreation)
 
 		var jmxTargetSystem string
 		switch filepath.Base(env.AgentConfig) {
