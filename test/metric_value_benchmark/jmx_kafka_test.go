@@ -84,7 +84,7 @@ func (t *JMXKafkaTestRunner) SetupBeforeAgentRun() error {
 		"(yes | nohup kafka_2.13-3.9.0/bin/kafka-console-producer.sh --topic quickstart-events --bootstrap-server localhost:9092) > /tmp/kafka-console-producer-logs.txt 2>&1 &",
 		"kafka_2.13-3.9.0/bin/kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server localhost:9092 > /tmp/kafka-console-consumer-logs.txt 2>&1 &",
 		fmt.Sprintf("tar -xzf %s", zookeeperArchive),
-		"mkdir apache-zookeeper-3.8.4-bin/data",
+		"rm -rf apache-zookeeper-3.8.4-bin/data && mkdir apache-zookeeper-3.8.4-bin/data",
 		"touch apache-zookeeper-3.8.4-bin/conf/zoo.cfg",
 		"echo -e 'tickTime = 2000\ndataDir = ../data\nclientPort = 2181\ninitLimit = 5\nsyncLimit = 2\n' >> apache-zookeeper-3.8.4-bin/conf/zoo.cfg",
 		"sudo apache-zookeeper-3.8.4-bin/bin/zkServer.sh start",
