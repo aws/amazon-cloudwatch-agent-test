@@ -376,7 +376,7 @@ func main() {
 		}
 	}
 }
-func generateTestName(test_directory string) string {
+func generateTestName(testType string, test_directory string) string {
 	parts := strings.Split(test_directory, "/")
 
 	// Remove empty parts caused by leading `../`
@@ -392,7 +392,13 @@ func generateTestName(test_directory string) string {
 		cleaned = append(cleaned[1:], cleaned[0])
 	}
 
-	return strings.Join(cleaned, "-")
+	if testType == testTypeKeyEc2SELinux {
+		if !strings.HasPrefix(cleaned[0], "selinux") {
+			cleaned = append([]string{"selinux"}, cleaned...)
+		}
+	}
+
+	return strings.Join(cleaned, "_")
 }
 func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrixRow {
 	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
@@ -420,7 +426,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			}
 
 			row := matrixRow{
-				TestName:      generateTestName(testConfig.testDir),
+				TestName:      generateTestName(testType, testConfig.testDir),
 				SELinuxBranch: testConfig.selinuxBranch,
 				TestDir:       testConfig.testDir,
 				TestType:      testType,
