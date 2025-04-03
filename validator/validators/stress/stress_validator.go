@@ -93,7 +93,7 @@ var (
 			},
 			"collectd": {
 				"procstat_cpu_usage":   float64(90),
-				"procstat_memory_rss":  float64(120000000),
+				"procstat_memory_rss":  float64(150000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(1350000000),
 				"procstat_memory_data": float64(135000000),
@@ -119,7 +119,7 @@ var (
 				"procstat_memory_data": float64(75000000),
 				"procstat_num_fds":     float64(12),
 				"net_bytes_sent":       float64(90000),
-				"net_packets_sent":     float64(100),
+				"net_packets_sent":     float64(120),
 			},
 			"emf": {
 				"procstat_cpu_usage":   float64(25),
@@ -191,8 +191,8 @@ var (
 
 		"50000": {
 			"statsd": {
-				"procstat_cpu_usage":   float64(250),
-				"procstat_memory_rss":  float64(440000000),
+				"procstat_cpu_usage":   float64(300),
+				"procstat_memory_rss":  float64(515000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(2000000000),
 				"procstat_memory_data": float64(600000000),
@@ -238,7 +238,7 @@ var (
 				"procstat_memory_data": float64(110000000),
 				"procstat_num_fds":     float64(12),
 				"net_bytes_sent":       float64(280000),
-				"net_packets_sent":     float64(225),
+				"net_packets_sent":     float64(250),
 			},
 		},
 	}
