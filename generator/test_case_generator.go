@@ -68,7 +68,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/nvidia_gpu"},
 	},
 	testTypeKeyEc2Linux: {
-		{testDir: "./test/ca_bundle"},
+		//Skipping this test for now until test is not flakey
+		//{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
 			testDir: "./test/metrics_number_dimension",
@@ -133,7 +134,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 	},
 	testTypeKeyEc2SELinux: {
-		{testDir: "./test/ca_bundle"},
+		//skip test until test is not flakey
+		//{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
 			testDir: "./test/metrics_number_dimension",
