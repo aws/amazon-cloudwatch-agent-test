@@ -332,8 +332,10 @@ func (t AmpTestRunner) getOtlpMetrics() ([]string, []string) {
 	return []string{
 			"my_gauge",
 			"my_cumulative_counter",
+			"my_delta_counter",
 		}, []string{
 			"my_cumulative_histogram",
+			"my_delta_histogram",
 		}
 }
 
