@@ -1,0 +1,34 @@
+{
+  "metrics": {
+    "namespace": "KAFKA_E2E",
+    "metrics_collected": {
+      "jmx": {
+        "kafka": {
+          "measurement": [
+            "kafka.message.count",
+            "kafka.request.count",
+            "kafka.request.failed",
+            "kafka.request.time.total",
+            "kafka.request.time.50p",
+            "kafka.request.time.99p",
+            "kafka.request.time.avg"
+          ]
+        },
+        "kafka-producer": {
+          "measurement": [
+            "kafka.producer.io-wait-time-ns-avg",
+            "kafka.producer.outgoing-byte-rate",
+            "kafka.producer.response-rate"
+          ]
+        },
+        "kafka-consumer": {
+          "measurement": [
+            "kafka.consumer.total.records-consumed-rate",
+            "kafka.consumer.total.bytes-consumed-rate",
+            "kafka.consumer.fetch-rate"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -17,7 +17,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e/helm"
+
 )
 
 //------------------------------------------------------------------------------
@@ -70,14 +71,14 @@ func TestMain(m *testing.M) {
 
 	// Destroy K8s resources if terraform destroy
 	if env.Destroy {
-		if err := e2e.DestroyResources(env); err != nil {
+		if err := helm.DestroyResources(env); err != nil {
 			fmt.Printf("Failed to delete kubernetes resources: %v\n", err)
 		}
 		os.Exit(0)
 	}
 
 	// Configure AWS clients and create K8s resources
-	if err := e2e.InitializeEnvironment(env); err != nil {
+	if err := helm.InitializeEnvironment(env); err != nil {
 		fmt.Printf("Failed to initialize environment: %v\n", err)
 		os.Exit(1)
 	}
@@ -121,7 +122,7 @@ func testMetrics(t *testing.T) {
 	tests := testMetricsRegistry[configFile]
 
 	fmt.Println("waiting for metrics to propagate...")
-	time.Sleep(e2e.Wait)
+	time.Sleep(helm.Wait)
 
 	for _, testFunc := range tests {
 		testFunc(t)
@@ -134,7 +135,7 @@ func testMetrics(t *testing.T) {
 
 func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 	t.Run("verify_agent_resources", func(t *testing.T) {
-		e2e.VerifyAgentResources(t, clientset, "jmx")
+		helm.VerifyAgentResources(t, clientset, "jmx")
 	})
 }
 
@@ -160,7 +161,7 @@ func testJMXResources(t *testing.T, clientset *kubernetes.Clientset) {
 			"JAVA_TOOL_OPTIONS":                      " -javaagent:/otel-auto-instrumentation-java/javaagent.jar",
 		}
 
-		e2e.VerifyPodEnvironment(t, clientset, deploymentName, requiredEnvVars)
+		helm.VerifyPodEnvironment(t, clientset, deploymentName, requiredEnvVars)
 	})
 }
 
@@ -170,7 +171,7 @@ func testJMXResources(t *testing.T, clientset *kubernetes.Clientset) {
 
 func testTomcatMetrics(t *testing.T) {
 	t.Run("verify_jvm_tomcat_metrics", func(t *testing.T) {
-		e2e.ValidateMetrics(t, []string{
+		helm.ValidateMetrics(t, []string{
 			"jvm.classes.loaded",
 			"jvm.gc.collections.count",
 			"jvm.gc.collections.elapsed",
@@ -200,15 +201,14 @@ func testTomcatMetrics(t *testing.T) {
 
 func testTomcatSessions(t *testing.T) {
 	t.Run("verify_tomcat_sessions", func(t *testing.T) {
-		e2e.GenerateTraffic(t)
-		time.Sleep(e2e.Wait)
-		e2e.VerifyMetricAboveZero(t, "tomcat.sessions", "JVM_TOMCAT_E2E")
+		time.Sleep(helm.Wait)
+		helm.VerifyMetricAboveZero(t, "tomcat.sessions", "JVM_TOMCAT_E2E")
 	})
 }
 
 func testKafkaMetrics(t *testing.T) {
 	t.Run("verify_kafka_metrics", func(t *testing.T) {
-		e2e.ValidateMetrics(t, []string{
+		helm.ValidateMetrics(t, []string{
 			"kafka.message.count",
 			"kafka.request.count",
 			"kafka.request.failed",
@@ -228,7 +228,7 @@ func testKafkaMetrics(t *testing.T) {
 
 func testContainerInsightsMetrics(t *testing.T) {
 	t.Run("verify_containerinsights_metrics", func(t *testing.T) {
-		e2e.ValidateMetrics(t, []string{
+		helm.ValidateMetrics(t, []string{
 			"jvm_classes_loaded",
 			"jvm_threads_current",
 			"jvm_threads_daemon",
@@ -253,8 +253,7 @@ func testContainerInsightsMetrics(t *testing.T) {
 
 func testTomcatRejectedSessions(t *testing.T) {
 	t.Run("verify_catalina_manager_rejectedsessions", func(t *testing.T) {
-		e2e.GenerateTraffic(t)
-		time.Sleep(e2e.Wait)
-		e2e.VerifyMetricAboveZero(t, "catalina_manager_rejectedsessions", "ContainerInsights/Prometheus")
+		time.Sleep(helm.Wait)
+		helm.VerifyMetricAboveZero(t, "catalina_manager_rejectedsessions", "ContainerInsights/Prometheus")
 	})
 }

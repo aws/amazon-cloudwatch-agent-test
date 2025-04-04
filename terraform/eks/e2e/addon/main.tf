@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source = "../../common"
+  source = "../../../common"
 }
 
 module "basic_components" {
-  source = "../../basic_components"
+  source = "../../../basic_components"
 }
-
 locals {
   cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-monitoring-config-e2e-eks"
+
 }
 
 data "aws_eks_cluster_auth" "this" {
@@ -100,23 +100,11 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   role       = aws_iam_role.node_role.name
 }
 
-resource "null_resource" "helm_charts" {
-  provisioner "local-exec" {
-    command = <<-EOT
-      git clone https://github.com/aws-observability/helm-charts.git helm-charts
-      cd helm-charts
-      git checkout ${var.helm_charts_branch}
-    EOT
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = "rm -rf ${path.module}/helm-charts"
-  }
-}
 
 resource "null_resource" "validator" {
-  depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, null_resource.helm_charts]
+  depends_on = [
+    aws_eks_addon.this
+  ]
 
   triggers = {
     cluster_name            = aws_eks_cluster.this.name
@@ -127,14 +115,43 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating K8s resources and metrics"
+      echo "=== Starting Validation Process ==="
+      echo "=== Configuration Values ==="
+      echo "Test Directory: ${var.test_dir}"
+      echo "Region: ${var.region}"
+      echo "Kubernetes Version: ${var.k8s_version}"
+      echo "EKS Cluster Name: ${aws_eks_cluster.this.name}"
+      echo "Compute Type: EKS"
+      echo "EKS Deployment Strategy: ${var.eks_deployment_strategy}"
+
+      echo "=== CloudWatch Agent Configuration ==="
+      echo "Repository: ${var.cloudwatch_agent_repository}"
+      echo "Tag: ${var.cloudwatch_agent_tag}"
+      echo "Repository URL: ${var.cloudwatch_agent_repository_url}"
+
+      echo "=== Operator Configuration ==="
+      echo "Repository: ${var.cloudwatch_agent_operator_repository}"
+      echo "Tag: ${var.cloudwatch_agent_operator_tag}"
+      echo "Repository URL: ${var.cloudwatch_agent_operator_repository_url}"
+
+      echo "=== Target Allocator Configuration ==="
+      echo "Repository: ${var.cloudwatch_agent_target_allocator_repository}"
+      echo "Tag: ${var.cloudwatch_agent_target_allocator_tag}"
+      echo "Repository URL: ${var.cloudwatch_agent_target_allocator_repository_url}"
+
+      echo "=== Configuration Files ==="
+      echo "Agent Config: ${var.test_dir}/${var.agent_config}"
+      echo "OpenTelemetry Config: ${var.otel_config != "" ? "${var.test_dir}/${var.otel_config}" : "Not specified"}"
+      echo "Prometheus Config: ${var.prometheus_config != "" ? "${var.test_dir}/${var.prometheus_config}" : "Not specified"}"
+      echo "Sample App: ${var.test_dir}/${var.sample_app}"
+
+      echo "=== Starting Test Execution ==="
       go test -timeout 2h -v ${var.test_dir} \
       -region=${var.region} \
       -k8s_version=${var.k8s_version} \
       -eksClusterName=${aws_eks_cluster.this.name} \
       -computeType=EKS \
       -eksDeploymentStrategy=${var.eks_deployment_strategy} \
-      -helm_charts_branch=${var.helm_charts_branch} \
       -cloudwatch_agent_repository=${var.cloudwatch_agent_repository} \
       -cloudwatch_agent_tag=${var.cloudwatch_agent_tag} \
       -cloudwatch_agent_repository_url=${var.cloudwatch_agent_repository_url} \
@@ -154,13 +171,36 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
-      echo "Running cleanup for K8s resources"
+      echo "=== Starting Cleanup Process ==="
+      echo "=== Cleanup Configuration ==="
+      echo "Test Directory: ${self.triggers.test_dir}"
+      echo "Region: ${self.triggers.region}"
+      echo "EKS Cluster Name: ${self.triggers.cluster_name}"
+      echo "Compute Type: EKS"
+      echo "EKS Deployment Strategy: ${self.triggers.eks_deployment_strategy}"
+
+      echo "=== Executing Cleanup ==="
       go test -timeout 30m -v ${self.triggers.test_dir} \
       -destroy \
       -region=${self.triggers.region} \
       -eksClusterName=${self.triggers.cluster_name} \
       -computeType=EKS \
       -eksDeploymentStrategy=${self.triggers.eks_deployment_strategy}
+
+      echo "=== Cleanup Complete ==="
     EOT
   }
+}
+
+resource "aws_eks_addon" "this" {
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this
+  ]
+  addon_name           = var.addon_name
+  cluster_name         = aws_eks_cluster.this.name
+  configuration_values = file("${var.test_dir}/${var.agent_config}")
+}
+output "eks_cluster_name" {
+  value = aws_eks_cluster.this.name
 }
