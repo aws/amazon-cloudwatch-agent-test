@@ -1,4 +1,7 @@
 {
+  "agent": {
+    "region": "us-west-2"
+  },
   "metrics": {
     "namespace": "JVM_TOMCAT_E2E",
     "metrics_collected": {
