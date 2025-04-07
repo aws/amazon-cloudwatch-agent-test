@@ -102,10 +102,12 @@ resource "null_resource" "integration_test_setup_agent" {
     inline = [
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
+
+      # Verify the presence of amazon-cloudwatch-agent-ctl.ps1 and search for it if not found
+      "powershell.exe -Command \"if (-not (Test-Path 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1')) { $scriptPath = Get-ChildItem -Path C:\\ -Filter amazon-cloudwatch-agent-ctl.ps1 -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName; if (-not $scriptPath) { Write-Output 'amazon-cloudwatch-agent-ctl.ps1 not found after installation'; exit 1 } else { Write-Output ('amazon-cloudwatch-agent-ctl.ps1 found at: ' + $scriptPath) } } else { Write-Output 'amazon-cloudwatch-agent-ctl.ps1 found in the expected location' }\""
     ]
   }
 }
-
 resource "null_resource" "integration_test_setup_validator" {
   depends_on = [aws_instance.cwagent, module.validator, aws_ssm_parameter.upload_ssm]
 
@@ -191,6 +193,7 @@ resource "null_resource" "integration_test_run" {
   }
 }
 
+
 resource "null_resource" "integration_test_run_validator" {
   # run validator only when test_dir is not passed e.g. the default from variable.tf
   count = length(regexall("/feature/windows", var.test_dir)) > 0 && length(regexall("/feature/windows/custom_start", var.test_dir)) < 1 ? 1 : 0
@@ -234,7 +237,10 @@ resource "null_resource" "integration_test_run_validator" {
       "cd amazon-cloudwatch-agent-test",
       "go test ./test/sanity -p 1 -v",
       "cd ..",
-      "C:\\validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
+
+      # Retry logic for amazon-cloudwatch-agent-ctl.ps1 with timeout
+      "powershell.exe -Command \"$maxRetries = 50; $retryCount = 0; while (-not (Test-Path 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1') -and $retryCount -lt $maxRetries) { Start-Sleep -s 10; $retryCount++ }; if ($retryCount -eq $maxRetries) { throw 'Timeout: amazon-cloudwatch-agent-ctl.ps1 not found' }\"",
+
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
       "C:\\validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
     ]
