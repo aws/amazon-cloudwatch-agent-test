@@ -8,6 +8,7 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"testing"
 
@@ -117,7 +118,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			// {TestRunner: &ProcStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &DiskIOTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &NetTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			// {TestRunner: &EthtoolTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &EthtoolTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &EMFTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &SwapTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &ProcessesTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
@@ -125,19 +126,18 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			// {TestRunner: &RenameSSMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &JMXTomcatJVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &JMXKafkaTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
 		}
 
 		// Only add entity related tests if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
-		// if os.Getenv("AWS_REGION") == "us-west-2" {
-		// 	ec2TestRunners = append(ec2TestRunners,
-		// 		// &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-		// 		// &test_runner.TestRunner{TestRunner: &CollectDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-		// 		// &test_runner.TestRunner{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-		// 		// &test_runner.TestRunner{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
-		// 		//&test_runner.TestRunner{TestRunner: &StatsDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
-		// 	)
-		// }
+		if os.Getenv("AWS_REGION") == "us-west-2" {
+			ec2TestRunners = append(ec2TestRunners,
+				// &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				// &test_runner.TestRunner{TestRunner: &CollectDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				// &test_runner.TestRunner{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				&test_runner.TestRunner{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
+				&test_runner.TestRunner{TestRunner: &StatsDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
+			)
+		}
 	}
 	return ec2TestRunners
 }

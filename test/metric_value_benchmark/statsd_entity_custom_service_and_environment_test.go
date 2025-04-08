@@ -66,7 +66,7 @@ func (t *StatsDEntityCustomServiceAndEnvironmentRunner) ValidateStatsDEntity(met
 	}
 
 	// Wait a minute to ensure that the ListEntitiesForMetric call doesn't return an empty entity
-	time.Sleep(time.Minute)
+	time.Sleep(2 * time.Minute)
 
 	metricNamespace := "StatsDEntityCustomServiceEnvironmentTest"
 
