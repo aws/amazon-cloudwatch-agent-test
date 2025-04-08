@@ -80,7 +80,7 @@ resource "null_resource" "integration_test" {
         "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
-        "sudo ./amazon_cloudwatch_agent.sh"
+        "sudo ./amazon_cloudwatch_agent.sh -y"
         ] : [
         "echo SELinux test not enabled"
       ],
@@ -93,6 +93,7 @@ resource "null_resource" "integration_test" {
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
         "echo run integration test",
         "cd ~/amazon-cloudwatch-agent-test",
+        "timeout 60 bash -c 'until [ -f /home/ec2-user/amazon-cloudwatch-agent-test/test/sanity/resources/verifyUnixCtlScript.sh ]; do echo \"Waiting for verifyUnixCtlScript.sh...\"; sleep 2; done'",
         "sudo chmod 777 ~/amazon-cloudwatch-agent-test/test/sanity/resources/verifyUnixCtlScript.sh",
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"

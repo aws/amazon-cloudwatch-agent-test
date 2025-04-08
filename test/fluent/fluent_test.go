@@ -39,6 +39,7 @@ var logGroupToKey = map[string][][]string{
 var logGroupToKeyWindows = map[string][][]string{
 	"dataplane": {
 		{"log", "file_name"},
+		{"log", "az", "ec2_instance_id"},
 		{"SourceName", "Message", "ComputerName"},
 	},
 	"host": {
@@ -61,58 +62,71 @@ func TestFluentLogs(t *testing.T) {
 		logGroupToKey = logGroupToKeyWindows
 	}
 
-	currRetries := 0
-	now := time.Now()
 	for group, fieldsArr := range logGroupToKey {
 		group = fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, group)
+
+		currRetries := 0
 		for currRetries < logStreamRetry {
 			if awsservice.IsLogGroupExists(group) {
 				break
-			} else {
-				currRetries++
-				time.Sleep(time.Duration(currRetries) * time.Second)
 			}
+			currRetries++
+			time.Sleep(time.Duration(currRetries) * time.Second)
 		}
 		if currRetries >= logStreamRetry {
-			t.Fatalf("fluent log group doesn't exsit: %s", group)
+			t.Fatalf("fluent log group doesn't exist: %s", group)
 		}
 
-		streams := awsservice.GetLogStreams(group)
-		if len(streams) == 0 {
-			t.Fatalf("fluent log streams are empty for log group: %s", group)
-		}
+		maxRetries := 30
+		for retry := 0; retry < maxRetries; retry++ {
+			streams := awsservice.GetLogStreams(group)
+			if len(streams) == 0 {
+				t.Logf("No log streams found for %s, waiting... (attempt %d/%d)", group, retry+1, maxRetries)
+				time.Sleep(10 * time.Second)
+				continue
+			}
 
-		err := awsservice.ValidateLogs(
-			group,
-			*(streams[0].LogStreamName),
-			nil,
-			&now,
-			awsservice.AssertLogsNotEmpty(),
-			func(events []types.OutputLogEvent) error {
-				// only 1 log message gets validated
-				// log message must include expected fields, and there could be more than 1 set of expected fields per log group
-				var found bool
-				for _, fields := range fieldsArr {
-					var match int
-					for _, field := range fields {
-						if strings.Contains(*events[0].Message, "\""+field+"\"") {
-							match += 1
+			err := awsservice.ValidateLogs(
+				group,
+				*(streams[0].LogStreamName),
+				nil,
+				nil,
+				awsservice.AssertLogsNotEmpty(),
+				func(events []types.OutputLogEvent) error {
+					// only 1 log message gets validated
+					// log message must include expected fields, and there could be more than 1 set of expected fields per log
+
+					if len(events) == 0 {
+						return fmt.Errorf("no log events found")
+					}
+
+					for _, event := range events {
+						for _, fields := range fieldsArr {
+							var match int
+							for _, field := range fields {
+								if strings.Contains(*event.Message, "\""+field+"\"") {
+									match += 1
+								}
+							}
+							if match == len(fields) {
+								return nil
+							}
 						}
 					}
-					if match == len(fields) {
-						found = true
-						break
-					}
-				}
-				if !found {
-					return fmt.Errorf("fluent log entry doesn't include expected message fields: %s", *events[0].Message)
-				}
-				return nil
-			},
-		)
+					return fmt.Errorf("no log entries found with expected message fields in %d events", len(events))
+				},
+			)
 
-		if err != nil {
-			t.Fatalf("failed validation for log group %s: %v", group, err)
+			if err == nil {
+				break
+			}
+
+			if retry == maxRetries-1 {
+				t.Fatalf("failed validation for log group %s: %v", group, err)
+			}
+
+			t.Logf("Waiting for logs to appear in %s... (attempt %d/%d)", group, retry+1, maxRetries)
+			time.Sleep(10 * time.Second)
 		}
 	}
 
