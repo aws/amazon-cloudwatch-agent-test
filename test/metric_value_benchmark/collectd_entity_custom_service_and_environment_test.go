@@ -62,6 +62,9 @@ func (t *CollectDEntityCustomServiceAndEnvironmentRunner) ValidateCollectDEntity
 		Status: status.FAILED,
 	}
 
+	// Wait a minute to ensure that the ListEntitiesForMetric call doesn't return an empty entity
+	time.Sleep(time.Minute)
+
 	metricNamespace := "CollectDEntityCustomServiceEnvironmentTest"
 
 	requestBody, err := metric.BuildCollectDRequestBody(metricNamespace, metricName)

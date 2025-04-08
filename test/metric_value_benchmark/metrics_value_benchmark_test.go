@@ -125,7 +125,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			// {TestRunner: &RenameSSMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &JMXTomcatJVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			// {TestRunner: &JMXKafkaTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-			{TestRunner: &StatsDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
+			{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
 		}
 
 		// Only add entity related tests if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
