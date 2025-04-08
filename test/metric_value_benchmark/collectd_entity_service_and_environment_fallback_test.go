@@ -63,7 +63,7 @@ func (t *CollectDEntityServiceAndEnvironmentFallback) ValidateCollectDEntity(met
 	}
 
 	// Wait to ensure that the ListEntitiesForMetric call doesn't return an empty entity
-	time.Sleep(3 * time.Minute)
+	time.Sleep(4 * time.Minute)
 
 	metricNamespace := "CollectDEntityServiceEnvironmentFallbackTest"
 
