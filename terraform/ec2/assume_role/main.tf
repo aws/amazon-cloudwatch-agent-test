@@ -203,10 +203,6 @@ resource "null_resource" "integration_test_run" {
     inline = concat(
       [
         "echo Preparing environment...",
-        "sudo yum remove chronicled -y",
-        "sudo yum install audit -y",
-        "sudo systemctl start auditd",
-        "sudo systemctl enable auditd",
       ],
 
       # SELinux test setup (if enabled)
@@ -214,7 +210,7 @@ resource "null_resource" "integration_test_run" {
         "sudo yum install -y audit policycoreutils-python-utils go",
         "sudo setenforce 1",
         "echo Running SELinux test setup...",
-        "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
+        "git clone --branch goFix https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh -y"
@@ -231,9 +227,7 @@ resource "null_resource" "integration_test_run" {
         "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
-        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v",
-        "sudo ausearch -m AVC,USER_AVC -ts recent -ts $(date --date='450 minutes ago' '+%H:%M:%S') | audit2allow -M custom_policy",
-        "cat custom_policy.te"
+        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"
       ],
     )
   }
