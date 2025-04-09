@@ -126,6 +126,7 @@ resource "null_resource" "integration_test_run" {
     inline = concat(
       [
         "echo Preparing environment...",
+        "echo new test",
         "sudo yum remove chronicled -y",
         "sudo yum install audit -y",
         "sudo systemctl start auditd",
