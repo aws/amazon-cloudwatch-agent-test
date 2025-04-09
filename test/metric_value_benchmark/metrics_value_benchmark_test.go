@@ -133,8 +133,8 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			ec2TestRunners = append(ec2TestRunners,
 				// &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 				// &test_runner.TestRunner{TestRunner: &CollectDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-				&test_runner.TestRunner{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 				&test_runner.TestRunner{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
+				&test_runner.TestRunner{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 				// &test_runner.TestRunner{TestRunner: &StatsDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
 			)
 		}
