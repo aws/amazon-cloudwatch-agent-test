@@ -66,7 +66,7 @@ func (t *StatsDEntityCustomServiceAndEnvironmentRunner) ValidateStatsDEntity(met
 	}
 
 	// Wait to ensure that the ListEntitiesForMetric call doesn't return an empty entity
-	time.Sleep(4 * time.Minute)
+	time.Sleep(1 * time.Minute)
 
 	metricNamespace := "StatsDEntityCustomServiceEnvironmentTest"
 
@@ -117,7 +117,7 @@ func (t *StatsDEntityCustomServiceAndEnvironmentRunner) ValidateStatsDEntity(met
 }
 
 func (t *StatsDEntityCustomServiceAndEnvironmentRunner) GetAgentRunDuration() time.Duration {
-	return time.Minute
+	return 5 * time.Minute
 }
 
 func (t *StatsDEntityCustomServiceAndEnvironmentRunner) GetExpectedEntity() []metric.Entity {

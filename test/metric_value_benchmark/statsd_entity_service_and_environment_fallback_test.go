@@ -66,7 +66,7 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) ValidateStatsDEntity(metricN
 	}
 
 	// Wait to ensure that the ListEntitiesForMetric call doesn't return an empty entity
-	time.Sleep(4 * time.Minute)
+	time.Sleep(1 * time.Minute)
 
 	metricNamespace := "StatsDEntityServiceEnvironmentFallbackTest"
 
@@ -117,7 +117,7 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) ValidateStatsDEntity(metricN
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) GetAgentRunDuration() time.Duration {
-	return time.Minute
+	return 5 * time.Minute
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) GetExpectedEntity() []metric.Entity {

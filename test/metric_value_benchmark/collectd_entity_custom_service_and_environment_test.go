@@ -63,7 +63,7 @@ func (t *CollectDEntityCustomServiceAndEnvironmentRunner) ValidateCollectDEntity
 	}
 
 	// Wait to ensure that the ListEntitiesForMetric call doesn't return an empty entity
-	time.Sleep(4 * time.Minute)
+	time.Sleep(1 * time.Minute)
 
 	metricNamespace := "CollectDEntityCustomServiceEnvironmentTest"
 
@@ -114,7 +114,7 @@ func (t *CollectDEntityCustomServiceAndEnvironmentRunner) ValidateCollectDEntity
 }
 
 func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetAgentRunDuration() time.Duration {
-	return time.Minute
+	return 5 * time.Minute
 }
 
 func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetExpectedEntity() []metric.Entity {
