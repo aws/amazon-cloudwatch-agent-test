@@ -7,7 +7,7 @@
         "deployment.environment": "statsd-environment"
     },
     "metrics": {
-        "namespace": "StatsDEntityCustomServiceEnvironmentTest",
+        "namespace": "A2StatsDEntityCustomServiceEnvironmentTest",
         "append_dimensions": {
             "InstanceId": "${aws:InstanceId}"
         },
