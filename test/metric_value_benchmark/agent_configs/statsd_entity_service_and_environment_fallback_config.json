@@ -2,8 +2,7 @@
     "agent": {
         "metrics_collection_interval": 15,
         "run_as_user": "root",
-        "debug": true,
-        "logfile": ""
+        "debug": true
     },
     "metrics": {
         "namespace": "StatsDEntityServiceEnvironmentFallbackTest",

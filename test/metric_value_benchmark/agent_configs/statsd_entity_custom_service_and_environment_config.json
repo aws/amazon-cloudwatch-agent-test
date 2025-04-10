@@ -3,7 +3,6 @@
         "metrics_collection_interval": 15,
         "run_as_user": "root",
         "debug": true,
-        "logfile": "",
         "service.name": "statsd-name",
         "deployment.environment": "statsd-environment"
     },
