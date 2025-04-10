@@ -135,7 +135,7 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 		_ = client.Write(ctx, &api.ValueList{
 			Identifier: api.Identifier{
 				Host:   exec.Hostname(),
-				Plugin: fmt.Sprint("gauge_", t),
+				Plugin: fmt.Sprint("gauge_100", t),
 				Type:   "gauge",
 			},
 			Time:     time.Now(),
@@ -146,7 +146,7 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 		err = client.Write(ctx, &api.ValueList{
 			Identifier: api.Identifier{
 				Host:   exec.Hostname(),
-				Plugin: fmt.Sprint("counter_", t),
+				Plugin: fmt.Sprint("counter_100", t),
 				Type:   "counter",
 			},
 			Time:     time.Now(),
@@ -172,7 +172,7 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 				_ = client.Write(ctx, &api.ValueList{
 					Identifier: api.Identifier{
 						Host:   exec.Hostname(),
-						Plugin: fmt.Sprint("gauge_", t),
+						Plugin: fmt.Sprint("gauge_100", t),
 						Type:   "gauge",
 					},
 					Time:     time.Now(),
@@ -183,7 +183,7 @@ func SendCollectDMetrics(metricPerInterval int, sendingInterval, duration time.D
 				err = client.Write(ctx, &api.ValueList{
 					Identifier: api.Identifier{
 						Host:   exec.Hostname(),
-						Plugin: fmt.Sprint("counter_", t),
+						Plugin: fmt.Sprint("counter_100", t),
 						Type:   "counter",
 					},
 					Time:     time.Now(),

@@ -68,7 +68,7 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) ValidateStatsDEntity(metricN
 	// Wait to ensure that the ListEntitiesForMetric call doesn't return an empty entity
 	time.Sleep(1 * time.Second)
 
-	metricNamespace := "StatsDEntityServiceEnvironmentFallbackTest"
+	metricNamespace := "A2StatsDEntityCustomServiceEnvironmentTest"
 
 	requestBody, err := metric.BuildStatsDRequestBody(metricNamespace, metricName)
 	if err != nil {
