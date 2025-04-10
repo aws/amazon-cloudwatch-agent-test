@@ -6,13 +6,22 @@
 package metric_value_benchmark
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+)
+
+const (
+	entityResourceType = "AWS::EC2::Instance"
+	entityType         = "AWS::Resource"
 )
 
 type DiskIOEBSTestRunner struct {
@@ -23,9 +32,12 @@ var _ test_runner.ITestRunner = (*DiskIOEBSTestRunner)(nil)
 
 func (m *DiskIOEBSTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := m.GetMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
+	// Double the length for testing the metric and entity
+	testResults := make([]status.TestResult, 2*len(metricsToFetch))
 	for i, name := range metricsToFetch {
 		testResults[i] = m.validateEBSMetric(name)
+		// Offset to latter half of the array
+		testResults[i+len(metricsToFetch)] = m.validateEBSEntity(name)
 	}
 
 	return status.TestGroupResult{
@@ -94,6 +106,90 @@ func (m *DiskIOEBSTestRunner) validateEBSMetric(metricName string) status.TestRe
 	}
 
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+		return testResult
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func (m *DiskIOEBSTestRunner) validateEBSEntity(metricName string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   fmt.Sprintf("%s_entity", metricName),
+		Status: status.FAILED,
+	}
+	env := environment.GetEnvironmentMetaData()
+	volumeID, err := common.GetAnyNvmeVolumeID()
+	if err != nil {
+		return testResult
+	}
+
+	requestBody := []byte(fmt.Sprintf(`{
+                "Namespace": "%s",
+                "MetricName": "%s",
+                "Dimensions": [
+                    {"Name": "InstanceId", "Value": "%s"},
+                    {"Name": "VolumeId", "Value": "%s"}
+                ]
+            }`, namespace, metricName, env.InstanceId, volumeID))
+
+	req, err := common.BuildListEntitiesForMetricRequest(requestBody, region)
+	if err != nil {
+		log.Printf("Failed to build ListEntitiesForMetric request for metric: '%s': %v", metricName, err)
+		return testResult
+	}
+
+	// send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failed to send request for metric: '%s': %v", metricName, err)
+		return testResult
+	}
+	defer resp.Body.Close()
+
+	// parse and verify the response
+	var response struct {
+		Entities []struct {
+			KeyAttributes struct {
+				Type         string `json:"Type"`
+				ResourceType string `json:"ResourceType"`
+				Identifier   string `json:"Identifier"`
+			} `json:"KeyAttributes"`
+		} `json:"Entities"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		log.Printf("Failed to decode response for metric: '%s': %v", metricName, err)
+		return testResult
+	}
+
+	if len(response.Entities) != 1 {
+		log.Printf("Response does not container the correct number of entities for metric '%s'", metricName)
+		return testResult
+	}
+
+	entity := response.Entities[0]
+	if entity.KeyAttributes.Identifier != env.InstanceId ||
+		entity.KeyAttributes.ResourceType != entityResourceType ||
+		entity.KeyAttributes.Type != entityType {
+
+		log.Printf("Entity mismatch for metric '%s':\n"+
+			"Expected:\n"+
+			"  Type: %s\n"+
+			"  ResourceType: %s\n"+
+			"  InstanceId: %s\n"+
+			"Got:\n"+
+			"  Type: %s\n"+
+			"  ResourceType: %s\n"+
+			"  InstanceId: %s",
+			metricName,
+			entityType,
+			entityResourceType,
+			env.InstanceId,
+			entity.KeyAttributes.Type,
+			entity.KeyAttributes.ResourceType,
+			entity.KeyAttributes.Identifier)
 		return testResult
 	}
 
