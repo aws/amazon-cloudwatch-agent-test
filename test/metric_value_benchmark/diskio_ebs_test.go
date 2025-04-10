@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -76,6 +77,10 @@ func (m *DiskIOEBSTestRunner) GetMeasuredMetrics() []string {
 		"diskio_ebs_ec2_instance_performance_exceeded_tp",
 		"diskio_ebs_volume_queue_length",
 	}
+}
+
+func (m *DiskIOEBSTestRunner) GetAgentRunDuration() time.Duration {
+	return 4 * time.Minute
 }
 
 func (m *DiskIOEBSTestRunner) validateEBSMetric(metricName string) status.TestResult {
