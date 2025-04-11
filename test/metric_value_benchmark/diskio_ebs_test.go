@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -37,8 +38,11 @@ func (m *DiskIOEBSTestRunner) Validate() status.TestGroupResult {
 	testResults := make([]status.TestResult, 2*len(metricsToFetch))
 	for i, name := range metricsToFetch {
 		testResults[i] = m.validateEBSMetric(name)
-		// Offset to latter half of the array
-		testResults[i+len(metricsToFetch)] = m.validateEBSEntity(name)
+		// We cannot validate entity in ITAR/CN
+		if os.Getenv("AWS_REGION") == "us-west-2" {
+			// Offset to latter half of the array
+			testResults[i+len(metricsToFetch)] = m.validateEBSEntity(name)
+		}
 	}
 
 	return status.TestGroupResult{
