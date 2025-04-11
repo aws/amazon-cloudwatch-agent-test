@@ -22,7 +22,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.26.3
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.138.2
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.35.2
-	github.com/aws/aws-sdk-go-v2/service/eks v1.63.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.2
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.44.2
 	github.com/aws/aws-sdk-go-v2/service/xray v1.23.2
