@@ -60,7 +60,12 @@ func (m *DiskIOEBSTestRunner) GetAgentConfigFileName() string {
 }
 
 func (m *DiskIOEBSTestRunner) SetupBeforeAgentRun() error {
-	err := common.RunCommands([]string{"sudo setcap cap_sys_admin+ep /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent"})
+	err := m.BaseTestRunner.SetupBeforeAgentRun()
+	if err != nil {
+		return err
+	}
+
+	err = common.RunCommands([]string{"sudo setcap cap_sys_admin+ep /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent"})
 	if err != nil {
 		log.Printf("unable to setcap: %s", err)
 	}
