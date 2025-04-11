@@ -72,7 +72,7 @@ resource "aws_instance" "cwagent" {
   EOT
 
   root_block_device {
-      volume_size = 200
+    volume_size = 200
   }
 
   metadata_options {
