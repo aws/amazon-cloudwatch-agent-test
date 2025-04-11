@@ -1,0 +1,14 @@
+{
+  "agent": {
+    "config": {
+      "logs": {
+        "metrics_collected": {
+          "kubernetes": {
+            "cluster_name": "TestCluster",
+            "jmx_container_insights": true
+          }
+        }
+      }
+    }
+  }
+}
