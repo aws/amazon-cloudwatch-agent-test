@@ -62,6 +62,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.18.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.26.2 // indirect
+	github.com/aws/smithy-go v1.18.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
