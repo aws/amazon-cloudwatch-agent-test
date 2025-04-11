@@ -258,6 +258,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "../../../../test/gpu",
 			terraformDir: "terraform/eks/addon/gpu",
 		},
+		{
+			testDir:      "../../../../test/ebscsi",
+			terraformDir: "terraform/eks/addon/ebs",
+		},
 	},
 	"eks_daemon": {
 		{
