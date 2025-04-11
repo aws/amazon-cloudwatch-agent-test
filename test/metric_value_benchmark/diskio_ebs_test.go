@@ -173,8 +173,8 @@ func (m *DiskIOEBSTestRunner) validateEBSEntity(metricName string) status.TestRe
 		return testResult
 	}
 
-	if len(response.Entities) != 0 {
-		log.Printf("Response contains no entities for metric '%s'", metricName)
+	if len(response.Entities) != 1 {
+		log.Printf("Response does not contain the correct number of entities for metric '%s'", metricName)
 		return testResult
 	}
 
