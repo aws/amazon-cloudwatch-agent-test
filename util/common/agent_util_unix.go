@@ -268,3 +268,11 @@ func DownloadFromS3(bucket string, key string, destPath string) error {
 
 	return nil
 }
+
+func SELinuxEnforced() (bool, error) {
+	output, err := RunCommand("sudo sestatus")
+	if err != nil {
+		return false, err
+	}
+	return strings.Contains(output, "enabled"), nil
+}
