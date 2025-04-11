@@ -206,7 +206,7 @@ resource "null_resource" "integration_test_run" {
       ],
 
       # SELinux test setup (if enabled)
-      var.is_selinux_test ? [
+        var.is_selinux_test ? [
         "sudo yum install -y audit policycoreutils-python-utils go",
         "sudo setenforce 1",
         "echo Running SELinux test setup...",
@@ -214,7 +214,7 @@ resource "null_resource" "integration_test_run" {
         "cd amazon-cloudwatch-agent-selinux",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
         "sudo ./amazon_cloudwatch_agent.sh -y"
-        ] : [
+      ] : [
         "echo SELinux test not enabled"
       ],
 
@@ -245,5 +245,4 @@ data "aws_ami" "latest" {
     values = [var.ami]
   }
 }
-
 
