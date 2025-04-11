@@ -16,7 +16,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.12.9
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.9
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.15.4
-	github.com/aws/aws-sdk-go-v2/service/autoscaling v1.52.3
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.42.0
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.31.2
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.29.2
@@ -28,7 +27,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.44.2
 	github.com/aws/aws-sdk-go-v2/service/xray v1.23.2
 	github.com/aws/aws-xray-sdk-go v1.8.3
-	github.com/aws/smithy-go v1.22.2
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/google/uuid v1.4.0
 	github.com/mitchellh/mapstructure v1.5.0
@@ -68,6 +66,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.18.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.26.2 // indirect
+	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
