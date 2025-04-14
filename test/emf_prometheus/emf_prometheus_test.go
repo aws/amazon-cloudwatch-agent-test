@@ -63,7 +63,6 @@ func (suite *PrometheusEMFTestSuite) TestAllInSuite() {
 
 type PrometheusEMFTestRunner struct {
 	test_runner.BaseTestRunner
-	testName string
 }
 
 func (t *PrometheusEMFTestRunner) Validate() status.TestGroupResult {
@@ -94,11 +93,15 @@ func (t *PrometheusEMFTestRunner) validateUntypedMetricAbsence() status.TestResu
 		},
 	}
 
+	log.Println("We are in validateUntypedMetricAbsence")
 	valueFetcher := metric.MetricValueFetcher{}
 	_, err := valueFetcher.Fetch(prometheusNamespace, "prometheus_test_untyped", dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
 	if err == nil {
+		log.Println("There was no error after fetch in validateUntypedMetricAbsence")
+
 		return testResult
 	}
+	log.Println("Here is the err:", err)
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
@@ -129,9 +132,13 @@ func (t *PrometheusEMFTestRunner) validateOtherMetricsPresence() status.TestResu
 				Value: aws.String(m.promType),
 			},
 		}
+		log.Println("this is the metric", m, m.promType, m.name)
+
+		log.Println("We are in validateOtherMetricsPresence")
 
 		values, err := valueFetcher.Fetch(prometheusNamespace, m.name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
 		if err != nil {
+			log.Println("Here is the err:", err)
 			return testResult
 		}
 
@@ -140,6 +147,7 @@ func (t *PrometheusEMFTestRunner) validateOtherMetricsPresence() status.TestResu
 		}
 
 		if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(m.name, values, 0) {
+			log.Println("Failed at IsAllValuesGreaterThanOrEqualToExpectedValue", m)
 			return testResult
 		}
 	}
