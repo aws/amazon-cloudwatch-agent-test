@@ -297,6 +297,30 @@ func (t *AmpTestRunner) validateMetric(queryTemplate string, metricName string, 
 	return testResult
 }
 
+func (t *AmpTestRunner) validateMetricAbsence(metricName string, dims []types.Dimension) status.TestResult {
+	testResult := status.TestResult{
+		Name:   metricName,
+		Status: status.FAILED,
+	}
+
+	query := buildPrometheusQuery(ampQueryTemplate, metricName, dims)
+	log.Printf("querying for absence of untyped metric: %s\n", query)
+
+	responseJSON, err := queryAMPMetrics(metadata.AmpWorkspaceId, query)
+	if err != nil {
+		log.Printf("failed to query AMP for %s: %s\n", metricName, err)
+		return testResult
+	}
+
+	if len(responseJSON.Data.Result) == 0 {
+		testResult.Status = status.SUCCESSFUL
+	} else {
+		log.Printf("untyped metric %s was found in AMP\n", metricName)
+	}
+
+	return testResult
+}
+
 func (t AmpTestRunner) GetTestName() string {
 	return t.name
 }
