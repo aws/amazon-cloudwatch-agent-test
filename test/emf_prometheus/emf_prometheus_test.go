@@ -1,19 +1,22 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package emf_prometheus
 
 import (
 	_ "embed"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/aws-sdk-go/aws"
 	"log"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
@@ -23,69 +26,85 @@ var prometheusConfig string
 //go:embed resources/prometheus_metrics
 var prometheusMetrics string
 
-const (
-	prometheusNamespace = "PrometheusEMFTest"
-	testDuration        = 5 * time.Minute
-)
+const prometheusNamespace = "PrometheusEMFTest"
 
-func TestPrometheusEMFTestSuite(t *testing.T) {
-	suite.Run(t, new(PrometheusEMFTestSuite))
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-type PrometheusEMFTestSuite struct {
-	suite.Suite
-	test_runner.TestSuite
+func TestPrometheusEMF(t *testing.T) {
+	log.Println("Starting PrometheusEMF Test")
+
+	log.Println("Setting up Prometheus...")
+	setupPrometheus(t)
+
+	log.Println("Starting CloudWatch Agent...")
+	startAgent(t)
+
+	log.Println("Verifying untyped metric absence...")
+	verifyUntypedMetricAbsence(t)
+
+	log.Println("Verifying other metrics presence...")
+	verifyOtherMetricsPresence(t)
+
+	log.Println("Cleaning up resources...")
+	cleanup(t)
+
+	log.Println("PrometheusEMF Test completed successfully")
 }
 
-func (suite *PrometheusEMFTestSuite) SetupSuite() {
-	log.Println(">>>> Starting Prometheus EMF Test Suite")
-}
-
-func (suite *PrometheusEMFTestSuite) TearDownSuite() {
-	suite.Result.Print()
-	log.Println(">>>> Finished Prometheus EMF Test Suite")
-}
-
-var (
-	testRunners []*test_runner.TestRunner = []*test_runner.TestRunner{
-		{
-			TestRunner: &PrometheusEMFTestRunner{},
-		},
-	}
-)
-
-func (suite *PrometheusEMFTestSuite) TestAllInSuite() {
-	for _, testRunner := range testRunners {
-		suite.AddToSuiteResult(testRunner.Run())
-	}
-	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Prometheus EMF Test Suite Failed")
-}
-
-type PrometheusEMFTestRunner struct {
-	test_runner.BaseTestRunner
-}
-
-func (t *PrometheusEMFTestRunner) Validate() status.TestGroupResult {
-	testResults := []status.TestResult{
-		t.validateUntypedMetricAbsence(),
-		t.validateOtherMetricsPresence(),
+func setupPrometheus(t *testing.T) {
+	commands := []string{
+		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus_config.yaml\n%s\nEOF", prometheusConfig),
+		fmt.Sprintf("cat <<EOF | sudo tee /tmp/metrics\n%s\nEOF", prometheusMetrics),
+		"sudo python3 -m http.server 8101 --directory /tmp &> /dev/null &",
 	}
 
-	return status.TestGroupResult{
-		Name:        t.GetTestName(),
-		TestResults: testResults,
+	log.Println("Running Prometheus setup commands...")
+	err := common.RunCommands(commands)
+	if err != nil {
+		log.Printf("Failed to setup Prometheus: %v", err)
+		// Verify files were created
+		if _, err := common.RunCommand("ls -l /tmp/prometheus_config.yaml"); err != nil {
+			log.Printf("prometheus_config.yaml not found: %v", err)
+		}
+		if _, err := common.RunCommand("ls -l /tmp/metrics"); err != nil {
+			log.Printf("metrics file not found: %v", err)
+		}
+		// Check if Python server is running
+		if _, err := common.RunCommand("ps aux | grep 'python3 -m http.server 8101'"); err != nil {
+			log.Printf("Python HTTP server not running: %v", err)
+		}
+	}
+	require.NoError(t, err, "Failed to setup Prometheus")
+
+	// Verify HTTP server is responding
+	log.Println("Verifying HTTP server is accessible...")
+	if _, err := common.RunCommand("curl -s -f http://localhost:8101/metrics"); err != nil {
+		log.Printf("WARNING: HTTP server not responding: %v", err)
 	}
 }
 
-func (t *PrometheusEMFTestRunner) validateUntypedMetricAbsence() status.TestResult {
-	testResult := status.TestResult{
-		Name:   "UntypedMetricAbsence",
-		Status: status.FAILED,
-	}
+func startAgent(t *testing.T) {
+	log.Println("Copying agent configuration...")
+	common.CopyFile(filepath.Join("agent_configs", "prometheus_emf_config.json"), common.ConfigOutputPath)
 
-	// Wait for metrics to be published
+	log.Println("Starting CloudWatch Agent...")
+	err := common.StartAgent(common.ConfigOutputPath, true, false)
+	if err != nil {
+		log.Printf("Failed to start agent: %v", err)
+		// Check agent status
+		if output, err := common.RunCommand("sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status"); err != nil {
+			log.Printf("Agent status check failed: %v\nOutput: %s", err, output)
+		}
+	}
+	require.NoError(t, err)
+
+	log.Println("Waiting for metrics to be published...")
 	time.Sleep(2 * time.Minute)
+}
 
+func verifyUntypedMetricAbsence(t *testing.T) {
 	dims := []types.Dimension{
 		{
 			Name:  aws.String("prom_type"),
@@ -93,26 +112,16 @@ func (t *PrometheusEMFTestRunner) validateUntypedMetricAbsence() status.TestResu
 		},
 	}
 
-	log.Println("We are in validateUntypedMetricAbsence")
+	log.Printf("Checking for absence of untyped metric in namespace %s...", prometheusNamespace)
 	valueFetcher := metric.MetricValueFetcher{}
-	_, err := valueFetcher.Fetch(prometheusNamespace, "prometheus_test_untyped", dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
+	values, err := valueFetcher.Fetch(prometheusNamespace, "prometheus_test_untyped", dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
 	if err == nil {
-		log.Println("There was no error after fetch in validateUntypedMetricAbsence")
-
-		return testResult
+		log.Printf("WARNING: Untyped metric found with values: %v", values)
 	}
-	log.Println("Here is the err:", err)
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+	require.Error(t, err, "Untyped metric was found when it should have been filtered out")
 }
 
-func (t *PrometheusEMFTestRunner) validateOtherMetricsPresence() status.TestResult {
-	testResult := status.TestResult{
-		Name:   "OtherMetricsPresence",
-		Status: status.FAILED,
-	}
-
+func verifyOtherMetricsPresence(t *testing.T) {
 	metricsToCheck := []struct {
 		name     string
 		promType string
@@ -126,68 +135,45 @@ func (t *PrometheusEMFTestRunner) validateOtherMetricsPresence() status.TestResu
 	valueFetcher := metric.MetricValueFetcher{}
 
 	for _, m := range metricsToCheck {
+		log.Printf("Checking metric %s of type %s...", m.name, m.promType)
+
 		dims := []types.Dimension{
 			{
 				Name:  aws.String("prom_type"),
 				Value: aws.String(m.promType),
 			},
 		}
-		log.Println("this is the metric", m, m.promType, m.name)
-
-		log.Println("We are in validateOtherMetricsPresence")
 
 		values, err := valueFetcher.Fetch(prometheusNamespace, m.name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
 		if err != nil {
-			log.Println("Here is the err:", err)
-			return testResult
+			log.Printf("Failed to fetch metric %s: %v", m.name, err)
 		}
+		require.NoError(t, err, fmt.Sprintf("Failed to fetch metric %s", m.name))
 
 		if len(values) == 0 {
-			return testResult
+			log.Printf("No values found for metric %s", m.name)
+		} else {
+			log.Printf("Found %d values for metric %s: %v", len(values), m.name, values)
 		}
+		require.NotEmpty(t, values, fmt.Sprintf("No values found for metric %s", m.name))
 
 		if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(m.name, values, 0) {
-			log.Println("Failed at IsAllValuesGreaterThanOrEqualToExpectedValue", m)
-			return testResult
+			log.Printf("Values for metric %s are not as expected. Values: %v", m.name, values)
 		}
-	}
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
-}
-
-func (t *PrometheusEMFTestRunner) GetTestName() string {
-	return "PrometheusEMFValidation"
-}
-
-func (t *PrometheusEMFTestRunner) GetAgentConfigFileName() string {
-	return "prometheus_emf_config.json"
-}
-
-func (t *PrometheusEMFTestRunner) GetMeasuredMetrics() []string {
-	return []string{
-		"prometheus_test_counter",
-		"prometheus_test_gauge",
-		"prometheus_test_summary_sum",
-		"prometheus_test_histogram_sum",
-		"prometheus_test_untyped",
+		require.True(t, metric.IsAllValuesGreaterThanOrEqualToExpectedValue(m.name, values, 0),
+			fmt.Sprintf("Values for metric %s are not as expected", m.name))
 	}
 }
-func (t *PrometheusEMFTestRunner) SetupBeforeAgentRun() error {
-	err := setupPrometheus()
+
+func cleanup(t *testing.T) {
+	log.Println("Running cleanup commands...")
+	commands := []string{
+		"sudo pkill -f 'python3 -m http.server 8101'",
+		"sudo rm -f /tmp/prometheus_config.yaml /tmp/metrics",
+	}
+	err := common.RunCommands(commands)
 	if err != nil {
-		return fmt.Errorf("failed to setup prometheus: %w", err)
+		log.Printf("Cleanup failed: %v", err)
 	}
-
-	return t.SetUpConfig()
-}
-
-func setupPrometheus() error {
-	startPrometheusCommands := []string{
-		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus_config.yaml\n%s\nEOF", prometheusConfig),
-		fmt.Sprintf("cat <<EOF | sudo tee /tmp/metrics\n%s\nEOF", prometheusMetrics),
-		"sudo python3 -m http.server 8101 --directory /tmp &> /dev/null &",
-	}
-
-	return common.RunCommands(startPrometheusCommands)
+	require.NoError(t, err, "Failed to cleanup")
 }
