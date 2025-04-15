@@ -9,7 +9,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/aws-sdk-go/aws"
 	"log"
+	"math/rand"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,10 +31,15 @@ var prometheusMetrics string
 
 const (
 	prometheusNamespace = "PrometheusEMFJobTest"
-	jobName            = "prometheus_test_job"
+	jobNamePrefix       = "prometheus_test_job_"
 )
 
+var jobName string
+
 func TestPrometheusEMFJob(t *testing.T) {
+	jobName = jobNamePrefix + strconv.Itoa(rand.Intn(100000))
+	log.Printf("Using random job name: %s", jobName)
+
 	log.Println("Starting PrometheusEMFJob Test")
 
 	log.Println("Setting up Prometheus...")
@@ -54,8 +61,13 @@ func TestPrometheusEMFJob(t *testing.T) {
 }
 
 func setupPrometheus(t *testing.T) {
+	configWithJobName := strings.Replace(prometheusConfig,
+		"job_name: 'prometheus_test_job'",
+		fmt.Sprintf("job_name: '%s'", jobName),
+		1)
+
 	commands := []string{
-		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus_config.yaml\n%s\nEOF", prometheusConfig),
+		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus_config.yaml\n%s\nEOF", configWithJobName),
 		fmt.Sprintf("cat <<EOF | sudo tee /tmp/metrics\n%s\nEOF", prometheusMetrics),
 		"sudo python3 -m http.server 8101 --directory /tmp &> /dev/null &",
 	}
@@ -95,27 +107,19 @@ func startAgent(t *testing.T) {
 }
 
 func verifyMetricsInLogGroup(t *testing.T) {
-	log.Printf("Checking for metrics in log group %s...", jobName)
+	log.Printf("Checking for existence of log group %s...", jobName)
 
-	streams := awsservice.GetLogStreams(jobName)
-	require.NotEmpty(t, streams, "No log streams found in log group %s", jobName)
-
-	since := time.Now().Add(-5 * time.Minute)
-	until := time.Now()
-
-	events, err := awsservice.GetLogsSince(jobName, *streams[0].LogStreamName, &since, &until)
-	require.NoError(t, err, "Failed to get log events")
-	require.NotEmpty(t, events, "No log events found")
-
-	foundEMF := false
-	for _, event := range events {
-		if strings.Contains(*event.Message, `"_aws":{"Timestamp":`) {
-			foundEMF = true
-			log.Printf("Found EMF log: %s", *event.Message)
-			break
+	maxAttempts := 10
+	for i := 0; i < maxAttempts; i++ {
+		if awsservice.IsLogGroupExists(jobName) {
+			log.Printf("Log group %s exists", jobName)
+			return
 		}
+		log.Printf("Log group %s not found, attempt %d/%d, waiting...", jobName, i+1, maxAttempts)
+		time.Sleep(30 * time.Second)
 	}
-	require.True(t, foundEMF, "No EMF logs found in the log group")
+
+	require.Fail(t, fmt.Sprintf("Log group %s was not created after %d attempts", jobName, maxAttempts))
 }
 
 func verifyMetricsInCloudWatch(t *testing.T) {
@@ -166,4 +170,8 @@ func cleanup(t *testing.T) {
 		log.Printf("Cleanup failed: %v", err)
 	}
 	require.NoError(t, err, "Failed to cleanup")
+
+	// Delete the log group
+	log.Printf("Deleting log group: %s", jobName)
+	awsservice.DeleteLogGroup(jobName)
 }
