@@ -268,3 +268,14 @@ func DownloadFromS3(bucket string, key string, destPath string) error {
 
 	return nil
 }
+
+func SELinuxEnforced() (bool, error) {
+	status, err := os.ReadFile("/sys/fs/selinux/enforce")
+	if err != nil {
+		return false, err
+	}
+	if strings.TrimSpace(string(status)) == "1" {
+		return true, nil
+	}
+	return false, nil
+}
