@@ -6,8 +6,10 @@ package emf_prometheus
 import (
 	_ "embed"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,6 +39,7 @@ func TestPrometheusEMF(t *testing.T) {
 	setupPrometheus(t)
 	startAgent(t)
 	verifyUntypedMetricAbsence(t)
+	verifyUntypedMetricLogsAbsence(t)
 	verifyOtherMetricsPresence(t)
 	cleanup(t)
 }
@@ -81,6 +84,48 @@ func startAgent(t *testing.T) {
 	require.NoError(t, err)
 
 	time.Sleep(2 * time.Minute)
+}
+
+func verifyUntypedMetricLogsAbsence(t *testing.T) {
+	log.Printf("Checking CloudWatch Logs for absence of untyped metric logs...")
+
+	logGroupName := "prometheus_test"
+
+	streams := awsservice.GetLogStreams(logGroupName)
+	require.NotEmpty(t, streams, "No log streams found in log group %s", logGroupName)
+
+	since := time.Now().Add(-5 * time.Minute)
+	until := time.Now()
+
+	events, err := awsservice.GetLogsSince(logGroupName, *streams[0].LogStreamName, &since, &until)
+	require.NoError(t, err, "Failed to get log events")
+
+	log.Printf("Checking logs in stream %s for untyped metrics...", *streams[0].LogStreamName)
+	for _, event := range events {
+		if strings.Contains(*event.Message, "prometheus_test_untyped") {
+			log.Printf("Found untyped metric in log: %s", *event.Message)
+			t.Fatalf("untyped metric found in logs when it should have been filtered")
+		}
+	}
+
+	log.Printf("Verifying presence of other metric types in logs...")
+	metricsToCheck := []string{
+		"prometheus_test_counter",
+		"prometheus_test_gauge",
+		"prometheus_test_summary",
+	}
+
+	for _, metricName := range metricsToCheck {
+		found := false
+		for _, event := range events {
+			if strings.Contains(*event.Message, metricName) {
+				found = true
+				log.Printf("Found metric %s in logs", metricName)
+				break
+			}
+		}
+		require.True(t, found, "Failed to find metric %s in logs", metricName)
+	}
 }
 
 func verifyUntypedMetricAbsence(t *testing.T) {
