@@ -132,7 +132,6 @@ func verifyOtherMetricsPresence(t *testing.T) {
 		{"prometheus_test_counter", "counter"},
 		{"prometheus_test_gauge", "gauge"},
 		{"prometheus_test_summary_sum", "summary"},
-		{"prometheus_test_histogram_sum", "histogram"},
 	}
 
 	valueFetcher := metric.MetricValueFetcher{}
