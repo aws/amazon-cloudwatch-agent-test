@@ -115,10 +115,13 @@ func verifyUntypedMetricAbsence(t *testing.T) {
 	log.Printf("Checking for absence of untyped metric in namespace %s...", prometheusNamespace)
 	valueFetcher := metric.MetricValueFetcher{}
 	values, err := valueFetcher.Fetch(prometheusNamespace, "prometheus_test_untyped", dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
-	if err == nil {
-		log.Printf("WARNING: Untyped metric found with values: %v", values)
+
+	if err != nil {
+		log.Printf("Error fetching untyped metric: %v", err)
 	}
-	require.Error(t, err, "Untyped metric was found when it should have been filtered out")
+
+	log.Printf("Untyped metric values: %v", values)
+	require.Empty(t, values, "Untyped metric was found when it should have been filtered out")
 }
 
 func verifyOtherMetricsPresence(t *testing.T) {
