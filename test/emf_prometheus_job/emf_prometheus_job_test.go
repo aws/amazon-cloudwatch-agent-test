@@ -6,6 +6,7 @@ package emf_prometheus_job
 import (
 	_ "embed"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/aws-sdk-go/aws"
 	"log"
@@ -35,6 +36,10 @@ const (
 )
 
 var jobName string
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
 
 func TestPrometheusEMFJob(t *testing.T) {
 	jobName = jobNamePrefix + strconv.Itoa(rand.Intn(100000))
@@ -76,7 +81,6 @@ func setupPrometheus(t *testing.T) {
 	err := common.RunCommands(commands)
 	if err != nil {
 		log.Printf("Failed to setup Prometheus: %v", err)
-		// Verify files were created
 		if _, err := common.RunCommand("ls -l /tmp/prometheus_config.yaml"); err != nil {
 			log.Printf("prometheus_config.yaml not found: %v", err)
 		}
@@ -95,7 +99,6 @@ func startAgent(t *testing.T) {
 	err := common.StartAgent(common.ConfigOutputPath, true, false)
 	if err != nil {
 		log.Printf("Failed to start agent: %v", err)
-		// Check agent status
 		if output, err := common.RunCommand("sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status"); err != nil {
 			log.Printf("Agent status check failed: %v\nOutput: %s", err, output)
 		}
@@ -171,7 +174,6 @@ func cleanup(t *testing.T) {
 	}
 	require.NoError(t, err, "Failed to cleanup")
 
-	// Delete the log group
 	log.Printf("Deleting log group: %s", jobName)
 	awsservice.DeleteLogGroup(jobName)
 }
