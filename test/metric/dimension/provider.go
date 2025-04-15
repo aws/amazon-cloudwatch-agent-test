@@ -35,6 +35,7 @@ func GetDimensionFactory(env environment.MetaData) Factory {
 		&LocalImageIdDimensionProvider{Provider: Provider{env: env}},
 		&LocalInstanceTypeDimensionProvider{Provider: Provider{env: env}},
 		&ECSInstanceIdDimensionProvider{Provider: Provider{env: env}},
+		&VolumeIdDimensionProvider{Provider: Provider{env: env}},
 		&CustomDimensionProvider{Provider: Provider{env: env}},
 	}
 
