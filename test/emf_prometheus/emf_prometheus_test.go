@@ -34,24 +34,11 @@ func init() {
 }
 
 func TestPrometheusEMF(t *testing.T) {
-	log.Println("Starting PrometheusEMF Test")
-
-	log.Println("Setting up Prometheus...")
 	setupPrometheus(t)
-
-	log.Println("Starting CloudWatch Agent...")
 	startAgent(t)
-
-	log.Println("Verifying untyped metric absence...")
 	verifyUntypedMetricAbsence(t)
-
-	log.Println("Verifying other metrics presence...")
 	verifyOtherMetricsPresence(t)
-
-	log.Println("Cleaning up resources...")
 	cleanup(t)
-
-	log.Println("PrometheusEMF Test completed successfully")
 }
 
 func setupPrometheus(t *testing.T) {
@@ -61,11 +48,8 @@ func setupPrometheus(t *testing.T) {
 		"sudo python3 -m http.server 8101 --directory /tmp &> /dev/null &",
 	}
 
-	log.Println("Running Prometheus setup commands...")
 	err := common.RunCommands(commands)
 	if err != nil {
-		log.Printf("Failed to setup Prometheus: %v", err)
-		// Verify files were created
 		if _, err := common.RunCommand("ls -l /tmp/prometheus_config.yaml"); err != nil {
 			log.Printf("prometheus_config.yaml not found: %v", err)
 		}
@@ -80,28 +64,22 @@ func setupPrometheus(t *testing.T) {
 	require.NoError(t, err, "Failed to setup Prometheus")
 
 	// Verify HTTP server is responding
-	log.Println("Verifying HTTP server is accessible...")
 	if _, err := common.RunCommand("curl -s -f http://localhost:8101/metrics"); err != nil {
 		log.Printf("WARNING: HTTP server not responding: %v", err)
 	}
 }
 
 func startAgent(t *testing.T) {
-	log.Println("Copying agent configuration...")
 	common.CopyFile(filepath.Join("agent_configs", "emf_prometheus_config.json"), common.ConfigOutputPath)
 
-	log.Println("Starting CloudWatch Agent...")
 	err := common.StartAgent(common.ConfigOutputPath, true, false)
 	if err != nil {
-		log.Printf("Failed to start agent: %v", err)
-		// Check agent status
 		if output, err := common.RunCommand("sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status"); err != nil {
 			log.Printf("Agent status check failed: %v\nOutput: %s", err, output)
 		}
 	}
 	require.NoError(t, err)
 
-	log.Println("Waiting for metrics to be published...")
 	time.Sleep(2 * time.Minute)
 }
 
@@ -113,7 +91,6 @@ func verifyUntypedMetricAbsence(t *testing.T) {
 		},
 	}
 
-	log.Printf("Checking for absence of untyped metric in namespace %s...", prometheusNamespace)
 	valueFetcher := metric.MetricValueFetcher{}
 	values, err := valueFetcher.Fetch(prometheusNamespace, "prometheus_test_untyped", dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
 
@@ -121,7 +98,6 @@ func verifyUntypedMetricAbsence(t *testing.T) {
 		log.Printf("Error fetching untyped metric: %v", err)
 	}
 
-	log.Printf("Untyped metric values: %v", values)
 	require.Empty(t, values, "Untyped metric was found when it should have been filtered out")
 }
 
@@ -138,8 +114,6 @@ func verifyOtherMetricsPresence(t *testing.T) {
 	valueFetcher := metric.MetricValueFetcher{}
 
 	for _, m := range metricsToCheck {
-		log.Printf("Checking metric %s of type %s...", m.name, m.promType)
-
 		dims := []types.Dimension{
 			{
 				Name:  aws.String("prom_type"),
