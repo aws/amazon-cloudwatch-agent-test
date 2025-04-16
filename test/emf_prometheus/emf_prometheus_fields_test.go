@@ -1,6 +1,5 @@
 package emf_prometheus
 
-
 import (
 	_ "embed"
 	"encoding/json"
@@ -36,7 +35,7 @@ func TestPrometheusEMFFields(t *testing.T) {
 		namespace,
 		logGroupName)
 	verifyEMFFields(t, logGroupName)
-	cleanup(t, logGroupName)
+	//cleanup(t, logGroupName)
 }
 
 func verifyEMFFields(t *testing.T, logGroupName string) {

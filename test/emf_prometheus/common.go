@@ -92,7 +92,7 @@ func startAgent(t *testing.T, agentConfigPath string, namespace, logGroupName st
 	require.NoError(t, err, "Failed to restore original config")
 
 	// Wait for agent to start and collect metrics
-	time.Sleep(2 * time.Minute)
+	time.Sleep(1 * time.Minute)
 }
 
 func verifyMetricsInCloudWatch(t *testing.T, namespace string) {
