@@ -23,19 +23,19 @@ var fieldsPrometheusMetrics string
 
 func TestPrometheusEMFFields(t *testing.T) {
 	randomSuffix := generateRandomSuffix()
-	namespace := fmt.Sprintf("%s_ft_%s", namespacePrefix, randomSuffix)
-	logGroupName := fmt.Sprintf("%s_ft_%s", logGroupPrefix, randomSuffix)
+	namespace := fmt.Sprintf("%s_fields_test_%s", namespacePrefix, randomSuffix)
+	logGroupName := fmt.Sprintf("%s_fields_test_%s", logGroupPrefix, randomSuffix)
 
 	log.Printf("Starting EMF fields test with namespace: %s and log group: %s",
 		namespace, logGroupName)
 
 	setupPrometheus(t, fieldsPrometheusConfig, fieldsPrometheusMetrics, "")
 	startAgent(t,
-		filepath.Join("agent_configs", "emf_prometheus_untyped_config.json"),
+		filepath.Join("agent_configs", "emf_prometheus_fields_config.json"),
 		namespace,
 		logGroupName)
 	verifyEMFFields(t, logGroupName)
-	//cleanup(t, logGroupName)
+	cleanup(t, logGroupName)
 }
 
 func verifyEMFFields(t *testing.T, logGroupName string) {
