@@ -33,7 +33,7 @@ func TestPrometheusEMF(t *testing.T) {
 
 	setupPrometheus(t, untypedPrometheusConfig, untypedPrometheusMetrics, "")
 	startAgent(t,
-		filepath.Join("agent_configs", "emf_prometheus_untyped_config.json"),
+		filepath.Join("agent_configs", "emf_prometheus_config.json"),
 		namespace,
 		logGroupName)
 	verifyUntypedMetricAbsence(t, namespace)
