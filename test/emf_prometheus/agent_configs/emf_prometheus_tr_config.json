@@ -11,7 +11,7 @@
         "prometheus_config_path": "/tmp/prometheus_config.yaml",
         "log_group_name": "{JobName}",
         "emf_processor": {
-          "metric_namespace": "PrometheusEMFJobTest",
+          "metric_namespace": "${NAMESPACE}",
           "metric_declaration": [
             {
               "source_labels": [

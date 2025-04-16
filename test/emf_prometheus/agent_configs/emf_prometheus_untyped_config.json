@@ -9,9 +9,9 @@
     "metrics_collected": {
       "prometheus": {
         "prometheus_config_path": "/tmp/prometheus_config.yaml",
-        "log_group_name": "prometheus_test",
+        "log_group_name": "${LOG_GROUP_NAME}",
         "emf_processor": {
-          "metric_namespace": "PrometheusEMFTest",
+          "metric_namespace": "${NAMESPACE}",
           "metric_declaration": [
             {
               "source_labels": [
