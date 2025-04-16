@@ -3,6 +3,7 @@ package emf_prometheus
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"log"
 	"math/rand"
 	"os"
@@ -25,6 +26,9 @@ const (
 	logGroupPrefix  = "prometheus_test"
 )
 
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
 
 func setupPrometheus(t *testing.T, prometheusConfig, prometheusMetrics string, jobName string) {
 	var configContent string

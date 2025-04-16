@@ -6,7 +6,6 @@ package emf_prometheus
 import (
 	_ "embed"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"path/filepath"
@@ -23,15 +22,11 @@ var prometheusConfig string
 var prometheusMetrics string
 
 const (
-	prometheusNamespace = "PrometheusEMFJobTest"
 	jobNamePrefix       = "prometheus"
 )
 
 var jobName string
 
-func init() {
-	environment.RegisterEnvironmentMetaDataFlags()
-}
 
 func TestPrometheusEMFTokenReplacement(t *testing.T) {
 	randomSuffix := generateRandomSuffix()
