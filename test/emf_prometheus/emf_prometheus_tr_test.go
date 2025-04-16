@@ -34,18 +34,18 @@ func (t *TokenReplacementTestRunner) Validate() status.TestGroupResult {
 		return status.TestGroupResult{
 			Name: t.GetTestName(),
 			TestResults: []status.TestResult{{
-				Name:    "Setup",
-				Status:  status.FAILED,
+				Name:   "Setup",
+				Status: status.FAILED,
 			}},
 		}
 	}
 
-	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_token_replacement_config.json"), namespace, ""); err != nil {
+	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_config.json"), namespace, ""); err != nil {
 		return status.TestGroupResult{
 			Name: t.GetTestName(),
 			TestResults: []status.TestResult{{
-				Name:    "Agent Start",
-				Status:  status.FAILED,
+				Name:   "Agent Start",
+				Status: status.FAILED,
 			}},
 		}
 	}
