@@ -19,16 +19,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
-type GPUTestSuite struct {
+type EBSCSITestSuite struct {
 	suite.Suite
 	test_runner.TestSuite
 }
 
-func (suite *GPUTestSuite) SetupSuite() {
+func (suite *EBSCSITestSuite) SetupSuite() {
 	fmt.Println(">>>> Starting EBS Container Insights TestSuite")
 }
 
-func (suite *GPUTestSuite) TearDownSuite() {
+func (suite *EBSCSITestSuite) TearDownSuite() {
 	suite.Result.Print()
 	fmt.Println(">>>> Finished EBS Container Insights TestSuite")
 }
@@ -55,7 +55,7 @@ func getEksTestRunners(env *environment.MetaData) []*test_runner.EKSTestRunner {
 	return eksTestRunners
 }
 
-func (suite *GPUTestSuite) TestAllInSuite() {
+func (suite *EBSCSITestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData()
 	switch env.ComputeType {
 	case computetype.EKS:
@@ -70,11 +70,11 @@ func (suite *GPUTestSuite) TestAllInSuite() {
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "EBS Container Test Suite Failed")
 }
 
-func (suite *GPUTestSuite) AddToSuiteResult(r status.TestGroupResult) {
+func (suite *EBSCSITestSuite) AddToSuiteResult(r status.TestGroupResult) {
 	suite.Result.TestGroupResults = append(suite.Result.TestGroupResults, r)
 }
 
-func TestGPUSuite(t *testing.T) {
-	suite.Run(t, new(GPUTestSuite))
+func TestEBSCSISuite(t *testing.T) {
+	suite.Run(t, new(EBSCSITestSuite))
 }
 
