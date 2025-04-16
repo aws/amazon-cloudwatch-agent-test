@@ -275,7 +275,7 @@ resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
     aws_eks_addon.ebs_csi_addon,
-    aws_eks_addon.this,
+    helm_release.aws_observability,
     null_resource.update_image,
     kubernetes_deployment.ebs_deployment,
   ]
