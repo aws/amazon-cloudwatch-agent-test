@@ -232,7 +232,8 @@ resource "kubernetes_deployment" "ebs_deployment" {
       spec {
         container {
           name  = "app"
-          image = "amazonlinux"
+          image = "public.ecr.aws/amazonlinux/amazonlinux"
+          command = ["/bin/bash", "-c", "sleep infinity"]
           
           volume_mount {
             name       = "persistent-storage"
