@@ -31,7 +31,7 @@ func TestPrometheusEMFFields(t *testing.T) {
 
 	setupPrometheus(t, fieldsPrometheusConfig, fieldsPrometheusMetrics, "")
 	startAgent(t,
-		filepath.Join("agent_configs", "emf_prometheus_fields_config.json"),
+		filepath.Join("agent_configs", "emf_prometheus_untyped_config.json"),
 		namespace,
 		logGroupName)
 	verifyEMFFields(t, logGroupName)
