@@ -51,7 +51,7 @@ func (t *UntypedTestRunner) GetTestName() string {
 }
 
 func (t *UntypedTestRunner) GetAgentConfigFileName() string {
-	return "emf_prometheus_config.json"
+	return "emf_prometheus_untyped_config.json"
 }
 func (t *UntypedTestRunner) SetupBeforeAgentRun() error {
 	randomSuffix := generateRandomSuffix()
@@ -77,7 +77,6 @@ func (t *UntypedTestRunner) SetupBeforeAgentRun() error {
 
 	return t.BaseTestRunner.SetupBeforeAgentRun()
 }
-
 
 func verifyUntypedMetricAbsence(namespace string) status.TestResult {
 	testResult := status.TestResult{
