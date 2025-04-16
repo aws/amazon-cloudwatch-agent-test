@@ -3,6 +3,8 @@
 
 module "common" {
   source = "../../../common"
+  cwagent_image_repo = var.cwagent_image_repo
+  cwagent_image_tag  = var.cwagent_image_tag
 }
 
 module "basic_components" {
@@ -163,6 +165,7 @@ resource "null_resource" "update_image" {
   provisioner "local-exec" {
     command = <<-EOT
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
+      kubectl set image deployment/amazon-cloudwatch-observability-controller-manager -n amazon-cloudwatch manager=public.ecr.aws/cloudwatch-agent/cloudwatch-agent-operator:latest
       sleep 10
     EOT
   }
