@@ -63,32 +63,37 @@ func setupPrometheus(t *testing.T, prometheusConfig, prometheusMetrics string, j
 	}
 }
 
-func startAgent(t *testing.T, agentConfig string, namespace, logGroupName string) {
+func startAgent(t *testing.T, agentConfigPath string, namespace, logGroupName string) {
+
 	// Read the config file
-	configContent, err := os.ReadFile(agentConfig)
-	require.NoError(t, err, "Failed to read agent config")
+	originalConfigContent, err := os.ReadFile(agentConfigPath)
+	require.NoError(t, err, "Failed to read original config file")
 
 	// Replace template values
-	configStr := string(configContent)
-	configStr = strings.ReplaceAll(configStr, "${NAMESPACE}", namespace)
-	configStr = strings.ReplaceAll(configStr, "${LOG_GROUP_NAME}", logGroupName)
+	updatedConfigContent := string(originalConfigContent)
+	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${NAMESPACE}", namespace)
+	updatedConfigContent = strings.ReplaceAll(updatedConfigContent, "${LOG_GROUP_NAME}", logGroupName)
 
-	log.Printf("Using namespace: %s and log group: %s", namespace, logGroupName)
+	// Write updated config
+	err = os.WriteFile(agentConfigPath, []byte(updatedConfigContent), os.ModePerm)
+	require.NoError(t, err, "Failed to write updated config")
 
-	// Write the modified config
-	err = os.WriteFile(common.ConfigOutputPath, []byte(configStr), 0644)
-	require.NoError(t, err, "Failed to write modified agent config")
-
-	err = common.StartAgent(common.ConfigOutputPath, true, false)
+	// Start agent
+	err = common.StartAgent(agentConfigPath, true, false)
 	if err != nil {
 		if output, err := common.RunCommand("sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status"); err != nil {
 			log.Printf("Agent status check failed: %v\nOutput: %s", err, output)
 		}
 	}
-	require.NoError(t, err)
+	require.NoError(t, err, "Failed to start agent")
+
+	// Restore original config
+	err = os.WriteFile(agentConfigPath, originalConfigContent, os.ModePerm)
+	require.NoError(t, err, "Failed to restore original config")
+
+	// Wait for agent to start and collect metrics
 	time.Sleep(2 * time.Minute)
 }
-
 
 func verifyMetricsInCloudWatch(t *testing.T, namespace string) {
 	metricsToCheck := []struct {
