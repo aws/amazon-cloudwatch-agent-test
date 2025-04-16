@@ -40,7 +40,7 @@ func (t *TokenReplacementTestRunner) Validate() status.TestGroupResult {
 		}
 	}
 
-	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_config.json"), namespace, ""); err != nil {
+	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_tr_config.json"), namespace, ""); err != nil {
 		return status.TestGroupResult{
 			Name: t.GetTestName(),
 			TestResults: []status.TestResult{{

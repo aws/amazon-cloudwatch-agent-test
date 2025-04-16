@@ -41,7 +41,7 @@ func (t *EMFFieldsTestRunner) Validate() status.TestGroupResult {
 		}
 	}
 
-	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_fields_config.json"), namespace, logGroupName); err != nil {
+	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_config.json"), namespace, logGroupName); err != nil {
 		return status.TestGroupResult{
 			Name: t.GetTestName(),
 			TestResults: []status.TestResult{{
