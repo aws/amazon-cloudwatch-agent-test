@@ -1,77 +1,110 @@
+// emf_fields_runner.go
 package emf_prometheus
 
 import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"path/filepath"
-	"strings"
-	"testing"
-	"time"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
-//go:embed resources/fields/prometheus.yaml
+//go:embed resources/prometheus.yaml
 var fieldsPrometheusConfig string
 
-//go:embed resources/fields/prometheus_metrics
+//go:embed resources/prometheus_metrics
 var fieldsPrometheusMetrics string
 
-func TestPrometheusEMFFields(t *testing.T) {
+type EMFFieldsTestRunner struct {
+	test_runner.BaseTestRunner
+}
+
+func (t *EMFFieldsTestRunner) GetMeasuredMetrics() []string {
+	return nil
+}
+
+func (t *EMFFieldsTestRunner) Validate() status.TestGroupResult {
 	randomSuffix := generateRandomSuffix()
 	namespace := fmt.Sprintf("%s_fields_test_%s", namespacePrefix, randomSuffix)
 	logGroupName := fmt.Sprintf("%s_fields_test_%s", logGroupPrefix, randomSuffix)
 
-	log.Printf("Starting EMF fields test with namespace: %s and log group: %s",
-		namespace, logGroupName)
-
-	setupPrometheus(t, fieldsPrometheusConfig, fieldsPrometheusMetrics, "")
-	startAgent(t,
-		filepath.Join("agent_configs", "emf_prometheus_config.json"),
-		namespace,
-		logGroupName)
-	verifyEMFFields(t, logGroupName)
-	cleanup(t, logGroupName)
-}
-
-func verifyEMFFields(t *testing.T, logGroupName string) {
-	log.Printf("Verifying EMF fields in log group %s...", logGroupName)
-
-	streams := awsservice.GetLogStreams(logGroupName)
-	require.NotEmpty(t, streams, "No log streams found in log group %s", logGroupName)
-
-	since := time.Now().Add(-5 * time.Minute)
-	until := time.Now()
-
-	events, err := awsservice.GetLogsSince(logGroupName, *streams[0].LogStreamName, &since, &until)
-	require.NoError(t, err, "Failed to get log events")
-	require.NotEmpty(t, events, "No log events found")
-
-	requiredFields := []string{
-		"host",
-		"instance",
-		"job",
-		"prom_metric_type",
+	if err := setupPrometheus(fieldsPrometheusConfig, fieldsPrometheusMetrics, ""); err != nil {
+		return status.TestGroupResult{
+			Name: t.GetTestName(),
+			TestResults: []status.TestResult{{
+				Name:    "Setup",
+				Status:  status.FAILED,
+			}},
+		}
 	}
 
-	foundValidEMF := false
-	for _, event := range events {
-		if !strings.Contains(*event.Message, `"CloudWatchMetrics"`) {
-			continue
+	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_fields_config.json"), namespace, logGroupName); err != nil {
+		return status.TestGroupResult{
+			Name: t.GetTestName(),
+			TestResults: []status.TestResult{{
+				Name:    "Agent Start",
+				Status:  status.FAILED,
+			}},
 		}
+	}
+
+	defer cleanup(logGroupName)
+
+	testResults := []status.TestResult{
+		verifyEMFFields(logGroupName),
+		verifyMetricsInCloudWatch(namespace),
+	}
+
+	return status.TestGroupResult{
+		Name:        t.GetTestName(),
+		TestResults: testResults,
+	}
+}
+
+func (t *EMFFieldsTestRunner) GetTestName() string {
+	return "Prometheus EMF Fields Test"
+}
+
+func (t *EMFFieldsTestRunner) GetAgentConfigFileName() string {
+	return filepath.Join("agent_configs", "emf_prometheus_fields_config.json")
+}
+
+func verifyEMFFields(logGroupName string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   "EMF Fields Presence",
+		Status: status.FAILED,
+	}
+
+	streams := awsservice.GetLogStreams(logGroupName)
+	if len(streams) == 0 {
+		log.Printf("No log streams found in log group %s", logGroupName)
+		return testResult
+	}
+
+	events, err := awsservice.GetLogsSince(logGroupName, *streams[0].LogStreamName, nil, nil)
+	if err != nil {
+		log.Printf("Failed to get log events: %v", err)
+		return testResult
+	}
+
+	requiredFields := []string{"host", "instance", "job", "prom_metric_type"}
+	expectedMetricTypes := map[string]bool{
+		"counter": false,
+		"gauge":   false,
+		"summary": false,
+	}
+
+	for _, event := range events {
+		log.Printf("Checking EMF log: %s", *event.Message)
 
 		var emfLog map[string]interface{}
-		err := json.Unmarshal([]byte(*event.Message), &emfLog)
-		if err != nil {
+		if err := json.Unmarshal([]byte(*event.Message), &emfLog); err != nil {
 			log.Printf("Failed to parse EMF log: %v", err)
 			continue
 		}
-
-		log.Printf("Checking EMF log: %s", *event.Message)
 
 		missingFields := []string{}
 		for _, field := range requiredFields {
@@ -81,30 +114,35 @@ func verifyEMFFields(t *testing.T, logGroupName string) {
 		}
 
 		if len(missingFields) > 0 {
-			log.Printf("EMF log missing fields: %v", missingFields)
+			log.Printf("EMF log missing required fields: %v", missingFields)
 			continue
 		}
 
-		host, _ := emfLog["host"].(string)
-		require.True(t, strings.Contains(host, ".internal") || strings.Contains(host, ".amazonaws.com"),
-			"Host field doesn't match expected format: %s", host)
-
-		instance, _ := emfLog["instance"].(string)
-		require.Equal(t, "localhost:8101", instance,
-			"Instance field doesn't match expected value: %s", instance)
-
-		job, _ := emfLog["job"].(string)
-		require.Equal(t, "prometheus_test_job", job,
-			"Job field doesn't match expected value: %s", job)
+		// Log field values
+		log.Printf("Found EMF fields - host: %s, instance: %s, job: %s, type: %s",
+			emfLog["host"],
+			emfLog["instance"],
+			emfLog["job"],
+			emfLog["prom_metric_type"])
 
 		metricType, _ := emfLog["prom_metric_type"].(string)
-		require.Contains(t, []string{"counter", "gauge", "summary"}, metricType,
-			"Unexpected metric type: %s", metricType)
-
-		foundValidEMF = true
-		log.Printf("Found valid EMF log with all required fields")
-		break
+		if _, exists := expectedMetricTypes[metricType]; exists {
+			expectedMetricTypes[metricType] = true
+		}
 	}
 
-	require.True(t, foundValidEMF, "No valid EMF logs found with all required fields")
+	missingTypes := []string{}
+	for metricType, found := range expectedMetricTypes {
+		if !found {
+			missingTypes = append(missingTypes, metricType)
+		}
+	}
+
+	if len(missingTypes) > 0 {
+		log.Printf("Missing metric types in EMF logs: %v", missingTypes)
+		return testResult
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
 }

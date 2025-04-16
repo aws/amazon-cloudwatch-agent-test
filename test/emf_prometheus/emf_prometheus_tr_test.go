@@ -1,64 +1,93 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
 package emf_prometheus
 
 import (
 	_ "embed"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"path/filepath"
-	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
-//go:embed resources/token_replacement/prometheus.yaml
-var prometheusConfig string
+//go:embed resources/prometheus.yaml
+var tokenReplacementPrometheusConfig string
 
-//go:embed resources/token_replacement/prometheus_metrics
-var prometheusMetrics string
+//go:embed resources/prometheus_metrics
+var tokenReplacementPrometheusMetrics string
 
-const (
-	jobNamePrefix       = "prometheus"
-)
-
-var jobName string
-
-
-func TestPrometheusEMFTokenReplacement(t *testing.T) {
-	randomSuffix := generateRandomSuffix()
-	jobName = fmt.Sprintf("%s_tr_test_%s", jobNamePrefix, randomSuffix)
-	namespace := fmt.Sprintf("%s_tr_test_%s", namespacePrefix, randomSuffix)
-
-
-	log.Printf("Starting token replacement test with namespace: %s and job name: %s",
-		namespace, jobName)
-
-	setupPrometheus(t, prometheusConfig, prometheusMetrics, jobName)
-	startAgent(t,
-		filepath.Join("agent_configs", "emf_prometheus_tr_config.json"),
-		namespace,
-		"")
-	verifyLogGroupExists(t, jobName)
-	verifyMetricsInCloudWatch(t, namespace)
-	cleanup(t, jobName)
+type TokenReplacementTestRunner struct {
+	test_runner.BaseTestRunner
 }
 
-func verifyLogGroupExists(t *testing.T, logGroupName string) {
-	log.Printf("Checking for existence of log group %s...", logGroupName)
+func (t *TokenReplacementTestRunner) GetMeasuredMetrics() []string {
+	return nil
+}
+func (t *TokenReplacementTestRunner) Validate() status.TestGroupResult {
+	randomSuffix := generateRandomSuffix()
+	jobName := fmt.Sprintf("%s_tr_test_%s", "prometheus", randomSuffix)
+	namespace := fmt.Sprintf("%s_tr_test_%s", namespacePrefix, randomSuffix)
 
-	maxAttempts := 10
+	if err := setupPrometheus(tokenReplacementPrometheusConfig, tokenReplacementPrometheusMetrics, jobName); err != nil {
+		return status.TestGroupResult{
+			Name: t.GetTestName(),
+			TestResults: []status.TestResult{{
+				Name:    "Setup",
+				Status:  status.FAILED,
+			}},
+		}
+	}
+
+	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_token_replacement_config.json"), namespace, ""); err != nil {
+		return status.TestGroupResult{
+			Name: t.GetTestName(),
+			TestResults: []status.TestResult{{
+				Name:    "Agent Start",
+				Status:  status.FAILED,
+			}},
+		}
+	}
+
+	defer cleanup(jobName)
+
+	testResults := []status.TestResult{
+		verifyLogGroupExists(jobName),
+		verifyMetricsInCloudWatch(namespace),
+	}
+
+	return status.TestGroupResult{
+		Name:        t.GetTestName(),
+		TestResults: testResults,
+	}
+}
+
+func (t *TokenReplacementTestRunner) GetTestName() string {
+	return "Prometheus EMF Token Replacement Test"
+}
+
+func (t *TokenReplacementTestRunner) GetAgentConfigFileName() string {
+	return filepath.Join("agent_configs", "emf_prometheus_token_replacement_config.json")
+}
+
+func verifyLogGroupExists(logGroupName string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   "Log Group Existence",
+		Status: status.FAILED,
+	}
+
+	maxAttempts := 3
 	for i := 0; i < maxAttempts; i++ {
 		if awsservice.IsLogGroupExists(logGroupName) {
-			log.Printf("Log group %s exists", logGroupName)
-			return
+			log.Printf("Found log group %s", logGroupName)
+			testResult.Status = status.SUCCESSFUL
+			return testResult
 		}
 		log.Printf("Log group %s not found, attempt %d/%d, waiting...", logGroupName, i+1, maxAttempts)
 		time.Sleep(30 * time.Second)
 	}
 
-	require.Fail(t, fmt.Sprintf("Log group %s was not created after %d attempts", logGroupName, maxAttempts))
+	log.Printf("Failed to find log group %s after %d attempts", logGroupName, maxAttempts)
+	return testResult
 }
