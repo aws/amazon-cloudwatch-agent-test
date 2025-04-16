@@ -14,10 +14,18 @@
           "metric_namespace": "${NAMESPACE}",
           "metric_declaration": [
             {
-              "source_labels": ["include"],
+              "source_labels": [
+                "include"
+              ],
               "label_matcher": "^yes$",
               "dimensions": [
-                ["prom_type"]
+                [
+                  "prom_type"
+                ],
+                [
+                  "prom_type",
+                  "quantile"
+                ]
               ],
               "metric_selectors": [
                 "^prometheus_test*"
