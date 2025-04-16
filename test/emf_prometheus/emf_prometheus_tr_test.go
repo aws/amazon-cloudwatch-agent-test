@@ -32,8 +32,8 @@ const jobNamePrefix = "prometheus_job_"
 func (t *TokenReplacementTestRunner) SetupBeforeAgentRun() error {
 	// Generate random names
 	randomSuffix := generateRandomSuffix()
-	t.namespace = fmt.Sprintf("%s_tr_test_%s", namespacePrefix, randomSuffix)
-	t.jobName = fmt.Sprintf("%s_tr_test_%s", jobNamePrefix, randomSuffix)
+	t.namespace = fmt.Sprintf("%str_test_%s", namespacePrefix, randomSuffix)
+	t.jobName = fmt.Sprintf("%str_test_%s", jobNamePrefix, randomSuffix)
 
 	// Setup Prometheus with job name
 	if err := setupPrometheus(tokenReplacementPrometheusConfig, tokenReplacementPrometheusMetrics, t.jobName); err != nil {
@@ -63,6 +63,7 @@ func (t *TokenReplacementTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *TokenReplacementTestRunner) Validate() status.TestGroupResult {
+	time.Sleep(2*time.Minute)
 	testResults := []status.TestResult{
 		verifyLogGroupExists(t.jobName),
 		verifyMetricsInCloudWatch(t.namespace),

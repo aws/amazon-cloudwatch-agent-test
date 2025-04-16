@@ -19,7 +19,7 @@ import (
 
 const (
 	namespacePrefix = "emf_prometheus_"
-	logGroupPrefix  = "prometheus_test"
+	logGroupPrefix  = "prometheus_test_"
 )
 
 func setupPrometheus(prometheusConfig, prometheusMetrics string, jobName string) error {

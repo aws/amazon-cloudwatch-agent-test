@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 //go:embed resources/prometheus.yaml
@@ -31,6 +32,7 @@ func (t *EMFFieldsTestRunner) GetMeasuredMetrics() []string {
 	return nil
 }
 func (t *EMFFieldsTestRunner) Validate() status.TestGroupResult {
+	time.Sleep(2 * time.Minute)
 	testResults := []status.TestResult{
 		verifyEMFFields(t.logGroupName),
 		verifyMetricsInCloudWatch(t.namespace),
@@ -55,8 +57,8 @@ func (t *EMFFieldsTestRunner) GetAgentConfigFileName() string {
 func (t *EMFFieldsTestRunner) SetupBeforeAgentRun() error {
 	// Generate random names
 	randomSuffix := generateRandomSuffix()
-	t.namespace = fmt.Sprintf("%s_fields_test_%s", namespacePrefix, randomSuffix)
-	t.logGroupName = fmt.Sprintf("%s_fields_test_%s", logGroupPrefix, randomSuffix)
+	t.namespace = fmt.Sprintf("%sfields_test_%s", namespacePrefix, randomSuffix)
+	t.logGroupName = fmt.Sprintf("%sfields_test_%s", logGroupPrefix, randomSuffix)
 
 	// Setup Prometheus
 	if err := setupPrometheus(fieldsPrometheusConfig, fieldsPrometheusMetrics, ""); err != nil {

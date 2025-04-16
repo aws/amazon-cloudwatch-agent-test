@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
@@ -35,6 +36,7 @@ func (t *UntypedTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *UntypedTestRunner) Validate() status.TestGroupResult {
+	time.Sleep(2*time.Minute)
 	testResults := []status.TestResult{
 		verifyUntypedMetricAbsence(t.namespace),
 		verifyUntypedMetricLogsAbsence(t.logGroupName),
@@ -56,8 +58,8 @@ func (t *UntypedTestRunner) GetAgentConfigFileName() string {
 }
 func (t *UntypedTestRunner) SetupBeforeAgentRun() error {
 	randomSuffix := generateRandomSuffix()
-	t.namespace = fmt.Sprintf("%s_untyped_test_%s", namespacePrefix, randomSuffix)
-	t.logGroupName = fmt.Sprintf("%s_untyped_test_%s", logGroupPrefix, randomSuffix)
+	t.namespace = fmt.Sprintf("%suntyped_test_%s", namespacePrefix, randomSuffix)
+	t.logGroupName = fmt.Sprintf("%suntyped_test_%s", logGroupPrefix, randomSuffix)
 
 	if err := setupPrometheus(untypedPrometheusConfig, untypedPrometheusMetrics, ""); err != nil {
 		return err
