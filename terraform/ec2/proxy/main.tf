@@ -104,6 +104,7 @@ output "proxy_dns_name" {
 
 data "aws_ami" "latest" {
   most_recent = true
+  owners      = ["self", "amazon"]
 
   filter {
     name   = "name"
