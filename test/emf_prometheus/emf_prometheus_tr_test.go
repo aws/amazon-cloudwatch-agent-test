@@ -3,6 +3,7 @@ package emf_prometheus
 import (
 	_ "embed"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"log"
 	"os"
 	"path/filepath"
@@ -51,6 +52,8 @@ func (t *TokenReplacementTestRunner) SetupBeforeAgentRun() error {
 	if err := os.WriteFile(configPath, []byte(updatedContent), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to write updated config: %v", err)
 	}
+
+	common.CopyFile(configPath, common.ConfigOutputPath)
 
 	return t.BaseTestRunner.SetupBeforeAgentRun()
 }

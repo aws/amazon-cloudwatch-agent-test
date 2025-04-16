@@ -8,6 +8,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,7 +23,7 @@ var fieldsPrometheusMetrics string
 
 type EMFFieldsTestRunner struct {
 	test_runner.BaseTestRunner
-	namespace string
+	namespace    string
 	logGroupName string
 }
 
@@ -42,7 +43,6 @@ func (t *EMFFieldsTestRunner) Validate() status.TestGroupResult {
 		TestResults: testResults,
 	}
 }
-
 
 func (t *EMFFieldsTestRunner) GetTestName() string {
 	return "Prometheus EMF Fields Test"
@@ -76,6 +76,7 @@ func (t *EMFFieldsTestRunner) SetupBeforeAgentRun() error {
 	if err := os.WriteFile(configPath, []byte(updatedContent), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to write updated config: %v", err)
 	}
+	common.CopyFile(configPath, common.ConfigOutputPath)
 
 	return t.BaseTestRunner.SetupBeforeAgentRun()
 }
