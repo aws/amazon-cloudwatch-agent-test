@@ -75,7 +75,7 @@ func (t *DiskIOTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *DiskIOTestRunner) GetAgentRunDuration() time.Duration {
-	return 3 * time.Minute
+	return 5 * time.Minute
 }
 
 func (t *DiskIOTestRunner) GetMeasuredMetrics() []string {

@@ -186,29 +186,29 @@ resource "kubernetes_storage_class" "ebs_sc" {
     encrypted = "true"
   }
 }
-resource "kubernetes_persistent_volume_claim" "ebs_pvc" {
-  depends_on = [kubernetes_storage_class.ebs_sc]
-  metadata {
-    name      = "ebs-pvc-${module.common.testing_id}"
-    namespace = "default"
-  }
-
-  wait_until_bound = false
-  
-  spec {
-    access_modes = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class.ebs_sc.metadata[0].name
-    
-    resources {
-      requests = {
-        storage = "5Gi"
-      }
-    }
-  }
-}
+# resource "kubernetes_persistent_volume_claim" "ebs_pvc" {
+#   depends_on = [kubernetes_storage_class.ebs_sc]
+#   metadata {
+#     name      = "ebs-pvc-${module.common.testing_id}"
+#     namespace = "default"
+#   }
+#
+#   wait_until_bound = false
+#   
+#   spec {
+#     access_modes = ["ReadWriteOnce"]
+#     storage_class_name = kubernetes_storage_class.ebs_sc.metadata[0].name
+#     
+#     resources {
+#       requests = {
+#         storage = "5Gi"
+#       }
+#     }
+#   }
+# }
 
 resource "kubernetes_deployment" "ebs_deployment" {
-  depends_on = [kubernetes_persistent_volume_claim.ebs_pvc]
+  depends_on = [kubernetes_storage_class.ebs_sc]
   metadata {
     name = "app"
   }
@@ -243,8 +243,18 @@ resource "kubernetes_deployment" "ebs_deployment" {
         
         volume {
           name = "persistent-storage"
-          persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.ebs_pvc.metadata[0].name
+          ephemeral {
+            volume_claim_template {
+              spec {
+                access_modes = ["ReadWriteOnce"]
+                storage_class_name = kubernetes_storage_class.ebs_sc.metadata[0].name
+                resources {
+                  requests = {
+                      storage = "5Gi"
+                  }
+                }
+              }
+            }
           }
         }
       }
