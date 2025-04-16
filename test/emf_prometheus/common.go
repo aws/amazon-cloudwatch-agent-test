@@ -59,21 +59,6 @@ func startAgent(agentConfigPath, namespace, logGroupName string) error {
 	content = strings.ReplaceAll(content, "${NAMESPACE}", namespace)
 	content = strings.ReplaceAll(content, "${LOG_GROUP_NAME}", logGroupName)
 
-	err = os.WriteFile(agentConfigPath, []byte(content), os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("failed to write updated config: %v", err)
-	}
-
-	err = common.StartAgent(agentConfigPath, true, false)
-	if err != nil {
-		return fmt.Errorf("failed to start agent: %v", err)
-	}
-
-	// Restore original config
-	err = os.WriteFile(agentConfigPath, originalContent, os.ModePerm)
-	if err != nil {
-		log.Printf("Warning: failed to restore original config: %v", err)
-	}
 
 	time.Sleep(2 * time.Minute)
 	return nil

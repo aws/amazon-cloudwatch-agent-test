@@ -4,7 +4,9 @@ import (
 	_ "embed"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -20,42 +22,50 @@ var tokenReplacementPrometheusMetrics string
 
 type TokenReplacementTestRunner struct {
 	test_runner.BaseTestRunner
+	namespace string
+	jobName   string
+}
+
+const jobNamePrefix = "prometheus_job_"
+
+func (t *TokenReplacementTestRunner) SetupBeforeAgentRun() error {
+	// Generate random names
+	randomSuffix := generateRandomSuffix()
+	t.namespace = fmt.Sprintf("%s_tr_test_%s", namespacePrefix, randomSuffix)
+	t.jobName = fmt.Sprintf("%s_tr_test_%s", jobNamePrefix, randomSuffix)
+
+	// Setup Prometheus with job name
+	if err := setupPrometheus(tokenReplacementPrometheusConfig, tokenReplacementPrometheusMetrics, t.jobName); err != nil {
+		return err
+	}
+
+	// Modify config file
+	configPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %v", err)
+	}
+
+	updatedContent := strings.ReplaceAll(string(content), "${NAMESPACE}", t.namespace)
+
+	if err := os.WriteFile(configPath, []byte(updatedContent), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write updated config: %v", err)
+	}
+
+	return t.BaseTestRunner.SetupBeforeAgentRun()
 }
 
 func (t *TokenReplacementTestRunner) GetMeasuredMetrics() []string {
 	return nil
 }
+
 func (t *TokenReplacementTestRunner) Validate() status.TestGroupResult {
-	randomSuffix := generateRandomSuffix()
-	jobName := fmt.Sprintf("%s_tr_test_%s", "prometheus", randomSuffix)
-	namespace := fmt.Sprintf("%s_tr_test_%s", namespacePrefix, randomSuffix)
-
-	if err := setupPrometheus(tokenReplacementPrometheusConfig, tokenReplacementPrometheusMetrics, jobName); err != nil {
-		return status.TestGroupResult{
-			Name: t.GetTestName(),
-			TestResults: []status.TestResult{{
-				Name:   "Setup",
-				Status: status.FAILED,
-			}},
-		}
-	}
-
-	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_tr_config.json"), namespace, ""); err != nil {
-		return status.TestGroupResult{
-			Name: t.GetTestName(),
-			TestResults: []status.TestResult{{
-				Name:   "Agent Start",
-				Status: status.FAILED,
-			}},
-		}
-	}
-
-	defer cleanup(jobName)
-
 	testResults := []status.TestResult{
-		verifyLogGroupExists(jobName),
-		verifyMetricsInCloudWatch(namespace),
+		verifyLogGroupExists(t.jobName),
+		verifyMetricsInCloudWatch(t.namespace),
 	}
+
+	defer cleanup(t.jobName)
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -63,12 +73,13 @@ func (t *TokenReplacementTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
+
 func (t *TokenReplacementTestRunner) GetTestName() string {
 	return "Prometheus EMF Token Replacement Test"
 }
 
 func (t *TokenReplacementTestRunner) GetAgentConfigFileName() string {
-	return filepath.Join("agent_configs", "emf_prometheus_token_replacement_config.json")
+	return "emf_prometheus_tr_config.json"
 }
 
 func verifyLogGroupExists(logGroupName string) status.TestResult {

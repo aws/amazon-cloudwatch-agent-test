@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -24,6 +25,8 @@ var untypedPrometheusMetrics string
 
 type UntypedTestRunner struct {
 	test_runner.BaseTestRunner
+	namespace    string
+	logGroupName string
 }
 
 func (t *UntypedTestRunner) GetMeasuredMetrics() []string {
@@ -31,37 +34,11 @@ func (t *UntypedTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *UntypedTestRunner) Validate() status.TestGroupResult {
-	randomSuffix := generateRandomSuffix()
-	namespace := fmt.Sprintf("%s_untyped_test_%s", namespacePrefix, randomSuffix)
-	logGroupName := fmt.Sprintf("%s_untyped_test_%s", logGroupPrefix, randomSuffix)
-
-	testResults := []status.TestResult{}
-
-	if err := setupPrometheus(untypedPrometheusConfig, untypedPrometheusMetrics, ""); err != nil {
-		return status.TestGroupResult{
-			Name: t.GetTestName(),
-			TestResults: []status.TestResult{{
-				Name:   "Setup",
-				Status: status.FAILED,
-			}},
-		}
+	testResults := []status.TestResult{
+		verifyUntypedMetricAbsence(t.namespace),
+		verifyUntypedMetricLogsAbsence(t.logGroupName),
+		verifyMetricsInCloudWatch(t.namespace),
 	}
-
-	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_config.json"), namespace, logGroupName); err != nil {
-		return status.TestGroupResult{
-			Name: t.GetTestName(),
-			TestResults: []status.TestResult{{
-				Name:   "Agent Start",
-				Status: status.FAILED,
-			}},
-		}
-	}
-
-	defer cleanup(logGroupName)
-
-	testResults = append(testResults, verifyUntypedMetricAbsence(namespace))
-	testResults = append(testResults, verifyUntypedMetricLogsAbsence(logGroupName))
-	testResults = append(testResults, verifyMetricsInCloudWatch(namespace))
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -74,8 +51,33 @@ func (t *UntypedTestRunner) GetTestName() string {
 }
 
 func (t *UntypedTestRunner) GetAgentConfigFileName() string {
-	return filepath.Join("agent_configs", "emf_prometheus_untyped_config.json")
+	return "emf_prometheus_config.json"
 }
+func (t *UntypedTestRunner) SetupBeforeAgentRun() error {
+	randomSuffix := generateRandomSuffix()
+	t.namespace = fmt.Sprintf("%s_untyped_test_%s", namespacePrefix, randomSuffix)
+	t.logGroupName = fmt.Sprintf("%s_untyped_test_%s", logGroupPrefix, randomSuffix)
+
+	if err := setupPrometheus(untypedPrometheusConfig, untypedPrometheusMetrics, ""); err != nil {
+		return err
+	}
+
+	configPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %v", err)
+	}
+
+	updatedContent := strings.ReplaceAll(string(content), "${NAMESPACE}", t.namespace)
+	updatedContent = strings.ReplaceAll(updatedContent, "${LOG_GROUP_NAME}", t.logGroupName)
+
+	if err := os.WriteFile(configPath, []byte(updatedContent), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write updated config: %v", err)
+	}
+
+	return t.BaseTestRunner.SetupBeforeAgentRun()
+}
+
 
 func verifyUntypedMetricAbsence(namespace string) status.TestResult {
 	testResult := status.TestResult{

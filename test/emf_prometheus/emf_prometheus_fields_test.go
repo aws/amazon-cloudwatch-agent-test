@@ -9,7 +9,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
+	"os"
 	"path/filepath"
+	"strings"
 )
 
 //go:embed resources/prometheus.yaml
@@ -20,43 +22,20 @@ var fieldsPrometheusMetrics string
 
 type EMFFieldsTestRunner struct {
 	test_runner.BaseTestRunner
+	namespace string
+	logGroupName string
 }
 
 func (t *EMFFieldsTestRunner) GetMeasuredMetrics() []string {
 	return nil
 }
-
 func (t *EMFFieldsTestRunner) Validate() status.TestGroupResult {
-	randomSuffix := generateRandomSuffix()
-	namespace := fmt.Sprintf("%s_fields_test_%s", namespacePrefix, randomSuffix)
-	logGroupName := fmt.Sprintf("%s_fields_test_%s", logGroupPrefix, randomSuffix)
-
-	if err := setupPrometheus(fieldsPrometheusConfig, fieldsPrometheusMetrics, ""); err != nil {
-		return status.TestGroupResult{
-			Name: t.GetTestName(),
-			TestResults: []status.TestResult{{
-				Name:    "Setup",
-				Status:  status.FAILED,
-			}},
-		}
-	}
-
-	if err := startAgent(filepath.Join("agent_configs", "emf_prometheus_config.json"), namespace, logGroupName); err != nil {
-		return status.TestGroupResult{
-			Name: t.GetTestName(),
-			TestResults: []status.TestResult{{
-				Name:    "Agent Start",
-				Status:  status.FAILED,
-			}},
-		}
-	}
-
-	defer cleanup(logGroupName)
-
 	testResults := []status.TestResult{
-		verifyEMFFields(logGroupName),
-		verifyMetricsInCloudWatch(namespace),
+		verifyEMFFields(t.logGroupName),
+		verifyMetricsInCloudWatch(t.namespace),
 	}
+
+	defer cleanup(t.logGroupName)
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -64,12 +43,41 @@ func (t *EMFFieldsTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
+
 func (t *EMFFieldsTestRunner) GetTestName() string {
 	return "Prometheus EMF Fields Test"
 }
 
 func (t *EMFFieldsTestRunner) GetAgentConfigFileName() string {
-	return filepath.Join("agent_configs", "emf_prometheus_fields_config.json")
+	return "emf_prometheus_fields_config.json"
+}
+
+func (t *EMFFieldsTestRunner) SetupBeforeAgentRun() error {
+	// Generate random names
+	randomSuffix := generateRandomSuffix()
+	t.namespace = fmt.Sprintf("%s_fields_test_%s", namespacePrefix, randomSuffix)
+	t.logGroupName = fmt.Sprintf("%s_fields_test_%s", logGroupPrefix, randomSuffix)
+
+	// Setup Prometheus
+	if err := setupPrometheus(fieldsPrometheusConfig, fieldsPrometheusMetrics, ""); err != nil {
+		return err
+	}
+
+	// Modify config file
+	configPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %v", err)
+	}
+
+	updatedContent := strings.ReplaceAll(string(content), "${NAMESPACE}", t.namespace)
+	updatedContent = strings.ReplaceAll(updatedContent, "${LOG_GROUP_NAME}", t.logGroupName)
+
+	if err := os.WriteFile(configPath, []byte(updatedContent), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write updated config: %v", err)
+	}
+
+	return t.BaseTestRunner.SetupBeforeAgentRun()
 }
 
 func verifyEMFFields(logGroupName string) status.TestResult {
