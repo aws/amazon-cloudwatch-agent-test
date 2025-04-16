@@ -16,12 +16,12 @@ variable "cw_addon_name" {
   default = "amazon-cloudwatch-observability"
 }
 
-variable "cw_image_repo" {
+variable "cwagent_image_repo" {
   type    = string
   default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
 }
 
-variable "cw_image_tag" {
+variable "cwagent_image_tag" {
   type    = string
   default = "latest"
 }
