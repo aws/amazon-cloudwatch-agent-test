@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecsdeploymenttype"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/ecslaunchtype"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksdeploymenttype"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksinstallationtype"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
@@ -64,6 +65,7 @@ type MetaData struct {
 	OtelConfig                                  string
 	SampleApp                                   string
 	AccountId                                   string
+	EKSInstallationType                         eksinstallationtype.EKSInstallationType
 }
 
 type MetaDataStrings struct {
@@ -107,6 +109,7 @@ type MetaDataStrings struct {
 	OtelConfig                                  string
 	SampleApp                                   string
 	AccountId                                   string
+	EKSInstallationType                         string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -157,6 +160,7 @@ func registerEKSE2ETestData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.PrometheusConfig), "prometheus_config", "", "Prometheus configuration file path")
 	flag.StringVar(&(dataString.OtelConfig), "otel_config", "", "OpenTelemetry configuration file path")
 	flag.StringVar(&(dataString.SampleApp), "sample_app", "", "Sample application manifest file path")
+	flag.StringVar(&(dataString.EKSInstallationType), "eks_installation_type", "HELM_CHART", "Installation type (HELM_CHART or EKS_ADDON)")
 }
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
@@ -280,6 +284,20 @@ func fillEKSData(e *MetaData, data *MetaDataStrings) {
 	e.EksGpuType = data.EksGpuType
 }
 
+func fillEKSInstallationType(e *MetaData, data *MetaDataStrings) {
+	if e.ComputeType != computetype.EKS {
+		return
+	}
+
+	installationType, ok := eksinstallationtype.FromString(data.EKSInstallationType)
+	if !ok {
+		log.Printf("Invalid installation type %s. Defaulting to HELM_CHART", data.EKSInstallationType)
+		e.EKSInstallationType = eksinstallationtype.HELM_CHART
+	} else {
+		e.EKSInstallationType = installationType
+	}
+}
+
 func registerAmpWorkspaceId(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.AmpWorkspaceId), "ampWorkspaceId", "", "workspace Id for Amazon Managed Prometheus (AMP)")
 }
@@ -352,6 +370,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.OtelConfig = registeredMetaDataStrings.OtelConfig
 	metaDataStorage.SampleApp = registeredMetaDataStrings.SampleApp
 	metaDataStorage.AccountId = registeredMetaDataStrings.AccountId
+	fillEKSInstallationType(metaDataStorage, registeredMetaDataStrings)
 
 	return metaDataStorage
 }
