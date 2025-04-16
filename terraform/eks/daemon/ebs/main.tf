@@ -20,7 +20,7 @@ locals {
 }
 
 resource "aws_eks_cluster" "this" {
-  name     = "cwagent-addon-eks-integ-${module.common.testing_id}"
+  name     = "cwagent-eks-integ-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
   vpc_config {
@@ -162,6 +162,8 @@ resource "kubernetes_persistent_volume_claim" "ebs_pvc" {
     name      = "ebs-pvc-${module.common.testing_id}"
     namespace = "default"
   }
+
+  wait_until_bound = false
   
   spec {
     access_modes = ["ReadWriteOnce"]
