@@ -219,6 +219,25 @@ resource "kubernetes_deployment" "ebs_deployment" {
   }
 }
 
+# Get the single instance ID of the node in the node group
+data "aws_instances" "eks_node" {
+  depends_on = [
+    aws_eks_node_group.this
+  ]
+  filter {
+    name   = "tag:eks:nodegroup-name"
+    values = [aws_eks_node_group.this.node_group_name]
+  }
+}
+
+# Retrieve details of the single instance to get private DNS
+data "aws_instance" "eks_node_detail" {
+  depends_on = [
+    data.aws_instances.eks_node
+  ]
+  instance_id = data.aws_instances.eks_node.ids[0]
+}
+
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
