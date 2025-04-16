@@ -120,16 +120,43 @@ resource "aws_eks_addon" "ebs_csi_addon" {
   addon_name   = "aws-ebs-csi-driver"
 }
 
-resource "aws_eks_addon" "this" {
+resource "null_resource" "clone_helm_chart" {
+  triggers = {
+    timestamp = "${timestamp()}" # Forces re-run on every apply
+  }
+  provisioner "local-exec" {
+    command = <<-EOT
+      if [ ! -d "./helm-charts" ]; then
+        git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
+      fi
+    EOT
+  }
+}
+
+resource "helm_release" "aws_observability" {
+  name             = "amazon-cloudwatch-observability"
+  chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
+  namespace        = "amazon-cloudwatch"
+  create_namespace = true
+
+  set {
+    name  = "clusterName"
+    value = aws_eks_cluster.this.name
+  }
+
+  set {
+    name  = "region"
+    value = "us-west-2"
+  }
   depends_on = [
-    null_resource.kubectl
+    aws_eks_cluster.this,
+    aws_eks_node_group.this,
+    null_resource.clone_helm_chart,
   ]
-  addon_name   = var.cw_addon_name
-  cluster_name = aws_eks_cluster.this.name
 }
 
 resource "null_resource" "update_image" {
-  depends_on = [aws_eks_addon.this]
+  depends_on = [helm_release.aws_observability, null_resource.kubectl]
   triggers = {
     timestamp = "${timestamp()}" # Forces re-run on every apply
   }

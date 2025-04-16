@@ -11,11 +11,6 @@ variable "test_dir" {
   default = "../../../../test/ebscsi"
 }
 
-variable "cw_addon_name" {
-  type    = string
-  default = "amazon-cloudwatch-observability"
-}
-
 variable "cwagent_image_repo" {
   type    = string
   default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
@@ -24,6 +19,11 @@ variable "cwagent_image_repo" {
 variable "cwagent_image_tag" {
   type    = string
   default = "latest"
+}
+
+variable "helm_chart_branch" {
+  type    = string
+  default = "main"
 }
 
 variable "k8s_version" {
