@@ -32,7 +32,7 @@ resource "aws_eks_cluster" "this" {
 # EKS Node Groups
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "cwagent-addon-eks-integ-node-${module.common_testing_id}"
+  node_group_name = "cwagent-addon-eks-integ-node-${module.common.testing_id}"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
 
@@ -144,7 +144,7 @@ resource "null_resource" "update_image" {
 resource "kubernetes_storage_class" "ebs_sc" {
   depends_on = [aws_eks_addon.ebs_csi_addon]
   metadata {
-    name = "ebs-sc-${module.common_testing_id}"
+    name = "ebs-sc-${module.common.testing_id}"
   }
   
   storage_provisioner = "ebs.csi.aws.com"
@@ -159,7 +159,7 @@ resource "kubernetes_storage_class" "ebs_sc" {
 resource "kubernetes_persistent_volume_claim" "ebs_pvc" {
   depends_on = [kubernetes_storage_class.ebs_sc]
   metadata {
-    name      = "ebs-pvc-${module.common_testing_id}"
+    name      = "ebs-pvc-${module.common.testing_id}"
     namespace = "default"
   }
   
@@ -211,7 +211,7 @@ resource "kubernetes_deployment" "ebs_deployment" {
         volume {
           name = "persistent-storage"
           persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.example_pvc.metadata[0].name
+            claim_name = kubernetes_persistent_volume_claim.ebs_pvc.metadata[0].name
           }
         }
       }
