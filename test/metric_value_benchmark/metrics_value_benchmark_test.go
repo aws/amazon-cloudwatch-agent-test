@@ -20,6 +20,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const namespace = "MetricValueBenchmarkTest"
@@ -131,6 +132,12 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		// Only add EntityMetricsTestRunner if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
 		if os.Getenv("AWS_REGION") == "us-west-2" {
 			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
+		}
+
+		// Only add the Disk IO EBS test if not running on SELinux
+		runningOnSELinux, _ := common.SELinuxEnforced()
+		if !runningOnSELinux {
+			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &DiskIOEBSTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
 		}
 	}
 	return ec2TestRunners

@@ -71,6 +71,10 @@ resource "aws_instance" "cwagent" {
     sudo systemctl restart sshd
   EOT
 
+  root_block_device {
+    volume_size = 200
+  }
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
@@ -133,6 +137,7 @@ resource "null_resource" "integration_test_fips_check" {
 
 data "aws_ami" "latest" {
   most_recent = true
+  owners      = ["self", "amazon"]
 
   filter {
     name   = "name"

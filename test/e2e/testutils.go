@@ -22,7 +22,7 @@ import (
 //------------------------------------------------------------------------------
 
 const (
-	Wait                    = 10 * time.Minute
+	Wait                    = 8 * time.Minute
 	WaitForResourceCreation = 2 * time.Minute
 	interval                = 30 * time.Second
 )
@@ -79,6 +79,7 @@ func VerifyAgentResources(t *testing.T, clientset *kubernetes.Clientset, configK
 	require.NoError(t, err, "Error getting CloudWatch Agent Service Account")
 	require.NotNil(t, serviceAccount, "CloudWatch Agent Service Account not found")
 }
+
 func GetPodList(t *testing.T, clientset *kubernetes.Clientset, namespace string, name string) v1.PodList {
 	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s", name),
