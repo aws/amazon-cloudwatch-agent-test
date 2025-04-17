@@ -310,6 +310,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/metric_value_benchmark", terraformDir: "terraform/eks/daemon/credentials/pod_identity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
+		{
+			testDir:      "./test/ebscsi",
+			terraformDir: "terraform/eks/daemon/ebs",
+		},
 	},
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
