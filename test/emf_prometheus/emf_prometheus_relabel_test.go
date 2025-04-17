@@ -37,29 +37,26 @@ func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
-	// Read original config
 	configPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
 	content, err := os.ReadFile(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %v", err)
 	}
 
-	// Replace template values
 	updatedContent := strings.ReplaceAll(string(content), "${NAMESPACE}", t.namespace)
 	updatedContent = strings.ReplaceAll(updatedContent, "${LOG_GROUP_NAME}", t.logGroupName)
 
-	// Write updated content back to original config
 	if err := os.WriteFile(configPath, []byte(updatedContent), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to write updated config: %v", err)
 	}
 
-	// Copy to agent config path
 	common.CopyFile(configPath, common.ConfigOutputPath)
 
 	return nil
 }
 
 func (t *RelabelTestRunner) Validate() status.TestGroupResult {
+	time.Sleep(2*time.Minute)
 	testResults := []status.TestResult{
 		verifyRelabeledMetrics(t.logGroupName),
 		verifyMetricsInCloudWatch(t.namespace),
