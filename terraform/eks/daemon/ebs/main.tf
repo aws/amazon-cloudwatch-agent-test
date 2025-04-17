@@ -233,7 +233,7 @@ resource "kubernetes_deployment" "ebs_deployment" {
         container {
           name  = "app"
           image = "public.ecr.aws/amazonlinux/amazonlinux"
-          command = ["/bin/bash", "-c", "sleep infinity"]
+          command = ["/bin/bash", "-c", "while true; do echo $(date -u) >> /data/out.txt; sleep 5; done"]
           
           volume_mount {
             name       = "persistent-storage"
