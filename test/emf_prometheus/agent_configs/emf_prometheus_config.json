@@ -1,0 +1,40 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "logs": {
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "/tmp/prometheus_config.yaml",
+        "log_group_name": "prometheus_test",
+        "emf_processor": {
+          "metric_namespace": "PrometheusEMFTest",
+          "metric_declaration": [
+            {
+              "source_labels": [
+                "include"
+              ],
+              "label_matcher": "^yes$",
+              "dimensions": [
+                [
+                  "prom_type"
+                ],
+                [
+                  "prom_type",
+                  "quantile"
+                ]
+              ],
+              "metric_selectors": [
+                "^prometheus_test*"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "force_flush_interval": 5
+  }
+}
