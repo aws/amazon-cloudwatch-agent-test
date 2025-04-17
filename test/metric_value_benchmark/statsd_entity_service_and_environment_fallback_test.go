@@ -56,7 +56,7 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) SetupAfterAgentRun() error {
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) GetMeasuredMetrics() []string {
-	return []string{"statsd_counter_10"}
+	return []string{"statsd_counter_1"}
 }
 
 func (t *StatsDEntityServiceAndEnvironmentFallback) ValidateStatsDEntity(metricName string) status.TestResult {
@@ -68,7 +68,7 @@ func (t *StatsDEntityServiceAndEnvironmentFallback) ValidateStatsDEntity(metricN
 	// Wait to ensure that the ListEntitiesForMetric call doesn't return an empty entity
 	time.Sleep(1 * time.Second)
 
-	metricNamespace := "A2StatsDEntityCustomServiceEnvironmentTest"
+	metricNamespace := "StatsDEntityServiceEnvironmentFallbackTest"
 
 	requestBody, err := metric.BuildStatsDRequestBody(metricNamespace, metricName)
 	if err != nil {

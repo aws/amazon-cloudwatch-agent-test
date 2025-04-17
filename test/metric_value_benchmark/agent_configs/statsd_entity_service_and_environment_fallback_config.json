@@ -5,7 +5,7 @@
         "debug": true
     },
     "metrics": {
-        "namespace": "A2StatsDEntityServiceEnvironmentFallbackTest",
+        "namespace": "StatsDEntityServiceEnvironmentFallbackTest",
         "append_dimensions": {
             "InstanceId": "${aws:InstanceId}"
         },

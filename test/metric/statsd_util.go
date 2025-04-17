@@ -29,12 +29,12 @@ const (
 var (
 	// metric name must use "_"" as a separator and include the metric type.
 	StatsdMetricNames = []string{
-		"statsd_counter_10",
-		"statsd_gauge_20",
-		"statsd_timing_30",
-		"statsd_counter_40",
-		"statsd_gauge_50",
-		"statsd_timing_60",
+		"statsd_counter_1",
+		"statsd_gauge_2",
+		"statsd_timing_3",
+		"statsd_counter_4",
+		"statsd_gauge_5",
+		"statsd_timing_6",
 	}
 	StatsdMetricValues = []float64{1000, 2000, 3000, 4000, 5000, 6000}
 )
