@@ -120,6 +120,11 @@ resource "aws_eks_addon" "ebs_csi_addon" {
   depends_on   = [aws_eks_node_group.this]
   cluster_name = aws_eks_cluster.this.name
   addon_name   = "aws-ebs-csi-driver"
+  configuration_values = jsonencode({
+      node = {
+          enableMetrics = true
+      }
+  })
 }
 
 resource "null_resource" "clone_helm_chart" {
