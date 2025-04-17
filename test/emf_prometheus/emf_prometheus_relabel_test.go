@@ -56,7 +56,6 @@ func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
 }
 
 func (t *RelabelTestRunner) Validate() status.TestGroupResult {
-	time.Sleep(2*time.Minute)
 	testResults := []status.TestResult{
 		verifyRelabeledMetrics(t.logGroupName),
 		verifyMetricsInCloudWatch(t.namespace),
