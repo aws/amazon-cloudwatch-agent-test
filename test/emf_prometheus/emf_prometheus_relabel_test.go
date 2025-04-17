@@ -32,7 +32,7 @@ func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
 	randomSuffix := generateRandomSuffix()
 	t.namespace = fmt.Sprintf("%s_relabel_test_%s", namespacePrefix, randomSuffix)
 	t.logGroupName = fmt.Sprintf("%s_relabel_test_%s", logGroupPrefix, randomSuffix)
-
+	log.Println("This is the namespace and the logGroupName", t.namespace, t.logGroupName)
 	if err := setupPrometheus(relabelPrometheusConfig, relabelPrometheusMetrics, ""); err != nil {
 		return err
 	}
