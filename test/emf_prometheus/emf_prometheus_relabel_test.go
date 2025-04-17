@@ -16,10 +16,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
-//go:embed resources/relabel/prometheus.yaml
+//go:embed resources/prometheus_relabel.yaml
 var relabelPrometheusConfig string
 
-//go:embed resources/relabel/prometheus_metrics
+//go:embed resources/prometheus_metrics
 var relabelPrometheusMetrics string
 
 type RelabelTestRunner struct {
@@ -113,8 +113,8 @@ func verifyRelabeledMetrics(logGroupName string) status.TestResult {
 
 	// Track metrics that have been found with correct relabeling
 	metricsFound := map[string]bool{
-		"prometheus_test_counter": false,
-		"prometheus_test_gauge": false,
+		"prometheus_test_counter":     false,
+		"prometheus_test_gauge":       false,
 		"prometheus_test_summary_sum": false,
 	}
 
