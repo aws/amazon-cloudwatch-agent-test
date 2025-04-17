@@ -34,15 +34,15 @@ var testRunners []*test_runner.TestRunner
 func getTestRunners() []*test_runner.TestRunner {
 	if testRunners == nil {
 		testRunners = []*test_runner.TestRunner{
-			{
-				//TestRunner: &UntypedTestRunner{},
-			},
-			{
-				//TestRunner: &TokenReplacementTestRunner{},
-			},
-			{
-				//TestRunner: &EMFFieldsTestRunner{},
-			},
+			//{
+			//	//TestRunner: &UntypedTestRunner{},
+			//},
+			//{
+			//	//TestRunner: &TokenReplacementTestRunner{},
+			//},
+			//{
+			//	//TestRunner: &EMFFieldsTestRunner{},
+			//},
 			{
 				TestRunner: &RelabelTestRunner{},
 			},
