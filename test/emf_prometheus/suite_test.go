@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package emf_prometheus
 
 import (
@@ -34,15 +37,15 @@ var testRunners []*test_runner.TestRunner
 func getTestRunners() []*test_runner.TestRunner {
 	if testRunners == nil {
 		testRunners = []*test_runner.TestRunner{
-			//{
-			//	//TestRunner: &UntypedTestRunner{},
-			//},
-			//{
-			//	//TestRunner: &TokenReplacementTestRunner{},
-			//},
-			//{
-			//	//TestRunner: &EMFFieldsTestRunner{},
-			//},
+			{
+				TestRunner: &UntypedTestRunner{},
+			},
+			{
+				TestRunner: &TokenReplacementTestRunner{},
+			},
+			{
+				TestRunner: &EMFFieldsTestRunner{},
+			},
 			{
 				TestRunner: &RelabelTestRunner{},
 			},

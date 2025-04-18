@@ -1,9 +1,11 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package emf_prometheus
 
 import (
 	_ "embed"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 //go:embed resources/prometheus.yaml
@@ -36,7 +39,7 @@ func (t *UntypedTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *UntypedTestRunner) Validate() status.TestGroupResult {
-	time.Sleep(2*time.Minute)
+	time.Sleep(2 * time.Minute)
 	testResults := []status.TestResult{
 		verifyUntypedMetricAbsence(t.namespace),
 		verifyUntypedMetricLogsAbsence(t.logGroupName),
