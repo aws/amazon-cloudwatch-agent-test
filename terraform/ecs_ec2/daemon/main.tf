@@ -19,7 +19,7 @@ resource "aws_ecs_cluster" "cluster" {
 ######
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["amazon"]
+  owners      = ["self", "amazon"]
 
   filter {
     name   = "name"
