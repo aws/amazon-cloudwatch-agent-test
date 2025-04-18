@@ -110,3 +110,17 @@ variable "eks_deployment_strategy" {
   type    = string
   default = "DAEMON"
 }
+
+variable "addon_name" {
+  type    = string
+  default = "amazon-cloudwatch-observability"
+}
+
+variable "eks_installation_type" {
+  type    = string
+  default = "HELM_CHART"
+  validation {
+    condition     = contains(["HELM_CHART", "EKS_ADDON"], var.eks_installation_type)
+    error_message = "eks_installation_type must be either 'HELM_CHART' or 'EKS_ADDON'"
+  }
+}

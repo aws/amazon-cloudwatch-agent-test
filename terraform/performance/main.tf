@@ -149,6 +149,7 @@ resource "null_resource" "validator_windows" {
 
 data "aws_ami" "latest" {
   most_recent = true
+  owners      = ["self", "amazon"]
 
   filter {
     name   = "name"
