@@ -61,7 +61,7 @@ func DeleteLogGroup(logGroupName string) {
 func ValidateLogs(logGroup, logStream string, since, until *time.Time, validators ...LogEventsValidator) error {
 	log.Printf("Checking %s/%s", logGroup, logStream)
 
-	events, err := getLogsSince(logGroup, logStream, since, until)
+	events, err := GetLogsSince(logGroup, logStream, since, until)
 	if err != nil {
 		return err
 	}
@@ -74,9 +74,9 @@ func ValidateLogs(logGroup, logStream string, since, until *time.Time, validator
 	return nil
 }
 
-// getLogsSince makes GetLogEvents API calls, paginates through the results for the given time frame, and returns
+// GetLogsSince makes GetLogEvents API calls, paginates through the results for the given time frame, and returns
 // the raw log strings
-func getLogsSince(logGroup, logStream string, since, until *time.Time) ([]types.OutputLogEvent, error) {
+func GetLogsSince(logGroup, logStream string, since, until *time.Time) ([]types.OutputLogEvent, error) {
 	var events []types.OutputLogEvent
 
 	// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html
@@ -366,7 +366,7 @@ func AssertNoDuplicateLogs() LogEventsValidator {
 
 func GetLogEventCountPerType(logGroup, logStream string, since, until *time.Time) (map[string]int, error) {
 	var typeFrequency = make(map[string]int)
-	events, err := getLogsSince(logGroup, logStream, since, until)
+	events, err := GetLogsSince(logGroup, logStream, since, until)
 
 	// if there is an error, return the empty map
 	if err != nil {
