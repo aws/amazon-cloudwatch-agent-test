@@ -28,6 +28,8 @@ type RelabelTestRunner struct {
 	logGroupName string
 }
 
+//hi
+
 func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
 	randomSuffix := generateRandomSuffix()
 	t.namespace = fmt.Sprintf("%srelabel_test_%s", namespacePrefix, randomSuffix)
