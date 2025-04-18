@@ -30,8 +30,8 @@ type RelabelTestRunner struct {
 
 func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
 	randomSuffix := generateRandomSuffix()
-	t.namespace = fmt.Sprintf("%s_relabel_test_%s", namespacePrefix, randomSuffix)
-	t.logGroupName = fmt.Sprintf("%s_relabel_test_%s", logGroupPrefix, randomSuffix)
+	t.namespace = fmt.Sprintf("%srelabel_test_%s", namespacePrefix, randomSuffix)
+	t.logGroupName = fmt.Sprintf("%srelabel_test_%s", logGroupPrefix, randomSuffix)
 	log.Println("This is the namespace and the logGroupName", t.namespace, t.logGroupName)
 	if err := setupPrometheus(relabelPrometheusConfig, relabelPrometheusMetrics, ""); err != nil {
 		return err
@@ -46,6 +46,7 @@ func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
 	updatedContent := strings.ReplaceAll(string(content), "${NAMESPACE}", t.namespace)
 	updatedContent = strings.ReplaceAll(updatedContent, "${LOG_GROUP_NAME}", t.logGroupName)
 
+	log.Println(updatedContent)
 	if err := os.WriteFile(configPath, []byte(updatedContent), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to write updated config: %v", err)
 	}
@@ -61,7 +62,7 @@ func (t *RelabelTestRunner) Validate() status.TestGroupResult {
 		verifyMetricsInCloudWatch(t.namespace),
 	}
 
-	defer cleanup(t.logGroupName)
+	//defer cleanup(t.logGroupName)
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),

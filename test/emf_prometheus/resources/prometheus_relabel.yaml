@@ -8,7 +8,7 @@ scrape_configs:
         labels:
           label1: 'test1'
     metric_relabel_configs:
-      - source_labels: [__name__]
-        regex: (.*)
+      - source_labels: ['__name__']
         replacement: $1
-        target_label: my_name
+        regex: (.*)
+        target_label: 'my_name'
