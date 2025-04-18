@@ -8,7 +8,7 @@
   "logs": {
     "metrics_collected": {
       "prometheus": {
-        "prometheus_config_path": "/tmp/prometheus_config.yaml",
+        "prometheus_config_path": "/tmp/prometheus.yaml",
         "log_group_name": "${LOG_GROUP_NAME}",
         "emf_processor": {
           "metric_namespace": "${NAMESPACE}",
