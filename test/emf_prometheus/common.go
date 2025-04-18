@@ -5,7 +5,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"log"
 	"math/rand"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -34,7 +33,7 @@ func setupPrometheus(prometheusConfig, prometheusMetrics string, jobName string)
 	}
 
 	commands := []string{
-		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus_config.yaml\n%s\nEOF", configContent),
+		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus.yaml\n%s\nEOF", configContent),
 		fmt.Sprintf("cat <<EOF | sudo tee /tmp/metrics\n%s\nEOF", prometheusMetrics),
 		"sudo python3 -m http.server 8101 --directory /tmp &> /dev/null &",
 	}
@@ -49,25 +48,10 @@ func setupPrometheus(prometheusConfig, prometheusMetrics string, jobName string)
 	return nil
 }
 
-func startAgent(agentConfigPath, namespace, logGroupName string) error {
-	originalContent, err := os.ReadFile(agentConfigPath)
-	if err != nil {
-		return fmt.Errorf("failed to read agent config: %v", err)
-	}
-
-	content := string(originalContent)
-	content = strings.ReplaceAll(content, "${NAMESPACE}", namespace)
-	content = strings.ReplaceAll(content, "${LOG_GROUP_NAME}", logGroupName)
-
-
-	time.Sleep(2 * time.Minute)
-	return nil
-}
-
 func cleanup(logGroupName string) error {
 	commands := []string{
 		"sudo pkill -f 'python3 -m http.server 8101'",
-		"sudo rm -f /tmp/prometheus_config.yaml /tmp/metrics",
+		"sudo rm -f /tmp/prometheus.yaml /tmp/metrics",
 	}
 
 	if err := common.RunCommands(commands); err != nil {
