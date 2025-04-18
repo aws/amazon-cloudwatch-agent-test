@@ -1,7 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-// emf_fields_runner.go
+//go:build !windows
+
 package emf_prometheus
 
 import (
