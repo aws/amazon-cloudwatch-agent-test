@@ -46,6 +46,7 @@ func (t *UntypedTestRunner) Validate() status.TestGroupResult {
 		verifyUntypedMetricLogsAbsence(t.logGroupName),
 		verifyMetricsInCloudWatch(t.namespace),
 	}
+	defer cleanup(t.logGroupName)
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -65,9 +66,9 @@ func (t *UntypedTestRunner) GetAgentConfigFileName() string {
 	return "emf_prometheus_untyped_config.json"
 }
 func (t *UntypedTestRunner) SetupBeforeAgentRun() error {
-	randomSuffix := generateRandomSuffix()
-	t.namespace = fmt.Sprintf("%suntyped_test_%s", namespacePrefix, randomSuffix)
-	t.logGroupName = fmt.Sprintf("%suntyped_test_%s", logGroupPrefix, randomSuffix)
+	instanceID := awsservice.GetInstanceId()
+	t.namespace = fmt.Sprintf("%suntyped_test_%s", namespacePrefix, instanceID)
+	t.logGroupName = fmt.Sprintf("%suntyped_test_%s", logGroupPrefix, instanceID)
 
 	if err := setupPrometheus(untypedPrometheusConfig, untypedPrometheusMetrics, ""); err != nil {
 		return err

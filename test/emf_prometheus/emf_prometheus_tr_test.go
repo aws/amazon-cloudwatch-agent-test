@@ -35,17 +35,14 @@ type TokenReplacementTestRunner struct {
 const jobNamePrefix = "prometheus_job_"
 
 func (t *TokenReplacementTestRunner) SetupBeforeAgentRun() error {
-	// Generate random names
-	randomSuffix := generateRandomSuffix()
-	t.namespace = fmt.Sprintf("%str_test_%s", namespacePrefix, randomSuffix)
-	t.jobName = fmt.Sprintf("%str_test_%s", jobNamePrefix, randomSuffix)
+	instanceID:= awsservice.GetInstanceId()
+	t.namespace = fmt.Sprintf("%str_test_%s", namespacePrefix, instanceID)
+	t.jobName = fmt.Sprintf("%str_test_%s", jobNamePrefix, instanceID)
 
-	// Setup Prometheus with job name
 	if err := setupPrometheus(tokenReplacementPrometheusConfig, tokenReplacementPrometheusMetrics, t.jobName); err != nil {
 		return err
 	}
 
-	// Modify config file
 	configPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
 	content, err := os.ReadFile(configPath)
 	if err != nil {
@@ -68,7 +65,7 @@ func (t *TokenReplacementTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *TokenReplacementTestRunner) GetAgentRunDuration() time.Duration {
-	return 2 * time.Minute
+	return 1 * time.Minute
 }
 
 func (t *TokenReplacementTestRunner) Validate() status.TestGroupResult {

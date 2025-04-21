@@ -33,12 +33,10 @@ type RelabelTestRunner struct {
 	logGroupName string
 }
 
-//hi
-
 func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
-	randomSuffix := generateRandomSuffix()
-	t.namespace = fmt.Sprintf("%srelabel_test_%s", namespacePrefix, randomSuffix)
-	t.logGroupName = fmt.Sprintf("%srelabel_test_%s", logGroupPrefix, randomSuffix)
+	instanceID:= awsservice.GetInstanceId()
+	t.namespace = fmt.Sprintf("%srelabel_test_%s", namespacePrefix, instanceID)
+	t.logGroupName = fmt.Sprintf("%srelabel_test_%s", logGroupPrefix, instanceID)
 	log.Println("This is the namespace and the logGroupName", t.namespace, t.logGroupName)
 	if err := setupPrometheus(relabelPrometheusConfig, relabelPrometheusMetrics, ""); err != nil {
 		return err
@@ -69,7 +67,7 @@ func (t *RelabelTestRunner) Validate() status.TestGroupResult {
 		verifyMetricsInCloudWatch(t.namespace),
 	}
 
-	//defer cleanup(t.logGroupName)
+	defer cleanup(t.logGroupName)
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -115,7 +113,6 @@ func verifyRelabeledMetrics(logGroupName string) status.TestResult {
 		return testResult
 	}
 
-	// Track metrics that have been found with correct relabeling
 	metricsFound := map[string]bool{
 		"prometheus_test_counter":     false,
 		"prometheus_test_gauge":       false,
@@ -129,21 +126,17 @@ func verifyRelabeledMetrics(logGroupName string) status.TestResult {
 			continue
 		}
 
-		// Check if this is a CloudWatch Metrics log
 		if _, ok := emfLog["CloudWatchMetrics"]; !ok {
 			continue
 		}
 
-		// Check for my_name field and verify it matches the metric name
 		myName, hasMyName := emfLog["my_name"].(string)
 		if !hasMyName {
 			log.Printf("EMF log missing my_name field: %s", *event.Message)
 			continue
 		}
 
-		// Verify my_name matches the actual metric name
 		if _, isTracked := metricsFound[myName]; isTracked {
-			// Verify the metric value exists
 			if _, hasMetric := emfLog[myName]; hasMetric {
 				metricsFound[myName] = true
 				log.Printf("Found correctly relabeled metric: %s", myName)
@@ -151,7 +144,6 @@ func verifyRelabeledMetrics(logGroupName string) status.TestResult {
 		}
 	}
 
-	// Check if all expected metrics were found with correct relabeling
 	allMetricsFound := true
 	missingMetrics := []string{}
 	for metric, found := range metricsFound {

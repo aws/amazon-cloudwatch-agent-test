@@ -7,8 +7,6 @@ package emf_prometheus
 import (
 	"fmt"
 	"log"
-	"math/rand"
-	"strconv"
 	"strings"
 	"time"
 
@@ -53,22 +51,17 @@ func setupPrometheus(prometheusConfig, prometheusMetrics string, jobName string)
 	return nil
 }
 
-func cleanup(logGroupName string) error {
+func cleanup(logGroupName string)  {
 	commands := []string{
 		"sudo pkill -f 'python3 -m http.server 8101'",
 		"sudo rm -f /tmp/prometheus.yaml /tmp/metrics",
 	}
 
 	if err := common.RunCommands(commands); err != nil {
-		return fmt.Errorf("failed to cleanup: %v", err)
+		log.Printf("failed to cleanup: %v", err)
 	}
 
 	awsservice.DeleteLogGroup(logGroupName)
-	return nil
-}
-
-func generateRandomSuffix() string {
-	return strconv.Itoa(rand.Intn(100000))
 }
 
 func verifyMetricsInCloudWatch(namespace string) status.TestResult {

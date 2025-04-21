@@ -64,17 +64,14 @@ func (t *EMFFieldsTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *EMFFieldsTestRunner) SetupBeforeAgentRun() error {
-	// Generate random names
-	randomSuffix := generateRandomSuffix()
-	t.namespace = fmt.Sprintf("%sfields_test_%s", namespacePrefix, randomSuffix)
-	t.logGroupName = fmt.Sprintf("%sfields_test_%s", logGroupPrefix, randomSuffix)
+	instanceID:= awsservice.GetInstanceId()
+	t.namespace = fmt.Sprintf("%sfields_test_%s", namespacePrefix, instanceID)
+	t.logGroupName = fmt.Sprintf("%sfields_test_%s", logGroupPrefix, instanceID)
 
-	// Setup Prometheus
 	if err := setupPrometheus(fieldsPrometheusConfig, fieldsPrometheusMetrics, ""); err != nil {
 		return err
 	}
 
-	// Modify config file
 	configPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
 	content, err := os.ReadFile(configPath)
 	if err != nil {
@@ -138,7 +135,6 @@ func verifyEMFFields(logGroupName string) status.TestResult {
 			continue
 		}
 
-		// Log field values
 		log.Printf("Found EMF fields - host: %s, instance: %s, job: %s, type: %s",
 			emfLog["host"],
 			emfLog["instance"],
