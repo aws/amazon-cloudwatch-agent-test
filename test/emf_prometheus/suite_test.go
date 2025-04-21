@@ -70,4 +70,3 @@ func (suite *PrometheusEMFTestSuite) AddToSuiteResult(r status.TestGroupResult) 
 func TestPrometheusEMFSuite(t *testing.T) {
 	suite.Run(t, new(PrometheusEMFTestSuite))
 }
-
