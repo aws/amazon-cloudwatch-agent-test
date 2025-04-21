@@ -137,6 +137,7 @@ resource "null_resource" "integration_test_fips_check" {
 
 data "aws_ami" "latest" {
   most_recent = true
+  owners      = ["self", "amazon"]
 
   filter {
     name   = "name"

@@ -103,7 +103,6 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   role       = aws_iam_role.node_role.name
 }
 
-
 resource "null_resource" "kubectl" {
   depends_on = [
     aws_eks_cluster.this,
