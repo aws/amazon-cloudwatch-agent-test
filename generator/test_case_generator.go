@@ -153,7 +153,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{
 			testDir:     "./test/emf_prometheus",
-			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
 			maxAttempts: 2,
 		},
 		{testDir: "./test/metric_value_benchmark"},
