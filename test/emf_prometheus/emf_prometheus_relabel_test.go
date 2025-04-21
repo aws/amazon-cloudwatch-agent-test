@@ -1,0 +1,171 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+//go:build !windows
+
+package emf_prometheus
+
+import (
+	_ "embed"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+)
+
+//go:embed resources/prometheus_relabel.yaml
+var relabelPrometheusConfig string
+
+//go:embed resources/prometheus_metrics
+var relabelPrometheusMetrics string
+
+type RelabelTestRunner struct {
+	test_runner.BaseTestRunner
+	namespace    string
+	logGroupName string
+}
+
+//hi
+
+func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
+	randomSuffix := generateRandomSuffix()
+	t.namespace = fmt.Sprintf("%srelabel_test_%s", namespacePrefix, randomSuffix)
+	t.logGroupName = fmt.Sprintf("%srelabel_test_%s", logGroupPrefix, randomSuffix)
+	log.Println("This is the namespace and the logGroupName", t.namespace, t.logGroupName)
+	if err := setupPrometheus(relabelPrometheusConfig, relabelPrometheusMetrics, ""); err != nil {
+		return err
+	}
+
+	configPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %v", err)
+	}
+
+	updatedContent := strings.ReplaceAll(string(content), "${NAMESPACE}", t.namespace)
+	updatedContent = strings.ReplaceAll(updatedContent, "${LOG_GROUP_NAME}", t.logGroupName)
+
+	log.Println(updatedContent)
+	if err := os.WriteFile(configPath, []byte(updatedContent), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write updated config: %v", err)
+	}
+
+	common.CopyFile(configPath, common.ConfigOutputPath)
+
+	return nil
+}
+
+func (t *RelabelTestRunner) Validate() status.TestGroupResult {
+	testResults := []status.TestResult{
+		verifyRelabeledMetrics(t.logGroupName),
+		verifyMetricsInCloudWatch(t.namespace),
+	}
+
+	//defer cleanup(t.logGroupName)
+
+	return status.TestGroupResult{
+		Name:        t.GetTestName(),
+		TestResults: testResults,
+	}
+}
+
+func (t *RelabelTestRunner) GetTestName() string {
+	return "Prometheus EMF Relabel Test"
+}
+
+func (t *RelabelTestRunner) GetAgentConfigFileName() string {
+	return "emf_prometheus_relabel_config.json"
+}
+
+func (t *RelabelTestRunner) GetMeasuredMetrics() []string {
+	return []string{
+		"prometheus_test_counter",
+		"prometheus_test_gauge",
+		"prometheus_test_summary_sum",
+	}
+}
+
+func (t *RelabelTestRunner) GetAgentRunDuration() time.Duration {
+	return 2 * time.Minute
+}
+
+func verifyRelabeledMetrics(logGroupName string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   "Relabeled Metrics",
+		Status: status.FAILED,
+	}
+
+	streams := awsservice.GetLogStreams(logGroupName)
+	if len(streams) == 0 {
+		log.Printf("No log streams found in log group %s", logGroupName)
+		return testResult
+	}
+
+	events, err := awsservice.GetLogsSince(logGroupName, *streams[0].LogStreamName, nil, nil)
+	if err != nil {
+		log.Printf("Failed to get log events: %v", err)
+		return testResult
+	}
+
+	// Track metrics that have been found with correct relabeling
+	metricsFound := map[string]bool{
+		"prometheus_test_counter":     false,
+		"prometheus_test_gauge":       false,
+		"prometheus_test_summary_sum": false,
+	}
+
+	for _, event := range events {
+		var emfLog map[string]interface{}
+		if err := json.Unmarshal([]byte(*event.Message), &emfLog); err != nil {
+			log.Printf("Failed to parse EMF log: %v", err)
+			continue
+		}
+
+		// Check if this is a CloudWatch Metrics log
+		if _, ok := emfLog["CloudWatchMetrics"]; !ok {
+			continue
+		}
+
+		// Check for my_name field and verify it matches the metric name
+		myName, hasMyName := emfLog["my_name"].(string)
+		if !hasMyName {
+			log.Printf("EMF log missing my_name field: %s", *event.Message)
+			continue
+		}
+
+		// Verify my_name matches the actual metric name
+		if _, isTracked := metricsFound[myName]; isTracked {
+			// Verify the metric value exists
+			if _, hasMetric := emfLog[myName]; hasMetric {
+				metricsFound[myName] = true
+				log.Printf("Found correctly relabeled metric: %s", myName)
+			}
+		}
+	}
+
+	// Check if all expected metrics were found with correct relabeling
+	allMetricsFound := true
+	missingMetrics := []string{}
+	for metric, found := range metricsFound {
+		if !found {
+			allMetricsFound = false
+			missingMetrics = append(missingMetrics, metric)
+		}
+	}
+
+	if !allMetricsFound {
+		log.Printf("Missing relabeled metrics: %v", missingMetrics)
+		return testResult
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}

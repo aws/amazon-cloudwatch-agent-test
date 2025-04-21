@@ -1,0 +1,13 @@
+prometheus_test_untyped{include="yes",prom_type="untyped"} 1
+# TYPE prometheus_test_counter counter
+prometheus_test_counter{include="yes",prom_type="counter"} 1
+# TYPE prometheus_test_counter_exclude counter
+prometheus_test_counter_exclude{include="no",prom_type="counter"} 1
+# TYPE prometheus_test_gauge gauge
+prometheus_test_gauge{include="yes",prom_type="gauge"} 500
+# TYPE prometheus_test_summary summary
+prometheus_test_summary_sum{include="yes",prom_type="summary"} 200
+prometheus_test_summary_count{include="yes",prom_type="summary"} 50
+prometheus_test_summary{include="yes",quantile="0",prom_type="summary"} 0.1
+prometheus_test_summary{include="yes",quantile="0.5",prom_type="summary"} 0.25
+prometheus_test_summary{include="yes",quantile="1",prom_type="summary"} 5.5

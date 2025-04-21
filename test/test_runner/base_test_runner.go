@@ -157,9 +157,9 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	runningDuration := t.TestRunner.GetAgentRunDuration()
 	time.Sleep(runningDuration)
 	log.Printf("Agent has been running for : %s", runningDuration.String())
-	common.StopAgent()
+	//common.StopAgent()
 
-	err = common.DeleteFile(configOutputPath)
+	//err = common.DeleteFile(configOutputPath)
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
 		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %w", err)

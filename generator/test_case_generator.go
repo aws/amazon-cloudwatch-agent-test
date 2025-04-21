@@ -80,6 +80,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
 			maxAttempts: 1,
 		},
+		{
+			testDir: "./test/emf_prometheus",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 		{testDir: "./test/metric_value_benchmark"},
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
@@ -318,7 +322,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 
 var testTypeToTestConfigE2E = map[string][]testConfig{
 	"eks_e2e_jmx": {
-		{testDir: "../../../test/e2e/jmx"},
+		{
+			testDir:      "../../../test/e2e/jmx",
+			terraformDir: "../../../terraform/e2e/jmx",
+		},
 	},
 }
 
@@ -378,6 +385,7 @@ func main() {
 		}
 	}
 }
+
 func generateTestName(testType string, test_directory string) string {
 	parts := strings.Split(test_directory, "/")
 
