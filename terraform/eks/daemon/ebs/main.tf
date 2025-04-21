@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source = "../../../common"
+  source             = "../../../common"
   cwagent_image_repo = var.cwagent_image_repo
   cwagent_image_tag  = var.cwagent_image_tag
 }
@@ -121,9 +121,9 @@ resource "aws_eks_addon" "ebs_csi_addon" {
   cluster_name = aws_eks_cluster.this.name
   addon_name   = "aws-ebs-csi-driver"
   configuration_values = jsonencode({
-      node = {
-          enableMetrics = true
-      }
+    node = {
+      enableMetrics = true
+    }
   })
 }
 
@@ -181,10 +181,10 @@ resource "kubernetes_storage_class" "ebs_sc" {
   metadata {
     name = "ebs-sc-${module.common.testing_id}"
   }
-  
+
   storage_provisioner = "ebs.csi.aws.com"
   volume_binding_mode = "WaitForFirstConsumer"
-  
+
   parameters = {
     type      = "gp3"
     fsType    = "ext4"
@@ -197,45 +197,45 @@ resource "kubernetes_deployment" "ebs_deployment" {
   metadata {
     name = "app"
   }
-  
+
   spec {
     replicas = 1
-    
+
     selector {
       match_labels = {
         app = "app"
       }
     }
-    
+
     template {
       metadata {
         labels = {
           app = "app"
         }
       }
-      
+
       spec {
         container {
-          name  = "app"
-          image = "public.ecr.aws/amazonlinux/amazonlinux"
+          name    = "app"
+          image   = "public.ecr.aws/amazonlinux/amazonlinux"
           command = ["/bin/bash", "-c", "while true; do echo $(date -u) >> /data/out.txt; sleep 5; done"]
-          
+
           volume_mount {
             name       = "persistent-storage"
             mount_path = "/data"
           }
         }
-        
+
         volume {
           name = "persistent-storage"
           ephemeral {
             volume_claim_template {
               spec {
-                access_modes = ["ReadWriteOnce"]
+                access_modes       = ["ReadWriteOnce"]
                 storage_class_name = kubernetes_storage_class.ebs_sc.metadata[0].name
                 resources {
                   requests = {
-                      storage = "5Gi"
+                    storage = "5Gi"
                   }
                 }
               }
