@@ -142,7 +142,7 @@ func verifyEMFFields(logGroupName string) status.TestResult {
 			emfLog["prom_metric_type"])
 
 		host, _ := emfLog["host"].(string)
-		if !strings.Contains(host, ".internal") && !strings.Contains(host, ".amazonaws.com") {
+		if !strings.Contains(host, ".internal") {
 			log.Printf("Invalid host format: %s", host)
 			return testResult
 		}
