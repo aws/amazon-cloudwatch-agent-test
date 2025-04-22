@@ -64,7 +64,7 @@ func (t *EMFFieldsTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *EMFFieldsTestRunner) SetupBeforeAgentRun() error {
-	instanceID:= awsservice.GetInstanceId()
+	instanceID := awsservice.GetInstanceId()
 	t.namespace = fmt.Sprintf("%sfields_test_%s", namespacePrefix, instanceID)
 	t.logGroupName = fmt.Sprintf("%sfields_test_%s", logGroupPrefix, instanceID)
 
@@ -140,6 +140,24 @@ func verifyEMFFields(logGroupName string) status.TestResult {
 			emfLog["instance"],
 			emfLog["job"],
 			emfLog["prom_metric_type"])
+
+		host, _ := emfLog["host"].(string)
+		if !strings.Contains(host, ".internal") && !strings.Contains(host, ".amazonaws.com") {
+			log.Printf("Invalid host format: %s", host)
+			return testResult
+		}
+
+		instance, _ := emfLog["instance"].(string)
+		if instance != "localhost:8101" {
+			log.Printf("Unexpected instance value: %s", instance)
+			return testResult
+		}
+
+		job, _ := emfLog["job"].(string)
+		if job != "prometheus_test_job" {
+			log.Printf("Unexpected job value: %s", job)
+			return testResult
+		}
 
 		metricType, _ := emfLog["prom_metric_type"].(string)
 		if _, exists := expectedMetricTypes[metricType]; exists {
