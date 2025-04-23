@@ -67,6 +67,8 @@ func applyHelmResources(k8ctl *utils.K8CtlManager, helmManager *utils.HelmManage
 		"manager.image.repository":                 utils.NewHelmValue(env.CloudwatchAgentOperatorRepository),
 		"manager.image.tag":                        utils.NewHelmValue(env.CloudwatchAgentOperatorTag),
 		"manager.image.repositoryDomainMap.public": utils.NewHelmValue(env.CloudwatchAgentOperatorRepositoryURL),
+		"agent.prometheus.targetAllocator.enabled": utils.NewHelmValue("true"),
+		"agent.mode":                               utils.NewHelmValue("statefulset"),
 	}
 
 	if env.AgentConfig != "" {
@@ -114,13 +116,16 @@ func applyCommonResources(k8ctl *utils.K8CtlManager, env *environment.MetaData) 
 		return err
 	}
 
+	fmt.Printf("Waiting for ApplyResource for SampleApp...%v\n", env.SampleApp)
 	if err := k8ctl.ApplyResource(env.SampleApp); err != nil {
 		return err
 	}
 
 	deploymentName := strings.TrimSuffix(filepath.Base(env.SampleApp), ".yaml")
+
+	fmt.Printf("deploymentName: %v\n", deploymentName)
 	fmt.Println("Waiting for Sample Application to initialize...")
-	return k8ctl.ConditionalWait("--for=condition=available", 300*time.Second,
+	return k8ctl.ConditionalWait("--for=condition=available", 4*time.Minute,
 		fmt.Sprintf("deployment/%s", deploymentName), "test")
 }
 
