@@ -91,7 +91,7 @@ func applyHelmResources(k8ctl *utils.K8CtlManager, helmManager *utils.HelmManage
 
 func applyAddonResources(k8ctl *utils.K8CtlManager, env *environment.MetaData) error {
 	if err := k8ctl.UpdateKubeConfig(env.EKSClusterName); err != nil {
-		return err
+		return fmt.Errorf("failed to update kube config: %v", err)
 	}
 
 	if err := updateAddonImages(k8ctl, env); err != nil {

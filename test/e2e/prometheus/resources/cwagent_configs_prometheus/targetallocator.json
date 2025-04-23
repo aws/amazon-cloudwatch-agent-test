@@ -1,0 +1,36 @@
+{
+  "agent": {
+    "config": {
+      "logs": {
+        "metrics_collected": {
+          "prometheus": {
+            "log_group_name": "prometheus_test",
+            "emf_processor": {
+              "metric_namespace": "PrometheusTest",
+              "metric_declaration": [
+                {
+                  "source_labels": [
+                    "label1"
+                  ],
+                  "label_matcher": "^value1$",
+                  "dimensions": [
+                    [
+                      "datapoint_id"
+                    ],
+                    [
+                      "datapoint_id",
+                      "foo_0"
+                    ]
+                  ],
+                  "metric_selectors": [
+                    "^test_*"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
