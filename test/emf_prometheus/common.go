@@ -51,7 +51,7 @@ func setupPrometheus(prometheusConfig, prometheusMetrics string, jobName string)
 	return nil
 }
 
-func cleanup(logGroupName string)  {
+func cleanup(logGroupName string) {
 	commands := []string{
 		"sudo pkill -f 'python3 -m http.server 8101'",
 		"sudo rm -f /tmp/prometheus.yaml /tmp/metrics",
@@ -80,6 +80,9 @@ func verifyMetricsInCloudWatch(namespace string) status.TestResult {
 	}
 
 	valueFetcher := metric.MetricValueFetcher{}
+	maxRetries := 12
+	retryInterval := 10 * time.Second
+
 	for _, m := range metricsToCheck {
 		log.Printf("Checking metric %s of type %s...", m.name, m.promType)
 		dims := []types.Dimension{{
@@ -87,17 +90,25 @@ func verifyMetricsInCloudWatch(namespace string) status.TestResult {
 			Value: aws.String(m.promType),
 		}}
 
-		values, err := valueFetcher.Fetch(namespace, m.name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
-		if err != nil {
-			log.Printf("Failed to fetch metric %s: %v", m.name, err)
-			return testResult
+		success := false
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			values, err := valueFetcher.Fetch(namespace, m.name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
+			if err != nil {
+				log.Printf("Attempt %d: Failed to fetch metric %s: %v", attempt, m.name, err)
+			} else if len(values) == 0 {
+				log.Printf("Attempt %d: No values found for metric %s", attempt, m.name)
+			} else {
+				log.Printf("Found %d values for metric %s: %v", len(values), m.name, values)
+				success = true
+				break
+			}
+			time.Sleep(retryInterval)
 		}
 
-		if len(values) == 0 {
-			log.Printf("No values found for metric %s", m.name)
+		if !success {
+			log.Printf("Metric %s not found after %d attempts", m.name, maxRetries)
 			return testResult
 		}
-		log.Printf("Found %d values for metric %s: %v", len(values), m.name, values)
 	}
 
 	testResult.Status = status.SUCCESSFUL
