@@ -137,7 +137,7 @@ resource "null_resource" "integration_test_run" {
         "sudo systemctl enable auditd",
         "echo Running SELinux test setup...",
         "sudo yum install selinux-policy selinux-policy-targeted policycoreutils-python-utils selinux-policy-devel -y",
-        "sudo setenforce 0",
+        "sudo setenforce 1",
         "echo below is either Permissive/Enforcing",
         "sudo getenforce",
         "sudo rm -r amazon-cloudwatch-agent-selinux",
