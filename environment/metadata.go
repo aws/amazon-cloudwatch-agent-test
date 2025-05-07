@@ -66,6 +66,7 @@ type MetaData struct {
 	SampleApp                                   string
 	AccountId                                   string
 	EKSInstallationType                         eksinstallationtype.EKSInstallationType
+	EnableTargetAllocator                       bool
 }
 
 type MetaDataStrings struct {
@@ -110,6 +111,7 @@ type MetaDataStrings struct {
 	SampleApp                                   string
 	AccountId                                   string
 	EKSInstallationType                         string
+	EnableTargetAllocator                       bool
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -161,6 +163,8 @@ func registerEKSE2ETestData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.OtelConfig), "otel_config", "", "OpenTelemetry configuration file path")
 	flag.StringVar(&(dataString.SampleApp), "sample_app", "", "Sample application manifest file path")
 	flag.StringVar(&(dataString.EKSInstallationType), "eks_installation_type", "HELM_CHART", "Installation type (HELM_CHART or EKS_ADDON)")
+	flag.BoolVar(&(dataString.EnableTargetAllocator), "enable_target_allocator", false, "Whether to enable target allocator (true/false")
+
 }
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
@@ -370,6 +374,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.OtelConfig = registeredMetaDataStrings.OtelConfig
 	metaDataStorage.SampleApp = registeredMetaDataStrings.SampleApp
 	metaDataStorage.AccountId = registeredMetaDataStrings.AccountId
+	metaDataStorage.EnableTargetAllocator = registeredMetaDataStrings.EnableTargetAllocator
 	fillEKSInstallationType(metaDataStorage, registeredMetaDataStrings)
 
 	return metaDataStorage

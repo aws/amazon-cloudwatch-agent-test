@@ -135,7 +135,7 @@ func testMetrics(t *testing.T) {
 func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 	t.Run("verify_agent_resources", func(t *testing.T) {
 		time.Sleep(e2e.WaitForResourceCreation)
-		e2e.VerifyAgentResources(t, clientset, "jmx")
+		e2e.VerifyAgentResourcesDaemonSet(t, clientset, "jmx")
 	})
 }
 

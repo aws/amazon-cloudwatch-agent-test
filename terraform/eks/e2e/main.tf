@@ -128,6 +128,19 @@ resource "aws_eks_addon" "this" {
   configuration_values = file("${var.test_dir}/${var.agent_config}")
 }
 
+# # Conditional resource for Target Allocator
+# resource "aws_eks_addon" "this" {
+#   count = var.eks_installation_type == "EKS_ADDON" ? 1 : 0
+#
+#   depends_on = [
+#     aws_eks_cluster.this,
+#     aws_eks_node_group.this
+#   ]
+#   addon_name           = var.addon_name
+#   cluster_name         = aws_eks_cluster.this.name
+#   configuration_values = file("${var.test_dir}/${var.agent_config}")
+# }
+
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_cluster.this,
@@ -197,7 +210,7 @@ resource "null_resource" "validator" {
       -agent_config="${var.test_dir}/${var.agent_config}" \
       ${var.otel_config != "" ? "-otel_config=\"${var.test_dir}/${var.otel_config}\"" : ""} \
       ${var.prometheus_config != "" ? "-prometheus_config=\"${var.test_dir}/${var.prometheus_config}\"" : ""} \
-      -sample_app="${var.test_dir}/${var.sample_app}" \
+      ${var.sample_app != "" ? "-sample_app=\"${var.test_dir}/${var.sample_app}\"" : ""} \
       -eks_installation_type=${var.eks_installation_type}
     EOT
   }
