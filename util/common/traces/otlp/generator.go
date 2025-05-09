@@ -6,6 +6,7 @@ package otlp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
@@ -82,6 +83,7 @@ func (g *OtlpTracesGenerator) Generate(ctx context.Context) error {
 }
 
 func (g *OtlpTracesGenerator) GetSegmentCount() (int, int) {
+	fmt.Println("Getting segment count inside function!", g)
 	return g.SegmentsGenerationCount, g.SegmentsEndedCount
 }
 

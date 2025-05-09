@@ -4,6 +4,7 @@
 package otlp
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -66,6 +67,7 @@ func TestTraces(t *testing.T) {
 				AgentConfigPath: testCase.agentConfigPath,
 				AgentRuntime:    agentRuntime,
 			}
+			fmt.Println("Before Trace test")
 			err := base.TraceTest(t, OtlpTestCfg)
 			require.NoError(t, err, "TraceTest failed because %s", err)
 

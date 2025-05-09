@@ -6,6 +6,7 @@ package base
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -61,13 +62,23 @@ func TraceTest(t *testing.T, traceTest TraceTestConfig) error {
 	startTime := time.Now()
 	common.CopyFile(traceTest.AgentConfigPath, common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false), "Couldn't Start the agent")
+	fmt.Println("Agent started !!!!")
 	go func() {
 		require.NoError(t, traceTest.Generator.StartSendingTraces(context.Background()), "load generator exited with error")
 	}()
-	time.Sleep(traceTest.AgentRuntime)
+	fmt.Println("Agent going to sleep!")
+
+	time.Sleep(1*time.Second)
+	fmt.Println("Agent awake!")
+	fmt.Println("Stopping sending traces!")
+
 	traceTest.Generator.StopSendingTraces()
+	fmt.Println("Stopped sending traces!")
+
 	time.Sleep(AGENT_SHUTDOWN_DELAY)
 	common.StopAgent()
+
+	fmt.Println("Getting segment count!")
 	testsGenerated, testsEnded := traceTest.Generator.GetSegmentCount()
 	t.Logf("For %s , Test Cases Generated %d | Test Cases Ended: %d", traceTest.Name, testsGenerated, testsEnded)
 	endTime := time.Now()
