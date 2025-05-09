@@ -68,7 +68,7 @@ func TraceTest(t *testing.T, traceTest TraceTestConfig) error {
 	}()
 	fmt.Println("Agent going to sleep!")
 
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Minute)
 	fmt.Println("Agent awake!")
 	fmt.Println("Stopping sending traces!")
 
@@ -79,6 +79,7 @@ func TraceTest(t *testing.T, traceTest TraceTestConfig) error {
 	common.StopAgent()
 
 	fmt.Println("Getting segment count!")
+
 	testsGenerated, testsEnded := traceTest.Generator.GetSegmentCount()
 	t.Logf("For %s , Test Cases Generated %d | Test Cases Ended: %d", traceTest.Name, testsGenerated, testsEnded)
 	endTime := time.Now()
