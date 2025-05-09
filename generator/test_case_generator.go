@@ -155,14 +155,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:     "./test/emf_prometheus",
 			maxAttempts: 2,
 		},
-		//{testDir: "./test/metric_value_benchmark"}, // Skipping test until it is fixed!
+		{testDir: "./test/metric_value_benchmark"}, // Skipping test until it is fixed!
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/selinux_negative_test"},
-		//{testDir: "./test/otlp"}, // Skipping test until it is fixed!
+		{testDir: "./test/otlp"}, // Skipping test until it is fixed!
 		{
 			testDir: "./test/lvm",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
