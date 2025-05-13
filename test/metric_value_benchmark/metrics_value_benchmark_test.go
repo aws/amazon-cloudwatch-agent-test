@@ -8,7 +8,6 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"testing"
 
@@ -127,17 +126,6 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &RenameSSMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &JMXTomcatJVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &JMXKafkaTestRunner{BaseTestRunner: test_runner.BaseTestRunner{DimensionFactory: factory}, env: env}},
-		}
-
-		// Only add entity related tests if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
-		if os.Getenv("AWS_REGION") == "us-west-2" {
-			ec2TestRunners = append(ec2TestRunners,
-				&test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-				&test_runner.TestRunner{TestRunner: &StatsDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
-				&test_runner.TestRunner{TestRunner: &CollectDEntityCustomServiceAndEnvironmentRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-				&test_runner.TestRunner{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-				&test_runner.TestRunner{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
-			)
 		}
 
 		// Only add the Disk IO EBS test if not running on SELinux
