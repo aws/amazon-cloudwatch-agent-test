@@ -86,7 +86,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			maxAttempts: 2,
 		},
 		{testDir: "./test/entity_metrics_benchmark"},
-		{testDir: "./test/metric_value_benchmark_legacy"},
+		{testDir: "./test/metric_value_benchmark"},
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
