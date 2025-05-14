@@ -24,6 +24,7 @@ import (
 const (
 	entityResourceType = "AWS::EC2::Instance"
 	entityType         = "AWS::Resource"
+	region             = "us-west-2"
 )
 
 type DiskIOEBSTestRunner struct {
