@@ -1,102 +1,26 @@
-awsemf/prometheus:
-  add_entity: false
-  certificate_file_path: ""
-  detailed_metrics: false
-  dimension_rollup_option: NoDimensionRollup
-  disable_metric_extraction: false
-  eks_fargate_container_insights_enabled: false
-  endpoint: ""
-  enhanced_container_insights: false
-  imds_retries: 1
-  local_mode: false
-  log_group_name: prometheus_test_otel_bump
-  log_retention: 0
-  log_stream_name: '{JobName}'
-  max_retries: 2
-  metric_declarations:
-    - dimensions:
-        - - prom_type
-        - - prom_type
-          - quantile
-      label_matchers:
-        - label_names:
-            - include
-          regex: ^yes$
-          separator: ;
-      metric_name_selectors:
-        - ^prometheus_test*
-  middleware: agenthealth/logs
-  namespace: OtelBump
-  no_verify_ssl: false
-  num_workers: 8
-  output_destination: cloudwatch
-  profile: ""
-  proxy_address: ""
-  region: us-west-2
-  request_timeout_seconds: 30
-  resource_arn: ""
-  resource_to_telemetry_conversion:
-    enabled: true
-  retain_initial_value_of_delta_metric: false
-  role_arn: ""
-  version: "0"
-extensions:
-  agenthealth/logs:
-    is_usage_data_enabled: true
-    stats:
-      operations:
-        - PutLogEvents
-      usage_flags:
-        mode: EC2
-        region_type: EC2M
-  agenthealth/statuscode:
-    is_status_code_enabled: true
-    is_usage_data_enabled: true
-    stats:
-      usage_flags:
-        mode: EC2
-        region_type: EC2M
-  entitystore:
-    mode: ec2
-    region: us-west-2
-processors:
-  batch/prometheus/cloudwatchlogs:
-    metadata_cardinality_limit: 1000
-    send_batch_max_size: 0
-    send_batch_size: 8192
-    timeout: 5s
 receivers:
-  telegraf_prometheus:
-    collection_interval: 10s
-    initial_delay: 1s
-    timeout: 0s
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  awsemf/otel-merging:
+    namespace: "CWAgent-testing-otel"
+    log_group_name: "CWA"
+    dimension_rollup_option: "NoDimensionRollup"
+    log_stream_name: "Testing-otel"
+    resource_to_telemetry_conversion:
+      enabled: true
+    version: "0"
+
+extensions:
+  health_check:
+
 service:
   extensions:
-    - agenthealth/logs
-    - agenthealth/statuscode
-    - entitystore
+    - health_check
   pipelines:
-    metrics/prometheus/cloudwatchlogs:
-      exporters:
-        - awsemf/prometheus
-      processors:
-        - batch/prometheus/cloudwatchlogs
-      receivers:
-        - telegraf_prometheus
-  telemetry:
-    logs:
-      development: false
-      disable_caller: false
-      disable_stacktrace: false
-      encoding: console
-      level: debug
-      sampling:
-        enabled: true
-        initial: 2
-        thereafter: 500
-        tick: 10s
     metrics:
-      address: ""
-      level: None
-    traces:
-      level: None
+      receivers: [otlp]
+      exporters: [awsemf/otel-merging]
