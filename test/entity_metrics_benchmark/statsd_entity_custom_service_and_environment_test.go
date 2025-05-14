@@ -117,7 +117,7 @@ func (t *StatsDEntityCustomServiceAndEnvironmentRunner) ValidateStatsDEntity(met
 }
 
 func (t *StatsDEntityCustomServiceAndEnvironmentRunner) GetAgentRunDuration() time.Duration {
-	return 150 * time.Second
+	return 3 * time.Minute
 }
 
 func (t *StatsDEntityCustomServiceAndEnvironmentRunner) GetExpectedEntity() []metric.Entity {

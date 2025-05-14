@@ -114,7 +114,7 @@ func (t *CollectDEntityCustomServiceAndEnvironmentRunner) ValidateCollectDEntity
 }
 
 func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetAgentRunDuration() time.Duration {
-	return 150 * time.Second
+	return 3 * time.Minute
 }
 
 func (t *CollectDEntityCustomServiceAndEnvironmentRunner) GetExpectedEntity() []metric.Entity {

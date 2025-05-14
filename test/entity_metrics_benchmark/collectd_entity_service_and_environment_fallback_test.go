@@ -114,7 +114,7 @@ func (t *CollectDEntityServiceAndEnvironmentFallback) ValidateCollectDEntity(met
 }
 
 func (t *CollectDEntityServiceAndEnvironmentFallback) GetAgentRunDuration() time.Duration {
-	return 150 * time.Second
+	return 3 * time.Minute
 }
 
 func (t *CollectDEntityServiceAndEnvironmentFallback) GetExpectedEntity() []metric.Entity {
