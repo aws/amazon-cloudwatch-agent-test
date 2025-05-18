@@ -7,10 +7,8 @@ package amp
 
 import (
 	_ "embed"
-	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/suite"
-	"path/filepath"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -125,27 +123,6 @@ func (t HistogramTestRunner) getOtlpHistogramMetrics() []string {
 		"my_cumulative_histogram",
 		"my_delta_histogram",
 	}
-}
-
-func (t HistogramTestRunner) SetupBeforeAgentRun() error {
-	err := t.BaseTestRunner.SetupBeforeAgentRun()
-	if err != nil {
-		return err
-	}
-
-	// replace AMP workspace ID placeholder with a testing workspace ID from metadata
-	agentConfigPath := filepath.Join("agent_configs", t.GetAgentConfigFileName())
-	ampCommands := []string{
-		"sed -ie 's/{workspace_id}/" + metadata.AmpWorkspaceId + "/g' " + agentConfigPath,
-		// use below to add JMX metrics then update agent config & GetMeasuredMetrics()
-		//"nohup java -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=2030 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.rmi.port=2030  -Dcom.sun.management.jmxremote.host=0.0.0.0  -Djava.rmi.server.hostname=0.0.0.0 -Dserver.port=8090 -Dspring.application.admin.enabled=true -jar jars/spring-boot-web-starter-tomcat.jar > /tmp/spring-boot-web-starter-tomcat-jar.txt 2>&1 &",
-	}
-	err = common.RunCommands(ampCommands)
-	if err != nil {
-		return fmt.Errorf("failed to modify agent configuration: %w", err)
-	}
-
-	return t.SetUpConfig()
 }
 
 func (t HistogramTestRunner) SetupAfterAgentRun() error {

@@ -5,11 +5,6 @@
     "debug": true
   },
   "metrics": {
-    "metrics_destinations": {
-      "amp": {
-        "workspace_id": "{workspace_id}"
-      }
-    },
     "metrics_collected": {
       "otlp": {
         "http_endpoint": "0.0.0.0:1234"
