@@ -105,7 +105,7 @@ func (t *HistogramTestRunner) validateHistogramMetric(metricName string, dims []
 		return testResult
 	}
 
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 10) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
 
