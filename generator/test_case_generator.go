@@ -73,6 +73,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/amp",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		}, {
+			testDir: "./test/histograms",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 	},
 	testTypeKeyEc2SELinux: {
