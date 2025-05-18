@@ -92,7 +92,7 @@ func (t *HistogramTestRunner) validateOtlpHistogramMetrics() status.TestGroupRes
 }
 
 func (t *HistogramTestRunner) validateHistogramMetric(metricName string, dims []types.Dimension) status.TestResult {
-	namespace := ""
+	namespace := "CWAgent/OTLPHistograms"
 
 	testResult := status.TestResult{
 		Name:   metricName,
@@ -100,12 +100,12 @@ func (t *HistogramTestRunner) validateHistogramMetric(metricName string, dims []
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, metric.Statistics("todo"), metric.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, "percentile", metric.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
 	}
 
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
+	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 10) {
 		return testResult
 	}
 
