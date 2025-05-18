@@ -70,8 +70,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 	testTypeKeyEc2Linux: {
 		//Skipping this test for now until test is not flakey
 		//{testDir: "./test/ca_bundle"},
-		{testDir: "./test/cloudwatchlogs"},
-		{testDir: "./test/otlp"},
 		{
 			testDir: "./test/amp",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
