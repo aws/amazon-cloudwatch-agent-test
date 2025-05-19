@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
@@ -88,7 +89,7 @@ func (t *HistogramTestRunner) validateOtlpHistogramMetrics() status.TestGroupRes
 	testResults := make([]status.TestResult, len(histogramMetrics))
 
 	for i, metricName := range histogramMetrics {
-		testResults[i] = t.validateHistogramMetric(metricName, []types.Dimension{})
+		testResults[i] = t.validateHistogramMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -97,7 +98,7 @@ func (t *HistogramTestRunner) validateOtlpHistogramMetrics() status.TestGroupRes
 	}
 }
 
-func (t *HistogramTestRunner) validateHistogramMetric(metricName string, dims []types.Dimension) status.TestResult {
+func (t *HistogramTestRunner) validateHistogramMetric(metricName string) status.TestResult {
 	namespace := "CWAgent/OTLPHistograms"
 
 	testResult := status.TestResult{
@@ -105,9 +106,16 @@ func (t *HistogramTestRunner) validateHistogramMetric(metricName string, dims []
 		Status: status.FAILED,
 	}
 
+	dims := getDimensions(metadata.InstanceId)
+	if len(dims) == 0 {
+		log.Printf("Unable to determine dimensions for %s\n", metricName)
+		return testResult
+	}
+
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, "percentile", metric.HighResolutionStatPeriod)
+	values, err := fetcher.Fetch(namespace, metricName, dims, "Maximum", metric.HighResolutionStatPeriod)
 	if err != nil {
+		log.Printf("Unable to fetch metrics for namespace {%s} metric name {%s} dims: {%v}\n", namespace, metricName, dims)
 		return testResult
 	}
 
@@ -128,9 +136,30 @@ func (t HistogramTestRunner) GetMeasuredMetrics() []string {
 
 func (t HistogramTestRunner) getOtlpHistogramMetrics() []string {
 	return []string{
-		"my_cumulative_histogram",
-		"my_delta_histogram",
+		"my.cumulative.histogram",
+		"my.delta.histogram",
 	}
+}
+
+func getDimensions(metricName string) []types.Dimension {
+	env := environment.GetEnvironmentMetaData()
+	factory := dimension.GetDimensionFactory(*env)
+	dims, failed := factory.GetDimensions([]dimension.Instruction{
+		{
+			Key:   "InstanceId",
+			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "InstanceType",
+			Value: dimension.UnknownDimensionValue(),
+		},
+	})
+
+	if len(failed) > 0 {
+		return []types.Dimension{}
+	}
+
+	return dims
 }
 
 func (t HistogramTestRunner) SetupAfterAgentRun() error {
