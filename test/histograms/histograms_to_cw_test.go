@@ -7,10 +7,12 @@ package amp
 
 import (
 	_ "embed"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"github.com/stretchr/testify/suite"
 	"log"
 	"testing"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -77,6 +79,10 @@ func (t HistogramTestRunner) Validate() status.TestGroupResult {
 	return t.validateOtlpHistogramMetrics()
 }
 
+func (t *HistogramTestRunner) GetAgentRunDuration() time.Duration {
+	return 3 * time.Minute
+}
+
 func (t *HistogramTestRunner) validateOtlpHistogramMetrics() status.TestGroupResult {
 	histogramMetrics := t.getOtlpHistogramMetrics()
 	testResults := make([]status.TestResult, len(histogramMetrics))
@@ -105,7 +111,7 @@ func (t *HistogramTestRunner) validateHistogramMetric(metricName string, dims []
 		return testResult
 	}
 
-	log.Println("Metrics retrieved from cloudwatch for Metric Name {%s} are: %v", metricName, values)
+	log.Printf("Metrics retrieved from cloudwatch for Metric Name {%s} are: %v\n", metricName, values)
 
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
