@@ -9,11 +9,11 @@ import (
 	_ "embed"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/suite"
+	"log"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
@@ -105,6 +105,8 @@ func (t *HistogramTestRunner) validateHistogramMetric(metricName string, dims []
 		return testResult
 	}
 
+	log.Println("Metrics retrieved from cloudwatch for Metric Name {%s} are: %v", metricName, values)
+
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
 		return testResult
 	}
@@ -128,38 +130,6 @@ func (t HistogramTestRunner) getOtlpHistogramMetrics() []string {
 func (t HistogramTestRunner) SetupAfterAgentRun() error {
 	// OTLP source has some special setup after the agent starts
 	return common.RunAsyncCommand("resources/otlp_pusher.sh")
-}
-
-func getDimensions() []types.Dimension {
-	factory := dimension.GetDimensionFactory(*metadata)
-	dims, failed := factory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "InstanceId",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "InstanceType",
-			Value: dimension.UnknownDimensionValue(),
-		},
-	})
-
-	if len(failed) > 0 {
-		return []types.Dimension{}
-	}
-
-	return dims
-}
-
-func matchDimensions(labels map[string]interface{}) bool {
-	if len(appendDims) > len(labels) {
-		return false
-	}
-	for k, v := range appendDims {
-		if lv, found := labels[k]; !found || lv != v {
-			return false
-		}
-	}
-	return true
 }
 
 var _ test_runner.ITestRunner = (*HistogramTestRunner)(nil)
