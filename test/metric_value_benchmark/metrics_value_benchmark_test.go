@@ -8,7 +8,6 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"testing"
 
@@ -110,7 +109,7 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 	if ec2TestRunners == nil {
 		factory := dimension.GetDimensionFactory(*env)
 		ec2TestRunners = []*test_runner.TestRunner{
-			{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &StatsdTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
 			{TestRunner: &DiskTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &NetStatTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &PrometheusTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
@@ -127,11 +126,6 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &RenameSSMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &JMXTomcatJVMTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &JMXKafkaTestRunner{BaseTestRunner: test_runner.BaseTestRunner{DimensionFactory: factory}, env: env}},
-		}
-
-		// Only add EntityMetricsTestRunner if in us-west-2 (we don't have access to ListEntitiesForMetric in CN/ITAR)
-		if os.Getenv("AWS_REGION") == "us-west-2" {
-			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &EntityMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
 		}
 
 		// Only add the Disk IO EBS test if not running on SELinux
