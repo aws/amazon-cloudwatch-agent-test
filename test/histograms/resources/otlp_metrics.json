@@ -131,12 +131,12 @@
                 "aggregationTemporality": 2,
                 "dataPoints": [
                   {
-                    "startTimeUnixNano": START_TIME,
+                    "startTimeUnixNano": INITIAL_START_TIME,
                     "timeUnixNano": START_TIME,
-                    "count": 2,
-                    "sum": 2,
-                    "bucketCounts": [1,1],
-                    "explicitBounds": [1],
+                    "count": CUMULATIVE_HIST_COUNT,
+                    "sum": CUMULATIVE_HIST_SUM,
+                    "bucketCounts": [1,CUMULATIVE_HIST_COUNT],
+                    "explicitBounds": [1, 2],
                     "min": 0,
                     "max": 2,
                     "attributes": [
