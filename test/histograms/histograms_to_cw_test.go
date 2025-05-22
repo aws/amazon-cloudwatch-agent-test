@@ -22,18 +22,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-// NOTE: this should match with append_dimensions under metrics in agent config
-var appendDims = map[string]string{
-	"d1": "foo",
-	"d2": "bar",
-}
-
 var metadata *environment.MetaData
 
 var (
 	testRunners []*test_runner.TestRunner = []*test_runner.TestRunner{
 		{
-			TestRunner: &HistogramTestRunner{},
+			TestRunner: &OtlpHistogramTestRunner{},
 		},
 	}
 )
@@ -61,30 +55,30 @@ func (suite *HistogramTestSuite) TestAllInSuite() {
 	for _, testRunner := range testRunners {
 		suite.AddToSuiteResult(testRunner.Run())
 	}
-	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Assume Role Test Suite Failed")
+	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Histogram to CW Test Suite Failed")
 }
 
-type HistogramTestRunner struct {
+type OtlpHistogramTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-func (t HistogramTestRunner) GetTestName() string {
+func (t OtlpHistogramTestRunner) GetTestName() string {
 	return "otlp_histograms"
 }
 
-func (t HistogramTestRunner) GetAgentConfigFileName() string {
+func (t OtlpHistogramTestRunner) GetAgentConfigFileName() string {
 	return "otlp_config.json"
 }
 
-func (t HistogramTestRunner) Validate() status.TestGroupResult {
+func (t OtlpHistogramTestRunner) Validate() status.TestGroupResult {
 	return t.validateOtlpHistogramMetrics()
 }
 
-func (t *HistogramTestRunner) GetAgentRunDuration() time.Duration {
+func (t *OtlpHistogramTestRunner) GetAgentRunDuration() time.Duration {
 	return 3 * time.Minute
 }
 
-func (t *HistogramTestRunner) validateOtlpHistogramMetrics() status.TestGroupResult {
+func (t *OtlpHistogramTestRunner) validateOtlpHistogramMetrics() status.TestGroupResult {
 	histogramMetrics := t.getOtlpHistogramMetrics()
 	testResults := make([]status.TestResult, len(histogramMetrics))
 
@@ -98,7 +92,7 @@ func (t *HistogramTestRunner) validateOtlpHistogramMetrics() status.TestGroupRes
 	}
 }
 
-func (t *HistogramTestRunner) validateHistogramMetric(metricName string) status.TestResult {
+func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) status.TestResult {
 	namespace := "CWAgent/OTLPHistograms"
 
 	testResult := status.TestResult{
@@ -129,12 +123,12 @@ func (t *HistogramTestRunner) validateHistogramMetric(metricName string) status.
 	return testResult
 }
 
-func (t HistogramTestRunner) GetMeasuredMetrics() []string {
+func (t OtlpHistogramTestRunner) GetMeasuredMetrics() []string {
 	// dummy function to satisfy the interface
 	return []string{}
 }
 
-func (t HistogramTestRunner) getOtlpHistogramMetrics() []string {
+func (t OtlpHistogramTestRunner) getOtlpHistogramMetrics() []string {
 	return []string{
 		"my.cumulative.histogram",
 		"my.delta.histogram",
@@ -162,9 +156,9 @@ func getDimensions(metricName string) []types.Dimension {
 	return dims
 }
 
-func (t HistogramTestRunner) SetupAfterAgentRun() error {
+func (t OtlpHistogramTestRunner) SetupAfterAgentRun() error {
 	// OTLP source has some special setup after the agent starts
 	return common.RunAsyncCommand("resources/otlp_pusher.sh")
 }
 
-var _ test_runner.ITestRunner = (*HistogramTestRunner)(nil)
+var _ test_runner.ITestRunner = (*OtlpHistogramTestRunner)(nil)
