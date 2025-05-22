@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package metric_value_benchmark
+package entity_metrics_benchmark
 
 import (
 	"encoding/json"
