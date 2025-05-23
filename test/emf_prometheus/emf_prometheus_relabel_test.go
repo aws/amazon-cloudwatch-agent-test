@@ -34,7 +34,7 @@ type RelabelTestRunner struct {
 }
 
 func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
-	instanceID:= awsservice.GetInstanceId()
+	instanceID := awsservice.GetInstanceId()
 	t.namespace = fmt.Sprintf("%srelabel_test_%s", namespacePrefix, instanceID)
 	t.logGroupName = fmt.Sprintf("%srelabel_test_%s", logGroupPrefix, instanceID)
 	log.Println("This is the namespace and the logGroupName", t.namespace, t.logGroupName)
