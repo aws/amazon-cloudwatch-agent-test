@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
 package otlp_histograms
 
 import (
@@ -90,7 +92,7 @@ func TestOTLPMetrics(t *testing.T) {
 					Value: aws.String("my.service"),
 				},
 			},
-			expected: 2, // Max value from the histogram
+			expected: 2,
 		},
 		{
 			name: "my.delta.exponential.histogram",
@@ -133,7 +135,7 @@ func TestOTLPMetrics(t *testing.T) {
 	fetcher := metric.MetricValueFetcher{}
 	namespace := "CWAgent"
 	stats := []metric.Statistics{
-		metric.MAXIMUM,
+		metric.MAXUMUM,
 		metric.MINIMUM,
 		metric.SUM,
 		metric.AVERAGE,
