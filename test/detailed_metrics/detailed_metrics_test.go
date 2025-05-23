@@ -24,12 +24,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-//go:embed resources/prometheus.yaml
-var prometheusConfig string
-
-//go:embed resources/prometheus_metrics
-var prometheusMetrics string
-
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
@@ -48,12 +42,13 @@ func TestDetailedMetricsToEMF(t *testing.T) {
 	common.TouchFile(common.AgentLogFile)
 	start := time.Now()
 
-	setupPrometheus(prometheusConfig, prometheusMetrics)
-
-	agentTranslatorCommand := `/opt/aws/amazon-cloudwatch-agent/bin/config-translator --input resources/agent_config.json \
-	--input-dir /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d \
-	--output /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml \
-	--mode ec2 --config /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml \
+	// translator only works on .tmp files
+	common.CopyFile("agent_configs/agent_config.json", "agent_configs/agent_config.json.tmp")
+	agentTranslatorCommand := `/opt/aws/amazon-cloudwatch-agent/bin/config-translator --input agent_configs/agent_config.json \
+	--input-dir agent_configs/ \
+	--output agent_configs/amazon-cloudwatch-agent.toml \
+	--mode ec2 -\
+	-config /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml \
 	--multi-config default`
 
 	out, err := exec.
@@ -63,12 +58,13 @@ func TestDetailedMetricsToEMF(t *testing.T) {
 	log.Printf("Translator ran")
 
 	setDetailedMetricsFlag()
+	log.Printf("Updated detailed metrics flag")
 
 	agentStartWithoutTranslatorCommand := `/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent \
 		-envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json \
 		-config /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml \
 		-otelconfig /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml \
-		-pidfile /opt/aws/amazon-cloudwatch-agent/var/amazon-cloudwatch-agent.pid`
+		-pidfile /opt/aws/amazon-cloudwatch-agent/var/amazon-cloudwatch-agent.pid &`
 
 	out, err = exec.
 		Command("bash", "-c", agentStartWithoutTranslatorCommand).
@@ -76,6 +72,8 @@ func TestDetailedMetricsToEMF(t *testing.T) {
 
 	require.NoError(t, err, fmt.Sprint(err)+string(out))
 	log.Printf("Agent has started")
+
+	common.RunAsyncCommand("resources/otlp_pusher.sh")
 
 	// ensure that there is enough time from the "start" time and the first log line,
 	// so we don't miss it in the GetLogEvents call

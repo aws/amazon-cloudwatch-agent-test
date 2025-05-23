@@ -1,0 +1,71 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "my.service"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "my.library",
+            "version": "1.0.0",
+            "attributes": [
+              {
+                "key": "my.scope.attribute",
+                "value": {
+                  "stringValue": "some scope attribute"
+                }
+              }
+            ]
+          },
+          "metrics": [
+            {
+              "name": "my.summary",
+              "unit": "ms",
+              "description": "I am a Summary metric",
+              "summary": {
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "count": 100,
+                    "sum": 5000.0,
+                    "quantileValues": [
+                      {
+                        "quantile": 0.50,
+                        "value": 43.5
+                      },
+                      {
+                        "quantile": 0.95,
+                        "value": 95.2
+                      },
+                      {
+                        "quantile": 0.99,
+                        "value": 97.8
+                      }
+                    ],
+                    "attributes": [
+                      {
+                        "key": "my.summary.attr",
+                        "value": {
+                          "stringValue": "some value"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
