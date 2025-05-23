@@ -144,3 +144,70 @@ func verifyUntypedMetricLogsAbsence(logGroupName string) status.TestResult {
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
+
+func verifyHistogramMetrics(namespace string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   "Histogram Metrics Verification",
+		Status: status.FAILED,
+	}
+
+	dims := []types.Dimension{
+		{
+			Name:  aws.String("prom_type"),
+			Value: aws.String("histogram"),
+		},
+	}
+
+	valueFetcher := metric.MetricValueFetcher{}
+
+	// Check histogram sum
+	sumValues, err := valueFetcher.Fetch(namespace, "prometheus_test_histogram_sum", dims, metric.AVERAGE, metric.MinuteStatPeriod)
+	if err != nil || len(sumValues) == 0 {
+		log.Printf("Error fetching histogram sum metric: %v", err)
+		return testResult
+	}
+	if sumValues[0] != 300 {
+		log.Printf("Unexpected histogram sum value: %v", sumValues[0])
+		return testResult
+	}
+
+	// Check histogram count
+	countValues, err := valueFetcher.Fetch(namespace, "prometheus_test_histogram_count", dims, metric.AVERAGE, metric.MinuteStatPeriod)
+	if err != nil || len(countValues) == 0 {
+		log.Printf("Error fetching histogram count metric: %v", err)
+		return testResult
+	}
+	if countValues[0] != 75 {
+		log.Printf("Unexpected histogram count value: %v", countValues[0])
+		return testResult
+	}
+
+	// Check histogram buckets
+	buckets := map[string]float64{
+		"0":    1,
+		"0.5":  2,
+		"2.5":  3,
+		"5":    4,
+		"+Inf": 5,
+	}
+
+	for le, expectedValue := range buckets {
+		bucketDims := append(dims, types.Dimension{
+			Name:  aws.String("le"),
+			Value: aws.String(le),
+		})
+
+		bucketValues, err := valueFetcher.Fetch(namespace, "prometheus_test_histogram_bucket", bucketDims, metric.AVERAGE, metric.MinuteStatPeriod)
+		if err != nil || len(bucketValues) == 0 {
+			log.Printf("Error fetching histogram bucket metric (le=%s): %v", le, err)
+			return testResult
+		}
+		if bucketValues[0] != expectedValue {
+			log.Printf("Unexpected histogram bucket value for le=%s: got %v, want %v", le, bucketValues[0], expectedValue)
+			return testResult
+		}
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}

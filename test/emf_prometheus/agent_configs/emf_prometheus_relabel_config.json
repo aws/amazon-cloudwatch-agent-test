@@ -1,32 +1,15 @@
 {
   "agent": {
-    "metrics_collection_interval": 10,
+    "metrics_collection_interval": 15,
     "run_as_user": "root",
-    "debug": true,
-    "logfile": ""
+    "debug": true
   },
   "logs": {
+    "log_group_name": "otlpTest",
     "metrics_collected": {
-      "prometheus": {
-        "prometheus_config_path": "/tmp/prometheus.yaml",
-        "log_group_name": "${LOG_GROUP_NAME}",
-        "emf_processor": {
-          "metric_namespace": "${NAMESPACE}",
-          "metric_declaration": [
-            {
-              "source_labels": ["include"],
-              "label_matcher": "^yes$",
-              "dimensions": [
-                ["prom_type"]
-              ],
-              "metric_selectors": [
-                "^prometheus_test*"
-              ]
-            }
-          ]
-        }
+      "otlp": {
+        "http_endpoint": "127.0.0.1:1234"
       }
-    },
-    "force_flush_interval": 5
+    }
   }
 }
