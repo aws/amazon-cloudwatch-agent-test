@@ -2,6 +2,9 @@
 
 CURRENT_TIME=$(date +%s%N)
 START_TIME=$CURRENT_TIME
+INITIAL_START_TIME=$CURRENT_TIME
+CUMULATIVE_HIST_COUNT=2
+CUMULATIVE_HIST_SUM=2
 
 if [ -z "$INSTANCE_ID" ]; then
     echo "INSTANCE_ID environment variable is not set"
@@ -18,24 +21,6 @@ cat <<EOF > /tmp/metrics_payload.json
             "key": "service.name",
             "value": {
               "stringValue": "my.service"
-            }
-          },
-          {
-            "key": "custom.attribute",
-            "value": {
-              "stringValue": "test-value"
-            }
-          },
-          {
-            "key": "environment",
-            "value": {
-              "stringValue": "production"
-            }
-          },
-          {
-            "key": "instance_id",
-            "value": {
-              "stringValue": "$INSTANCE_ID"
             }
           }
         ]
@@ -55,6 +40,63 @@ cat <<EOF > /tmp/metrics_payload.json
             ]
           },
           "metrics": [
+            {
+              "name": "my.delta.counter",
+              "unit": "1",
+              "description": "I am a Delta Counter",
+              "sum": {
+                "aggregationTemporality": 1,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "asDouble": 5,
+                    "startTimeUnixNano": $START_TIME,
+                    "timeUnixNano": $START_TIME,
+                    "attributes": [
+                      {
+                        "key": "my.delta.counter.attr",
+                        "value": {
+                          "stringValue": "some value"
+                        }
+                      },
+                      {
+                        "key": "instance_id",
+                        "value": {
+                          "stringValue": "$INSTANCE_ID"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "my.gauge",
+              "unit": "1",
+              "description": "I am a Gauge",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "asDouble": 10,
+                    "timeUnixNano": $START_TIME,
+                    "attributes": [
+                      {
+                        "key": "my.gauge.attr",
+                        "value": {
+                          "stringValue": "some value"
+                        }
+                      },
+                      {
+                        "key": "instance_id",
+                        "value": {
+                          "stringValue": "$INSTANCE_ID"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "name": "my.delta.histogram",
               "unit": "1",
@@ -79,15 +121,42 @@ cat <<EOF > /tmp/metrics_payload.json
                         }
                       },
                       {
-                        "key": "region",
+                        "key": "instance_id",
                         "value": {
-                          "stringValue": "us-west-2"
+                          "stringValue": "$INSTANCE_ID"
                         }
-                      },
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "my.cumulative.exponential.histogram",
+              "unit": "1",
+              "description": "I am an Cumulative Exponential Histogram",
+              "exponentialHistogram": {
+                "aggregationTemporality": 2,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": $START_TIME,
+                    "timeUnixNano": $START_TIME,
+                    "count": 3,
+                    "sum": 10,
+                    "scale": 0,
+                    "zeroCount": 1,
+                    "positive": {
+                      "offset": 1,
+                      "bucketCounts": [0,2]
+                    },
+                    "min": 0,
+                    "max": 5,
+                    "zeroThreshold": 0,
+                    "attributes": [
                       {
-                        "key": "status",
+                        "key": "my.cumulative.exponential.histogram.attr",
                         "value": {
-                          "stringValue": "active"
+                          "stringValue": "some value"
                         }
                       },
                       {

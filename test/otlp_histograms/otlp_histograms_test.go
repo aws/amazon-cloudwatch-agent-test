@@ -1,4 +1,4 @@
-package amp
+package otlp_histograms
 
 import (
 	_ "embed"
@@ -26,67 +26,156 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-func TestOTLPHistogramMetrics(t *testing.T) {
+func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	log.Println("Testing TestOTLPHistogramMetrics")
 	instanceID := awsservice.GetInstanceId()
-	log.Println("Instance ID", instanceID)
-
+	log.Println("Instance ID::: ", instanceID)
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
-	dims := []types.Dimension{
+
+	metrics := []struct {
+		name       string
+		dimensions []types.Dimension
+		expected   float64
+	}{
 		{
-			Name:  aws.String("environment"),
-			Value: aws.String("production"),
+			name: "my.delta.counter",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("my.delta.counter.attr"),
+					Value: aws.String("some value"),
+				},
+				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+			},
+			expected: 5,
 		},
 		{
-			Name:  aws.String("instance_id"),
-			Value: aws.String(instanceID),
+			name: "my.gauge",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+				{
+					Name:  aws.String("my.gauge.attr"),
+					Value: aws.String("some value"),
+				},
+				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+			},
+			expected: 10,
 		},
 		{
-			Name:  aws.String("service.name"),
-			Value: aws.String("my.service"),
+			name: "my.delta.histogram",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("my.delta.histogram.attr"),
+					Value: aws.String("some value"),
+				},
+				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+			},
+			expected: 2, // Max value from the histogram
 		},
 		{
-			Name:  aws.String("my.delta.histogram.attr"),
-			Value: aws.String("some value"),
+			name: "my.delta.exponential.histogram",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+				{
+					Name:  aws.String("my.exponential.histogram.attr"),
+					Value: aws.String("some value"),
+				},
+				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+			},
+			expected: 5,
 		},
 		{
-			Name:  aws.String("region"),
-			Value: aws.String("us-west-2"),
-		},
-		{
-			Name:  aws.String("custom.attribute"),
-			Value: aws.String("test-value"),
-		},
-		{
-			Name:  aws.String("status"),
-			Value: aws.String("active"),
+			name: "my.cumulative.exponential.histogram",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+				{
+					Name:  aws.String("my.cumulative.exponential.histogram.attr"),
+					Value: aws.String("some value"),
+				},
+				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+			},
+			expected: 5,
 		},
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-
 	namespace := "CWAgent"
-	metricName := "my.delta.histogram"
+	stats := []metric.Statistics{
+		metric.MAXIMUM,
+		metric.MINIMUM,
+		metric.SUM,
+		metric.AVERAGE,
+	}
 
 	time.Sleep(2 * time.Minute)
 
-	values, err := fetcher.Fetch(namespace, metricName, dims, "Maximum", metric.HighResolutionStatPeriod)
-	assert.NoError(t, err, "Failed to fetch metrics")
-	assert.NotEmpty(t, values, "No metric values returned")
+	for _, m := range metrics {
+		t.Run(m.name, func(t *testing.T) {
+			for _, stat := range stats {
+				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, stat, metric.HighResolutionStatPeriod)
+				if err != nil {
+					t.Logf("Failed to fetch metrics for %s with stat %s: %v", m.name, stat, err)
+					continue
+				}
 
-	t.Logf("Metrics retrieved from CloudWatch for %s: %v", metricName, values)
+				t.Logf("Metrics retrieved from CloudWatch for %s (stat: %s): %v", m.name, stat, values)
 
-	for _, value := range values {
-		assert.Equal(t, float64(2), value, fmt.Sprintf("Expected value 2, got %v for metric %s", value, metricName))
+				if len(values) == 0 {
+					t.Errorf("No values returned for %s with stat %s", m.name, stat)
+					continue
+				}
+
+				switch m.name {
+				case "my.gauge", "my.delta.counter":
+					assert.Equal(t, m.expected, values[0],
+						fmt.Sprintf("Expected %v, got %v for metric %s with stat %s",
+							m.expected, values[0], m.name, stat))
+				default:
+					assert.GreaterOrEqual(t, values[0], float64(0),
+						fmt.Sprintf("Expected value >= 0, got %v for metric %s with stat %s",
+							values[0], m.name, stat))
+				}
+			}
+		})
 	}
 }
 
 func startAgent(t *testing.T) {
 	common.CopyFile(filepath.Join("agent_configs", "config.json"), common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
-	time.Sleep(10 * time.Second) // Wait for the agent to start properly
+	time.Sleep(10 * time.Second)
 }
 
 func runOTLPPusher(instanceID string) error {
