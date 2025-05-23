@@ -106,17 +106,19 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) sta
 		return testResult
 	}
 
+	stats := []metric.Statistics{metric.MAXUMUM, metric.MINIMUM, metric.MINIMUM, metric.SUM, metric.AVERAGE}
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespace, metricName, dims, "Maximum", metric.HighResolutionStatPeriod)
-	if err != nil {
-		log.Printf("Unable to fetch metrics for namespace {%s} metric name {%s} dims: {%v}\n", namespace, metricName, dims)
-		return testResult
-	}
+	for _, stat := range stats {
+		values, err := fetcher.Fetch(namespace, metricName, dims, stat, metric.HighResolutionStatPeriod)
+		if err != nil {
+			log.Printf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s} dims: {%v}\n", namespace, metricName, stat, dims)
+			return testResult
+		}
+		log.Printf("Metrics retrieved from cloudwatch for namespace {%s} metric Name {%s} stat {%s} dims{%v} are: %v\n", namespace, metricName, stat, dims, values)
 
-	log.Printf("Metrics retrieved from cloudwatch for Metric Name {%s} are: %v\n", metricName, values)
-
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
-		return testResult
+		if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
+			return testResult
+		}
 	}
 
 	testResult.Status = status.SUCCESSFUL
