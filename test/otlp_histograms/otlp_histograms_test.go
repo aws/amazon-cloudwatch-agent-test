@@ -143,7 +143,7 @@ func TestOTLPMetrics(t *testing.T) {
 		metric.AVERAGE,
 	}
 
-	time.Sleep(2 * time.Minute)
+	time.Sleep(3 * time.Minute)
 
 	for _, m := range metrics {
 		t.Run(m.name, func(t *testing.T) {
