@@ -75,7 +75,7 @@ func (t OtlpHistogramTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *OtlpHistogramTestRunner) GetAgentRunDuration() time.Duration {
-	return 3 * time.Minute
+	return 5 * time.Minute
 }
 
 func (t *OtlpHistogramTestRunner) validateOtlpHistogramMetrics() status.TestGroupResult {
@@ -111,10 +111,10 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) sta
 	for _, stat := range stats {
 		values, err := fetcher.Fetch(namespace, metricName, dims, stat, metric.HighResolutionStatPeriod)
 		if err != nil {
-			log.Printf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s} dims: {%v}\n", namespace, metricName, stat, dims)
+			log.Printf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s} dims: {%+v}\n", namespace, metricName, stat, dims)
 			return testResult
 		}
-		log.Printf("Metrics retrieved from cloudwatch for namespace {%s} metric Name {%s} stat {%s} dims{%v} are: %v\n", namespace, metricName, stat, dims, values)
+		log.Printf("Metrics retrieved from cloudwatch for namespace {%s} metric Name {%s} stat {%s} dims{%+v} are: %v\n", namespace, metricName, stat, dims, values)
 
 		if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
 			return testResult
