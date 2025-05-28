@@ -3,7 +3,10 @@
 
 package metric
 
-import "log"
+import (
+	"log"
+	"math"
+)
 
 var CpuMetrics = []string{"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
 	"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
@@ -40,4 +43,29 @@ func IsAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []fl
 	log.Printf("The average value %f for metric %s are within bound [%f, %f]",
 		metricAverageValue, metricName, lowerBoundValue, upperBoundValue)
 	return true
+}
+
+func FloatEqualWithEpsilon(a, b, epsilon float64) bool {
+	// Handle special cases like NaN and Inf
+	if math.IsNaN(a) || math.IsNaN(b) {
+		return false
+	}
+	if math.IsInf(a, 0) || math.IsInf(b, 0) {
+		return a == b
+	}
+
+	// Compare using relative error
+	diff := math.Abs(a - b)
+	if a == b {
+		return true
+	} else if a == 0 || b == 0 || diff < math.SmallestNonzeroFloat64 {
+		// Use absolute error if one of the numbers is zero
+		return diff < epsilon
+	}
+	// Use relative error
+	return diff/(math.Abs(a)+math.Abs(b)) < epsilon
+}
+
+func FloatEqual(a, b float64) bool {
+	return FloatEqualWithEpsilon(a, b, float64(1e-10))
 }

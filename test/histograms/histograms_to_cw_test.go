@@ -7,6 +7,7 @@ package amp
 
 import (
 	_ "embed"
+	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -30,6 +31,12 @@ var (
 			TestRunner: &OtlpHistogramTestRunner{},
 		},
 	}
+)
+
+var _ test_runner.ITestRunner = (*OtlpHistogramTestRunner)(nil)
+
+const (
+	namespace = "CWAgent/OTLPHistograms"
 )
 
 func init() {
@@ -71,20 +78,9 @@ func (t OtlpHistogramTestRunner) GetAgentConfigFileName() string {
 }
 
 func (t OtlpHistogramTestRunner) Validate() status.TestGroupResult {
-	return t.validateOtlpHistogramMetrics()
-}
-
-func (t *OtlpHistogramTestRunner) GetAgentRunDuration() time.Duration {
-	return 5 * time.Minute
-}
-
-func (t *OtlpHistogramTestRunner) validateOtlpHistogramMetrics() status.TestGroupResult {
-	histogramMetrics := t.getOtlpHistogramMetrics()
-	testResults := make([]status.TestResult, len(histogramMetrics))
-
-	for i, metricName := range histogramMetrics {
-		testResults[i] = t.validateHistogramMetric(metricName)
-	}
+	testResults := []status.TestResult{}
+	testResults = append(testResults, t.validateHistogramMetric("my.delta.histogram")...)
+	testResults = append(testResults, t.validateHistogramMetric("my.cumulative.histogram")...)
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -92,49 +88,13 @@ func (t *OtlpHistogramTestRunner) validateOtlpHistogramMetrics() status.TestGrou
 	}
 }
 
-func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) status.TestResult {
-	namespace := "CWAgent/OTLPHistograms"
-
-	testResult := status.TestResult{
-		Name:   metricName,
-		Status: status.FAILED,
-	}
-
-	dims := getDimensions(metadata.InstanceId)
-	if len(dims) == 0 {
-		log.Printf("Unable to determine dimensions for %s\n", metricName)
-		return testResult
-	}
-
-	stats := []metric.Statistics{metric.MAXUMUM, metric.MINIMUM, metric.MINIMUM, metric.SUM, metric.AVERAGE}
-	fetcher := metric.MetricValueFetcher{}
-	for _, stat := range stats {
-		values, err := fetcher.Fetch(namespace, metricName, dims, stat, metric.HighResolutionStatPeriod)
-		if err != nil {
-			log.Printf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s} dims: {%+v}\n", namespace, metricName, stat, dims)
-			return testResult
-		}
-		log.Printf("Metrics retrieved from cloudwatch for namespace {%s} metric Name {%s} stat {%s} dims{%+v} are: %v\n", namespace, metricName, stat, dims, values)
-
-		if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 1) {
-			return testResult
-		}
-	}
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+func (t *OtlpHistogramTestRunner) GetAgentRunDuration() time.Duration {
+	return 5 * time.Minute
 }
 
 func (t OtlpHistogramTestRunner) GetMeasuredMetrics() []string {
 	// dummy function to satisfy the interface
 	return []string{}
-}
-
-func (t OtlpHistogramTestRunner) getOtlpHistogramMetrics() []string {
-	return []string{
-		"my.cumulative.histogram",
-		"my.delta.histogram",
-	}
 }
 
 func getDimensions(metricName string) []types.Dimension {
@@ -163,4 +123,69 @@ func (t OtlpHistogramTestRunner) SetupAfterAgentRun() error {
 	return common.RunAsyncCommand("resources/otlp_pusher.sh")
 }
 
-var _ test_runner.ITestRunner = (*OtlpHistogramTestRunner)(nil)
+func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []status.TestResult {
+	results := []status.TestResult{}
+
+	dims := getDimensions(metadata.InstanceId)
+	if len(dims) == 0 {
+		log.Printf("Unable to determine dimensions for %s\n", metricName)
+		return []status.TestResult{{
+			Name:   metricName,
+			Status: status.FAILED,
+		}}
+	}
+
+	expected := []struct {
+		stat  types.Statistic
+		value float64
+	}{
+		{
+			stat:  types.StatisticMinimum,
+			value: 0,
+		},
+		{
+			stat:  types.StatisticMaximum,
+			value: 2,
+		},
+		{
+			stat:  types.StatisticSum,
+			value: 24,
+		},
+		{
+			stat:  types.StatisticAverage,
+			value: 2,
+		},
+		{
+			stat:  types.StatisticSampleCount,
+			value: 12,
+		},
+	}
+	fetcher := metric.MetricValueFetcher{}
+	for _, e := range expected {
+		testResult := status.TestResult{
+			Name:   fmt.Sprintf("%s/%s", metricName, e.stat),
+			Status: status.FAILED,
+		}
+		values, err := fetcher.Fetch(namespace, metricName, dims, metric.Statistics(e.stat), metric.MinuteStatPeriod)
+		if err != nil {
+			log.Printf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s}\n", namespace, metricName, e.stat)
+			results = append(results, testResult)
+			continue
+		}
+		if len(values) < 3 {
+			log.Printf("Not enough metrics retrieved for namespace {%s} metric Name {%s} stat {%s}. Need at least 3, got %d", namespace, metricName, e.stat, len(values))
+			results = append(results, testResult)
+			continue
+		}
+		// omit first/last metric as the 1m collection intervals may be missing data points from when the agent was started/stopped
+		if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values[1:len(values)-1], e.value) {
+			results = append(results, testResult)
+			continue
+		}
+
+		testResult.Status = status.SUCCESSFUL
+		results = append(results, testResult)
+	}
+
+	return results
+}
