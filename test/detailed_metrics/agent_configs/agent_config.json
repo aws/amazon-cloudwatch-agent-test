@@ -9,6 +9,7 @@
       "otlp": {
         "http_endpoint": "127.0.0.1:1234"
       }
-    }
+    },
+    "log_stream": "{instance_id}"
   }
 }

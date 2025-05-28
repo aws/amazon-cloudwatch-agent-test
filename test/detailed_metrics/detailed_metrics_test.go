@@ -6,13 +6,9 @@
 package cloudwatchlogs
 
 import (
-	"bufio"
-	_ "embed"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
-	"strings"
 	"testing"
 	"time"
 
@@ -42,22 +38,14 @@ func TestDetailedMetricsToEMF(t *testing.T) {
 	common.TouchFile(common.AgentLogFile)
 	start := time.Now()
 
-	// translator only works on .tmp files
-	common.CopyFile("agent_configs/agent_config.json", "agent_configs/agent_config.json.tmp")
-	agentTranslatorCommand := `/opt/aws/amazon-cloudwatch-agent/bin/config-translator --input agent_configs/agent_config.json \
-	--input-dir agent_configs/ \
-	--output agent_configs/amazon-cloudwatch-agent.toml \
-	--mode ec2 -\
-	-config /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml \
-	--multi-config default`
-
-	out, err := exec.
-		Command("bash", "-c", agentTranslatorCommand).
-		Output()
-	require.NoError(t, err, fmt.Sprint(err)+string(out))
+	// Since there is no way to set the detailed_metrics flag on the awsemfexporter using the agent's json configuration,
+	// run the translator, modify the yaml, and then run the agent
+	err := runTranslator()
+	require.NoError(t, err, "Error running translator")
 	log.Printf("Translator ran")
 
-	setDetailedMetricsFlag()
+	err = setDetailedMetricsFlag()
+	require.NoError(t, err, "Error setting detailed metrics flag in agent .yaml")
 	log.Printf("Updated detailed metrics flag")
 
 	agentStartWithoutTranslatorCommand := `/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent \
@@ -66,24 +54,21 @@ func TestDetailedMetricsToEMF(t *testing.T) {
 		-otelconfig /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml \
 		-pidfile /opt/aws/amazon-cloudwatch-agent/var/amazon-cloudwatch-agent.pid &`
 
-	out, err = exec.
-		Command("bash", "-c", agentStartWithoutTranslatorCommand).
-		Output()
-
-	require.NoError(t, err, fmt.Sprint(err)+string(out))
+	common.RunAsyncCommand(agentStartWithoutTranslatorCommand)
 	log.Printf("Agent has started")
 
 	common.RunAsyncCommand("resources/otlp_pusher.sh")
 
 	// ensure that there is enough time from the "start" time and the first log line,
 	// so we don't miss it in the GetLogEvents call
+	log.Printf("waiting for 5 minutes")
 	time.Sleep(5 * time.Minute)
 	common.StopAgent()
 	end := time.Now()
 
 	// check CWL to ensure we got the expected number of logs in the log stream
 	err = awsservice.ValidateLogs(
-		instanceId,
+		"/aws/cwagent", // OTLP -> EMF always go to this log group
 		instanceId,
 		&start,
 		&end,
@@ -93,72 +78,34 @@ func TestDetailedMetricsToEMF(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func setDetailedMetricsFlag() {
-	// add detailed metrics flag
-	filename := "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml"
-	input, err := os.Open(filename)
+func setDetailedMetricsFlag() error {
+	ampCommands := []string{
+		"sed -ie 's/detailed_metrics: false/detailed_metrics: true/g' /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml",
+	}
+	err := common.RunCommands(ampCommands)
 	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
-		return
+		return fmt.Errorf("failed to modify agent configuration: %w", err)
 	}
-	defer input.Close()
-
-	output, err := os.Create(filename + ".tmp")
-	if err != nil {
-		fmt.Printf("Error creating temporary file: %v\n", err)
-		return
-	}
-	defer output.Close()
-
-	scanner := bufio.NewScanner(input)
-	writer := bufio.NewWriter(output)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.Replace(line, "detailed_metrics: false", "detailed_metrics: true", 1)
-		fmt.Fprintln(writer, line)
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Printf("Error reading file: %v\n", err)
-		return
-	}
-
-	writer.Flush()
-
-	if err := os.Rename(filename+".tmp", filename); err != nil {
-		fmt.Printf("Error replacing file: %v\n", err)
-		return
-	}
-	//
-}
-
-func setupPrometheus(prometheusConfig, prometheusMetrics string) error {
-	commands := []string{
-		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus.yaml\n%s\nEOF", prometheusConfig),
-		fmt.Sprintf("cat <<EOF | sudo tee /tmp/metrics\n%s\nEOF", prometheusMetrics),
-		"sudo python3 -m http.server 8101 --directory /tmp &> /dev/null &",
-	}
-
-	err := common.RunCommands(commands)
-	if err != nil {
-		return fmt.Errorf("failed to setup Prometheus: %v", err)
-	}
-
-	// Wait for server to start
-	time.Sleep(2 * time.Second)
 	return nil
 }
 
-func cleanup(logGroupName string) {
-	commands := []string{
-		"sudo pkill -f 'python3 -m http.server 8101'",
-		"sudo rm -f /tmp/prometheus.yaml /tmp/metrics",
+func runTranslator() error {
+	// translator only works on .tmp files, so copy what we have to a .tmp
+	common.CopyFile("agent_configs/agent_config.json", "agent_configs/agent_config.json.tmp")
+	agentTranslatorCommand := `/opt/aws/amazon-cloudwatch-agent/bin/config-translator \
+	--input-dir agent_configs \
+	--output /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml \
+	--mode ec2 -\
+	-config /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml \
+	--multi-config default`
+
+	out, err := exec.
+		Command("bash", "-c", agentTranslatorCommand).
+		Output()
+	if err != nil {
+		log.Printf("Failed to run translator: %s", string(out))
+		return err
 	}
 
-	if err := common.RunCommands(commands); err != nil {
-		log.Printf("failed to cleanup: %v", err)
-	}
-
-	awsservice.DeleteLogGroup(logGroupName)
+	return err
 }
