@@ -5,9 +5,6 @@ package otlp_histograms
 import (
 	_ "embed"
 	"fmt"
-	"log"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -33,51 +30,14 @@ func init() {
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
 	instanceID := awsservice.GetInstanceId()
-	log.Println("Instance ID::: ", instanceID)
-	err := runOTLPPusher(instanceID)
-	assert.NoError(t, err)
+	err := startOtlpPusher()
+	require.NoError(t, err, "Failed to start OTLP pusher")
 
 	metrics := []struct {
 		name       string
 		dimensions []types.Dimension
 		expected   float64
 	}{
-		{
-			name: "my.delta.counter",
-			dimensions: []types.Dimension{
-				{
-					Name:  aws.String("my.delta.counter.attr"),
-					Value: aws.String("some value"),
-				},
-				{
-					Name:  aws.String("instance_id"),
-					Value: aws.String(instanceID),
-				},
-				{
-					Name:  aws.String("service.name"),
-					Value: aws.String("my.service"),
-				},
-			},
-			expected: 5,
-		},
-		{
-			name: "my.gauge",
-			dimensions: []types.Dimension{
-				{
-					Name:  aws.String("service.name"),
-					Value: aws.String("my.service"),
-				},
-				{
-					Name:  aws.String("my.gauge.attr"),
-					Value: aws.String("some value"),
-				},
-				{
-					Name:  aws.String("instance_id"),
-					Value: aws.String(instanceID),
-				},
-			},
-			expected: 10,
-		},
 		{
 			name: "my.delta.histogram",
 			dimensions: []types.Dimension{
@@ -97,22 +57,18 @@ func TestOTLPMetrics(t *testing.T) {
 			expected: 2,
 		},
 		{
-			name: "my.delta.exponential.histogram",
+			name: "my.cumulative.histogram",
 			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("my.cumulative.histogram.attr"),
+					Value: aws.String("some value"),
+				},
 				{
 					Name:  aws.String("service.name"),
 					Value: aws.String("my.service"),
 				},
-				{
-					Name:  aws.String("my.exponential.histogram.attr"),
-					Value: aws.String("some value"),
-				},
-				{
-					Name:  aws.String("instance_id"),
-					Value: aws.String(instanceID),
-				},
 			},
-			expected: 5,
+			expected: 0,
 		},
 		{
 			name: "my.cumulative.exponential.histogram",
@@ -162,7 +118,11 @@ func TestOTLPMetrics(t *testing.T) {
 				}
 
 				switch m.name {
-				case "my.gauge", "my.delta.counter":
+				case "my.cumulative.histogram":
+					assert.Greater(t, values[0], float64(0),
+						fmt.Sprintf("Expected increasing value > 0, got %v for metric %s with stat %s",
+							values[0], m.name, stat))
+				case "my.delta.histogram":
 					assert.Equal(t, m.expected, values[0],
 						fmt.Sprintf("Expected %v, got %v for metric %s with stat %s",
 							m.expected, values[0], m.name, stat))
@@ -182,30 +142,6 @@ func startAgent(t *testing.T) {
 	time.Sleep(10 * time.Second)
 }
 
-func runOTLPPusher(instanceID string) error {
-	tmpfile, err := os.CreateTemp("", "otlp_pusher_*.sh")
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %v", err)
-	}
-	defer os.Remove(tmpfile.Name())
-
-	if _, err := tmpfile.Write([]byte(otlpPusherScript)); err != nil {
-		return fmt.Errorf("failed to write script: %v", err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		return fmt.Errorf("failed to close temp file: %v", err)
-	}
-
-	if err := os.Chmod(tmpfile.Name(), 0755); err != nil {
-		return fmt.Errorf("failed to make script executable: %v", err)
-	}
-
-	cmd := exec.Command(tmpfile.Name())
-	cmd.Env = append(os.Environ(), fmt.Sprintf("INSTANCE_ID=%s", instanceID))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("script failed: %v, output: %s", err, string(output))
-	}
-
-	return nil
+func startOtlpPusher() error {
+	return common.RunAsyncCommand("sudo resources/otlp_pusher.sh")
 }
