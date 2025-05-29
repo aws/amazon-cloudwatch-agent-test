@@ -51,16 +51,13 @@ func TestDetailedMetricsToEMF(t *testing.T) {
 	require.NoError(t, err, "Error modifying settings in agent .yaml")
 	log.Printf("Updated agent yaml file")
 
-	agentStartWithoutTranslatorCommand := `/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent \
-		-envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json \
-		-config /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml \
-		-otelconfig /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml \
-		-pidfile /opt/aws/amazon-cloudwatch-agent/var/amazon-cloudwatch-agent.pid &`
-
-	common.RunAsyncCommand(agentStartWithoutTranslatorCommand)
+	err = startAgent()
+	require.NoError(t, err, "Unable to start the agent")
 	log.Printf("Agent has started")
 
-	common.RunAsyncCommand("resources/otlp_pusher.sh")
+	err = startOtlpPusher()
+	require.NoError(t, err, "Unable to start the OTLP pusher")
+	log.Printf("OTLP Pusher started")
 
 	// ensure that there is enough time from the "start" time and the first log line,
 	// so we don't miss it in the GetLogEvents call
@@ -84,9 +81,9 @@ func TestDetailedMetricsToEMF(t *testing.T) {
 func modifyAgentYaml() error {
 	instanceId := awsservice.GetInstanceId()
 	ampCommands := []string{
-		"sed -ie 's/detailed_metrics: false/detailed_metrics: true/g' /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml",
+		"sudo sed -ie 's/detailed_metrics: false/detailed_metrics: true/g' /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml",
 		// translator does not move logs::log_stream_name setting to the emf exporter so do it ourselves to ensure the log stream is created
-		fmt.Sprintf(`sed -ie 's/log_stream_name: ""/log_stream_name: "%s"/g' /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml`, instanceId),
+		fmt.Sprintf(`sudo sed -ie 's/log_stream_name: ""/log_stream_name: "%s"/g' /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml`, instanceId),
 	}
 	err := common.RunCommands(ampCommands)
 	if err != nil {
@@ -99,7 +96,7 @@ func runTranslator() error {
 	// translator only works on .tmp files, so copy what we have to a .tmp
 	common.CopyFile("agent_configs/agent_config.json", "agent_configs/agent_config.json.tmp")
 	agentTranslatorCommands := []string{
-		`/opt/aws/amazon-cloudwatch-agent/bin/config-translator \
+		`sudo /opt/aws/amazon-cloudwatch-agent/bin/config-translator \
 	--input-dir /home/ec2-user/amazon-cloudwatch-agent-test/test/detailed_metrics/agent_configs \
 	--output /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml \
 	--mode ec2 \
@@ -109,11 +106,28 @@ func runTranslator() error {
 
 	err := common.RunCommands(agentTranslatorCommands)
 	if err != nil {
-		log.Printf("Failed to run translator: %s", err)
 		return err
 	}
 
 	return err
+}
+
+func startAgent() error {
+	agentStartWithoutTranslatorCommand := `sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent \
+		-envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json \
+		-config /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml \
+		-otelconfig /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml \
+		-pidfile /opt/aws/amazon-cloudwatch-agent/var/amazon-cloudwatch-agent.pid &`
+
+	err := common.RunAsyncCommand(agentStartWithoutTranslatorCommand)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func startOtlpPusher() error {
+	return common.RunAsyncCommand("sudo resources/otlp_pusher.sh")
 }
 
 func validateLogs(events []types.OutputLogEvent) error {
