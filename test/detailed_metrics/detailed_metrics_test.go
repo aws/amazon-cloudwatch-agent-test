@@ -7,8 +7,10 @@ package cloudwatchlogs
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"math"
 	"testing"
 	"time"
 
@@ -62,7 +64,7 @@ func TestDetailedMetricsToEMF(t *testing.T) {
 
 	// ensure that there is enough time from the "start" time and the first log line,
 	// so we don't miss it in the GetLogEvents call
-	waittime := 1 * time.Minute
+	waittime := 45 * time.Second
 	log.Printf("waiting for %s", waittime)
 	time.Sleep(waittime)
 	common.StopAgent()
@@ -115,10 +117,18 @@ func runTranslator() error {
 }
 
 func validateLogs(events []types.OutputLogEvent) error {
-	// we expect:
-	// * 4 log events around the same time
+
+	errs := []error{}
+
+	// Each time the OTLP pusher sends metrics to the agent, we expect to see 4 log events:
 	// * 1 log event for each quantile (.5, .9, .95) for 3 total
 	// * 1 log event for sum/count
+	// the agent runs for 45s and the pusher pushes every 30s. so the agent could see 1 or 2 pushes from the OTLP pusher,
+	// so we would expect 4 or 8 log events in CloudWatch
+	if len(events) != 4 && len(events) != 8 {
+		return fmt.Errorf("unexpected number of events. expected 4 or 8, got %d", len(events))
+	}
+
 	foundQuantiles := make(map[string]bool)
 	foundSumCount := false
 
@@ -138,43 +148,45 @@ func validateLogs(events []types.OutputLogEvent) error {
 
 				// Verify my.summary exists and is a number
 				if _, ok := logData["my.summary"].(float64); !ok {
-					return fmt.Errorf("my.summary not found or not a number for quantile %s", quantile)
+					errs = append(errs, fmt.Errorf("my.summary not found or not a number for quantile %s", quantile))
 				}
 			default:
-				return fmt.Errorf("unexpected quantile value: %s", quantile)
+				errs = append(errs, fmt.Errorf("unexpected quantile value: %s", quantile))
 			}
 		} else {
 			// This should be the sum/count event
 			sumValue, hasSum := logData["my.summary_sum"].(float64)
 			countValue, hasCount := logData["my.summary_count"].(float64)
 
+			expectedSum := 5000.0
+			expectedCount := 100.0
+
 			if hasSum && hasCount {
 				foundSumCount = true
 
-				// Optional: Add specific value validations if needed
-				if countValue <= 0 {
-					return fmt.Errorf("invalid count value: %f", countValue)
+				if math.Abs(countValue-expectedCount) > 0.001 {
+					errs = append(errs, fmt.Errorf("expected count value %f, got %f", expectedCount, countValue))
 				}
-				if sumValue < 0 {
-					return fmt.Errorf("invalid sum value: %f", sumValue)
+				if math.Abs(sumValue-expectedSum) > 0.001 {
+					errs = append(errs, fmt.Errorf("expected sum value %f, got %f", expectedSum, sumValue))
 				}
 			}
 		}
 	}
 
-	// Verify we found all expected events
 	if !foundSumCount {
-		return fmt.Errorf("missing sum/count metrics")
+		errs = append(errs, fmt.Errorf("sum/count event not found"))
 	}
 
 	expectedQuantiles := []string{"0.5", "0.95", "0.99"}
-
 	for _, expectedQuantile := range expectedQuantiles {
 		if !foundQuantiles[expectedQuantile] {
-			return fmt.Errorf("missing quantile %s", expectedQuantile)
+			errs = append(errs, fmt.Errorf("missing quantile %s", expectedQuantile))
 		}
 	}
 
-	return nil
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
 	return nil
 }
