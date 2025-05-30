@@ -1,11 +1,13 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package windows_event_log_state
+package logfile
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -27,40 +29,42 @@ func init() {
 func TestStateFile(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 
-	common.CopyFile(filepath.Join("resources", "config.json"), common.ConfigOutputPath)
+	common.CopyFile(testConfigJSON, common.ConfigOutputPath)
 	log.Print("Starting agent...")
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
 	time.Sleep(5 * time.Second)
 
-	writer := &windowsEventWriter{
-		eventLogName:  "Application",
-		eventLogLevel: "INFORMATION",
-	}
-	generator, err := logs.NewGenerator(&logs.GeneratorConfig{
-		LinesPerSecond:  1,
-		LineLength:      50,
-		TimestampFormat: "2006-01-02T15:04:05.000",
-	}, writer)
+	paths, err := common.GetLogFilePaths(common.ConfigOutputPath)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 
-	log.Print("Generating windows events...")
+	log.Print("Generating log lines...")
 	startTime := time.Now()
-	wg.Add(1)
-	go generator.Generate(ctx, &wg)
+	for _, path := range paths {
+		writer, err := newFileWriter(path)
+		require.NoError(t, err)
+		generator, err := logs.NewGenerator(&logs.GeneratorConfig{
+			LinesPerSecond:  1,
+			LineLength:      50,
+			TimestampFormat: "2006-01-02T15:04:05.000",
+		}, writer)
+		require.NoError(t, err)
+		wg.Add(1)
+		go generator.Generate(ctx, &wg)
+	}
 	time.Sleep(30 * time.Second)
 
 	log.Print("Shutting down agent")
 	common.StopAgent()
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	log.Print("Restarting agent. Resuming log collection...")
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
 	time.Sleep(30 * time.Second)
 
-	log.Print("Stopping event generator")
+	log.Print("Stopping log generator")
 	cancel()
 	wg.Wait()
 	time.Sleep(10 * time.Second)
@@ -79,13 +83,34 @@ func TestStateFile(t *testing.T) {
 	))
 }
 
-type windowsEventWriter struct {
-	eventLogName  string
-	eventLogLevel string
+type fileWriter struct {
+	file *os.File
+	mu   sync.Mutex
 }
 
-var _ logs.EntryWriter = (*windowsEventWriter)(nil)
+var _ logs.EntryWriter = (*fileWriter)(nil)
 
-func (w windowsEventWriter) Write(entry string) error {
-	return common.CreateWindowsEvent(w.eventLogName, w.eventLogLevel, entry)
+func newFileWriter(filePath string) (*fileWriter, error) {
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create directories: %w", err)
+	}
+	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	return &fileWriter{file: f}, nil
+}
+
+func (w *fileWriter) Write(entry string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	_, err := w.file.WriteString(entry)
+	return err
+}
+
+func (w *fileWriter) Close() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.file.Close()
 }
