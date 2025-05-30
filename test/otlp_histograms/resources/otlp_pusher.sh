@@ -5,9 +5,6 @@ if [ -z "$INSTANCE_ID" ]; then
     exit 1
 fi
 
-CUMULATIVE_HIST_COUNT=2
-CUMULATIVE_HIST_SUM=2
-
 # Create the initial JSON payload
 cat <<EOF > /tmp/metrics_payload.json
 {
@@ -57,40 +54,6 @@ cat <<EOF > /tmp/metrics_payload.json
                     "attributes": [
                       {
                         "key": "my.delta.histogram.attr",
-                        "value": {
-                          "stringValue": "some value"
-                        }
-                      },
-                      {
-                        "key": "instance_id",
-                        "value": {
-                          "stringValue": "$INSTANCE_ID"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            },
-            {
-              "name": "my.cumulative.histogram",
-              "unit": "1",
-              "description": "I am a Cumulative Histogram",
-              "histogram": {
-                "aggregationTemporality": 2,
-                "dataPoints": [
-                  {
-                    "startTimeUnixNano": START_TIME,
-                    "timeUnixNano": START_TIME,
-                    "count": CUMULATIVE_HIST_COUNT,
-                    "sum": CUMULATIVE_HIST_SUM,
-                    "bucketCounts": [0,CUMULATIVE_HIST_COUNT],
-                    "explicitBounds": [1, 2],
-                    "min": 0,
-                    "max": 2,
-                    "attributes": [
-                      {
-                        "key": "my.cumulative.histogram.attr",
                         "value": {
                           "stringValue": "some value"
                         }
@@ -158,9 +121,7 @@ while true; do
     START_TIME=$(date +%s%N)
 
     cat /tmp/metrics_payload.json | \
-        sed -e "s/START_TIME/$START_TIME/g" \
-        -e "s/CUMULATIVE_HIST_COUNT/$CUMULATIVE_HIST_COUNT/g" \
-        -e "s/CUMULATIVE_HIST_SUM/$CUMULATIVE_HIST_SUM/g" > /tmp/metrics_payload_with_time.json
+        sed -e "s/START_TIME/$START_TIME/g" > /tmp/metrics_payload_with_time.json
 
     response=$(curl -s -w "\n%{http_code}" -X POST http://127.0.0.1:1234/v1/metrics \
       -H "Content-Type: application/json" \
@@ -176,9 +137,6 @@ while true; do
     else
         echo "Successfully sent metrics at $(date)"
     fi
-
-    CUMULATIVE_HIST_COUNT=$((CUMULATIVE_HIST_COUNT + 2))
-    CUMULATIVE_HIST_SUM=$((CUMULATIVE_HIST_SUM + 2))
 
     rm -f /tmp/metrics_payload_with_time.json
 
