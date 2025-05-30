@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 )
 
 func init() {
