@@ -23,9 +23,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-//go:embed resources/otlp_pusher.sh
-var otlpPusherScript string
-
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
@@ -33,11 +30,9 @@ func init() {
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
 	instanceID := awsservice.GetInstanceId()
-	log.Println("Instance ID::: ", instanceID)
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
-	// Allow time for metrics to be collected
 	time.Sleep(2 * time.Minute)
 
 	metrics := []struct {
