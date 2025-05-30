@@ -72,6 +72,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
+			testDir:     "./test/logfile_state",
+			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
+			maxAttempts: 1,
+		},
+		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
@@ -211,6 +216,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/windows"},
 		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
+		{
+			testDir:     "../../../test/logfile_state",
+			maxAttempts: 1,
+		},
+		{
+			testDir:     "../../../test/windows_event_logs_state",
+			maxAttempts: 1,
+		},
 		{testDir: "../../../test/feature/windows/event_logs"},
 		{
 			testDir: "../../../test/feature/windows/custom_start/userdata",
