@@ -138,6 +138,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 		{
+			testDir: "./test/otlp_histograms",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
 			testDir:      "./test/assume_role",
 			terraformDir: "terraform/ec2/assume_role",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -191,6 +195,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{
 			testDir: "./test/agent_otel_merging",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/otlp_histograms",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 		{

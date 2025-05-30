@@ -10,7 +10,7 @@ const (
 	AVERAGE                  Statistics = "Average"
 	SAMPLE_COUNT             Statistics = "SampleCount"
 	MINIMUM                  Statistics = "Minimum"
-	MAXUMUM                  Statistics = "Maxmimum"
+	MAXUMUM                  Statistics = "Maximum"
 	SUM                      Statistics = "Sum"
 	HighResolutionStatPeriod            = 10
 	MinuteStatPeriod                    = 60
