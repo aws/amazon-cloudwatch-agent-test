@@ -1,22 +1,26 @@
-package amp
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+package otlp_histograms
 
 import (
 	_ "embed"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 //go:embed resources/otlp_pusher.sh
@@ -26,93 +30,179 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-func TestOTLPHistogramMetrics(t *testing.T) {
+func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	log.Println("Testing TestOTLPHistogramMetrics")
 	instanceID := awsservice.GetInstanceId()
-	log.Println("Instance ID", instanceID)
-
+	log.Println("Instance ID::: ", instanceID)
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
-	dims := []types.Dimension{
+
+	// Allow time for metrics to be collected
+	time.Sleep(2 * time.Minute)
+
+	metrics := []struct {
+		name       string
+		dimensions []types.Dimension
+		expected   []struct {
+			stat  types.Statistic
+			value float64
+			check func(t *testing.T, expected, actual float64)
+		}
+	}{
 		{
-			Name:  aws.String("environment"),
-			Value: aws.String("production"),
+			name: "my.delta.histogram",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("my.delta.histogram.attr"),
+					Value: aws.String("some value"),
+				},
+				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+			},
+			expected: []struct {
+				stat  types.Statistic
+				value float64
+				check func(t *testing.T, expected, actual float64)
+			}{
+				{
+					stat:  types.StatisticMinimum,
+					value: 0,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.Equal(t, expected, actual)
+					},
+				},
+				{
+					stat:  types.StatisticMaximum,
+					value: 2,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.Equal(t, expected, actual)
+					},
+				},
+				{
+					stat:  types.StatisticSum,
+					value: 2,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.GreaterOrEqual(t, actual, expected)
+					},
+				},
+				{
+					stat:  types.StatisticAverage,
+					value: 1,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.InDelta(t, expected, actual, 0.01)
+					},
+				},
+				{
+					stat:  types.StatisticSampleCount,
+					value: 2,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.GreaterOrEqual(t, actual, expected)
+					},
+				},
+			},
 		},
 		{
-			Name:  aws.String("instance_id"),
-			Value: aws.String(instanceID),
-		},
-		{
-			Name:  aws.String("service.name"),
-			Value: aws.String("my.service"),
-		},
-		{
-			Name:  aws.String("my.delta.histogram.attr"),
-			Value: aws.String("some value"),
-		},
-		{
-			Name:  aws.String("region"),
-			Value: aws.String("us-west-2"),
-		},
-		{
-			Name:  aws.String("custom.attribute"),
-			Value: aws.String("test-value"),
-		},
-		{
-			Name:  aws.String("status"),
-			Value: aws.String("active"),
+			name: "my.cumulative.exponential.histogram",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+				{
+					Name:  aws.String("my.cumulative.exponential.histogram.attr"),
+					Value: aws.String("some value"),
+				},
+				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+			},
+			expected: []struct {
+				stat  types.Statistic
+				value float64
+				check func(t *testing.T, expected, actual float64)
+			}{
+				{
+					stat:  types.StatisticMinimum,
+					value: 0,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.Equal(t, expected, actual)
+					},
+				},
+				{
+					stat:  types.StatisticMaximum,
+					value: 5,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.Equal(t, expected, actual)
+					},
+				},
+				{
+					stat:  types.StatisticSum,
+					value: 10,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.GreaterOrEqual(t, actual, expected)
+					},
+				},
+				{
+					stat:  types.StatisticAverage,
+					value: 3.33,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.InDelta(t, expected, actual, 0.01)
+					},
+				},
+				{
+					stat:  types.StatisticSampleCount,
+					value: 3,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.GreaterOrEqual(t, actual, expected)
+					},
+				},
+			},
 		},
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-
 	namespace := "CWAgent"
-	metricName := "my.delta.histogram"
 
-	time.Sleep(2 * time.Minute)
+	for _, m := range metrics {
+		t.Run(m.name, func(t *testing.T) {
+			for _, e := range m.expected {
+				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, metric.Statistics(e.stat), metric.MinuteStatPeriod)
+				require.NoError(t, err)
+				require.GreaterOrEqual(t, len(values), 3)
 
-	values, err := fetcher.Fetch(namespace, metricName, dims, "Maximum", metric.HighResolutionStatPeriod)
-	assert.NoError(t, err, "Failed to fetch metrics")
-	assert.NotEmpty(t, values, "No metric values returned")
-
-	t.Logf("Metrics retrieved from CloudWatch for %s: %v", metricName, values)
-
-	for _, value := range values {
-		assert.Equal(t, float64(2), value, fmt.Sprintf("Expected value 2, got %v for metric %s", value, metricName))
+				for _, v := range values[1 : len(values)-1] {
+					e.check(t, e.value, v)
+				}
+			}
+		})
 	}
 }
 
 func startAgent(t *testing.T) {
 	common.CopyFile(filepath.Join("agent_configs", "config.json"), common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
-	time.Sleep(10 * time.Second) // Wait for the agent to start properly
+	time.Sleep(10 * time.Second)
 }
 
 func runOTLPPusher(instanceID string) error {
-	tmpfile, err := os.CreateTemp("", "otlp_pusher_*.sh")
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %v", err)
-	}
-	defer os.Remove(tmpfile.Name())
-
-	if _, err := tmpfile.Write([]byte(otlpPusherScript)); err != nil {
-		return fmt.Errorf("failed to write script: %v", err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		return fmt.Errorf("failed to close temp file: %v", err)
-	}
-
-	if err := os.Chmod(tmpfile.Name(), 0755); err != nil {
-		return fmt.Errorf("failed to make script executable: %v", err)
-	}
-
-	cmd := exec.Command(tmpfile.Name())
+	cmd := exec.Command("/bin/bash", "resources/otlp_pusher.sh")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("INSTANCE_ID=%s", instanceID))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("script failed: %v, output: %s", err, string(output))
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start script: %v", err)
 	}
+
+	go func() {
+		if err := cmd.Wait(); err != nil {
+			log.Printf("OTLP pusher script ended: %v", err)
+		}
+	}()
 
 	return nil
 }
