@@ -1,0 +1,13 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15
+  },
+  "logs": {
+    "metrics_collected": {
+      "kubernetes": {
+        "enhanced_container_insights": true
+      }
+    },
+    "force_flush_interval": 5
+  }
+}
