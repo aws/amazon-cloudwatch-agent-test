@@ -44,7 +44,7 @@ func (t *EMFFieldsTestRunner) GetAgentRunDuration() time.Duration {
 func (t *EMFFieldsTestRunner) Validate() status.TestGroupResult {
 	testResults := []status.TestResult{
 		verifyEMFFields(t.logGroupName),
-		verifyMetricsInCloudWatch(t.namespace),
+		VerifyMetricsInCloudWatch(t.namespace),
 	}
 
 	defer cleanup(t.logGroupName)

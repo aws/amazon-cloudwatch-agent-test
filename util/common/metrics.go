@@ -12,6 +12,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/emf_prometheus"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"log"
 	"net"
 	"net/http"
@@ -140,6 +142,15 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	// Start updating metrics
 	log.Printf("[Prometheus] Starting metric updates with interval: %v", config.UpdateInterval)
 	go mg.updateMetrics()
+
+	time.Sleep(2 * time.Minute)
+	result := emf_prometheus.VerifyMetricsInCloudWatch("CloudWatchAgentStress")
+
+	if result.Status == status.SUCCESSFUL {
+		log.Printf("[Prometheus] ✅ Metrics verification successful")
+	} else {
+		log.Printf("[Prometheus] ❌ Metrics verification failed")
+	}
 
 	// Wait for duration or error
 	log.Printf("[Prometheus] Running for duration: %v", duration)

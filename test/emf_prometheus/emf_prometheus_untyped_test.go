@@ -44,7 +44,7 @@ func (t *UntypedTestRunner) Validate() status.TestGroupResult {
 	testResults := []status.TestResult{
 		verifyUntypedMetricAbsence(t.namespace),
 		verifyUntypedMetricLogsAbsence(t.logGroupName),
-		verifyMetricsInCloudWatch(t.namespace),
+		VerifyMetricsInCloudWatch(t.namespace),
 	}
 	defer cleanup(t.logGroupName)
 

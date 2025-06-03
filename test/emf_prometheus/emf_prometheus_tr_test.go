@@ -35,7 +35,7 @@ type TokenReplacementTestRunner struct {
 const jobNamePrefix = "prometheus_job_"
 
 func (t *TokenReplacementTestRunner) SetupBeforeAgentRun() error {
-	instanceID:= awsservice.GetInstanceId()
+	instanceID := awsservice.GetInstanceId()
 	t.namespace = fmt.Sprintf("%str_test_%s", namespacePrefix, instanceID)
 	t.jobName = fmt.Sprintf("%str_test_%s", jobNamePrefix, instanceID)
 
@@ -71,7 +71,7 @@ func (t *TokenReplacementTestRunner) GetAgentRunDuration() time.Duration {
 func (t *TokenReplacementTestRunner) Validate() status.TestGroupResult {
 	testResults := []status.TestResult{
 		verifyLogGroupExists(t.jobName),
-		verifyMetricsInCloudWatch(t.namespace),
+		VerifyMetricsInCloudWatch(t.namespace),
 	}
 
 	defer cleanup(t.jobName)

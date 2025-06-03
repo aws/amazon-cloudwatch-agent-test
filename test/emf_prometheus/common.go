@@ -64,7 +64,7 @@ func cleanup(logGroupName string) {
 	awsservice.DeleteLogGroup(logGroupName)
 }
 
-func verifyMetricsInCloudWatch(namespace string) status.TestResult {
+func VerifyMetricsInCloudWatch(namespace string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   "Metrics Presence",
 		Status: status.FAILED,

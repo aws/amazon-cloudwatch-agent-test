@@ -86,8 +86,6 @@ var (
 				"procstat_memory_vms":  float64(1400000000),
 				"procstat_memory_data": float64(90000000),
 				"procstat_num_fds":     float64(15),
-				"net_bytes_sent":       float64(120000),
-				"net_packets_sent":     float64(120),
 			},
 		},
 		"5000": {
@@ -148,8 +146,6 @@ var (
 				"procstat_memory_vms":  float64(1450000000),
 				"procstat_memory_data": float64(180000000),
 				"procstat_num_fds":     float64(20),
-				"net_bytes_sent":       float64(600000),
-				"net_packets_sent":     float64(550),
 			},
 		},
 		"10000": {
@@ -210,8 +206,6 @@ var (
 				"procstat_memory_vms":  float64(1500000000),
 				"procstat_memory_data": float64(250000000),
 				"procstat_num_fds":     float64(25),
-				"net_bytes_sent":       float64(1200000),
-				"net_packets_sent":     float64(1100),
 			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
@@ -277,8 +271,6 @@ var (
 				"procstat_memory_vms":  float64(2000000000),
 				"procstat_memory_data": float64(500000000),
 				"procstat_num_fds":     float64(30),
-				"net_bytes_sent":       float64(2400000),
-				"net_packets_sent":     float64(2200),
 			},
 		},
 	}

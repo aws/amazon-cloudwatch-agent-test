@@ -64,7 +64,7 @@ func (t *RelabelTestRunner) SetupBeforeAgentRun() error {
 func (t *RelabelTestRunner) Validate() status.TestGroupResult {
 	testResults := []status.TestResult{
 		verifyRelabeledMetrics(t.logGroupName),
-		verifyMetricsInCloudWatch(t.namespace),
+		VerifyMetricsInCloudWatch(t.namespace),
 	}
 
 	defer cleanup(t.logGroupName)
