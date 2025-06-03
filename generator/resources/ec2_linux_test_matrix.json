@@ -1,5 +1,49 @@
 [
   {
+    "os": "ubuntu-20.04",
+    "username": "ubuntu",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go deb",
+    "ami": "cloudwatch-agent-integration-test-ubuntu*",
+    "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux"
+  },
+  {
+    "os": "ubuntu-22.04",
+    "username": "ubuntu",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go deb",
+    "ami": "cloudwatch-agent-integration-test-ubuntu-LTS-22*",
+    "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux"
+  },
+  {
+    "os": "ubuntu-24",
+    "username": "ubuntu",
+    "instanceType":"t3.medium",
+    "installAgentCommand": "go run ./install/install_agent.go deb",
+    "ami": "cloudwatch-agent-integration-test-ubuntu-24*",
+    "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux"
+  },
+  {
+    "os": "debian-12",
+    "username": "admin",
+    "instanceType": "c6g.large",
+    "installAgentCommand": "go run ./install/install_agent.go deb",
+    "ami": "cloudwatch-agent-integration-test-debian-12-arm64*",
+    "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
+    "arc": "arm64",
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux"
+  },
+  {
     "os": "al2",
     "username": "ec2-user",
     "instanceType":"t3a.medium",
@@ -40,6 +84,83 @@
     "ami": "cloudwatch-agent-integration-test-aarch64-al2023*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "arm64",
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
+  },
+  {
+    "os": "ol8",
+    "username": "ec2-user",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
+    "ami": "cloudwatch-agent-integration-test-ol8*",
+    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
+  },
+  {
+    "os": "ol9",
+    "username": "ec2-user",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
+    "ami": "cloudwatch-agent-integration-test-ol9*",
+    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
+  },
+  {
+    "os": "sles-15",
+    "username": "ec2-user",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
+    "ami": "cloudwatch-agent-integration-test-sles-15*",
+    "caCertPath": "/etc/ssl/ca-bundle.pem",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
+  },
+  {
+    "os": "rocky-linux-8",
+    "username": "rocky",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
+    "ami": "cloudwatch-agent-integration-test-rocky-linux-8*",
+    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
+  },
+  {
+    "os": "rocky-linux-9",
+    "username": "rocky",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
+    "ami": "cloudwatch-agent-integration-test-rocky-linux-9*",
+    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
+  },
+  {
+    "os": "alma-linux-8",
+    "username": "ec2-user",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
+    "ami": "cloudwatch-agent-integration-test-alma-linux-8*",
+    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
+  },
+  {
+    "os": "alma-linux-9",
+    "username": "ec2-user",
+    "instanceType":"t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
+    "ami": "cloudwatch-agent-integration-test-alma-linux-9*",
+    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
     "family": "linux"
   }
