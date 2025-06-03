@@ -1,0 +1,65 @@
+receivers: ["prometheus"]
+test_case: "prometheus_performance"
+validate_type: "performance"
+data_type: "metrics"
+metrics_config: "<metrics_config>"
+scrape_interval: "<scrape_interval>"
+
+agent_collection_period: 300
+
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+
+metric_namespace: "CloudWatchAgentPerformance"
+metric_validation:
+  - metric_name: "procstat_cpu_usage"
+    metric_dimension:
+      - name: "exe"
+        value: "cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"
+  - metric_name: "procstat_memory_rss"
+    metric_dimension:
+      - name: "exe"
+        value: "cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"
+  - metric_name: "procstat_memory_swap"
+    metric_dimension:
+      - name: "exe"
+        value: "cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"
+  - metric_name: "procstat_memory_vms"
+    metric_dimension:
+      - name: "exe"
+        value: "cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"
+  - metric_name: "procstat_memory_data"
+    metric_dimension:
+      - name: "exe"
+        value: "cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"
+  - metric_name: "procstat_num_fds"
+    metric_dimension:
+      - name: "exe"
+        value: "cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"
+  - metric_name: "procstat_write_bytes"
+    metric_dimension:
+      - name: "exe"
+        value: "cloudwatch-agent"
+      - name: "process_name"
+        value: "amazon-cloudwatch-agent"
+  - metric_name: "net_bytes_sent"
+    metric_dimension:
+      - name: "interface"
+        value: "eth0"
+  - metric_name: "net_packets_sent"
+    metric_dimension:
+      - name: "interface"
+        value: "eth0"
+  - metric_name: "mem_total"
+    metric_dimension: []

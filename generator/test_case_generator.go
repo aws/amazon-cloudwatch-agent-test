@@ -225,6 +225,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},
+		{testDir: "../../test/performance/prometheus"},
 		{testDir: "../../test/performance/logs"},
 		{testDir: "../../test/performance/system"},
 		{testDir: "../../test/performance/statsd"},
@@ -237,6 +238,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"ec2_stress": {
 		{testDir: "../../test/stress/emf"},
+		{testDir: "../../test/stress/prometheus"},
 		{testDir: "../../test/stress/logs"},
 		{testDir: "../../test/stress/system"},
 		{testDir: "../../test/stress/statsd"},

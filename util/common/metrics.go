@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -46,6 +47,17 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendEMFMetrics(metricPerInterval, metricLogGroup, metricNamespace, sendingInterval, duration)
 		case "app_signals":
 			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
+		case "prometheus":
+			cfg := PrometheusConfig{
+				CounterCount:   metricPerInterval / 3, // Split total metrics between types
+				GaugeCount:     metricPerInterval / 3,
+				SummaryCount:   metricPerInterval / 3,
+				Port:           8101,
+				UpdateInterval: sendingInterval,
+				ScrapeInterval: int(sendingInterval.Seconds()),
+				InstanceID:     metricLogGroup, // Use log group as instance ID
+			}
+			err = SendPrometheusMetrics(cfg, duration)
 		case "traces":
 			err = SendAppSignalsTraceMetrics(duration) //does app signals have dimension for metric?
 
@@ -73,6 +85,131 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 		time.Sleep(5 * time.Second)
 	}
 
+	return nil
+}
+
+func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
+	log.Printf("[Prometheus] Starting metric generation with config: %+v", config)
+	log.Printf("[Prometheus] Total metrics to generate: %d (Counter: %d, Gauge: %d, Summary: %d)",
+		config.CounterCount+config.GaugeCount+config.SummaryCount,
+		config.CounterCount, config.GaugeCount, config.SummaryCount)
+
+	// Start metric generator
+	mg := NewMetricGenerator(config)
+	log.Printf("[Prometheus] Created metric generator")
+
+	// Create prometheus.yaml
+	log.Printf("[Prometheus] Creating prometheus config with scrape interval: %ds", config.ScrapeInterval)
+	err := createPrometheusConfig(config.ScrapeInterval)
+	if err != nil {
+		log.Printf("[Prometheus] Failed to create prometheus config: %v", err)
+		return fmt.Errorf("failed to create prometheus config: %v", err)
+	}
+	log.Printf("[Prometheus] Successfully created prometheus config at /tmp/prometheus.yaml")
+
+	// Start HTTP server for metrics
+	server := &http.Server{
+		Addr: fmt.Sprintf(":%d", config.Port),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/metrics" {
+				log.Printf("[Prometheus] Received metrics request from %s", r.RemoteAddr)
+				start := time.Now()
+				mg.generateMetrics(w)
+				log.Printf("[Prometheus] Generated metrics in %v", time.Since(start))
+			}
+		}),
+	}
+
+	// Start server in goroutine
+	log.Printf("[Prometheus] Starting metric server on port %d", config.Port)
+	serverErrCh := make(chan error, 1)
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Printf("[Prometheus] Metric server error: %v", err)
+			serverErrCh <- err
+		}
+	}()
+
+	// Wait for server to start
+	time.Sleep(100 * time.Millisecond)
+	log.Printf("[Prometheus] Checking if server is running")
+	if err := checkServerRunning(config.Port); err != nil {
+		log.Printf("[Prometheus] Server failed to start: %v", err)
+		return fmt.Errorf("server failed to start: %v", err)
+	}
+	log.Printf("[Prometheus] Server is running successfully")
+
+	// Start updating metrics
+	log.Printf("[Prometheus] Starting metric updates with interval: %v", config.UpdateInterval)
+	go mg.updateMetrics()
+
+	// Wait for duration or error
+	log.Printf("[Prometheus] Running for duration: %v", duration)
+	select {
+	case err := <-serverErrCh:
+		log.Printf("[Prometheus] Server error during run: %v", err)
+		return err
+	case <-time.After(duration):
+		log.Printf("[Prometheus] Completed running for specified duration")
+	}
+
+	// Cleanup
+	log.Printf("[Prometheus] Starting cleanup")
+	if err := server.Close(); err != nil {
+		log.Printf("[Prometheus] Error during server cleanup: %v", err)
+		return fmt.Errorf("error during cleanup: %v", err)
+	}
+	log.Printf("[Prometheus] Cleanup completed successfully")
+
+	return nil
+}
+
+// Helper function to check if server is running
+func checkServerRunning(port int) error {
+	for i := 0; i < 3; i++ {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", port))
+		if err == nil {
+			resp.Body.Close()
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return fmt.Errorf("server not responding on port %d", port)
+}
+
+type PrometheusConfig struct {
+	CounterCount   int           `json:"counter_count"`
+	GaugeCount     int           `json:"gauge_count"`
+	SummaryCount   int           `json:"summary_count"`
+	Port           int           `json:"port"`
+	UpdateInterval time.Duration `json:"update_interval"`
+	ScrapeInterval int           `json:"scrape_interval"`
+	InstanceID     string        `json:"instance_id"`
+}
+
+func createPrometheusConfig(scrapeInterval int) error {
+	log.Printf("[Prometheus] Creating config with scrape interval: %ds", scrapeInterval)
+
+	cfg := fmt.Sprintf(`
+global:
+  scrape_interval: %ds
+  evaluation_interval: %ds
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:8101']
+`, scrapeInterval, scrapeInterval)
+
+	log.Printf("[Prometheus] Writing config to /tmp/prometheus.yaml:\n%s", cfg)
+
+	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), 0644)
+	if err != nil {
+		log.Printf("[Prometheus] Failed to write config: %v", err)
+		return err
+	}
+
+	log.Printf("[Prometheus] Successfully wrote config file")
 	return nil
 }
 

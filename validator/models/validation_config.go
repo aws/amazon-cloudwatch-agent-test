@@ -15,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf", "xray", "app_signals", "traces"}
+var supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf", "xray", "app_signals", "prometheus", "traces"}
 var retryCount = 0
 
 type ValidateConfig interface {
