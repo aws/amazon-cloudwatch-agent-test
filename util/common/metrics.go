@@ -95,11 +95,9 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		config.CounterCount+config.GaugeCount+config.SummaryCount,
 		config.CounterCount, config.GaugeCount, config.SummaryCount)
 
-	// Start metric generator
 	mg := NewMetricGenerator(config)
 	log.Printf("[Prometheus] Created metric generator")
 
-	// Create prometheus.yaml
 	log.Printf("[Prometheus] Creating prometheus config with scrape interval: %ds", config.ScrapeInterval)
 	err := createPrometheusConfig(config.ScrapeInterval)
 	if err != nil {
@@ -108,7 +106,6 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 	log.Printf("[Prometheus] Successfully created prometheus config at /tmp/prometheus.yaml")
 
-	// Start HTTP server for metrics
 	server := &http.Server{
 		Addr: fmt.Sprintf(":%d", config.Port),
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
