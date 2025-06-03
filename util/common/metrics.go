@@ -37,6 +37,7 @@ const MetricEndpoint = "4316/v1/metrics"
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
 func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
+	log.Println("metricPerInterval is here: ", metricPerInterval)
 	go func() {
 		switch receiver {
 		case "statsd":
@@ -49,13 +50,13 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
 		case "prometheus":
 			cfg := PrometheusConfig{
-				CounterCount:   metricPerInterval / 3, // Split total metrics between types
-				GaugeCount:     metricPerInterval / 3,
-				SummaryCount:   metricPerInterval / 3,
+				CounterCount:   1000,
+				GaugeCount:     1000,
+				SummaryCount:   1000,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
 				ScrapeInterval: int(sendingInterval.Seconds()),
-				InstanceID:     metricLogGroup, // Use log group as instance ID
+				InstanceID:     metricLogGroup,
 			}
 			err = SendPrometheusMetrics(cfg, duration)
 		case "traces":
