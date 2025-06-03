@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	ConfigOutputPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.json"
+	ConfigOutputPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\config.json"
 	AgentLogFile     = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
 )
 

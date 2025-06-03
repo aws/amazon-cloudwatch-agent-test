@@ -1,0 +1,22 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "Application",
+            "event_levels": [
+              "INFORMATION"
+            ],
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 1
+          }
+        ]
+      }
+    }
+  }
+}
