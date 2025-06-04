@@ -53,13 +53,3 @@ metric_validation:
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
-  - metric_name: "net_bytes_sent"
-    metric_sample_count: 300
-    metric_dimension:
-      - name: "interface"
-        value: "eth0"
-  - metric_name: "net_packets_sent"
-    metric_sample_count: 300
-    metric_dimension:
-      - name: "interface"
-        value: "eth0"
