@@ -94,17 +94,8 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
 	log.Printf("[Prometheus] Starting metric generation with Avalanche")
 
-	// Get GOPATH using go env
-	gopathCmd := exec2.Command("go", "env", "GOPATH")
-	gopathBytes, err := gopathCmd.Output()
-	if err != nil {
-		log.Printf("[Prometheus] Failed to get GOPATH: %v", err)
-		return fmt.Errorf("failed to get GOPATH: %v", err)
-	}
-	gopath := strings.TrimSpace(string(gopathBytes))
-
 	// Prepare Avalanche command
-	avalanchePath := filepath.Join(gopath, "bin", "avalanche")
+	avalanchePath := filepath.Join("/root/go", "bin", "avalanche")
 	cmd := exec2.Command(avalanchePath,
 		fmt.Sprintf("--port=%d", config.Port),
 		fmt.Sprintf("--metric-count=%d", config.CounterCount+config.GaugeCount),
