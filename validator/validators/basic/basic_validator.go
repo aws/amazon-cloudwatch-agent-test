@@ -55,7 +55,6 @@ func (s *BasicValidator) GenerateLoad() error {
 	case "traces":
 		return traces.StartTraceGeneration(receiver, agentConfigFilePath, agentCollectionPeriod, metricSendingInterval)
 	default:
-		log.Println("dataRate is here", dataRate)
 		// Sending metrics based on the receivers; however, for scraping plugin  (e.g prometheus), we would need to scrape it instead of sending
 		return common.StartSendingMetrics(receiver, agentCollectionPeriod, metricSendingInterval, dataRate, logGroup, metricNamespace)
 	}
