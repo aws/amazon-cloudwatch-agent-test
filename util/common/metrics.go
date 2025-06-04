@@ -161,10 +161,10 @@ type PrometheusConfig struct {
 }
 
 func createPrometheusConfig(scrapeInterval int) error {
-	log.Printf("[Prometheus] Creating config with scrape interval: %ds", scrapeInterval)
+	//log.Printf("[Prometheus] Creating config with scrape interval: %ds", scrapeInterval)
 
 	// Format the template with the scrape interval
-	cfg := fmt.Sprintf(prometheusTemplate, scrapeInterval, scrapeInterval)
+	cfg := prometheusTemplate
 
 	log.Printf("[Prometheus] Writing config to /tmp/prometheus.yaml:\n%s", cfg)
 
