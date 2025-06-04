@@ -98,17 +98,17 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	avalanchePath := filepath.Join("/root/go", "bin", "avalanche")
 	cmd := exec2.Command(avalanchePath,
 		fmt.Sprintf("--port=%d", config.Port),
-		fmt.Sprintf("--metric-count=%d", config.CounterCount+config.GaugeCount),
+		fmt.Sprintf("--counter-metric-count=%d", config.CounterCount),
+		fmt.Sprintf("--gauge-metric-count=%d", config.GaugeCount),
+		fmt.Sprintf("--summary-metric-count=%d", config.SummaryCount),
 		"--series-count=1",
 		"--label-count=0")
 
-	// Start Avalanche in background
 	if err := cmd.Start(); err != nil {
 		log.Printf("[Prometheus] Failed to start Avalanche: %v", err)
 		return fmt.Errorf("failed to start Avalanche: %v", err)
 	}
 
-	// Ensure Avalanche is stopped when we're done
 	defer func() {
 		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
 			log.Printf("[Prometheus] Failed to stop Avalanche process: %v", err)
