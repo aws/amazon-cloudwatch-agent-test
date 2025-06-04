@@ -135,7 +135,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200])) // Print first 200 characters
 
 	// Create Prometheus config
-	if err := createPrometheusConfig(config.ScrapeInterval); err != nil {
+	if err := createPrometheusConfig(10); err != nil {
 		log.Printf("[Prometheus] Failed to create Prometheus config: %v", err)
 		return fmt.Errorf("failed to create Prometheus config: %v", err)
 	}
@@ -161,10 +161,10 @@ type PrometheusConfig struct {
 }
 
 func createPrometheusConfig(scrapeInterval int) error {
-	//log.Printf("[Prometheus] Creating config with scrape interval: %ds", scrapeInterval)
+	log.Printf("[Prometheus] Creating config with scrape interval: %ds", scrapeInterval)
 
 	// Format the template with the scrape interval
-	cfg := prometheusTemplate
+	cfg := fmt.Sprintf(prometheusTemplate, scrapeInterval, scrapeInterval)
 
 	log.Printf("[Prometheus] Writing config to /tmp/prometheus.yaml:\n%s", cfg)
 
