@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"log"
 	"net"
@@ -58,9 +59,9 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
 		case "prometheus":
 			cfg := PrometheusConfig{
-				CounterCount:   1000,
-				GaugeCount:     1000,
-				SummaryCount:   1000,
+				CounterCount:   10,
+				GaugeCount:     10,
+				SummaryCount:   10,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
 				ScrapeInterval: int(sendingInterval.Seconds()),
@@ -140,7 +141,7 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 //	return success
 //}
 
-func CountNamespaceMetrics(namespace string) (int, error) {
+func CountNamespaceMetricsWithDimensions(namespace, job, instance string) (int, error) {
 	// Load AWS configuration
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
@@ -150,9 +151,22 @@ func CountNamespaceMetrics(namespace string) (int, error) {
 	// Create CloudWatch client
 	client := cloudwatch.NewFromConfig(cfg)
 
+	// Set up dimensions filter
+	dimensions := []types.DimensionFilter{
+		{
+			Name:  aws.String("job"),
+			Value: aws.String(job),
+		},
+		{
+			Name:  aws.String("instance"),
+			Value: aws.String(instance),
+		},
+	}
+
 	// Set up the input for ListMetrics
 	input := &cloudwatch.ListMetricsInput{
-		Namespace: aws.String(namespace),
+		Namespace:  aws.String(namespace),
+		Dimensions: dimensions,
 	}
 
 	// Use paginator to handle multiple pages of results
@@ -165,14 +179,8 @@ func CountNamespaceMetrics(namespace string) (int, error) {
 			return count, fmt.Errorf("error fetching metrics: %v", err)
 		}
 		count += len(output.Metrics)
-
-		// Optional: Log progress for large namespaces
-		if count > 0 && count%1000 == 0 {
-			log.Printf("Counted %d metrics so far in namespace %s", count, namespace)
-		}
 	}
 
-	log.Printf("Total metrics in namespace %s: %d", namespace, count)
 	return count, nil
 }
 
@@ -215,7 +223,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		return fmt.Errorf("Avalanche failed to start: %v", err)
 	}
 	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200])) // Print first 200 characters
-	count, err := CountNamespaceMetrics("PromTest11")
+	count, err := CountNamespaceMetricsWithDimensions("PromTest11", "prometheus_test_job", "localhost:8101")
 	if err != nil {
 		log.Printf("Error counting metrics: %v", err)
 	}
