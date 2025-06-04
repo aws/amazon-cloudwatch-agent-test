@@ -95,7 +95,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Starting metric generation with Avalanche")
 
 	// Prepare Avalanche command
-	avalanchePath := filepath.Join("root", "go", "bin", "avalanche")
+	avalanchePath := filepath.Join("/root", "go", "bin", "avalanche")
 	cmd := exec2.Command(avalanchePath,
 		fmt.Sprintf("--port=%d", config.Port),
 		fmt.Sprintf("--counter-metric-count=%d", config.CounterCount),
