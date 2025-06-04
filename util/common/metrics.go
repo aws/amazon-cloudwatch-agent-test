@@ -12,6 +12,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/aws-sdk-go/aws"
 	"log"
 	"net"
 	"net/http"
@@ -38,6 +42,7 @@ const MetricEndpoint = "4316/v1/metrics"
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
 func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
 	log.Println("metricPerInterval is here: ", metricPerInterval)
+
 	go func() {
 		switch receiver {
 		case "statsd":
@@ -141,6 +146,14 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Starting metric updates with interval: %v", config.UpdateInterval)
 	go mg.updateMetrics()
 
+	result := verifyMetricsInCloudWatch("CloudWatchAgentStress")
+
+	if result.Status == status.SUCCESSFUL {
+		log.Printf("[Prometheus] ✅ Metrics verification successful")
+	} else {
+		log.Printf("[Prometheus] ❌ Metrics verification failed")
+	}
+
 	// Wait for duration or error
 	log.Printf("[Prometheus] Running for duration: %v", duration)
 	select {
@@ -209,6 +222,57 @@ scrape_configs:
 
 	log.Printf("[Prometheus] Successfully wrote config file")
 	return nil
+}
+
+func verifyMetricsInCloudWatch(namespace string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   "Metrics Presence",
+		Status: status.FAILED,
+	}
+
+	metricsToCheck := []struct {
+		name     string
+		promType string
+	}{
+		{"prometheus_test_counter", "counter"},
+		{"prometheus_test_gauge", "gauge"},
+		{"prometheus_test_summary_sum", "summary"},
+	}
+
+	valueFetcher := metric.MetricValueFetcher{}
+	maxRetries := 12
+	retryInterval := 10 * time.Second
+
+	for _, m := range metricsToCheck {
+		log.Printf("Checking metric %s of type %s...", m.name, m.promType)
+		dims := []types.Dimension{{
+			Name:  aws.String("prom_type"),
+			Value: aws.String(m.promType),
+		}}
+
+		success := false
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			values, err := valueFetcher.Fetch(namespace, m.name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
+			if err != nil {
+				log.Printf("Attempt %d: Failed to fetch metric %s: %v", attempt, m.name, err)
+			} else if len(values) == 0 {
+				log.Printf("Attempt %d: No values found for metric %s", attempt, m.name)
+			} else {
+				log.Printf("Found %d values for metric %s: %v", len(values), m.name, values)
+				success = true
+				break
+			}
+			time.Sleep(retryInterval)
+		}
+
+		if !success {
+			log.Printf("Metric %s not found after %d attempts", m.name, maxRetries)
+			return testResult
+		}
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
 }
 
 func getBaseDir() string {

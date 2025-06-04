@@ -5,6 +5,8 @@ data_type: "metrics"
 metrics_config: "<metrics_config>"
 scrape_interval: "<scrape_interval>"
 agent_collection_period: 300
+values_per_minute: "<values_per_minute>"
+
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 
