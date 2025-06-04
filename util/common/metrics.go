@@ -259,6 +259,7 @@ func createPrometheusConfig(scrapeInterval int) error {
 
 	// Replace $SCRAPE_INTERVAL with the actual value
 	cfg := strings.ReplaceAll(prometheusTemplate, "$SCRAPE_INTERVAL", fmt.Sprintf("%ds", scrapeInterval))
+	cfg = strings.ReplaceAll(prometheusTemplate, "$PORT", fmt.Sprintf("%ds", 8101))
 
 	log.Printf("[Prometheus] Writing config to /tmp/prometheus.yaml:\n%s", cfg)
 
