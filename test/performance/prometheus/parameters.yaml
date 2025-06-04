@@ -8,7 +8,7 @@ values_per_minute: "<values_per_minute>"
 
 agent_collection_period: 300
 
-cloudwatch_agent_config: "<cloudwatch_agent_config>"
+cloudwatch_agent_config: "/tmp/agent_config.json"
 
 metric_namespace: "CloudWatchAgentPerformance"
 metric_validation:

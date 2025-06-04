@@ -7,7 +7,7 @@ scrape_interval: "<scrape_interval>"
 values_per_minute: "<values_per_minute>"
 agent_collection_period: 300
 
-cloudwatch_agent_config: "<cloudwatch_agent_config>"
+cloudwatch_agent_config: "/tmp/agent_config.json"
 
 metric_namespace: "CloudWatchAgentStress"
 metric_validation:
