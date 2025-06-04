@@ -4,7 +4,7 @@ validate_type: "stress"
 data_type: "metrics"
 metrics_config: "<metrics_config>"
 scrape_interval: "<scrape_interval>"
-values_per_minute: "<values_per_minute>"
+values_per_minute: "500"
 agent_collection_period: 300
 
 cloudwatch_agent_config: "/tmp/agent_config.json"

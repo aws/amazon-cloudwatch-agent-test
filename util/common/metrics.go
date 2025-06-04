@@ -16,9 +16,11 @@ import (
 	"net"
 	"net/http"
 	"os"
+	exec2 "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"collectd.org/api"
@@ -90,74 +92,61 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 }
 
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
-	log.Printf("[Prometheus] Starting metric generation with config: %+v", config)
-	log.Printf("[Prometheus] Total metrics to generate: %d (Counter: %d, Gauge: %d, Summary: %d)",
-		config.CounterCount+config.GaugeCount+config.SummaryCount,
-		config.CounterCount, config.GaugeCount, config.SummaryCount)
+	log.Printf("[Prometheus] Starting metric generation with Avalanche")
 
-	mg := NewMetricGenerator(config)
-	log.Printf("[Prometheus] Created metric generator")
+	// Prepare Avalanche command
+	cmd := exec2.Command("avalanche",
+		fmt.Sprintf("--port=%d", config.Port),
+		fmt.Sprintf("--metric-count=%d", config.CounterCount+config.GaugeCount),
+		"--series-count=1",
+		"--label-count=0")
 
-	log.Printf("[Prometheus] Creating prometheus config with scrape interval: %ds", config.ScrapeInterval)
-	err := createPrometheusConfig(config.ScrapeInterval)
-	if err != nil {
-		log.Printf("[Prometheus] Failed to create prometheus config: %v", err)
-		return fmt.Errorf("failed to create prometheus config: %v", err)
-	}
-	log.Printf("[Prometheus] Successfully created prometheus config at /tmp/prometheus.yaml")
-
-	server := &http.Server{
-		Addr: fmt.Sprintf(":%d", config.Port),
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/metrics" {
-				log.Printf("[Prometheus] Received metrics request from %s", r.RemoteAddr)
-				start := time.Now()
-				mg.generateMetrics(w)
-				log.Printf("[Prometheus] Generated metrics in %v", time.Since(start))
-			}
-		}),
+	// Start Avalanche in background
+	if err := cmd.Start(); err != nil {
+		log.Printf("[Prometheus] Failed to start Avalanche: %v", err)
+		return fmt.Errorf("failed to start Avalanche: %v", err)
 	}
 
-	// Start server in goroutine
-	log.Printf("[Prometheus] Starting metric server on port %d", config.Port)
-	serverErrCh := make(chan error, 1)
-	go func() {
-		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Printf("[Prometheus] Metric server error: %v", err)
-			serverErrCh <- err
+	// Ensure Avalanche is stopped when we're done
+	defer func() {
+		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			log.Printf("[Prometheus] Failed to stop Avalanche process: %v", err)
 		}
+		_, _ = cmd.Process.Wait()
 	}()
 
-	// Wait for server to start
-	time.Sleep(100 * time.Millisecond)
-	log.Printf("[Prometheus] Checking if server is running")
+	log.Printf("[Prometheus] Avalanche started on port %d", config.Port)
+
+	// Wait for Avalanche to start up
+	time.Sleep(2 * time.Second)
+	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
+	output, err := curlCmd.Output()
+	log.Printf("[Prometheus] Metrics endpoint response:\n%s", string(output))
+
+	if err != nil {
+		log.Printf("[Prometheus] Failed to curl metrics endpoint: %v", err)
+		return fmt.Errorf("failed to curl metrics endpoint: %v", err)
+	}
+
+	// Check if Avalanche is running
 	if err := checkServerRunning(config.Port); err != nil {
-		log.Printf("[Prometheus] Server failed to start: %v", err)
-		return fmt.Errorf("server failed to start: %v", err)
+		log.Printf("[Prometheus] Avalanche failed to start: %v", err)
+		return fmt.Errorf("Avalanche failed to start: %v", err)
 	}
-	log.Printf("[Prometheus] Server is running successfully")
+	log.Printf("[Prometheus] Avalanche is running successfully")
 
-	// Start updating metrics
-	log.Printf("[Prometheus] Starting metric updates with interval: %v", config.UpdateInterval)
-	go mg.updateMetrics()
+	// Create Prometheus config
+	if err := createPrometheusConfig(config.ScrapeInterval); err != nil {
+		log.Printf("[Prometheus] Failed to create Prometheus config: %v", err)
+		return fmt.Errorf("failed to create Prometheus config: %v", err)
+	}
+	log.Printf("[Prometheus] Successfully created Prometheus config at /tmp/prometheus.yaml")
 
-	// Wait for duration or error
+	// Wait for duration
 	log.Printf("[Prometheus] Running for duration: %v", duration)
-	select {
-	case err := <-serverErrCh:
-		log.Printf("[Prometheus] Server error during run: %v", err)
-		return err
-	case <-time.After(duration):
-		log.Printf("[Prometheus] Completed running for specified duration")
-	}
+	time.Sleep(duration)
 
-	// Cleanup
-	log.Printf("[Prometheus] Starting cleanup")
-	if err := server.Close(); err != nil {
-		log.Printf("[Prometheus] Error during server cleanup: %v", err)
-		return fmt.Errorf("error during cleanup: %v", err)
-	}
-	log.Printf("[Prometheus] Cleanup completed successfully")
+	log.Printf("[Prometheus] Completed running for specified duration")
 
 	return nil
 }
