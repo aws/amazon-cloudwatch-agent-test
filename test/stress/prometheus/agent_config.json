@@ -6,9 +6,9 @@
     "metrics_collected": {
       "prometheus": {
         "prometheus_config_path": "/tmp/prometheus.yaml",
-        "log_group_name": "PrometheusPerformanceTest",
+        "log_group_name": "CloudWatchAgentStress",
         "emf_processor": {
-          "metric_namespace": "PrometheusPerformance",
+          "metric_namespace": "CloudWatchAgentStress",
           "metric_declaration": [
             {
               "source_labels": ["job", "instance_id"],
