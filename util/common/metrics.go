@@ -13,6 +13,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/aws-sdk-go/aws"
 	"log"
 	"net"
 	"net/http"
@@ -56,9 +61,9 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
 		case "prometheus":
 			cfg := PrometheusConfig{
-				CounterCount:   10,
-				GaugeCount:     10,
-				SummaryCount:   5,
+				CounterCount:   1000,
+				GaugeCount:     1000,
+				SummaryCount:   1000,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
 				ScrapeInterval: int(sendingInterval.Seconds()),
@@ -95,8 +100,88 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 	return nil
 }
 
+func verifyMetricsInCloudWatch(namespace string) bool {
+
+	metricsToCheck := []struct {
+		name     string
+		promType string
+	}{
+		{"prometheus_test_counter", "counter"},
+		{"prometheus_test_gauge", "gauge"},
+		{"prometheus_test_summary_sum", "summary"},
+	}
+
+	valueFetcher := metric.MetricValueFetcher{}
+	maxRetries := 12
+	retryInterval := 10 * time.Second
+	success := false
+	for _, m := range metricsToCheck {
+		log.Printf("Checking metric %s of type %s...", m.name, m.promType)
+		dims := []types.Dimension{{
+			Name:  aws.String(""),
+			Value: aws.String(m.promType),
+		}}
+
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			values, err := valueFetcher.Fetch(namespace, m.name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
+			if err != nil {
+				log.Printf("Attempt %d: Failed to fetch metric %s: %v", attempt, m.name, err)
+			} else if len(values) == 0 {
+				log.Printf("Attempt %d: No values found for metric %s", attempt, m.name)
+			} else {
+				log.Printf("Found %d values for metric %s: %v", len(values), m.name, values)
+				success = true
+				break
+			}
+			time.Sleep(retryInterval)
+		}
+
+		if !success {
+			log.Printf("Metric %s not found after %d attempts", m.name, maxRetries)
+		}
+	}
+	return success
+}
+
+func CountNamespaceMetrics(namespace string) (int, error) {
+	// Load AWS configuration
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		return 0, fmt.Errorf("unable to load SDK config: %v", err)
+	}
+
+	// Create CloudWatch client
+	client := cloudwatch.NewFromConfig(cfg)
+
+	// Set up the input for ListMetrics
+	input := &cloudwatch.ListMetricsInput{
+		Namespace: aws.String(namespace),
+	}
+
+	// Use paginator to handle multiple pages of results
+	paginator := cloudwatch.NewListMetricsPaginator(client, input)
+
+	count := 0
+	for paginator.HasMorePages() {
+		output, err := paginator.NextPage(context.TODO())
+		if err != nil {
+			return count, fmt.Errorf("error fetching metrics: %v", err)
+		}
+		count += len(output.Metrics)
+
+		// Optional: Log progress for large namespaces
+		if count > 0 && count%1000 == 0 {
+			log.Printf("Counted %d metrics so far in namespace %s", count, namespace)
+		}
+	}
+
+	log.Printf("Total metrics in namespace %s: %d", namespace, count)
+	return count, nil
+}
+
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
 	log.Printf("[Prometheus] Starting metric generation with Avalanche")
+	exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port)).Run() //Killing the port if it exists.
 
 	// Prepare Avalanche command
 	avalanchePath := filepath.Join("/root", "go", "bin", "avalanche")
@@ -133,7 +218,11 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		return fmt.Errorf("Avalanche failed to start: %v", err)
 	}
 	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200])) // Print first 200 characters
-
+	count, err := CountNamespaceMetrics("PromTest11")
+	if err != nil {
+		log.Printf("Error counting metrics: %v", err)
+	}
+	log.Println("This is how many metrics exist in this namespace", count)
 	// Create Prometheus config
 	if err := createPrometheusConfig(10); err != nil {
 		log.Printf("[Prometheus] Failed to create Prometheus config: %v", err)
