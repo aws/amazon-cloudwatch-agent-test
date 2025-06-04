@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -36,6 +37,9 @@ const SleepDuration = 5 * time.Second
 
 const TracesEndpoint = "4316/v1/traces"
 const MetricEndpoint = "4316/v1/metrics"
+
+//go:embed prometheus/prometheus.yaml
+var prometheusTemplate string
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
 func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
@@ -159,17 +163,13 @@ type PrometheusConfig struct {
 func createPrometheusConfig(scrapeInterval int) error {
 	log.Printf("[Prometheus] Creating config with scrape interval: %ds", scrapeInterval)
 
-	yamlContent, err := os.ReadFile("./prometheus/prometheus.yaml")
-	if err != nil {
-		log.Printf("[Prometheus] Failed to read prometheus.yaml template: %v", err)
-		return err
-	}
-
-	cfg := fmt.Sprintf(string(yamlContent), scrapeInterval, scrapeInterval)
+	// Format the template with the scrape interval
+	cfg := fmt.Sprintf(prometheusTemplate, scrapeInterval, scrapeInterval)
 
 	log.Printf("[Prometheus] Writing config to /tmp/prometheus.yaml:\n%s", cfg)
 
-	err = os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), os.ModePerm)
+	// Write the formatted config
+	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), 0644)
 	if err != nil {
 		log.Printf("[Prometheus] Failed to write config: %v", err)
 		return err
