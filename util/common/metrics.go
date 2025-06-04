@@ -123,7 +123,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Avalanche started on port %d", config.Port)
 
 	// Wait for Avalanche to start up
-	time.Sleep(2 * time.Second)
+	//time.Sleep(2 * time.Second)
 
 	// Check if Avalanche is running by curling the metrics endpoint
 	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
@@ -163,13 +163,12 @@ type PrometheusConfig struct {
 func createPrometheusConfig(scrapeInterval int) error {
 	log.Printf("[Prometheus] Creating config with scrape interval: %ds", scrapeInterval)
 
-	// Format the template with the scrape interval
-	cfg := fmt.Sprintf(prometheusTemplate, scrapeInterval, scrapeInterval)
+	// Replace $SCRAPE_INTERVAL with the actual value
+	cfg := strings.ReplaceAll(prometheusTemplate, "$SCRAPE_INTERVAL", fmt.Sprintf("%ds", scrapeInterval))
 
 	log.Printf("[Prometheus] Writing config to /tmp/prometheus.yaml:\n%s", cfg)
 
-	// Write the formatted config
-	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), os.ModePerm)
+	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), 0644)
 	if err != nil {
 		log.Printf("[Prometheus] Failed to write config: %v", err)
 		return err
