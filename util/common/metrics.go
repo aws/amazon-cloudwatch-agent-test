@@ -13,10 +13,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"log"
 	"net"
@@ -100,48 +97,48 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 	return nil
 }
 
-func verifyMetricsInCloudWatch(namespace string) bool {
-
-	metricsToCheck := []struct {
-		name     string
-		promType string
-	}{
-		{"prometheus_test_counter", "counter"},
-		{"prometheus_test_gauge", "gauge"},
-		{"prometheus_test_summary_sum", "summary"},
-	}
-
-	valueFetcher := metric.MetricValueFetcher{}
-	maxRetries := 12
-	retryInterval := 10 * time.Second
-	success := false
-	for _, m := range metricsToCheck {
-		log.Printf("Checking metric %s of type %s...", m.name, m.promType)
-		dims := []types.Dimension{{
-			Name:  aws.String(""),
-			Value: aws.String(m.promType),
-		}}
-
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			values, err := valueFetcher.Fetch(namespace, m.name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
-			if err != nil {
-				log.Printf("Attempt %d: Failed to fetch metric %s: %v", attempt, m.name, err)
-			} else if len(values) == 0 {
-				log.Printf("Attempt %d: No values found for metric %s", attempt, m.name)
-			} else {
-				log.Printf("Found %d values for metric %s: %v", len(values), m.name, values)
-				success = true
-				break
-			}
-			time.Sleep(retryInterval)
-		}
-
-		if !success {
-			log.Printf("Metric %s not found after %d attempts", m.name, maxRetries)
-		}
-	}
-	return success
-}
+//func verifyMetricsInCloudWatch(namespace string) bool {
+//
+//	metricsToCheck := []struct {
+//		name     string
+//		promType string
+//	}{
+//		{"prometheus_test_counter", "counter"},
+//		{"prometheus_test_gauge", "gauge"},
+//		{"prometheus_test_summary_sum", "summary"},
+//	}
+//
+//	valueFetcher := metric.MetricValueFetcher{}
+//	maxRetries := 12
+//	retryInterval := 10 * time.Second
+//	success := false
+//	for _, m := range metricsToCheck {
+//		log.Printf("Checking metric %s of type %s...", m.name, m.promType)
+//		dims := []types.Dimension{{
+//			Name:  aws.String(""),
+//			Value: aws.String(m.promType),
+//		}}
+//
+//		for attempt := 1; attempt <= maxRetries; attempt++ {
+//			values, err := valueFetcher.Fetch(namespace, m.name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
+//			if err != nil {
+//				log.Printf("Attempt %d: Failed to fetch metric %s: %v", attempt, m.name, err)
+//			} else if len(values) == 0 {
+//				log.Printf("Attempt %d: No values found for metric %s", attempt, m.name)
+//			} else {
+//				log.Printf("Found %d values for metric %s: %v", len(values), m.name, values)
+//				success = true
+//				break
+//			}
+//			time.Sleep(retryInterval)
+//		}
+//
+//		if !success {
+//			log.Printf("Metric %s not found after %d attempts", m.name, maxRetries)
+//		}
+//	}
+//	return success
+//}
 
 func CountNamespaceMetrics(namespace string) (int, error) {
 	// Load AWS configuration
