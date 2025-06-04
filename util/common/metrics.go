@@ -56,9 +56,9 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
 		case "prometheus":
 			cfg := PrometheusConfig{
-				CounterCount:   1000,
-				GaugeCount:     1000,
-				SummaryCount:   1000,
+				CounterCount:   10,
+				GaugeCount:     10,
+				SummaryCount:   5,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
 				ScrapeInterval: int(sendingInterval.Seconds()),
@@ -169,7 +169,7 @@ func createPrometheusConfig(scrapeInterval int) error {
 	log.Printf("[Prometheus] Writing config to /tmp/prometheus.yaml:\n%s", cfg)
 
 	// Write the formatted config
-	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), 0644)
+	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), os.ModePerm)
 	if err != nil {
 		log.Printf("[Prometheus] Failed to write config: %v", err)
 		return err
