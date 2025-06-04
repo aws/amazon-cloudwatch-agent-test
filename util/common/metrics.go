@@ -142,16 +142,14 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 //}
 
 func CountNamespaceMetricsWithDimensions(namespace, job, instance string) (int, error) {
-	// Load AWS configuration
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return 0, fmt.Errorf("unable to load SDK config: %v", err)
 	}
 
-	// Create CloudWatch client
 	client := cloudwatch.NewFromConfig(cfg)
 
-	// Set up dimensions filter
+	// Important: Changed from DimensionFilter to Dimension
 	dimensions := []types.DimensionFilter{
 		{
 			Name:  aws.String("job"),
@@ -163,13 +161,14 @@ func CountNamespaceMetricsWithDimensions(namespace, job, instance string) (int, 
 		},
 	}
 
-	// Set up the input for ListMetrics
 	input := &cloudwatch.ListMetricsInput{
 		Namespace:  aws.String(namespace),
-		Dimensions: dimensions,
+		Dimensions: dimensions, // Using Dimension instead of DimensionFilter
 	}
 
-	// Use paginator to handle multiple pages of results
+	// Let's also log the actual request for debugging
+	log.Printf("Querying metrics with namespace: %s, job: %s, instance: %s", namespace, job, instance)
+
 	paginator := cloudwatch.NewListMetricsPaginator(client, input)
 
 	count := 0
@@ -178,6 +177,8 @@ func CountNamespaceMetricsWithDimensions(namespace, job, instance string) (int, 
 		if err != nil {
 			return count, fmt.Errorf("error fetching metrics: %v", err)
 		}
+		// Log the raw output for debugging
+		log.Printf("Raw metrics output: %+v", output.Metrics)
 		count += len(output.Metrics)
 	}
 
@@ -213,7 +214,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Avalanche started on port %d", config.Port)
 
 	// Wait for Avalanche to start up
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	// Check if Avalanche is running by curling the metrics endpoint
 	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
