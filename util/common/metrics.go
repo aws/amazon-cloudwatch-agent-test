@@ -142,7 +142,9 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 //}
 
 func CountNamespaceMetricsWithDimensions(namespace, job, instance string) (int, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("us-west-2"), // or whatever your region is
+	)
 	if err != nil {
 		return 0, fmt.Errorf("unable to load SDK config: %v", err)
 	}
