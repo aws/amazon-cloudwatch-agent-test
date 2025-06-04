@@ -98,50 +98,74 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 	return nil
 }
 
-//func verifyMetricsInCloudWatch(namespace string) bool {
-//
-//	metricsToCheck := []struct {
-//		name     string
-//		promType string
-//	}{
-//		{"prometheus_test_counter", "counter"},
-//		{"prometheus_test_gauge", "gauge"},
-//		{"prometheus_test_summary_sum", "summary"},
-//	}
-//
-//	valueFetcher := metric.MetricValueFetcher{}
-//	maxRetries := 12
-//	retryInterval := 10 * time.Second
-//	success := false
-//	for _, m := range metricsToCheck {
-//		log.Printf("Checking metric %s of type %s...", m.name, m.promType)
-//		dims := []types.Dimension{{
-//			Name:  aws.String(""),
-//			Value: aws.String(m.promType),
-//		}}
-//
-//		for attempt := 1; attempt <= maxRetries; attempt++ {
-//			values, err := valueFetcher.Fetch(namespace, m.name, dims, metric.SAMPLE_COUNT, metric.MinuteStatPeriod)
-//			if err != nil {
-//				log.Printf("Attempt %d: Failed to fetch metric %s: %v", attempt, m.name, err)
-//			} else if len(values) == 0 {
-//				log.Printf("Attempt %d: No values found for metric %s", attempt, m.name)
-//			} else {
-//				log.Printf("Found %d values for metric %s: %v", len(values), m.name, values)
-//				success = true
-//				break
-//			}
-//			time.Sleep(retryInterval)
-//		}
-//
-//		if !success {
-//			log.Printf("Metric %s not found after %d attempts", m.name, maxRetries)
-//		}
-//	}
-//	return success
-//}
+// Async version
+func CountNamespaceMetricsWithDimensionsAsync(namespace, job, instance string) (int, error) {
+	startTime := time.Now()
+	defer func() {
+		duration := time.Since(startTime)
+		log.Printf("Async function took %v to execute", duration)
+	}()
+
+	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancel()
+
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-west-2"),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("unable to load SDK config: %v", err)
+	}
+
+	client := cloudwatch.NewFromConfig(cfg)
+
+	dimensions := []types.DimensionFilter{
+		{
+			Name:  aws.String("InstanceId"),
+			Value: aws.String(instance),
+		},
+	}
+
+	input := &cloudwatch.ListMetricsInput{
+		Namespace:  aws.String(namespace),
+		Dimensions: dimensions,
+	}
+
+	countChan := make(chan int, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		paginator := cloudwatch.NewListMetricsPaginator(client, input)
+		count := 0
+
+		for paginator.HasMorePages() {
+			select {
+			case <-ctx.Done():
+				errChan <- ctx.Err()
+				return
+			default:
+				output, err := paginator.NextPage(ctx)
+				if err != nil {
+					errChan <- fmt.Errorf("error fetching metrics: %v", err)
+					return
+				}
+				count += len(output.Metrics)
+			}
+		}
+		countChan <- count
+	}()
+
+	select {
+	case count := <-countChan:
+		return count, nil
+	case err := <-errChan:
+		return 0, err
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	}
+}
 
 func CountNamespaceMetricsWithDimensions(namespace, job, instance string) (int, error) {
+	startTime := time.Now()
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-west-2"), // or whatever your region is
 	)
@@ -154,11 +178,7 @@ func CountNamespaceMetricsWithDimensions(namespace, job, instance string) (int, 
 	// Important: Changed from DimensionFilter to Dimension
 	dimensions := []types.DimensionFilter{
 		{
-			Name:  aws.String("job"),
-			Value: aws.String(job),
-		},
-		{
-			Name:  aws.String("instance"),
+			Name:  aws.String("InstanceId"),
 			Value: aws.String(instance),
 		},
 	}
@@ -168,21 +188,21 @@ func CountNamespaceMetricsWithDimensions(namespace, job, instance string) (int, 
 		Dimensions: dimensions, // Using Dimension instead of DimensionFilter
 	}
 
-	// Let's also log the actual request for debugging
-	log.Printf("Querying metrics with namespace: %s, job: %s, instance: %s", namespace, job, instance)
-
+	apiStartTime := time.Now()
 	paginator := cloudwatch.NewListMetricsPaginator(client, input)
-
 	count := 0
 	for paginator.HasMorePages() {
 		output, err := paginator.NextPage(context.TODO())
 		if err != nil {
 			return count, fmt.Errorf("error fetching metrics: %v", err)
 		}
-		// Log the raw output for debugging
-		log.Printf("Raw metrics output: %+v", output.Metrics)
 		count += len(output.Metrics)
 	}
+	apiTime := time.Since(apiStartTime)
+
+	totalTime := time.Since(startTime)
+	log.Printf("API calls took: %v", apiTime)
+	log.Printf("Total execution time: %v", totalTime)
 
 	return count, nil
 }
@@ -226,10 +246,18 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		return fmt.Errorf("Avalanche failed to start: %v", err)
 	}
 	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200])) // Print first 200 characters
-	count, err := CountNamespaceMetricsWithDimensions("PromTest11", "prometheus_test_job", "localhost:8101")
+
+	count, err := CountNamespaceMetricsWithDimensionsAsync("CloudWatchAgentStress", "", "i-0c1e0db87272b3c88")
 	if err != nil {
 		log.Printf("Error counting metrics: %v", err)
 	}
+	log.Println("This is how many metrics exist in this namespace with Async", count)
+
+	count, err = CountNamespaceMetricsWithDimensions("CloudWatchAgentStress", "", "i-0c1e0db87272b3c88")
+	if err != nil {
+		log.Printf("Error counting metrics: %v", err)
+	}
+
 	log.Println("This is how many metrics exist in this namespace", count)
 	// Create Prometheus config
 	if err := createPrometheusConfig(10); err != nil {
