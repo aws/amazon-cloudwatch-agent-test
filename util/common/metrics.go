@@ -159,20 +159,17 @@ type PrometheusConfig struct {
 func createPrometheusConfig(scrapeInterval int) error {
 	log.Printf("[Prometheus] Creating config with scrape interval: %ds", scrapeInterval)
 
-	cfg := fmt.Sprintf(`
-global:
-  scrape_interval: %ds
-  evaluation_interval: %ds
+	yamlContent, err := os.ReadFile("test/configs/prometheus.yaml")
+	if err != nil {
+		log.Printf("[Prometheus] Failed to read prometheus.yaml template: %v", err)
+		return err
+	}
 
-scrape_configs:
-  - job_name: 'prometheus'
-    static_configs:
-      - targets: ['localhost:8101']
-`, scrapeInterval, scrapeInterval)
+	cfg := fmt.Sprintf(string(yamlContent), scrapeInterval, scrapeInterval)
 
 	log.Printf("[Prometheus] Writing config to /tmp/prometheus.yaml:\n%s", cfg)
 
-	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), 0644)
+	err = os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), 0644)
 	if err != nil {
 		log.Printf("[Prometheus] Failed to write config: %v", err)
 		return err

@@ -1,0 +1,8 @@
+global:
+  scrape_interval: %ds
+  evaluation_interval: %ds
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:8101']
