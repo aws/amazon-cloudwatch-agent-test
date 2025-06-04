@@ -213,7 +213,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Avalanche started on port %d", config.Port)
 
 	// Wait for Avalanche to start up
-	//time.Sleep(2 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	// Check if Avalanche is running by curling the metrics endpoint
 	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
