@@ -94,8 +94,18 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
 	log.Printf("[Prometheus] Starting metric generation with Avalanche")
 
+	// Get GOPATH using go env
+	gopathCmd := exec2.Command("go", "env", "GOPATH")
+	gopathBytes, err := gopathCmd.Output()
+	if err != nil {
+		log.Printf("[Prometheus] Failed to get GOPATH: %v", err)
+		return fmt.Errorf("failed to get GOPATH: %v", err)
+	}
+	gopath := strings.TrimSpace(string(gopathBytes))
+
 	// Prepare Avalanche command
-	cmd := exec2.Command("avalanche",
+	avalanchePath := filepath.Join(gopath, "bin", "avalanche")
+	cmd := exec2.Command(avalanchePath,
 		fmt.Sprintf("--port=%d", config.Port),
 		fmt.Sprintf("--metric-count=%d", config.CounterCount+config.GaugeCount),
 		"--series-count=1",
@@ -119,21 +129,15 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	// Wait for Avalanche to start up
 	time.Sleep(2 * time.Second)
+
+	// Check if Avalanche is running by curling the metrics endpoint
 	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
 	output, err := curlCmd.Output()
-	log.Printf("[Prometheus] Metrics endpoint response:\n%s", string(output))
-
 	if err != nil {
-		log.Printf("[Prometheus] Failed to curl metrics endpoint: %v", err)
-		return fmt.Errorf("failed to curl metrics endpoint: %v", err)
-	}
-
-	// Check if Avalanche is running
-	if err := checkServerRunning(config.Port); err != nil {
 		log.Printf("[Prometheus] Avalanche failed to start: %v", err)
 		return fmt.Errorf("Avalanche failed to start: %v", err)
 	}
-	log.Printf("[Prometheus] Avalanche is running successfully")
+	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200])) // Print first 200 characters
 
 	// Create Prometheus config
 	if err := createPrometheusConfig(config.ScrapeInterval); err != nil {
@@ -149,19 +153,6 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Completed running for specified duration")
 
 	return nil
-}
-
-// Helper function to check if server is running
-func checkServerRunning(port int) error {
-	for i := 0; i < 3; i++ {
-		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", port))
-		if err == nil {
-			resp.Body.Close()
-			return nil
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	return fmt.Errorf("server not responding on port %d", port)
 }
 
 type PrometheusConfig struct {
