@@ -47,10 +47,10 @@ var prometheusTemplate string
 func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
 	switch metricPerInterval {
 	case 1000:
-		return 10, 10, 5, 20, 10
+		return 100, 100, 20, 10, 0
 
 	case 5000:
-		return 25, 25, 10, 40, 25
+		return 100, 100, 20, 100, 0
 
 	case 10000:
 		return 50, 50, 15, 50, 100
@@ -185,7 +185,9 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		fmt.Sprintf("--series-count=%d", series),
 		fmt.Sprintf("--label-count=%d", label),
 		fmt.Sprintf("--const-label=InstanceId=%s", config.InstanceID),
-		"--series-change-interval=1")
+		"--series-change-interval=0",
+		"--series-interval=0",
+		"--value-interval=10")
 
 	if err := cmd.Start(); err != nil {
 		log.Printf("[Prometheus] Failed to start Avalanche: %v", err)
