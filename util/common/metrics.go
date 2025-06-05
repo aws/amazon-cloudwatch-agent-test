@@ -125,7 +125,7 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 
 func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("us-west-2"), // or whatever your region is
+		config.WithRegion("us-west-2"),
 	)
 	if err != nil {
 		return 0, fmt.Errorf("unable to load SDK config: %v", err)
@@ -133,20 +133,28 @@ func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, err
 
 	client := cloudwatch.NewFromConfig(cfg)
 
-	// Important: Changed from DimensionFilter to Dimension
 	dimensions := []types.DimensionFilter{
+		{
+			Name:  aws.String("job"),
+			Value: aws.String("prometheus_test_job"),
+		},
 		{
 			Name:  aws.String("InstanceId"),
 			Value: aws.String(instanceID),
+		},
+		{
+			Name:  aws.String("series_id"),
+			Value: aws.String("*"), // Wildcard for all series_id values
 		},
 	}
 
 	input := &cloudwatch.ListMetricsInput{
 		Namespace:  aws.String(namespace),
-		Dimensions: dimensions, // Using Dimension instead of DimensionFilter
+		Dimensions: dimensions,
 	}
 
 	paginator := cloudwatch.NewListMetricsPaginator(client, input)
+
 	count := 0
 	for paginator.HasMorePages() {
 		output, err := paginator.NextPage(context.TODO())
@@ -154,8 +162,10 @@ func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, err
 			return count, fmt.Errorf("error fetching metrics: %v", err)
 		}
 		count += len(output.Metrics)
+		log.Printf("Found %d metrics in this page", len(output.Metrics))
 	}
 
+	log.Printf("Total metrics found: %d", count)
 	return count, nil
 }
 
