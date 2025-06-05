@@ -62,6 +62,25 @@ func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series,
 	}
 }
 
+func updateAgentConfig(configPath string, instanceID string) error {
+	// Read the agent config file
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read agent config: %v", err)
+	}
+
+	// Convert to string for replacement
+	config := string(data)
+
+	// Replace the namespace
+	oldNamespace := "CloudWatchAgentStress/prometheus"
+	newNamespace := fmt.Sprintf("CloudWatchAgentStress/prometheus/%s", instanceID)
+	config = strings.ReplaceAll(config, oldNamespace, newNamespace)
+
+	// Write back the modified config
+	return os.WriteFile(configPath, []byte(config), os.ModePerm)
+}
+
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
 func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
 	log.Println("metricPerInterval is here: ", metricPerInterval)
@@ -78,9 +97,7 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
 		case "prometheus":
 			cfg := PrometheusConfig{
-				CounterCount:   metricPerInterval,
-				GaugeCount:     metricPerInterval,
-				SummaryCount:   metricPerInterval,
+				MetricCount:    metricPerInterval,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
 				ScrapeInterval: int(sendingInterval.Seconds()),
@@ -117,7 +134,7 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 	return nil
 }
 
-func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, error) {
+func CountNamespaceMetricsWithDimensions(namespace string) (int, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-west-2"),
 	)
@@ -132,10 +149,6 @@ func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, err
 			Name:  aws.String("job"),
 			Value: aws.String("prometheus_test_job"),
 		},
-		{
-			Name:  aws.String("InstanceId"),
-			Value: aws.String(instanceID),
-		},
 	}
 
 	input := &cloudwatch.ListMetricsInput{
@@ -144,7 +157,6 @@ func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, err
 	}
 
 	paginator := cloudwatch.NewListMetricsPaginator(client, input)
-
 	count := 0
 	for paginator.HasMorePages() {
 		output, err := paginator.NextPage(context.TODO())
@@ -152,10 +164,8 @@ func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, err
 			return count, fmt.Errorf("error fetching metrics: %v", err)
 		}
 		count += len(output.Metrics)
-		log.Printf("Found %d metrics in this page", len(output.Metrics))
 	}
 
-	log.Printf("Total metrics found: %d", count)
 	return count, nil
 }
 
@@ -164,7 +174,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port)).Run()
 
 	// Get Avalanche parameters based on desired metric count
-	counter, gauge, summary, series, label := getAvalancheParams(config.CounterCount)
+	counter, gauge, summary, series, label := getAvalancheParams(config.MetricCount)
 	log.Printf("[Prometheus] Using parameters: counter=%d, gauge=%d, summary=%d, series=%d, label=%d",
 		counter, gauge, summary, series, label)
 
@@ -218,6 +228,10 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	log.Printf("[Prometheus] Successfully created Prometheus config at /tmp/prometheus.yaml")
 
+	if err := updateAgentConfig("/tmp/agent_config.json", config.InstanceID); err != nil {
+		log.Printf("[Prometheus] Failed to update agent config: %v", err)
+		return err
+	}
 	//Starting the agent after prometheus label has been created.
 	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
 		"-a", "fetch-config",
@@ -232,11 +246,16 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	// Wait for duration
 	log.Printf("[Prometheus] Running for duration: %v", duration)
 	time.Sleep(duration)
+	namespace := fmt.Sprintf("CloudWatchAgentStress/prometheus/%s", config.InstanceID)
+	count, _ := CountNamespaceMetricsWithDimensions(namespace)
+	//if err != nil {
+	//	log.Printf("Error counting metrics: %v", err)
+	//	os.Exit(1)
+	//} else if count < config.MetricCount {
+	//	log.Printf("Not all metrics are being generated!! Expected: ~%d Actual: %d", config.MetricCount, count)
+	//	os.Exit(1)
+	//}
 
-	count, err := CountNamespaceMetricsWithDimensions("CloudWatchAgentStress/prometheus", config.InstanceID)
-	if err != nil {
-		log.Printf("Error counting metrics: %v", err)
-	}
 	log.Println("This is how many metrics exist in this namespace", count)
 
 	log.Printf("[Prometheus] Completed running for specified duration")
@@ -245,9 +264,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 }
 
 type PrometheusConfig struct {
-	CounterCount   int           `json:"counter_count"`
-	GaugeCount     int           `json:"gauge_count"`
-	SummaryCount   int           `json:"summary_count"`
+	MetricCount    int           `json:"metric_count"`
 	Port           int           `json:"port"`
 	UpdateInterval time.Duration `json:"update_interval"`
 	ScrapeInterval int           `json:"scrape_interval"`
