@@ -47,6 +47,7 @@ var prometheusTemplate string
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
 func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
 	log.Println("metricPerInterval is here: ", metricPerInterval)
+	log.Println("metricPerInterval is here: ", sendingInterval)
 	go func() {
 		switch receiver {
 		case "statsd":
@@ -59,9 +60,9 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
 		case "prometheus":
 			cfg := PrometheusConfig{
-				CounterCount:   metricPerInterval/3,
-				GaugeCount:     metricPerInterval/3,
-				SummaryCount:   metricPerInterval/3,
+				CounterCount:   metricPerInterval / 3,
+				GaugeCount:     metricPerInterval / 3,
+				SummaryCount:   metricPerInterval / 3,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
 				ScrapeInterval: int(sendingInterval.Seconds()),
@@ -138,6 +139,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Starting metric generation with Avalanche")
 	exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port)).Run() //Killing the port if it exists.
 
+	fmt.Println(config.InstanceID)
 	// Prepare Avalanche command
 	avalanchePath := filepath.Join("/root", "go", "bin", "avalanche")
 	cmd := exec2.Command(avalanchePath,
@@ -145,7 +147,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		fmt.Sprintf("--counter-metric-count=%d", config.CounterCount),
 		fmt.Sprintf("--gauge-metric-count=%d", config.GaugeCount),
 		fmt.Sprintf("--summary-metric-count=%d", config.SummaryCount),
-		fmt.Sprintf("--const-label=InstanceId=%d", config.InstanceID),
+		fmt.Sprintf("--const-label=InstanceId=%s", config.InstanceID),
 		"--series-count=1",
 		"--label-count=0")
 
