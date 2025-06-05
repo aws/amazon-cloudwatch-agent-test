@@ -139,10 +139,13 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Starting metric generation with Avalanche")
 	exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port)).Run() //Killing the port if it exists.
 
-	fmt.Println(config.InstanceID)
 	// Prepare Avalanche command
-	avalanchePath := filepath.Join("/root", "go", "bin", "avalanche")
-	cmd := exec2.Command(avalanchePath,
+	gopathCmd := exec2.Command("go", "env", "GOPATH")
+	gopathBytes, err := gopathCmd.Output()
+	gopath := strings.TrimSpace(string(gopathBytes))
+	log.Println("this is hte go path", gopath)
+
+	cmd := exec2.Command(gopath,
 		fmt.Sprintf("--port=%d", config.Port),
 		fmt.Sprintf("--counter-metric-count=%d", config.CounterCount),
 		fmt.Sprintf("--gauge-metric-count=%d", config.GaugeCount),
