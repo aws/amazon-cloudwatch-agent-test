@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"collectd.org/api"
@@ -136,55 +135,51 @@ func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, err
 }
 
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
-	log.Printf("[Prometheus] Starting metric generation with Avalanche")
-	exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port)).Run() //Killing the port if it exists.
+	log.Printf("[Prometheus] Starting metric generation with Prometheus Generator")
 
-	// Prepare Avalanche command
-	gopathCmd := exec2.Command("go", "env", "GOPATH")
-	gopathBytes, err := gopathCmd.Output()
-	gopath := strings.TrimSpace(string(gopathBytes))
+	// Kill any existing process on the port
+	exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port)).Run()
 
-	cmd := exec2.Command("sudo", filepath.Join(gopath, "bin", "avalanche"),
-		fmt.Sprintf("--port=%d", config.Port),
-		fmt.Sprintf("--counter-metric-count=%d", config.CounterCount),
-		fmt.Sprintf("--gauge-metric-count=%d", config.GaugeCount),
-		fmt.Sprintf("--summary-metric-count=%d", config.SummaryCount),
-		fmt.Sprintf("--const-label=InstanceId=%s", config.InstanceID),
-		"--series-count=1",
-		"--label-count=0")
+	// Create metric generator
+	mg := NewMetricGenerator(config)
 
-	if err := cmd.Start(); err != nil {
-		log.Printf("[Prometheus] Failed to start Avalanche: %v", err)
-		return fmt.Errorf("failed to start Avalanche: %v", err)
+	// Create server with custom handler
+	server := &http.Server{
+		Addr: fmt.Sprintf(":%d", config.Port),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/metrics" {
+				mg.generateMetrics(w)
+			}
+		}),
 	}
 
-	defer func() {
-		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			log.Printf("[Prometheus] Failed to stop Avalanche process: %v", err)
+	// Start updating metrics in background
+	go mg.updateMetrics()
+
+	// Start server in goroutine
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Printf("[Prometheus] Server error: %v", err)
 		}
-		_, _ = cmd.Process.Wait()
 	}()
 
-	log.Printf("[Prometheus] Avalanche started on port %d", config.Port)
+	// Wait for server to start
+	time.Sleep(2 * time.Second)
 
-	// Wait for Avalanche to start up
-	time.Sleep(5 * time.Second)
-
-	// Check if Avalanche is running by curling the metrics endpoint
-	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
-	output, err := curlCmd.Output()
-	if err != nil {
-		log.Printf("[Prometheus] Avalanche failed to start: %v", err)
-		return fmt.Errorf("Avalanche failed to start: %v", err)
+	// Verify server is running
+	if err := ValidateMetricGeneration(config.Port); err != nil {
+		log.Printf("[Prometheus] Server failed to start: %v", err)
+		return fmt.Errorf("server failed to start: %v", err)
 	}
-	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200])) // Print first 200 characters
+	log.Printf("[Prometheus] Server is running successfully")
 
+	// Count existing metrics
 	count, err := CountNamespaceMetricsWithDimensions("CloudWatchAgentStress/prometheus", config.InstanceID)
 	if err != nil {
 		log.Printf("Error counting metrics: %v", err)
 	}
-
 	log.Println("This is how many metrics exist in this namespace", count)
+
 	// Create Prometheus config
 	if err := createPrometheusConfig(config.ScrapeInterval); err != nil {
 		log.Printf("[Prometheus] Failed to create Prometheus config: %v", err)
@@ -196,8 +191,12 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Running for duration: %v", duration)
 	time.Sleep(duration)
 
-	log.Printf("[Prometheus] Completed running for specified duration")
+	// Cleanup
+	if err := server.Close(); err != nil {
+		log.Printf("[Prometheus] Error during server cleanup: %v", err)
+	}
 
+	log.Printf("[Prometheus] Completed running for specified duration")
 	return nil
 }
 
