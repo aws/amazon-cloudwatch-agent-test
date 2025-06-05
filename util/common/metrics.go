@@ -145,7 +145,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	gopath := strings.TrimSpace(string(gopathBytes))
 	log.Println("this is hte go path", gopath)
 
-	cmd := exec2.Command("sudo", gopath,
+	cmd := exec2.Command(gopath, "bin",
 		fmt.Sprintf("--port=%d", config.Port),
 		fmt.Sprintf("--counter-metric-count=%d", config.CounterCount),
 		fmt.Sprintf("--gauge-metric-count=%d", config.GaugeCount),
