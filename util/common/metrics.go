@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"collectd.org/api"
@@ -53,7 +52,7 @@ func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series,
 		return 100, 100, 20, 100, 0
 
 	case 10000:
-		return 50, 50, 15, 50, 100
+		return 100, 100, 20, 100, 10
 
 	case 50000:
 		return 50, 50, 30, 1000, 1000
@@ -191,10 +190,10 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 
 	defer func() {
-		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			log.Printf("[Prometheus] Failed to stop Avalanche process: %v", err)
+		killCmd := exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port))
+		if err := killCmd.Run(); err != nil {
+			log.Printf("[Prometheus] Failed to kill port 8101: %v", err)
 		}
-		_, _ = cmd.Process.Wait()
 	}()
 
 	log.Printf("[Prometheus] Avalanche started on port %d", config.Port)
