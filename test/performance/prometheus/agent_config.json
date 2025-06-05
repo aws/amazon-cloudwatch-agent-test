@@ -30,7 +30,7 @@
     "force_flush_interval": 5
   },
   "metrics": {
-    "namespace": "CloudWatchAgentPerformance",
+    "namespace": "CloudWatchAgentStress/prometheus",
     "metrics_collected": {
       "procstat": [
         {

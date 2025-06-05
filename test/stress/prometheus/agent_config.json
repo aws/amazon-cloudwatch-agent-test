@@ -1,29 +1,26 @@
 {
   "agent": {
-    "metrics_collection_interval": 10,
-    "run_as_user": "root",
     "debug": true
   },
   "logs": {
     "metrics_collected": {
       "prometheus": {
         "prometheus_config_path": "/tmp/prometheus.yaml",
-        "log_group_name": "PromTest1",
+        "log_group_name": "CloudWatchAgentStress/prometheus",
         "emf_processor": {
-          "metric_namespace": "PromTest1",
+          "metric_namespace": "CloudWatchAgentStress/prometheus",
           "metric_declaration": [
             {
-              "source_labels": ["job"],
-              "label_matcher": ".*",
+              "source_labels": ["job", "instance_id"],
+              "label_matcher": "^prometheus.*$",
               "dimensions": [
                 ["job"],
-                ["job", "instance"],
-                ["job", "prom_metric_type"],
-                ["job", "series_id"]
+                ["job", "instance_id"]
               ],
               "metric_selectors": [
-                "^avalanche_.*",
-                "^prometheus_test_.*"
+                "^prometheus_test_counter.*",
+                "^prometheus_test_gauge.*",
+                "^prometheus_test_summary.*"
               ]
             }
           ]
@@ -33,7 +30,7 @@
     "force_flush_interval": 5
   },
   "metrics": {
-    "namespace": "CloudWatchAgentStress2",
+    "namespace": "CloudWatchAgentStress/prometheus",
     "metrics_collected": {
       "procstat": [
         {
