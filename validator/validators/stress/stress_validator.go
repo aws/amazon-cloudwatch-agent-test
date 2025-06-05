@@ -80,7 +80,7 @@ var (
 				"net_packets_sent":     float64(100),
 			},
 			"prometheus": {
-				"procstat_cpu_usage":   float64(40),
+				"procstat_cpu_usage":   float64(8),
 				"procstat_memory_rss":  float64(120000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(1400000000),

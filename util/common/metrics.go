@@ -47,23 +47,18 @@ var prometheusTemplate string
 func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
 	switch metricPerInterval {
 	case 1000:
-		// 1000 total metrics
-		return 10, 10, 5, 20, 10 // (10+10+5)*20*10 > 1000
+		return 10, 10, 5, 20, 10
 
 	case 5000:
-		// 5000 total metrics
-		return 25, 25, 10, 40, 25 // (25+25+10)*40*25 >≈ 5000
+		return 25, 25, 10, 40, 25
 
 	case 10000:
-		// 10000 total metrics
-		return 50, 50, 15, 50, 40 // (50+50+15)*50*40 >≈ 10000
+		return 50, 50, 15, 50, 100
 
 	case 50000:
-		// 50000 total metrics
-		return 100, 100, 30, 1000, 100 // (100+100+30)*1000*100 >≈ 50000
+		return 100, 100, 30, 1000, 100
 
 	default:
-		// Default to smallest setting
 		return 10, 10, 5, 20, 10
 	}
 }
@@ -165,12 +160,12 @@ func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, err
 		log.Printf("Found %d metrics in this page", len(output.Metrics))
 	}
 
-	log.Printf("Total metrics found: %d", count)
+	//log.Printf("Total metrics found: %d", count)
 	return count, nil
 }
 
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
-	log.Printf("[Prometheus] Starting metric generation with Avalanche")
+	//log.Printf("[Prometheus] Starting metric generation with Avalanche")
 	exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port)).Run()
 
 	// Get Avalanche parameters based on desired metric count
