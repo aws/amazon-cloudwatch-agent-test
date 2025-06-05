@@ -213,12 +213,6 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200])) // Print first 200 characters
 
-	count, err := CountNamespaceMetricsWithDimensions("CloudWatchAgentStress/prometheus", config.InstanceID)
-	if err != nil {
-		log.Printf("Error counting metrics: %v", err)
-	}
-
-	log.Println("This is how many metrics exist in this namespace", count)
 	// Create Prometheus config
 	if err := createPrometheusConfig(config.ScrapeInterval); err != nil {
 		log.Printf("[Prometheus] Failed to create Prometheus config: %v", err)
@@ -229,6 +223,12 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	// Wait for duration
 	log.Printf("[Prometheus] Running for duration: %v", duration)
 	time.Sleep(duration)
+
+	count, err := CountNamespaceMetricsWithDimensions("CloudWatchAgentStress/prometheus", config.InstanceID)
+	if err != nil {
+		log.Printf("Error counting metrics: %v", err)
+	}
+	log.Println("This is how many metrics exist in this namespace", count)
 
 	log.Printf("[Prometheus] Completed running for specified duration")
 
