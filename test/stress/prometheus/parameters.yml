@@ -9,7 +9,7 @@ agent_collection_period: 300
 
 cloudwatch_agent_config: "/tmp/agent_config.json"
 
-metric_namespace: "CloudWatchAgentStress/prometheus"
+metric_namespace: "CloudWatchAgentStress"
 metric_validation:
   - metric_name: "procstat_cpu_usage"
     metric_sample_count: 300
