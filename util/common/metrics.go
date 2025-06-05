@@ -79,9 +79,9 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
 		case "prometheus":
 			cfg := PrometheusConfig{
-				CounterCount:   metricPerInterval,
-				GaugeCount:     metricPerInterval,
-				SummaryCount:   metricPerInterval,
+				CounterCount:   50000,
+				GaugeCount:     50000,
+				SummaryCount:   50000,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
 				ScrapeInterval: int(sendingInterval.Seconds()),

@@ -3,8 +3,8 @@ test_case: "prometheus_stress"
 validate_type: "stress"
 data_type: "metrics"
 metrics_config: "<metrics_config>"
-scrape_interval: "<scrape_interval>"
-values_per_minute: "<values_per_minute>"
+scrape_interval: "60"
+values_per_minute: "50000"
 agent_collection_period: 300
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
