@@ -25,11 +25,12 @@ func NewMetricGenerator(config PrometheusConfig) *MetricGenerator {
 }
 
 func (mg *MetricGenerator) generateMetrics(w http.ResponseWriter) {
+
 	// Generate counter metrics
 	for i := 0; i < mg.config.CounterCount; i++ {
 		fmt.Fprintf(w, "# HELP prometheus_test_counter A test counter metric\n")
 		fmt.Fprintf(w, "# TYPE prometheus_test_counter counter\n")
-		fmt.Fprintf(w, "prometheus_test_counter{job=\"prometheus\",instance_id=\"%s\",include=\"yes\",prom_type=\"counter\"} %d\n",
+		fmt.Fprintf(w, "prometheus_test_counter{instance_id=\"%s\"} %d\n",
 			mg.config.InstanceID, atomic.LoadInt64(&mg.counterValues[i]))
 	}
 
@@ -37,7 +38,7 @@ func (mg *MetricGenerator) generateMetrics(w http.ResponseWriter) {
 	for i := 0; i < mg.config.GaugeCount; i++ {
 		fmt.Fprintf(w, "# HELP prometheus_test_gauge A test gauge metric\n")
 		fmt.Fprintf(w, "# TYPE prometheus_test_gauge gauge\n")
-		fmt.Fprintf(w, "prometheus_test_gauge{job=\"prometheus\",instance_id=\"%s\",include=\"yes\",prom_type=\"gauge\"} %f\n",
+		fmt.Fprintf(w, "prometheus_test_gauge{instance_id=\"%s\"} %f\n",
 			mg.config.InstanceID, mg.gaugeValues[i])
 	}
 
@@ -45,13 +46,14 @@ func (mg *MetricGenerator) generateMetrics(w http.ResponseWriter) {
 	for i := 0; i < mg.config.SummaryCount; i++ {
 		fmt.Fprintf(w, "# HELP prometheus_test_summary A test summary metric\n")
 		fmt.Fprintf(w, "# TYPE prometheus_test_summary summary\n")
-		fmt.Fprintf(w, "prometheus_test_summary_sum{job=\"prometheus\",instance_id=\"%s\",include=\"yes\",prom_type=\"summary\"} %f\n",
+		fmt.Fprintf(w, "prometheus_test_summary_sum{instance_id=\"%s\"} %f\n",
 			mg.config.InstanceID, mg.summaryValues[i])
 	}
 
 	// Log metric generation for debugging
 	log.Printf("Generated %d counter metrics, %d gauge metrics, %d summary metrics",
 		mg.config.CounterCount, mg.config.GaugeCount, mg.config.SummaryCount)
+
 }
 
 func (mg *MetricGenerator) updateMetrics() {

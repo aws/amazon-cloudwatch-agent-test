@@ -16,13 +16,9 @@
               "source_labels": ["job"],
               "label_matcher": ".*",
               "dimensions": [
-                ["job"],
-                ["job", "instance"],
-                ["job", "prom_metric_type"],
-                ["job", "series_id"]
+                ["instance_id"]
               ],
               "metric_selectors": [
-                "^avalanche_.*",
                 "^prometheus_test_.*"
               ]
             }
