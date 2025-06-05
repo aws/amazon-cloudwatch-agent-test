@@ -184,6 +184,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		fmt.Sprintf("--summary-metric-count=%d", summary),
 		fmt.Sprintf("--series-count=%d", series),
 		fmt.Sprintf("--label-count=%d", label),
+		fmt.Sprintf("--const-label=InstanceId=%s", config.InstanceID),
 		"--series-change-interval=0",
 		"--series-interval=0",
 		"--value-interval=10")
@@ -222,7 +223,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	log.Printf("[Prometheus] Successfully created Prometheus config at /tmp/prometheus.yaml")
 
-	//Starting the agent after prometheus label has been created
+	//Starting the agent after prometheus label has been created.
 	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
 		"-a", "fetch-config",
 		"-s",
