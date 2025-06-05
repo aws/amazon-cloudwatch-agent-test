@@ -92,12 +92,7 @@ resource "null_resource" "install_binaries" {
       "aws s3 cp --no-progress s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_package} .",
       "aws s3 cp --no-progress s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_validator} .",
       local.ami_family["install_command"],
-      "sudo yum install -y golang",
-      # Install avalanche
       "go install github.com/prometheus-community/avalanche/cmd/avalanche@latest",
-      # Add Go bin to PATH
-      "echo 'export PATH=$PATH:~/go/bin' >> ~/.bashrc",
-      "source ~/.bashrc"
     ]
   }
 }
