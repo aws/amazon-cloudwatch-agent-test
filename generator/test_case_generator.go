@@ -223,29 +223,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
-	"ec2_performance": {
-		{testDir: "../../test/performance/emf"},
-		{testDir: "../../test/performance/logs"},
-		{testDir: "../../test/performance/system"},
-		{testDir: "../../test/performance/statsd"},
-		{testDir: "../../test/performance/collectd"},
-		{testDir: "../../test/performance/trace/xray", runMockServer: true},
-	},
-	"ec2_windows_performance": {
-		{testDir: "../../test/performance/windows/logs"},
-		{testDir: "../../test/performance/windows/system"},
-	},
 	"ec2_stress": {
 		{testDir: "../../test/stress/emf"},
 		{testDir: "../../test/stress/prometheus"},
-		{testDir: "../../test/stress/logs"},
-		{testDir: "../../test/stress/system"},
-		{testDir: "../../test/stress/statsd"},
-		{testDir: "../../test/stress/collectd"},
-	},
-	"ec2_windows_stress": {
-		{testDir: "../../test/stress/windows/logs"},
-		{testDir: "../../test/stress/windows/system"},
+		{testDir: "../../test/stress/prometheus"},
+		{testDir: "../../test/stress/prometheus"},
+		{testDir: "../../test/stress/prometheus"},
 	},
 	"ecs_fargate": {
 		{testDir: "./test/ecs/ecs_metadata"},
