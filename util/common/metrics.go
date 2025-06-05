@@ -254,7 +254,7 @@ func createPrometheusConfig(scrapeInterval int) error {
 
 	log.Printf("[Prometheus] Writing config to /tmp/prometheus.yaml:\n%s", cfg)
 
-	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), 0644)
+	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), os.ModePerm)
 	if err != nil {
 		log.Printf("[Prometheus] Failed to write config: %v", err)
 		return err
