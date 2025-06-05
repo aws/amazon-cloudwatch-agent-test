@@ -219,8 +219,20 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		log.Printf("[Prometheus] Failed to create Prometheus config: %v", err)
 		return fmt.Errorf("failed to create Prometheus config: %v", err)
 	}
+
 	log.Printf("[Prometheus] Successfully created Prometheus config at /tmp/prometheus.yaml")
 
+	//Starting the agent after prometheus label has been created
+	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
+		"-a", "fetch-config",
+		"-s",
+		"-m", "ec2",
+		"-c", "file:/tmp/agent_config.json")
+
+	if err := agentCmd.Run(); err != nil {
+		log.Printf("[Prometheus] Failed to start CloudWatch agent: %v", err)
+		return fmt.Errorf("failed to start CloudWatch agent: %v", err)
+	}
 	// Wait for duration
 	log.Printf("[Prometheus] Running for duration: %v", duration)
 	time.Sleep(duration)
