@@ -137,10 +137,6 @@ func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, err
 			Name:  aws.String("InstanceId"),
 			Value: aws.String(instanceID),
 		},
-		{
-			Name:  aws.String("series_id"),
-			Value: aws.String("*"), // Wildcard for all series_id values
-		},
 	}
 
 	input := &cloudwatch.ListMetricsInput{
@@ -160,7 +156,7 @@ func CountNamespaceMetricsWithDimensions(namespace, instanceID string) (int, err
 		log.Printf("Found %d metrics in this page", len(output.Metrics))
 	}
 
-	//log.Printf("Total metrics found: %d", count)
+	log.Printf("Total metrics found: %d", count)
 	return count, nil
 }
 
