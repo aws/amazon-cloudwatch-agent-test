@@ -164,7 +164,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}()
 
 	// Wait for server to start
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	// Verify server is running
 	if err := ValidateMetricGeneration(config.Port); err != nil {
