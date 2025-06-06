@@ -22,7 +22,9 @@ import (
 	"os"
 	exec2 "os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -62,32 +64,56 @@ func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series,
 	}
 }
 
-func updateAgentConfig(configPath string, instanceID string) error {
-	// Read the agent config file
+// updateAgentConfig updates the namespace in the CloudWatch Agent config file.
+//
+// Behavior:
+// 1. On the first run:
+//    - Finds any occurrence of "CloudWatchAgentStress/Prometheus".
+//    - Replaces it with "CloudWatchAgentStress/Prometheus/{instanceID}/1".
+//
+// 2. On subsequent runs:
+//    - Detects an existing namespace in the form "CloudWatchAgentStress/Prometheus/{instanceID}/{index}".
+//    - Increments the {index} by 1 and replaces it with the new value.
+//
+// The function writes the updated config back to the file and returns the new namespace used.
+func updateAgentConfig(configPath string, instanceID string) (string, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to read agent config: %v", err)
+		return "", fmt.Errorf("failed to read agent config: %v", err)
 	}
 
 	cfg := string(data)
 
-	oldNamespace := "CloudWatchAgentStress/prometheus"
-	newNamespace := fmt.Sprintf("PrometheusStressTest/%s", instanceID)
-	cfg = strings.ReplaceAll(cfg, oldNamespace, newNamespace)
+	// Match full namespace with instanceID and index
+	fullPattern := fmt.Sprintf(`CloudWatchAgentStress/Prometheus/%s/(\d+)`, regexp.QuoteMeta(instanceID))
+	fullRegex := regexp.MustCompile(fullPattern)
 
-	// Write back the modified config
+	if matches := fullRegex.FindStringSubmatch(cfg); len(matches) == 2 {
+		// Found existing namespace with index
+		oldIndex, _ := strconv.Atoi(matches[1])
+		newIndex := oldIndex + 1
+		newNamespace := fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/%d", instanceID, newIndex)
+		cfg = fullRegex.ReplaceAllString(cfg, newNamespace)
+
+		// Write updated config
+		if err := os.WriteFile(configPath, []byte(cfg), os.ModePerm); err != nil {
+			return "", fmt.Errorf("failed to write modified config: %v", err)
+		}
+
+		return newNamespace, nil
+	}
+
+	// Else look for first-time pattern without instance ID
+	baseRegex := regexp.MustCompile(`CloudWatchAgentStress/Prometheus`)
+	newNamespace := fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/1", instanceID)
+	cfg = baseRegex.ReplaceAllString(cfg, newNamespace)
+
+	// Write updated config
 	if err := os.WriteFile(configPath, []byte(cfg), os.ModePerm); err != nil {
-		return fmt.Errorf("failed to write modified config: %v", err)
+		return "", fmt.Errorf("failed to write modified config: %v", err)
 	}
 
-	// Re-read and print the modified config to verify
-	verifiedData, err := os.ReadFile(configPath)
-	if err != nil {
-		return fmt.Errorf("failed to verify written config: %v", err)
-	}
-
-	fmt.Println("Written Agent Config:\n", string(verifiedData))
-	return nil
+	return newNamespace, nil
 }
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
