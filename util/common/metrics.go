@@ -69,16 +69,25 @@ func updateAgentConfig(configPath string, instanceID string) error {
 		return fmt.Errorf("failed to read agent config: %v", err)
 	}
 
-	// Convert to string for replacement
-	config := string(data)
+	cfg := string(data)
 
-	// Replace the namespace
 	oldNamespace := "CloudWatchAgentStress/prometheus"
 	newNamespace := fmt.Sprintf("PrometheusStressTest/%s", instanceID)
-	config = strings.ReplaceAll(config, oldNamespace, newNamespace)
+	cfg = strings.ReplaceAll(cfg, oldNamespace, newNamespace)
 
 	// Write back the modified config
-	return os.WriteFile(configPath, []byte(config), os.ModePerm)
+	if err := os.WriteFile(configPath, []byte(cfg), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write modified config: %v", err)
+	}
+
+	// Re-read and print the modified config to verify
+	verifiedData, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to verify written config: %v", err)
+	}
+
+	fmt.Println("Written Agent Config:\n", string(verifiedData))
+	return nil
 }
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
