@@ -5,6 +5,7 @@ package otlp_histograms
 import (
 	_ "embed"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"os"
 	"os/exec"
@@ -29,8 +30,7 @@ func init() {
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	//instanceID := awsservice.GetInstanceId()
-	instanceID := "test-instance-1"
+	instanceID := awsservice.GetInstanceId()
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
