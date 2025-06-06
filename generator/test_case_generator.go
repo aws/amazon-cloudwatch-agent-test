@@ -146,6 +146,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			terraformDir: "terraform/ec2/assume_role",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
+		{
+			testDir: "./test/detailed_metrics",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
 	},
 	testTypeKeyEc2SELinux: {
 		//skip test until test is not flakey
