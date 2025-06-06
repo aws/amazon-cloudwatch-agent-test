@@ -74,7 +74,7 @@ func updateAgentConfig(configPath string, instanceID string) error {
 
 	// Replace the namespace
 	oldNamespace := "CloudWatchAgentStress/prometheus"
-	newNamespace := fmt.Sprintf("CloudWatchAgentStress/prometheus/%s", instanceID)
+	newNamespace := fmt.Sprintf("PrometheusStressTest/%s", instanceID)
 	config = strings.ReplaceAll(config, oldNamespace, newNamespace)
 
 	// Write back the modified config
