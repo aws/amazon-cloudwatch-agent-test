@@ -1,0 +1,14 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15,
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "metrics_collected": {
+      "otlp": {
+        "http_endpoint": "127.0.0.1:1234"
+      }
+    }
+  }
+}
