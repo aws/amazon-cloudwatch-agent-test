@@ -9,6 +9,11 @@ fi
 INITIAL_START_TIME=$(date +%s%N)
 COUNT=0
 
+# Add debug logging
+echo "Starting OTLP metrics pusher with INSTANCE_ID: $INSTANCE_ID"
+echo "Initial start time: $INITIAL_START_TIME"
+
+
 # Create the initial JSON payload
 cat <<EOF > /tmp/metrics_payload.json
 {
@@ -95,6 +100,18 @@ cat <<EOF > /tmp/metrics_payload.json
                         "value": {
                           "stringValue": "some value"
                         }
+                      },
+                      {
+                        "key": "service.name",
+                        "value": {
+                          "stringValue": "my.service"
+                        }
+                      },
+                      {
+                        "key": "instance_id",
+                        "value": {
+                          "stringValue": "$INSTANCE_ID"
+                        }
                       }
                     ]
                   }
@@ -153,6 +170,8 @@ while true; do
     START_TIME=$(date +%s%N)
     COUNT=$((COUNT + 2))  # Increment count by 2
 
+    echo "Sending metrics with COUNT: $COUNT, START_TIME: $START_TIME"
+
     # Create temporary file with all replacements
     cat /tmp/metrics_payload.json | \
         sed -e "s/START_TIME/$START_TIME/g" \
@@ -160,9 +179,10 @@ while true; do
         -e "s/CURRENT_COUNT/$COUNT/g" \
         -e "s/CURRENT_SUM/$COUNT/g" > /tmp/metrics_payload_with_time.json
 
-    response=$(curl -s -w "\n%{http_code}" -X POST http://127.0.0.1:1234/v1/metrics \
+    # Add verbose curl output for debugging
+    response=$(curl -v -s -w "\n%{http_code}" -X POST http://127.0.0.1:1234/v1/metrics \
       -H "Content-Type: application/json" \
-      -d @/tmp/metrics_payload_with_time.json)
+      -d @/tmp/metrics_payload_with_time.json 2>&1)
 
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
@@ -170,9 +190,14 @@ while true; do
     if [ "$http_code" -ne 200 ]; then
         echo "Failed to send metrics. Status code: $http_code"
         echo "Response body: $body"
+        echo "Full curl response:"
+        echo "$response"
         echo "Retrying in 10 seconds..."
     else
         echo "Successfully sent metrics at $(date) with count: $COUNT"
+        # Print the actual payload being sent
+        echo "Sent payload:"
+        cat /tmp/metrics_payload_with_time.json
     fi
 
     rm -f /tmp/metrics_payload_with_time.json

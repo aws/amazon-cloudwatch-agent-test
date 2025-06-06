@@ -20,7 +20,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
@@ -30,8 +29,8 @@ func init() {
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	instanceID := awsservice.GetInstanceId()
-	log.Println(instanceID)
+	//instanceID := awsservice.GetInstanceId()
+	instanceID := "test-instance-1"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
