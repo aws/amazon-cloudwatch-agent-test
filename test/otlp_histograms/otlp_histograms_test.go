@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,6 +55,60 @@ func TestOTLPMetrics(t *testing.T) {
 				{
 					Name:  aws.String("instance_id"),
 					Value: aws.String(instanceID),
+				},
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+			},
+			expected: []struct {
+				stat  types.Statistic
+				value float64
+				check func(t *testing.T, expected, actual float64)
+			}{
+				{
+					stat:  types.StatisticMinimum,
+					value: 0,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.Equal(t, expected, actual)
+					},
+				},
+				{
+					stat:  types.StatisticMaximum,
+					value: 2,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.Equal(t, expected, actual)
+					},
+				},
+				{
+					stat:  types.StatisticSum,
+					value: 2,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.GreaterOrEqual(t, actual, expected)
+					},
+				},
+				{
+					stat:  types.StatisticAverage,
+					value: 1,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.InDelta(t, expected, actual, 0.01)
+					},
+				},
+				{
+					stat:  types.StatisticSampleCount,
+					value: 2,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.GreaterOrEqual(t, actual, expected)
+					},
+				},
+			},
+		},
+		{
+			name: "my.cumulative.histogram",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("my.cumulative.histogram.attr"),
+					Value: aws.String("some value"),
 				},
 				{
 					Name:  aws.String("service.name"),
@@ -171,6 +226,16 @@ func TestOTLPMetrics(t *testing.T) {
 				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, metric.Statistics(e.stat), metric.MinuteStatPeriod)
 				require.NoError(t, err)
 				require.GreaterOrEqual(t, len(values), 3)
+
+				// For cumulative metrics, we want to check that the values are monotonically increasing
+				if strings.Contains(m.name, "cumulative") {
+					for i := 1; i < len(values); i++ {
+						if e.stat == types.StatisticSum || e.stat == types.StatisticSampleCount {
+							assert.GreaterOrEqual(t, values[i], values[i-1],
+								"Cumulative metric %s with stat %s should be monotonically increasing", m.name, e.stat)
+						}
+					}
+				}
 
 				for _, v := range values[1 : len(values)-1] {
 					e.check(t, e.value, v)

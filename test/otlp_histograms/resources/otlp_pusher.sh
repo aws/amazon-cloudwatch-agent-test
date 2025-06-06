@@ -5,6 +5,10 @@ if [ -z "$INSTANCE_ID" ]; then
     exit 1
 fi
 
+# Set initial time and count
+INITIAL_START_TIME=$(date +%s%N)
+COUNT=0
+
 # Create the initial JSON payload
 cat <<EOF > /tmp/metrics_payload.json
 {
@@ -45,9 +49,9 @@ cat <<EOF > /tmp/metrics_payload.json
                   {
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "count": 2,
-                    "sum": 2,
-                    "bucketCounts": [0,2],
+                    "count": CURRENT_COUNT,
+                    "sum": CURRENT_SUM,
+                    "bucketCounts": [0,CURRENT_COUNT],
                     "explicitBounds": [1,2],
                     "min": 0,
                     "max": 2,
@@ -70,6 +74,34 @@ cat <<EOF > /tmp/metrics_payload.json
               }
             },
             {
+              "name": "my.cumulative.histogram",
+              "unit": "1",
+              "description": "I am a Cumulative Histogram",
+              "histogram": {
+                "aggregationTemporality": 2,
+                "dataPoints": [
+                  {
+                    "startTimeUnixNano": INITIAL_START_TIME,
+                    "timeUnixNano": START_TIME,
+                    "count": CURRENT_COUNT,
+                    "sum": CURRENT_SUM,
+                    "bucketCounts": [0,CURRENT_COUNT],
+                    "explicitBounds": [1, 2],
+                    "min": 0,
+                    "max": 2,
+                    "attributes": [
+                      {
+                        "key": "my.cumulative.histogram.attr",
+                        "value": {
+                          "stringValue": "some value"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
               "name": "my.cumulative.exponential.histogram",
               "unit": "1",
               "description": "I am an Cumulative Exponential Histogram",
@@ -79,13 +111,13 @@ cat <<EOF > /tmp/metrics_payload.json
                   {
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "count": 3,
-                    "sum": 10,
+                    "count": CURRENT_COUNT,
+                    "sum": CURRENT_SUM,
                     "scale": 0,
                     "zeroCount": 1,
                     "positive": {
                       "offset": 1,
-                      "bucketCounts": [0,2]
+                      "bucketCounts": [0,CURRENT_COUNT]
                     },
                     "min": 0,
                     "max": 5,
@@ -119,9 +151,14 @@ EOF
 # Start the OTLP sending loop
 while true; do
     START_TIME=$(date +%s%N)
+    COUNT=$((COUNT + 2))  # Increment count by 2
 
+    # Create temporary file with all replacements
     cat /tmp/metrics_payload.json | \
-        sed -e "s/START_TIME/$START_TIME/g" > /tmp/metrics_payload_with_time.json
+        sed -e "s/START_TIME/$START_TIME/g" \
+        -e "s/INITIAL_START_TIME/$INITIAL_START_TIME/g" \
+        -e "s/CURRENT_COUNT/$COUNT/g" \
+        -e "s/CURRENT_SUM/$COUNT/g" > /tmp/metrics_payload_with_time.json
 
     response=$(curl -s -w "\n%{http_code}" -X POST http://127.0.0.1:1234/v1/metrics \
       -H "Content-Type: application/json" \
@@ -135,7 +172,7 @@ while true; do
         echo "Response body: $body"
         echo "Retrying in 10 seconds..."
     else
-        echo "Successfully sent metrics at $(date)"
+        echo "Successfully sent metrics at $(date) with count: $COUNT"
     fi
 
     rm -f /tmp/metrics_payload_with_time.json
