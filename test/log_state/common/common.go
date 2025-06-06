@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -47,6 +49,8 @@ func Validate(gs GeneratorStarter, testConfigPath string) error {
 	common.StopAgent()
 	time.Sleep(10 * time.Second)
 
+	logStateFiles()
+
 	log.Print("Restarting agent. Resuming log collection...")
 	if err := common.StartAgent(common.ConfigOutputPath, true, false); err != nil {
 		return fmt.Errorf("could not restart agent: %v", err)
@@ -60,7 +64,9 @@ func Validate(gs GeneratorStarter, testConfigPath string) error {
 
 	log.Print("Shutting down agent")
 	common.StopAgent()
+
 	endTime := time.Now()
+	logStateFiles()
 	return awsservice.ValidateLogs(
 		instanceID,
 		instanceID,
@@ -70,4 +76,24 @@ func Validate(gs GeneratorStarter, testConfigPath string) error {
 		awsservice.AssertNoDuplicateLogs(),
 		logs.AssertNoMissingLogs,
 	)
+}
+
+func logStateFiles() {
+	files, err := os.ReadDir(common.AgentLogStateFileDir)
+	if err != nil {
+		log.Printf("Could not read agent log state directory: %v", err)
+		return
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		var content []byte
+		content, err = os.ReadFile(filepath.Join(common.AgentLogStateFileDir, file.Name()))
+		if err != nil {
+			log.Printf("Error reading state file %s: %v", file.Name(), err)
+			continue
+		}
+		log.Printf("File: %s\nContent:\n%s\n", file.Name(), string(content))
+	}
 }

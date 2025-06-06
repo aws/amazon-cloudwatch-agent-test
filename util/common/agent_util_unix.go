@@ -28,6 +28,7 @@ const (
 	ConfigOutputPath        = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	Namespace               = "CWAgent"
 	Host                    = "host"
+	AgentLogStateFileDir    = "/opt/aws/amazon-cloudwatch-agent/logs/state"
 	AgentLogFile            = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	InstallAgentVersionPath = "/opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION"
 )
