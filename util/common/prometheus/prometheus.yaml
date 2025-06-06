@@ -3,6 +3,6 @@ global:
   evaluation_interval: $SCRAPE_INTERVAL
 
 scrape_configs:
-  - job_name: 'prometheus'
+  - job_name: 'prometheus_test_job'
     static_configs:
       - targets: ['localhost:$PORT']
