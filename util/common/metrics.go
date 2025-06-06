@@ -147,7 +147,7 @@ func CountNamespaceMetricsWithDimensions(namespace string) (int, error) {
 	dimensions := []types.DimensionFilter{
 		{
 			Name:  aws.String("job"),
-			Value: aws.String("prometheus_test_job"),
+			Value: aws.String("prometheus"),
 		},
 	}
 
@@ -249,7 +249,8 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	// Wait for duration
 	log.Printf("[Prometheus] Running for duration: %v", duration)
 	time.Sleep(duration)
-	namespace := fmt.Sprintf("CloudWatchAgentStress/prometheus/%s", config.InstanceID)
+	//namespace := fmt.Sprintf("CloudWatchAgentStress/prometheus/%s", config.InstanceID)
+	namespace := "CloudWatchAgentStress/prometheus/i-0c865f1dd3d9752a8"
 	count, _ := CountNamespaceMetricsWithDimensions(namespace)
 	//if err != nil {
 	//	log.Printf("Error counting metrics: %v", err)
