@@ -49,9 +49,9 @@ cat <<EOF > /tmp/metrics_payload.json
                   {
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "count": CURRENT_COUNT,
-                    "sum": CURRENT_SUM,
-                    "bucketCounts": [0,CURRENT_COUNT],
+                    "count": 2,
+                    "sum": 2,
+                    "bucketCounts": [0,2],
                     "explicitBounds": [1,2],
                     "min": 0,
                     "max": 2,
@@ -111,13 +111,13 @@ cat <<EOF > /tmp/metrics_payload.json
                   {
                     "startTimeUnixNano": START_TIME,
                     "timeUnixNano": START_TIME,
-                    "count": CURRENT_COUNT,
-                    "sum": CURRENT_SUM,
+                    "count": 3,
+                    "sum": 10,
                     "scale": 0,
                     "zeroCount": 1,
                     "positive": {
                       "offset": 1,
-                      "bucketCounts": [0,CURRENT_COUNT]
+                      "bucketCounts": [0,2]
                     },
                     "min": 0,
                     "max": 5,
