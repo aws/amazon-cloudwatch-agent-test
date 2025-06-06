@@ -46,73 +46,12 @@ const TMPAGENTPATH = "/tmp/agent_config.json"
 //go:embed prometheus/prometheus.yaml
 var prometheusTemplate string
 
-func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
-	switch metricPerInterval {
-	case 1000:
-		return 100, 100, 20, 10, 0
-
-	case 5000:
-		return 100, 100, 20, 100, 0
-
-	case 10000:
-		return 100, 100, 20, 100, 10
-
-	case 50000:
-		return 100, 100, 20, 250, 10
-
-	default:
-		return 10, 10, 5, 20, 10
-	}
-}
-
-// updateAgentConfig updates the namespace in the CloudWatch Agent config file.
-//
-// Behavior:
-// 1. On the first run:
-//   - Finds any occurrence of "CloudWatchAgentStress/Prometheus".
-//   - Replaces it with "CloudWatchAgentStress/Prometheus/{instanceID}/1".
-//
-// 2. On subsequent runs (if stress test retried):
-//   - Detects an existing namespace in the form "CloudWatchAgentStress/Prometheus/{instanceID}/{index}".
-//   - Increments the {index} by 1 and replaces it with the new value.
-//
-// The function writes the updated config back to the file and returns the new namespace used.
-func updateAgentConfig(configPath string, instanceID string) string {
-	// Read the agent config file
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		fmt.Printf("failed to read agent config: %v\n", err)
-		os.Exit(1)
-	}
-
-	cfg := string(data)
-
-	// Match full namespace with instanceID and index: CloudWatchAgentStress/Prometheus/{instanceID}/{index}
-	fullPattern := fmt.Sprintf(`CloudWatchAgentStress/Prometheus/%s/(\d+)`, regexp.QuoteMeta(instanceID))
-	fullRegex := regexp.MustCompile(fullPattern)
-
-	var newNamespace string
-
-	if matches := fullRegex.FindStringSubmatch(cfg); len(matches) == 2 {
-		// Found existing namespace with index
-		oldIndex, _ := strconv.Atoi(matches[1])
-		newIndex := oldIndex + 1
-		newNamespace = fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/%d", instanceID, newIndex)
-		cfg = fullRegex.ReplaceAllString(cfg, newNamespace)
-	} else {
-		// First-time update: replace base namespace
-		newNamespace = fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/1", instanceID)
-		baseRegex := regexp.MustCompile(`CloudWatchAgentStress/Prometheus`)
-		cfg = baseRegex.ReplaceAllString(cfg, newNamespace)
-	}
-
-	// Write updated config
-	if err := os.WriteFile(configPath, []byte(cfg), os.ModePerm); err != nil {
-		fmt.Printf("failed to write modified config: %v\n", err)
-		os.Exit(1)
-	}
-
-	return newNamespace
+type PrometheusConfig struct {
+	MetricCount    int           `json:"metric_count"`
+	Port           int           `json:"port"`
+	UpdateInterval time.Duration `json:"update_interval"`
+	ScrapeInterval int           `json:"scrape_interval"`
+	InstanceID     string        `json:"instance_id"`
 }
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
@@ -262,7 +201,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	log.Printf("[Prometheus] Successfully created Prometheus config at /tmp/prometheus.yaml")
 
-	namespace := updateAgentConfig(TMPAGENTPATH, config.InstanceID)
+	namespace := updateAgentConfigNamespacePrometheus(TMPAGENTPATH, config.InstanceID)
 	//Starting the agent after prometheus label has been created.
 	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
 		"-a", "fetch-config",
@@ -277,14 +216,14 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	// Wait for duration
 	log.Printf("[Prometheus] Running for duration: %v", duration)
 	time.Sleep(duration)
-	count, _ := CountNamespaceMetricsWithDimensions(namespace)
-	//if err != nil {
-	//	log.Printf("Error counting metrics: %v", err)
-	//	os.Exit(1)
-	//} else if count < config.MetricCount {
-	//	log.Printf("Not all metrics are being generated!! Expected: ~%d Actual: %d", config.MetricCount, count)
-	//	os.Exit(1)
-	//}
+	count, err := CountNamespaceMetricsWithDimensions(namespace)
+	if err != nil {
+		log.Printf("Error counting metrics: %v", err)
+		os.Exit(1)
+	} else if count < config.MetricCount {
+		log.Printf("Not all metrics are being generated!! Expected: ~%d Actual: %d", config.MetricCount, count)
+		os.Exit(1)
+	}
 
 	log.Println("This is how many metrics exist in this namespace", count)
 
@@ -292,13 +231,23 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	return nil
 }
+func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
+	switch metricPerInterval {
+	case 1000:
+		return 100, 100, 20, 10, 0
 
-type PrometheusConfig struct {
-	MetricCount    int           `json:"metric_count"`
-	Port           int           `json:"port"`
-	UpdateInterval time.Duration `json:"update_interval"`
-	ScrapeInterval int           `json:"scrape_interval"`
-	InstanceID     string        `json:"instance_id"`
+	case 5000:
+		return 100, 100, 20, 100, 0
+
+	case 10000:
+		return 100, 100, 20, 100, 10
+
+	case 50000:
+		return 100, 100, 20, 250, 10
+
+	default:
+		return 10, 10, 5, 20, 10
+	}
 }
 
 func createPrometheusConfig(scrapeInterval int) error {
@@ -318,6 +267,54 @@ func createPrometheusConfig(scrapeInterval int) error {
 
 	log.Printf("[Prometheus] Successfully wrote config file")
 	return nil
+}
+
+// Behavior:
+// 1. On the first run:
+//   - Replaces "CloudWatchAgentStress/Prometheus".
+//   - Replaces it with "CloudWatchAgentStress/Prometheus/{instanceID}/1".
+//
+// 2. On subsequent runs (if stress test retried):
+//   - Detects an existing namespace in the form "CloudWatchAgentStress/Prometheus/{instanceID}/{index}".
+//   - Increments the {index} by 1 and replaces it with the new value.
+//
+// The function writes the updated config back to the file and returns the new namespace used.
+func updateAgentConfigNamespacePrometheus(configPath string, instanceID string) string {
+	// Read the agent config file
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		fmt.Printf("failed to read agent config: %v\n", err)
+		os.Exit(1)
+	}
+
+	cfg := string(data)
+
+	// Match full namespace with instanceID and index: CloudWatchAgentStress/Prometheus/{instanceID}/{index}
+	fullPattern := fmt.Sprintf(`CloudWatchAgentStress/Prometheus/%s/(\d+)`, regexp.QuoteMeta(instanceID))
+	fullRegex := regexp.MustCompile(fullPattern)
+
+	var newNamespace string
+
+	if matches := fullRegex.FindStringSubmatch(cfg); len(matches) == 2 {
+		// Found existing namespace with index
+		oldIndex, _ := strconv.Atoi(matches[1])
+		newIndex := oldIndex + 1
+		newNamespace = fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/%d", instanceID, newIndex)
+		cfg = fullRegex.ReplaceAllString(cfg, newNamespace)
+	} else {
+		// First-time update: replace base namespace
+		newNamespace = fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/1", instanceID)
+		baseRegex := regexp.MustCompile(`CloudWatchAgentStress/Prometheus`)
+		cfg = baseRegex.ReplaceAllString(cfg, newNamespace)
+	}
+
+	// Write updated config
+	if err := os.WriteFile(configPath, []byte(cfg), os.ModePerm); err != nil {
+		fmt.Printf("failed to write modified config: %v\n", err)
+		os.Exit(1)
+	}
+
+	return newNamespace
 }
 
 func getBaseDir() string {
