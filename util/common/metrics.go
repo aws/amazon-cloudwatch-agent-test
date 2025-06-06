@@ -248,7 +248,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	// Wait for duration
 	log.Printf("[Prometheus] Running for duration: %v", duration)
-	time.Sleep(duration)
+	//time.Sleep(duration)
 	//namespace := fmt.Sprintf("CloudWatchAgentStress/prometheus/%s", config.InstanceID)
 	namespace := "CloudWatchAgentStress/prometheus/i-0c865f1dd3d9752a8"
 	count, _ := CountNamespaceMetricsWithDimensions(namespace)
