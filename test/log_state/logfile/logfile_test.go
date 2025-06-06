@@ -6,11 +6,13 @@
 package logfile
 
 import (
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 func init() {
@@ -18,5 +20,10 @@ func init() {
 }
 
 func TestStateFile(t *testing.T) {
-	assert.NoError(t, Validate())
+	err := Validate()
+	if err != nil {
+		content := common.ReadAgentLogfile(common.AgentLogFile)
+		log.Printf("agent log file content:\n%s", content)
+	}
+	assert.NoError(t, err)
 }
