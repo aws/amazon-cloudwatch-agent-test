@@ -4,50 +4,50 @@ validate_type: "stress"
 data_type: "metrics"
 metrics_config: "<metrics_config>"
 scrape_interval: "60"
-values_per_minute: "50000"
-agent_collection_period: 300
+values_per_minute: "5000"
+agent_collection_period: 160
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 
 metric_namespace: "CloudWatchAgentStress"
 metric_validation:
   - metric_name: "procstat_cpu_usage"
-    metric_sample_count: 300
+    metric_sample_count: 160
     metric_dimension:
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_memory_rss"
-    metric_sample_count: 300
+    metric_sample_count: 160
     metric_dimension:
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_memory_swap"
-    metric_sample_count: 300
+    metric_sample_count: 160
     metric_dimension:
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_memory_vms"
-    metric_sample_count: 300
+    metric_sample_count: 160
     metric_dimension:
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_memory_data"
-    metric_sample_count: 300
+    metric_sample_count: 160
     metric_dimension:
       - name: "exe"
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
   - metric_name: "procstat_num_fds"
-    metric_sample_count: 300
+    metric_sample_count: 160
     metric_dimension:
       - name: "exe"
         value: "cloudwatch-agent"
