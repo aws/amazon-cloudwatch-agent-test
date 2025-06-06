@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -12,6 +13,8 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/acceptance"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/log_state/logfile"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/log_state/windows_event_log"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/nvidia_gpu"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -46,6 +49,12 @@ func main() {
 			err = nvidia_gpu.Validate()
 		case "acceptance":
 			err = acceptance.Validate()
+		case "logfile":
+			err = logfile.Validate()
+		case "windows_event_log":
+			err = windows_event_log.Validate()
+		default:
+			err = errors.New("unsupported test name")
 		}
 
 		if err != nil {
