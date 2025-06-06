@@ -31,6 +31,7 @@ func init() {
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
 	instanceID := awsservice.GetInstanceId()
+	log.Println(instanceID)
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
