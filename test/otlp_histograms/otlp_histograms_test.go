@@ -5,7 +5,6 @@ package otlp_histograms
 import (
 	_ "embed"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"os"
 	"os/exec"
@@ -14,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
