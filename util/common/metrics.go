@@ -281,6 +281,7 @@ func createPrometheusConfig(scrapeInterval int) error {
 // The function writes the updated config back to the file and returns the new namespace used.
 func updateAgentConfigNamespacePrometheus(configPath string, instanceID string) string {
 	// Read the agent config file
+	fmt.Printf("Reading config file from: %s\n", configPath)
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		fmt.Printf("failed to read agent config: %v\n", err)
@@ -288,9 +289,11 @@ func updateAgentConfigNamespacePrometheus(configPath string, instanceID string) 
 	}
 
 	cfg := string(data)
+	fmt.Printf("Original config content:\n%s\n", cfg)
 
 	// Match full namespace with instanceID and index: CloudWatchAgentStress/Prometheus/{instanceID}/{index}
 	fullPattern := fmt.Sprintf(`CloudWatchAgentStress/Prometheus/%s/(\d+)`, regexp.QuoteMeta(instanceID))
+	fmt.Printf("Looking for pattern: %s\n", fullPattern)
 	fullRegex := regexp.MustCompile(fullPattern)
 
 	var newNamespace string
@@ -300,19 +303,27 @@ func updateAgentConfigNamespacePrometheus(configPath string, instanceID string) 
 		oldIndex, _ := strconv.Atoi(matches[1])
 		newIndex := oldIndex + 1
 		newNamespace = fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/%d", instanceID, newIndex)
+		fmt.Printf("Found existing namespace. Updating from index %d to %d\n", oldIndex, newIndex)
+		fmt.Printf("Old namespace: %s\n", matches[0])
+		fmt.Printf("New namespace: %s\n", newNamespace)
 		cfg = fullRegex.ReplaceAllString(cfg, newNamespace)
 	} else {
 		// First-time update: replace base namespace
 		newNamespace = fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/1", instanceID)
+		fmt.Printf("No existing namespace found. Creating first-time namespace: %s\n", newNamespace)
 		baseRegex := regexp.MustCompile(`CloudWatchAgentStress/Prometheus`)
 		cfg = baseRegex.ReplaceAllString(cfg, newNamespace)
 	}
 
+	fmt.Printf("Updated config content:\n%s\n", cfg)
+
 	// Write updated config
+	fmt.Printf("Writing updated config back to: %s\n", configPath)
 	if err := os.WriteFile(configPath, []byte(cfg), os.ModePerm); err != nil {
 		fmt.Printf("failed to write modified config: %v\n", err)
 		os.Exit(1)
 	}
+	fmt.Printf("Successfully updated config file with new namespace: %s\n", newNamespace)
 
 	return newNamespace
 }
