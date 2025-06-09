@@ -206,7 +206,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 	// Wait for duration
 	log.Printf("[Prometheus] Running for duration: %v", duration)
-	time.Sleep(duration - 1*time.Minute)
+	time.Sleep(duration)
 	count, err := CountNamespaceMetrics(namespace)
 	if err != nil {
 		log.Printf("Error counting metrics: %v", err)
