@@ -437,6 +437,8 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
 	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-5, metricSampleCount, int32(boundAndPeriod)); !ok {
+		log.Println("Validation for sample count did not add up")
+		log.Println("Here is the metricName, namespace, metricDimensions, start/end, metric sample count, bound", metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount, boundAndPeriod)
 		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount-5, metricSampleCount)
 	}
 
