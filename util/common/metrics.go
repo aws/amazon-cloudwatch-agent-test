@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"log"
 	"net"
@@ -107,7 +106,7 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 	return nil
 }
 
-func CountNamespaceMetricsWithDimensions(namespace string) (int, error) {
+func CountNamespaceMetrics(namespace string) (int, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-west-2"),
 	)
@@ -117,16 +116,8 @@ func CountNamespaceMetricsWithDimensions(namespace string) (int, error) {
 
 	client := cloudwatch.NewFromConfig(cfg)
 
-	dimensions := []types.DimensionFilter{
-		{
-			Name:  aws.String("job"),
-			Value: aws.String("prometheus_test_job"),
-		},
-	}
-
 	input := &cloudwatch.ListMetricsInput{
-		Namespace:  aws.String(namespace),
-		Dimensions: dimensions,
+		Namespace: aws.String(namespace),
 	}
 
 	paginator := cloudwatch.NewListMetricsPaginator(client, input)
@@ -215,8 +206,8 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 	// Wait for duration
 	log.Printf("[Prometheus] Running for duration: %v", duration)
-	time.Sleep(duration * 2)
-	count, err := CountNamespaceMetricsWithDimensions(namespace)
+	time.Sleep(duration)
+	count, err := CountNamespaceMetrics(namespace)
 	if err != nil {
 		log.Printf("Error counting metrics: %v", err)
 		os.Exit(1)
