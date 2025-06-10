@@ -74,7 +74,7 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 				MetricCount:    metricPerInterval,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
-				ScrapeInterval: 60,
+				ScrapeInterval: int(sendingInterval.Seconds()),
 				InstanceID:     metricLogGroup,
 			}
 			err = SendPrometheusMetrics(cfg, duration)
@@ -200,7 +200,6 @@ func readAgentLogs() (string, error) {
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
 	cleanupPortPrometheus(config.Port)
 
-	// Get Avalanche parameters based on desired metric count
 	counter, gauge, summary, series, label := getAvalancheParams(config.MetricCount)
 	log.Printf("[Prometheus] Using parameters: counter=%d, gauge=%d, summary=%d, series=%d, label=%d",
 		counter, gauge, summary, series, label)
@@ -235,7 +234,6 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	// Wait for Avalanche to start up
 	time.Sleep(5 * time.Second)
 
-	// Check if Avalanche is running by curling the metrics endpoint
 	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
 	output, err := curlCmd.Output()
 	if err != nil {
@@ -243,7 +241,6 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200]))
 
-	// Create Prometheus config
 	if err := createPrometheusConfig(config.ScrapeInterval); err != nil {
 		return fmt.Errorf("failed to create Prometheus config: %v", err)
 	}
@@ -275,13 +272,6 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	if count < config.MetricCount {
 		return fmt.Errorf("insufficient metrics generated: expected ~%d, got %d", config.MetricCount, count)
-	}
-
-	agentLogs, err := readAgentLogs()
-	if err != nil {
-		log.Printf("Warning: Failed to read agent logs: %v", err)
-	} else {
-		log.Printf("Agent Logs:\n%s", agentLogs)
 	}
 
 	log.Printf("[Prometheus] Completed running for specified duration")
