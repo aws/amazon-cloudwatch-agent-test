@@ -72,7 +72,8 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 				MetricCount:    metricPerInterval,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
-				ScrapeInterval: int(sendingInterval.Seconds()),
+				//ScrapeInterval: int(sendingInterval.Seconds()),
+				ScrapeInterval: 10,
 				InstanceID:     metricLogGroup,
 			}
 			err = SendPrometheusMetrics(cfg, duration)
