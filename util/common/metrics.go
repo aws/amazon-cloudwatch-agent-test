@@ -11,9 +11,12 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"log"
 	"net"
@@ -134,6 +137,78 @@ func CountNamespaceMetrics(namespace string) (int, error) {
 	return count, nil
 }
 
+type CloudWatchMetricLog struct {
+	CloudWatchMetrics []struct {
+		Namespace  string     `json:"Namespace"`
+		Dimensions [][]string `json:"Dimensions"`
+		Metrics    []struct {
+			Name              string `json:"Name"`
+			Unit              string `json:"Unit"`
+			StorageResolution int    `json:"StorageResolution"`
+		} `json:"Metrics"`
+	} `json:"CloudWatchMetrics"`
+}
+
+func countMetricsInLogs(logGroupName string) (int, error) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("us-west-2"),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("unable to load SDK config: %v", err)
+	}
+
+	client := cloudwatchlogs.NewFromConfig(cfg)
+
+	// Get most recent log stream
+	streamInput := &cloudwatchlogs.DescribeLogStreamsInput{
+		LogGroupName: aws.String(logGroupName),
+		OrderBy:      types.OrderByLastEventTime,
+		Descending:   aws.Bool(true),
+		Limit:        aws.Int32(1),
+	}
+
+	streams, err := client.DescribeLogStreams(context.TODO(), streamInput)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get log streams: %v", err)
+	}
+
+	if len(streams.LogStreams) == 0 {
+		return 0, fmt.Errorf("no log streams found")
+	}
+
+	// Get logs from the stream
+	input := &cloudwatchlogs.GetLogEventsInput{
+		LogGroupName:  aws.String(logGroupName),
+		LogStreamName: streams.LogStreams[0].LogStreamName,
+		StartFromHead: aws.Bool(false),
+		Limit:         aws.Int32(100),
+	}
+
+	resp, err := client.GetLogEvents(context.TODO(), input)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get log events: %v", err)
+	}
+
+	totalMetrics := 0
+	for _, event := range resp.Events {
+		var metricLog CloudWatchMetricLog
+		if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
+			log.Printf("Failed to parse log event: %v", err)
+			continue
+		}
+
+		// Count metrics in each CloudWatchMetrics block
+		for _, cwMetric := range metricLog.CloudWatchMetrics {
+			totalMetrics += len(cwMetric.Metrics)
+			log.Printf("Found %d metrics in namespace %s",
+				len(cwMetric.Metrics),
+				cwMetric.Namespace)
+		}
+	}
+
+	return totalMetrics, nil
+}
+
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
 	cleanupPortPrometheus(config.Port)
 
@@ -208,6 +283,14 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 
 	log.Printf("Found %d metrics in namespace %s", count, namespace)
+
+	log.Println("counting metrics in logs")
+	count2, err := countMetricsInLogs(namespace)
+	if err != nil {
+		return fmt.Errorf("error counting metrics: %v", err)
+	}
+
+	log.Printf("Found %d metrics in namespace %s", count2, namespace)
 
 	if count < config.MetricCount {
 		return fmt.Errorf("insufficient metrics generated: expected ~%d, got %d", config.MetricCount, count)
