@@ -227,16 +227,16 @@ func cleanupPortPrometheus(port int) {
 func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
 	switch metricPerInterval {
 	case 1000:
-		return 100, 100, 50, 10, 0
+		return 100, 100, 20, 10, 0
 
 	case 5000:
-		return 100, 100, 50, 100, 0
+		return 100, 100, 20, 100, 0
 
 	case 10000:
-		return 100, 100, 50, 300, 10
+		return 100, 100, 20, 300, 10
 
 	case 50000:
-		return 100, 100, 50, 1400, 10
+		return 100, 100, 20, 1400, 10
 
 	default:
 		return 10, 10, 5, 20, 10
