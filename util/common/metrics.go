@@ -135,8 +135,7 @@ func CountNamespaceMetrics(namespace string) (int, error) {
 }
 
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
-	//log.Printf("[Prometheus] Starting metric generation with Avalanche")
-	exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port)).Run()
+	cleanupPortPrometheus(config.Port)
 
 	// Get Avalanche parameters based on desired metric count
 	counter, gauge, summary, series, label := getAvalancheParams(config.MetricCount)
@@ -145,6 +144,9 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	gopathCmd := exec2.Command("go", "env", "GOPATH")
 	gopathBytes, err := gopathCmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get GOPATH: %v", err)
+	}
 	gopath := strings.TrimSpace(string(gopathBytes))
 
 	cmd := exec2.Command("sudo", filepath.Join(gopath, "bin", "avalanche"),
@@ -160,16 +162,10 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		"--value-interval=10")
 
 	if err := cmd.Start(); err != nil {
-		log.Printf("[Prometheus] Failed to start Avalanche: %v", err)
 		return fmt.Errorf("failed to start Avalanche: %v", err)
 	}
 
-	defer func() {
-		killCmd := exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", config.Port))
-		if err := killCmd.Run(); err != nil {
-			log.Printf("[Prometheus] Failed to kill port 8101: %v", err)
-		}
-	}()
+	defer cleanupPortPrometheus(config.Port)
 
 	log.Printf("[Prometheus] Avalanche started on port %d", config.Port)
 
@@ -180,21 +176,19 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
 	output, err := curlCmd.Output()
 	if err != nil {
-		log.Printf("[Prometheus] Avalanche failed to start: %v", err)
 		return fmt.Errorf("Avalanche failed to start: %v", err)
 	}
-	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200])) // Print first 200 characters
+	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200]))
 
 	// Create Prometheus config
 	if err := createPrometheusConfig(config.ScrapeInterval); err != nil {
-		log.Printf("[Prometheus] Failed to create Prometheus config: %v", err)
 		return fmt.Errorf("failed to create Prometheus config: %v", err)
 	}
 
 	log.Printf("[Prometheus] Successfully created Prometheus config at /tmp/prometheus.yaml")
 
 	namespace := updateAgentConfigNamespacePrometheus(TMPAGENTPATH, config.InstanceID)
-	//Starting the agent after prometheus label has been created.
+
 	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
 		"-a", "fetch-config",
 		"-s",
@@ -202,27 +196,34 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		"-c", "file:/tmp/agent_config.json")
 
 	if err := agentCmd.Run(); err != nil {
-		log.Printf("[Prometheus] Failed to start CloudWatch agent: %v", err)
 		return fmt.Errorf("failed to start CloudWatch agent: %v", err)
 	}
-	// Wait for duration
+
 	log.Printf("[Prometheus] Running for duration: %v", duration)
 	time.Sleep(duration)
+
 	count, err := CountNamespaceMetrics(namespace)
 	if err != nil {
-		log.Printf("Error counting metrics: %v", err)
-		os.Exit(1)
-	} else if count < config.MetricCount {
-		log.Printf("Not all metrics are being generated!! Expected: ~%d Actual: %d", config.MetricCount, count)
-		os.Exit(1)
+		return fmt.Errorf("error counting metrics: %v", err)
 	}
 
-	log.Println("This is how many metrics exist in this namespace", count)
+	log.Printf("Found %d metrics in namespace %s", count, namespace)
+
+	if count < config.MetricCount {
+		return fmt.Errorf("insufficient metrics generated: expected ~%d, got %d", config.MetricCount, count)
+	}
 
 	log.Printf("[Prometheus] Completed running for specified duration")
-
 	return nil
 }
+
+func cleanupPortPrometheus(port int) {
+	killCmd := exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", port))
+	if err := killCmd.Run(); err != nil {
+		log.Printf("[Prometheus] Failed to kill port %d: %v", port, err)
+	}
+}
+
 func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
 	switch metricPerInterval {
 	case 1000:
@@ -232,10 +233,10 @@ func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series,
 		return 100, 100, 50, 100, 0
 
 	case 10000:
-		return 100, 100, 50, 125, 10
+		return 100, 100, 50, 300, 10
 
 	case 50000:
-		return 100, 100, 50, 400, 10
+		return 100, 100, 50, 1400, 10
 
 	default:
 		return 10, 10, 5, 20, 10
