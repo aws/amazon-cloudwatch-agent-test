@@ -57,9 +57,7 @@ func (s *BasicValidator) GenerateLoad() error {
 	default:
 		if receiver == "prometheus" {
 			if s.vConfig.GetScrapeInterval() == 0 {
-				log.Printf("No scrape interval defined, using metric sending interval: %v seconds", metricSendingInterval.Seconds())
 			} else {
-				// If scrape interval is defined, use it for metricSendingInterval
 				metricSendingInterval = time.Duration(s.vConfig.GetScrapeInterval()) * time.Second
 				log.Printf("Using defined scrape interval for metric sending interval: %v seconds", metricSendingInterval.Seconds())
 			}
