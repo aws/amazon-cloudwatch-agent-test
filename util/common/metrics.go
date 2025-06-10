@@ -74,8 +74,7 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 				MetricCount:    metricPerInterval,
 				Port:           8101,
 				UpdateInterval: sendingInterval,
-				//ScrapeInterval: int(sendingInterval.Seconds()),
-				ScrapeInterval: 10,
+				ScrapeInterval: 60,
 				InstanceID:     metricLogGroup,
 			}
 			err = SendPrometheusMetrics(cfg, duration)
@@ -131,7 +130,6 @@ func countMetricsInLogs(logGroupName string) (int, error) {
 
 	client := cloudwatchlogs.NewFromConfig(cfg)
 
-	// Get most recent log stream
 	streamInput := &cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: aws.String(logGroupName),
 		OrderBy:      types.OrderByLastEventTime,
@@ -167,7 +165,6 @@ func countMetricsInLogs(logGroupName string) (int, error) {
 		}
 
 		batchMetrics := 0
-		// Process events in this batch
 		for _, event := range resp.Events {
 			var metricLog CloudWatchMetricLog
 			if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
@@ -182,17 +179,12 @@ func countMetricsInLogs(logGroupName string) (int, error) {
 		}
 
 		totalMetrics += batchMetrics
-		log.Printf("Processed batch of %d events with %d metrics, running total: %d metrics",
-			len(resp.Events), batchMetrics, totalMetrics)
-
-		// Check if we've processed all events
 		if resp.NextForwardToken == nil || (nextToken != nil && *resp.NextForwardToken == *nextToken) {
 			break
 		}
 		nextToken = resp.NextForwardToken
 	}
 
-	log.Printf("Finished processing %d events with total of %d metrics", eventCount, totalMetrics)
 	return totalMetrics, nil
 }
 
@@ -306,16 +298,16 @@ func cleanupPortPrometheus(port int) {
 func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
 	switch metricPerInterval {
 	case 1000:
-		return 100, 100, 20, 10, 0
+		return 50, 50, 20, 10, 0
 
 	case 5000:
-		return 100, 100, 20, 50, 0
+		return 100, 50, 20, 50, 0
 
 	case 10000:
 		return 100, 100, 20, 100, 10
 
 	case 50000:
-		return 100, 500, 20, 500, 10
+		return 100, 100, 20, 500, 10
 
 	default:
 		return 10, 10, 5, 20, 10
