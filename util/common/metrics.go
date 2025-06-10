@@ -153,7 +153,7 @@ func countMetricsInLogs(logGroupName string) (int, error) {
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: streams.LogStreams[0].LogStreamName,
 		StartFromHead: aws.Bool(false),
-		Limit:         aws.Int32(100),
+		Limit:         aws.Int32(10000),
 	}
 
 	resp, err := client.GetLogEvents(context.TODO(), input)
