@@ -250,7 +250,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		return fmt.Errorf("error counting metrics: %v", err)
 	}
 
-	log.Printf("Found %d metrics in namespace %s", count, namespace)
+	log.Printf("Found %d metrics in loggroup %s", count, namespace)
 
 	if count < config.MetricCount {
 		return fmt.Errorf("insufficient metrics generated: expected ~%d, got %d", config.MetricCount, count)
