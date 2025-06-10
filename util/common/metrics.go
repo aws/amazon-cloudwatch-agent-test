@@ -121,6 +121,18 @@ type CloudWatchMetricLog struct {
 	} `json:"CloudWatchMetrics"`
 }
 
+type CloudWatchMetricLog struct {
+	CloudWatchMetrics []struct {
+		Namespace  string     `json:"Namespace"`
+		Dimensions [][]string `json:"Dimensions"`
+		Metrics    []struct {
+			Name              string `json:"Name"`
+			Unit              string `json:"Unit"`
+			StorageResolution int    `json:"StorageResolution"`
+		} `json:"Metrics"`
+	} `json:"CloudWatchMetrics"`
+}
+
 func countMetricsInLogs(logGroupName string) (int, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-west-2"),
@@ -148,33 +160,54 @@ func countMetricsInLogs(logGroupName string) (int, error) {
 		return 0, fmt.Errorf("no log streams found")
 	}
 
-	// Get logs from the stream
-	input := &cloudwatchlogs.GetLogEventsInput{
-		LogGroupName:  aws.String(logGroupName),
-		LogStreamName: streams.LogStreams[0].LogStreamName,
-		StartFromHead: aws.Bool(false),
-		Limit:         aws.Int32(10000),
-	}
-
-	resp, err := client.GetLogEvents(context.TODO(), input)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get log events: %v", err)
-	}
-
 	totalMetrics := 0
-	for _, event := range resp.Events {
-		var metricLog CloudWatchMetricLog
-		if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
-			continue
+	var nextToken *string
+	eventCount := 0
+
+	for {
+		input := &cloudwatchlogs.GetLogEventsInput{
+			LogGroupName:  aws.String(logGroupName),
+			LogStreamName: streams.LogStreams[0].LogStreamName,
+			StartFromHead: aws.Bool(true),
+			NextToken:     nextToken,
+			Limit:         aws.Int32(10000),
 		}
 
-		for _, cwMetric := range metricLog.CloudWatchMetrics {
-			totalMetrics += len(cwMetric.Metrics)
+		resp, err := client.GetLogEvents(context.TODO(), input)
+		if err != nil {
+			return totalMetrics, fmt.Errorf("failed to get log events: %v", err)
 		}
+
+		batchMetrics := 0
+		// Process events in this batch
+		for _, event := range resp.Events {
+			var metricLog CloudWatchMetricLog
+			if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
+				log.Printf("Failed to parse log event: %v", err)
+				continue
+			}
+
+			for _, cwMetric := range metricLog.CloudWatchMetrics {
+				batchMetrics += len(cwMetric.Metrics)
+			}
+			eventCount++
+		}
+
+		totalMetrics += batchMetrics
+		log.Printf("Processed batch of %d events with %d metrics, running total: %d metrics",
+			len(resp.Events), batchMetrics, totalMetrics)
+
+		// Check if we've processed all events
+		if resp.NextForwardToken == nil || (nextToken != nil && *resp.NextForwardToken == *nextToken) {
+			break
+		}
+		nextToken = resp.NextForwardToken
 	}
 
+	log.Printf("Finished processing %d events with total of %d metrics", eventCount, totalMetrics)
 	return totalMetrics, nil
 }
+
 func readAgentLogs() (string, error) {
 	cmd := exec2.Command("sudo", "cat", "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log")
 	output, err := cmd.Output()
