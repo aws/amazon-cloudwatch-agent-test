@@ -121,18 +121,6 @@ type CloudWatchMetricLog struct {
 	} `json:"CloudWatchMetrics"`
 }
 
-type CloudWatchMetricLog struct {
-	CloudWatchMetrics []struct {
-		Namespace  string     `json:"Namespace"`
-		Dimensions [][]string `json:"Dimensions"`
-		Metrics    []struct {
-			Name              string `json:"Name"`
-			Unit              string `json:"Unit"`
-			StorageResolution int    `json:"StorageResolution"`
-		} `json:"Metrics"`
-	} `json:"CloudWatchMetrics"`
-}
-
 func countMetricsInLogs(logGroupName string) (int, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-west-2"),
