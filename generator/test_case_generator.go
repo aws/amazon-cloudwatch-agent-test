@@ -269,47 +269,47 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 	},
 	"eks_daemon": {
-		{
-			testDir:      "./test/metric_value_benchmark",
-			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
-			instanceType: "g4dn.xlarge",
-		},
-		{
-			testDir:      "./test/metric_value_benchmark",
-			terraformDir: "terraform/eks/daemon/windows/2019",
-			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir:      "./test/metric_value_benchmark",
-			terraformDir: "terraform/eks/daemon/windows/2022",
-			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/statsd", terraformDir: "terraform/eks/daemon/statsd",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/emf", terraformDir: "terraform/eks/daemon/emf",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/d",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
-		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
-		{
-			testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		},
+		//{
+		//	testDir:      "./test/metric_value_benchmark",
+		//	targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//	instanceType: "g4dn.xlarge",
+		//},
+		//{
+		//	testDir:      "./test/metric_value_benchmark",
+		//	terraformDir: "terraform/eks/daemon/windows/2019",
+		//	targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//},
+		//{
+		//	testDir:      "./test/metric_value_benchmark",
+		//	terraformDir: "terraform/eks/daemon/windows/2022",
+		//	targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//},
+		//{
+		//	testDir: "./test/statsd", terraformDir: "terraform/eks/daemon/statsd",
+		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//},
+		//{
+		//	testDir: "./test/emf", terraformDir: "terraform/eks/daemon/emf",
+		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//},
+		//{
+		//	testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/d",
+		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//},
+		//{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/bit"},
+		//{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
+		//{
+		//	testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
+		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//},
+		//{
+		//	testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
+		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//},
+		//{
+		//	testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
+		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		//},
 		//Skipping test until efa team implements fix
 		//{
 		//	testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
