@@ -253,7 +253,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/stress/windows/system"},
 	},
 	"ecs_fargate": {
-		{testDir: "./test/ecs/ecs_metadata"},
+		{testDir: "./test/ecs/ecs_sd"},
 	},
 	"ecs_ec2_daemon": {
 		{

@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "./test/ecs/ecs_metadata"
+  default = "./test/ecs/ecs_sd"
 }
 
 variable "cwagent_image_repo" {
