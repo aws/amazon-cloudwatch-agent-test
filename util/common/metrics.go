@@ -226,16 +226,16 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
 	switch metricPerInterval {
 	case 1000:
-		return 100, 100, 20, 10, 0
+		return 100, 100, 50, 10, 0
 
 	case 5000:
-		return 100, 100, 20, 100, 0
+		return 100, 100, 50, 100, 0
 
 	case 10000:
-		return 100, 100, 20, 100, 10
+		return 100, 100, 50, 125, 10
 
 	case 50000:
-		return 100, 100, 20, 250, 10
+		return 100, 100, 50, 400, 10
 
 	default:
 		return 10, 10, 5, 20, 10
