@@ -294,7 +294,7 @@ func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series,
 		return 100, 100, 20, 100, 10
 
 	case 50000:
-		return 100, 100, 20, 500, 10
+		return 100, 500, 20, 500, 10
 
 	default:
 		return 10, 10, 5, 20, 10
