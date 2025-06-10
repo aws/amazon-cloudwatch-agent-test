@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws"
@@ -110,33 +109,6 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 	return nil
 }
 
-func CountNamespaceMetrics(namespace string) (int, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("us-west-2"),
-	)
-	if err != nil {
-		return 0, fmt.Errorf("unable to load SDK config: %v", err)
-	}
-
-	client := cloudwatch.NewFromConfig(cfg)
-
-	input := &cloudwatch.ListMetricsInput{
-		Namespace: aws.String(namespace),
-	}
-
-	paginator := cloudwatch.NewListMetricsPaginator(client, input)
-	count := 0
-	for paginator.HasMorePages() {
-		output, err := paginator.NextPage(context.TODO())
-		if err != nil {
-			return count, fmt.Errorf("error fetching metrics: %v", err)
-		}
-		count += len(output.Metrics)
-	}
-
-	return count, nil
-}
-
 type CloudWatchMetricLog struct {
 	CloudWatchMetrics []struct {
 		Namespace  string     `json:"Namespace"`
@@ -193,16 +165,11 @@ func countMetricsInLogs(logGroupName string) (int, error) {
 	for _, event := range resp.Events {
 		var metricLog CloudWatchMetricLog
 		if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
-			log.Printf("Failed to parse log event: %v", err)
 			continue
 		}
 
-		// Count metrics in each CloudWatchMetrics block
 		for _, cwMetric := range metricLog.CloudWatchMetrics {
 			totalMetrics += len(cwMetric.Metrics)
-			log.Printf("Found %d metrics in namespace %s",
-				len(cwMetric.Metrics),
-				cwMetric.Namespace)
 		}
 	}
 
@@ -277,20 +244,13 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	log.Printf("[Prometheus] Running for duration: %v", duration)
 	time.Sleep(duration)
 
-	count, err := CountNamespaceMetrics(namespace)
+	log.Println("counting metrics in logs")
+	count, err := countMetricsInLogs(namespace)
 	if err != nil {
 		return fmt.Errorf("error counting metrics: %v", err)
 	}
 
 	log.Printf("Found %d metrics in namespace %s", count, namespace)
-
-	log.Println("counting metrics in logs")
-	count2, err := countMetricsInLogs(namespace)
-	if err != nil {
-		return fmt.Errorf("error counting metrics: %v", err)
-	}
-
-	log.Printf("Found %d metrics in namespace %s", count2, namespace)
 
 	if count < config.MetricCount {
 		return fmt.Errorf("insufficient metrics generated: expected ~%d, got %d", config.MetricCount, count)
@@ -313,13 +273,13 @@ func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series,
 		return 100, 100, 20, 10, 0
 
 	case 5000:
-		return 100, 100, 20, 100, 0
+		return 100, 100, 20, 50, 0
 
 	case 10000:
-		return 100, 100, 20, 300, 10
+		return 100, 100, 20, 100, 10
 
 	case 50000:
-		return 100, 100, 20, 1400, 10
+		return 100, 100, 20, 500, 10
 
 	default:
 		return 10, 10, 5, 20, 10
