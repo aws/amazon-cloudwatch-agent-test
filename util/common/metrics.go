@@ -175,6 +175,14 @@ func countMetricsInLogs(logGroupName string) (int, error) {
 
 	return totalMetrics, nil
 }
+func readAgentLogs() (string, error) {
+	cmd := exec2.Command("sudo", "cat", "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to read agent logs: %v", err)
+	}
+	return string(output), nil
+}
 
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
 	cleanupPortPrometheus(config.Port)
@@ -254,6 +262,13 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	if count < config.MetricCount {
 		return fmt.Errorf("insufficient metrics generated: expected ~%d, got %d", config.MetricCount, count)
+	}
+
+	agentLogs, err := readAgentLogs()
+	if err != nil {
+		log.Printf("Warning: Failed to read agent logs: %v", err)
+	} else {
+		log.Printf("Agent Logs:\n%s", agentLogs)
 	}
 
 	log.Printf("[Prometheus] Completed running for specified duration")
