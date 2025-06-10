@@ -395,7 +395,7 @@ resource "kubernetes_daemonset" "neuron_monitor" {
         }
         container {
           name  = "neuron-monitor-prometheus"
-          image = "506463145083.dkr.ecr.us-west-2.amazonaws.com/mocked-neuron-monitor:v2"
+          image = "506463145083.dkr.ecr.us-west-2.amazonaws.com/mocked-neuron-monitor:v3"
           port {
             container_port = 8000
           }
