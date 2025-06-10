@@ -18,15 +18,22 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
-// Purpose: Detect the changes in metadata endpoint for ECS Container Agent https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/util/ecsutil/ecsutil.go#L67-L75
-// Implementation: Checking if a log group's the format(https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/translate/logs/metrics_collected/prometheus/ruleLogGroupName.go#L33)
-// exists or not  since the log group's format has the scrapping cluster name from metadata endpoint.
+/*
+Purpose:
+1) Validate ECS ServiceDiscovery via DockerLabels by publishing Prometheus EMF to CW  https://github.com/aws/amazon-cloudwatch-agent/blob/main/internal/ecsservicediscovery/README.md
+2) Detect the changes in metadata endpoint for ECS Container Agent https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/util/ecsutil/ecsutil.go#L67-L75
+
+
+Implementation:
+1) Check if the LogGroupFormat correctly scrapes the clusterName from metadata endpoint (https://github.com/aws/amazon-cloudwatch-agent/blob/5ef3dba446cb56a4c2306878592b5d14300ae82f/translator/translate/otel/exporter/awsemf/prometheus.go#L38)
+2) Check if expected Prometheus EMF data is correctly published as logs and metrics to CloudWatch
+*/
 
 const (
 	RetryTime = 15
-	// Log group format: https://github.com/aws/amazon-cloudwatch-agent/blob/main/translator/translate/logs/metrics_collected/prometheus/ruleLogGroupName.go#L33
+	// Log group format: https://github.com/aws/amazon-cloudwatch-agent/blob/5ef3dba446cb56a4c2306878592b5d14300ae82f/translator/translate/otel/exporter/awsemf/prometheus.go#L38
 	ECSLogGroupNameFormat = "/aws/ecs/containerinsights/%s/prometheus"
-	// Log stream based on job name: https://github.com/khanhntd/amazon-cloudwatch-agent-test/blob/main/test/ecs/ecs_sd/resources/extra_apps.tpl#41
+	// Log stream based on job name in extra_apps.tpl:https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/test/ecs/ecs_sd/resources/extra_apps.tpl#L41
 	LogStreamName = "prometheus-redis"
 )
 
@@ -36,15 +43,25 @@ var clusterName = flag.String("clusterName", "", "Please provide the os preferen
 var schema string
 
 func TestValidatingCloudWatchLogs(t *testing.T) {
-	start := time.Now()
 
+	logGroupName, logGroupFound, start, end := ValidateLogGroupFormat(t)
+
+	ValidateLogsContent(t, logGroupName, start, end)
+
+	if logGroupFound {
+		awsservice.DeleteLogGroupAndStream(logGroupName, LogStreamName)
+	}
+}
+
+func ValidateLogGroupFormat(t *testing.T) (string, bool, time.Time, time.Time) {
+	start := time.Now()
 	logGroupName := fmt.Sprintf(ECSLogGroupNameFormat, *clusterName)
 
 	var logGroupFound bool
 	for currentRetry := 1; ; currentRetry++ {
 
 		if currentRetry == RetryTime {
-			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
+			t.Fatalf("Test has exhausted %v retry time", RetryTime)
 		}
 
 		if !awsservice.IsLogGroupExists(logGroupName) {
@@ -52,33 +69,30 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			time.Sleep(20 * time.Second)
 			continue
 		}
-
-		end := time.Now()
-
-		err := awsservice.ValidateLogs(
-			logGroupName,
-			LogStreamName,
-			&start,
-			&end,
-			awsservice.AssertLogsNotEmpty(),
-			awsservice.AssertPerLog(
-				awsservice.AssertLogSchema(awsservice.WithSchema(schema)),
-				func(event types.OutputLogEvent) error {
-					if strings.Contains(*event.Message, "CloudWatchMetrics") &&
-						!strings.Contains(*event.Message, "\"Namespace\":\"ECS/ContainerInsights/Prometheus\"") {
-						return fmt.Errorf("emf log found for non ECS/ContainerInsights/Prometheus namespace: %s", *event.Message)
-					}
-					return nil
-				},
-				awsservice.AssertLogContainsSubstring("\"job\":\"prometheus-redis\""),
-			),
-		)
-		assert.NoError(t, err)
-
 		break
 	}
+	end := time.Now()
+	return logGroupName, logGroupFound, start, end
+}
 
-	if logGroupFound {
-		awsservice.DeleteLogGroupAndStream(logGroupName, LogStreamName)
-	}
+func ValidateLogsContent(t *testing.T, logGroupName string, start time.Time, end time.Time) {
+	err := awsservice.ValidateLogs(
+		logGroupName,
+		LogStreamName,
+		&start,
+		&end,
+		awsservice.AssertLogsNotEmpty(),
+		awsservice.AssertPerLog(
+			awsservice.AssertLogSchema(awsservice.WithSchema(schema)),
+			func(event types.OutputLogEvent) error {
+				if strings.Contains(*event.Message, "CloudWatchMetrics") &&
+					!strings.Contains(*event.Message, "\"Namespace\":\"ECS/ContainerInsights/Prometheus\"") {
+					return fmt.Errorf("emf log found for non ECS/ContainerInsights/Prometheus namespace: %s", *event.Message)
+				}
+				return nil
+			},
+			awsservice.AssertLogContainsSubstring("\"job\":\"prometheus-redis\""),
+		),
+	)
+	assert.NoError(t, err)
 }
