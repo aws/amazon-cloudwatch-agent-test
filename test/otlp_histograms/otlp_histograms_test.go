@@ -30,7 +30,7 @@ func init() {
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	instanceID := "ThisIsATest3"
+	instanceID := "ThisIsATest4"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
