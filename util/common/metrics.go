@@ -188,15 +188,6 @@ func countMetricsInLogs(logGroupName string) (int, error) {
 	return totalMetrics, nil
 }
 
-func readAgentLogs() (string, error) {
-	cmd := exec2.Command("sudo", "cat", "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to read agent logs: %v", err)
-	}
-	return string(output), nil
-}
-
 func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
 	cleanupPortPrometheus(config.Port)
 
@@ -228,8 +219,6 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 
 	defer cleanupPortPrometheus(config.Port)
-
-	log.Printf("[Prometheus] Avalanche started on port %d", config.Port)
 
 	// Wait for Avalanche to start up
 	time.Sleep(5 * time.Second)
@@ -288,16 +277,16 @@ func cleanupPortPrometheus(port int) {
 func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
 	switch metricPerInterval {
 	case 1000:
-		return 50, 50, 20, 10, 0
+		return 50, 50, 20, 10, 9
 
 	case 5000:
-		return 100, 50, 20, 50, 0
+		return 50, 50, 20, 20, 0
 
 	case 10000:
-		return 100, 100, 20, 100, 10
+		return 100, 100, 20, 50, 10
 
 	case 50000:
-		return 100, 100, 20, 500, 10
+		return 100, 100, 20, 100, 10
 
 	default:
 		return 10, 10, 5, 20, 10
