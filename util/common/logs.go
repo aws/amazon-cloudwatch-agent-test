@@ -62,7 +62,7 @@ func CreateWindowsEvent(eventLogName string, eventLogLevel string, msg string) e
 func StartLogWrite(configFilePath string, duration time.Duration, sendingInterval time.Duration, logLinesPerMinute int) error {
 	var multiErr error
 
-	logPaths, err := getLogFilePaths(configFilePath)
+	logPaths, err := GetLogFilePaths(configFilePath)
 	if err != nil {
 		return err
 	}
@@ -112,9 +112,9 @@ func writeToLogs(filePath string, duration, sendingInterval time.Duration, logLi
 	}
 }
 
-// getLogFilePaths parses the cloudwatch agent config at the specified path and returns a list of the log files that the
+// GetLogFilePaths parses the cloudwatch agent config at the specified path and returns a list of the log files that the
 // agent will monitor when using that config file
-func getLogFilePaths(configPath string) ([]string, error) {
+func GetLogFilePaths(configPath string) ([]string, error) {
 	file, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err

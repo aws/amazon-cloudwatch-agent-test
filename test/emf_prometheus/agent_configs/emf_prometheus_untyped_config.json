@@ -9,9 +9,9 @@
     "metrics_collected": {
       "prometheus": {
         "prometheus_config_path": "/tmp/prometheus.yaml",
-        "log_group_name": "TestingHistoGram",
+        "log_group_name": "${LOG_GROUP_NAME}",
         "emf_processor": {
-          "metric_namespace": "TestingHistoGram",
+          "metric_namespace": "${NAMESPACE}",
           "metric_declaration": [
             {
               "source_labels": [

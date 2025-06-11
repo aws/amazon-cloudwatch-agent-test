@@ -72,6 +72,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
+			testDir: "./test/log_state/logfile",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
@@ -130,7 +134,15 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 		{
+			testDir: "./test/histograms",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
 			testDir: "./test/agent_otel_merging",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/otlp_histograms",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 		{
@@ -190,6 +202,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 		{
+			testDir: "./test/otlp_histograms",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
 			testDir:      "./test/assume_role",
 			terraformDir: "terraform/ec2/assume_role",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -208,6 +224,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
 		{testDir: "../../../test/feature/windows/event_logs"},
+		{testDir: "../../../test/log_state/logfile"},
+		{testDir: "../../../test/log_state/windows_event_log"},
 		{
 			testDir: "../../../test/feature/windows/custom_start/userdata",
 			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
@@ -243,7 +261,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/stress/windows/system"},
 	},
 	"ecs_fargate": {
-		{testDir: "./test/ecs/ecs_metadata"},
+		{testDir: "./test/ecs/ecs_sd"},
 	},
 	"ecs_ec2_daemon": {
 		{
