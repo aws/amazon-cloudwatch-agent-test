@@ -41,6 +41,25 @@
                 ],
                 "log_group_name": "{instance_id}",
                 "log_stream_name": "Application"
+              },
+              {
+                "event_name": "Security",
+                "event_ids": [
+                 4624
+                ],
+                "log_group_name": "{instance_id}",
+                "log_stream_name": "Security"
+              },
+              {
+                "event_name": "System",
+                "event_levels":[
+                  "ERROR"
+                ],
+                "event_ids": [
+                  7009
+                ],
+                "log_group_name": "{instance_id}",
+                "log_stream_name": "System"
               }
             ]
           },
