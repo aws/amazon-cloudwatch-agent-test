@@ -42,12 +42,11 @@ type validatorConfig struct {
 	TestCase string `yaml:"test_case"` // Test case name
 
 	// Validate type for the test https://github.com/aws/amazon-cloudwatch-agent-test/blob/39a9e16c70f07a17c43c0630647158cd496bd168/validator/validators/validator.go#L15-L24
-	ValidateType        string `yaml:"validate_type"`
-	DataType            string `yaml:"data_type"`             // Only supports metrics/logs/traces
-	NumberMonitoredLogs int    `yaml:"number_monitored_logs"` // Number of logs to be monitored
-	ValuesPerMinute     string `yaml:"values_per_minute"`
-	ScrapeInterval      string `yaml:"scrape_interval"`
-	// Number of metrics to be sent or number of log lines to write
+	ValidateType          string `yaml:"validate_type"`
+	DataType              string `yaml:"data_type"`             // Only supports metrics/logs/traces
+	NumberMonitoredLogs   int    `yaml:"number_monitored_logs"` // Number of logs to be monitored
+	ValuesPerMinute       string `yaml:"values_per_minute"`
+	ScrapeInterval        string `yaml:"scrape_interval"`         // Prometheus Scraping interval
 	AgentCollectionPeriod int    `yaml:"agent_collection_period"` // Number of seconds the agent should run and collect the metrics
 	OSFamily              string `yaml:"os_family"`               // OS Family for the validator test
 

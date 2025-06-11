@@ -55,6 +55,7 @@ func (s *BasicValidator) GenerateLoad() error {
 	case "traces":
 		return traces.StartTraceGeneration(receiver, agentConfigFilePath, agentCollectionPeriod, metricSendingInterval)
 	default:
+		// Sending metrics based on the receivers; however, for scraping plugin (e.g prometheus), we would need to scrape it instead of sending
 		if receiver == "prometheus" {
 			if s.vConfig.GetScrapeInterval() == 0 {
 			} else {
