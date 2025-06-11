@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"net"
 	"net/http"
@@ -32,9 +33,6 @@ import (
 	"github.com/DataDog/datadog-go/statsd"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
 )
 
@@ -119,69 +117,31 @@ type CloudWatchMetricLog struct {
 }
 
 func countMetricsInLogs(logGroupName string) (int, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("us-west-2"),
-	)
-	if err != nil {
-		return 0, fmt.Errorf("unable to load SDK config: %v", err)
-	}
-
-	client := cloudwatchlogs.NewFromConfig(cfg)
-
-	streamInput := &cloudwatchlogs.DescribeLogStreamsInput{
-		LogGroupName: aws.String(logGroupName),
-		OrderBy:      types.OrderByLastEventTime,
-		Descending:   aws.Bool(true),
-		Limit:        aws.Int32(1),
-	}
-
-	streams, err := client.DescribeLogStreams(context.TODO(), streamInput)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get log streams: %v", err)
-	}
-
-	if len(streams.LogStreams) == 0 {
+	// Get the most recent log stream
+	streams := awsservice.GetLogStreams(logGroupName)
+	if len(streams) == 0 {
 		return 0, fmt.Errorf("no log streams found")
 	}
 
-	totalMetrics := 0
-	var nextToken *string
-	eventCount := 0
-
-	for {
-		input := &cloudwatchlogs.GetLogEventsInput{
-			LogGroupName:  aws.String(logGroupName),
-			LogStreamName: streams.LogStreams[0].LogStreamName,
-			StartFromHead: aws.Bool(true),
-			NextToken:     nextToken,
-			Limit:         aws.Int32(10000),
-		}
-
-		resp, err := client.GetLogEvents(context.TODO(), input)
-		if err != nil {
-			return totalMetrics, fmt.Errorf("failed to get log events: %v", err)
-		}
-
-		batchMetrics := 0
-		for _, event := range resp.Events {
-			var metricLog CloudWatchMetricLog
-			if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
-				log.Printf("Failed to parse log event: %v", err)
-				continue
-			}
-
-			for _, cwMetric := range metricLog.CloudWatchMetrics {
-				batchMetrics += len(cwMetric.Metrics)
-			}
-			eventCount++
-		}
-
-		totalMetrics += batchMetrics
-		if resp.NextForwardToken == nil || (nextToken != nil && *resp.NextForwardToken == *nextToken) {
-			break
-		}
-		nextToken = resp.NextForwardToken
+	// Get all log events from the stream
+	events, err := awsservice.GetLogsSince(logGroupName, *streams[0].LogStreamName, nil, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get log events: %v", err)
 	}
+
+	totalMetrics := 0
+	for _, event := range events {
+		var metricLog CloudWatchMetricLog
+		if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
+			log.Printf("Failed to parse log event: %v", err)
+			continue
+		}
+
+		for _, cwMetric := range metricLog.CloudWatchMetrics {
+			totalMetrics += len(cwMetric.Metrics)
+		}
+	}
+	log.Println("this is hte total metrics", totalMetrics)
 
 	return totalMetrics, nil
 }
@@ -302,16 +262,18 @@ func createPrometheusConfig(scrapeInterval int) error {
 	return nil
 }
 
-// Behavior:
-// 1. On the first run:
-//   - Replaces "CloudWatchAgentStress/Prometheus".
-//   - Replaces it with "CloudWatchAgentStress/Prometheus/{instanceID}/1".
-//
-// 2. On subsequent runs (if stress test retried):
-//   - Detects an existing namespace in the form "CloudWatchAgentStress/Prometheus/{instanceID}/{index}".
-//   - Increments the {index} by 1 and replaces it with the new value.
-//
-// The function writes the updated config back to the file and returns the new namespace used.
+/*
+Behavior:
+1. On the first run:
+  - Replaces "CloudWatchAgentStress/Prometheus".
+  - Replaces it with "CloudWatchAgentStress/Prometheus/{instanceID}/1".
+
+2. On subsequent runs (if stress test retried):
+  - Detects an existing namespace in the form "CloudWatchAgentStress/Prometheus/{instanceID}/{index}".
+  - Increments the {index} by 1 and replaces it with the new value.
+
+The function writes the updated config back to the file and returns the new namespace used.
+*/
 func updateAgentConfigNamespacePrometheus(configPath string, instanceID string) string {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
