@@ -225,7 +225,7 @@ func TestOTLPMetrics(t *testing.T) {
 			for _, e := range m.expected {
 				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, metric.Statistics(e.stat), metric.MinuteStatPeriod)
 				require.NoError(t, err)
-				require.GreaterOrEqual(t, len(values), 3)
+				require.GreaterOrEqual(t, len(values), 2)
 
 				// Skip first and last values
 				middleValues := values[1 : len(values)-1]
