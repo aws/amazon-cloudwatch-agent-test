@@ -244,7 +244,7 @@ func GetLogStreams(logGroupName string) []types.LogStream {
 			LogGroupName: aws.String(logGroupName),
 			OrderBy:      types.OrderByLastEventTime,
 			Descending:   aws.Bool(true),
-			Limit:        aws.Int32(10),
+			Limit:        aws.Int32(10000),
 		})
 
 		if err != nil {

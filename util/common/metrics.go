@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"log"
 	"net"
 	"net/http"
@@ -34,6 +33,8 @@ import (
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 const SleepDuration = 5 * time.Second
@@ -117,19 +118,21 @@ type CloudWatchMetricLog struct {
 }
 
 func countMetricsInLogs(logGroupName string) (int, error) {
-	// Get the most recent log stream
 	streams := awsservice.GetLogStreams(logGroupName)
 	if len(streams) == 0 {
 		return 0, fmt.Errorf("no log streams found")
 	}
 
-	// Get all log events from the stream
+	// Get all logs from the most recent stream
 	events, err := awsservice.GetLogsSince(logGroupName, *streams[0].LogStreamName, nil, nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get log events: %v", err)
 	}
 
 	totalMetrics := 0
+	eventCount := 0
+
+	// Process each event and count metrics
 	for _, event := range events {
 		var metricLog CloudWatchMetricLog
 		if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
@@ -140,8 +143,8 @@ func countMetricsInLogs(logGroupName string) (int, error) {
 		for _, cwMetric := range metricLog.CloudWatchMetrics {
 			totalMetrics += len(cwMetric.Metrics)
 		}
+		eventCount++
 	}
-	log.Println("this is hte total metrics", totalMetrics)
 
 	return totalMetrics, nil
 }
@@ -172,7 +175,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		"--series-interval=0",
 		"--value-interval=10")
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(5 * time.Minute)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start Avalanche: %v", err)
@@ -193,7 +196,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	log.Printf("[Prometheus] Successfully created Prometheus config at /tmp/prometheus.yaml")
 
-	updateAgentConfigNamespacePrometheus(TMPAGENTPATH, config.InstanceID)
+	namespace := updateAgentConfigNamespacePrometheus(TMPAGENTPATH, config.InstanceID)
 
 	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
 		"-a", "fetch-config",
@@ -206,9 +209,11 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 
 	log.Printf("[Prometheus] Running for duration: %v", duration)
-	//time.Sleep(duration)
+	time.Sleep(duration)
+	log.Println("This is befoer the counting for logs")
 
-	count, err := countMetricsInLogs("CloudWatchAgentStress/Prometheus/i-0004f325f155a5a3d/1")
+	count, err := countMetricsInLogs(namespace)
+	log.Println("This is afer the counting for logs", count)
 	if err != nil {
 		return fmt.Errorf("error counting metrics: %v", err)
 	}
