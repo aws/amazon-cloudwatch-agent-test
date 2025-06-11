@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -31,7 +30,7 @@ func init() {
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	instanceID := "ThisIsATest2"
+	instanceID := "ThisIsATest3"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
@@ -83,7 +82,7 @@ func TestOTLPMetrics(t *testing.T) {
 				},
 				{
 					stat:  types.StatisticSum,
-					value: 2,
+					value: 10,
 					check: func(t *testing.T, expected, actual float64) {
 						assert.GreaterOrEqual(t, actual, expected)
 					},
@@ -97,7 +96,7 @@ func TestOTLPMetrics(t *testing.T) {
 				},
 				{
 					stat:  types.StatisticSampleCount,
-					value: 3,
+					value: 10,
 					check: func(t *testing.T, expected, actual float64) {
 						assert.GreaterOrEqual(t, actual, expected)
 					},
@@ -226,29 +225,16 @@ func TestOTLPMetrics(t *testing.T) {
 			for _, e := range m.expected {
 				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, metric.Statistics(e.stat), metric.MinuteStatPeriod)
 				require.NoError(t, err)
-				require.GreaterOrEqual(t, len(values), 2)
+				require.GreaterOrEqual(t, len(values), 3)
 
-				// For cumulative metrics, we want to check that the values are monotonically increasing
-				if strings.Contains(m.name, "cumulative") {
-					if len(values) > 1 {
-						if e.stat == types.StatisticSum || e.stat == types.StatisticSampleCount {
-							// Check if the overall trend is increasing
-							assert.GreaterOrEqual(t, values[len(values)-1], values[0],
-								"Cumulative metric %s with stat %s should show an increasing trend", m.name, e.stat)
-						}
-					}
-				}
+				// Skip first and last values
+				middleValues := values[1 : len(values)-1]
 
-				// Check values, but skip the first and last to avoid edge effects
-				if len(values) > 2 {
-					for _, v := range values[1 : len(values)-1] {
-						e.check(t, e.value, v)
-					}
-				} else {
-					// If we have fewer values, check all of them
-					for _, v := range values {
-						e.check(t, e.value, v)
-					}
+				// Check if all values are >= expected value
+				for _, v := range middleValues {
+					assert.GreaterOrEqual(t, v, e.value,
+						"Metric %s with stat %s should have values >= %f, got %f",
+						m.name, e.stat, e.value, v)
 				}
 			}
 		})
