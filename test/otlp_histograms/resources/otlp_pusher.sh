@@ -4,7 +4,8 @@ INITIAL_START_TIME=$(date +%s%N)
 COUNT=0
 
 # Initialize the file
-cat ./resources/otlp_metrics.json | sed -e "s/INITIAL_START_TIME/$INITIAL_START_TIME/" > ./resources/otlp_metrics_initial.json
+cat ./resources/otlp_metrics.json | sed -e "s/INITIAL_START_TIME/$INITIAL_START_TIME/" \
+    -e "s/\$INSTANCE_ID/$INSTANCE_ID/" > ./resources/otlp_metrics_initial.json
 
 while true; export START_TIME=$(date +%s%N); do
   START_TIME=$(date +%s%N)
