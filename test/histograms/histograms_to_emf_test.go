@@ -1,6 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-package otlp_histograms
+package amp
 
 import (
 	_ "embed"
@@ -21,16 +21,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-//go:embed resources/otlp_metrics.json
-var metricsJSON string
-
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	instanceID := "ThisIsATest4"
+	instanceID := "ThisIsATest5"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
@@ -242,13 +239,13 @@ func TestOTLPMetrics(t *testing.T) {
 }
 
 func startAgent(t *testing.T) {
-	common.CopyFile(filepath.Join("agent_configs", "config.json"), common.ConfigOutputPath)
+	common.CopyFile(filepath.Join("agent_configs", "otlp_emf_config.json"), common.ConfigOutputPath)
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
 	time.Sleep(10 * time.Second)
 }
 
 func runOTLPPusher(instanceID string) error {
-	cmd := exec.Command("/bin/bash", "resources/otlp_pusher.sh")
+	cmd := exec.Command("/bin/bash", "resources/otlp_emf_pusher.sh")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("INSTANCE_ID=%s", instanceID))
 	return cmd.Start()
 }
