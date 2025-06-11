@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +29,7 @@ func init() {
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	instanceID := awsservice.GetInstanceId()
+	instanceID := "ThisIsATest"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
