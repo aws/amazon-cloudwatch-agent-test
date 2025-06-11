@@ -26,7 +26,7 @@ func TestOTLPMetrics(t *testing.T) {
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
-	time.Sleep(2 * time.Minute)
+	time.Sleep(3 * time.Minute)
 
 	metrics := []struct {
 		name       string
