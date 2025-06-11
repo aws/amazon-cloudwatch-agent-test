@@ -16,14 +16,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
-
-func init() {
-	environment.RegisterEnvironmentMetaDataFlags()
-}
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
