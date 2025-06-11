@@ -4,10 +4,7 @@ package otlp_histograms
 
 import (
 	_ "embed"
-	"fmt"
-	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -22,6 +19,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
+
+//go:embed resources/otlp_metrics.json
+var metricsJSON string
 
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
@@ -251,17 +251,6 @@ func startAgent(t *testing.T) {
 }
 
 func runOTLPPusher(instanceID string) error {
-	cmd := exec.Command("/bin/bash", "resources/otlp_pusher.sh")
-	cmd.Env = append(os.Environ(), fmt.Sprintf("INSTANCE_ID=%s", instanceID))
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start script: %v", err)
-	}
-
-	go func() {
-		if err := cmd.Wait(); err != nil {
-			log.Printf("OTLP pusher script ended: %v", err)
-		}
-	}()
-
-	return nil
+	os.Setenv("INSTANCE_ID", instanceID)
+	return common.RunAsyncCommand("resources/otlp_pusher.sh")
 }
