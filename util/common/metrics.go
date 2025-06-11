@@ -193,7 +193,7 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 
 	log.Printf("[Prometheus] Successfully created Prometheus config at /tmp/prometheus.yaml")
 
-	namespace := updateAgentConfigNamespacePrometheus(TMPAGENTPATH, config.InstanceID)
+	updateAgentConfigNamespacePrometheus(TMPAGENTPATH, config.InstanceID)
 
 	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
 		"-a", "fetch-config",
@@ -206,9 +206,9 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 	}
 
 	log.Printf("[Prometheus] Running for duration: %v", duration)
-	time.Sleep(duration)
+	//time.Sleep(duration)
 
-	count, err := countMetricsInLogs(namespace)
+	count, err := countMetricsInLogs("CloudWatchAgentStress/Prometheus/i-0004f325f155a5a3d/1")
 	if err != nil {
 		return fmt.Errorf("error counting metrics: %v", err)
 	}
