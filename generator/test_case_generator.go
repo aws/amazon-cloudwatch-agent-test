@@ -241,6 +241,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/stress/system"},
 		{testDir: "../../test/stress/statsd"},
 		{testDir: "../../test/stress/collectd"},
+		{testDir: "../../test/stress/prometheus"},
 	},
 	"ec2_windows_stress": {
 		{testDir: "../../test/stress/windows/logs"},
