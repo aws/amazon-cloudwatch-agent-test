@@ -4,7 +4,9 @@ package otlp_histograms
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -251,6 +253,7 @@ func startAgent(t *testing.T) {
 }
 
 func runOTLPPusher(instanceID string) error {
-	os.Setenv("INSTANCE_ID", instanceID)
-	return common.RunAsyncCommand("resources/otlp_pusher.sh")
+	cmd := exec.Command("/bin/bash", "resources/otlp_pusher.sh")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("INSTANCE_ID=%s", instanceID))
+	return cmd.Start()
 }
