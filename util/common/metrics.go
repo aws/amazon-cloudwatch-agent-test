@@ -264,6 +264,13 @@ func createPrometheusConfig(scrapeInterval int) error {
 
 /*
 Behavior:
+This method updates the Prometheus-EMF agent JSON to add the instance ID to the namespace.
+Which allows us to isolate tests from each other by ensuring each test has a unique namespace.
+In the case of retries, we want to continue generating a unique namespace.
+We start with CloudWatchAgentStress/Prometheus in agent.json config file,
+and the following happens on each run:
+
+subsequent runs afterwards:
 1. On the first run:
   - Replaces "CloudWatchAgentStress/Prometheus".
   - Replaces it with "CloudWatchAgentStress/Prometheus/{instanceID}/1".
