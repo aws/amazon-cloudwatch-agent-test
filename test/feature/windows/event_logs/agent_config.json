@@ -45,7 +45,7 @@
               {
                 "event_name": "Security",
                 "event_ids": [
-                 4624
+                 400
                 ],
                 "log_group_name": "{instance_id}",
                 "log_stream_name": "Security"
@@ -56,10 +56,21 @@
                   "ERROR"
                 ],
                 "event_ids": [
-                  7009
+                  700
                 ],
                 "log_group_name": "{instance_id}",
                 "log_stream_name": "System"
+              },
+              {
+                "event_name": "Application",
+                "event_levels":[
+                  "WARNING"
+                ],
+                "event_ids": [
+                  89
+                ],
+                "log_group_name": "{instance_id}",
+                "log_stream_name": "Application"
               }
             ]
           },

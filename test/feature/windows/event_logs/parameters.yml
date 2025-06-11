@@ -73,13 +73,20 @@ log_validation:
     log_stream: "Application"
     log_source: "WindowsEvents"
   - log_value: "Security logon-events log"
-    log_event_ids: 4624
+    log_level: "Information"
+    log_event_ids: 400
     log_lines: 1
-    log_stream: "Security"
+    log_stream: "SecurityEvt"
     log_source: "WindowsEvents"
   - log_value: "System error log"
     log_level: "Error"
-    log_event_ids: 7009
+    log_event_ids: 700
     log_lines: 1
     log_stream: "System"
+    log_source: "WindowsEvents"
+  - log_value: "Application Warning log"
+    log_level: "Warning"
+    log_event_ids: 89
+    log_lines: 1
+    log_stream: "Application"
     log_source: "WindowsEvents"

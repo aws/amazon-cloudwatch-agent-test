@@ -242,7 +242,7 @@ resource "null_resource" "integration_test_run_validator" {
       "powershell.exe -Command \"$maxRetries = 50; $retryCount = 0; while (-not (Test-Path 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1') -and $retryCount -lt $maxRetries) { Start-Sleep -s 10; $retryCount++ }; if ($retryCount -eq $maxRetries) { throw 'Timeout: amazon-cloudwatch-agent-ctl.ps1 not found' }\"",
 
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
-      "C:\\validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
+      "C:\\validator.exe --validator-config=\\home\\mcommey\\workplace\\CWA\\amazon-cloudwatch-agent-test\\test\\feature\\windows\\event_logs\\parameters.yml --preparation-mode=false"
     ]
   }
 }
