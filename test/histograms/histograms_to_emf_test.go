@@ -22,7 +22,7 @@ import (
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	instanceID := "ThisIsATest5"
+	instanceID := "ThisIsATest6"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
