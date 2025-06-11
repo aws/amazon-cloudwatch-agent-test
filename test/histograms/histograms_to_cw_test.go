@@ -89,7 +89,7 @@ func (t OtlpHistogramTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *OtlpHistogramTestRunner) GetAgentRunDuration() time.Duration {
-	return 5 * time.Minute
+	return 5 * time.Second
 }
 
 func (t OtlpHistogramTestRunner) GetMeasuredMetrics() []string {
