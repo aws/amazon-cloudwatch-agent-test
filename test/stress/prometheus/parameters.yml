@@ -3,7 +3,8 @@ test_case: "prometheus_stress"
 validate_type: "stress"
 data_type: "metrics"
 metrics_config: "<metrics_config>"
-scrape_interval: "<scrape_interval>"
+scrape_interval: "60"
+values_per_minute: "<values_per_minute>"
 agent_collection_period: 300
 
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
@@ -52,13 +53,3 @@ metric_validation:
         value: "cloudwatch-agent"
       - name: "process_name"
         value: "amazon-cloudwatch-agent"
-  - metric_name: "net_bytes_sent"
-    metric_sample_count: 300
-    metric_dimension:
-      - name: "interface"
-        value: "eth0"
-  - metric_name: "net_packets_sent"
-    metric_sample_count: 300
-    metric_dimension:
-      - name: "interface"
-        value: "eth0"

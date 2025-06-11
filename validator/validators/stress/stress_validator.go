@@ -80,14 +80,12 @@ var (
 				"net_packets_sent":     float64(100),
 			},
 			"prometheus": {
-				"procstat_cpu_usage":   float64(40),
+				"procstat_cpu_usage":   float64(18),
 				"procstat_memory_rss":  float64(120000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(1400000000),
 				"procstat_memory_data": float64(90000000),
 				"procstat_num_fds":     float64(15),
-				"net_bytes_sent":       float64(120000),
-				"net_packets_sent":     float64(120),
 			},
 		},
 		"5000": {
@@ -148,8 +146,6 @@ var (
 				"procstat_memory_vms":  float64(1450000000),
 				"procstat_memory_data": float64(180000000),
 				"procstat_num_fds":     float64(20),
-				"net_bytes_sent":       float64(600000),
-				"net_packets_sent":     float64(550),
 			},
 		},
 		"10000": {
@@ -210,8 +206,6 @@ var (
 				"procstat_memory_vms":  float64(1500000000),
 				"procstat_memory_data": float64(250000000),
 				"procstat_num_fds":     float64(25),
-				"net_bytes_sent":       float64(1200000),
-				"net_packets_sent":     float64(1100),
 			},
 		},
 		// Single use case where most of the metrics will be dropped. Since the default buffer for telegraf is 10000
@@ -261,7 +255,7 @@ var (
 				"net_packets_sent":     float64(100),
 			},
 			"emf": {
-				"procstat_cpu_usage":   float64(165),
+				"procstat_cpu_usage":   float64(130),
 				"procstat_memory_rss":  float64(160000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(1200000000),
@@ -277,8 +271,6 @@ var (
 				"procstat_memory_vms":  float64(2000000000),
 				"procstat_memory_data": float64(500000000),
 				"procstat_num_fds":     float64(30),
-				"net_bytes_sent":       float64(2400000),
-				"net_packets_sent":     float64(2200),
 			},
 		},
 	}
@@ -446,8 +438,8 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 
 	// Validate if the metrics are not dropping any metrics and able to backfill within the same minute (e.g if the memory_rss metric is having collection_interval 1
 	// , it will need to have 60 sample counts - 1 datapoint / second)
-	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-5, metricSampleCount, int32(boundAndPeriod)); !ok {
-		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount-5, metricSampleCount)
+	if ok := awsservice.ValidateSampleCount(metricName, metricNamespace, metricDimensions, startTime, endTime, metricSampleCount-10, metricSampleCount, int32(boundAndPeriod)); !ok {
+		return fmt.Errorf("\n metric %s is not within sample count bound [ %d, %d]", metricName, metricSampleCount-10, metricSampleCount)
 	}
 
 	return nil

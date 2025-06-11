@@ -99,7 +99,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		// skipping FIPS test as the test cannot be verified
 		// neither ssh nor SSM works after a reboot once FIPS is enabled
-		//{
+		//	{
 		//	testDir: "./test/fips",
 		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
 		//},
@@ -225,7 +225,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"ec2_performance": {
 		{testDir: "../../test/performance/emf"},
-		{testDir: "../../test/performance/prometheus"},
 		{testDir: "../../test/performance/logs"},
 		{testDir: "../../test/performance/system"},
 		{testDir: "../../test/performance/statsd"},
