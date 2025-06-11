@@ -5,7 +5,6 @@ package amp
 import (
 	_ "embed"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,11 +22,11 @@ import (
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	instanceID := awsservice.GetInstanceId()
+	instanceID := "Test1"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
-	time.Sleep(5 * time.Minute)
+	time.Sleep(2 * time.Minute)
 
 	metrics := []struct {
 		name       string
