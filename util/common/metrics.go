@@ -5,36 +5,31 @@ package common
 
 import (
 	"bytes"
+	"collectd.org/api"
+	"collectd.org/exec"
+	"collectd.org/network"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	_ "embed"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"github.com/DataDog/datadog-go/statsd"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/prometheus_helper"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/prozz/aws-embedded-metrics-golang/emf"
 	"net"
 	"net/http"
 	"os"
 	exec2 "os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
-
-	"collectd.org/api"
-	"collectd.org/exec"
-	"collectd.org/network"
-	"github.com/DataDog/datadog-go/statsd"
-	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/prozz/aws-embedded-metrics-golang/emf"
-
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 const SleepDuration = 5 * time.Second
@@ -43,7 +38,7 @@ const TracesEndpoint = "4316/v1/traces"
 const MetricEndpoint = "4316/v1/metrics"
 const TMPAGENTPATH = "/tmp/agent_config.json"
 
-//go:embed prometheus/prometheus.yaml
+//go:embed prometheus_helper/prometheus.yaml
 var prometheusTemplate string
 
 type PrometheusConfig struct {
@@ -105,56 +100,10 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 	return nil
 }
 
-type CloudWatchMetricLog struct {
-	CloudWatchMetrics []struct {
-		Namespace  string     `json:"Namespace"`
-		Dimensions [][]string `json:"Dimensions"`
-		Metrics    []struct {
-			Name              string `json:"Name"`
-			Unit              string `json:"Unit"`
-			StorageResolution int    `json:"StorageResolution"`
-		} `json:"Metrics"`
-	} `json:"CloudWatchMetrics"`
-}
+func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time.Duration) error {
+	prometheus_helper.CleanupPortPrometheus(config.Port)
 
-func countMetricsInLogs(logGroupName string) (int, error) {
-	streams := awsservice.GetLogStreams(logGroupName)
-	if len(streams) == 0 {
-		return 0, fmt.Errorf("no log streams found")
-	}
-
-	// Get all logs from the most recent stream
-	events, err := awsservice.GetLogsSince(logGroupName, *streams[0].LogStreamName, nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get log events: %v", err)
-	}
-
-	totalMetrics := 0
-	eventCount := 0
-
-	// Process each event and count metrics
-	for _, event := range events {
-		var metricLog CloudWatchMetricLog
-		if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
-			log.Printf("Failed to parse log event: %v", err)
-			continue
-		}
-
-		for _, cwMetric := range metricLog.CloudWatchMetrics {
-			totalMetrics += len(cwMetric.Metrics)
-		}
-		eventCount++
-	}
-
-	return totalMetrics, nil
-}
-
-func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) error {
-	cleanupPortPrometheus(config.Port)
-
-	counter, gauge, summary, series, label := getAvalancheParams(config.MetricCount)
-	log.Printf("[Prometheus] Using parameters: counter=%d, gauge=%d, summary=%d, series=%d, label=%d",
-		counter, gauge, summary, series, label)
+	counter, gauge, summary, series, label := prometheus_helper.GetAvalancheParams(config.MetricCount)
 
 	gopathCmd := exec2.Command("go", "env", "GOPATH")
 	gopathBytes, err := gopathCmd.Output()
@@ -181,23 +130,21 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		return fmt.Errorf("failed to start Avalanche: %v", err)
 	}
 
-	defer cleanupPortPrometheus(config.Port)
+	defer prometheus_helper.CleanupPortPrometheus(config.Port)
 
 	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
-	output, err := curlCmd.Output()
+	err = curlCmd.Run()
 	if err != nil {
 		return fmt.Errorf("Avalanche failed to start: %v", err)
 	}
-	log.Printf("[Prometheus] Avalanche is running successfully. Sample output:\n%s", string(output[:200]))
 
-	if err := createPrometheusConfig(config.ScrapeInterval); err != nil {
+	if err := prometheus_helper.CreatePrometheusConfig(prometheusTemplate, config.ScrapeInterval); err != nil {
 		return fmt.Errorf("failed to create Prometheus config: %v", err)
 	}
+	//namespace and log group are the same
+	namespaceAndLogGroup := prometheus_helper.UpdateNamespace(TMPAGENTPATH, config.InstanceID)
 
-	log.Printf("[Prometheus] Successfully created Prometheus config at /tmp/prometheus.yaml")
-
-	namespace := updateAgentConfigNamespacePrometheus(TMPAGENTPATH, config.InstanceID)
-
+	//Restarting agent with updated namespace and log group
 	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
 		"-a", "fetch-config",
 		"-s",
@@ -208,124 +155,20 @@ func SendPrometheusMetrics(config PrometheusConfig, duration time.Duration) erro
 		return fmt.Errorf("failed to start CloudWatch agent: %v", err)
 	}
 
-	log.Printf("[Prometheus] Running for duration: %v", duration)
-	time.Sleep(duration)
-	log.Println("This is befoer the counting for logs")
+	time.Sleep(agentCollectionDuration)
+	count, err := awsservice.CountMetricsInEMFLogs(namespaceAndLogGroup)
 
-	count, err := countMetricsInLogs(namespace)
-	log.Println("This is afer the counting for logs", count)
 	if err != nil {
-		return fmt.Errorf("error counting metrics: %v", err)
+		return fmt.Errorf("E! error counting metrics: %v", err)
 	}
 
+	// This is just to generally verify that we are getting metrics in the emf logs
 	if count < config.MetricCount {
 		return fmt.Errorf("insufficient metrics generated: expected ~%d, got %d", config.MetricCount, count)
 	}
+	awsservice.DeleteLogGroup(namespaceAndLogGroup)
 
-	log.Printf("[Prometheus] Completed running for specified duration")
 	return nil
-}
-
-func cleanupPortPrometheus(port int) {
-	killCmd := exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", port))
-	if err := killCmd.Run(); err != nil {
-		log.Printf("[Prometheus] Failed to kill port %d: %v", port, err)
-	}
-}
-
-func getAvalancheParams(metricPerInterval int) (counter, gauge, summary, series, label int) {
-	switch metricPerInterval {
-	case 1000:
-		return 50, 50, 20, 10, 9
-
-	case 5000:
-		return 50, 50, 20, 20, 0
-
-	case 10000:
-		return 100, 100, 20, 50, 10
-
-	case 50000:
-		return 100, 100, 20, 100, 10
-
-	default:
-		return 10, 10, 5, 20, 10
-	}
-}
-
-func createPrometheusConfig(scrapeInterval int) error {
-	cfg := prometheusTemplate
-	cfg = strings.ReplaceAll(cfg, "$SCRAPE_INTERVAL", fmt.Sprintf("%ds", scrapeInterval))
-	cfg = strings.ReplaceAll(cfg, "$PORT", fmt.Sprintf("%d", 8101))
-
-	err := os.WriteFile("/tmp/prometheus.yaml", []byte(cfg), os.ModePerm)
-	if err != nil {
-		log.Printf("[Prometheus] Failed to write config: %v", err)
-		return err
-	}
-
-	log.Printf("[Prometheus] Successfully wrote config file")
-	return nil
-}
-
-/*
-Behavior:
-This method updates the Prometheus-EMF agent JSON to add the instance ID to the namespace.
-Which allows us to isolate tests from each other by ensuring each test has a unique namespace.
-In the case of retries, we want to continue generating a unique namespace.
-We start with CloudWatchAgentStress/Prometheus in agent.json config file,
-and the following happens on each run:
-
-subsequent runs afterwards:
-1. On the first run:
-  - Replaces "CloudWatchAgentStress/Prometheus".
-  - Replaces it with "CloudWatchAgentStress/Prometheus/{instanceID}/1".
-
-2. On subsequent runs (if stress test retried):
-  - Detects an existing namespace in the form "CloudWatchAgentStress/Prometheus/{instanceID}/{index}".
-  - Increments the {index} by 1 and replaces it with the new value.
-
-The function writes the updated config back to the file and returns the new namespace used.
-*/
-func updateAgentConfigNamespacePrometheus(configPath string, instanceID string) string {
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		fmt.Printf("failed to read agent config: %v\n", err)
-		os.Exit(1)
-	}
-
-	cfg := string(data)
-	// Match full namespace with instanceID and index: CloudWatchAgentStress/Prometheus/{instanceID}/{index}
-	fullPattern := fmt.Sprintf(`CloudWatchAgentStress/Prometheus/%s/(\d+)`, regexp.QuoteMeta(instanceID))
-	fmt.Printf("Looking for pattern: %s\n", fullPattern)
-	fullRegex := regexp.MustCompile(fullPattern)
-
-	var newNamespace string
-
-	if matches := fullRegex.FindStringSubmatch(cfg); len(matches) == 2 {
-		// Found existing namespace with index
-		oldIndex, _ := strconv.Atoi(matches[1])
-		newIndex := oldIndex + 1
-		newNamespace = fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/%d", instanceID, newIndex)
-		fmt.Printf("Found existing namespace. Updating from index %d to %d\n", oldIndex, newIndex)
-		fmt.Printf("Old namespace: %s\n", matches[0])
-		fmt.Printf("New namespace: %s\n", newNamespace)
-		cfg = fullRegex.ReplaceAllString(cfg, newNamespace)
-	} else {
-		// First-time update: replace base namespace
-		newNamespace = fmt.Sprintf("CloudWatchAgentStress/Prometheus/%s/1", instanceID)
-		fmt.Printf("No existing namespace found. Creating first-time namespace: %s\n", newNamespace)
-		baseRegex := regexp.MustCompile(`CloudWatchAgentStress/Prometheus`)
-		cfg = baseRegex.ReplaceAllString(cfg, newNamespace)
-	}
-
-	// Write updated config
-	if err := os.WriteFile(configPath, []byte(cfg), os.ModePerm); err != nil {
-		fmt.Printf("failed to write modified config: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Successfully updated config file with new namespace: %s\n", newNamespace)
-
-	return newNamespace
 }
 
 func getBaseDir() string {
