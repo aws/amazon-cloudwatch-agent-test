@@ -27,7 +27,7 @@ func TestOTLPMetrics(t *testing.T) {
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
-	time.Sleep(2 * time.Minute)
+	time.Sleep(5 * time.Minute)
 
 	metrics := []struct {
 		name       string
@@ -208,6 +208,64 @@ func TestOTLPMetrics(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "my.delta.exponential.histogram",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("my.exponential.histogram.attr"),
+					Value: aws.String("some value"),
+				},
+				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+			},
+			expected: []struct {
+				stat  types.Statistic
+				value float64
+				check func(t *testing.T, expected, actual float64)
+			}{
+				{
+					stat:  types.StatisticMinimum,
+					value: 0,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.Equal(t, expected, actual)
+					},
+				},
+				{
+					stat:  types.StatisticMaximum,
+					value: 5,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.Equal(t, expected, actual)
+					},
+				},
+				{
+					stat:  types.StatisticSum,
+					value: 10,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.GreaterOrEqual(t, actual, expected)
+					},
+				},
+				{
+					stat:  types.StatisticAverage,
+					value: 3.33,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.InDelta(t, expected, actual, 0.01)
+					},
+				},
+				{
+					stat:  types.StatisticSampleCount,
+					value: 3,
+					check: func(t *testing.T, expected, actual float64) {
+						assert.GreaterOrEqual(t, actual, expected)
+					},
+				},
+			},
+		},
 	}
 
 	fetcher := metric.MetricValueFetcher{}
@@ -218,7 +276,7 @@ func TestOTLPMetrics(t *testing.T) {
 			for _, e := range m.expected {
 				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, metric.Statistics(e.stat), metric.MinuteStatPeriod)
 				require.NoError(t, err)
-				require.GreaterOrEqual(t, len(values), 2)
+				require.GreaterOrEqual(t, len(values), 3)
 
 				// Skip first and last values
 				middleValues := values[1 : len(values)-1]
