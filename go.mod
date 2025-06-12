@@ -1,6 +1,6 @@
 module github.com/aws/amazon-cloudwatch-agent-test
 
-go 1.18
+go 1.20
 
 // Avoid checksum mismatch for go-collectd https://github.com/collectd/go-collectd/issues/94
 replace collectd.org v0.5.0 => github.com/collectd/go-collectd v0.5.0
