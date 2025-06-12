@@ -429,5 +429,6 @@ func CountMetricsInEMFLogs(logGroupName string) (int, error) {
 		eventCount++
 	}
 
+	log.Println("Printing total metric", totalMetrics)
 	return totalMetrics, nil
 }

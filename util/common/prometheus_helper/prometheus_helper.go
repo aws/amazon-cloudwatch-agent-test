@@ -99,5 +99,6 @@ func UpdateNamespace(configPath string, instanceID string) string {
 		os.Exit(1)
 	}
 
+	log.Println("Printing new namespace", newNamespace)
 	return newNamespace
 }
