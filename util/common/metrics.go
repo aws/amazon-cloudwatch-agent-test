@@ -122,6 +122,11 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 	}
 	gopath := strings.TrimSpace(string(gopathBytes))
 
+	// Add before starting avalanche
+	netstatCmd := exec2.Command("sudo", "netstat", "-tulpn", "|", "grep", fmt.Sprintf(":%d", config.Port))
+	output, _ := netstatCmd.CombinedOutput()
+	log.Printf("Port check before avalanche: %s", string(output))
+
 	log.Println("Running avalanche")
 	cmd := exec2.Command("sudo", filepath.Join(gopath, "bin", "avalanche"),
 		fmt.Sprintf("--port=%d", config.Port),
@@ -137,7 +142,7 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 
 	log.Println("Sleep 5 second for avalanche")
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start Avalanche: %v", err)
@@ -145,10 +150,19 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 
 	log.Println("doing a curl to avalanche")
 
-	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
-	err = curlCmd.Run()
-	if err != nil {
-		return fmt.Errorf("Avalanche failed to start: %v", err)
+	log.Println("Checking if avalanche is listening...")
+	for i := 0; i < 3; i++ {
+		curlCmd := exec2.Command("curl", "-s", "--connect-timeout", "5", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
+		output, err := curlCmd.CombinedOutput()
+		if err == nil {
+			log.Println("Avalanche is ready")
+			break
+		}
+		if i == 2 {
+			return fmt.Errorf("Avalanche failed to start after retries: %v\nOutput: %s", err, string(output))
+		}
+		log.Printf("Attempt %d: Avalanche not ready yet, waiting...", i+1)
+		time.Sleep(5 * time.Second)
 	}
 
 	log.Println("Creating Prometheus config")
