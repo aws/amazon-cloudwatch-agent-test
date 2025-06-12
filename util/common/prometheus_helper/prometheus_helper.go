@@ -47,9 +47,16 @@ func CreatePrometheusConfig(prometheusTemplate string, scrapeInterval int) error
 }
 
 func CleanupPortPrometheus(port int) {
-	killCmd := exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", port))
-	if err := killCmd.Run(); err != nil {
-		log.Printf("[Prometheus] Failed to kill port %d: %v", port, err)
+	// First try to find if any process is using the port
+	findCmd := exec2.Command("sudo", "lsof", "-i", fmt.Sprintf(":%d", port))
+	if output, err := findCmd.Output(); err == nil && len(output) > 0 {
+		// Only try to kill if we found a process
+		killCmd := exec2.Command("sudo", "fuser", "-k", fmt.Sprintf("%d/tcp", port))
+		if err := killCmd.Run(); err != nil {
+			log.Printf("[Prometheus] Failed to kill port %d: %v", port, err)
+		}
+	} else {
+		log.Printf("[Prometheus] No process found on port %d", port)
 	}
 }
 
