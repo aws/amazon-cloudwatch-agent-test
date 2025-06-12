@@ -104,6 +104,10 @@ func TestOTLPMetrics(t *testing.T) {
 					Value: aws.String("some value"),
 				},
 				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+				{
 					Name:  aws.String("service.name"),
 					Value: aws.String("my.service"),
 				},
