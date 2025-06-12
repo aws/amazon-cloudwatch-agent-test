@@ -138,8 +138,6 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 		return fmt.Errorf("failed to start Avalanche: %v", err)
 	}
 
-	defer prometheus_helper.CleanupPortPrometheus(config.Port)
-
 	for i := 0; i < 3; i++ {
 		curlCmd := exec2.Command("curl", "-s", "--connect-timeout", "5", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
 		output, err := curlCmd.CombinedOutput()
