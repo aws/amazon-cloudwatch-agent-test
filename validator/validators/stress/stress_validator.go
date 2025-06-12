@@ -255,7 +255,7 @@ var (
 				"net_packets_sent":     float64(100),
 			},
 			"emf": {
-				"procstat_cpu_usage":   float64(130),
+				"procstat_cpu_usage":   float64(165),
 				"procstat_memory_rss":  float64(160000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(1200000000),

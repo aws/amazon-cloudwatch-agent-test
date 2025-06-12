@@ -5,9 +5,6 @@ package common
 
 import (
 	"bytes"
-	"collectd.org/api"
-	"collectd.org/exec"
-	"collectd.org/network"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -16,12 +13,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/DataDog/datadog-go/statsd"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common/prometheus_helper"
-	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/prozz/aws-embedded-metrics-golang/emf"
 	"net"
 	"net/http"
 	"os"
@@ -30,6 +21,17 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"collectd.org/api"
+	"collectd.org/exec"
+	"collectd.org/network"
+	"github.com/DataDog/datadog-go/statsd"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/prozz/aws-embedded-metrics-golang/emf"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/prometheus_helper"
 )
 
 const SleepDuration = 5 * time.Second

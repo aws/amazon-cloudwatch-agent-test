@@ -57,8 +57,9 @@ func (s *BasicValidator) GenerateLoad() error {
 	default:
 		// Sending metrics based on the receivers; however, for scraping plugin (e.g prometheus), we would need to scrape it instead of sending
 		if receiver == "prometheus" {
-			if s.vConfig.GetScrapeInterval() != 0 {
-				metricSendingInterval = time.Duration(s.vConfig.GetScrapeInterval()) * time.Second
+			scrapeInterval := s.vConfig.GetScrapeInterval()
+			if scrapeInterval != 0 {
+				metricSendingInterval = time.Duration(scrapeInterval) * time.Second
 				log.Printf("Using scrape_interval defined in parameters.yml for metric sending interval: %v seconds", metricSendingInterval.Seconds())
 			}
 		}
