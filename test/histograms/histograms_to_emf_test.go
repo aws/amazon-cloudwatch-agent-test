@@ -17,13 +17,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	instanceID := awsservice.GetInstanceId()
+	instanceID := "Test10"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
