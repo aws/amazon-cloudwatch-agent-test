@@ -104,7 +104,6 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 }
 
 func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time.Duration) error {
-	prometheus_helper.CleanupPortPrometheus(config.Port)
 	var namespaceAndLogGroup string
 
 	defer func() {
@@ -113,7 +112,7 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 			awsservice.DeleteLogGroup(namespaceAndLogGroup)
 		}
 	}()
-
+	log.Println("Getting avalanche params")
 	counter, gauge, summary, series, label := prometheus_helper.GetAvalancheParams(config.MetricCount)
 
 	gopathCmd := exec2.Command("go", "env", "GOPATH")
@@ -123,6 +122,7 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 	}
 	gopath := strings.TrimSpace(string(gopathBytes))
 
+	log.Println("Running avalanche")
 	cmd := exec2.Command("sudo", filepath.Join(gopath, "bin", "avalanche"),
 		fmt.Sprintf("--port=%d", config.Port),
 		fmt.Sprintf("--counter-metric-count=%d", counter),
@@ -135,11 +135,15 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 		"--series-interval=0",
 		"--value-interval=10")
 
+	log.Println("Sleep 5 second for avalanche")
+
 	time.Sleep(5 * time.Second)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start Avalanche: %v", err)
 	}
+
+	log.Println("doing a curl to avalanche")
 
 	curlCmd := exec2.Command("curl", "-s", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
 	err = curlCmd.Run()
@@ -147,13 +151,19 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 		return fmt.Errorf("Avalanche failed to start: %v", err)
 	}
 
+	log.Println("Creating Prometheus config")
+
 	if err := prometheus_helper.CreatePrometheusConfig(prometheusTemplate, config.ScrapeInterval); err != nil {
 		return fmt.Errorf("failed to create Prometheus config: %v", err)
 	}
+	log.Println("Catting prometheus yaml")
+
 	err = catFile("/tmp/prometheus.yaml")
 	if err != nil {
 		log.Println("There was an issue logging prometheus yaml")
 	}
+
+	log.Println("Updating namespace")
 
 	//Namespace and log group are the same
 	namespaceAndLogGroup = prometheus_helper.UpdateNamespace(TMPAGENTPATH, config.InstanceID)
@@ -162,6 +172,8 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 	if err != nil {
 		log.Println("There was an issue logging agent file")
 	}
+
+	log.Println("Restarting agent")
 
 	//Restarting agent with updated namespace and log group
 	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
@@ -174,12 +186,18 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 		return fmt.Errorf("failed to start CloudWatch agent: %v", err)
 	}
 
+	log.Println("Sleeping for agent collection duration", agentCollectionDuration)
+
 	time.Sleep(agentCollectionDuration)
+	log.Println("Counting metrics in EMF logs")
+
 	count, err := awsservice.CountMetricsInEMFLogs(namespaceAndLogGroup)
 
 	if err != nil {
 		return fmt.Errorf("error counting metrics: %v", err)
 	}
+
+	log.Println("If statement to check metric count: ", count)
 
 	//This is just to generally verify that we are getting metrics in the emf logs
 	if count < config.MetricCount {
