@@ -387,3 +387,47 @@ func GetLogEventCountPerType(logGroup, logStream string, since, until *time.Time
 
 	return typeFrequency, nil
 }
+
+type CloudWatchEMF struct {
+	CloudWatchMetrics []struct {
+		Namespace  string     `json:"Namespace"`
+		Dimensions [][]string `json:"Dimensions"`
+		Metrics    []struct {
+			Name              string `json:"Name"`
+			Unit              string `json:"Unit"`
+			StorageResolution int    `json:"StorageResolution"`
+		} `json:"Metrics"`
+	} `json:"CloudWatchMetrics"`
+}
+
+func CountMetricsInEMFLogs(logGroupName string) (int, error) {
+	streams := GetLogStreams(logGroupName)
+	if len(streams) == 0 {
+		return 0, fmt.Errorf("no log streams found")
+	}
+
+	// Get all logs from the most recent stream
+	events, err := GetLogsSince(logGroupName, *streams[0].LogStreamName, nil, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get log events: %v", err)
+	}
+
+	totalMetrics := 0
+	eventCount := 0
+
+	// Process each event and count metrics
+	for _, event := range events {
+		var metricLog CloudWatchEMF
+		if err := json.Unmarshal([]byte(*event.Message), &metricLog); err != nil {
+			log.Printf("Failed to parse log event: %v", err)
+			continue
+		}
+
+		for _, cwMetric := range metricLog.CloudWatchMetrics {
+			totalMetrics += len(cwMetric.Metrics)
+		}
+		eventCount++
+	}
+
+	return totalMetrics, nil
+}

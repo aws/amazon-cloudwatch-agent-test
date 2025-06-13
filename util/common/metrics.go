@@ -8,13 +8,16 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
+	exec2 "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -27,12 +30,27 @@ import (
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/prometheus_helper"
 )
 
 const SleepDuration = 5 * time.Second
 
 const TracesEndpoint = "4316/v1/traces"
 const MetricEndpoint = "4316/v1/metrics"
+const TMPAGENTPATH = "/tmp/agent_config.json"
+
+//go:embed prometheus_helper/prometheus.yaml
+var prometheusTemplate string
+
+type PrometheusConfig struct {
+	MetricCount    int           `json:"metric_count"`
+	Port           int           `json:"port"`
+	UpdateInterval time.Duration `json:"update_interval"`
+	ScrapeInterval int           `json:"scrape_interval"`
+	InstanceID     string        `json:"instance_id"`
+}
 
 // StartSendingMetrics will generate metrics load based on the receiver (e.g 5000 statsd metrics per minute)
 func StartSendingMetrics(receiver string, duration, sendingInterval time.Duration, metricPerInterval int, metricLogGroup, metricNamespace string) (err error) {
@@ -46,6 +64,15 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendEMFMetrics(metricPerInterval, metricLogGroup, metricNamespace, sendingInterval, duration)
 		case "app_signals":
 			err = SendAppSignalMetrics(duration) //does app signals have dimension for metric?
+		case "prometheus":
+			cfg := PrometheusConfig{
+				MetricCount:    metricPerInterval,
+				Port:           8101,
+				UpdateInterval: sendingInterval,
+				ScrapeInterval: int(sendingInterval.Seconds()),
+				InstanceID:     metricLogGroup,
+			}
+			err = SendPrometheusMetrics(cfg, duration)
 		case "traces":
 			err = SendAppSignalsTraceMetrics(duration) //does app signals have dimension for metric?
 
@@ -71,6 +98,85 @@ func SendAppSignalsTraceMetrics(duration time.Duration) error {
 		}
 
 		time.Sleep(5 * time.Second)
+	}
+
+	return nil
+}
+
+func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time.Duration) error {
+	var namespaceAndLogGroup string
+
+	defer func() {
+		prometheus_helper.CleanupPortPrometheus(config.Port)
+		if namespaceAndLogGroup != "" {
+			awsservice.DeleteLogGroup(namespaceAndLogGroup)
+		}
+	}()
+	log.Println("Getting avalanche params")
+	counter, gauge, summary, series, label := prometheus_helper.GetAvalancheParams(config.MetricCount)
+
+	gopathCmd := exec2.Command("go", "env", "GOPATH")
+	gopathBytes, err := gopathCmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get GOPATH: %v", err)
+	}
+	gopath := strings.TrimSpace(string(gopathBytes))
+
+	cmd := exec2.Command("sudo", filepath.Join(gopath, "bin", "avalanche"),
+		fmt.Sprintf("--port=%d", config.Port),
+		fmt.Sprintf("--counter-metric-count=%d", counter),
+		fmt.Sprintf("--gauge-metric-count=%d", gauge),
+		fmt.Sprintf("--summary-metric-count=%d", summary),
+		fmt.Sprintf("--series-count=%d", series),
+		fmt.Sprintf("--label-count=%d", label),
+		fmt.Sprintf("--const-label=InstanceId=%s", config.InstanceID),
+		"--series-change-interval=0",
+		"--series-interval=0",
+		"--value-interval=10")
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start Avalanche: %v", err)
+	}
+
+	for i := 0; i < 3; i++ {
+		curlCmd := exec2.Command("curl", "-s", "--connect-timeout", "5", fmt.Sprintf("http://localhost:%d/metrics", config.Port))
+		output, err := curlCmd.CombinedOutput()
+		if err == nil {
+			break
+		}
+		if i == 2 {
+			return fmt.Errorf("Avalanche failed to start after retries: %v\nOutput: %s", err, string(output))
+		}
+		time.Sleep(5 * time.Second)
+	}
+
+	if err := prometheus_helper.CreatePrometheusConfig(prometheusTemplate, config.ScrapeInterval); err != nil {
+		return fmt.Errorf("failed to create Prometheus config: %v", err)
+	}
+	//namespace and log group are the same
+	namespaceAndLogGroup = prometheus_helper.UpdateNamespace(TMPAGENTPATH, config.InstanceID)
+
+	//Restarting agent with updated namespace and log group
+	agentCmd := exec2.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl",
+		"-a", "fetch-config",
+		"-s",
+		"-m", "ec2",
+		"-c", "file:"+TMPAGENTPATH)
+
+	if err := agentCmd.Run(); err != nil {
+		return fmt.Errorf("failed to start CloudWatch agent: %v", err)
+	}
+
+	time.Sleep(agentCollectionDuration)
+	count, err := awsservice.CountMetricsInEMFLogs(namespaceAndLogGroup)
+
+	if err != nil {
+		return fmt.Errorf("error counting metrics: %v", err)
+	}
+
+	// This is just to generally verify that we are getting metrics in the emf logs
+	if count < config.MetricCount {
+		return fmt.Errorf("insufficient metrics generated: expected ~%d, got %d", config.MetricCount, count)
 	}
 
 	return nil
