@@ -15,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf", "xray", "app_signals", "traces"}
+var supportedReceivers = []string{"logs", "statsd", "collectd", "system", "emf", "xray", "app_signals", "prometheus", "traces"}
 var retryCount = 0
 
 type ValidateConfig interface {
@@ -26,6 +26,7 @@ type ValidateConfig interface {
 	GetNumberMonitoredLogs() int
 	GetDataRate() int
 	GetCloudWatchAgentConfigPath() string
+	GetScrapeInterval() int
 	GetAgentCollectionPeriod() time.Duration
 	GetMetricNamespace() string
 	GetMetricValidation() []MetricValidation
@@ -45,6 +46,7 @@ type validatorConfig struct {
 	DataType              string `yaml:"data_type"`               // Only supports metrics/logs/traces
 	NumberMonitoredLogs   int    `yaml:"number_monitored_logs"`   // Number of logs to be monitored
 	ValuesPerMinute       string `yaml:"values_per_minute"`       // Number of metrics to be sent or number of log lines to write
+	ScrapeInterval        string `yaml:"scrape_interval"`         // Prometheus Scraping interval
 	AgentCollectionPeriod int    `yaml:"agent_collection_period"` // Number of seconds the agent should run and collect the metrics
 	OSFamily              string `yaml:"os_family"`               // OS Family for the validator test
 
@@ -133,6 +135,13 @@ func (v *validatorConfig) GetDataType() string {
 func (v *validatorConfig) GetDataRate() int {
 	if dataRate, err := strconv.Atoi(v.ValuesPerMinute); err == nil {
 		return dataRate
+	}
+	return 0
+}
+
+func (v *validatorConfig) GetScrapeInterval() int {
+	if scrapeInterval, err := strconv.Atoi(v.ScrapeInterval); err == nil {
+		return scrapeInterval
 	}
 	return 0
 }
