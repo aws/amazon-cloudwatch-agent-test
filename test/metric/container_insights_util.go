@@ -298,7 +298,7 @@ func ValidateLogsFrequency(env *environment.MetaData) status.TestResult {
 	return testResult
 }
 
-func ValidateLNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.TestResult {
+func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.TestResult {
 
 	testResult := status.TestResult{
 		Name:   "emf-logs-neuron-core-utilization",
