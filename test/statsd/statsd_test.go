@@ -26,8 +26,8 @@ type StatsDTestSuite struct {
 	test_runner.TestSuite
 }
 
-func (suite *StatsDTestSuite) SetupSuite() {
-	fmt.Println(">>>> Starting StatsDTestSuite")
+func (suite *StatsDTestSuite) GetSuiteName() string {
+	return "StatsDTestSuite"
 }
 
 func (suite *StatsDTestSuite) TearDownSuite() {
