@@ -40,7 +40,7 @@ func GenerateWindowsEvents(validationLog []models.LogValidation) error {
 			if vLog.LogEventID != "" {
 				id = vLog.LogEventID
 			}
-			err := CreateWindowsEvent(vLog.LogStream, vLog.LogLevel, id, vLog.LogValue)
+			err := CreateWindowsEvent(vLog.LogChannel, vLog.LogLevel, id, vLog.LogValue)
 			if err != nil {
 				multiErr = multierr.Append(multiErr, err)
 			}
