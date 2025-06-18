@@ -45,30 +45,36 @@ log_validation:
   - log_value: "System information log"
     log_level: "Information"
     log_lines: 1
+    log_channel: "System"
     log_stream: "System"
     log_source: "WindowsEvents"
   - log_value: "System warning log"
     log_level: "Warning"
     log_lines: 1
+    log_channel: "System"
     log_stream: "System"
     log_source: "WindowsEvents"
   - log_value: "System error log"
     log_level: "Error"
     log_lines: 1
+    log_channel: "System"
     log_stream: "System"
     log_source: "WindowsEvents"
   - log_value: "Application information log"
     log_level: "Information"
     log_lines: 1
+    log_channel: "Application"
     log_stream: "Application"
     log_source: "WindowsEvents"
   - log_value: "Application warning log"
     log_level: "Warning"
     log_lines: 1
+    log_channel: "Application"
     log_stream: "Application"
     log_source: "WindowsEvents"
   - log_value: "Application error log"
     log_level: "Error"
     log_lines: 1
+    log_channel: "Application"
     log_stream: "Application"
     log_source: "WindowsEvents"

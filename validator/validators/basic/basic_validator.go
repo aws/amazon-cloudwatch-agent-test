@@ -204,7 +204,8 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource, l
 				case "WindowsEvents":
 					if logLevel != "" && strings.Contains(message, logLine) && strings.Contains(message, logLevel) {
 						actualEventCount += 1
-					} else if logEventID != "" && strings.Contains(message, logLine) && strings.Contains(message, logEventID) {
+					}
+					if logEventID != "" && strings.Contains(message, logLine) && strings.Contains(message, logEventID) {
 						actualEventCount += 1
 					}
 				default:
