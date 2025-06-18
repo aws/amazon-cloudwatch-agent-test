@@ -118,7 +118,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		fmt.Println("Traces Metrics are correct!")
 	}
 	for _, logValidation := range logValidations {
-		err := s.ValidateLogs(logValidation.LogStream, logValidation.LogValue, logValidation.LogLevel, logValidation.LogSource, logValidation.LogLines, startTime, endTime)
+		err := s.ValidateLogs(logValidation.LogStream, logValidation.LogValue, logValidation.LogLevel, logValidation.LogSource, logValidation.LogEventID, logValidation.LogLines, startTime, endTime)
 		if err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
@@ -186,7 +186,7 @@ func (s *BasicValidator) ValidateTracesMetrics() error {
 	return nil
 }
 
-func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource string, expectedMinimumEventCount int, startTime, endTime time.Time) error {
+func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource, logEventID string, expectedMinimumEventCount int, startTime, endTime time.Time) error {
 	logGroup := awsservice.GetInstanceId()
 	log.Printf("Start to validate that substring '%s' has at least %d log event(s) within log group %s, log stream %s, between %v and %v", logLine, expectedMinimumEventCount, logGroup, logStream, startTime, endTime)
 	return awsservice.ValidateLogs(
@@ -203,6 +203,8 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource st
 				switch logSource {
 				case "WindowsEvents":
 					if logLevel != "" && strings.Contains(message, logLine) && strings.Contains(message, logLevel) {
+						actualEventCount += 1
+					} else if logEventID != "" && strings.Contains(message, logLine) && strings.Contains(message, logEventID) {
 						actualEventCount += 1
 					}
 				default:
