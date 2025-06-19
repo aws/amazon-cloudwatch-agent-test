@@ -30,11 +30,6 @@ func (suite *StatsDTestSuite) GetSuiteName() string {
 	return "StatsDTestSuite"
 }
 
-func (suite *StatsDTestSuite) TearDownSuite() {
-	suite.Result.Print()
-	fmt.Println(">>>> Finished StatsDTestSuite")
-}
-
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
