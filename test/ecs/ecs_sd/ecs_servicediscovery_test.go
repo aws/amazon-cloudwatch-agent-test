@@ -5,24 +5,11 @@ package ecs_sd
 
 import (
 	_ "embed"
-	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/environment/computetype"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/stretchr/testify/suite"
-	"log"
-	"strings"
 	"testing"
-	"time"
-
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
-	"github.com/stretchr/testify/assert"
-
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 /*
@@ -64,7 +51,6 @@ func (suite *ECSServiceDiscoveryTestSuite) GetSuiteName() string {
 }
 
 func (suite *ECSServiceDiscoveryTestSuite) TestAllInSuite() {
-	
 	for _, testRunner := range testRunners {
 		suite.AddToSuiteResult(testRunner.Run())
 	}
