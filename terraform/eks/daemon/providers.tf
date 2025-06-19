@@ -24,7 +24,7 @@ terraform {
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "2.23.0"  # Try this specific version
+      version = "2.36.0"  # Pin to this specific version
     }
     template = {
       source  = "hashicorp/template"
