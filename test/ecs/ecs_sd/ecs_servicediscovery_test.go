@@ -24,12 +24,22 @@ Implementation:
 */
 
 var (
-	testRunners []*test_runner.TestRunner = []*test_runner.TestRunner{
-		{
-			TestRunner: &ECSServiceDiscoveryTestRunner{},
-		},
-	}
+	ecsTestRunners []*test_runner.ECSTestRunner
 )
+
+func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
+	if len(ecsTestRunners) == 0 {
+
+		ecsTestRunners = []*test_runner.ECSTestRunner{
+			{
+				Runner:      &ECSServiceDiscoveryTestRunner{},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
+			},
+		}
+	}
+	return ecsTestRunners
+}
 
 var _ test_runner.ITestRunner = (*ECSServiceDiscoveryTestRunner)(nil)
 
@@ -51,8 +61,9 @@ func (suite *ECSServiceDiscoveryTestSuite) GetSuiteName() string {
 }
 
 func (suite *ECSServiceDiscoveryTestSuite) TestAllInSuite() {
-	for _, testRunner := range testRunners {
-		suite.AddToSuiteResult(testRunner.Run())
+	env := environment.GetEnvironmentMetaData()
+	for _, ecsTestRunner := range getEcsTestRunners(env) {
+		ecsTestRunner.Run(suite, env)
 	}
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "ECS ServiceDiscovery Test Suite Failed")
 }

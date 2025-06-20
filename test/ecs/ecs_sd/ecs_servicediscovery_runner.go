@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package ecs_sd
 
 import (
@@ -35,6 +38,7 @@ func (t ECSServiceDiscoveryTestRunner) GetTestName() string {
 func (t ECSServiceDiscoveryTestRunner) GetAgentConfigFileName() string {
 	return ""
 }
+
 func (t ECSServiceDiscoveryTestRunner) GetMeasuredMetrics() []string {
 	// dummy function to satisfy the interface
 	return []string{}
@@ -88,7 +92,7 @@ func (t ECSServiceDiscoveryTestRunner) ValidateLogGroupFormat(logGroupName strin
 	}
 
 	log.Printf("ECS ServiceDiscovery Test has exhausted %v retry times", MaxRetryCount)
-	return false, fmt.Errorf("%s:%s", "Test Retries Exhausted ", MaxRetryCount)
+	return false, fmt.Errorf("Test Retries Exhausted: %d", MaxRetryCount)
 }
 
 func (t ECSServiceDiscoveryTestRunner) ValidateLogsContent(logGroupName string, start time.Time, end time.Time) error {
