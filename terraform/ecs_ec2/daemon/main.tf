@@ -242,7 +242,13 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating metrics/logs"
       cd ../../..
-      go test ${var.test_dir} -timeout 0 -computeType=ECS -ecsLaunchType=EC2 -ecsDeploymentStrategy=DAEMON -cwagentConfigSsmParamName=${local.cwagent_config_ssm_param_name} -clusterArn=${aws_ecs_cluster.cluster.arn} -cwagentECSServiceName=${aws_ecs_service.cwagent_service.name} -v
+      go test ${var.test_dir} -timeout 0 \
+      -computeType=ECS \
+      -ecsLaunchType=EC2 \
+      -ecsDeploymentStrategy=DAEMON \
+      -cwagentConfigSsmParamName=${local.cwagent_config_ssm_param_name} \
+      -clusterArn=${aws_ecs_cluster.cluster.arn} \
+      -cwagentECSServiceName=${aws_ecs_service.cwagent_service.name} -v
     EOT
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service, null_resource.disable_metadata]

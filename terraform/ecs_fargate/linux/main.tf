@@ -147,7 +147,12 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating metrics/logs"
       cd ../../..
-      go test ${var.test_dir} -clusterName=${aws_ecs_cluster.cluster.name} -v
+      go test ${var.test_dir} \
+      -computeType=ECS \
+      -ecsLaunchType=FARGATE \
+      -ecsDeploymentStrategy=DAEMON \
+      -clusterArn=${aws_ecs_cluster.cluster.arn} \
+      -v
     EOT
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service]
