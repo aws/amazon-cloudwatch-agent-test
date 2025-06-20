@@ -69,11 +69,12 @@ type MetricValidation struct {
 }
 
 type LogValidation struct {
-	LogValue  string `yaml:"log_value"`
-	LogLines  int    `yaml:"log_lines"`
-	LogStream string `yaml:"log_stream"`
-	LogLevel  string `yaml:"log_level"`
-	LogSource string `yaml:"log_source"`
+	LogValue   string `yaml:"log_value"`
+	LogLines   int    `yaml:"log_lines"`
+	LogStream  string `yaml:"log_stream"`
+	LogLevel   string `yaml:"log_level"`
+	LogEventID string `yaml:"log_event_ids"`
+	LogSource  string `yaml:"log_source"`
 }
 
 type MetricDimension struct {
