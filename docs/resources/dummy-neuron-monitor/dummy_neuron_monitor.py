@@ -18,6 +18,8 @@ def get_instance_labels(instance_info):
         'region': instance_info['instance_region'],
         'subnet_id': instance_info['subnet_id']
     }
+    if 'ultraserver_id' in instance_info:
+        instance_labels['ultraserver_id'] = instance_info['ultraserver_id']
     return instance_labels
 
 
@@ -845,8 +847,8 @@ def update_loop(certfile, keyfile):
                 '"instance_id":"i-09db9b55e0095612f","instance_type":"trn1n.32xlarge",'
                 '"instance_availability_zone":"us-east-1c","instance_availability_zone_id":"use1-az6",'
                 '"instance_region":"us-east-1","ami_id":"ami-030686a4e905e98d3",'
-                '"subnet_id":"subnet-06a7754948e8a000f","error":""},"neuron_hardware_info":{"neuron_device_count":16,'
-                '"neuroncore_per_device_count":2,"error":""}}')
+                '"subnet_id":"subnet-06a7754948e8a000f","ultraserver_id":"u-cafb07773a569a23","error":""},'
+                '"neuron_hardware_info":{"neuron_device_count":16,"neuroncore_per_device_count":2,"error":""}}')
         if len(line) == 0:
             continue
         if original_file_hash:
