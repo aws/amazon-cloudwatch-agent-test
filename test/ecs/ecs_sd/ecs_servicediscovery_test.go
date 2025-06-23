@@ -1,15 +1,18 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build !windows
+
 package ecs_sd
 
 import (
-	_ "embed"
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 /*

@@ -1,19 +1,23 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build !windows
+
 package ecs_sd
 
 import (
 	_ "embed"
 	"fmt"
+	"log"
+	"strings"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
-	"log"
-	"strings"
-	"time"
 )
 
 const (
