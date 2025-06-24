@@ -60,7 +60,7 @@ func (t *PrometheusPMDTestRunner) GetTestName() string {
 }
 
 func (t *PrometheusPMDTestRunner) GetAgentConfigFileName() string {
-	return "pmd_config.json"
+	return "prometheus_pmd_config.json"
 }
 
 func (t *PrometheusPMDTestRunner) SetupBeforeAgentRun() error {
