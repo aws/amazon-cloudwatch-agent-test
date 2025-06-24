@@ -1,6 +1,24 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0" # Updated from 4.0 to 5.0
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "2.36.0"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.9.0"
+    }
+  }
+  required_version = ">= 1.0"
+}
+
 provider "aws" {
   region = var.region
 }

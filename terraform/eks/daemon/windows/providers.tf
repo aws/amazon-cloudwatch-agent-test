@@ -5,6 +5,24 @@ provider "aws" {
   region = var.region
 }
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "2.36.0" # Consider upgrading to 2.37.1 or later
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.9.0"
+    }
+  }
+  required_version = ">= 1.0"
+}
+
 provider "kubernetes" {
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
