@@ -9,11 +9,11 @@ terraform {
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "2.36.0"  # Consider upgrading to 2.37.1 or later
+      version = "2.36.0" # Consider upgrading to 2.37.1 or later
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "~> 2.9.0"  # Add appropriate version for helm provider
+      version = "~> 2.9.0" # Add appropriate version for helm provider
     }
     template = {
       source  = "hashicorp/template"
