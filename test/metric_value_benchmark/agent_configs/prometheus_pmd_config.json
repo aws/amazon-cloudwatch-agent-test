@@ -1,0 +1,24 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15
+  },
+  "metrics": {
+    "namespace": "PMDTest",
+    "metrics_destinations": {
+      "cloudwatch": {}
+    },
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "/tmp/prometheus.yaml"
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ]
+  }
+}
