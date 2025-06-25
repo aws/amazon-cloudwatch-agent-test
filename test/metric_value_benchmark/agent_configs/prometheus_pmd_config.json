@@ -3,7 +3,7 @@
     "metrics_collection_interval": 15
   },
   "metrics": {
-    "namespace": "PMDTest",
+    "namespace": "PMDTest4",
     "metrics_destinations": {
       "cloudwatch": {}
     },

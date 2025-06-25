@@ -133,6 +133,8 @@ func InstallAgent(installerFilePath string) error {
 }
 
 func StartAgent(configOutputPath string, fatalOnFailure bool, ssm bool) error {
+	log.Println("Inside start agent")
+
 	agentStartCommand := environment.GetEnvironmentMetaData().AgentStartCommand
 	return StartAgentWithCommand(configOutputPath, fatalOnFailure, ssm, agentStartCommand)
 }

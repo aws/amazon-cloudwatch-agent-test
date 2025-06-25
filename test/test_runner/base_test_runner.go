@@ -59,10 +59,14 @@ func (t *BaseTestRunner) SetupBeforeAgentRun() error {
 }
 
 func (t *BaseTestRunner) SetUpConfig() error {
+	log.Println("Inside Setupconfig")
+
 	agentConfigPath := filepath.Join(agentConfigDirectory, t.AgentConfig.ConfigFileName)
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
 	common.CopyFile(agentConfigPath, configOutputPath)
 	if t.AgentConfig.UseSSM {
+		log.Println("Use ssm")
+
 		log.Printf("Starting agent from ssm parameter %s", agentConfigPath)
 		agentConfigByteArray, err := os.ReadFile(agentConfigPath)
 		if err != nil {
@@ -140,6 +144,7 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	if t.TestRunner.UseSSM() {
 		err = common.StartAgent(t.TestRunner.SSMParameterName(), false, true)
 	} else {
+		log.Println("Not using ssm ssm")
 		err = common.StartAgent(configOutputPath, false, false)
 	}
 
