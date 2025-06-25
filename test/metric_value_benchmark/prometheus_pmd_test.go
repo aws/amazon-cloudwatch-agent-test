@@ -107,7 +107,7 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 
 	fetcher := metric.MetricValueFetcher{}
 
-	stats := []metric.Statistics{metric.AVERAGE, metric.MAXIMUM, metric.MINIMUM, metric.SUM, metric.SAMPLECOUNT}
+	stats := []metric.Statistics{metric.AVERAGE, metric.MAXIMUM, metric.MINIMUM, metric.SUM, metric.SAMPLE_COUNT}
 	statValues := make(map[metric.Statistics][]float64)
 
 	for _, stat := range stats {
