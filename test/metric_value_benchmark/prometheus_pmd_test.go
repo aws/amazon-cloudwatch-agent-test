@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"os/exec"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -17,7 +16,6 @@ import (
 
 type PrometheusPMDTestRunner struct {
 	test_runner.BaseTestRunner
-	prometheusCmd *exec.Cmd
 }
 
 var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
