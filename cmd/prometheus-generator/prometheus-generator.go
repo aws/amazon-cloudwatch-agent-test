@@ -13,6 +13,7 @@ import (
 var (
 	counter   uint64
 	histogram []float64
+	untyped   uint64 // Added untyped metric
 	port      int
 )
 
@@ -25,15 +26,19 @@ func updateMetrics() {
 		atomic.AddUint64(&counter, 1)
 		value := rand.Float64() * 10
 		histogram = append(histogram, value)
+
+		atomic.StoreUint64(&untyped, uint64(rand.Intn(100)+1))
+
 		time.Sleep(1 * time.Second)
 	}
 }
 
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	currentCounter := atomic.LoadUint64(&counter)
+	currentUntyped := atomic.LoadUint64(&untyped)
 
-	// Output untyped metric with static value
-	fmt.Fprintf(w, "prometheus_test_untyped{include=\"yes\",prom_type=\"untyped\"} 1\n")
+	// Output untyped metric (note: no TYPE declaration for untyped)
+	fmt.Fprintf(w, "prometheus_test_untyped{include=\"yes\",prom_type=\"untyped\"} %d\n", currentUntyped)
 
 	// Calculate histogram stats
 	var sum float64

@@ -4,7 +4,7 @@
     "debug": true
   },
   "metrics": {
-    "namespace": "PMDTest4",
+    "namespace": "PMDTest6",
     "metrics_destinations": {
       "cloudwatch": {}
     },

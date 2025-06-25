@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"log"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -23,7 +24,7 @@ var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
 //go:embed agent_configs/prometheus.yaml
 var prometheusPMDConfig string
 
-const namespacePMD = "PMDTest4"
+const namespacePMD = "PMDTest6"
 
 func (t *PrometheusPMDTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
@@ -105,13 +106,58 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(namespacePMD, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
-	if err != nil {
-		return testResult
+
+	// Get different statistics for the metric
+	stats := []metric.Statistics{metric.AVERAGE, metric.MAXIMUM, metric.MINIMUM, metric.SUM, metric.SAMPLE_COUNT}
+	statValues := make(map[metric.Statistics][]float64)
+
+	for _, stat := range stats {
+		values, err := fetcher.Fetch(namespacePMD, metricName, dims, stat, metric.HighResolutionStatPeriod)
+		if err != nil {
+			log.Printf("Failed to fetch %s for metric %s: %v", stat, metricName, err)
+			return testResult
+		}
+		statValues[stat] = values
 	}
 
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
-		return testResult
+	switch metricName {
+	case "prometheus_test_histogram":
+		// For histogram, values should be between 0-10 (our generation range)
+		if len(statValues[metric.MAXIMUM]) > 0 && statValues[metric.MAXIMUM][0] > 10 {
+			log.Printf("Histogram max value too high: %v", statValues[metric.MAXIMUM][0])
+			return testResult
+		}
+		if len(statValues[metric.MINIMUM]) > 0 && statValues[metric.MINIMUM][0] < 0 {
+			log.Printf("Histogram min value negative: %v", statValues[metric.MINIMUM][0])
+			return testResult
+		}
+
+	case "prometheus_test_gauge":
+		// For gauge, values should be between 0-1000
+		if len(statValues[metric.MAXIMUM]) > 0 && statValues[metric.MAXIMUM][0] > 1000 {
+			log.Printf("Gauge max value too high: %v", statValues[metric.MAXIMUM][0])
+			return testResult
+		}
+		if len(statValues[metric.MINIMUM]) > 0 && statValues[metric.MINIMUM][0] < 0 {
+			log.Printf("Gauge min value negative: %v", statValues[metric.MINIMUM][0])
+			return testResult
+		}
+
+	case "prometheus_test_counter":
+		avgValues := statValues[metric.AVERAGE]
+		for i := 1; i < len(avgValues); i++ {
+			if avgValues[i] < avgValues[i-1] {
+				log.Printf("Counter not monotonically increasing: %v", avgValues)
+				return testResult
+			}
+		}
+	}
+
+	log.Printf("Metric %s statistics:", metricName)
+	for stat, values := range statValues {
+		if len(values) > 0 {
+			log.Printf("  %v: latest=%v, count=%d", stat, values[len(values)-1], len(values))
+		}
 	}
 
 	testResult.Status = status.SUCCESSFUL
