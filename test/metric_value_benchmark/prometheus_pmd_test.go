@@ -107,8 +107,7 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 
 	fetcher := metric.MetricValueFetcher{}
 
-	// Get different statistics for the metric
-	stats := []metric.Statistics{metric.AVERAGE, metric.MAXIMUM, metric.MINIMUM, metric.SUM, metric.SAMPLE_COUNT}
+	stats := []metric.Statistics{metric.AVERAGE, metric.MAXIMUM, metric.MINIMUM, metric.SUM, metric.SAMPLECOUNT}
 	statValues := make(map[metric.Statistics][]float64)
 
 	for _, stat := range stats {
@@ -120,9 +119,10 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 		statValues[stat] = values
 	}
 
+	// Validate based on metric type
 	switch metricName {
 	case "prometheus_test_histogram":
-		// For histogram, values should be between 0-10 (our generation range)
+		// For histogram, values should be between 0-10
 		if len(statValues[metric.MAXIMUM]) > 0 && statValues[metric.MAXIMUM][0] > 10 {
 			log.Printf("Histogram max value too high: %v", statValues[metric.MAXIMUM][0])
 			return testResult
@@ -144,6 +144,7 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 		}
 
 	case "prometheus_test_counter":
+		// Counter should be monotonically increasing
 		avgValues := statValues[metric.AVERAGE]
 		for i := 1; i < len(avgValues); i++ {
 			if avgValues[i] < avgValues[i-1] {
@@ -151,8 +152,20 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 				return testResult
 			}
 		}
+
+	case "prometheus_test_untyped":
+		// Untyped values should be between 1-100
+		if len(statValues[metric.MAXIMUM]) > 0 && statValues[metric.MAXIMUM][0] > 100 {
+			log.Printf("Untyped max value too high: %v", statValues[metric.MAXIMUM][0])
+			return testResult
+		}
+		if len(statValues[metric.MINIMUM]) > 0 && statValues[metric.MINIMUM][0] < 1 {
+			log.Printf("Untyped min value too low: %v", statValues[metric.MINIMUM][0])
+			return testResult
+		}
 	}
 
+	// Log statistics for debugging
 	log.Printf("Metric %s statistics:", metricName)
 	for stat, values := range statValues {
 		if len(values) > 0 {
