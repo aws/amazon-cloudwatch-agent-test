@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -290,6 +292,51 @@ func ValidateLogsFrequency(env *environment.MetaData) status.TestResult {
 		if err != nil {
 			log.Printf("log validation (%s/%s) failed: %v, start time : %s", group, stream, err, start)
 			return testResult
+		}
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.TestResult {
+
+	testResult := status.TestResult{
+		Name:   "emf-logs-neuron-core-utilization",
+		Status: status.FAILED,
+	}
+
+	end := time.Now().Add(time.Duration(-2) * time.Minute).Truncate(time.Minute)
+	start := end.Add(time.Duration(-1) * time.Minute)
+	group := fmt.Sprintf("/aws/containerinsights/%s/performance", env.EKSClusterName)
+
+	// need to get the instances used for the EKS cluster
+	eKSInstances, err := awsservice.GetEKSInstances(env.EKSClusterName)
+	if err != nil {
+		log.Println("failed to get EKS instances", err)
+		return testResult
+	}
+
+	for _, instance := range eKSInstances {
+		stream := *instance.InstanceName
+		coreMap, err := awsservice.GetNeuronCoreUtilizationPerCore(group, stream, &start, &end)
+
+		if err != nil {
+			log.Printf("log validation (%s/%s) failed: %v, start time : %s, error is : %s", group, stream, err, start, err)
+			return testResult
+		}
+
+		// Check if coreMap has the expected core utilization values
+		for coreKey, actualValue := range coreMap {
+			if strings.HasPrefix(coreKey, "core") {
+				coreNumStr := strings.TrimPrefix(coreKey, "core")
+				expectedValue, err := strconv.Atoi(coreNumStr)
+				if err != nil || math.Round(actualValue) != float64(expectedValue) {
+					log.Printf("Core utilization validation failed: expected %s:%d, got %v", 
+						coreKey, expectedValue, actualValue)
+					return testResult
+				}
+			}
 		}
 	}
 
