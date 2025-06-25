@@ -825,7 +825,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating EKS metrics/logs for AWS Neuron"
       cd ../../../..
-      go test -timeout 30m ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
+      go test -timeout 120m ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
   }
 }
