@@ -24,7 +24,7 @@ var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
 //go:embed agent_configs/prometheus.yaml
 var prometheusPMDConfig string
 
-const namespacePMD = "PMDTest6"
+const namespacePMD = "PrometheusPMDTest"
 
 func (t *PrometheusPMDTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
@@ -40,7 +40,7 @@ func (t *PrometheusPMDTestRunner) Validate() status.TestGroupResult {
 }
 
 func (t *PrometheusPMDTestRunner) GetTestName() string {
-	return "PMD Prometheus Metrics"
+	return "PrometheusPMDTest"
 }
 
 func (t *PrometheusPMDTestRunner) GetAgentRunDuration() time.Duration {
@@ -65,7 +65,6 @@ func (t *PrometheusPMDTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
-	// Start the Prometheus generator
 	err = t.startPrometheusGenerator()
 	if err != nil {
 		return fmt.Errorf("failed to start prometheus generator: %v", err)
@@ -154,7 +153,6 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 		}
 
 	case "prometheus_test_untyped":
-		// Untyped values should be between 1-100
 		if len(statValues[metric.MAXIMUM]) > 0 && statValues[metric.MAXIMUM][0] > 100 {
 			log.Printf("Untyped max value too high: %v", statValues[metric.MAXIMUM][0])
 			return testResult
@@ -162,14 +160,6 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 		if len(statValues[metric.MINIMUM]) > 0 && statValues[metric.MINIMUM][0] < 1 {
 			log.Printf("Untyped min value too low: %v", statValues[metric.MINIMUM][0])
 			return testResult
-		}
-	}
-
-	// Log statistics for debugging
-	log.Printf("Metric %s statistics:", metricName)
-	for stat, values := range statValues {
-		if len(values) > 0 {
-			log.Printf("  %v: latest=%v, count=%d", stat, values[len(values)-1], len(values))
 		}
 	}
 
