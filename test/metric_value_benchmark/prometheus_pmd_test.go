@@ -75,16 +75,12 @@ func (t *PrometheusPMDTestRunner) SetupBeforeAgentRun() error {
 	return nil
 }
 func (t *PrometheusPMDTestRunner) startPrometheusGenerator() error {
-	//err := killExisting("prometheus-generator")
-	//if err != nil {
-	//	return err
-	//}
-
 	cmd := "go run ../../cmd/prometheus-generator -port=8101"
 	return common.RunAsyncCommand(cmd)
 }
 func (t *PrometheusPMDTestRunner) GetMeasuredMetrics() []string {
 	return []string{
+		"prometheus_test_untyped",
 		"prometheus_test_counter",
 		"prometheus_test_gauge",
 		"prometheus_test_histogram",

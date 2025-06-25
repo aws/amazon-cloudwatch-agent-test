@@ -32,6 +32,9 @@ func updateMetrics() {
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	currentCounter := atomic.LoadUint64(&counter)
 
+	// Output untyped metric with static value
+	fmt.Fprintf(w, "prometheus_test_untyped{include=\"yes\",prom_type=\"untyped\"} 1\n")
+
 	// Calculate histogram stats
 	var sum float64
 	buckets := make(map[float64]int)
