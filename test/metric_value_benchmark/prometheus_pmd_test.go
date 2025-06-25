@@ -42,6 +42,9 @@ func (t *PrometheusPMDTestRunner) GetTestName() string {
 	return "PMD Prometheus Metrics"
 }
 
+func (t *PrometheusPMDTestRunner) GetAgentRunDuration() time.Duration {
+	return 2 * time.Minute
+}
 func (t *PrometheusPMDTestRunner) GetAgentConfigFileName() string {
 	return "prometheus_pmd_config.json"
 }
