@@ -13,7 +13,7 @@ import (
 var (
 	counter   uint64
 	histogram []float64
-	untyped   uint64 // Added untyped metric
+	untyped   uint64
 	port      int
 )
 
@@ -37,9 +37,6 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	currentCounter := atomic.LoadUint64(&counter)
 	currentUntyped := atomic.LoadUint64(&untyped)
 
-	// Output untyped metric (note: no TYPE declaration for untyped)
-	fmt.Fprintf(w, "prometheus_test_untyped{include=\"yes\",prom_type=\"untyped\"} %d\n", currentUntyped)
-
 	// Calculate histogram stats
 	var sum float64
 	buckets := make(map[float64]int)
@@ -53,6 +50,7 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	fmt.Fprintf(w, "prometheus_test_untyped{include=\"yes\",prom_type=\"untyped\"} %d\n", currentUntyped)
 
 	fmt.Fprintf(w, "# TYPE prometheus_test_counter counter\n")
 	fmt.Fprintf(w, "prometheus_test_counter{include=\"yes\",prom_type=\"counter\"} %d\n", currentCounter)
