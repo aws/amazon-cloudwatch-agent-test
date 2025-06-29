@@ -1,0 +1,248 @@
+module "common" {
+  source = "../../common"
+}
+
+module "basic_components" {
+  source = "../../basic_components"
+}
+
+locals {
+  cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-eks-performance"
+}
+
+# Read agent config file if it exists
+data "local_file" "agent_config" {
+  count    = var.agent_config != "" ? 1 : 0
+  filename = "${var.test_dir}/${var.agent_config}"
+}
+
+# EKS Cluster Creation
+resource "aws_eks_cluster" "this" {
+  name     = "${local.cluster_name}"
+  role_arn = module.basic_components.role_arn
+  version  = var.k8s_version
+  vpc_config {
+    subnet_ids         = module.basic_components.public_subnet_ids
+    security_group_ids = [module.basic_components.security_group]
+  }
+}
+
+# EKS Cluster Node Groups
+resource "aws_eks_node_group" "this" {
+  cluster_name    = aws_eks_cluster.this.name
+  node_group_name = "${local.cluster_name}-node"
+  node_role_arn   = aws_iam_role.node_role.arn
+  subnet_ids      = module.basic_components.public_subnet_ids
+
+  scaling_config {
+    desired_size = var.nodes
+    max_size     = 500
+    min_size     = 1
+  }
+
+  ami_type       = var.ami_type
+  capacity_type  = "ON_DEMAND"
+  disk_size      = 20
+  instance_types = [var.instance_type]
+
+  depends_on = [
+    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
+    aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
+    aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy
+  ]
+}
+
+# EKS Cluster Security Groups
+resource "aws_security_group_rule" "nodeport_inbound" {
+  type              = "ingress"
+  from_port         = 30080
+  to_port           = 30080
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
+}
+
+# EKS Node IAM Role
+resource "aws_iam_role" "node_role" {
+  name = "cwagent-eks-Worker-Role-${module.common.testing_id}"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+# EKS Node Policies
+resource "aws_iam_role_policy_attachment" "node_AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.node_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "node_AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.node_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.node_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.node_role.name
+}
+
+# EKS Cluster Auth
+data "aws_eks_cluster_auth" "this" {
+  name = aws_eks_cluster.this.name
+}
+
+# Helm Provider Definition
+provider "helm" {
+  kubernetes {
+    host                   = aws_eks_cluster.this.endpoint
+    cluster_ca_certificate = base64decode(aws_eks_cluster.this.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.this.token
+  }
+}
+
+# Conditional resource for helm charts
+resource "null_resource" "helm_charts" {
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
+      cd ${path.module}/helm-charts
+      git checkout ${var.helm_charts_branch}
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "rm -rf ${path.module}/helm-charts"
+  }
+}
+
+# Install Helm chart
+resource "helm_release" "cloudwatch_observability" {
+  name             = "amazon-cloudwatch-observability"
+  chart            = "../../../terraform/eks/performance/helm-charts/charts/amazon-cloudwatch-observability"
+  namespace        = "amazon-cloudwatch"
+  create_namespace = true
+
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this,
+    null_resource.helm_charts
+  ]
+
+  set {
+    name  = "clusterName"
+    value = var.eks_cluster_name
+  }
+
+  set {
+    name  = "region"
+    value = var.region
+  }
+
+  set {
+    name  = "agent.image.repository"
+    value = var.cloudwatch_agent_repository
+  }
+
+  set {
+    name  = "agent.image.tag"
+    value = var.cloudwatch_agent_tag
+  }
+
+  set {
+    name  = "agent.image.repositoryDomainMap.public"
+    value = var.cloudwatch_agent_repository_url
+  }
+
+  set {
+    name  = "manager.image.repository"
+    value = var.cloudwatch_agent_operator_repository
+  }
+
+  set {
+    name  = "manager.image.tag"
+    value = var.cloudwatch_agent_operator_tag
+  }
+
+  set {
+    name  = "manager.image.repositoryDomainMap.public"
+    value = var.cloudwatch_agent_operator_repository_url
+  }
+
+  # Conditional agent config
+  set {
+    name  = "agent.config"
+    value = var.agent_config != "" ? data.local_file.agent_config[0].content : ""
+    type  = "string"
+  }
+}
+
+resource "null_resource" "validator" {
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this,
+    null_resource.helm_charts,
+    aws_eks_addon.this
+  ]
+
+  triggers = {
+    cluster_name            = aws_eks_cluster.this.name
+    region                  = var.region
+    test_dir                = var.test_dir
+    eks_deployment_strategy = var.eks_deployment_strategy
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "=== Starting Validation Process ==="
+      echo "=== Configuration Values ==="
+      echo "Test Directory: ${var.test_dir}"
+      echo "Region: ${var.region}"
+      echo "Kubernetes Version: ${var.k8s_version}"
+      echo "EKS Cluster Name: ${aws_eks_cluster.this.name}"
+      echo "Compute Type: EKS"
+      echo "EKS Deployment Strategy: ${var.eks_deployment_strategy}"
+
+      echo "=== CloudWatch Agent Configuration ==="
+      echo "Repository: ${var.cloudwatch_agent_repository}"
+      echo "Tag: ${var.cloudwatch_agent_tag}"
+      echo "Repository URL: ${var.cloudwatch_agent_repository_url}"
+
+      echo "=== Operator Configuration ==="
+      echo "Repository: ${var.cloudwatch_agent_operator_repository}"
+      echo "Tag: ${var.cloudwatch_agent_operator_tag}"
+      echo "Repository URL: ${var.cloudwatch_agent_operator_repository_url}"
+
+      echo "=== Target Allocator Configuration ==="
+      echo "Repository: ${var.cloudwatch_agent_target_allocator_repository}"
+      echo "Tag: ${var.cloudwatch_agent_target_allocator_tag}"
+      echo "Repository URL: ${var.cloudwatch_agent_target_allocator_repository_url}"
+
+      echo "=== Configuration Files ==="
+      echo "Agent Config: ${var.test_dir}/${var.agent_config}"
+#       echo "OpenTelemetry Config: ${var.otel_config != "" ? "${var.test_dir}/${var.otel_config}" : "Not specified"}"
+#       echo "Prometheus Config: ${var.prometheus_config != "" ? "${var.test_dir}/${var.prometheus_config}" : "Not specified"}"
+#       echo "Sample App: ${var.test_dir}/${var.sample_app}"
+    EOT
+  }
+}
+
+output "eks_cluster_name" {
+  value = aws_eks_cluster.this.name
+}
