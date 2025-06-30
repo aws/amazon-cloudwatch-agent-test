@@ -116,6 +116,13 @@ resource "null_resource" "helm_charts" {
     command = <<-EOT
       git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
       cd ${path.module}/helm-charts
+
+      echo "path xxx"
+      pwd
+
+      echo "subdirectories xxx"
+      ls -la
+
       git checkout ${var.helm_charts_branch}
     EOT
   }
@@ -129,7 +136,7 @@ resource "null_resource" "helm_charts" {
 # Install Helm chart
 resource "helm_release" "cloudwatch_observability" {
   name             = "amazon-cloudwatch-observability"
-  chart            = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability"
+  chart            = "helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
   create_namespace = true
 
