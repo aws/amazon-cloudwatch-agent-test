@@ -102,7 +102,7 @@ data "aws_eks_cluster_auth" "this" {
 
 # Helm Provider Definition
 provider "helm" {
-  kubernetes {
+  kubernetes = {
     host                   = aws_eks_cluster.this.endpoint
     cluster_ca_certificate = base64decode(aws_eks_cluster.this.certificate_authority[0].data)
     token                  = data.aws_eks_cluster_auth.this.token
@@ -188,7 +188,6 @@ resource "null_resource" "cluster_manager" {
     aws_eks_cluster.this,
     aws_eks_node_group.this,
     null_resource.helm_charts,
-    aws_eks_addon.this
   ]
 
   triggers = {
@@ -224,8 +223,8 @@ resource "null_resource" "cluster_manager" {
       echo "Tag: ${var.cloudwatch_agent_target_allocator_tag}"
       echo "Repository URL: ${var.cloudwatch_agent_target_allocator_repository_url}"
 
-      echo "=== Configuration Files ==="
-#      echo "Agent Config: ${var.test_dir}/${var.agent_config}"
+#       echo "=== Configuration Files ==="
+#       echo "Agent Config: ${var.test_dir}/${var.agent_config}"
 #       echo "OpenTelemetry Config: ${var.otel_config != "" ? "${var.test_dir}/${var.otel_config}" : "Not specified"}"
 #       echo "Prometheus Config: ${var.prometheus_config != "" ? "${var.test_dir}/${var.prometheus_config}" : "Not specified"}"
 #       echo "Sample App: ${var.test_dir}/${var.sample_app}"
