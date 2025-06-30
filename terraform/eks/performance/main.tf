@@ -114,27 +114,16 @@ resource "null_resource" "helm_charts" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "::group::Cloning and setting up Helm charts"
-
-      echo "Working directory before clone:"
-      pwd
-
-      echo "\nCloning helm-charts repository..."
       git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
-
-      echo "\nChanging to helm-charts directory..."
       cd ${path.module}/helm-charts
 
-      echo "\nCurrent directory structure:"
+      echo "path xxx"
+      pwd
+
+      echo "subdirectories xxx"
       ls -la
 
-      echo "\nChecking out branch: ${var.helm_charts_branch}"
       git checkout ${var.helm_charts_branch}
-
-      echo "\nFinal directory structure:"
-      ls -la
-
-      echo "::endgroup::"
     EOT
   }
 
@@ -146,6 +135,8 @@ resource "null_resource" "helm_charts" {
 
 # Install Helm chart
 resource "helm_release" "cloudwatch_observability" {
+  depends_on = [null_resource.helm_charts]
+
   name             = "amazon-cloudwatch-observability"
   chart            = "helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
