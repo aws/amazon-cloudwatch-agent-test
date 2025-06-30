@@ -138,7 +138,7 @@ resource "helm_release" "cloudwatch_observability" {
   depends_on = [null_resource.helm_charts]
 
   name             = "amazon-cloudwatch-observability"
-  chart            = "helm-charts/charts/amazon-cloudwatch-observability"
+  chart            = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
   create_namespace = true
 
