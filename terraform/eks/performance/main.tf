@@ -114,15 +114,9 @@ resource "null_resource" "helm_charts" {
 
   provisioner "local-exec" {
     command = <<-EOT
+      echo "=== Starting Validation Process ==="
       git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
       cd ${path.module}/helm-charts
-
-      echo "path xxx"
-      pwd
-
-      echo "subdirectories xxx"
-      ls -la
-
       git checkout ${var.helm_charts_branch}
     EOT
   }
