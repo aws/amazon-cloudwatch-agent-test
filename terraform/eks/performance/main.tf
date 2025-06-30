@@ -114,16 +114,27 @@ resource "null_resource" "helm_charts" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
-      cd ${path.module}/helm-charts
+      echo "::group::Cloning and setting up Helm charts"
 
-      echo "path xxx"
+      echo "Working directory before clone:"
       pwd
 
-      echo "subdirectories xxx"
+      echo "\nCloning helm-charts repository..."
+      git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
+
+      echo "\nChanging to helm-charts directory..."
+      cd ${path.module}/helm-charts
+
+      echo "\nCurrent directory structure:"
       ls -la
 
+      echo "\nChecking out branch: ${var.helm_charts_branch}"
       git checkout ${var.helm_charts_branch}
+
+      echo "\nFinal directory structure:"
+      ls -la
+
+      echo "::endgroup::"
     EOT
   }
 
