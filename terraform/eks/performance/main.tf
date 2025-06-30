@@ -133,54 +133,40 @@ resource "helm_release" "cloudwatch_observability" {
   namespace        = "amazon-cloudwatch"
   create_namespace = true
 
-  depends_on = [
-    aws_eks_cluster.this,
-    aws_eks_node_group.this,
-    null_resource.helm_charts
+  set = [
+    {
+      name  = "clusterName"
+      value = var.eks_cluster_name
+    },
+    {
+      name  = "region"
+      value = var.region
+    },
+    {
+      name  = "agent.image.repository"
+      value = var.cloudwatch_agent_repository
+    },
+    {
+      name  = "agent.image.tag"
+      value = var.cloudwatch_agent_tag
+    },
+    {
+      name  = "agent.image.repositoryDomainMap.public"
+      value = var.cloudwatch_agent_repository_url
+    },
+    {
+      name  = "manager.image.repository"
+      value = var.cloudwatch_agent_operator_repository
+    },
+    {
+      name  = "manager.image.tag"
+      value = var.cloudwatch_agent_operator_tag
+    },
+    {
+      name  = "manager.image.repositoryDomainMap.public"
+      value = var.cloudwatch_agent_operator_repository_url
+    }
   ]
-
-  set {
-    name  = "clusterName"
-    value = var.eks_cluster_name
-  }
-
-  set {
-    name  = "region"
-    value = var.region
-  }
-
-  # CloudWatch Agent configuration
-  set {
-    name  = "agent.image.repository"
-    value = var.cloudwatch_agent_repository
-  }
-
-  set {
-    name  = "agent.image.tag"
-    value = var.cloudwatch_agent_tag
-  }
-
-  set {
-    name  = "agent.image.repositoryDomainMap.public"
-    value = var.cloudwatch_agent_repository_url
-  }
-
-  # Operator configuration
-  set {
-    name  = "manager.image.repository"
-    value = var.cloudwatch_agent_operator_repository
-  }
-
-  set {
-    name  = "manager.image.tag"
-    value = var.cloudwatch_agent_operator_tag
-  }
-
-  set {
-    name  = "manager.image.repositoryDomainMap.public"
-    value = var.cloudwatch_agent_operator_repository_url
-  }
-
 }
 
 resource "null_resource" "cluster_manager" {
