@@ -63,7 +63,7 @@ func (t *ECSTestRunner) Run(s ITestSuite, e *environment.MetaData) {
 	if len(agentConfigFileName) != 0 {
 		err := t.RunStrategy.RunAgentStrategy(e, t.Runner.GetAgentConfigFileName())
 		if err != nil {
-			log.Printf("Failed to run agent with config for the given testm err:%v", err)
+			log.Printf("Failed to run agent with config for the given test err:%v", err)
 			s.AddToSuiteResult(status.TestGroupResult{
 				Name: t.Runner.GetTestName(),
 				TestResults: []status.TestResult{

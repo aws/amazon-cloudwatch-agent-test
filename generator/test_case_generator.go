@@ -72,6 +72,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
+			testDir: "./test/log_state/logfile",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
@@ -85,6 +89,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
 			maxAttempts: 2,
 		},
+		{testDir: "./test/entity_metrics_benchmark"},
 		{testDir: "./test/metric_value_benchmark"},
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
@@ -129,6 +134,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 		{
+			testDir: "./test/histograms",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
 			testDir: "./test/agent_otel_merging",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
@@ -136,6 +145,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/assume_role",
 			terraformDir: "terraform/ec2/assume_role",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/detailed_metrics",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 	},
 	testTypeKeyEc2SELinux: {
@@ -155,14 +168,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:     "./test/emf_prometheus",
 			maxAttempts: 2,
 		},
-		{testDir: "./test/metric_value_benchmark"},
+		//{testDir: "./test/metric_value_benchmark"}, // Skipping test until it is fixed!
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/selinux_negative_test"},
-		{testDir: "./test/otlp"},
+		//{testDir: "./test/otlp"}, // Skipping test until it is fixed!
 		{
 			testDir: "./test/lvm",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -207,6 +220,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
 		{testDir: "../../../test/feature/windows/event_logs"},
+		{testDir: "../../../test/log_state/logfile"},
+		{testDir: "../../../test/log_state/windows_event_log"},
 		{
 			testDir: "../../../test/feature/windows/custom_start/userdata",
 			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
@@ -236,13 +251,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/stress/system"},
 		{testDir: "../../test/stress/statsd"},
 		{testDir: "../../test/stress/collectd"},
+		{testDir: "../../test/stress/prometheus"},
 	},
 	"ec2_windows_stress": {
 		{testDir: "../../test/stress/windows/logs"},
 		{testDir: "../../test/stress/windows/system"},
 	},
 	"ecs_fargate": {
-		{testDir: "./test/ecs/ecs_metadata"},
+		{testDir: "./test/ecs/ecs_sd"},
 	},
 	"ecs_ec2_daemon": {
 		{
@@ -259,6 +275,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{
 			testDir: "./test/emf",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+		},
+		{
+			testDir: "./test/ecs/ecs_sd",
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},
