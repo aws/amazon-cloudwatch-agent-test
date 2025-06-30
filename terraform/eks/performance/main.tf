@@ -6,9 +6,13 @@ module "basic_components" {
   source = "../../basic_components"
 }
 
+locals {
+  cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-eks-performance"
+}
+
 # EKS Cluster Creation
 resource "aws_eks_cluster" "this" {
-  name     = var.cluster_name
+  name     = local.cluster_name
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
   vpc_config {
@@ -20,7 +24,7 @@ resource "aws_eks_cluster" "this" {
 # EKS Cluster Node Groups
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "${var.cluster_name}-node"
+  node_group_name = "${local.cluster_name}-node"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
 
@@ -132,7 +136,7 @@ resource "helm_release" "cloudwatch_observability" {
   set = [
     {
       name  = "clusterName"
-      value = var.cluster_name
+      value = local.cluster_name
     },
     {
       name  = "region"
