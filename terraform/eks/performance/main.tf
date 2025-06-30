@@ -20,7 +20,7 @@ resource "aws_eks_cluster" "this" {
 # EKS Cluster Node Groups
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "${local.cluster_name}-node"
+  node_group_name = "${var.cluster_name}-node"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
 
@@ -226,6 +226,6 @@ resource "null_resource" "cluster_manager" {
 #   }
 }
 
-output "eks_cluster_name" {
+output "cluster_name" {
   value = aws_eks_cluster.this.name
 }
