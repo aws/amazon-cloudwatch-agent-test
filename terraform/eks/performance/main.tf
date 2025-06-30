@@ -6,13 +6,9 @@ module "basic_components" {
   source = "../../basic_components"
 }
 
-locals {
-  cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-eks-performance"
-}
-
 # EKS Cluster Creation
 resource "aws_eks_cluster" "this" {
-  name     = "${local.cluster_name}"
+  name     = var.cluster_name
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
   vpc_config {
@@ -136,7 +132,7 @@ resource "helm_release" "cloudwatch_observability" {
   set = [
     {
       name  = "clusterName"
-      value = var.eks_cluster_name
+      value = var.cluster_name
     },
     {
       name  = "region"
