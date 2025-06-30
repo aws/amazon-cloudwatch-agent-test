@@ -114,10 +114,18 @@ resource "null_resource" "helm_charts" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "::debug::=== Starting Validation Process ==="
+      set -e
+      echo "Cloning helm-charts repository..."
       git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
       cd ${path.module}/helm-charts
+      echo "Checking out branch: ${var.helm_charts_branch}"
       git checkout ${var.helm_charts_branch}
+      echo "Contents of charts directory:"
+      ls -R ${path.module}/helm-charts/charts
+      if [ ! -d "${path.module}/helm-charts/charts/amazon-cloudwatch-observability" ]; then
+        echo "Error: amazon-cloudwatch-observability chart not found!"
+        exit 1
+      fi
     EOT
   }
 
