@@ -111,6 +111,9 @@ provider "helm" {
 
 # Conditional resource for helm charts
 resource "null_resource" "helm_charts" {
+  triggers = {
+    always_run = timestamp()
+  }
 
   provisioner "local-exec" {
     command = <<-EOT
