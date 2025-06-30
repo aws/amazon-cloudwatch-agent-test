@@ -181,16 +181,16 @@ resource "helm_release" "aws_observability" {
   chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
   create_namespace = true
-
-  set {
-    name  = "clusterName"
-    value = aws_eks_cluster.this.name
-  }
-
-  set {
-    name  = "region"
-    value = "us-west-2"
-  }
+  set = [
+    {
+      name  = "clusterName"
+      value = aws_eks_cluster.this.name
+    }, 
+    {
+      name  = "region"
+      value = "us-west-2"
+    }
+  ]
   depends_on = [
     aws_eks_cluster.this,
     aws_eks_node_group.this,
