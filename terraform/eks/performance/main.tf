@@ -10,12 +10,6 @@ locals {
   cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-eks-performance"
 }
 
-# Read agent config file if it exists
-data "local_file" "agent_config" {
-  count    = var.agent_config != "" ? 1 : 0
-  filename = "${var.test_dir}/${var.agent_config}"
-}
-
 # EKS Cluster Creation
 resource "aws_eks_cluster" "this" {
   name     = "${local.cluster_name}"
@@ -155,6 +149,7 @@ resource "helm_release" "cloudwatch_observability" {
     value = var.region
   }
 
+  # CloudWatch Agent configuration
   set {
     name  = "agent.image.repository"
     value = var.cloudwatch_agent_repository
@@ -170,6 +165,7 @@ resource "helm_release" "cloudwatch_observability" {
     value = var.cloudwatch_agent_repository_url
   }
 
+  # Operator configuration
   set {
     name  = "manager.image.repository"
     value = var.cloudwatch_agent_operator_repository
@@ -185,15 +181,9 @@ resource "helm_release" "cloudwatch_observability" {
     value = var.cloudwatch_agent_operator_repository_url
   }
 
-  # Conditional agent config
-  set {
-    name  = "agent.config"
-    value = var.agent_config != "" ? data.local_file.agent_config[0].content : ""
-    type  = "string"
-  }
 }
 
-resource "null_resource" "validator" {
+resource "null_resource" "cluster_manager" {
   depends_on = [
     aws_eks_cluster.this,
     aws_eks_node_group.this,
@@ -235,12 +225,24 @@ resource "null_resource" "validator" {
       echo "Repository URL: ${var.cloudwatch_agent_target_allocator_repository_url}"
 
       echo "=== Configuration Files ==="
-      echo "Agent Config: ${var.test_dir}/${var.agent_config}"
+#      echo "Agent Config: ${var.test_dir}/${var.agent_config}"
 #       echo "OpenTelemetry Config: ${var.otel_config != "" ? "${var.test_dir}/${var.otel_config}" : "Not specified"}"
 #       echo "Prometheus Config: ${var.prometheus_config != "" ? "${var.test_dir}/${var.prometheus_config}" : "Not specified"}"
 #       echo "Sample App: ${var.test_dir}/${var.sample_app}"
     EOT
   }
+
+#   provisioner "local-exec" {
+#     when    = destroy
+#     command = <<-EOT
+#       echo "=== Starting Cleanup Process ==="
+#       echo "=== Cleanup Configuration ==="
+#       echo "Region: ${self.triggers.region}"
+#       echo "EKS Cluster Name: ${self.triggers.cluster_name}"
+#       echo "Compute Type: EKS"
+#       echo "EKS Deployment Strategy: ${self.triggers.eks_deployment_strategy}"
+#     EOT
+#   }
 }
 
 output "eks_cluster_name" {
