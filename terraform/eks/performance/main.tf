@@ -129,7 +129,7 @@ resource "null_resource" "helm_charts" {
 # Install Helm chart
 resource "helm_release" "cloudwatch_observability" {
   name             = "amazon-cloudwatch-observability"
-  chart            = "../../../terraform/eks/performance/helm-charts/amazon-cloudwatch-observability"
+  chart            = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
   create_namespace = true
 
