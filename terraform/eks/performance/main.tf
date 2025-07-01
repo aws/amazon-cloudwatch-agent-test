@@ -129,7 +129,7 @@ resource "null_resource" "helm_charts" {
 # Add a time_sleep resource to ensure the git clone has completed
 resource "time_sleep" "wait_for_helm_charts" {
   depends_on = [null_resource.helm_charts]
-  create_duration = "10s"
+  create_duration = "20s"
 }
 
 # Install Helm chart
@@ -141,7 +141,7 @@ resource "helm_release" "cloudwatch_observability" {
   ]
 
   name             = "amazon-cloudwatch-observability"
-  chart            = abspath("${path.module}/helm-charts/charts/amazon-cloudwatch-observability")
+  chart            = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
   create_namespace = true
 
