@@ -134,12 +134,6 @@ resource "helm_release" "cloudwatch_observability" {
       null_resource.helm_charts,
   ]
 
-  triggers = {
-      cluster_name            = aws_eks_cluster.this.name
-      region                  = var.region
-      test_dir                = var.test_dir
-  }
-
   name             = "amazon-cloudwatch-observability"
   chart            = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
