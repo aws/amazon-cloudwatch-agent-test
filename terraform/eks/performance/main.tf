@@ -126,12 +126,18 @@ resource "null_resource" "helm_charts" {
   }
 }
 
+# Add a time_sleep resource to ensure the git clone has completed
+resource "time_sleep" "wait_for_helm_charts" {
+  depends_on = [null_resource.helm_charts]
+  create_duration = "10s"
+}
+
 # Install Helm chart
 resource "helm_release" "cloudwatch_observability" {
   depends_on = [
       aws_eks_cluster.this,
       aws_eks_node_group.this,
-      null_resource.helm_charts,
+      time_sleep.wait_for_helm_charts,
   ]
 
   name             = "amazon-cloudwatch-observability"
