@@ -12,7 +12,7 @@ locals {
 
 # EKS Cluster Creation
 resource "aws_eks_cluster" "this" {
-  name     = ${local.cluster_name}-${module.common.testing_id}
+  name     = "${local.cluster_name}-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
   vpc_config {
