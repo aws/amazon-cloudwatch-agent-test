@@ -111,24 +111,12 @@ provider "helm" {
 
 # Conditional resource for helm charts
 resource "null_resource" "helm_charts" {
-  triggers = {
-    always_run = timestamp()
-  }
 
   provisioner "local-exec" {
     command = <<-EOT
-      set -e
-      echo "Cloning helm-charts repository..."
       git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
       cd ${path.module}/helm-charts
-      echo "Checking out branch: ${var.helm_charts_branch}"
       git checkout ${var.helm_charts_branch}
-      echo "Contents of charts directory:"
-      ls -R ${path.module}/helm-charts/charts
-      if [ ! -d "${path.module}/helm-charts/charts/amazon-cloudwatch-observability" ]; then
-        echo "Error: amazon-cloudwatch-observability chart not found!"
-        exit 1
-      fi
     EOT
   }
 
@@ -140,7 +128,17 @@ resource "null_resource" "helm_charts" {
 
 # Install Helm chart
 resource "helm_release" "cloudwatch_observability" {
-  depends_on = [null_resource.helm_charts]
+  depends_on = [
+      aws_eks_cluster.this,
+      aws_eks_node_group.this,
+      null_resource.helm_charts,
+  ]
+
+  triggers = {
+      cluster_name            = aws_eks_cluster.this.name
+      region                  = var.region
+      test_dir                = var.test_dir
+  }
 
   name             = "amazon-cloudwatch-observability"
   chart            = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability"
