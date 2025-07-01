@@ -7,7 +7,7 @@ module "basic_components" {
 }
 
 module "performance" {
-  source = "performance"
+  source = "./performance"
 }
 
 locals {
