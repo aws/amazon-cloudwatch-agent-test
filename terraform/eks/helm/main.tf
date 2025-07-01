@@ -10,10 +10,6 @@ module "performance" {
   source = "./performance"
 }
 
-locals {
-  cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-eks-performance"
-}
-
 # Helm Provider Definition
 provider "helm" {
   kubernetes {
@@ -68,7 +64,7 @@ resource "helm_release" "cloudwatch_observability" {
 
 resource "null_resource" "cluster_manager" {
   triggers = {
-    cluster_name            = aws_eks_cluster.this.name
+    cluster_name            = module.performance.cluster_name
     region                  = var.region
     test_dir                = var.test_dir
   }
@@ -105,5 +101,5 @@ resource "null_resource" "cluster_manager" {
 }
 
 output "cluster_name" {
-  value = aws_eks_cluster.this.name
+  value = module.performance.cluster_name
 }
