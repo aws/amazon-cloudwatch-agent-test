@@ -129,6 +129,11 @@ resource "null_resource" "helm_charts" {
   }
 }
 
+data "local_file" "helm_chart" {
+  depends_on = [null_resource.helm_charts]
+  filename   = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability/Chart.yaml"
+}
+
 # Add a time_sleep resource to ensure the git clone has completed
 resource "time_sleep" "wait_for_helm_charts" {
   depends_on = [null_resource.helm_charts]
@@ -141,6 +146,7 @@ resource "helm_release" "cloudwatch_observability" {
       aws_eks_cluster.this,
       aws_eks_node_group.this,
       time_sleep.wait_for_helm_charts,
+      data.local_file.helm_chart
   ]
 
   name             = "amazon-cloudwatch-observability"
