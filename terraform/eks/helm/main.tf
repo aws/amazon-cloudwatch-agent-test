@@ -6,10 +6,6 @@ module "basic_components" {
   source = "../../basic_components"
 }
 
-module "performance" {
-  source = "./performance"
-}
-
 # Helm Provider Definition
 provider "helm" {
   kubernetes {
@@ -98,8 +94,4 @@ resource "null_resource" "cluster_manager" {
     EOT
   }
 
-}
-
-output "cluster_name" {
-  value = module.performance.cluster_name
 }
