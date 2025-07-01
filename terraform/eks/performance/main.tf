@@ -100,155 +100,17 @@ data "aws_eks_cluster_auth" "this" {
   name = aws_eks_cluster.this.name
 }
 
-# Helm Provider Definition
-provider "helm" {
-  kubernetes = {
-    host                   = aws_eks_cluster.this.endpoint
-    cluster_ca_certificate = base64decode(aws_eks_cluster.this.certificate_authority[0].data)
-    token                  = data.aws_eks_cluster_auth.this.token
-  }
+output "cluster_endpoint" {
+  value = aws_eks_cluster.this.endpoint
 }
 
-# Conditional resource for helm charts
-resource "null_resource" "helm_charts" {
-  triggers = {
-      always_run = timestamp()  # This will make it run on every apply
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      git clone https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
-      cd ${path.module}/helm-charts
-      git checkout ${var.helm_charts_branch}
-    EOT
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = "rm -rf ${path.module}/helm-charts"
-  }
+output "cluster_ca_certificate" {
+  value = aws_eks_cluster.this.certificate_authority[0].data
 }
 
-data "local_file" "helm_chart" {
-  depends_on = [null_resource.helm_charts]
-  filename   = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability/Chart.yaml"
-}
-
-# Add a time_sleep resource to ensure the git clone has completed
-resource "time_sleep" "wait_for_helm_charts" {
-  depends_on = [null_resource.helm_charts]
-  create_duration = "20s"
-}
-
-# Install Helm chart
-resource "helm_release" "cloudwatch_observability" {
-  depends_on = [
-      aws_eks_cluster.this,
-      aws_eks_node_group.this,
-      time_sleep.wait_for_helm_charts,
-      data.local_file.helm_chart
-  ]
-
-  name             = "amazon-cloudwatch-observability"
-  chart            = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability"
-  namespace        = "amazon-cloudwatch"
-  create_namespace = true
-
-  set = [
-    {
-      name  = "clusterName"
-      value = local.cluster_name
-    },
-    {
-      name  = "region"
-      value = var.region
-    },
-    {
-      name  = "agent.image.repository"
-      value = var.cloudwatch_agent_repository
-    },
-    {
-      name  = "agent.image.tag"
-      value = var.cloudwatch_agent_tag
-    },
-    {
-      name  = "agent.image.repositoryDomainMap.public"
-      value = var.cloudwatch_agent_repository_url
-    },
-    {
-      name  = "manager.image.repository"
-      value = var.cloudwatch_agent_operator_repository
-    },
-    {
-      name  = "manager.image.tag"
-      value = var.cloudwatch_agent_operator_tag
-    },
-    {
-      name  = "manager.image.repositoryDomainMap.public"
-      value = var.cloudwatch_agent_operator_repository_url
-    }
-  ]
-}
-
-resource "null_resource" "cluster_manager" {
-  depends_on = [
-    aws_eks_cluster.this,
-    aws_eks_node_group.this,
-    null_resource.helm_charts,
-  ]
-
-  triggers = {
-    cluster_name            = aws_eks_cluster.this.name
-    region                  = var.region
-    test_dir                = var.test_dir
-    eks_deployment_strategy = var.eks_deployment_strategy
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      echo "=== Starting Validation Process ==="
-      echo "=== Configuration Values ==="
-      echo "Test Directory: ${var.test_dir}"
-      echo "Region: ${var.region}"
-      echo "Kubernetes Version: ${var.k8s_version}"
-      echo "EKS Cluster Name: ${aws_eks_cluster.this.name}"
-      echo "Compute Type: EKS"
-      echo "EKS Deployment Strategy: ${var.eks_deployment_strategy}"
-
-      echo "=== CloudWatch Agent Configuration ==="
-      echo "Repository: ${var.cloudwatch_agent_repository}"
-      echo "Tag: ${var.cloudwatch_agent_tag}"
-      echo "Repository URL: ${var.cloudwatch_agent_repository_url}"
-
-      echo "=== Operator Configuration ==="
-      echo "Repository: ${var.cloudwatch_agent_operator_repository}"
-      echo "Tag: ${var.cloudwatch_agent_operator_tag}"
-      echo "Repository URL: ${var.cloudwatch_agent_operator_repository_url}"
-
-      echo "=== Target Allocator Configuration ==="
-      echo "Repository: ${var.cloudwatch_agent_target_allocator_repository}"
-      echo "Tag: ${var.cloudwatch_agent_target_allocator_tag}"
-      echo "Repository URL: ${var.cloudwatch_agent_target_allocator_repository_url}"
-
-#       echo "=== Configuration Files ==="
-#       echo "Agent Config: ${var.test_dir}/${var.agent_config}"
-#       echo "OpenTelemetry Config: ${var.otel_config != "" ? "${var.test_dir}/${var.otel_config}" : "Not specified"}"
-#       echo "Prometheus Config: ${var.prometheus_config != "" ? "${var.test_dir}/${var.prometheus_config}" : "Not specified"}"
-#       echo "Sample App: ${var.test_dir}/${var.sample_app}"
-    EOT
-  }
-
-#   provisioner "local-exec" {
-#     when    = destroy
-#     command = <<-EOT
-#       echo "=== Starting Cleanup Process ==="
-#       echo "=== Cleanup Configuration ==="
-#       echo "Region: ${self.triggers.region}"
-#       echo "EKS Cluster Name: ${self.triggers.cluster_name}"
-#       echo "Compute Type: EKS"
-#       echo "EKS Deployment Strategy: ${self.triggers.eks_deployment_strategy}"
-#     EOT
-#   }
+output "cluster_auth_token" {
+  value = data.aws_eks_cluster_auth.this.token
+  sensitive = true
 }
 
 output "cluster_name" {
