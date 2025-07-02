@@ -33,8 +33,10 @@ var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
 var prometheusPMDConfig string
 
 const (
-	namespacePMD = "PrometheusPMDTest"
+	namespacePMD = "PrometheusPMDTest15"
 	epsilon      = 0.1
+	retryDelay   = 5 * time.Second
+	maxRetries   = 2
 
 	// Updated expected histogram values to match actual metrics
 	expectedHistogramMin  = 1.0   // Matches actual min
