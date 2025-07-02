@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand/v2"
 	"os"
 	"os/signal"
 	"time"
@@ -61,9 +62,22 @@ func run(ctx context.Context, endpoint string) error {
 	}
 
 	// Create meter provider
+	expView := sdkmetric.NewView(
+		sdkmetric.Instrument{
+			Name: "test.exponential.histogram",
+			Kind: sdkmetric.InstrumentKindHistogram,
+		},
+		sdkmetric.Stream{
+			Name: "test.stream",
+			Aggregation: sdkmetric.AggregationBase2ExponentialHistogram{
+				MaxSize: 160, NoMinMax: false, MaxScale: 20,
+			},
+		},
+	)
 	meterProvider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(res),
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(10*time.Second))),
+		sdkmetric.WithView(expView),
 	)
 	defer func() {
 		if err := meterProvider.Shutdown(ctx); err != nil {
@@ -123,11 +137,21 @@ func createAndRecordMetrics(ctx context.Context, meter metric.Meter) error {
 		return fmt.Errorf("failed to create histogram: %v", err)
 	}
 
+	// Exponential Histogram
+	expHistogram, err := meter.Float64Histogram("test.exponential.histogram",
+		metric.WithDescription("A test histogram"))
+	if err != nil {
+		return fmt.Errorf("failed to create histogram: %v", err)
+	}
+
 	// Start a goroutine to update metrics
 	go func() {
 
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
+
+		// Parameters for exponential distribution
+		lambda := 0.1 // Rate parameter
 
 		for {
 			select {
@@ -149,6 +173,15 @@ func createAndRecordMetrics(ctx context.Context, meter metric.Meter) error {
 				histogram.Record(ctx, 35, metric.WithAttributes(attrs...))
 				histogram.Record(ctx, 75, metric.WithAttributes(attrs...))
 				histogram.Record(ctx, 150, metric.WithAttributes(attrs...))
+
+				// Generate exponentially distributed values
+				// Using inverse transform sampling: -ln(1-U)/lambda
+				// where U is uniform random number between 0 and 1
+				for i := 0; i < 5; i++ {
+					u := rand.Float64()
+					expValue := -math.Log(1-u) / lambda
+					expHistogram.Record(ctx, expValue, metric.WithAttributes(attrs...))
+				}
 			}
 		}
 	}()
