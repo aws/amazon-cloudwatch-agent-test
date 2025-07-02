@@ -13,6 +13,7 @@ module "basic_components" {
 
 locals {
   aws_eks = "aws eks --region ${var.region}"
+  cluster_name = var.cluster_name != "" ? var.cluster_name : "cwagent-eks-performance"
 }
 
 data "aws_eks_cluster_auth" "this" {
@@ -20,7 +21,7 @@ data "aws_eks_cluster_auth" "this" {
 }
 
 resource "aws_eks_cluster" "this" {
-  name     = "cwagent-eks-performance-${module.common.testing_id}"
+  name     = "${local.cluster_name}-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
   vpc_config {
@@ -32,7 +33,7 @@ resource "aws_eks_cluster" "this" {
 # EKS Node Groups
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "cwagent-eks-performance-node-${module.common.testing_id}"
+  node_group_name = "${local.cluster_name}-node-${module.common.testing_id}"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
 
