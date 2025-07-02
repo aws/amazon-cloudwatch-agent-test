@@ -40,6 +40,8 @@ const (
 	expectedHistogramMin  = 1.0  // Min value
 	expectedHistogramMax  = 10.0 // Max value
 	expectedHistogramMean = 5.5  // Mean value (average of 1-10)
+	expectedHistogramSum  = 55.0 // Sum of values 1-10
+	expectedSampleCount   = 10.0 // Number of samples
 
 	// Expected quantile values
 	expectedMedian   = 5.5 // 50th percentile
@@ -202,23 +204,30 @@ func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
 		statValues[metric.MAXIMUM][0],
 		statValues[metric.AVERAGE][0])
 
-	// Check min value
 	if len(statValues[metric.MINIMUM]) == 0 || !approximatelyEqual(statValues[metric.MINIMUM][0], expectedHistogramMin) {
 		return fmt.Errorf("incorrect min value: got %v, want %v",
 			statValues[metric.MINIMUM][0], expectedHistogramMin)
 	}
 
-	// Check max value
 	if len(statValues[metric.MAXIMUM]) == 0 || !approximatelyEqual(statValues[metric.MAXIMUM][0], expectedHistogramMax) {
 		return fmt.Errorf("incorrect max value: got %v, want %v",
 			statValues[metric.MAXIMUM][0], expectedHistogramMax)
 	}
 
-	// More lenient mean check
 	if len(statValues[metric.AVERAGE]) == 0 ||
 		math.Abs(statValues[metric.AVERAGE][0]-expectedHistogramMean) > 2.0 {
 		return fmt.Errorf("mean value too far from expected: got %v, want %v ± 2.0",
 			statValues[metric.AVERAGE][0], expectedHistogramMean)
+	}
+
+	if len(statValues[metric.SUM]) == 0 || !approximatelyEqual(statValues[metric.SUM][0], expectedHistogramSum) {
+		return fmt.Errorf("incorrect sum value: got %v, want %v",
+			statValues[metric.SUM][0], expectedHistogramSum)
+	}
+
+	if len(statValues[metric.SAMPLE_COUNT]) == 0 || !approximatelyEqual(statValues[metric.SAMPLE_COUNT][0], expectedSampleCount) {
+		return fmt.Errorf("incorrect sample count: got %v, want %v",
+			statValues[metric.SAMPLE_COUNT][0], expectedSampleCount)
 	}
 
 	log.Printf("Histogram statistics validation successful")
