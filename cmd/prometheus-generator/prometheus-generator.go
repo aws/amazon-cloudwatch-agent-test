@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -14,8 +15,9 @@ var (
 	counter      uint64
 	histogram    []float64
 	untyped      uint64
-	port         int
+	historyMutex sync.Mutex
 	currentIndex uint64
+	port         int
 
 	// Fixed values for predictable testing
 	histogramValues = []float64{
@@ -23,7 +25,7 @@ var (
 		4.0, 4.5, 5.0, 5.5, 6.0, // Mid-range values
 		7.0, 7.5, 8.0, 8.5, 9.0, // Upper quantile values
 	}
-	histogramBuckets = []float64{1.0, 2.5, 5.0, 7.5, 9.0} // Adjusted to match max value
+	histogramBuckets = []float64{1.0, 2.5, 5.0, 7.5, 9.0} // Changed to match max value
 )
 
 func init() {
@@ -34,14 +36,17 @@ func updateMetrics() {
 	for {
 		atomic.AddUint64(&counter, 1)
 
-		// Get next value from histogramValues using atomic operation to ensure thread safety
+		// Use fixed values instead of random
 		idx := atomic.AddUint64(&currentIndex, 1) - 1
 		value := histogramValues[idx%uint64(len(histogramValues))]
 
+		historyMutex.Lock()
 		histogram = append(histogram, value)
-
-		// Keep untyped metric within expected range (1-100)
-		atomic.StoreUint64(&untyped, (idx%100)+1)
+		// Keep only last 15 values
+		if len(histogram) > 15 {
+			histogram = histogram[len(histogram)-15:]
+		}
+		historyMutex.Unlock()
 
 		time.Sleep(1 * time.Second)
 	}
@@ -50,6 +55,11 @@ func updateMetrics() {
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	currentCounter := atomic.LoadUint64(&counter)
 	currentUntyped := atomic.LoadUint64(&untyped)
+
+	historyMutex.Lock()
+	currentHistogram := make([]float64, len(histogram))
+	copy(currentHistogram, histogram)
+	historyMutex.Unlock()
 
 	// Calculate histogram stats
 	var sum float64
@@ -61,7 +71,7 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Calculate histogram metrics
-	for _, v := range histogram {
+	for _, v := range currentHistogram {
 		sum += v
 		for _, bound := range histogramBuckets {
 			if v <= bound {
@@ -83,7 +93,7 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "# TYPE prometheus_test_histogram histogram\n")
 	fmt.Fprintf(w, "prometheus_test_histogram_sum{include=\"yes\",prom_type=\"histogram\"} %f\n", sum)
-	fmt.Fprintf(w, "prometheus_test_histogram_count{include=\"yes\",prom_type=\"histogram\"} %d\n", len(histogram))
+	fmt.Fprintf(w, "prometheus_test_histogram_count{include=\"yes\",prom_type=\"histogram\"} %d\n", len(currentHistogram))
 
 	// Output histogram buckets
 	count := 0
@@ -91,10 +101,10 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 		count += buckets[bound]
 		fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"%g\",prom_type=\"histogram\"} %d\n", bound, count)
 	}
-	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"+Inf\",prom_type=\"histogram\"} %d\n", len(histogram))
+	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"+Inf\",prom_type=\"histogram\"} %d\n", len(currentHistogram))
 
 	// Calculate and output quantiles
-	quantiles := calculateQuantiles(histogram)
+	quantiles := calculateQuantiles(currentHistogram)
 	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.50\",include=\"yes\",prom_type=\"histogram\"} %f\n", quantiles[0.50])
 	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.90\",include=\"yes\",prom_type=\"histogram\"} %f\n", quantiles[0.90])
 	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.95\",include=\"yes\",prom_type=\"histogram\"} %f\n", quantiles[0.95])
