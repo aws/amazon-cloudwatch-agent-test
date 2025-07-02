@@ -6,137 +6,88 @@ import (
 	"log"
 	"net/http"
 	"sort"
-	"sync"
 	"sync/atomic"
-	"time"
 )
 
 var (
-	counter      uint64
-	histogram    []float64
-	untyped      uint64
-	historyMutex sync.Mutex
-	currentIndex uint64
-	port         int
+	counter uint64
+	port    int
 
-	// Fixed values for predictable testing
+	// Fixed values for histogram
 	histogramValues = []float64{
-		1.0, 1.5, 2.0, 2.5, 3.0, // Lower quantile values
-		4.0, 4.5, 5.0, 5.5, 6.0, // Mid-range values
-		7.0, 7.5, 8.0, 8.5, 9.0, // Upper quantile values
+		1.0, 2.0, 3.0, 4.0, 5.0,
+		6.0, 7.0, 8.0, 9.0, 10.0,
 	}
-	histogramBuckets = []float64{1.0, 2.5, 5.0, 7.5, 9.0} // Changed to match max value
 )
 
 func init() {
 	flag.IntVar(&port, "port", 8101, "Port to listen on")
 }
 
-func updateMetrics() {
-	for {
-		atomic.AddUint64(&counter, 1)
-
-		// Use fixed values instead of random
-		idx := atomic.AddUint64(&currentIndex, 1) - 1
-		value := histogramValues[idx%uint64(len(histogramValues))]
-
-		historyMutex.Lock()
-		histogram = append(histogram, value)
-		// Keep only last 15 values
-		if len(histogram) > 15 {
-			histogram = histogram[len(histogram)-15:]
-		}
-		historyMutex.Unlock()
-
-		time.Sleep(1 * time.Second)
-	}
-}
-
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
-	currentCounter := atomic.LoadUint64(&counter)
-	currentUntyped := atomic.LoadUint64(&untyped)
+	currentCounter := atomic.AddUint64(&counter, 1)
 
-	historyMutex.Lock()
-	currentHistogram := make([]float64, len(histogram))
-	copy(currentHistogram, histogram)
-	historyMutex.Unlock()
+	// Output untyped metric
+	fmt.Fprintf(w, "prometheus_test_untyped{include=\"yes\",prom_type=\"untyped\"} %d\n",
+		currentCounter%100+1)
 
-	// Calculate histogram stats
-	var sum float64
-	buckets := make(map[float64]int)
-
-	// Initialize buckets
-	for _, bound := range histogramBuckets {
-		buckets[bound] = 0
-	}
-
-	// Calculate histogram metrics
-	for _, v := range currentHistogram {
-		sum += v
-		for _, bound := range histogramBuckets {
-			if v <= bound {
-				buckets[bound]++
-			}
-		}
-	}
-
-	// Output metrics in Prometheus format
-	fmt.Fprintf(w, "prometheus_test_untyped{include=\"yes\",prom_type=\"untyped\"} %d\n", currentUntyped)
-
+	// Output counter metric
 	fmt.Fprintf(w, "# TYPE prometheus_test_counter counter\n")
-	fmt.Fprintf(w, "prometheus_test_counter{include=\"yes\",prom_type=\"counter\"} %d\n", currentCounter)
+	fmt.Fprintf(w, "prometheus_test_counter{include=\"yes\",prom_type=\"counter\"} %d\n",
+		currentCounter)
 
+	// Output gauge metric
 	fmt.Fprintf(w, "# TYPE prometheus_test_gauge gauge\n")
-	// Use a fixed pattern for gauge based on counter
-	gaugeValue := float64(currentCounter%1000) + 0.5
-	fmt.Fprintf(w, "prometheus_test_gauge{include=\"yes\",prom_type=\"gauge\"} %f\n", gaugeValue)
+	fmt.Fprintf(w, "prometheus_test_gauge{include=\"yes\",prom_type=\"gauge\"} %f\n",
+		float64(currentCounter%1000))
 
+	// Output histogram metrics
 	fmt.Fprintf(w, "# TYPE prometheus_test_histogram histogram\n")
+
+	// Calculate sum and count
+	sum := 0.0
+	for _, v := range histogramValues {
+		sum += v
+	}
+
 	fmt.Fprintf(w, "prometheus_test_histogram_sum{include=\"yes\",prom_type=\"histogram\"} %f\n", sum)
-	fmt.Fprintf(w, "prometheus_test_histogram_count{include=\"yes\",prom_type=\"histogram\"} %d\n", len(currentHistogram))
+	fmt.Fprintf(w, "prometheus_test_histogram_count{include=\"yes\",prom_type=\"histogram\"} %d\n",
+		len(histogramValues))
 
 	// Output histogram buckets
 	count := 0
-	for _, bound := range histogramBuckets {
-		count += buckets[bound]
-		fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"%g\",prom_type=\"histogram\"} %d\n", bound, count)
+	buckets := []float64{1.0, 2.5, 5.0, 7.5, 10.0}
+	for _, bound := range buckets {
+		for _, v := range histogramValues {
+			if v <= bound {
+				count++
+			}
+		}
+		fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"%g\",prom_type=\"histogram\"} %d\n",
+			bound, count)
+		count = 0
 	}
-	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"+Inf\",prom_type=\"histogram\"} %d\n", len(currentHistogram))
+	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"+Inf\",prom_type=\"histogram\"} %d\n",
+		len(histogramValues))
 
-	// Calculate and output quantiles
-	quantiles := calculateQuantiles(currentHistogram)
-	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.50\",include=\"yes\",prom_type=\"histogram\"} %f\n", quantiles[0.50])
-	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.90\",include=\"yes\",prom_type=\"histogram\"} %f\n", quantiles[0.90])
-	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.95\",include=\"yes\",prom_type=\"histogram\"} %f\n", quantiles[0.95])
-}
-
-func calculateQuantiles(values []float64) map[float64]float64 {
-	if len(values) == 0 {
-		return nil
-	}
-
-	sorted := make([]float64, len(values))
-	copy(sorted, values)
+	// Output quantiles
+	sorted := make([]float64, len(histogramValues))
+	copy(sorted, histogramValues)
 	sort.Float64s(sorted)
 
-	quantiles := make(map[float64]float64)
-	quantiles[0.50] = sorted[int(float64(len(sorted))*0.50)]
-	quantiles[0.90] = sorted[int(float64(len(sorted))*0.90)]
-	quantiles[0.95] = sorted[int(float64(len(sorted))*0.95)]
-
-	return quantiles
-}
-
-func StartServer() error {
-	go updateMetrics()
-	http.HandleFunc("/metrics", metricsHandler)
-	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.50\",include=\"yes\",prom_type=\"histogram\"} %f\n",
+		sorted[len(sorted)/2])
+	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.90\",include=\"yes\",prom_type=\"histogram\"} %f\n",
+		sorted[int(float64(len(sorted))*0.9)])
+	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.95\",include=\"yes\",prom_type=\"histogram\"} %f\n",
+		sorted[int(float64(len(sorted))*0.95)])
 }
 
 func main() {
 	flag.Parse()
 	log.Printf("Starting Prometheus metrics server on :%d\n", port)
-	if err := StartServer(); err != nil {
+	http.HandleFunc("/metrics", metricsHandler)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
 		log.Fatal(err)
 	}
 }
