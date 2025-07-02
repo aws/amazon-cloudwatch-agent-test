@@ -1,10 +1,10 @@
 {
   "agent": {
-    "metrics_collection_interval": 15,
+    "metrics_collection_interval": 60,
     "debug": true
   },
   "metrics": {
-    "namespace": "PrometheusPMDTest17",
+    "namespace": "PrometheusPMDTest18",
     "metrics_destinations": {
       "cloudwatch": {}
     },

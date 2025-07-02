@@ -1,6 +1,6 @@
 global:
-  scrape_interval: 5s
-  scrape_timeout: 5s
+  scrape_interval: 60s  # Change from 5s to 60s
+  scrape_timeout: 30s   # Increased timeout to be safe
 scrape_configs:
   - job_name: 'prometheus_test_job'
     static_configs:

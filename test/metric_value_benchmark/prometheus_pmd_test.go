@@ -33,17 +33,26 @@ var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
 var prometheusPMDConfig string
 
 const (
-	namespacePMD = "PrometheusPMDTest17"
+	namespacePMD = "PrometheusPMDTest18"
 	epsilon      = 2.0 // Increased epsilon for more lenient validation
 
-	// Expected histogram values
+	// Test timing constants
+	scrapeIntervalSeconds = 60.0 // 1 minute scrape interval
+	testDurationMinutes   = 3.0  // 3 minute test duration
+	expectedScrapes       = 3.0  // 3 minutes / 1 minute interval
+
+	// Basic histogram constants (per-scrape values)
 	expectedHistogramMin  = 1.0  // Min value
 	expectedHistogramMax  = 10.0 // Max value
 	expectedHistogramMean = 5.5  // Mean value (average of 1-10)
-	expectedHistogramSum  = 55.0 // Sum of values 1-10
-	expectedSampleCount   = 10.0 // Number of samples
+	singleScrapeSum       = 55.0 // Sum of values 1-10
+	singleScrapeCount     = 10.0 // Number of samples per scrape
 
-	// Expected quantile values
+	// Expected cumulative values
+	expectedHistogramSum = singleScrapeSum * expectedScrapes   // 55 * 3 = 165
+	expectedSampleCount  = singleScrapeCount * expectedScrapes // 10 * 3 = 30
+
+	// Quantile values (these remain the same as they're per-scrape)
 	expectedMedian   = 5.5 // 50th percentile
 	expected90thPerc = 9.0 // 90th percentile
 	expected95thPerc = 9.5 // 95th percentile
@@ -199,11 +208,14 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 
 func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
 	log.Printf("Validating histogram statistics...")
-	log.Printf("Current values - Min: %v, Max: %v, Mean: %v",
+	log.Printf("Current values - Min: %v, Max: %v, Mean: %v, Sum: %v, Count: %v",
 		statValues[metric.MINIMUM][0],
 		statValues[metric.MAXIMUM][0],
-		statValues[metric.AVERAGE][0])
+		statValues[metric.AVERAGE][0],
+		statValues[metric.SUM][0],
+		statValues[metric.SAMPLE_COUNT][0])
 
+	// Basic validations remain the same
 	if len(statValues[metric.MINIMUM]) == 0 || !approximatelyEqual(statValues[metric.MINIMUM][0], expectedHistogramMin) {
 		return fmt.Errorf("incorrect min value: got %v, want %v",
 			statValues[metric.MINIMUM][0], expectedHistogramMin)
@@ -215,19 +227,24 @@ func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
 	}
 
 	if len(statValues[metric.AVERAGE]) == 0 ||
-		math.Abs(statValues[metric.AVERAGE][0]-expectedHistogramMean) > 2.0 {
-		return fmt.Errorf("mean value too far from expected: got %v, want %v ± 2.0",
-			statValues[metric.AVERAGE][0], expectedHistogramMean)
+		math.Abs(statValues[metric.AVERAGE][0]-expectedHistogramMean) > epsilon {
+		return fmt.Errorf("mean value too far from expected: got %v, want %v ± %v",
+			statValues[metric.AVERAGE][0], expectedHistogramMean, epsilon)
 	}
 
-	if len(statValues[metric.SUM]) == 0 || !approximatelyEqual(statValues[metric.SUM][0], expectedHistogramSum) {
-		return fmt.Errorf("incorrect sum value: got %v, want %v",
-			statValues[metric.SUM][0], expectedHistogramSum)
+	// Sum and Count validations with wider tolerance
+	sumTolerance := singleScrapeSum // Allow for one scrape worth of variation
+	if len(statValues[metric.SUM]) == 0 ||
+		math.Abs(statValues[metric.SUM][0]-expectedHistogramSum) > sumTolerance {
+		return fmt.Errorf("sum too far from expected: got %v, want %v ± %v",
+			statValues[metric.SUM][0], expectedHistogramSum, sumTolerance)
 	}
 
-	if len(statValues[metric.SAMPLE_COUNT]) == 0 || !approximatelyEqual(statValues[metric.SAMPLE_COUNT][0], expectedSampleCount) {
-		return fmt.Errorf("incorrect sample count: got %v, want %v",
-			statValues[metric.SAMPLE_COUNT][0], expectedSampleCount)
+	countTolerance := singleScrapeCount // Allow for one scrape worth of variation
+	if len(statValues[metric.SAMPLE_COUNT]) == 0 ||
+		math.Abs(statValues[metric.SAMPLE_COUNT][0]-expectedSampleCount) > countTolerance {
+		return fmt.Errorf("sample count too far from expected: got %v, want %v ± %v",
+			statValues[metric.SAMPLE_COUNT][0], expectedSampleCount, countTolerance)
 	}
 
 	log.Printf("Histogram statistics validation successful")
