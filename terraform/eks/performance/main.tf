@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 module "common" {
-  source = "../../../common"
+  source = "../../common"
 }
 
 module "basic_components" {
-  source = "../../../basic_components"
+  source = "../../basic_components"
 
   region = var.region
 }
@@ -176,6 +176,8 @@ resource "null_resource" "clone_helm_chart" {
 }
 
 resource "helm_release" "aws_observability" {
+  depends_on = [null_resource.clone_helm_chart]
+
   name             = "amazon-cloudwatch-observability"
   chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
