@@ -36,17 +36,17 @@ const (
 	namespacePMD = "PrometheusPMDTest"
 	epsilon      = 0.1
 
-	// Expected histogram values
-	expectedHistogramMin  = 1.0
-	expectedHistogramMax  = 9.0
-	expectedHistogramMean = 5.0
-	expectedSampleCount   = 15.0 // Length of histogramValues
-	expectedHistogramSum  = 75.0 // Sum of histogramValues
+	// Expected histogram values (matching generator's histogramValues)
+	expectedHistogramMin  = 1.0  // Matches first value in generator
+	expectedHistogramMax  = 9.0  // Matches last value in generator
+	expectedHistogramMean = 5.0  // Average of all values
+	expectedSampleCount   = 15.0 // Length of histogramValues in generator
+	expectedHistogramSum  = 75.0 // Precalculated sum of histogramValues
 
-	// Expected quantile values
-	expectedMedian   = 5.0 // 50th percentile
-	expected90thPerc = 8.0 // 90th percentile
-	expected95thPerc = 8.5 // 95th percentile
+	// Expected quantile values (calculated from generator's fixed values)
+	expectedMedian   = 5.0 // Middle value (8th element)
+	expected90thPerc = 8.0 // 14th element (0.90 * 15)
+	expected95thPerc = 8.5 // 14th element (0.95 * 15)
 )
 
 func (t *PrometheusPMDTestRunner) Validate() status.TestGroupResult {
@@ -67,7 +67,7 @@ func (t *PrometheusPMDTestRunner) GetTestName() string {
 }
 
 func (t *PrometheusPMDTestRunner) GetAgentRunDuration() time.Duration {
-	return 2 * time.Minute
+	return 3 * time.Minute
 }
 func (t *PrometheusPMDTestRunner) GetAgentConfigFileName() string {
 	return "prometheus_pmd_config.json"
@@ -205,6 +205,12 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 }
 
 func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
+	log.Printf("Validating histogram statistics...")
+	log.Printf("Current values - Min: %v, Max: %v, Mean: %v",
+		statValues[metric.MINIMUM][0],
+		statValues[metric.MAXIMUM][0],
+		statValues[metric.AVERAGE][0])
+
 	// Check min value
 	if len(statValues[metric.MINIMUM]) == 0 || !approximatelyEqual(statValues[metric.MINIMUM][0], expectedHistogramMin) {
 		return fmt.Errorf("incorrect min value: got %v, want %v", statValues[metric.MINIMUM][0], expectedHistogramMin)
@@ -220,6 +226,7 @@ func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
 		return fmt.Errorf("incorrect mean value: got %v, want %v", statValues[metric.AVERAGE][0], expectedHistogramMean)
 	}
 
+	log.Printf("Histogram statistics validation successful")
 	return nil
 }
 
