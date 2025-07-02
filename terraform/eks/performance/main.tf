@@ -165,7 +165,7 @@ resource "aws_security_group_rule" "nodes_cluster_inbound" {
 data "external" "clone_helm_chart" {
   program = ["bash", "-c", <<-EOT
     rm -rf ./helm-charts
-    git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
+    git clone -b ${var.helm_charts_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
     echo '{"status":"ready"}'
   EOT
   ]
