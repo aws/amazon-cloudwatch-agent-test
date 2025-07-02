@@ -176,8 +176,6 @@ resource "null_resource" "clone_helm_chart" {
 }
 
 resource "helm_release" "aws_observability" {
-  depends_on = [null_resource.clone_helm_chart]
-
   name             = "amazon-cloudwatch-observability"
   chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
@@ -222,7 +220,7 @@ resource "helm_release" "aws_observability" {
   depends_on = [
     aws_eks_cluster.this,
     aws_eks_node_group.this,
-  null_resource.clone_helm_chart]
+    null_resource.clone_helm_chart]
 }
 
 resource "null_resource" "kubectl" {
