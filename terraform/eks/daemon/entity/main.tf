@@ -185,7 +185,7 @@ resource "helm_release" "aws_observability" {
     {
       name  = "clusterName"
       value = aws_eks_cluster.this.name
-    }, 
+    },
     {
       name  = "region"
       value = "us-west-2"
