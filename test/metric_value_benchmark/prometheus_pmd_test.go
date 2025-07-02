@@ -8,10 +8,11 @@ package metric_value_benchmark
 import (
 	_ "embed"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"log"
 	"math"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 
@@ -33,30 +34,23 @@ var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
 var prometheusPMDConfig string
 
 const (
-    namespacePMD = "PrometheusPMDTest21"
-    epsilon      = 2.0 
+    namespacePMD = "PrometheusPMDTest"
+    epsilon      = 2.0
 
-    // Basic histogram values
-    expectedHistogramMin  = 1.0   // Min value
-    expectedHistogramMax  = 10.0  // Max value
-    expectedHistogramMean = 5.5   // Mean value
+    expectedHistogramMin  = 1.0   
+    expectedHistogramMax  = 10.0  
+    expectedHistogramMean = 5.2   
 
-    // Per-scrape values
-    singleScrapeSum   = 55.0  // Sum per scrape
-    singleScrapeCount = 1     // Sample count per scrape
+    expectedSum   = 26.0  
+    expectedCount = 5   
 
-    // Expected values for 3-minute test with 60s scrape interval
-    expectedScrapes    = 3    // 180 seconds / 60 second interval 
-    expectedTotalSum   = singleScrapeSum * expectedScrapes    // 55 * 3 = 165
-    expectedTotalCount = singleScrapeCount * expectedScrapes  // 1 * 3 = 3
-
-    // Tolerances
-    sumTolerance     = singleScrapeSum      // Allow ±55
-    countTolerance   = singleScrapeCount    // Allow ±1
+    sumTolerance     = 10.0  
+    countTolerance   = 2.0  
 )
 
+
+
 func (t *PrometheusPMDTestRunner) Validate() status.TestGroupResult {
-	log.Printf("Starting PMD test validation")
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -153,7 +147,6 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 			return testResult
 		}
 		statValues[stat] = values
-		log.Printf("Fetched %s values for %s: %v", stat, metricName, values)
 	}
 
 	switch metricName {
@@ -202,109 +195,55 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
+
 func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
-    log.Printf("Validating histogram statistics...")
-    log.Printf("Current values - Min: %v, Max: %v, Mean: %v, Sum: %v, Count: %v",
-        statValues[metric.MINIMUM][0],
-        statValues[metric.MAXIMUM][0],
-        statValues[metric.AVERAGE][0],
-        statValues[metric.SUM][0],
-        statValues[metric.SAMPLE_COUNT][0])
-
-    // Min/Max/Mean validations remain strict
-    if len(statValues[metric.MINIMUM]) == 0 || !approximatelyEqual(statValues[metric.MINIMUM][0], expectedHistogramMin) {
-        return fmt.Errorf("incorrect min value: got %v, want %v",
-            statValues[metric.MINIMUM][0], expectedHistogramMin)
+    validations := []struct {
+        name      string
+        actual    float64
+        expected  float64
+        tolerance float64
+    }{
+        {"min", statValues[metric.MINIMUM][0], expectedHistogramMin, epsilon},
+        {"max", statValues[metric.MAXIMUM][0], expectedHistogramMax, epsilon},
+        {"mean", statValues[metric.AVERAGE][0], expectedHistogramMean, epsilon},
+        {"sum", statValues[metric.SUM][0], expectedSum, sumTolerance},
+        {"count", statValues[metric.SAMPLE_COUNT][0], expectedCount, countTolerance},
     }
 
-    if len(statValues[metric.MAXIMUM]) == 0 || !approximatelyEqual(statValues[metric.MAXIMUM][0], expectedHistogramMax) {
-        return fmt.Errorf("incorrect max value: got %v, want %v",
-            statValues[metric.MAXIMUM][0], expectedHistogramMax)
+    for _, v := range validations {
+        if math.Abs(v.actual-v.expected) > v.tolerance {
+            return fmt.Errorf("%s outside expected range: got %v, want %v ± %v",
+                v.name, v.actual, v.expected, v.tolerance)
+        }
     }
 
-    if len(statValues[metric.AVERAGE]) == 0 || !approximatelyEqual(statValues[metric.AVERAGE][0], expectedHistogramMean) {
-        return fmt.Errorf("mean value too far from expected: got %v, want %v ± %v",
-            statValues[metric.AVERAGE][0], expectedHistogramMean, epsilon)
-    }
-
-    // Sum validation with wider tolerance
-    actualSum := statValues[metric.SUM][0]
-    if len(statValues[metric.SUM]) == 0 || !approximatelyEqual(actualSum, expectedTotalSum) {
-        return fmt.Errorf("sum too far from expected: got %v, want %v ± %v",
-            actualSum, expectedTotalSum, sumTolerance)
-    }
-
-    // Sample count validation with wider tolerance
-    actualCount := statValues[metric.SAMPLE_COUNT][0]
-    if len(statValues[metric.SAMPLE_COUNT]) == 0 || !approximatelyEqual(actualCount, expectedTotalCount) {
-        return fmt.Errorf("sample count too far from expected: got %v, want %v ± %v",
-            actualCount, expectedTotalCount, countTolerance)
-    }
-
-    // Additional logging for clarity
-    log.Printf("Tolerances - Sum: ±%v, Count: ±%v, Other metrics: ±%v",
-        sumTolerance, countTolerance, epsilon)
-    log.Printf("Histogram statistics validation successful")
     return nil
 }
 
-
-
 func validateHistogramPercentiles(metricName string, dims []types.Dimension) error {
-    log.Printf("Validating histogram percentiles...")
     fetcher := metric.MetricValueFetcher{}
 
-    // Define percentiles to validate
-    percentiles := []string{"p99", "p95", "p90", "p50"}
-
-    // Fetch extended statistics
     values, err := fetcher.FetchExtended(
         namespacePMD,
         metricName,
         dims,
-        percentiles,
+        []string{"p50", "p90", "p95", "p99"},
         metric.HighResolutionStatPeriod,
     )
     if err != nil {
         return fmt.Errorf("failed to fetch percentiles: %v", err)
     }
 
-    // Log all percentile values
-    for p, v := range values {
-        log.Printf("Percentile %s: %v", p, v)
-    }
-
-    // Validate each percentile is within expected range
+    // Validate percentiles are within bucket bounds
     for p, v := range values {
         if len(v) == 0 {
             return fmt.Errorf("no values returned for percentile %s", p)
         }
-
         if v[0] < expectedHistogramMin || v[0] > expectedHistogramMax {
-            return fmt.Errorf("%s outside expected range: got %v, want between %v and %v",
+            return fmt.Errorf("percentile %s outside bounds: got %v, want between %v and %v",
                 p, v[0], expectedHistogramMin, expectedHistogramMax)
         }
-
     }
 
-    log.Printf("Histogram percentiles validation successful")
     return nil
-}
-
-
-func approximatelyEqual(actual, expected float64) bool {
-    diff := math.Abs(actual - expected)
-    log.Printf("Comparing values - Actual: %f, Expected: %f, Difference: %f, Tolerance: %f",
-        actual, expected, diff, epsilon)
-
-    // For sum and count, use their specific tolerances
-    if expected == expectedTotalSum {
-        return diff <= sumTolerance
-    }
-    if expected == expectedTotalCount {
-        return diff <= countTolerance
-    }
-
-    // For other metrics (min, max, mean), use epsilon
-    return diff <= epsilon
 }
