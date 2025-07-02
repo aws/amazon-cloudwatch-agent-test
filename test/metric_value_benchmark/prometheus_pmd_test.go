@@ -8,7 +8,9 @@ package metric_value_benchmark
 import (
 	_ "embed"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"log"
+	"math"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -30,7 +32,22 @@ var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
 //go:embed agent_configs/prometheus.yaml
 var prometheusPMDConfig string
 
-const namespacePMD = "PrometheusPMDTest"
+const (
+	namespacePMD = "PrometheusPMDTest"
+	epsilon      = 0.1
+
+	// Expected histogram values
+	expectedHistogramMin  = 1.0
+	expectedHistogramMax  = 9.0
+	expectedHistogramMean = 5.0
+	expectedSampleCount   = 15.0 // Length of histogramValues
+	expectedHistogramSum  = 75.0 // Sum of histogramValues
+
+	// Expected quantile values
+	expectedMedian   = 5.0 // 50th percentile
+	expected90thPerc = 8.0 // 90th percentile
+	expected95thPerc = 8.5 // 95th percentile
+)
 
 func (t *PrometheusPMDTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
@@ -127,13 +144,27 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 	// Validate based on metric type
 	switch metricName {
 	case "prometheus_test_histogram":
-		// For histogram, values should be between 0-10
-		if len(statValues[metric.MAXIMUM]) > 0 && statValues[metric.MAXIMUM][0] > 10 {
-			log.Printf("Histogram max value too high: %v", statValues[metric.MAXIMUM][0])
+		// 1. Validate basic statistics
+		if err := validateHistogramStats(statValues); err != nil {
+			log.Printf("Histogram statistics validation failed: %v", err)
 			return testResult
 		}
-		if len(statValues[metric.MINIMUM]) > 0 && statValues[metric.MINIMUM][0] < 0 {
-			log.Printf("Histogram min value negative: %v", statValues[metric.MINIMUM][0])
+
+		// 2. Validate sample count
+		if err := validateHistogramSampleCount(statValues); err != nil {
+			log.Printf("Histogram sample count validation failed: %v", err)
+			return testResult
+		}
+
+		// 3. Validate sum
+		if err := validateHistogramSum(statValues); err != nil {
+			log.Printf("Histogram sum validation failed: %v", err)
+			return testResult
+		}
+
+		// 4. Validate quantiles
+		if err := validateHistogramQuantiles(metricName, dims); err != nil {
+			log.Printf("Histogram quantiles validation failed: %v", err)
 			return testResult
 		}
 
@@ -171,4 +202,76 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
+}
+
+func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
+	// Check min value
+	if len(statValues[metric.MINIMUM]) == 0 || !approximatelyEqual(statValues[metric.MINIMUM][0], expectedHistogramMin) {
+		return fmt.Errorf("incorrect min value: got %v, want %v", statValues[metric.MINIMUM][0], expectedHistogramMin)
+	}
+
+	// Check max value
+	if len(statValues[metric.MAXIMUM]) == 0 || !approximatelyEqual(statValues[metric.MAXIMUM][0], expectedHistogramMax) {
+		return fmt.Errorf("incorrect max value: got %v, want %v", statValues[metric.MAXIMUM][0], expectedHistogramMax)
+	}
+
+	// Check mean value
+	if len(statValues[metric.AVERAGE]) == 0 || !approximatelyEqual(statValues[metric.AVERAGE][0], expectedHistogramMean) {
+		return fmt.Errorf("incorrect mean value: got %v, want %v", statValues[metric.AVERAGE][0], expectedHistogramMean)
+	}
+
+	return nil
+}
+
+func validateHistogramSampleCount(statValues map[metric.Statistics][]float64) error {
+	if len(statValues[metric.SAMPLE_COUNT]) == 0 || !approximatelyEqual(statValues[metric.SAMPLE_COUNT][0], expectedSampleCount) {
+		return fmt.Errorf("incorrect sample count: got %v, want %v",
+			statValues[metric.SAMPLE_COUNT][0], expectedSampleCount)
+	}
+	return nil
+}
+
+func validateHistogramSum(statValues map[metric.Statistics][]float64) error {
+	if len(statValues[metric.SUM]) == 0 || !approximatelyEqual(statValues[metric.SUM][0], expectedHistogramSum) {
+		return fmt.Errorf("incorrect sum: got %v, want %v",
+			statValues[metric.SUM][0], expectedHistogramSum)
+	}
+	return nil
+}
+
+func validateHistogramQuantiles(metricName string, dims []types.Dimension) error {
+	fetcher := metric.MetricValueFetcher{}
+
+	// Validate each quantile
+	quantiles := map[string]float64{
+		"0.50": expectedMedian,
+		"0.90": expected90thPerc,
+		"0.95": expected95thPerc,
+	}
+
+	for quantile, expectedValue := range quantiles {
+		// Add quantile dimension
+		quantileDims := append(dims, types.Dimension{
+			Name:  aws.String("quantile"),
+			Value: aws.String(quantile),
+		})
+
+		values, err := fetcher.Fetch(namespacePMD, metricName+"_quantile", quantileDims,
+			metric.AVERAGE, metric.HighResolutionStatPeriod)
+		if err != nil {
+			return fmt.Errorf("failed to fetch %s quantile: %v", quantile, err)
+		}
+
+		if len(values) == 0 || !approximatelyEqual(values[0], expectedValue) {
+			return fmt.Errorf("incorrect %s quantile: got %v, want %v",
+				quantile, values[0], expectedValue)
+		}
+	}
+
+	return nil
+}
+
+func approximatelyEqual(a, b float64) bool {
+	const epsilon = 0.1
+	return math.Abs(a-b) <= epsilon
 }
