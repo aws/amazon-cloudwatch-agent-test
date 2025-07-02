@@ -236,10 +236,50 @@ func validateHistogramQuantiles(metricName string, dims []types.Dimension) error
 
 	for quantile, expectedValue := range quantiles {
 		log.Printf("Validating %s quantile...", quantile)
-		quantileDims := append(dims, types.Dimension{
-			Name:  aws.String("quantile"),
-			Value: aws.String(quantile),
-		})
+
+		// Create complete set of dimensions
+		quantileDims := []types.Dimension{
+			{
+				Name:  aws.String("prom_type"),
+				Value: aws.String("histogram"),
+			},
+			{
+				Name:  aws.String("quantile"),
+				Value: aws.String(quantile),
+			},
+			{
+				Name:  aws.String("server.port"),
+				Value: aws.String("8101"),
+			},
+			{
+				Name:  aws.String("service.instance.id"),
+				Value: aws.String("localhost:8101"),
+			},
+			{
+				Name:  aws.String("service.name"),
+				Value: aws.String("prometheus_test_job"),
+			},
+			{
+				Name:  aws.String("url.scheme"),
+				Value: aws.String("http"),
+			},
+			{
+				Name:  aws.String("include"),
+				Value: aws.String("yes"),
+			},
+			{
+				Name:  aws.String("label1"),
+				Value: aws.String("val1"),
+			},
+		}
+
+		// Add instance ID dimension if present in original dims
+		for _, dim := range dims {
+			if *dim.Name == "InstanceId" {
+				quantileDims = append(quantileDims, dim)
+				break
+			}
+		}
 
 		values, err := fetcher.Fetch(namespacePMD, metricName+"_quantile", quantileDims,
 			metric.AVERAGE, metric.HighResolutionStatPeriod)
