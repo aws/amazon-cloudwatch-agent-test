@@ -33,7 +33,7 @@ var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
 var prometheusPMDConfig string
 
 const (
-	namespacePMD = "PrometheusPMDTest"
+	namespacePMD = "PrometheusPMDTest13"
 	epsilon      = 0.1
 
 	// Expected histogram values (matching generator's histogramValues)
