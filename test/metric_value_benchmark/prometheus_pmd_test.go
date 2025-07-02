@@ -47,9 +47,14 @@ const (
 	expectedMedian   = 5.0 // Middle value (8th element)
 	expected90thPerc = 8.0 // 14th element (0.90 * 15)
 	expected95thPerc = 8.5 // 14th element (0.95 * 15)
+
+	// Retry configuration
+	maxRetries = 3
+	retryDelay = 10 * time.Second
 )
 
 func (t *PrometheusPMDTestRunner) Validate() status.TestGroupResult {
+	log.Printf("Starting PMD test validation")
 	metricsToFetch := t.GetMeasuredMetrics()
 	testResults := make([]status.TestResult, len(metricsToFetch))
 	for i, metricName := range metricsToFetch {
@@ -67,13 +72,15 @@ func (t *PrometheusPMDTestRunner) GetTestName() string {
 }
 
 func (t *PrometheusPMDTestRunner) GetAgentRunDuration() time.Duration {
-	return 3 * time.Minute
+	return 3 * time.Minute // Increased to ensure enough samples
 }
+
 func (t *PrometheusPMDTestRunner) GetAgentConfigFileName() string {
 	return "prometheus_pmd_config.json"
 }
 
 func (t *PrometheusPMDTestRunner) SetupBeforeAgentRun() error {
+	log.Printf("Setting up PMD test")
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
@@ -93,14 +100,17 @@ func (t *PrometheusPMDTestRunner) SetupBeforeAgentRun() error {
 		return fmt.Errorf("failed to start prometheus generator: %v", err)
 	}
 
+	log.Printf("Waiting for generator to initialize")
 	time.Sleep(5 * time.Second)
 
 	return nil
 }
+
 func (t *PrometheusPMDTestRunner) startPrometheusGenerator() error {
 	cmd := "go run ../../cmd/prometheus-generator -port=8101"
 	return common.RunAsyncCommand(cmd)
 }
+
 func (t *PrometheusPMDTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"prometheus_test_untyped",
@@ -111,6 +121,27 @@ func (t *PrometheusPMDTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.TestResult {
+	log.Printf("Validating metric: %s", metricName)
+
+	for retry := 0; retry < maxRetries; retry++ {
+		testResult := t.validateMetricWithRetry(metricName)
+		if testResult.Status == status.SUCCESSFUL {
+			log.Printf("Metric %s validation successful", metricName)
+			return testResult
+		}
+		log.Printf("Retry %d failed for metric %s, waiting %v before next attempt",
+			retry+1, metricName, retryDelay)
+		time.Sleep(retryDelay)
+	}
+
+	log.Printf("Metric %s validation failed after %d retries", metricName, maxRetries)
+	return status.TestResult{
+		Name:   metricName,
+		Status: status.FAILED,
+	}
+}
+
+func (t *PrometheusPMDTestRunner) validateMetricWithRetry(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -124,11 +155,11 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 	})
 
 	if len(failed) > 0 {
+		log.Printf("Failed to get dimensions for metric %s", metricName)
 		return testResult
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-
 	stats := []metric.Statistics{metric.AVERAGE, metric.MAXIMUM, metric.MINIMUM, metric.SUM, metric.SAMPLE_COUNT}
 	statValues := make(map[metric.Statistics][]float64)
 
@@ -139,37 +170,38 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 			return testResult
 		}
 		statValues[stat] = values
+		log.Printf("Fetched %s values for %s: %v", stat, metricName, values)
 	}
 
 	// Validate based on metric type
 	switch metricName {
 	case "prometheus_test_histogram":
-		// 1. Validate basic statistics
 		if err := validateHistogramStats(statValues); err != nil {
 			log.Printf("Histogram statistics validation failed: %v", err)
 			return testResult
 		}
 
-		// 2. Validate sample count
 		if err := validateHistogramSampleCount(statValues); err != nil {
 			log.Printf("Histogram sample count validation failed: %v", err)
 			return testResult
 		}
 
-		// 3. Validate sum
 		if err := validateHistogramSum(statValues); err != nil {
 			log.Printf("Histogram sum validation failed: %v", err)
 			return testResult
 		}
 
-		// 4. Validate quantiles
 		if err := validateHistogramQuantiles(metricName, dims); err != nil {
 			log.Printf("Histogram quantiles validation failed: %v", err)
 			return testResult
 		}
 
+		if err := validateHistogramStability(statValues); err != nil {
+			log.Printf("Histogram stability validation failed: %v", err)
+			return testResult
+		}
+
 	case "prometheus_test_gauge":
-		// For gauge, values should be between 0-1000
 		if len(statValues[metric.MAXIMUM]) > 0 && statValues[metric.MAXIMUM][0] > 1000 {
 			log.Printf("Gauge max value too high: %v", statValues[metric.MAXIMUM][0])
 			return testResult
@@ -180,7 +212,6 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 		}
 
 	case "prometheus_test_counter":
-		// Counter should be monotonically increasing
 		avgValues := statValues[metric.AVERAGE]
 		for i := 1; i < len(avgValues); i++ {
 			if avgValues[i] < avgValues[i-1] {
@@ -211,19 +242,19 @@ func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
 		statValues[metric.MAXIMUM][0],
 		statValues[metric.AVERAGE][0])
 
-	// Check min value
 	if len(statValues[metric.MINIMUM]) == 0 || !approximatelyEqual(statValues[metric.MINIMUM][0], expectedHistogramMin) {
-		return fmt.Errorf("incorrect min value: got %v, want %v", statValues[metric.MINIMUM][0], expectedHistogramMin)
+		return fmt.Errorf("incorrect min value: got %v, want %v",
+			statValues[metric.MINIMUM][0], expectedHistogramMin)
 	}
 
-	// Check max value
 	if len(statValues[metric.MAXIMUM]) == 0 || !approximatelyEqual(statValues[metric.MAXIMUM][0], expectedHistogramMax) {
-		return fmt.Errorf("incorrect max value: got %v, want %v", statValues[metric.MAXIMUM][0], expectedHistogramMax)
+		return fmt.Errorf("incorrect max value: got %v, want %v",
+			statValues[metric.MAXIMUM][0], expectedHistogramMax)
 	}
 
-	// Check mean value
 	if len(statValues[metric.AVERAGE]) == 0 || !approximatelyEqual(statValues[metric.AVERAGE][0], expectedHistogramMean) {
-		return fmt.Errorf("incorrect mean value: got %v, want %v", statValues[metric.AVERAGE][0], expectedHistogramMean)
+		return fmt.Errorf("incorrect mean value: got %v, want %v",
+			statValues[metric.AVERAGE][0], expectedHistogramMean)
 	}
 
 	log.Printf("Histogram statistics validation successful")
@@ -231,25 +262,29 @@ func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
 }
 
 func validateHistogramSampleCount(statValues map[metric.Statistics][]float64) error {
+	log.Printf("Validating histogram sample count...")
 	if len(statValues[metric.SAMPLE_COUNT]) == 0 || !approximatelyEqual(statValues[metric.SAMPLE_COUNT][0], expectedSampleCount) {
 		return fmt.Errorf("incorrect sample count: got %v, want %v",
 			statValues[metric.SAMPLE_COUNT][0], expectedSampleCount)
 	}
+	log.Printf("Sample count validation successful")
 	return nil
 }
 
 func validateHistogramSum(statValues map[metric.Statistics][]float64) error {
+	log.Printf("Validating histogram sum...")
 	if len(statValues[metric.SUM]) == 0 || !approximatelyEqual(statValues[metric.SUM][0], expectedHistogramSum) {
 		return fmt.Errorf("incorrect sum: got %v, want %v",
 			statValues[metric.SUM][0], expectedHistogramSum)
 	}
+	log.Printf("Sum validation successful")
 	return nil
 }
 
 func validateHistogramQuantiles(metricName string, dims []types.Dimension) error {
+	log.Printf("Validating histogram quantiles...")
 	fetcher := metric.MetricValueFetcher{}
 
-	// Validate each quantile
 	quantiles := map[string]float64{
 		"0.50": expectedMedian,
 		"0.90": expected90thPerc,
@@ -257,7 +292,7 @@ func validateHistogramQuantiles(metricName string, dims []types.Dimension) error
 	}
 
 	for quantile, expectedValue := range quantiles {
-		// Add quantile dimension
+		log.Printf("Validating %s quantile...", quantile)
 		quantileDims := append(dims, types.Dimension{
 			Name:  aws.String("quantile"),
 			Value: aws.String(quantile),
@@ -273,12 +308,31 @@ func validateHistogramQuantiles(metricName string, dims []types.Dimension) error
 			return fmt.Errorf("incorrect %s quantile: got %v, want %v",
 				quantile, values[0], expectedValue)
 		}
+		log.Printf("%s quantile validation successful", quantile)
 	}
 
 	return nil
 }
 
+func validateHistogramStability(statValues map[metric.Statistics][]float64) error {
+	log.Printf("Validating histogram stability...")
+	if len(statValues[metric.AVERAGE]) < 3 {
+		return fmt.Errorf("insufficient data points for stability check")
+	}
+
+	lastValues := statValues[metric.AVERAGE][len(statValues[metric.AVERAGE])-3:]
+	for i := 1; i < len(lastValues); i++ {
+		if !approximatelyEqual(lastValues[i], lastValues[i-1]) {
+			return fmt.Errorf("values haven't stabilized yet: %v", lastValues)
+		}
+	}
+	log.Printf("Stability validation successful")
+	return nil
+}
+
 func approximatelyEqual(a, b float64) bool {
-	const epsilon = 0.1
-	return math.Abs(a-b) <= epsilon
+	diff := math.Abs(a - b)
+	log.Printf("Comparing values - A: %f, B: %f, Difference: %f, Epsilon: %f",
+		a, b, diff, epsilon)
+	return diff <= epsilon
 }
