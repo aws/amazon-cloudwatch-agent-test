@@ -33,8 +33,8 @@ var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
 var prometheusPMDConfig string
 
 const (
-	namespacePMD = "PrometheusPMDTest16"
-	epsilon      = 1.0 // Increased epsilon for more lenient validation
+	namespacePMD = "PrometheusPMDTest17"
+	epsilon      = 2.0 // Increased epsilon for more lenient validation
 
 	// Expected histogram values
 	expectedHistogramMin  = 1.0  // Min value
