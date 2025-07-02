@@ -21,6 +21,11 @@ variable "nodes" {
   default = 2
 }
 
+variable "node_groups" {
+  type    = number
+  default = 1
+}
+
 variable "ami_type" {
   type    = string
   default = "AL2_x86_64"
