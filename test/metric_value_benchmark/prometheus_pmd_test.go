@@ -171,10 +171,11 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 		}
 
 	case "prometheus_test_counter":
-		avgValues := statValues[metric.AVERAGE]
-		for i := 1; i < len(avgValues); i++ {
-			if avgValues[i] < avgValues[i-1] {
-				log.Printf("Counter not monotonically increasing: %v", avgValues)
+		maxValues := statValues[metric.MAXIMUM]
+		log.Printf("Checking counter monotonic increase with values: %v", maxValues)
+		for i := 1; i < len(maxValues); i++ {
+			if maxValues[i] < maxValues[i-1] {
+				log.Printf("Counter not monotonically increasing: %v", maxValues)
 				return testResult
 			}
 		}

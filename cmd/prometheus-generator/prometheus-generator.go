@@ -25,7 +25,9 @@ func init() {
 }
 
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
-	currentCounter := atomic.AddUint64(&counter, 1)
+	// Get current counter value and increment
+	currentCounter := atomic.LoadUint64(&counter)
+	atomic.AddUint64(&counter, 1)
 
 	// Output untyped metric
 	fmt.Fprintf(w, "prometheus_test_untyped{include=\"yes\",prom_type=\"untyped\"} %d\n",
@@ -34,7 +36,7 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	// Output counter metric
 	fmt.Fprintf(w, "# TYPE prometheus_test_counter counter\n")
 	fmt.Fprintf(w, "prometheus_test_counter{include=\"yes\",prom_type=\"counter\"} %d\n",
-		currentCounter)
+		currentCounter*5) // Make it increase by 5 each time
 
 	// Output gauge metric
 	fmt.Fprintf(w, "# TYPE prometheus_test_gauge gauge\n")
