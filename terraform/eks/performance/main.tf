@@ -185,7 +185,7 @@ resource "helm_release" "aws_observability" {
   set = [
     {
       name  = "clusterName"
-      value = module.performance.cluster_name
+      value = var.cluster_name
     },
     {
       name  = "region"
