@@ -38,13 +38,14 @@ func init() {
 }
 
 func updateMetrics() {
+	currentIndex := 0
 	for {
 		atomic.AddUint64(&counter, 1)
-		value := rand.Float64() * 10
+		// Use predefined values instead of random
+		value := histogramValues[currentIndex%len(histogramValues)]
 		histogram = append(histogram, value)
-
 		atomic.StoreUint64(&untyped, uint64(rand.Intn(100)+1))
-
+		currentIndex++
 		time.Sleep(1 * time.Second)
 	}
 }
