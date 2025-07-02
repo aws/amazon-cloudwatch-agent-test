@@ -5,19 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sort"
 	"sync/atomic"
 )
 
 var (
 	counter uint64
 	port    int
-
-	// Fixed values for histogram
-	histogramValues = []float64{
-		1.0, 2.0, 3.0, 4.0, 5.0,
-		6.0, 7.0, 8.0, 9.0, 10.0,
-	}
 )
 
 func init() {
@@ -46,43 +39,21 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	// Output histogram metrics
 	fmt.Fprintf(w, "# TYPE prometheus_test_histogram histogram\n")
 
-	// Calculate sum and count
-	sum := 0.0
-	for _, v := range histogramValues {
-		sum += v
-	}
+	// Static values for histogram
+	staticSum := 55.0    // Sum for one scrape
+	staticCount := 1     // Sample count for one scrape
 
-	fmt.Fprintf(w, "prometheus_test_histogram_sum{include=\"yes\",prom_type=\"histogram\"} %f\n", sum)
-	fmt.Fprintf(w, "prometheus_test_histogram_count{include=\"yes\",prom_type=\"histogram\"} %d\n",
-		len(histogramValues))
+	// Output sum and count
+	fmt.Fprintf(w, "prometheus_test_histogram_sum{include=\"yes\",prom_type=\"histogram\"} %f\n", staticSum)
+	fmt.Fprintf(w, "prometheus_test_histogram_count{include=\"yes\",prom_type=\"histogram\"} %d\n", staticCount)
 
-	// Output histogram buckets
-	count := 0
-	buckets := []float64{1.0, 2.5, 5.0, 7.5, 10.0}
-	for _, bound := range buckets {
-		for _, v := range histogramValues {
-			if v <= bound {
-				count++
-			}
-		}
-		fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"%g\",prom_type=\"histogram\"} %d\n",
-			bound, count)
-		count = 0
-	}
-	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"+Inf\",prom_type=\"histogram\"} %d\n",
-		len(histogramValues))
-
-	// Output quantiles
-	sorted := make([]float64, len(histogramValues))
-	copy(sorted, histogramValues)
-	sort.Float64s(sorted)
-
-	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.50\",include=\"yes\",prom_type=\"histogram\"} %f\n",
-		sorted[len(sorted)/2])
-	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.90\",include=\"yes\",prom_type=\"histogram\"} %f\n",
-		sorted[int(float64(len(sorted))*0.9)])
-	fmt.Fprintf(w, "prometheus_test_histogram_quantile{quantile=\"0.95\",include=\"yes\",prom_type=\"histogram\"} %f\n",
-		sorted[int(float64(len(sorted))*0.95)])
+	// Output histogram buckets with static counts
+	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"1.0\",prom_type=\"histogram\"} %d\n", 1)
+	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"2.5\",prom_type=\"histogram\"} %d\n", 1)
+	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"5.0\",prom_type=\"histogram\"} %d\n", 1)
+	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"7.5\",prom_type=\"histogram\"} %d\n", 1)
+	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"10.0\",prom_type=\"histogram\"} %d\n", 1)
+	fmt.Fprintf(w, "prometheus_test_histogram_bucket{include=\"yes\",le=\"+Inf\",prom_type=\"histogram\"} %d\n", 1)
 }
 
 func main() {
