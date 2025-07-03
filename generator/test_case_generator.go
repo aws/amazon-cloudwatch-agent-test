@@ -278,6 +278,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/emf",
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
+		{
+			testDir: "./test/ecs/ecs_sd",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+		},
 	},
 	"eks_addon": {
 		{

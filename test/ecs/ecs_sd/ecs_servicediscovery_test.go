@@ -1,21 +1,18 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build !windows
+
 package ecs_sd
 
 import (
-	_ "embed"
-	"flag"
-	"fmt"
-	"log"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
 /*
@@ -29,70 +26,47 @@ Implementation:
 2) Check if expected Prometheus EMF data is correctly published as logs and metrics to CloudWatch
 */
 
-const (
-	RetryTime = 15
-	// Log group format: https://github.com/aws/amazon-cloudwatch-agent/blob/5ef3dba446cb56a4c2306878592b5d14300ae82f/translator/translate/otel/exporter/awsemf/prometheus.go#L38
-	ECSLogGroupNameFormat = "/aws/ecs/containerinsights/%s/prometheus"
-	// Log stream based on job name in extra_apps.tpl:https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/test/ecs/ecs_sd/resources/extra_apps.tpl#L41
-	LogStreamName = "prometheus-redis"
+var (
+	ecsTestRunners []*test_runner.ECSTestRunner
 )
 
-var clusterName = flag.String("clusterName", "", "Please provide the os preference, valid value: windows/linux.")
+func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
+	if len(ecsTestRunners) == 0 {
 
-//go:embed resources/emf_prometheus_redis_schema.json
-var schema string
-
-func TestValidatingCloudWatchLogs(t *testing.T) {
-
-	logGroupName, logGroupFound, start, end := ValidateLogGroupFormat(t)
-
-	ValidateLogsContent(t, logGroupName, start, end)
-
-	if logGroupFound {
-		awsservice.DeleteLogGroupAndStream(logGroupName, LogStreamName)
-	}
-}
-
-func ValidateLogGroupFormat(t *testing.T) (string, bool, time.Time, time.Time) {
-	start := time.Now()
-	logGroupName := fmt.Sprintf(ECSLogGroupNameFormat, *clusterName)
-
-	var logGroupFound bool
-	for currentRetry := 1; ; currentRetry++ {
-
-		if currentRetry == RetryTime {
-			t.Fatalf("Test has exhausted %v retry time", RetryTime)
-		}
-
-		if !awsservice.IsLogGroupExists(logGroupName) {
-			log.Printf("Current retry: %v/%v and begin to sleep for 20s \n", currentRetry, RetryTime)
-			time.Sleep(20 * time.Second)
-			continue
-		}
-		break
-	}
-	end := time.Now()
-	return logGroupName, logGroupFound, start, end
-}
-
-func ValidateLogsContent(t *testing.T, logGroupName string, start time.Time, end time.Time) {
-	err := awsservice.ValidateLogs(
-		logGroupName,
-		LogStreamName,
-		&start,
-		&end,
-		awsservice.AssertLogsNotEmpty(),
-		awsservice.AssertPerLog(
-			awsservice.AssertLogSchema(awsservice.WithSchema(schema)),
-			func(event types.OutputLogEvent) error {
-				if strings.Contains(*event.Message, "CloudWatchMetrics") &&
-					!strings.Contains(*event.Message, "\"Namespace\":\"ECS/ContainerInsights/Prometheus\"") {
-					return fmt.Errorf("emf log found for non ECS/ContainerInsights/Prometheus namespace: %s", *event.Message)
-				}
-				return nil
+		ecsTestRunners = []*test_runner.ECSTestRunner{
+			{
+				Runner:      &ECSServiceDiscoveryTestRunner{},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
 			},
-			awsservice.AssertLogContainsSubstring("\"job\":\"prometheus-redis\""),
-		),
-	)
-	assert.NoError(t, err)
+		}
+	}
+	return ecsTestRunners
+}
+
+var _ test_runner.ITestRunner = (*ECSServiceDiscoveryTestRunner)(nil)
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
+
+func TestECSServiceDiscoveryTestSuite(t *testing.T) {
+	suite.Run(t, new(ECSServiceDiscoveryTestSuite))
+}
+
+type ECSServiceDiscoveryTestSuite struct {
+	suite.Suite
+	test_runner.TestSuite
+}
+
+func (suite *ECSServiceDiscoveryTestSuite) GetSuiteName() string {
+	return "ECSServiceDiscovery"
+}
+
+func (suite *ECSServiceDiscoveryTestSuite) TestAllInSuite() {
+	env := environment.GetEnvironmentMetaData()
+	for _, ecsTestRunner := range getEcsTestRunners(env) {
+		ecsTestRunner.Run(suite, env)
+	}
+	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "ECS ServiceDiscovery Test Suite Failed")
 }

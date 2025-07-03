@@ -163,17 +163,13 @@ resource "aws_security_group_rule" "nodes_cluster_inbound" {
   type                     = "ingress"
 }
 
-resource "null_resource" "clone_helm_chart" {
-  triggers = {
-    timestamp = "${timestamp()}" # Forces re-run on every apply
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      if [ ! -d "./helm-charts" ]; then
-        git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
-      fi
-    EOT
-  }
+data "external" "clone_helm_chart" {
+  program = ["bash", "-c", <<-EOT
+    rm -rf ./helm-charts
+    git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
+    echo '{"status":"ready"}'
+  EOT
+  ]
 }
 
 resource "helm_release" "aws_observability" {
@@ -181,20 +177,21 @@ resource "helm_release" "aws_observability" {
   chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
   namespace        = "amazon-cloudwatch"
   create_namespace = true
-
-  set {
-    name  = "clusterName"
-    value = aws_eks_cluster.this.name
-  }
-
-  set {
-    name  = "region"
-    value = "us-west-2"
-  }
+  set = [
+    {
+      name  = "clusterName"
+      value = aws_eks_cluster.this.name
+    },
+    {
+      name  = "region"
+      value = var.region
+    }
+  ]
   depends_on = [
     aws_eks_cluster.this,
     aws_eks_node_group.this,
-  null_resource.clone_helm_chart]
+    data.external.clone_helm_chart,
+  ]
 }
 
 resource "null_resource" "kubectl" {
