@@ -35,7 +35,7 @@ resource "aws_eks_node_group" "this" {
   count           = var.node_groups
 
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "${local.cluster_name}-node-${var.node_groups}-${module.common.testing_id}"
+  node_group_name = "${local.cluster_name}-node-${count.index}-${module.common.testing_id}"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
 
