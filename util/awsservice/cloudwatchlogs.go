@@ -431,3 +431,38 @@ func CountMetricsInEMFLogs(logGroupName string) (int, error) {
 
 	return totalMetrics, nil
 }
+
+func GetNeuronCoreUtilizationPerCore(logGroup, logStream string, since, until *time.Time) (map[string]float64, error) {
+	var coreUtilization = make(map[string]float64)
+	var data map[string]interface{}
+
+	events, err := GetLogsSince(logGroup, logStream, since, until)
+
+	// if there is an error, return the empty map
+	if err != nil {
+		return coreUtilization, err
+	}
+
+	for _, event := range events {
+		message := *event.Message
+
+		var eksClusterType EKSClusterType
+		innerErr := json.Unmarshal([]byte(message), &eksClusterType)
+		if innerErr != nil || !strings.Contains(eksClusterType.Type, "NodeAWSNeuronCore") {
+			continue
+		}
+
+		err := json.Unmarshal([]byte(message), &data)
+		if err != nil {
+			return coreUtilization, err
+		}
+
+		if core, ok := data["NeuronCore"].(string); ok {
+			if util, ok := data["node_neuroncore_utilization"].(float64); ok {
+				coreUtilization[core] = util
+			}
+		}
+	}
+
+	return coreUtilization, nil
+}
