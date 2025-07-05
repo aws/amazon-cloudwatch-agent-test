@@ -62,6 +62,8 @@ var (
 	eksPodEfaSchema string
 	//go:embed test_schemas/node_efa.json
 	eksNodeEfaSchema string
+	//go:embed test_schemas/node_ebs.json
+	eksNodeEBSSchema string
 
 	EksClusterValidationMap = map[string]string{
 		"Cluster":                eksClusterSchema,
@@ -90,6 +92,7 @@ var (
 		"ContainerEFA":           eksContainerEfaSchema,
 		"PodEFA":                 eksPodEfaSchema,
 		"NodeEFA":                eksNodeEfaSchema,
+		"NodeEBS":                eksNodeEBSSchema,
 	}
 
 	EksClusterFrequencyValidationMap = map[string]int{
