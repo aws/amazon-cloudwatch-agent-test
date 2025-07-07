@@ -20,6 +20,15 @@ import (
 type MetricValueFetcher struct {
 }
 
+type ExtendedStatistics string
+
+const (
+	P50 ExtendedStatistics = "p50"
+	P90 ExtendedStatistics = "p90"
+	P95 ExtendedStatistics = "p95"
+	P99 ExtendedStatistics = "p99"
+)
+
 func logDimensions(dims []types.Dimension) {
 	log.Printf("\tDimensions:\n")
 	for _, d := range dims {
@@ -75,4 +84,54 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 func subtractMinutes(fromTime time.Time, minutes int) time.Time {
 	tenMinutes := time.Duration(-1*minutes) * time.Minute
 	return fromTime.Add(tenMinutes)
+}
+
+func (n *MetricValueFetcher) FetchExtended(namespace, metricName string, metricSpecificDimensions []types.Dimension, extendedStats []string, metricQueryPeriod int32) (map[string]MetricValues, error) {
+	dimensions := metricSpecificDimensions
+	log.Println("Metric query input dimensions for extended statistics")
+	logDimensions(dimensions)
+
+	// Create metric data queries for each extended statistic
+	metricDataQueries := make([]types.MetricDataQuery, len(extendedStats))
+	for i, stat := range extendedStats {
+		metricToFetch := types.Metric{
+			Namespace:  aws.String(namespace),
+			MetricName: aws.String(metricName),
+			Dimensions: dimensions,
+		}
+
+		metricDataQueries[i] = types.MetricDataQuery{
+			MetricStat: &types.MetricStat{
+				Metric: &metricToFetch,
+				Period: &metricQueryPeriod,
+				Stat:   aws.String(stat),
+			},
+			Id: aws.String(fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(metricName, "-", "_"), ".", "_")), stat)),
+		}
+	}
+
+	endTime := time.Now()
+	startTime := subtractMinutes(endTime, 10)
+	getMetricDataInput := cloudwatch.GetMetricDataInput{
+		StartTime:         &startTime,
+		EndTime:           &endTime,
+		MetricDataQueries: metricDataQueries,
+	}
+
+	log.Printf("Extended metric data input: namespace %v, name %v, extended stats %v, period %v",
+		namespace, metricName, extendedStats, metricQueryPeriod)
+
+	output, err := awsservice.CwmClient.GetMetricData(context.Background(), &getMetricDataInput)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting extended metric data %v", err)
+	}
+
+	results := make(map[string]MetricValues)
+	for i, result := range output.MetricDataResults {
+		stat := extendedStats[i]
+		results[stat] = result.Values
+		log.Printf("Extended metric values for %s: %v", stat, result.Values)
+	}
+
+	return results, nil
 }

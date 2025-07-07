@@ -22,7 +22,8 @@ import (
 
 func TestOTLPMetrics(t *testing.T) {
 	startAgent(t)
-	instanceID := "Test10"
+	//temp - this should be deleted
+	instanceID := "TestingEmfClassicHistograms"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 

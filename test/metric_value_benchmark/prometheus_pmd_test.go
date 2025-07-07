@@ -9,7 +9,10 @@ import (
 	_ "embed"
 	"fmt"
 	"log"
+	"math"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 
@@ -30,7 +33,20 @@ var _ test_runner.ITestRunner = (*PrometheusPMDTestRunner)(nil)
 //go:embed agent_configs/prometheus.yaml
 var prometheusPMDConfig string
 
-const namespacePMD = "PrometheusPMDTest"
+const (
+	namespacePMD = "PrometheusPMDTest"
+	epsilon      = 2.0
+
+	expectedHistogramMin  = 1.0
+	expectedHistogramMax  = 10.0
+	expectedHistogramMean = 5.2
+
+	expectedSum   = 26.0
+	expectedCount = 5
+
+	sumTolerance   = 10.0
+	countTolerance = 2.0
+)
 
 func (t *PrometheusPMDTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := t.GetMeasuredMetrics()
@@ -50,13 +66,15 @@ func (t *PrometheusPMDTestRunner) GetTestName() string {
 }
 
 func (t *PrometheusPMDTestRunner) GetAgentRunDuration() time.Duration {
-	return 2 * time.Minute
+	return 3 * time.Minute
 }
+
 func (t *PrometheusPMDTestRunner) GetAgentConfigFileName() string {
 	return "prometheus_pmd_config.json"
 }
 
 func (t *PrometheusPMDTestRunner) SetupBeforeAgentRun() error {
+	log.Printf("Setting up PMD test")
 	err := t.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
@@ -80,10 +98,12 @@ func (t *PrometheusPMDTestRunner) SetupBeforeAgentRun() error {
 
 	return nil
 }
+
 func (t *PrometheusPMDTestRunner) startPrometheusGenerator() error {
 	cmd := "go run ../../cmd/prometheus-generator -port=8101"
 	return common.RunAsyncCommand(cmd)
 }
+
 func (t *PrometheusPMDTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"prometheus_test_untyped",
@@ -94,6 +114,8 @@ func (t *PrometheusPMDTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.TestResult {
+	log.Printf("Validating metric: %s", metricName)
+
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -107,11 +129,11 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 	})
 
 	if len(failed) > 0 {
+		log.Printf("Failed to get dimensions for metric %s", metricName)
 		return testResult
 	}
 
 	fetcher := metric.MetricValueFetcher{}
-
 	stats := []metric.Statistics{metric.AVERAGE, metric.MAXIMUM, metric.MINIMUM, metric.SUM, metric.SAMPLE_COUNT}
 	statValues := make(map[metric.Statistics][]float64)
 
@@ -124,21 +146,19 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 		statValues[stat] = values
 	}
 
-	// Validate based on metric type
 	switch metricName {
 	case "prometheus_test_histogram":
-		// For histogram, values should be between 0-10
-		if len(statValues[metric.MAXIMUM]) > 0 && statValues[metric.MAXIMUM][0] > 10 {
-			log.Printf("Histogram max value too high: %v", statValues[metric.MAXIMUM][0])
+		if err := validateHistogramStats(statValues); err != nil {
+			log.Printf("Histogram statistics validation failed: %v", err)
 			return testResult
 		}
-		if len(statValues[metric.MINIMUM]) > 0 && statValues[metric.MINIMUM][0] < 0 {
-			log.Printf("Histogram min value negative: %v", statValues[metric.MINIMUM][0])
+
+		if err := validateHistogramPercentiles(metricName, dims); err != nil {
+			log.Printf("Histogram percentiles validation failed: %v", err)
 			return testResult
 		}
 
 	case "prometheus_test_gauge":
-		// For gauge, values should be between 0-1000
 		if len(statValues[metric.MAXIMUM]) > 0 && statValues[metric.MAXIMUM][0] > 1000 {
 			log.Printf("Gauge max value too high: %v", statValues[metric.MAXIMUM][0])
 			return testResult
@@ -149,11 +169,11 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 		}
 
 	case "prometheus_test_counter":
-		// Counter should be monotonically increasing
-		avgValues := statValues[metric.AVERAGE]
-		for i := 1; i < len(avgValues); i++ {
-			if avgValues[i] < avgValues[i-1] {
-				log.Printf("Counter not monotonically increasing: %v", avgValues)
+		maxValues := statValues[metric.MAXIMUM]
+		log.Printf("Checking counter monotonic increase with values: %v", maxValues)
+		for i := 1; i < len(maxValues); i++ {
+			if maxValues[i] < maxValues[i-1] {
+				log.Printf("Counter not monotonically increasing: %v", maxValues)
 				return testResult
 			}
 		}
@@ -171,4 +191,56 @@ func (t *PrometheusPMDTestRunner) validatePMDMetric(metricName string) status.Te
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
+}
+
+func validateHistogramStats(statValues map[metric.Statistics][]float64) error {
+	validations := []struct {
+		name      string
+		actual    float64
+		expected  float64
+		tolerance float64
+	}{
+		{"min", statValues[metric.MINIMUM][0], expectedHistogramMin, epsilon},
+		{"max", statValues[metric.MAXIMUM][0], expectedHistogramMax, epsilon},
+		{"mean", statValues[metric.AVERAGE][0], expectedHistogramMean, epsilon},
+		{"sum", statValues[metric.SUM][0], expectedSum, sumTolerance},
+		{"count", statValues[metric.SAMPLE_COUNT][0], expectedCount, countTolerance},
+	}
+
+	for _, v := range validations {
+		if math.Abs(v.actual-v.expected) > v.tolerance {
+			return fmt.Errorf("%s outside expected range: got %v, want %v ± %v",
+				v.name, v.actual, v.expected, v.tolerance)
+		}
+	}
+
+	return nil
+}
+
+func validateHistogramPercentiles(metricName string, dims []types.Dimension) error {
+	fetcher := metric.MetricValueFetcher{}
+
+	values, err := fetcher.FetchExtended(
+		namespacePMD,
+		metricName,
+		dims,
+		[]string{"p50", "p90", "p95", "p99"},
+		metric.HighResolutionStatPeriod,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to fetch percentiles: %v", err)
+	}
+
+	// Validate percentiles are within bucket bounds
+	for p, v := range values {
+		if len(v) == 0 {
+			return fmt.Errorf("no values returned for percentile %s", p)
+		}
+		if v[0] < expectedHistogramMin || v[0] > expectedHistogramMax {
+			return fmt.Errorf("percentile %s outside bounds: got %v, want between %v and %v",
+				p, v[0], expectedHistogramMin, expectedHistogramMax)
+		}
+	}
+
+	return nil
 }
