@@ -335,7 +335,7 @@ func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.T
 				coreMapStr.WriteString(fmt.Sprintf("%s: %f, ", k, v))
 			}
 			log.Printf("coreMap: %s", coreMapStr.String())
-			testFailed = true
+			return testResult
 		}
 
 		// Check if coreMap has the expected core utilization values
@@ -352,9 +352,8 @@ func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.T
 		}
 	}
 
-	testResult.Status = status.SUCCESSFUL
-	if testFailed {
-		testResult.Status = status.FAILED
+	if !testFailed {
+		testResult.Status = status.SUCCESSFUL
 	}
 	return testResult
 }
