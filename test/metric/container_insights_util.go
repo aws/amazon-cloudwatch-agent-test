@@ -303,7 +303,7 @@ func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.T
 	const core = "core"
 	testResult := status.TestResult{
 		Name:   "emf-logs-neuron-core-utilization",
-		Status: status.FAILED,
+		Status: status.SUCCESSFUL,
 	}
 	var testFailed = false
 
@@ -315,6 +315,7 @@ func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.T
 	eKSInstances, err := awsservice.GetEKSInstances(env.EKSClusterName)
 	if err != nil {
 		log.Println("failed to get EKS instances", err)
+		testResult.Status = status.FAILED
 		return testResult
 	}
 
@@ -324,6 +325,7 @@ func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.T
 
 		if err != nil {
 			log.Printf("log validation (%s/%s) failed: %v, start time : %s, error is : %s", group, stream, err, start, err)
+			testResult.Status = status.FAILED
 			return testResult
 		}
 
@@ -335,6 +337,7 @@ func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.T
 				coreMapStr.WriteString(fmt.Sprintf("%s: %f, ", k, v))
 			}
 			log.Printf("coreMap: %s", coreMapStr.String())
+			testResult.Status = status.FAILED
 			return testResult
 		}
 
@@ -352,8 +355,8 @@ func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.T
 		}
 	}
 
-	if !testFailed {
-		testResult.Status = status.SUCCESSFUL
+	if testFailed {
+		testResult.Status = status.FAILED
 	}
 	return testResult
 }
