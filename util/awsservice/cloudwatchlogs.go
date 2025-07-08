@@ -454,7 +454,7 @@ func GetNeuronCoreUtilizationPerCore(logGroup, logStream string, since, until *t
 
 		err := json.Unmarshal([]byte(message), &data)
 		if err != nil {
-			return coreUtilization, err
+			continue
 		}
 
 		if core, ok := data["NeuronCore"].(string); ok {

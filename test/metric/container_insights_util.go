@@ -300,14 +300,15 @@ func ValidateLogsFrequency(env *environment.MetaData) status.TestResult {
 }
 
 func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.TestResult {
-
+	const core = "core"
 	testResult := status.TestResult{
 		Name:   "emf-logs-neuron-core-utilization",
 		Status: status.FAILED,
 	}
+	var testFailed = false
 
-	end := time.Now().Add(time.Duration(-2) * time.Minute).Truncate(time.Minute)
-	start := end.Add(time.Duration(-1) * time.Minute)
+	end := time.Now().Add(-2 * time.Minute).Truncate(time.Minute)
+	start := end.Add(-1 * time.Minute)
 	group := fmt.Sprintf("/aws/containerinsights/%s/performance", env.EKSClusterName)
 
 	// need to get the instances used for the EKS cluster
@@ -326,20 +327,34 @@ func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.T
 			return testResult
 		}
 
+		// We expect 32 Cores from the current test, anything less or more is a bug
+		if len(coreMap) != 32 {
+			log.Printf("32 Cores not found")
+			var coreMapStr strings.Builder
+			for k, v := range coreMap {
+				coreMapStr.WriteString(fmt.Sprintf("%s: %f, ", k, v))
+			}
+			log.Printf("coreMap: %s", coreMapStr.String())
+			testFailed = true
+		}
+
 		// Check if coreMap has the expected core utilization values
 		for coreKey, actualValue := range coreMap {
-			if strings.HasPrefix(coreKey, "core") {
-				coreNumStr := strings.TrimPrefix(coreKey, "core")
+			if strings.HasPrefix(coreKey, core) {
+				coreNumStr := strings.TrimPrefix(coreKey, core)
 				expectedValue, err := strconv.Atoi(coreNumStr)
 				if err != nil || math.Round(actualValue) != float64(expectedValue) {
 					log.Printf("Core utilization validation failed: expected %s:%d, got %v", 
 						coreKey, expectedValue, actualValue)
-					return testResult
+					testFailed = true
 				}
 			}
 		}
 	}
 
 	testResult.Status = status.SUCCESSFUL
+	if testFailed {
+		testResult.Status = status.FAILED
+	}
 	return testResult
 }
