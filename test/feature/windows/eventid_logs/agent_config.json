@@ -7,18 +7,6 @@
           "windows_events": {
             "collect_list": [
               {
-                "event_name": "Security",
-                "event_levels": [
-                  "INFORMATION",
-                  "WARNING",
-                  "ERROR",
-                  "CRITICAL",
-                  "VERBOSE"
-                ],
-                "log_group_name": "{instance_id}",
-                "log_stream_name": "SecurityEvent"
-              },
-              {
                 "event_name": "System",
                 "event_ids": [
                  400
