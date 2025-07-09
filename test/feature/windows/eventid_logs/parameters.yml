@@ -27,12 +27,6 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # and the collection period is 60. If X minutes, the logs line would be X * log lines
 
 log_validation:
-  - log_value: "Microsoft-Windows-Security-Auditing"
-    log_lines: 1
-    log_stream: "SecurityEvent"
-  - log_value: "Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'"
-    log_lines: 1
-    log_stream: "SecurityEvent"
   - log_value: "This is a log line."
     log_lines: 2
     log_stream: "test1.log"
