@@ -342,3 +342,7 @@ resource "kubernetes_pod" "traffic_generator_instrumentation" {
   }
 }
 
+output "cluster_name" {
+  value = aws_eks_cluster.this.name
+}
+
