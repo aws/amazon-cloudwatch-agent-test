@@ -180,10 +180,6 @@ resource "helm_release" "aws_observability" {
   namespace        = "amazon-cloudwatch"
   create_namespace = true
 
-  lifecycle {
-    ignore_changes = all
-  }
-
 
   set = [
     {
@@ -245,10 +241,6 @@ resource "null_resource" "kubectl" {
 resource "kubernetes_pod" "petclinic_instrumentation" {
   depends_on = [aws_eks_node_group.this, helm_release.aws_observability]
 
-  lifecycle {
-    ignore_changes = all
-  }
-
   metadata {
     name = "petclinic-instrumentation-default-env"
     annotations = {
@@ -279,10 +271,6 @@ resource "kubernetes_pod" "petclinic_instrumentation" {
 
 resource "kubernetes_pod" "petclinic_custom_env" {
   depends_on = [aws_eks_node_group.this, helm_release.aws_observability]
-
-  lifecycle {
-    ignore_changes = all
-  }
 
   metadata {
     name = "petclinic-instrumentation-custom-env"
@@ -319,10 +307,6 @@ resource "kubernetes_pod" "petclinic_custom_env" {
 
 # Service for Petclinic Pods to load-balance traffic
 resource "kubernetes_service" "petclinic_service" {
-  lifecycle {
-    ignore_changes = all
-  }
-
   metadata {
     name = "petclinic-service"
   }
@@ -342,10 +326,6 @@ resource "kubernetes_service" "petclinic_service" {
 # Traffic generator pod with bash command
 resource "kubernetes_pod" "traffic_generator_instrumentation" {
   depends_on = [kubernetes_pod.petclinic_instrumentation, kubernetes_pod.petclinic_custom_env, kubernetes_service.petclinic_service]
-
-  lifecycle {
-    ignore_changes = all
-  }
 
   metadata {
     name = "traffic-generator-instrumentation-default-env"
