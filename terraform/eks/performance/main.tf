@@ -240,8 +240,6 @@ resource "null_resource" "kubectl" {
 # Sample App Creation
 resource "kubernetes_pod" "petclinic_instrumentation" {
   depends_on = [aws_eks_node_group.this, helm_release.aws_observability]
-
-  provider = kubernetes.eks
   metadata {
     name = "petclinic-instrumentation-default-env"
     annotations = {
@@ -272,8 +270,6 @@ resource "kubernetes_pod" "petclinic_instrumentation" {
 
 resource "kubernetes_pod" "petclinic_custom_env" {
   depends_on = [aws_eks_node_group.this, helm_release.aws_observability]
-
-  provider = kubernetes.eks
   metadata {
     name = "petclinic-instrumentation-custom-env"
     annotations = {
@@ -309,7 +305,6 @@ resource "kubernetes_pod" "petclinic_custom_env" {
 
 # Service for Petclinic Pods to load-balance traffic
 resource "kubernetes_service" "petclinic_service" {
-  provider = kubernetes.eks
   metadata {
     name = "petclinic-service"
   }
