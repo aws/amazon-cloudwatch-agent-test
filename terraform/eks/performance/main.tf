@@ -307,6 +307,8 @@ resource "kubernetes_pod" "petclinic_custom_env" {
 
 # Service for Petclinic Pods to load-balance traffic
 resource "kubernetes_service" "petclinic_service" {
+  depends_on = [aws_eks_node_group.this, helm_release.aws_observability]
+
   metadata {
     name = "petclinic-service"
   }
@@ -342,5 +344,31 @@ resource "kubernetes_pod" "traffic_generator_instrumentation" {
         "apk add --no-cache curl && while true; do curl -s http://petclinic-service:8080/client-call; sleep 1; done"
       ]
     }
+  }
+}
+
+# Clean up kubernetes resources on destroy
+resource "null_resource" "kubernetes_cleanup" {
+  depends_on = [
+    kubernetes_pod.petclinic_instrumentation,
+    kubernetes_pod.petclinic_custom_env,
+    kubernetes_pod.traffic_generator_instrumentation,
+    kubernetes_service.petclinic_service
+  ]
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      # Delete Kubernetes resources directly via kubectl
+      kubectl delete pod petclinic-instrumentation-default-env --ignore-not-found=true --timeout=60s || true
+      kubectl delete pod petclinic-instrumentation-custom-env --ignore-not-found=true --timeout=60s || true
+      kubectl delete pod traffic-generator-instrumentation-default-env --ignore-not-found=true --timeout=60s || true
+      kubectl delete service petclinic-service --ignore-not-found=true --timeout=60s || true
+
+      # Wait for cleanup
+      sleep 10
+    EOT
+
+    on_failure = continue
   }
 }
