@@ -1,6 +1,6 @@
 module github.com/aws/amazon-cloudwatch-agent-test
 
-go 1.20
+go 1.23.0
 
 // Avoid checksum mismatch for go-collectd https://github.com/collectd/go-collectd/issues/94
 replace collectd.org v0.5.0 => github.com/collectd/go-collectd v0.5.0
@@ -38,8 +38,10 @@ require (
 	go.opentelemetry.io/otel/trace v1.21.0
 	go.uber.org/multierr v1.11.0
 	golang.org/x/exp v0.0.0-20231127185646-65229373498e
-	golang.org/x/sys v0.15.0
+	golang.org/x/sys v0.34.0
+	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	gopkg.in/yaml.v3 v3.0.1
+	k8s.io/api v0.23.0
 	k8s.io/apimachinery v0.23.0
 	k8s.io/client-go v0.23.0
 )
@@ -99,7 +101,6 @@ require (
 	golang.org/x/oauth2 v0.13.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/tools v0.16.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20231127180814-3a041ad873d4 // indirect
@@ -109,7 +110,6 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/api v0.23.0 // indirect
 	k8s.io/klog/v2 v2.30.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
