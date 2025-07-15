@@ -34,7 +34,6 @@ func TestOTLPMetrics(t *testing.T) {
 		expected   []struct {
 			stat  types.Statistic
 			value float64
-			check func(t *testing.T, expected, actual float64)
 		}
 	}{
 		{
@@ -56,42 +55,26 @@ func TestOTLPMetrics(t *testing.T) {
 			expected: []struct {
 				stat  types.Statistic
 				value float64
-				check func(t *testing.T, expected, actual float64)
 			}{
 				{
 					stat:  types.StatisticMinimum,
 					value: 0,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.Equal(t, expected, actual)
-					},
 				},
 				{
 					stat:  types.StatisticMaximum,
 					value: 2,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.Equal(t, expected, actual)
-					},
 				},
 				{
 					stat:  types.StatisticSum,
 					value: 10,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.GreaterOrEqual(t, actual, expected)
-					},
 				},
 				{
 					stat:  types.StatisticAverage,
 					value: 1,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.InDelta(t, expected, actual, 0.01)
-					},
 				},
 				{
 					stat:  types.StatisticSampleCount,
 					value: 10,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.GreaterOrEqual(t, actual, expected)
-					},
 				},
 			},
 		},
@@ -114,42 +97,26 @@ func TestOTLPMetrics(t *testing.T) {
 			expected: []struct {
 				stat  types.Statistic
 				value float64
-				check func(t *testing.T, expected, actual float64)
 			}{
 				{
 					stat:  types.StatisticMinimum,
 					value: 0,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.Equal(t, expected, actual)
-					},
 				},
 				{
 					stat:  types.StatisticMaximum,
 					value: 0,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.Equal(t, expected, actual)
-					},
 				},
 				{
 					stat:  types.StatisticSum,
 					value: 10,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.GreaterOrEqual(t, actual, expected)
-					},
 				},
 				{
 					stat:  types.StatisticAverage,
 					value: 1,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.InDelta(t, expected, actual, 0.01)
-					},
 				},
 				{
 					stat:  types.StatisticSampleCount,
 					value: 10,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.GreaterOrEqual(t, actual, expected)
-					},
 				},
 			},
 		},
@@ -172,42 +139,26 @@ func TestOTLPMetrics(t *testing.T) {
 			expected: []struct {
 				stat  types.Statistic
 				value float64
-				check func(t *testing.T, expected, actual float64)
 			}{
 				{
 					stat:  types.StatisticMinimum,
 					value: 0,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.Equal(t, expected, actual)
-					},
 				},
 				{
 					stat:  types.StatisticMaximum,
 					value: 5,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.Equal(t, expected, actual)
-					},
 				},
 				{
 					stat:  types.StatisticSum,
 					value: 10,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.GreaterOrEqual(t, actual, expected)
-					},
 				},
 				{
 					stat:  types.StatisticAverage,
 					value: 3.33,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.InDelta(t, expected, actual, 0.01)
-					},
 				},
 				{
 					stat:  types.StatisticSampleCount,
 					value: 3,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.GreaterOrEqual(t, actual, expected)
-					},
 				},
 			},
 		},
@@ -230,42 +181,26 @@ func TestOTLPMetrics(t *testing.T) {
 			expected: []struct {
 				stat  types.Statistic
 				value float64
-				check func(t *testing.T, expected, actual float64)
 			}{
 				{
 					stat:  types.StatisticMinimum,
 					value: 0,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.Equal(t, expected, actual)
-					},
 				},
 				{
 					stat:  types.StatisticMaximum,
 					value: 5,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.Equal(t, expected, actual)
-					},
 				},
 				{
 					stat:  types.StatisticSum,
 					value: 10,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.GreaterOrEqual(t, actual, expected)
-					},
 				},
 				{
 					stat:  types.StatisticAverage,
 					value: 3.33,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.InDelta(t, expected, actual, 0.01)
-					},
 				},
 				{
 					stat:  types.StatisticSampleCount,
 					value: 3,
-					check: func(t *testing.T, expected, actual float64) {
-						assert.GreaterOrEqual(t, actual, expected)
-					},
 				},
 			},
 		},
