@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand/v2"
 	"os"
 	"os/signal"
 	"time"
@@ -68,15 +67,18 @@ func run(ctx context.Context, endpoint string) error {
 			Kind: sdkmetric.InstrumentKindHistogram,
 		},
 		sdkmetric.Stream{
-			Name: "test.stream",
+			Name: "test.exponential.histogram",
 			Aggregation: sdkmetric.AggregationBase2ExponentialHistogram{
 				MaxSize: 160, NoMinMax: false, MaxScale: 20,
 			},
 		},
 	)
+
 	meterProvider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(res),
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(10*time.Second))),
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter,
+			sdkmetric.WithInterval(10*time.Second),
+		)),
 		sdkmetric.WithView(expView),
 	)
 	defer func() {
@@ -150,9 +152,6 @@ func createAndRecordMetrics(ctx context.Context, meter metric.Meter) error {
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
-		// Parameters for exponential distribution
-		lambda := 0.1 // Rate parameter
-
 		for {
 			select {
 			case <-ctx.Done():
@@ -175,13 +174,12 @@ func createAndRecordMetrics(ctx context.Context, meter metric.Meter) error {
 				histogram.Record(ctx, 150, metric.WithAttributes(attrs...))
 
 				// Generate exponentially distributed values
-				// Using inverse transform sampling: -ln(1-U)/lambda
-				// where U is uniform random number between 0 and 1
-				for i := 0; i < 5; i++ {
-					u := rand.Float64()
-					expValue := -math.Log(1-u) / lambda
-					expHistogram.Record(ctx, expValue, metric.WithAttributes(attrs...))
-				}
+				expHistogram.Record(ctx, 0.5, metric.WithAttributes(attrs...))
+				expHistogram.Record(ctx, 1, metric.WithAttributes(attrs...))
+				expHistogram.Record(ctx, 2, metric.WithAttributes(attrs...))
+				expHistogram.Record(ctx, 4, metric.WithAttributes(attrs...))
+				expHistogram.Record(ctx, 8, metric.WithAttributes(attrs...))
+				expHistogram.Record(ctx, 16, metric.WithAttributes(attrs...))
 			}
 		}
 	}()

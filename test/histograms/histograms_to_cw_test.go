@@ -81,6 +81,8 @@ func (t OtlpHistogramTestRunner) Validate() status.TestGroupResult {
 	testResults := []status.TestResult{}
 	testResults = append(testResults, t.validateHistogramMetric("my.delta.histogram")...)
 	testResults = append(testResults, t.validateHistogramMetric("my.cumulative.histogram")...)
+	testResults = append(testResults, t.validateHistogramMetric("my.delta.exponential.histogram")...)
+	testResults = append(testResults, t.validateHistogramMetric("my.cumulative.exponential.histogram")...)
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -135,30 +137,106 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 		}}
 	}
 
-	expected := []struct {
+	a := map[string][]struct {
 		stat  types.Statistic
 		value float64
 	}{
-		{
-			stat:  types.StatisticMinimum,
-			value: 0,
+		"my.delta.histogram": {
+			{
+				stat:  types.StatisticMinimum,
+				value: 0,
+			},
+			{
+				stat:  types.StatisticMaximum,
+				value: 2,
+			},
+			{
+				stat:  types.StatisticSum,
+				value: 24,
+			},
+			{
+				stat:  types.StatisticAverage,
+				value: 2,
+			},
+			{
+				stat:  types.StatisticSampleCount,
+				value: 12,
+			},
 		},
-		{
-			stat:  types.StatisticMaximum,
-			value: 2,
+		"my.cumulative.histogram": {
+			{
+				stat:  types.StatisticMinimum,
+				value: 0,
+			},
+			{
+				stat:  types.StatisticMaximum,
+				value: 2,
+			},
+			{
+				stat:  types.StatisticSum,
+				value: 24,
+			},
+			{
+				stat:  types.StatisticAverage,
+				value: 2,
+			},
+			{
+				stat:  types.StatisticSampleCount,
+				value: 12,
+			},
 		},
-		{
-			stat:  types.StatisticSum,
-			value: 24,
+		"my.delta.exponential.histogram": {
+			{
+				stat:  types.StatisticMinimum,
+				value: 0,
+			},
+			{
+				stat:  types.StatisticMaximum,
+				value: 2,
+			},
+			{
+				stat:  types.StatisticSum,
+				value: 24,
+			},
+			{
+				stat:  types.StatisticAverage,
+				value: 2,
+			},
+			{
+				stat:  types.StatisticSampleCount,
+				value: 12,
+			},
 		},
-		{
-			stat:  types.StatisticAverage,
-			value: 2,
+		"my.cumulative.exponential.histogram": {
+			{
+				stat:  types.StatisticMinimum,
+				value: 0,
+			},
+			{
+				stat:  types.StatisticMaximum,
+				value: 2,
+			},
+			{
+				stat:  types.StatisticSum,
+				value: 24,
+			},
+			{
+				stat:  types.StatisticAverage,
+				value: 2,
+			},
+			{
+				stat:  types.StatisticSampleCount,
+				value: 12,
+			},
 		},
-		{
-			stat:  types.StatisticSampleCount,
-			value: 12,
-		},
+	}
+	expected, ok := a[metricName]
+	if !ok {
+		log.Printf("Unable to determine expected metrics for %s\n", metricName)
+		return []status.TestResult{{
+			Name:   metricName,
+			Status: status.FAILED,
+		}}
 	}
 	fetcher := metric.MetricValueFetcher{}
 	for _, e := range expected {
