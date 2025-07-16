@@ -246,12 +246,16 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 		}
 		values, err := fetcher.Fetch(namespace, metricName, dims, metric.Statistics(e.stat), metric.MinuteStatPeriod)
 		if err != nil {
-			log.Printf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s}\n", namespace, metricName, e.stat)
+			reason := fmt.Errorf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s}\n", namespace, metricName, e.stat)
+			log.Print(reason)
+			testResult.Reason = reason
 			results = append(results, testResult)
 			continue
 		}
 		if len(values) < 3 {
-			log.Printf("Not enough metrics retrieved for namespace {%s} metric Name {%s} stat {%s}. Need at least 3, got %d", namespace, metricName, e.stat, len(values))
+			reason := fmt.Errorf("Not enough metrics retrieved for namespace {%s} metric Name {%s} stat {%s}. Need at least 3, got %d", namespace, metricName, e.stat, len(values))
+			log.Print(reason)
+			testResult.Reason = reason
 			results = append(results, testResult)
 			continue
 		}
