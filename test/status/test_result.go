@@ -53,7 +53,7 @@ func (r TestGroupResult) Print() {
 	log.Printf("==============%v==============", string(r.GetStatus()))
 	w := tabwriter.NewWriter(log.Writer(), 1, 1, 1, ' ', 0)
 	for _, result := range r.TestResults {
-		fmt.Fprintln(w, result.Name, "\t", result.Status, "\t")
+		fmt.Fprintln(w, result.Name, "\t", result.Status, "\t", result.Reason, "\t")
 	}
 	w.Flush()
 	log.Printf("==============================")
@@ -62,4 +62,5 @@ func (r TestGroupResult) Print() {
 type TestResult struct {
 	Name   string
 	Status TestStatus
+	Reason error
 }
