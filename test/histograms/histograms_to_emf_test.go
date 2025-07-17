@@ -1,6 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-package amp
+package histograms
 
 import (
 	_ "embed"
@@ -17,12 +17,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 func TestOTLPMetrics(t *testing.T) {
+	instanceID := awsservice.GetInstanceId()
+
 	startAgent(t)
-	instanceID := "Test10"
 	err := runOTLPPusher(instanceID)
 	assert.NoError(t, err)
 
@@ -66,15 +68,15 @@ func TestOTLPMetrics(t *testing.T) {
 				},
 				{
 					stat:  types.StatisticSum,
-					value: 10,
+					value: 12, // we send Sum=2 six times in one minute
 				},
 				{
 					stat:  types.StatisticAverage,
-					value: 1,
+					value: 1, // sum / samplecount = 2/2
 				},
 				{
 					stat:  types.StatisticSampleCount,
-					value: 10,
+					value: 12, // we send Count=2 six times in one minute
 				},
 			},
 		},
@@ -100,15 +102,15 @@ func TestOTLPMetrics(t *testing.T) {
 			}{
 				{
 					stat:  types.StatisticMinimum,
-					value: 0,
+					value: 0, // min/max are invalid for cumulative histograms converted to delta
 				},
 				{
 					stat:  types.StatisticMaximum,
-					value: 0,
+					value: 0, // min/max are invalid for cumulative histograms converted to delta
 				},
 				{
 					stat:  types.StatisticSum,
-					value: 10,
+					value: 12, // we send Sum=2 six times in one minute
 				},
 				{
 					stat:  types.StatisticAverage,
@@ -116,7 +118,49 @@ func TestOTLPMetrics(t *testing.T) {
 				},
 				{
 					stat:  types.StatisticSampleCount,
-					value: 10,
+					value: 12, // we send Count=2 six times in one minute
+				},
+			},
+		},
+		{
+			name: "my.delta.exponential.histogram",
+			dimensions: []types.Dimension{
+				{
+					Name:  aws.String("my.delta.exponential.histogram.attr"),
+					Value: aws.String("some value"),
+				},
+				{
+					Name:  aws.String("instance_id"),
+					Value: aws.String(instanceID),
+				},
+				{
+					Name:  aws.String("service.name"),
+					Value: aws.String("my.service"),
+				},
+			},
+			expected: []struct {
+				stat  types.Statistic
+				value float64
+			}{
+				{
+					stat:  types.StatisticMinimum,
+					value: 0,
+				},
+				{
+					stat:  types.StatisticMaximum,
+					value: 5,
+				},
+				{
+					stat:  types.StatisticSum,
+					value: 60, // we send Sum=10 six times in one minute
+				},
+				{
+					stat:  types.StatisticAverage,
+					value: 3.33, // sum / samplecount = 10/3
+				},
+				{
+					stat:  types.StatisticSampleCount,
+					value: 18, // we send Count=3 six times in one minute
 				},
 			},
 		},
@@ -142,65 +186,23 @@ func TestOTLPMetrics(t *testing.T) {
 			}{
 				{
 					stat:  types.StatisticMinimum,
-					value: 0,
+					value: 0, // min/max are invalid for cumulative histograms converted to delta
 				},
 				{
 					stat:  types.StatisticMaximum,
-					value: 5,
+					value: 0, // min/max are invalid for cumulative histograms converted to delta
 				},
 				{
 					stat:  types.StatisticSum,
-					value: 10,
+					value: 12, // we send Sum=2 six times in one minute
 				},
 				{
 					stat:  types.StatisticAverage,
-					value: 3.33,
+					value: 1, // sum / samplecount = 2/2
 				},
 				{
 					stat:  types.StatisticSampleCount,
-					value: 3,
-				},
-			},
-		},
-		{
-			name: "my.delta.exponential.histogram",
-			dimensions: []types.Dimension{
-				{
-					Name:  aws.String("my.exponential.histogram.attr"),
-					Value: aws.String("some value"),
-				},
-				{
-					Name:  aws.String("instance_id"),
-					Value: aws.String(instanceID),
-				},
-				{
-					Name:  aws.String("service.name"),
-					Value: aws.String("my.service"),
-				},
-			},
-			expected: []struct {
-				stat  types.Statistic
-				value float64
-			}{
-				{
-					stat:  types.StatisticMinimum,
-					value: 0,
-				},
-				{
-					stat:  types.StatisticMaximum,
-					value: 5,
-				},
-				{
-					stat:  types.StatisticSum,
-					value: 10,
-				},
-				{
-					stat:  types.StatisticAverage,
-					value: 3.33,
-				},
-				{
-					stat:  types.StatisticSampleCount,
-					value: 3,
+					value: 12, // we send Count=2 six times in one minute
 				},
 			},
 		},
@@ -214,17 +216,12 @@ func TestOTLPMetrics(t *testing.T) {
 			for _, e := range m.expected {
 				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, metric.Statistics(e.stat), metric.MinuteStatPeriod)
 				require.NoError(t, err)
-				require.GreaterOrEqual(t, len(values), 3)
+				require.GreaterOrEqual(t, len(values), 3, "Not enough metrics retrieved for namespace {%s} metric Name {%s} stat {%s}", namespace, m.name, e.stat)
 
-				// Skip first and last values
+				// omit first/last metric as the 1m collection intervals may be missing data points from when the agent was started/stopped
 				middleValues := values[1 : len(values)-1]
-
-				// Check if all values are >= expected value
-				for _, v := range middleValues {
-					assert.GreaterOrEqual(t, v, e.value,
-						"Metric %s with stat %s should have values >= %f, got %f",
-						m.name, e.stat, e.value, v)
-				}
+				err = metric.IsAllValuesGreaterThanOrEqualToExpectedValueWithError(m.name, middleValues, e.value)
+				require.NoError(t, err)
 			}
 		})
 	}

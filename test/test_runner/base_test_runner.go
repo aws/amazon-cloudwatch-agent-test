@@ -117,12 +117,7 @@ func (t *TestRunner) Run() status.TestGroupResult {
 			},
 		}
 	}
-	testGroupResult := t.TestRunner.Validate()
-	if testGroupResult.GetStatus() != status.SUCCESSFUL {
-		log.Printf("%v test group failed due to %v", testName, err)
-	}
-
-	return testGroupResult
+	return t.TestRunner.Validate()
 }
 
 func (t *TestRunner) RunAgent() error {
