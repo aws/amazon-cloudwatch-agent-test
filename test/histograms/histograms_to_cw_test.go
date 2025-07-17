@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package amp
+package histograms
 
 import (
 	_ "embed"
@@ -44,7 +44,7 @@ func init() {
 }
 
 func TestHistogramTestSuite(t *testing.T) {
-	suite.Run(t, new(HistogramTestSuite))
+	suite.Run(t, &HistogramTestSuite{})
 }
 
 type HistogramTestSuite struct {
@@ -130,16 +130,19 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 
 	dims := getDimensions(metadata.InstanceId)
 	if len(dims) == 0 {
-		log.Printf("Unable to determine dimensions for %s\n", metricName)
+		reason := fmt.Errorf("unable to determine dimensions for %s", metricName)
+		log.Println(reason)
 		return []status.TestResult{{
 			Name:   metricName,
 			Status: status.FAILED,
+			Reason: reason,
 		}}
 	}
 
 	a := map[string][]struct {
-		stat  types.Statistic
-		value float64
+		stat    types.Statistic
+		value   float64
+		epsilon float64
 	}{
 		"my.delta.histogram": {
 			{
@@ -192,50 +195,52 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 			},
 			{
 				stat:  types.StatisticMaximum,
-				value: 2,
+				value: 5,
 			},
 			{
 				stat:  types.StatisticSum,
-				value: 24,
+				value: 60, // we send Sum=10 six times in one minute
 			},
 			{
 				stat:  types.StatisticAverage,
-				value: 2,
+				value: 3.33, // sum / samplecount = 10/3
 			},
 			{
 				stat:  types.StatisticSampleCount,
-				value: 12,
+				value: 18, // we send Count=3 six times in one minute
 			},
 		},
 		"my.cumulative.exponential.histogram": {
 			{
 				stat:  types.StatisticMinimum,
-				value: 0,
+				value: 0, // min/max are invalid for cumulative histograms converted to delta
 			},
 			{
 				stat:  types.StatisticMaximum,
-				value: 2,
+				value: 0, // min/max are invalid for cumulative histograms converted to delta
 			},
 			{
 				stat:  types.StatisticSum,
-				value: 24,
+				value: 12, // we send Sum=2 six times in one minute
 			},
 			{
 				stat:  types.StatisticAverage,
-				value: 2,
+				value: 1, // sum / samplecount = 2/2
 			},
 			{
 				stat:  types.StatisticSampleCount,
-				value: 12,
+				value: 12, // we send Count=2 six times in one minute
 			},
 		},
 	}
 	expected, ok := a[metricName]
 	if !ok {
-		log.Printf("Unable to determine expected metrics for %s\n", metricName)
+		reason := fmt.Errorf("Unable to determine expected metrics for %s\n", metricName)
+		log.Println(reason)
 		return []status.TestResult{{
 			Name:   metricName,
 			Status: status.FAILED,
+			Reason: reason,
 		}}
 	}
 	fetcher := metric.MetricValueFetcher{}
@@ -246,21 +251,22 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 		}
 		values, err := fetcher.Fetch(namespace, metricName, dims, metric.Statistics(e.stat), metric.MinuteStatPeriod)
 		if err != nil {
-			reason := fmt.Errorf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s}\n", namespace, metricName, e.stat)
-			log.Print(reason)
+			reason := fmt.Errorf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s}: %w", namespace, metricName, e.stat, err)
+			log.Println(reason)
 			testResult.Reason = reason
 			results = append(results, testResult)
 			continue
 		}
 		if len(values) < 3 {
 			reason := fmt.Errorf("Not enough metrics retrieved for namespace {%s} metric Name {%s} stat {%s}. Need at least 3, got %d", namespace, metricName, e.stat, len(values))
-			log.Print(reason)
+			log.Println(reason)
 			testResult.Reason = reason
 			results = append(results, testResult)
 			continue
 		}
 		// omit first/last metric as the 1m collection intervals may be missing data points from when the agent was started/stopped
-		if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values[1:len(values)-1], e.value) {
+		if err := metric.IsAllValuesGreaterThanOrEqualToExpectedValueWithError(metricName, values[1:len(values)-1], e.value); err != nil {
+			testResult.Reason = err
 			results = append(results, testResult)
 			continue
 		}
