@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -294,5 +296,67 @@ func ValidateLogsFrequency(env *environment.MetaData) status.TestResult {
 	}
 
 	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.TestResult {
+	const core = "core"
+	testResult := status.TestResult{
+		Name:   "emf-logs-neuron-core-utilization",
+		Status: status.SUCCESSFUL,
+	}
+	var testFailed = false
+
+	end := time.Now().Add(-2 * time.Minute).Truncate(time.Minute)
+	start := end.Add(-1 * time.Minute)
+	group := fmt.Sprintf("/aws/containerinsights/%s/performance", env.EKSClusterName)
+
+	// need to get the instances used for the EKS cluster
+	eKSInstances, err := awsservice.GetEKSInstances(env.EKSClusterName)
+	if err != nil {
+		log.Println("failed to get EKS instances", err)
+		testResult.Status = status.FAILED
+		return testResult
+	}
+
+	for _, instance := range eKSInstances {
+		stream := *instance.InstanceName
+		coreMap, err := awsservice.GetNeuronCoreUtilizationPerCore(group, stream, &start, &end)
+
+		if err != nil {
+			log.Printf("log validation (%s/%s) failed: %v, start time : %s, error is : %s", group, stream, err, start, err)
+			testResult.Status = status.FAILED
+			return testResult
+		}
+
+		// We expect 32 Cores from the current test, anything less or more is a bug
+		if len(coreMap) != 32 {
+			log.Printf("32 Cores not found")
+			var coreMapStr strings.Builder
+			for k, v := range coreMap {
+				coreMapStr.WriteString(fmt.Sprintf("%s: %f, ", k, v))
+			}
+			log.Printf("coreMap: %s", coreMapStr.String())
+			testResult.Status = status.FAILED
+			return testResult
+		}
+
+		// Check if coreMap has the expected core utilization values
+		for coreKey, actualValue := range coreMap {
+			if strings.HasPrefix(coreKey, core) {
+				coreNumStr := strings.TrimPrefix(coreKey, core)
+				expectedValue, err := strconv.Atoi(coreNumStr)
+				if err != nil || math.Round(actualValue) != float64(expectedValue) {
+					log.Printf("Core utilization validation failed: expected %s:%d, got %v", 
+						coreKey, expectedValue, actualValue)
+					testFailed = true
+				}
+			}
+		}
+	}
+
+	if testFailed {
+		testResult.Status = status.FAILED
+	}
 	return testResult
 }
