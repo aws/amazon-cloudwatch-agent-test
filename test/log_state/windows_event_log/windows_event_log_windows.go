@@ -65,5 +65,5 @@ type windowsEventWriter struct {
 var _ logs.EntryWriter = (*windowsEventWriter)(nil)
 
 func (w windowsEventWriter) Write(entry string) error {
-	return common.CreateWindowsEvent(w.eventLogName, w.eventLogLevel, entry)
+	return common.CreateWindowsEvent(w.eventLogName, w.eventLogLevel, "1", entry)
 }
