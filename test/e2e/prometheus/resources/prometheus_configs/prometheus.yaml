@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 5s
+  scrape_timeout: 5s
+scrape_configs:
+  - job_name: 'cloudwatch-agent'
+    scrape_interval: 10s
+    static_configs:
+      - targets: [ '0.0.0.0:8888' ]

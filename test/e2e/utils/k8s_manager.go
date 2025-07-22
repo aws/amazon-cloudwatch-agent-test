@@ -93,12 +93,18 @@ func (k *K8CtlManager) Execute(cmdArgs []string) (string, error) {
 
 // ConditionalWait blocks until a condition is met for a Kubernetes resource
 func (k *K8CtlManager) ConditionalWait(condition string, timeout time.Duration, resource string, namespace string) error {
-	wait := exec.Command(k.Command, "wait", condition, fmt.Sprintf("--timeout=%s", timeout.String()), resource, "-n", namespace)
-	output, err := wait.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to wait for %s: %w\nOutput: %s", resource, err, output)
+	startTime := time.Now()
+	for {
+		wait := exec.Command(k.Command, "wait", condition, fmt.Sprintf("--timeout=%s", timeout.String()), resource, "-n", namespace)
+		output, err := wait.CombinedOutput()
+		if err == nil {
+			return nil
+		}
+		if time.Since(startTime) > timeout {
+			return fmt.Errorf("failed to wait for %s: %w\nOutput: %s", resource, err, output)
+		}
+		time.Sleep(5 * time.Second) // Wait before retrying
 	}
-	return nil
 }
 
 // PatchResource applies a patch to a Kubernetes resource
