@@ -152,6 +152,8 @@ resource "null_resource" "validator" {
       -ecsLaunchType=FARGATE \
       -ecsDeploymentStrategy=DAEMON \
       -clusterArn=${aws_ecs_cluster.cluster.arn} \
+      -cwagentECSServiceName=${aws_ecs_service.cwagent_service.name} \
+      -cwagentConfigSsmParamName=${aws_ssm_parameter.cwagent_config.name} \
       -v
     EOT
   }

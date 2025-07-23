@@ -43,7 +43,7 @@ func (r *ECSAgentRunStrategy) RunAgentStrategy(e *environment.MetaData, configFi
 	}
 	fmt.Print("CWAgent service is restarted")
 
-	time.Sleep(5 * time.Minute)
+	time.Sleep(1 * time.Minute)
 
 	return nil
 }

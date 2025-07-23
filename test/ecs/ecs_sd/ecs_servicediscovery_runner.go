@@ -33,14 +33,27 @@ var schema string
 
 type ECSServiceDiscoveryTestRunner struct {
 	test_runner.BaseTestRunner
+	scenarioName string
 }
 
 func (t ECSServiceDiscoveryTestRunner) GetTestName() string {
+	if t.scenarioName != "" {
+		return "ecs_servicediscovery_" + t.scenarioName
+	}
 	return "ecs_servicediscovery"
 }
 
 func (t ECSServiceDiscoveryTestRunner) GetAgentConfigFileName() string {
-	return ""
+	switch t.scenarioName {
+	case "dockerLabel":
+		return ""
+	case "taskDefinitionList":
+		return "./resources/config_task_definition_list.json"
+	case "serviceNameList":
+		return "./resources/config_service_name_list.json"
+	default:
+		return ""
+	}
 }
 
 func (t ECSServiceDiscoveryTestRunner) GetMeasuredMetrics() []string {
