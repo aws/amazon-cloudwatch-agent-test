@@ -21,7 +21,7 @@ func NewValidator(vConfig models.ValidateConfig) (validator models.ValidatorFact
 	case "feature":
 		validator = feature.NewFeatureValidator(vConfig)
 	case "stress":
-		validator = stress.NewStressValidator(vConfig)
+		validator = stress.NewStressValidator2(vConfig)
 	default:
 		return nil, fmt.Errorf("unknown validation type %s provided by test case %s", vConfig.GetValidateType(), vConfig.GetTestCase())
 	}
