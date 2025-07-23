@@ -1,0 +1,115 @@
+# Receivers that agent needs to tests
+receivers: []
+
+#Test case name
+test_case: "win_feature_event_regex_log"
+validate_type: "feature"
+# Only support metrics/traces/logs, even in this case we validate more than logs,
+# we only make this data_type as a placeholder
+data_type: "logs"
+
+# Number of logs being written
+number_monitored_logs: 1
+# Number of metrics to be sent or number of log lines being written  each minute
+values_per_minute: "2"
+# Number of seconds the agent should run and collect the metrics. In this case, 1 minutes
+agent_collection_period: 60 
+
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+
+# Logs that the test needs to validate; moreover, the feature validation already has
+# InstanceID as a log group; therefore, does not need to pass it
+# https://github.com/aws/amazon-cloudwatch-agent-test/blob/96f576e865b55de5e2aa88e4cf80b79c4d3dad70/validator/validators/feature/feature_validator.go#L108-L111
+# Moreover, the logs are being generated at with the generator 
+# https://github.com/aws/amazon-cloudwatch-agent-test/blob/96f576e865b55de5e2aa88e4cf80b79c4d3dad70/internal/common/logs.go#L41-L64
+# and being generated with 2 logs line per minute
+# https://github.com/aws/amazon-cloudwatch-agent-test/blob/96f576e865b55de5e2aa88e4cf80b79c4d3dad70/test/feature/mac/parameters.yml#L14
+# and the collection period is 60. If X minutes, the logs line would be X * log lines
+
+log_validation:
+  - log_value: "This is a log line."
+    log_lines: 2
+    log_stream: "test1.log"
+  - log_value: "# 0 - This is a log line."
+    log_lines: 1
+    log_stream: "test1.log"
+  - log_value: "# 1 - This is a log line."
+    log_lines: 1
+    log_stream: "test1.log"
+  - log_value: "Database connection failed"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "45"
+  - log_value: "Authentication failed for user admin"
+    log_level: "Warning" 
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "90"
+  - log_value: "Authentication failed for user admin"
+    log_level: "Warning" 
+    log_lines: 0
+    log_channel: "Application"
+    log_stream: "ApplicationEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "55"
+  - log_value: "user login successful"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "12"
+  - log_value: "user login successful"
+    log_level: "Warning"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "12"
+  - log_value: "Service started successfully"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "15"
+  - log_value: "CWAgent supports regex"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "777"
+  - log_value: "CWAgent has stopped"
+    log_level: "Error"
+    log_lines: 0
+    log_channel: "System"
+    log_stream: "SystemEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "888"
+  - log_value: "CWAgent has stopped"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "21"
+  - log_value: "memory is full, clear space"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "70"
+  - log_value: "Insufficient memory, only 2MB left"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents3"
+    log_source: "WindowsEvents"
+    log_event_id: "70"
