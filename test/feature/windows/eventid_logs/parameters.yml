@@ -27,12 +27,6 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # and the collection period is 60. If X minutes, the logs line would be X * log lines
 
 log_validation:
-  - log_value: "Microsoft-Windows-Security-Auditing"
-    log_lines: 1
-    log_stream: "SecurityEvent"
-  - log_value: "Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'"
-    log_lines: 1
-    log_stream: "SecurityEvent"
   - log_value: "This is a log line."
     log_lines: 2
     log_stream: "test1.log"
@@ -42,38 +36,23 @@ log_validation:
   - log_value: "# 1 - This is a log line."
     log_lines: 1
     log_stream: "test1.log"
-  - log_value: "System information log"
+  - log_value: "System logon-events log"
     log_level: "Information"
+    log_event_id: 400
     log_lines: 1
     log_channel: "System"
-    log_stream: "System"
+    log_stream: "SystemTest400"
     log_source: "WindowsEvents"
-  - log_value: "System warning log"
-    log_level: "Warning"
-    log_lines: 1
-    log_channel: "System"
-    log_stream: "System"
-    log_source: "WindowsEvents"
-  - log_value: "System error log"
+  - log_value: "Custom app error log"
     log_level: "Error"
+    log_event_id: 700
     log_lines: 1
     log_channel: "System"
-    log_stream: "System"
+    log_stream: "SystemTest700"
     log_source: "WindowsEvents"
-  - log_value: "Application information log"
-    log_level: "Information"
-    log_lines: 1
-    log_channel: "Application"
-    log_stream: "Application"
-    log_source: "WindowsEvents"
-  - log_value: "Application warning log"
+  - log_value: "System buffer error log"
     log_level: "Warning"
-    log_lines: 1
-    log_channel: "Application"
-    log_stream: "Application"
-    log_source: "WindowsEvents"
-  - log_value: "Application error log"
-    log_level: "Error"
+    log_event_id: 89
     log_lines: 1
     log_channel: "Application"
     log_stream: "Application"
