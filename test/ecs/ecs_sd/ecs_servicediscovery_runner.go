@@ -84,7 +84,7 @@ func (t ECSServiceDiscoveryTestRunner) ValidateCloudWatchLogs() status.TestResul
 
 	if logGroupFound {
 		if err != nil {
-			log.Printf("ECS ServiceDiscovery Test LogGroups invalid\n")
+			log.Printf("ECS ServiceDiscovery Test LogGroups invalid: %s\n", err)
 			testResult.Name = err.Error()
 			testResult.Status = status.FAILED
 		} else {
@@ -97,6 +97,11 @@ func (t ECSServiceDiscoveryTestRunner) ValidateCloudWatchLogs() status.TestResul
 
 func (t ECSServiceDiscoveryTestRunner) ValidateLogGroupFormat(logGroupName string) (bool, error) {
 	start := time.Now()
+
+	log.Println("Sleeping to allow metric collection in CloudWatch Logs.")
+	time.Sleep(2 * time.Minute)
+
+	log.Printf("Searching for LogGroup: %s\n", logGroupName)
 
 	for retries := 0; retries < MaxRetryCount; retries++ {
 		if awsservice.IsLogGroupExists(logGroupName) {

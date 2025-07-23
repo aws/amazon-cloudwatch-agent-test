@@ -26,22 +26,22 @@ type ECSAgentRunStrategy struct {
 func (r *ECSAgentRunStrategy) RunAgentStrategy(e *environment.MetaData, configFilePath string) error {
 	b, err := os.ReadFile(configFilePath)
 	if err != nil {
-		return fmt.Errorf("Failed while reading config file")
+		return fmt.Errorf("Failed while reading config file: %s\n", configFilePath)
 	}
 
 	agentConfig := string(b)
 
 	err = awsservice.PutStringParameter(e.CwagentConfigSsmParamName, agentConfig)
 	if err != nil {
-		return fmt.Errorf("Failed while reading config file : %s", err.Error())
+		return fmt.Errorf("Failed while reading config file : %s\n", err.Error())
 	}
-	fmt.Print("Put parameter successful")
+	fmt.Println("Put parameter successful.")
 
 	err = awsservice.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
 	if err != nil {
 		fmt.Print(err)
 	}
-	fmt.Print("CWAgent service is restarted")
+	fmt.Println("CWAgent service is restarting. Sleeping..")
 
 	time.Sleep(1 * time.Minute)
 
@@ -63,7 +63,7 @@ func (t *ECSTestRunner) Run(s ITestSuite, e *environment.MetaData) {
 	if len(agentConfigFileName) != 0 {
 		err := t.RunStrategy.RunAgentStrategy(e, t.Runner.GetAgentConfigFileName())
 		if err != nil {
-			log.Printf("Failed to run agent with config for the given test err:%v", err)
+			log.Printf("Failed to run agent with config for the given test err: %v\n", err)
 			s.AddToSuiteResult(status.TestGroupResult{
 				Name: t.Runner.GetTestName(),
 				TestResults: []status.TestResult{
@@ -75,6 +75,8 @@ func (t *ECSTestRunner) Run(s ITestSuite, e *environment.MetaData) {
 			})
 			return
 		}
+	} else {
+		log.Printf("CloudWatch Agent started.")
 	}
 
 	testGroupResult := t.Runner.Validate()
