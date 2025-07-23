@@ -1,0 +1,68 @@
+{
+  "metrics": [
+    {
+      "name": "apiserver_request_total",
+      "dimensions": {
+        "ClusterName": "eks-performance"
+      },
+      "threshold": 5
+    },
+    {
+      "name": "rest_client_request_duration_seconds",
+      "dimensions": {
+        "ClusterName": "eks-performance"
+      },
+      "threshold": 5
+    },
+    {
+      "name": "rest_client_requests_total",
+      "dimensions": {
+        "ClusterName": "eks-performance"
+      },
+      "threshold": 5
+    },
+    {
+      "name": "pod_status_running",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent"
+      },
+      "threshold": 5
+    },
+    {
+      "name": "pod_cpu_utilization",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent"
+      },
+      "threshold": 5
+    },
+    {
+      "name": "pod_memory_utilization",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent"
+      },
+      "threshold": 5
+    },
+    {
+      "name": "pod_network_tx_bytes",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent"
+      },
+      "threshold": 5
+    },
+    {
+      "name": "cluster_failed_node_count",
+      "dimensions": {
+        "ClusterName": "eks-performance"
+      },
+      "threshold": 5
+    }
+  ]
+}
