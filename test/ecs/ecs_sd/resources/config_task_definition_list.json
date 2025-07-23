@@ -14,9 +14,8 @@
           "sd_result_file": "/tmp/cwagent_ecs_auto_sd.yaml",
           "task_definition_list": [
             {
-              "sd_job_name": "task-def-redis",
               "sd_metrics_ports": "9121",
-              "sd_task_definition_arn_pattern": ".*:task-definition/.*-redis-exporter.*:[0-9]+"
+              "sd_task_definition_arn_pattern": ".*:task-definition/.*extra-apps-family.*:[0-9]+"
             }
           ]
         },

@@ -156,6 +156,21 @@ func IsLogGroupExists(logGroupName string, logGroupClassArg ...types.LogGroupCla
 	return len(describeLogGroupOutput.LogGroups) > 0
 }
 
+// IsLogGroupEmpty confirms whether the logGroupName is empty or not
+func IsLogGroupEmpty(logGroupName string, logStreamName string, logGroupClassArg ...types.LogGroupClass) bool {
+	if IsLogGroupExists(logGroupName) {
+		now := time.Now()
+		minuteAgo := now.Add(-time.Minute)
+		events, err := GetLogsSince(logGroupName, logStreamName, &minuteAgo, &now)
+		if err != nil {
+			log.Println("Error occurred while calling IsLogGroupEmpty ", err)
+			return false
+		}
+		return len(events) > 0
+	}
+	return false
+}
+
 // GetLogQueryStats for the log group between start/end (in epoch seconds) for the
 // query string.
 func GetLogQueryStats(logGroupName string, startTime, endTime int64, queryString string) (*types.QueryStatistics, error) {
