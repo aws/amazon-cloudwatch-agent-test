@@ -3,7 +3,6 @@
 package eks
 
 import (
-	"flag"
 	"log"
 	"testing"
 
@@ -14,7 +13,6 @@ import (
 
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
-	flag.Parse()
 }
 
 func TestEKSPerformance(t *testing.T) {
