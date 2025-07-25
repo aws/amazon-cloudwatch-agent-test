@@ -21,7 +21,7 @@ agents:
       }
     nodeSelector:
       kubernetes.io/os: linux
-      kubernetes.io/hostname: ip-10-1-254-12.us-west-2.compute.internal
+      kubernetes.io/hostname: <hostname>
     env:
       - name: CWAGENT_ROLE
         value: CI_LEADER
