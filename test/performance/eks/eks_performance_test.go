@@ -6,9 +6,8 @@ import (
 	"log"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
-
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 )
 
 func init() {
