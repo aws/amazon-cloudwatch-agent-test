@@ -4,6 +4,9 @@ agents:
     env:
       - name: CWAGENT_ROLE
         value: CI_NODE
+    nodeSelector:
+      kubernetes.io/os: linux
+      cwagent-target: "true"
   - name: cloudwatch-agent-ci
     mode: deployment
     config:
