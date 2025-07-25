@@ -5,21 +5,16 @@
       "dimensions": {
         "ClusterName": "eks-performance"
       },
-      "threshold": 5
+      "threshold": 13500,
+      "stat": "Sum"
     },
     {
       "name": "rest_client_request_duration_seconds",
       "dimensions": {
         "ClusterName": "eks-performance"
       },
-      "threshold": 5
-    },
-    {
-      "name": "rest_client_requests_total",
-      "dimensions": {
-        "ClusterName": "eks-performance"
-      },
-      "threshold": 5
+      "threshold": 0,
+      "stat": "Maximum"
     },
     {
       "name": "pod_status_running",
@@ -28,7 +23,8 @@
         "Namespace": "amazon-cloudwatch",
         "PodName": "cloudwatch-agent"
       },
-      "threshold": 5
+      "threshold": 5001,
+      "stat": "Sum"
     },
     {
       "name": "pod_cpu_utilization",
@@ -37,7 +33,18 @@
         "Namespace": "amazon-cloudwatch",
         "PodName": "cloudwatch-agent"
       },
-      "threshold": 5
+      "threshold": 0.5,
+      "stat": "Maximum"
+    },
+    {
+      "name": "pod_cpu_utilization",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent-ci"
+      },
+      "threshold": 0.35,
+      "stat": "Maximum"
     },
     {
       "name": "pod_memory_utilization",
@@ -46,23 +53,27 @@
         "Namespace": "amazon-cloudwatch",
         "PodName": "cloudwatch-agent"
       },
-      "threshold": 5
+      "threshold": 1.2,
+      "stat": "Maximum"
     },
     {
-      "name": "pod_network_tx_bytes",
+      "name": "pod_memory_utilization",
       "dimensions": {
         "ClusterName": "eks-performance",
         "Namespace": "amazon-cloudwatch",
-        "PodName": "cloudwatch-agent"
+        "PodName": "cloudwatch-agent-ci"
       },
-      "threshold": 5
+      "threshold": 1.7,
+      "stat": "Maximum"
     },
     {
       "name": "cluster_failed_node_count",
       "dimensions": {
         "ClusterName": "eks-performance"
       },
-      "threshold": 5
+      "threshold": 0,
+      "stat": "Sum"
+
     }
   ]
 }

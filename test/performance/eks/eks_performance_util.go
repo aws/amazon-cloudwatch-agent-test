@@ -28,6 +28,7 @@ type Metric struct {
 	Name       string            `json:"name"`
 	Dimensions map[string]string `json:"dimensions"`
 	Threshold  float64           `json:"threshold"`
+	Statistic  string            `json:"stat"`
 }
 
 // GetEKSPerformanceMetrics - Gets desired EKS performance metrics based on json file
@@ -64,7 +65,7 @@ func GetMetricDimensions(metric Metric, env *environment.MetaData) []types.Dimen
 }
 
 // ValidatePerformanceMetrics - Validates that the metric exists and is within the expected threshold (+/- 15%)
-func ValidatePerformanceMetrics(name string, threshold float64, dimensions []types.Dimension) status.TestResult {
+func ValidatePerformanceMetrics(name string, threshold float64, stat string, dimensions []types.Dimension) status.TestResult {
 	testResult := status.TestResult{
 		Name:   name,
 		Status: status.FAILED,
@@ -72,7 +73,7 @@ func ValidatePerformanceMetrics(name string, threshold float64, dimensions []typ
 
 	// get metric from cloudwatch container insights namespace
 	valueFetcher := metric.MetricValueFetcher{}
-	values, err := valueFetcher.Fetch(metric.ContainerInsightsNamespace, name, dimensions, metric.MAXIMUM, metric.MinuteStatPeriod)
+	values, err := valueFetcher.Fetch(metric.ContainerInsightsNamespace, name, dimensions, metric.Statistics(stat), metric.MinuteStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult

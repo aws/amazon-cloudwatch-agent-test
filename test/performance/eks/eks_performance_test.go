@@ -29,7 +29,7 @@ func TestEKSPerformance(t *testing.T) {
 		dimensions := GetMetricDimensions(metric, env)
 
 		log.Printf("Fetching metric from CloudWatch : %v", metric)
-		testResults = append(testResults, ValidatePerformanceMetrics(metric.Name, metric.Threshold, dimensions))
+		testResults = append(testResults, ValidatePerformanceMetrics(metric.Name, metric.Threshold, metric.Statistic, dimensions))
 	}
 
 	res := status.TestGroupResult{
