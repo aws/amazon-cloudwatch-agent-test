@@ -1,3 +1,11 @@
+# Override agent image to use dev build
+agent:
+  image:
+    repository: cloudwatch-agent
+    tag: latest
+    repositoryDomainMap:
+      public: public.ecr.aws/q4e2d9n7
+
 # Create separate installation for node and leader agents
 agents:
   - name: cloudwatch-agent
