@@ -3,7 +3,7 @@ agents:
   - name: cloudwatch-agent
     env:
       - name: CWAGENT_ROLE
-        value: CI_NODE
+        value: NODE
   - name: cloudwatch-agent-ci
     mode: deployment
     config:
@@ -21,7 +21,7 @@ agents:
       kubernetes.io/hostname: <hostname>
     env:
       - name: CWAGENT_ROLE
-        value: CI_LEADER
+        value: LEADER
     resources:
       limits:
         memory: 5Gi
