@@ -1,0 +1,28 @@
+# Create separate installation for node and leader agents
+agents:
+  - name: cloudwatch-agent
+    env:
+      - name: CWAGENT_ROLE
+        value: CI_NODE
+  - name: cloudwatch-agent-ci
+    mode: deployment
+    config:
+      {
+        "logs": {
+          "metrics_collected": {
+            "kubernetes": {
+              "enhanced_container_insights": true
+            }
+          }
+        }
+      }
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/hostname: <hostname>
+    env:
+      - name: CWAGENT_ROLE
+        value: CI_LEADER
+    resources:
+      limits:
+        memory: 5Gi
+        cpu: 2000m

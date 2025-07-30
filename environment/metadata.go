@@ -66,6 +66,8 @@ type MetaData struct {
 	SampleApp                                   string
 	AccountId                                   string
 	EKSInstallationType                         eksinstallationtype.EKSInstallationType
+	PerformanceMetricMapName                    string
+	PerformanceTestName                         string
 }
 
 type MetaDataStrings struct {
@@ -110,6 +112,8 @@ type MetaDataStrings struct {
 	SampleApp                                   string
 	AccountId                                   string
 	EKSInstallationType                         string
+	PerformanceMetricMapName                    string
+	PerformanceTestName                         string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -140,6 +144,8 @@ func registerEKSData(d *MetaDataStrings) {
 	flag.StringVar(&(d.EKSClusterName), "eksClusterName", "", "EKS cluster name")
 	flag.StringVar(&(d.EksDeploymentStrategy), "eksDeploymentStrategy", "", "Daemon/Replica/Sidecar")
 	flag.StringVar(&(d.EksGpuType), "eksGpuType", "", "nvidia/inferentia")
+	flag.StringVar(&(d.PerformanceMetricMapName), "performanceMetricMapName", "", "name of eks performance metric map within directory")
+	flag.StringVar(&(d.PerformanceTestName), "performanceTestName", "", "name of eks performance test")
 }
 
 func registerEKSE2ETestData(dataString *MetaDataStrings) {
@@ -282,6 +288,8 @@ func fillEKSData(e *MetaData, data *MetaDataStrings) {
 
 	e.EKSClusterName = data.EKSClusterName
 	e.EksGpuType = data.EksGpuType
+	e.PerformanceMetricMapName = data.PerformanceMetricMapName
+	e.PerformanceTestName = data.PerformanceTestName
 }
 
 func fillEKSInstallationType(e *MetaData, data *MetaDataStrings) {
