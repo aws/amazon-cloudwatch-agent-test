@@ -6,6 +6,7 @@
 package metric_value_benchmark
 
 import (
+	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
@@ -42,7 +43,7 @@ func (m *MemTestRunner) GetAgentConfigFileName() string {
 func (m *MemTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"mem_active", "mem_available", "mem_available_percent", "mem_buffered", "mem_cached",
-		"mem_free", "mem_inactive", "mem_total", "mem_used", "mem_used_percent", "mem_slab"}
+		"mem_free", "mem_inactive", "mem_total", "mem_used", "mem_used_percent", "mem_shared"}
 }
 
 func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
@@ -66,6 +67,10 @@ func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
 	values, err := fetcher.Fetch(namespace, metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
 	if err != nil {
 		return testResult
+	}
+
+	if metricName == "mem_shared" {
+		fmt.Printf("mem_shared values: %v\n", values)
 	}
 
 	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
