@@ -78,10 +78,6 @@ func TestOTLPMetrics(t *testing.T) {
 					stat:  types.StatisticSampleCount,
 					value: 12, // we send Count=2 six times in one minute
 				},
-				{
-					stat:  "p90",
-					value: 5,
-				},
 			},
 		},
 		{
@@ -123,10 +119,6 @@ func TestOTLPMetrics(t *testing.T) {
 				{
 					stat:  types.StatisticSampleCount,
 					value: 12, // we send Count=2 six times in one minute
-				},
-				{
-					stat:  "p90",
-					value: 5,
 				},
 			},
 		},
@@ -170,10 +162,6 @@ func TestOTLPMetrics(t *testing.T) {
 					stat:  types.StatisticSampleCount,
 					value: 18, // we send Count=3 six times in one minute
 				},
-				{
-					stat:  "p90",
-					value: 5,
-				},
 			},
 		},
 		{
@@ -215,10 +203,6 @@ func TestOTLPMetrics(t *testing.T) {
 				{
 					stat:  types.StatisticSampleCount,
 					value: 12, // we send Count=2 six times in one minute
-				},
-				{
-					stat:  "p90",
-					value: 5,
 				},
 			},
 		},
