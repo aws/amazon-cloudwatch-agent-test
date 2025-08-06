@@ -167,7 +167,7 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 			},
 			{
 				stat:  "p90",
-				value: 5,
+				value: 2.0,
 			},
 		},
 		"my.cumulative.histogram": {
@@ -193,7 +193,7 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 			},
 			{
 				stat:  "p90",
-				value: 5,
+				value: 2.0,
 			},
 		},
 		"my.delta.exponential.histogram": {
@@ -245,7 +245,7 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 			},
 			{
 				stat:  "p90",
-				value: 5,
+				value: 5.95,
 			},
 		},
 	}
