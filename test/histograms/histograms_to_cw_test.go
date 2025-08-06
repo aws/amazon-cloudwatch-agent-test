@@ -191,6 +191,10 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 				stat:  types.StatisticSampleCount,
 				value: 12,
 			},
+			{
+				stat:  "p90",
+				value: 5,
+			},
 		},
 		"my.delta.exponential.histogram": {
 			{
@@ -213,6 +217,10 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 				stat:  types.StatisticSampleCount,
 				value: 18, // we send Count=3 six times in one minute
 			},
+			{
+				stat:  "p90",
+				value: 5,
+			},
 		},
 		"my.cumulative.exponential.histogram": {
 			{
@@ -234,6 +242,10 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 			{
 				stat:  types.StatisticSampleCount,
 				value: 12, // we send Count=2 six times in one minute
+			},
+			{
+				stat:  "p90",
+				value: 5,
 			},
 		},
 	}
