@@ -214,7 +214,7 @@ func TestOTLPMetrics(t *testing.T) {
 	for _, m := range metrics {
 		t.Run(m.name, func(t *testing.T) {
 			for _, e := range m.expected {
-				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, metric.Statistics(e.stat), metric.MinuteStatPeriod)
+				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, e.stat, metric.MinuteStatPeriod)
 				require.NoError(t, err)
 				require.GreaterOrEqual(t, len(values), 3, "Not enough metrics retrieved for namespace {%s} metric Name {%s} stat {%s}", namespace, m.name, e.stat)
 

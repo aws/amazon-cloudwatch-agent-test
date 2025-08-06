@@ -165,6 +165,10 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 				stat:  types.StatisticSampleCount,
 				value: 12,
 			},
+			{
+				stat:  "p90",
+				value: 5,
+			},
 		},
 		"my.cumulative.histogram": {
 			{
@@ -249,7 +253,7 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 			Name:   fmt.Sprintf("%s/%s", metricName, e.stat),
 			Status: status.FAILED,
 		}
-		values, err := fetcher.Fetch(namespace, metricName, dims, metric.Statistics(e.stat), metric.MinuteStatPeriod)
+		values, err := fetcher.Fetch(namespace, metricName, dims, e.stat, metric.MinuteStatPeriod)
 		if err != nil {
 			reason := fmt.Errorf("Unable to fetch metrics for namespace {%s} metric name {%s} stat {%s}: %w", namespace, metricName, e.stat, err)
 			log.Println(reason)
