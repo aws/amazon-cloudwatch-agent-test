@@ -7,6 +7,7 @@ package emf_prometheus
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -35,12 +36,21 @@ func setupPrometheus(prometheusConfig, prometheusMetrics string, jobName string)
 		configContent = prometheusConfig
 	}
 
+	// Allow current user to write to /tmp directory
+	if _, err := common.RunCommand("sudo chmod 777 /tmp"); err != nil {
+		return fmt.Errorf("unable to chmod /tmp: %w", err)
+	}
+	fmt.Println(configContent)
+	fmt.Println(prometheusMetrics)
+	if err := os.WriteFile("/tmp/prometheus.yaml", []byte(configContent), os.ModePerm); err != nil {
+		return fmt.Errorf("unable to write to /tmp/prometheus.yaml: %w", err)
+	}
+	if err := os.WriteFile("/tmp/metrics", []byte(prometheusMetrics), os.ModePerm); err != nil {
+		return fmt.Errorf("unable to write to /tmp/metrics: %w", err)
+	}
 	commands := []string{
-		fmt.Sprintf("cat <<EOF | sudo tee /tmp/prometheus.yaml\n%s\nEOF", configContent),
-		fmt.Sprintf("cat <<EOF | sudo tee /tmp/metrics\n%s\nEOF", prometheusMetrics),
 		"sudo python3 -m http.server 8101 --directory /tmp &> /dev/null &",
 	}
-
 	err := common.RunCommands(commands)
 	if err != nil {
 		return fmt.Errorf("failed to setup Prometheus: %v", err)
@@ -64,9 +74,27 @@ func cleanup(logGroupName string) {
 	awsservice.DeleteLogGroup(logGroupName)
 }
 
+func verifyRelabeledMetricsInCloudWatch(namespace string) status.TestResult {
+	return verifyMetricsInCloudWatchWithDimensions(namespace, "Relabeled Metrics Presence", func(m struct{ name, promType string }) []types.Dimension {
+		return []types.Dimension{{
+			Name:  aws.String("my_replacement_test"),
+			Value: aws.String(fmt.Sprintf("yes/%s", m.promType)),
+		}}
+	})
+}
+
 func verifyMetricsInCloudWatch(namespace string) status.TestResult {
+	return verifyMetricsInCloudWatchWithDimensions(namespace, "Metrics Presence", func(m struct{ name, promType string }) []types.Dimension {
+		return []types.Dimension{{
+			Name:  aws.String("prom_type"),
+			Value: aws.String(m.promType),
+		}}
+	})
+}
+
+func verifyMetricsInCloudWatchWithDimensions(namespace, testName string, dimensionFunc func(struct{ name, promType string }) []types.Dimension) status.TestResult {
 	testResult := status.TestResult{
-		Name:   "Metrics Presence",
+		Name:   testName,
 		Status: status.FAILED,
 	}
 
@@ -85,10 +113,7 @@ func verifyMetricsInCloudWatch(namespace string) status.TestResult {
 
 	for _, m := range metricsToCheck {
 		log.Printf("Checking metric %s of type %s...", m.name, m.promType)
-		dims := []types.Dimension{{
-			Name:  aws.String("prom_type"),
-			Value: aws.String(m.promType),
-		}}
+		dims := dimensionFunc(m)
 
 		success := false
 		for attempt := 1; attempt <= maxRetries; attempt++ {

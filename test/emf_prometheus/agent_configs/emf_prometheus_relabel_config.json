@@ -17,7 +17,8 @@
               "source_labels": ["include"],
               "label_matcher": "^yes$",
               "dimensions": [
-                ["prom_type"]
+                ["prom_type"],
+                ["my_replacement_test"]
               ],
               "metric_selectors": [
                 "^prometheus_test*"
