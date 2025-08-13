@@ -2,7 +2,7 @@
 receivers: []
 
 #Test case name
-test_case: "win_feature_event_log"
+test_case: "win_feature_event_regex_log"
 validate_type: "feature"
 # Only support metrics/traces/logs, even in this case we validate more than logs,
 # we only make this data_type as a placeholder
@@ -27,12 +27,6 @@ cloudwatch_agent_config: "<cloudwatch_agent_config>"
 # and the collection period is 60. If X minutes, the logs line would be X * log lines
 
 log_validation:
-  - log_value: "Microsoft-Windows-Security-Auditing"
-    log_lines: 1
-    log_stream: "SecurityEvent"
-  - log_value: "Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'"
-    log_lines: 1
-    log_stream: "SecurityEvent"
   - log_value: "This is a log line."
     log_lines: 2
     log_stream: "test1.log"
@@ -42,39 +36,80 @@ log_validation:
   - log_value: "# 1 - This is a log line."
     log_lines: 1
     log_stream: "test1.log"
-  - log_value: "System information log"
-    log_level: "Information"
-    log_lines: 1
-    log_channel: "System"
-    log_stream: "System"
-    log_source: "WindowsEvents"
-  - log_value: "System warning log"
-    log_level: "Warning"
-    log_lines: 1
-    log_channel: "System"
-    log_stream: "System"
-    log_source: "WindowsEvents"
-  - log_value: "System error log"
-    log_level: "Error"
-    log_lines: 1
-    log_channel: "System"
-    log_stream: "System"
-    log_source: "WindowsEvents"
-  - log_value: "Application information log"
-    log_level: "Information"
-    log_lines: 1
-    log_channel: "Application"
-    log_stream: "Application"
-    log_source: "WindowsEvents"
-  - log_value: "Application warning log"
-    log_level: "Warning"
-    log_lines: 1
-    log_channel: "Application"
-    log_stream: "Application"
-    log_source: "WindowsEvents"
-  - log_value: "Application error log"
+  - log_value: "Database connection failed"
     log_level: "Error"
     log_lines: 1
     log_channel: "Application"
-    log_stream: "Application"
+    log_stream: "ApplicationEvents"
     log_source: "WindowsEvents"
+    log_event_id: "45"
+  - log_value: "Authentication failed for user admin"
+    log_level: "Warning" 
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "90"
+  - log_value: "Authentication failed for user admin"
+    log_level: "Warning" 
+    log_lines: 0
+    log_channel: "Application"
+    log_stream: "ApplicationEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "55"
+  - log_value: "user login successful"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "12"
+  - log_value: "user login successful"
+    log_level: "Warning"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "12"
+  - log_value: "Service started successfully"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "15"
+  - log_value: "CWAgent supports regex"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "777"
+  - log_value: "CWAgent has stopped"
+    log_level: "Error"
+    log_lines: 0
+    log_channel: "System"
+    log_stream: "SystemEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "888"
+  - log_value: "CWAgent has stopped"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "21"
+  - log_value: "memory is full, clear space"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "70"
+  - log_value: "Insufficient memory, only 2MB left"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents3"
+    log_source: "WindowsEvents"
+    log_event_id: "70"

@@ -1,0 +1,89 @@
+{
+  "metrics": [
+    {
+      "name": "apiserver_request_total",
+      "dimensions": {
+        "ClusterName": "eks-performance"
+      },
+      "threshold": 13500,
+      "stat": "Sum"
+    },
+    {
+      "name": "rest_client_request_duration_seconds",
+      "dimensions": {
+        "ClusterName": "eks-performance"
+      },
+      "threshold": 0,
+      "stat": "Maximum"
+    },
+    {
+      "name": "cluster_failed_node_count",
+      "dimensions": {
+        "ClusterName": "eks-performance"
+      },
+      "threshold": 0,
+      "stat": "Sum"
+
+    },
+    {
+      "name": "pod_status_running",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent"
+      },
+      "threshold": 5000,
+      "stat": "Sum"
+    },
+    {
+      "name": "pod_status_running",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent-ci"
+      },
+      "threshold": 1,
+      "stat": "Sum"
+    },
+    {
+      "name": "pod_cpu_utilization",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent"
+      },
+      "threshold": 0.25,
+      "stat": "Maximum"
+    },
+    {
+      "name": "pod_cpu_utilization",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent-ci"
+      },
+      "threshold": 0.5,
+      "stat": "Maximum"
+    },
+    {
+      "name": "pod_memory_utilization",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent"
+      },
+      "threshold": 2.3,
+      "stat": "Maximum"
+    },
+    {
+      "name": "pod_memory_utilization",
+      "dimensions": {
+        "ClusterName": "eks-performance",
+        "Namespace": "amazon-cloudwatch",
+        "PodName": "cloudwatch-agent-ci"
+      },
+      "threshold": 1.8,
+      "stat": "Maximum"
+    }
+  ]
+}

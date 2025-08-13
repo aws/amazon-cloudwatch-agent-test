@@ -36,7 +36,11 @@ func GenerateWindowsEvents(validationLog []models.LogValidation) error {
 	var multiErr error
 	for _, vLog := range validationLog {
 		if vLog.LogSource == "WindowsEvents" && vLog.LogLevel != "" {
-			err := CreateWindowsEvent(vLog.LogStream, vLog.LogLevel, vLog.LogValue)
+			id := "1"
+			if vLog.LogEventID != "" {
+				id = vLog.LogEventID
+			}
+			err := CreateWindowsEvent(vLog.LogChannel, vLog.LogLevel, id, vLog.LogValue)
 			if err != nil {
 				multiErr = multierr.Append(multiErr, err)
 			}
@@ -45,15 +49,15 @@ func GenerateWindowsEvents(validationLog []models.LogValidation) error {
 	return multiErr
 }
 
-func CreateWindowsEvent(eventLogName string, eventLogLevel string, msg string) error {
-	out, err := exec.Command("eventcreate", "/ID", "1", "/L", eventLogName, "/T", eventLogLevel, "/SO", "MYEVENTSOURCE"+eventLogName, "/D", msg).Output()
+func CreateWindowsEvent(eventLogName string, eventLogLevel string, eventID string, msg string) error {
+	out, err := exec.Command("eventcreate", "/ID", eventID, "/L", eventLogName, "/T", eventLogLevel, "/SO", "MYEVENTSOURCE"+eventLogName, "/D", msg).Output()
 
 	if err != nil {
 		log.Printf("Windows event creation failed: %v; the output is: %s", err, string(out))
 		return err
 	}
 
-	log.Printf("Windows Event is successfully created for logname: %s, loglevel: %s, logmsg: %s", eventLogName, eventLogLevel, msg)
+	log.Printf("Windows Event is successfully created for logname: %s, loglevel: %s, logeventId: %s, logmsg: %s", eventLogName, eventLogLevel, eventID, msg)
 	return nil
 }
 

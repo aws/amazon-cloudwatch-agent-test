@@ -33,14 +33,27 @@ var schema string
 
 type ECSServiceDiscoveryTestRunner struct {
 	test_runner.BaseTestRunner
+	scenarioName string
 }
 
 func (t ECSServiceDiscoveryTestRunner) GetTestName() string {
+	if t.scenarioName != "" {
+		return "ecs_servicediscovery_" + t.scenarioName
+	}
 	return "ecs_servicediscovery"
 }
 
 func (t ECSServiceDiscoveryTestRunner) GetAgentConfigFileName() string {
-	return ""
+	switch t.scenarioName {
+	case "dockerLabel":
+		return ""
+	case "taskDefinitionList":
+		return "./resources/config_task_definition_list.json"
+	case "serviceNameList":
+		return "./resources/config_service_name_list.json"
+	default:
+		return ""
+	}
 }
 
 func (t ECSServiceDiscoveryTestRunner) GetMeasuredMetrics() []string {
@@ -71,7 +84,7 @@ func (t ECSServiceDiscoveryTestRunner) ValidateCloudWatchLogs() status.TestResul
 
 	if logGroupFound {
 		if err != nil {
-			log.Printf("ECS ServiceDiscovery Test LogGroups invalid\n")
+			log.Printf("ECS ServiceDiscovery Test LogGroups invalid: %s\n", err)
 			testResult.Name = err.Error()
 			testResult.Status = status.FAILED
 		} else {
@@ -84,6 +97,11 @@ func (t ECSServiceDiscoveryTestRunner) ValidateCloudWatchLogs() status.TestResul
 
 func (t ECSServiceDiscoveryTestRunner) ValidateLogGroupFormat(logGroupName string) (bool, error) {
 	start := time.Now()
+
+	log.Println("Sleeping to allow metric collection in CloudWatch Logs.")
+	time.Sleep(2 * time.Minute)
+
+	log.Printf("Searching for LogGroup: %s\n", logGroupName)
 
 	for retries := 0; retries < MaxRetryCount; retries++ {
 		if awsservice.IsLogGroupExists(logGroupName) {
