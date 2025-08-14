@@ -19,7 +19,13 @@
     "node_efa_rdma_write_recv_bytes": {},
     "node_efa_rx_bytes": {},
     "node_efa_rx_dropped": {},
-    "node_efa_tx_bytes": {}
+    "node_efa_tx_bytes": {},
+    "node_efa_limit": {},
+    "node_efa_request": {},
+    "node_efa_usage_total": {},
+    "node_efa_reserved_capacity": {},
+    "node_efa_unreserved_capacity": {},
+    "node_efa_available_capacity": {}
   },
   "required": [
     "ClusterName",
