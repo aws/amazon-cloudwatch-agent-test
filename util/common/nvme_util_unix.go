@@ -32,3 +32,24 @@ func GetAnyNvmeVolumeID() (string, error) {
 
 	return "", fmt.Errorf("could not find an nvme device")
 }
+
+// GetAnyInstanceStoreSerialID returns the serial ID of the first NVMe instance store device found.
+func GetAnyInstanceStoreSerialID() (string, error) {
+	entries, err := os.ReadDir(sysClassNvmeDirPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read NVMe devices: %v", err)
+	}
+
+	for _, entry := range entries {
+		data, err := os.ReadFile(fmt.Sprintf("%s/%s/serial", sysClassNvmeDirPath, entry.Name()))
+		if err != nil {
+			continue // skip devices we can't read
+		}
+		serial := strings.TrimSpace(string(data))
+		if serial != "" {
+			return serial, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find any NVMe instance store device")
+}
