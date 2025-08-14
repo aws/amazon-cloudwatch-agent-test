@@ -24,6 +24,9 @@ var expectedDimsToMetrics = map[string][]string{
 		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageConstants, NodeNeuronCoreMemUsageModel, NodeNeuronCoreMemUsageScratchpad,
 		NodeNeuronCoreMemUsageRuntime, NodeNeuronCoreMemUsageTensors, NodeNeuronCoreMemUsageTotal, NodeNeuronDeviceHwEccEvents,
 		NodeExecutionErrorsTotal, NodeNeuronDeviceRuntimeMemoryUsed, NodeNeuronExecutionLatency,
+		NodeNeuronCoreLimit, NodeNeuronCoreUsageTotalAlloc, NodeNeuronCoreRequest,
+		NodeNeuronCoreReservedCapacity, NodeNeuronCoreUnreservedCapacity, NodeNeuronCoreAvailableCapacity,
+		PodNeuronCoreLimit, PodNeuronCoreUsageTotalAlloc, PodNeuronCoreRequest, PodNeuronCoreReservedCapacity,
 	},
 }
 

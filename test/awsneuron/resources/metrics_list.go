@@ -45,4 +45,16 @@ const (
 	NodeExecutionStatusFailedToQueue       = "node_neuron_execution_status_failed_to_queue"
 	NodeNeuronDeviceRuntimeMemoryUsed      = "node_neurondevice_runtime_memory_used_bytes"
 	NodeNeuronExecutionLatency             = "node_neuron_execution_latency"
+
+	NodeNeuronCoreLimit              = "node_neuroncore_limit"
+	NodeNeuronCoreUsageTotalAlloc    = "node_neuroncore_usage_total"
+	NodeNeuronCoreRequest            = "node_neuroncore_request"
+	NodeNeuronCoreReservedCapacity   = "node_neuroncore_reserved_capacity"
+	NodeNeuronCoreUnreservedCapacity = "node_neuroncore_unreserved_capacity"
+	NodeNeuronCoreAvailableCapacity  = "node_neuroncore_available_capacity"
+
+	PodNeuronCoreLimit            = "pod_neuroncore_limit"
+	PodNeuronCoreUsageTotalAlloc  = "pod_neuroncore_usage_total"
+	PodNeuronCoreRequest          = "pod_neuroncore_request"
+	PodNeuronCoreReservedCapacity = "pod_neuroncore_reserved_capacity"
 )
