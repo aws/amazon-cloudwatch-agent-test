@@ -220,6 +220,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
 		{testDir: "../../../test/feature/windows/event_logs"},
+		{testDir: "../../../test/feature/windows/eventid_logs"},
+		{testDir: "../../../test/feature/windows/event_regex_logs"},
 		{testDir: "../../../test/log_state/logfile"},
 		{testDir: "../../../test/log_state/windows_event_log"},
 		{
@@ -337,6 +339,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//},
 		{
 			testDir: "./test/metric_value_benchmark", terraformDir: "terraform/eks/daemon/credentials/pod_identity",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/ebscsi",
+			terraformDir: "terraform/eks/daemon/ebs",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 	},
