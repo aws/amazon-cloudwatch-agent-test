@@ -85,8 +85,10 @@ var expectedDimsToMetrics = map[string][]string{
 		NodeNeuronExecutionLatency, NodeNeuronDeviceHwEccEvents,
 	},
 	"ClusterName-InstanceId-NodeName": {
-		NodeExecutionErrorsTotal, NodeNeuronDeviceRuntimeMemoryUsed, NodeNeuronExecutionLatency,
-		NodeNeuronDeviceHwEccEvents,
+		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageTotal, NodeNeuronCoreMemUsageConstants,
+		NodeNeuronCoreMemUsageModel, NodeNeuronCoreMemUsageScratchpad, NodeNeuronCoreMemUsageRuntime,
+		NodeNeuronCoreMemUsageTensors, NodeExecutionErrorsTotal, NodeNeuronDeviceRuntimeMemoryUsed,
+		NodeNeuronExecutionLatency, NodeNeuronDeviceHwEccEvents,
 	},
 	"ClusterName-InstanceId-InstanceType-NeuronCore-NeuronDevice-NodeName": {
 		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageTotal, NodeNeuronCoreMemUsageConstants,
