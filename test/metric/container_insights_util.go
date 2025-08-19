@@ -40,6 +40,16 @@ type dimToMetrics struct {
 
 func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDimsToMetrics map[string][]string) []status.TestResult {
 	var results []status.TestResult
+	
+	// Log expectedDimsToMetrics before dimsToMetrics
+	log.Printf("Expected %d dimension groups", len(expectedDimsToMetrics))
+	for dims, metrics := range expectedDimsToMetrics {
+		log.Printf("Expected dimension group: %s with %d metrics", dims, len(metrics))
+		for _, metricName := range metrics {
+			log.Printf("  Expected metric: %s", metricName)
+		}
+	}
+	
 	dimsToMetrics := getMetricsInClusterDimension(env, metricFilter)
 	log.Printf("Found %d dimension groups", len(dimsToMetrics))
 	for _, dtm := range dimsToMetrics {
