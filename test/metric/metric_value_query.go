@@ -29,7 +29,7 @@ func logDimensions(dims []types.Dimension) {
 	}
 }
 
-func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat Statistics, metricQueryPeriod int32) (MetricValues, error) {
+func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificDimensions []types.Dimension, stat types.Statistic, metricQueryPeriod int32) (MetricValues, error) {
 	dimensions := metricSpecificDimensions
 	log.Println("Metric query input dimensions")
 	logDimensions(dimensions)
