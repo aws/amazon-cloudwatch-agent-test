@@ -28155,6 +28155,7 @@
             "instance_region": "us-east-1",
             "ami_id": "ami-030686a4e905e98d3",
             "subnet_id": "subnet-06a7754948e8a000f",
+            "ultraserver_id": "u-cafb07773a569a23",
             "error": ""
         },
         "neuron_hardware_info": {
