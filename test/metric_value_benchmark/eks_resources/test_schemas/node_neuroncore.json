@@ -25,7 +25,13 @@
     "node_neuroncore_memory_usage_runtime_memory": {},
     "node_neuroncore_memory_usage_tensors": {},
     "node_neuroncore_memory_usage_total": {},
-    "node_neuroncore_utilization": {}
+    "node_neuroncore_utilization": {},
+    "node_neuroncore_limit": {},
+    "node_neuroncore_usage_total": {},
+    "node_neuroncore_request": {},
+    "node_neuroncore_reserved_capacity": {},
+    "node_neuroncore_unreserved_capacity": {},
+    "node_neuroncore_available_capacity": {}
   },
   "required": [
     "ClusterName",
