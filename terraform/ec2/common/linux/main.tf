@@ -75,6 +75,11 @@ resource "aws_instance" "cwagent" {
     volume_size = 200
   }
 
+  ephemeral_block_device {
+    device_name  = "/dev/sdb"
+    virtual_name = "ephemeral0"
+  }
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
@@ -83,6 +88,27 @@ resource "aws_instance" "cwagent" {
   tags = {
     Name = var.is_canary ? "cwagent-canary-test-ec2-${var.test_name}-${module.common.testing_id}" : "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
   }
+}
+
+resource "null_resource" "check_nvme" {
+
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo yum install -y nvme-cli",
+      "sudo nvme list"
+    ]
+  }
+
+  depends_on = [
+    aws_instance.cwagent,
+  ]
 }
 
 resource "null_resource" "integration_test_fips_setup" {
