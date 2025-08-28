@@ -24,6 +24,7 @@ import (
 const (
 	instanceStoreEntityResourceType = "AWS::EC2::Instance"
 	instanceStoreEntityType         = "AWS::Resource"
+	region                          = "us-west-2"
 )
 
 type DiskIOInstanceStoreTestRunner struct {
