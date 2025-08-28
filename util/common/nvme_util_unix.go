@@ -41,11 +41,22 @@ func GetAnyInstanceStoreSerialID() (string, error) {
 	}
 
 	for _, entry := range entries {
-		data, err := os.ReadFile(fmt.Sprintf("%s/%s/serial", sysClassNvmeDirPath, entry.Name()))
+		modelPath := fmt.Sprintf("%s/%s/model", sysClassNvmeDirPath, entry.Name())
+		modelData, err := os.ReadFile(modelPath)
 		if err != nil {
-			continue // skip devices we can't read
+			continue // skip if can't read model
 		}
-		serial := strings.TrimSpace(string(data))
+		model := strings.TrimSpace(string(modelData))
+		if model != "Amazon EC2 NVMe Instance Storage" {
+			continue // skip if not the instance storage model
+		}
+
+		serialPath := fmt.Sprintf("%s/%s/serial", sysClassNvmeDirPath, entry.Name())
+		serialData, err := os.ReadFile(serialPath)
+		if err != nil {
+			continue // skip if can't read serial
+		}
+		serial := strings.TrimSpace(string(serialData))
 		if serial != "" {
 			return serial, nil
 		}
