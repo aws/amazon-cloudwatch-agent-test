@@ -2,8 +2,7 @@
   "agent": {
     "metrics_collection_interval": 10,
     "run_as_user": "root",
-    "debug": true,
-    "logfile": ""
+    "debug": true
   },
   "metrics": {
     "namespace": "MetricValueBenchmarkTest",
@@ -22,8 +21,8 @@
           "instance_store_total_write_bytes",
           "instance_store_total_read_time",
           "instance_store_total_write_time",
-          "instance_store_volume_performance_exceeded_iops",
-          "instance_store_volume_performance_exceeded_tp",
+          "instance_store_performance_exceeded_iops",
+          "instance_store_performance_exceeded_tp",
           "instance_store_volume_queue_length"
         ],
         "metrics_collection_interval": 10
