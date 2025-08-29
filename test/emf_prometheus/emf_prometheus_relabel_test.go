@@ -65,6 +65,7 @@ func (t *RelabelTestRunner) Validate() status.TestGroupResult {
 	testResults := []status.TestResult{
 		verifyRelabeledMetrics(t.logGroupName),
 		verifyMetricsInCloudWatch(t.namespace),
+		verifyRelabeledMetricsInCloudWatch(t.namespace),
 	}
 
 	defer cleanup(t.logGroupName)
@@ -131,8 +132,19 @@ func verifyRelabeledMetrics(logGroupName string) status.TestResult {
 		}
 
 		myName, hasMyName := emfLog["my_name"].(string)
-		if !hasMyName {
-			log.Printf("EMF log missing my_name field: %s", *event.Message)
+		myReplacementTest, hasMyReplacementTest := emfLog["my_replacement_test"].(string)
+		promType, hasPromType := emfLog["prom_type"].(string)
+		include, hasInclude := emfLog["include"].(string)
+		if !hasMyName || !hasMyReplacementTest || !hasPromType || !hasInclude {
+			log.Printf("EMF log missing my_name, my_replacement_test, prom_type, or include field: %v", emfLog)
+			continue
+		}
+
+		// The test sets up a relabel config to combine the "include" and "promType" tags using
+		// a replacement field that uses ${2} and $1 syntaxes. This verifies
+		expectedMyReplacementTest := fmt.Sprintf("%s/%s", include, promType)
+		if myReplacementTest != expectedMyReplacementTest {
+			log.Printf("EMF log my_replacement_field is not as expected. expected %s, got %s. event %v", expectedMyReplacementTest, myReplacementTest, *event.Message)
 			continue
 		}
 

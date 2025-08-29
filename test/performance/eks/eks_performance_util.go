@@ -75,7 +75,7 @@ func ValidatePerformanceMetrics(name string, threshold float64, stat string, dim
 
 	// get metric from cloudwatch container insights namespace
 	valueFetcher := metric.MetricValueFetcher{}
-	values, err := valueFetcher.Fetch(metric.ContainerInsightsNamespace, name, dimensions, metric.Statistics(stat), metric.MinuteStatPeriod)
+	values, err := valueFetcher.Fetch(metric.ContainerInsightsNamespace, name, dimensions, types.Statistic(stat), metric.MinuteStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
