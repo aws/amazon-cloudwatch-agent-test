@@ -32,3 +32,35 @@ func GetAnyNvmeVolumeID() (string, error) {
 
 	return "", fmt.Errorf("could not find an nvme device")
 }
+
+// GetAnyInstanceStoreSerialID returns the serial ID of the first NVMe instance store device found.
+func GetAnyInstanceStoreSerialID() (string, error) {
+	entries, err := os.ReadDir(sysClassNvmeDirPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read NVMe devices: %v", err)
+	}
+
+	for _, entry := range entries {
+		modelPath := fmt.Sprintf("%s/%s/model", sysClassNvmeDirPath, entry.Name())
+		modelData, err := os.ReadFile(modelPath)
+		if err != nil {
+			continue // skip if can't read model
+		}
+		model := strings.TrimSpace(string(modelData))
+		if model != "Amazon EC2 NVMe Instance Storage" {
+			continue // skip if not the instance storage model
+		}
+
+		serialPath := fmt.Sprintf("%s/%s/serial", sysClassNvmeDirPath, entry.Name())
+		serialData, err := os.ReadFile(serialPath)
+		if err != nil {
+			continue // skip if can't read serial
+		}
+		serial := strings.TrimSpace(string(serialData))
+		if serial != "" {
+			return serial, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find any NVMe instance store device")
+}
