@@ -13,24 +13,36 @@ import (
 
 const sysClassNvmeDirPath = "/sys/class/nvme"
 
-// GetAnyNvmeVolumeID will return the volume ID of the first NVMe device found
-func GetAnyNvmeVolumeID() (string, error) {
+// GetAnyEBSVolumeID will return the volume ID of the first NVMe device found
+func GetAnyEBSVolumeID() (string, error) {
 	entries, err := os.ReadDir(sysClassNvmeDirPath)
 	if err != nil {
 		return "", err
 	}
 
 	for _, entry := range entries {
-		data, err := os.ReadFile(fmt.Sprintf("%s/%s/serial", sysClassNvmeDirPath, entry.Name()))
+		modelPath := fmt.Sprintf("%s/%s/model", sysClassNvmeDirPath, entry.Name())
+		modelData, err := os.ReadFile(modelPath)
 		if err != nil {
-			return "", nil
+			continue // skip if can't read model
 		}
-		trimmed := strings.TrimPrefix(strings.TrimSpace(string(data)), "vol")
-		// Just take the first entry
-		return "vol-" + trimmed, nil
+		model := strings.TrimSpace(string(modelData))
+		if model != "Amazon Elastic Block Store" {
+			continue // skip if not the EBS model
+		}
+
+		serialPath := fmt.Sprintf("%s/%s/serial", sysClassNvmeDirPath, entry.Name())
+		serialData, err := os.ReadFile(serialPath)
+		if err != nil {
+			continue // skip if can't read serial
+		}
+		trimmed := strings.TrimPrefix(strings.TrimSpace(string(serialData)), "vol")
+		if trimmed != "" {
+			return "vol-" + trimmed, nil
+		}
 	}
 
-	return "", fmt.Errorf("could not find an nvme device")
+	return "", fmt.Errorf("could not find an EBS NVMe device")
 }
 
 // GetAnyInstanceStoreSerialID returns the serial ID of the first NVMe instance store device found.

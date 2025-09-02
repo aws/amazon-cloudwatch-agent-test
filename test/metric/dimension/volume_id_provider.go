@@ -29,7 +29,7 @@ func (p *VolumeIdDimensionProvider) GetDimension(instruction Instruction) types.
 	if instruction.Key != "VolumeId" || instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}
-	serial, err := common.GetAnyNvmeVolumeID()
+	serial, err := common.GetAnyEBSVolumeID()
 	if err != nil {
 		log.Print(err)
 		return types.Dimension{}
