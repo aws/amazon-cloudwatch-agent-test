@@ -1,0 +1,34 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "run_as_user": "root",
+    "debug": true,
+    "region": "us-west-2"
+  },
+  "metrics": {
+    "namespace": "MetricValueBenchmarkTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "diskio": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          "instance_store_total_read_ops",
+          "instance_store_total_write_ops",
+          "instance_store_total_read_bytes",
+          "instance_store_total_write_bytes",
+          "instance_store_total_read_time",
+          "instance_store_total_write_time",
+          "instance_store_performance_exceeded_iops",
+          "instance_store_performance_exceeded_tp",
+          "instance_store_volume_queue_length"
+        ],
+        "metrics_collection_interval": 10
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

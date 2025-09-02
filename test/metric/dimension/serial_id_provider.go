@@ -15,31 +15,31 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
-type VolumeIdDimensionProvider struct {
+type SerialIdDimensionProvider struct {
 	Provider
 }
 
-var _ IProvider = (*VolumeIdDimensionProvider)(nil)
+var _ IProvider = (*SerialIdDimensionProvider)(nil)
 
-func (p *VolumeIdDimensionProvider) IsApplicable() bool {
+func (p *SerialIdDimensionProvider) IsApplicable() bool {
 	return p.env.ComputeType == computetype.EC2
 }
 
-func (p *VolumeIdDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
-	if instruction.Key != "VolumeId" || instruction.Value.IsKnown() {
+func (p *SerialIdDimensionProvider) GetDimension(instruction Instruction) types.Dimension {
+	if instruction.Key != "SerialId" || instruction.Value.IsKnown() {
 		return types.Dimension{}
 	}
-	serial, err := common.GetAnyEBSVolumeID()
+	serial, err := common.GetAnyInstanceStoreSerialID()
 	if err != nil {
 		log.Print(err)
 		return types.Dimension{}
 	}
 	return types.Dimension{
-		Name:  aws.String("VolumeId"),
+		Name:  aws.String("SerialId"),
 		Value: aws.String(serial),
 	}
 }
 
-func (p *VolumeIdDimensionProvider) Name() string {
-	return "VolumeIdDimensionProvider"
+func (p *SerialIdDimensionProvider) Name() string {
+	return "SerialIdDimensionProvider"
 }
