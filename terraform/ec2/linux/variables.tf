@@ -128,3 +128,18 @@ variable "agent_start" {
   type        = string
   default     = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c "
 }
+
+variable "vpc_id" {
+  type    = string
+  default = ""
+}
+
+variable "subnet_id" {
+  type    = string
+  default = ""
+}
+
+variable "iam_instance_profile" {
+  type    = string
+  default = ""
+}

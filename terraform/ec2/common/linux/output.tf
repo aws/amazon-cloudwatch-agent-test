@@ -6,7 +6,7 @@ output "private_key_content" {
 }
 
 output "cwagent_public_ip" {
-  value = aws_instance.cwagent.public_ip
+  value = aws_instance.cwagent.ipv6_addresses[0]
 }
 
 output "cwagent_id" {

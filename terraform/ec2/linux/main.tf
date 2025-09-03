@@ -45,10 +45,10 @@ locals {
 
 resource "null_resource" "integration_test_setup" {
   connection {
-    type        = "ssh"
-    user        = var.user
+    type = "ssh"
+    user = var.user
     private_key = module.linux_common.private_key_content
-    host        = module.linux_common.cwagent_public_ip
+    host = "[${module.linux_common.cwagent_public_ip}]"
   }
 
   # Prepare Integration Test
@@ -85,10 +85,10 @@ resource "null_resource" "download_test_repo_and_vendor_from_s3" {
   count = startswith(var.region, "cn-") ? 1 : 0
 
   connection {
-    type        = "ssh"
-    user        = var.user
+    type = "ssh"
+    user = var.user
     private_key = module.linux_common.private_key_content
-    host        = module.linux_common.cwagent_public_ip
+    host = "[${module.linux_common.cwagent_public_ip}]"
   }
   provisioner "remote-exec" {
     inline = [
@@ -116,10 +116,10 @@ module "amp" {
 
 resource "null_resource" "integration_test_run" {
   connection {
-    type        = "ssh"
-    user        = var.user
+    type = "ssh"
+    user = var.user
     private_key = module.linux_common.private_key_content
-    host        = module.linux_common.cwagent_public_ip
+    host = "[${module.linux_common.cwagent_public_ip}]"
   }
 
   provisioner "remote-exec" {

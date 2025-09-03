@@ -100,11 +100,10 @@ resource "null_resource" "integration_test_setup_agent" {
   # Install agent binaries
   provisioner "remote-exec" {
     inline = [
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
-      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
-
-      # Verify the presence of amazon-cloudwatch-agent-ctl.ps1 and search for it if not found
-      "powershell.exe -Command \"if (-not (Test-Path 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1')) { $scriptPath = Get-ChildItem -Path C:\\ -Filter amazon-cloudwatch-agent-ctl.ps1 -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName; if (-not $scriptPath) { Write-Output 'amazon-cloudwatch-agent-ctl.ps1 not found after installation'; exit 1 } else { Write-Output ('amazon-cloudwatch-agent-ctl.ps1 found at: ' + $scriptPath) } } else { Write-Output 'amazon-cloudwatch-agent-ctl.ps1 found in the expected location' }\""
+        "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
+        "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
+        "if %errorlevel% neq 0 (echo MSI install failed with code %errorlevel% & exit 1)",
+        "powershell.exe -Command \"$retries = 0; $maxRetries = 30; $found = $false; while ($retries -lt $maxRetries -and -not $found) { if (Test-Path 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1') { $found = $true; Write-Output 'amazon-cloudwatch-agent-ctl.ps1 found in expected location'; } else { $scriptPath = Get-ChildItem -Path 'C:\\Program Files' -Filter amazon-cloudwatch-agent-ctl.ps1 -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName; if ($scriptPath) { $found = $true; Write-Output 'amazon-cloudwatch-agent-ctl.ps1 found at: ' + $scriptPath; } } if (-not $found) { Start-Sleep -Seconds 10; $retries++ } } if (-not $found) { Write-Output 'amazon-cloudwatch-agent-ctl.ps1 not found after installation and retries'; exit 1 }\""
     ]
   }
 }

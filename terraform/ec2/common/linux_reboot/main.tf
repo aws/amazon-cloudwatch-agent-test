@@ -13,7 +13,7 @@ resource "null_resource" "integration_test_reboot" {
     type        = "ssh"
     user        = var.user
     private_key = var.private_key_content
-    host        = var.cwagent_public_ip
+    host = "[${var.cwagent_public_ip}]"
   }
 
   # Prepare Integration Test
