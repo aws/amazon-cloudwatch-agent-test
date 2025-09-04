@@ -1,0 +1,35 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "traces": {
+    "traces_collected": {
+      "otlp": {
+        "http_endpoint": "127.0.0.1:4318"
+      }
+    }
+  },
+  "metrics": {
+    "namespace": "CWAgent/OTLP",
+    "metrics_collected": {
+      "otlp": {
+        "http_endpoint": "127.0.0.1:4318"
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "otlp": {
+        "http_endpoint": "127.0.0.1:4318"
+      }
+    },
+    "log_groups": [{
+      "file_path": "/tmp/otlp.log",
+      "log_group_name": "/aws/amazon-cloudwatch-agent/otlp",
+      "log_stream_name": "{instance_id}-otlp"
+    }]
+  }
+}

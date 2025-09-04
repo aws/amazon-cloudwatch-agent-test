@@ -54,6 +54,44 @@ func TestTraces(t *testing.T) {
 				},
 			},
 		},
+		"WithOTLP/Enhanced": {
+			agentConfigPath: filepath.Join("resources", "otlp-traces-config.json"),
+			generatorConfig: &base.TraceGeneratorConfig{
+				Interval: loadGeneratorInterval,
+				Annotations: map[string]interface{}{
+					"test_type":     "enhanced_otlp",
+					"instance_id":   env.InstanceId,
+					"commit_sha":    env.CwaCommitSha,
+					"service_name":  "otlp-trace-test",
+					"operation":     "test_operation",
+					"trace_version": "v2.0",
+				},
+				Metadata: map[string]map[string]interface{}{
+					"default": {
+						"custom_key":    "custom_value",
+						"test_metadata": "enhanced_test",
+						"environment":   "integration_test",
+					},
+					"http": {
+						"method": "POST",
+						"url":    "/api/test",
+						"status": 200,
+					},
+				},
+				Attributes: []attribute.KeyValue{
+					attribute.String("custom_key", "custom_value"),
+					attribute.String("test_type", "enhanced_otlp"),
+					attribute.String("instance_id", env.InstanceId),
+					attribute.String("commit_sha", env.CwaCommitSha),
+					attribute.String("service.name", "otlp-trace-test"),
+					attribute.String("service.version", "1.0.0"),
+					attribute.String("http.method", "POST"),
+					attribute.String("http.url", "/api/test"),
+					attribute.Int("http.status_code", 200),
+					attribute.Bool("test.enabled", true),
+				},
+			},
+		},
 	}
 	t.Logf("Sanity check: number of test cases:%d", len(testCases))
 	for name, testCase := range testCases {
