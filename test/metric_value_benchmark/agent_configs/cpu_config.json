@@ -17,7 +17,7 @@
           "time_guest", "time_guest_nice", "time_idle", "time_iowait", "time_irq",
           "time_nice", "time_softirq", "time_steal", "time_system", "time_user",
           "usage_active", "usage_guest", "usage_guest_nice", "usage_idle", "usage_iowait", "usage_irq",
-          "usage_nice", "usage_softirq", "usage_steal", "usage_system", "usage_user"
+          "usage_nice", "usage_softirq", "usage_steal", "usage_system", "usage_user", "cpu_load_average"
         ],
         "metrics_collection_interval": 10
       }
