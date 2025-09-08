@@ -1,6 +1,6 @@
 module github.com/aws/amazon-cloudwatch-agent-test
 
-go 1.20
+go 1.24.0
 
 // Avoid checksum mismatch for go-collectd https://github.com/collectd/go-collectd/issues/94
 replace collectd.org v0.5.0 => github.com/collectd/go-collectd v0.5.0
@@ -38,7 +38,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.21.0
 	go.uber.org/multierr v1.11.0
 	golang.org/x/exp v0.0.0-20231127185646-65229373498e
-	golang.org/x/sys v0.15.0
+	golang.org/x/sys v0.36.0
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.23.0
