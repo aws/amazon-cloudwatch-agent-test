@@ -42,7 +42,7 @@ func init() {
 //		generatorConfig *base.TraceGeneratorConfig
 //	}{
 //		"WithOTLP/Simple": {
-//			agentConfigPath: filepath.Join("resources", "otlp-config.json"),
+//			agentConfigPath: filepath.Join("agent_configs", "otlp-config.json"),
 //			generatorConfig: &base.TraceGeneratorConfig{
 //				Interval: loadGeneratorInterval,
 //				Annotations: map[string]interface{}{
@@ -64,7 +64,7 @@ func init() {
 //			},
 //		},
 //		"WithOTLP/Enhanced": {
-//			agentConfigPath: filepath.Join("resources", "otlp-traces-config.json"),
+//			agentConfigPath: filepath.Join("agent_configs", "otlp-traces-config.json"),
 //			generatorConfig: &base.TraceGeneratorConfig{
 //				Interval: loadGeneratorInterval,
 //				Annotations: map[string]interface{}{
