@@ -21,15 +21,10 @@
     }
   },
   "logs": {
-    "logs_collected": {
+    "metrics_collected": {
       "otlp": {
         "http_endpoint": "127.0.0.1:4318"
       }
-    },
-    "log_groups": [{
-      "file_path": "/tmp/otlp.log",
-      "log_group_name": "/aws/amazon-cloudwatch-agent/otlp",
-      "log_stream_name": "{instance_id}-otlp"
-    }]
+    }
   }
 }

@@ -140,14 +140,14 @@ func (t *OtlpTestRunner) Validate() status.TestGroupResult {
 	results = append(results, t.validateLogs())
 
 	return status.TestGroupResult{
-		Name:        "UnifiedOTLP",
+		Name:        "OTLP",
 		TestResults: results,
 	}
 }
 
 func (t *OtlpTestRunner) validateTraces() status.TestResult {
 	annotations := map[string]interface{}{
-		"test_type":   "unified_otlp",
+		"test_type":   "otlp",
 		"instance_id": t.env.InstanceId,
 	}
 
@@ -220,12 +220,12 @@ func (t *OtlpTestRunner) validateLogs() status.TestResult {
 	return testResult
 }
 
-func (t *OtlpTestRunner) GetTestName() string                { return "UnifiedOTLP" }
+func (t *OtlpTestRunner) GetTestName() string                { return "OTLP" }
 func (t *OtlpTestRunner) GetAgentRunDuration() time.Duration { return testRuntime }
 func (t *OtlpTestRunner) GetMeasuredMetrics() []string {
 	return []string{"otlp_counter", "otlp_gauge"}
 }
-func (t *OtlpTestRunner) GetAgentConfigFileName() string { return "unified-otlp-config.json" }
+func (t *OtlpTestRunner) GetAgentConfigFileName() string { return "shared-config.json" }
 
 func (t *OtlpTestRunner) SetupAfterAgentRun() error {
 	// Start trace generation
@@ -252,7 +252,7 @@ func (t *OtlpTestRunner) SetupAfterAgentRun() error {
 				"scopeLogs": [{
 					"logRecords": [{
 						"timeUnixNano": "'$(date +%%s%%N)'",
-						"body": {"stringValue": "OTLP unified test log"},
+						"body": {"stringValue": "OTLP test log"},
 						"attributes": [{"key": "instance_id", "value": {"stringValue": "%s"}}]
 					}]
 				}]
@@ -269,11 +269,11 @@ func (t *OtlpTestRunner) generateTraces() {
 	generator := otlp.NewLoadGenerator(&base.TraceGeneratorConfig{
 		Interval: 15 * time.Second,
 		Annotations: map[string]interface{}{
-			"test_type":   "unified_otlp",
+			"test_type":   "otlp",
 			"instance_id": t.env.InstanceId,
 		},
 		Attributes: []attribute.KeyValue{
-			attribute.String("test_type", "unified_otlp"),
+			attribute.String("test_type", "otlp"),
 			attribute.String("instance_id", t.env.InstanceId),
 		},
 	})
@@ -282,12 +282,12 @@ func (t *OtlpTestRunner) generateTraces() {
 
 var _ test_runner.ITestRunner = (*OtlpTestRunner)(nil)
 
-func TestUnifiedOTLP(t *testing.T) {
+func TestOTLP(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 
 	testRunner := &OtlpTestRunner{env: env}
 	runner := &test_runner.TestRunner{TestRunner: testRunner}
 
 	result := runner.Run()
-	require.Equal(t, status.SUCCESSFUL, result.GetStatus(), "Unified OTLP test failed")
+	require.Equal(t, status.SUCCESSFUL, result.GetStatus(), "OTLP test failed")
 }
