@@ -21,6 +21,8 @@
     "service.instance.id": {},
     "service.name": {},
     "url.scheme": {},
+    "resource": {},
+    "apiserver_storage_objects": {},
     "apiserver_storage_size_bytes": {},
     "apiserver_storage_db_total_size_in_bytes": {},
     "etcd_db_total_size_in_bytes": {},

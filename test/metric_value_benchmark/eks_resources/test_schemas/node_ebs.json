@@ -9,6 +9,7 @@
     "InstanceId": {},
     "InstanceType": {},
     "NodeName": {},
+    "PlatformType": {},
     "Timestamp": {},
     "Type": {},
     "Version": {},
@@ -46,7 +47,8 @@
     "node_diskio_ebs_total_write_time": {},
     "node_diskio_ebs_volume_performance_exceeded_iops": {},
     "node_diskio_ebs_volume_performance_exceeded_tp": {},
-    "node_diskio_ebs_volume_queue_length": {}
+    "node_diskio_ebs_volume_queue_length": {},
+    "CloudWatchMetrics": {}
   },
   "required": [
     "ClusterName",

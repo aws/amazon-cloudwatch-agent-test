@@ -24,12 +24,14 @@ const (
 	containerTemp     = "container_gpu_temperature"
 	containerUtil     = "container_gpu_utilization"
 	containerMemUtil  = "container_gpu_memory_utilization"
+	containerTensorCore = "container_gpu_tensor_core_utilization"
 	podMemTotal       = "pod_gpu_memory_total"
 	podMemUsed        = "pod_gpu_memory_used"
 	podPower          = "pod_gpu_power_draw"
 	podTemp           = "pod_gpu_temperature"
 	podUtil           = "pod_gpu_utilization"
 	podMemUtil        = "pod_gpu_memory_utilization"
+	podTensorCore     = "pod_gpu_tensor_core_utilization"
 	podLimit          = "pod_gpu_limit"
 	podRequest        = "pod_gpu_request"
 	podCountTotal     = "pod_gpu_usage_total"
@@ -40,49 +42,52 @@ const (
 	nodeTemp          = "node_gpu_temperature"
 	nodeUtil          = "node_gpu_utilization"
 	nodeMemUtil       = "node_gpu_memory_utilization"
+	nodeTensorCore    = "node_gpu_tensor_core_utilization"
 	nodeCountTotal    = "node_gpu_usage_total"
 	nodeCountLimit    = "node_gpu_limit"
 	nodeReserved      = "node_gpu_reserved_capacity"
+	nodeAvailable     = "node_gpu_available_capacity"
+	nodeUnreserved    = "node_gpu_unreserved_capacity"
 )
 
 var useE2EMetrics = flag.Bool("useE2EMetrics", false, "Use E2E metrics mapping which uses latest build CWA")
 
 var expectedDimsToMetricsIntegTest = map[string][]string{
 	"ClusterName": {
-		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
-		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil, containerTensorCore,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil, nodeTensorCore, nodeAvailable, nodeUnreserved,
 	},
 	"ClusterName-Namespace": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
 	},
 	//"ClusterName-Namespace-Service": {
 	//	podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
 	//},
 	"ClusterName-Namespace-PodName": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
 	},
 	"ClusterName-ContainerName-Namespace-PodName": {
-		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil, containerTensorCore,
 	},
 	"ClusterName-ContainerName-FullPodName-Namespace-PodName": {
-		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil, containerTensorCore,
 	},
 	"ClusterName-ContainerName-FullPodName-GpuDevice-Namespace-PodName": {
-		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil, containerTensorCore,
 	},
 	"ClusterName-FullPodName-Namespace-PodName": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
 	},
 	"ClusterName-FullPodName-GpuDevice-Namespace-PodName": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
 	},
 	"ClusterName-InstanceId-NodeName": {
-		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil, nodeTensorCore, nodeAvailable, nodeUnreserved,
 		//nodeCountTotal, nodeCountRequest, nodeCountLimit,
 	},
 	"ClusterName-GpuDevice-InstanceId-InstanceType-NodeName": {
-		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil, nodeTensorCore,
 	},
 }
 

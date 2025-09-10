@@ -11,11 +11,13 @@
     "GpuDevice": {},
     "Hostname": {},
     "InstanceId": {},
+    "InstanceType": {},
     "K8sPodName": {},
     "Namespace": {},
     "NodeName": {},
     "OTelLib": {},
     "PodName": {},
+    "Sources": {},
     "Timestamp": {},
     "Type": {},
     "UUID": {},
@@ -26,6 +28,18 @@
     "container_gpu_temperature": {},
     "container_gpu_utilization": {},
     "container_gpu_memory_utilization": {},
+    "container_gpu_tensor_core_utilization": {},
+    "kubernetes": {
+      "type": "object",
+      "properties": {
+        "host": {},
+        "labels": {},
+        "pod_name": {},
+        "pod_owners": {},
+        "container_name": {}
+      },
+      "additionalProperties": false
+    },
     "Service":{}
   },
   "required": [

@@ -5,6 +5,8 @@
   "type": "object",
   "properties": {
     "ClusterName":{},
+    "ContainerName":{},
+    "FullPodName":{},
     "Type":{},
     "Sources":{},
     "Timestamp":{},
@@ -13,6 +15,7 @@
     "InstanceId":{},
     "InstanceType":{},
     "NodeName":{},
+    "PlatformType":{},
     "PodName":{},
     "Namespace":{},
     "container_cpu_limit": {},
@@ -91,7 +94,8 @@
       ],
       "additionalProperties": false
     },
-    "Service":{}
+    "Service":{},
+    "CloudWatchMetrics": {}
   },
   "required": [
     "ClusterName",
