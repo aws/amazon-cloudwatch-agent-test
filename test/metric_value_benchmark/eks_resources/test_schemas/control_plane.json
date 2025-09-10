@@ -37,5 +37,6 @@
     "Timestamp",
     "Version",
     "CloudWatchMetrics"
-  ]
+  ],
+  "additionalProperties": false
 }

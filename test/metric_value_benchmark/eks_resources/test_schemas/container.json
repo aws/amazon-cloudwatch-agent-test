@@ -106,5 +106,6 @@
     "PodName",
     "Namespace",
     "kubernetes"
-  ]
+  ],
+  "additionalProperties": false
 }

@@ -59,5 +59,6 @@
     "NodeName",
     "kubernetes",
     "VolumeId"
-  ]
+  ],
+  "additionalProperties": false
 }
