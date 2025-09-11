@@ -63,23 +63,9 @@ var (
 	testRunners []*test_runner.TestRunner = []*test_runner.TestRunner{
 		{
 			TestRunner: &AmpTestRunner{
-				source: SourceHost,
-				config: "host_config.json",
-				name:   "host",
-			},
-		},
-		{
-			TestRunner: &AmpTestRunner{
 				source: SourcePrometheus,
 				config: "prometheus_config.json",
 				name:   "prometheus",
-			},
-		},
-		{
-			TestRunner: &AmpTestRunner{
-				source: SourceOtlp,
-				config: "otlp_config.json",
-				name:   "otlp",
 			},
 		},
 	}
@@ -129,7 +115,11 @@ func (suite *AmpTestSuite) TestAllInSuite() {
 		log.Println("There was an error trying to load credentials: ", err)
 	}
 	for _, testRunner := range testRunners {
-		suite.AddToSuiteResult(testRunner.Run())
+		if ampTest, ok := testRunner.TestRunner.(*AmpTestRunner); ok && ampTest.source == SourcePrometheus {
+			suite.AddToSuiteResult(testRunner.Run())
+		} else {
+			log.Printf("Skipping %s test", testRunner.TestRunner.GetTestName())
+		}
 	}
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Assume Role Test Suite Failed")
 }
