@@ -40,7 +40,22 @@ type dimToMetrics struct {
 
 func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDimsToMetrics map[string][]string) []status.TestResult {
 	var results []status.TestResult
+	log.Printf("Expected %d dimension groups", len(expectedDimsToMetrics))
+	for dims, metrics := range expectedDimsToMetrics {
+		log.Printf("Expected dimension group: %s with %d metrics", dims, len(metrics))
+		for _, metricName := range metrics {
+			log.Printf("  Expected metric: %s", metricName)
+		}
+	}
+	
 	dimsToMetrics := getMetricsInClusterDimension(env, metricFilter)
+	log.Printf("Found %d dimension groups", len(dimsToMetrics))
+	for _, dtm := range dimsToMetrics {
+		log.Printf("Dimension group: %s with %d metrics", dtm.dimStr, len(dtm.metrics))
+		for metricName, dimSets := range dtm.metrics {
+			log.Printf("  Metric: %s has %d dimension sets", metricName, len(dimSets))
+		}
+	}
 	for dims, metrics := range expectedDimsToMetrics {
 		var actual map[string][][]types.Dimension
 		// find matching dim set from fetched and processed metric-dims groups
