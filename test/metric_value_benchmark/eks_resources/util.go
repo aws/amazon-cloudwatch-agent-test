@@ -64,35 +64,50 @@ var (
 	eksNodeEfaSchema string
 	//go:embed test_schemas/node_ebs.json
 	eksNodeEBSSchema string
+	//go:embed test_schemas/cluster_statefulset.json
+	eksClusterStatefulSetSchema string
+	//go:embed test_schemas/cluster_replicaset.json
+	eksClusterReplicaSetSchema string
+	//go:embed test_schemas/container_neurondevice.json
+	eksContainerNeuronDeviceSchema string
+	//go:embed test_schemas/pod_neurondevice.json
+	eksPodNeuronDeviceSchema string
+	//go:embed test_schemas/hyperpod_node.json
+	eksHyperPodNodeSchema string
 
 	EksClusterValidationMap = map[string]string{
-		"Cluster":                eksClusterSchema,
-		"ClusterDaemonSet":       eksClusterDaemonsetSchema,
-		"ClusterDeployment":      eksClusterDeploymentSchema,
-		"ClusterNamespace":       eksClusterNamespaceSchema,
-		"ClusterService":         eksClusterServiceSchema,
-		"Container":              eksContainerSchema,
-		"ContainerFS":            eksContainerFSSchema,
-		"ControlPlane":           eksControlPlaneSchema,
-		"Node":                   eksNodeSchema,
-		"NodeDiskIO":             eksNodeDiskIOSchema,
-		"NodeFS":                 eksNodeFSSchema,
-		"NodeNet":                eksNodeNetSchema,
-		"Pod":                    eksPodSchema,
-		"PodNet":                 eksPodNetSchema,
-		"ContainerGPU":           eksContainerGpuSchema,
-		"PodGPU":                 eksPodGpuSchema,
-		"NodeGPU":                eksNodeGpuSchema,
-		"ClusterGPU":             eksClusterGpuSchema,
-		"ContainerAWSNeuronCore": eksContainerNeuronCoreSchema,
-		"PodAWSNeuronCore":       eksPodNeuronCoreSchema,
-		"NodeAWSNeuronCore":      eksNodeNeuronCoreSchema,
-		"NodeAWSNeuronDevice":    eksNodeNeuronDeviceSchema,
-		"NodeAWSNeuron":          eksNodeNeuronSchema,
-		"ContainerEFA":           eksContainerEfaSchema,
-		"PodEFA":                 eksPodEfaSchema,
-		"NodeEFA":                eksNodeEfaSchema,
-		"NodeEBS":                eksNodeEBSSchema,
+		"Cluster":                   eksClusterSchema,
+		"ClusterDaemonSet":          eksClusterDaemonsetSchema,
+		"ClusterDeployment":         eksClusterDeploymentSchema,
+		"ClusterNamespace":          eksClusterNamespaceSchema,
+		"ClusterService":            eksClusterServiceSchema,
+		"ClusterStatefulSet":        eksClusterStatefulSetSchema,
+		"ClusterReplicaSet":         eksClusterReplicaSetSchema,
+		"Container":                 eksContainerSchema,
+		"ContainerFS":               eksContainerFSSchema,
+		"ControlPlane":              eksControlPlaneSchema,
+		"Node":                      eksNodeSchema,
+		"NodeDiskIO":                eksNodeDiskIOSchema,
+		"NodeFS":                    eksNodeFSSchema,
+		"NodeNet":                   eksNodeNetSchema,
+		"Pod":                       eksPodSchema,
+		"PodNet":                    eksPodNetSchema,
+		"ContainerGPU":              eksContainerGpuSchema,
+		"PodGPU":                    eksPodGpuSchema,
+		"NodeGPU":                   eksNodeGpuSchema,
+		"ClusterGPU":                eksClusterGpuSchema,
+		"ContainerAWSNeuronCore":    eksContainerNeuronCoreSchema,
+		"PodAWSNeuronCore":          eksPodNeuronCoreSchema,
+		"NodeAWSNeuronCore":         eksNodeNeuronCoreSchema,
+		"NodeAWSNeuronDevice":       eksNodeNeuronDeviceSchema,
+		"NodeAWSNeuron":             eksNodeNeuronSchema,
+		"ContainerAWSNeuronDevice":  eksContainerNeuronDeviceSchema,
+		"PodAWSNeuronDevice":        eksPodNeuronDeviceSchema,
+		"ContainerEFA":              eksContainerEfaSchema,
+		"PodEFA":                    eksPodEfaSchema,
+		"NodeEFA":                   eksNodeEfaSchema,
+		"NodeEBS":                   eksNodeEBSSchema,
+		"HyperPodNode":              eksHyperPodNodeSchema,
 	}
 
 	EksClusterFrequencyValidationMap = map[string]int{
