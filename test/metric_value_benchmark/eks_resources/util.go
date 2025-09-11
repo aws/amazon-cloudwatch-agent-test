@@ -106,7 +106,6 @@ var (
 		"ContainerEFA":              eksContainerEfaSchema,
 		"PodEFA":                    eksPodEfaSchema,
 		"NodeEFA":                   eksNodeEfaSchema,
-		"NodeEBS":                   eksNodeEBSSchema,
 		"HyperPodNode":              eksHyperPodNodeSchema,
 	}
 
