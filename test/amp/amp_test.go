@@ -104,6 +104,7 @@ func (suite *AmpTestSuite) TearDownSuite() {
 }
 func (suite *AmpTestSuite) TestAllInSuite() {
 	metadata = environment.GetEnvironmentMetaData()
+	metadata.AmpWorkspaceId = "ws-df5a4c73-45a7-4639-8362-f46a7b92180c"
 	ctx := context.Background()
 	var err error
 	awsConfig, err = config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))

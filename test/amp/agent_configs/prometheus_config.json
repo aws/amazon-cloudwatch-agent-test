@@ -2,6 +2,7 @@
   "agent": {
     "metrics_collection_interval": 15,
     "run_as_user": "root",
+    "use_dualstack_endpoint": true,
     "debug": true
   },
   "metrics": {
