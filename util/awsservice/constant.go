@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -77,7 +78,7 @@ func ConfigureAWSClients(region string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region), config.WithUseDualStackEndpoint(aws.DualStackEndpointStateEnabled))
 	if err != nil {
 		// handle error
 		fmt.Println("There was an error trying to load default config: ", err)

@@ -4,4 +4,4 @@ global:
 scrape_configs:
   - job_name: 'prometheus_test_job'
     static_configs:
-      - targets: ['localhost:8101']
+      - targets: ['[::1]:8101']

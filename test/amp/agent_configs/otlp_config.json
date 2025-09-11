@@ -12,7 +12,7 @@
     },
     "metrics_collected": {
       "otlp": {
-        "http_endpoint": "0.0.0.0:1234"
+        "http_endpoint": "[::]:1234"
       }
     },
     "append_dimensions": {

@@ -1,18 +1,13 @@
 {
   "agent": {
+    "metrics_collection_interval": 10,
     "debug": true,
-    "metrics_collection_interval": 10
+    "credentials": {
+      "role_arn": "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME"
+    }
   },
   "metrics": {
-    "namespace": "MetricValueBenchmarkTest",
-    "append_dimensions": {
-      "InstanceId": "${aws:InstanceId}"
-    },
-    "aggregation_dimensions": [
-      [
-        "InstanceId"
-      ]
-    ],
+    "namespace": "IPv6AllClientsTest",
     "metrics_collected": {
       "cpu": {
         "resources": [
@@ -21,8 +16,32 @@
         "measurement": [
           {"name": "cpu_usage_nice", "rename": "ssm_cpu_utilization", "unit": "Percent"}
         ]
+      },
+      "mem": {
+        "measurement": [
+          "used_percent"
+        ],
+        "metrics_collection_interval": 10
       }
-    },
-    "force_flush_interval": 5
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/messages",
+            "log_group_name": "IPv6AllClientsTest/Logs",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    }
+  },
+  "traces": {
+    "traces_collected": {
+      "xray": {}
+    }
   }
 }

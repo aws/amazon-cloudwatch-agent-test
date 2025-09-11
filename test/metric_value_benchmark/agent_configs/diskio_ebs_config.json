@@ -2,11 +2,10 @@
   "agent": {
     "metrics_collection_interval": 10,
     "run_as_user": "root",
-    "debug": true,
-    "logfile": ""
+    "debug": true
   },
   "metrics": {
-    "namespace": "MetricValueBenchmarkTest",
+    "namespace": "MetricValueBenchmarkTest-ipv6-ebs",
     "append_dimensions": {
       "InstanceId": "${aws:InstanceId}"
     },
