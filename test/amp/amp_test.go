@@ -115,11 +115,7 @@ func (suite *AmpTestSuite) TestAllInSuite() {
 		log.Println("There was an error trying to load credentials: ", err)
 	}
 	for _, testRunner := range testRunners {
-		if ampTest, ok := testRunner.TestRunner.(*AmpTestRunner); ok && ampTest.source == SourcePrometheus {
-			suite.AddToSuiteResult(testRunner.Run())
-		} else {
-			log.Printf("Skipping %s test", testRunner.TestRunner.GetTestName())
-		}
+		suite.AddToSuiteResult(testRunner.Run())
 	}
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Assume Role Test Suite Failed")
 }
