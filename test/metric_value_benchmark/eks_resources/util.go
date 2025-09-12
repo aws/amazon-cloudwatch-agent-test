@@ -92,7 +92,6 @@ var (
 		"ContainerEFA":           eksContainerEfaSchema,
 		"PodEFA":                 eksPodEfaSchema,
 		"NodeEFA":                eksNodeEfaSchema,
-		"NodeEBS":                eksNodeEBSSchema,
 	}
 
 	EksClusterFrequencyValidationMap = map[string]int{
