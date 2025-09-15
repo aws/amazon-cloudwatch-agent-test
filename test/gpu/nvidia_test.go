@@ -18,71 +18,73 @@ import (
 const (
 	gpuMetricIndicator = "_gpu_"
 
-	containerMemTotal = "container_gpu_memory_total"
-	containerMemUsed  = "container_gpu_memory_used"
-	containerPower    = "container_gpu_power_draw"
-	containerTemp     = "container_gpu_temperature"
-	containerUtil     = "container_gpu_utilization"
-	containerMemUtil  = "container_gpu_memory_utilization"
-	podMemTotal       = "pod_gpu_memory_total"
-	podMemUsed        = "pod_gpu_memory_used"
-	podPower          = "pod_gpu_power_draw"
-	podTemp           = "pod_gpu_temperature"
-	podUtil           = "pod_gpu_utilization"
-	podMemUtil        = "pod_gpu_memory_utilization"
-	podLimit          = "pod_gpu_limit"
-	podRequest        = "pod_gpu_request"
-	podCountTotal     = "pod_gpu_usage_total"
-	podReserved       = "pod_gpu_reserved_capacity"
-	nodeMemTotal      = "node_gpu_memory_total"
-	nodeMemUsed       = "node_gpu_memory_used"
-	nodePower         = "node_gpu_power_draw"
-	nodeTemp          = "node_gpu_temperature"
-	nodeUtil          = "node_gpu_utilization"
-	nodeMemUtil       = "node_gpu_memory_utilization"
-	nodeCountTotal    = "node_gpu_usage_total"
-	nodeCountLimit    = "node_gpu_limit"
-	nodeReserved      = "node_gpu_reserved_capacity"
+	containerMemTotal   = "container_gpu_memory_total"
+	containerMemUsed    = "container_gpu_memory_used"
+	containerPower      = "container_gpu_power_draw"
+	containerTemp       = "container_gpu_temperature"
+	containerUtil       = "container_gpu_utilization"
+	containerMemUtil    = "container_gpu_memory_utilization"
+	containerTensorCore = "container_gpu_tensor_core_utilization"
+	podMemTotal         = "pod_gpu_memory_total"
+	podMemUsed          = "pod_gpu_memory_used"
+	podPower            = "pod_gpu_power_draw"
+	podTemp             = "pod_gpu_temperature"
+	podUtil             = "pod_gpu_utilization"
+	podMemUtil          = "pod_gpu_memory_utilization"
+	podTensorCore       = "pod_gpu_tensor_core_utilization"
+	podLimit            = "pod_gpu_limit"
+	podRequest          = "pod_gpu_request"
+	podCountTotal       = "pod_gpu_usage_total"
+	podReserved         = "pod_gpu_reserved_capacity"
+	nodeMemTotal        = "node_gpu_memory_total"
+	nodeMemUsed         = "node_gpu_memory_used"
+	nodePower           = "node_gpu_power_draw"
+	nodeTemp            = "node_gpu_temperature"
+	nodeUtil            = "node_gpu_utilization"
+	nodeMemUtil         = "node_gpu_memory_utilization"
+	nodeTensorCore      = "node_gpu_tensor_core_utilization"
+	nodeCountTotal      = "node_gpu_usage_total"
+	nodeCountLimit      = "node_gpu_limit"
+	nodeReserved        = "node_gpu_reserved_capacity"
 )
 
 var useE2EMetrics = flag.Bool("useE2EMetrics", false, "Use E2E metrics mapping which uses latest build CWA")
 
 var expectedDimsToMetricsIntegTest = map[string][]string{
 	"ClusterName": {
-		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
-		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil, containerTensorCore,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil, nodeTensorCore,
 	},
 	"ClusterName-Namespace": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
 	},
-	//"ClusterName-Namespace-Service": {
-	//	podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
-	//},
+	"ClusterName-Namespace-Service": {
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
+	},
 	"ClusterName-Namespace-PodName": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
 	},
-	"ClusterName-ContainerName-Namespace-PodName": {
-		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+	"ClusterName-Namespace-PodName-ContainerName": {
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil, containerTensorCore,
 	},
-	"ClusterName-ContainerName-FullPodName-Namespace-PodName": {
-		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+	"ClusterName-Namespace-PodName-FullPodName-ContainerName": {
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil, containerTensorCore,
 	},
-	"ClusterName-ContainerName-FullPodName-GpuDevice-Namespace-PodName": {
-		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil,
+	"ClusterName-Namespace-PodName-FullPodName-ContainerName-GpuDevice": {
+		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil, containerTensorCore,
 	},
-	"ClusterName-FullPodName-Namespace-PodName": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+	"ClusterName-Namespace-PodName-FullPodName": {
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
 	},
-	"ClusterName-FullPodName-GpuDevice-Namespace-PodName": {
-		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil,
+	"ClusterName-Namespace-PodName-FullPodName-GpuDevice": {
+		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCore,
 	},
-	"ClusterName-InstanceId-NodeName": {
-		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
-		//nodeCountTotal, nodeCountRequest, nodeCountLimit,
+	"ClusterName-NodeName-InstanceId": {
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil, nodeTensorCore,
 	},
-	"ClusterName-GpuDevice-InstanceId-InstanceType-NodeName": {
-		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil,
+	"ClusterName-NodeName-InstanceId-InstanceType-GpuDevice": {
+		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil, nodeTensorCore,
 	},
 }
 
@@ -101,8 +103,8 @@ func (t *NvidiaTestRunner) Validate() status.TestGroupResult {
 		// add GPU count metrics
 		expectedDimsToMetricsIntegTest["ClusterName"] = append(expectedDimsToMetricsIntegTest["ClusterName"], podReserved, podRequest, podCountTotal, podLimit, nodeCountTotal, nodeCountLimit, nodeReserved)
 		expectedDimsToMetricsIntegTest["ClusterName-Namespace-PodName"] = append(expectedDimsToMetricsIntegTest["ClusterName-Namespace-PodName"], podCountTotal, podRequest, podReserved, podLimit)
-		expectedDimsToMetricsIntegTest["ClusterName-FullPodName-Namespace-PodName"] = append(expectedDimsToMetricsIntegTest["ClusterName-FullPodName-Namespace-PodName"], podCountTotal, podRequest, podReserved, podLimit)
-		expectedDimsToMetricsIntegTest["ClusterName-InstanceId-NodeName"] = append(expectedDimsToMetricsIntegTest["ClusterName-InstanceId-NodeName"], nodeCountLimit, nodeCountTotal, nodeReserved)
+		expectedDimsToMetricsIntegTest["ClusterName-Namespace-PodName-FullPodName"] = append(expectedDimsToMetricsIntegTest["ClusterName-Namespace-PodName-FullPodName"], podCountTotal, podRequest, podReserved, podLimit)
+		expectedDimsToMetricsIntegTest["ClusterName-NodeName-InstanceId"] = append(expectedDimsToMetricsIntegTest["ClusterName-NodeName-InstanceId"], nodeCountLimit, nodeCountTotal, nodeReserved)
 	}
 	testResults = append(testResults, metric.ValidateMetrics(t.env, gpuMetricIndicator, expectedDimsToMetrics)...)
 	testResults = append(testResults, metric.ValidateLogs(t.env))
