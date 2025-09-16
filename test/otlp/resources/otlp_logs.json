@@ -1,0 +1,89 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "otlp-test-service"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "1.0.0"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "otlp-test-metrics",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "otlp_emf_counter",
+              "unit": "1",
+              "description": "OTLP test counter metric",
+              "sum": {
+                "aggregationTemporality": 1,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "asInt": "COUNTER_VALUE",
+                    "startTimeUnixNano": "START_TIME_NANO",
+                    "timeUnixNano": "TIMESTAMP_NANO",
+                    "attributes": [
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": "$INSTANCE_ID"
+                        }
+                      },
+                      {
+                        "key": "test.type",
+                        "value": {
+                          "stringValue": "otlp_integration_test"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "otlp_emf_gauge",
+              "unit": "1",
+              "description": "OTLP test gauge metric",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "asDouble": "GAUGE_VALUE",
+                    "timeUnixNano": "TIMESTAMP_NANO",
+                    "attributes": [
+                      {
+                        "key": "InstanceId",
+                        "value": {
+                          "stringValue": "$INSTANCE_ID"
+                        }
+                      },
+                      {
+                        "key": "test.type",
+                        "value": {
+                          "stringValue": "otlp_integration_test"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
