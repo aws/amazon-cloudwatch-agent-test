@@ -47,7 +47,7 @@ func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDim
 			log.Printf("  Expected metric: %s", metricName)
 		}
 	}
-	
+
 	dimsToMetrics := getMetricsInClusterDimension(env, metricFilter)
 	log.Printf("Found %d dimension groups", len(dimsToMetrics))
 	for _, dtm := range dimsToMetrics {
@@ -80,10 +80,10 @@ func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDim
 			// this is to prevent panic with rand.Intn when metrics are not yet ready in a cluster
 			if _, ok := actual[m]; !ok {
 				results = append(results, status.TestResult{
-					Name:   dims,
+					Name:   m + "/" + dims,
 					Status: status.FAILED,
 				})
-				log.Printf("ValidateMetrics failed with missing metric: %s", m)
+				log.Printf("ValidateMetrics failed with missing metric: %s, dimensions: %s", m, dims)
 				continue
 			}
 			// pick a random dimension set to test metric data OR test all dimension sets which might be overkill
@@ -250,7 +250,7 @@ func ValidateLogs(env *environment.MetaData) status.TestResult {
 					//log.Printf("eksClusterType is: %s", eksClusterType.Type)
 					jsonSchema, ok := eks_resources.EksClusterValidationMap[eksClusterType.Type]
 					if !ok {
-						return "", errors.New("invalid cluster type provided")
+						return "", errors.New("invalid type provided: " + eksClusterType.Type)
 					}
 					return jsonSchema, nil
 				}),
@@ -362,7 +362,7 @@ func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.T
 				coreNumStr := strings.TrimPrefix(coreKey, core)
 				expectedValue, err := strconv.Atoi(coreNumStr)
 				if err != nil || math.Round(actualValue) != float64(expectedValue) {
-					log.Printf("Core utilization validation failed: expected %s:%d, got %v", 
+					log.Printf("Core utilization validation failed: expected %s:%d, got %v",
 						coreKey, expectedValue, actualValue)
 					testFailed = true
 				}
