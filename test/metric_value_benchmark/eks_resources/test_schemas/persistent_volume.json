@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "persistent volume schema",
+  "description": "json schema for persistent volume metrics",
+  "type": "object",
+  "properties": {
+    "CloudWatchMetrics": {},
+    "ClusterName": {},
+    "Timestamp": {},
+    "Type": {},
+    "Version": {},
+    "kubernetes": {},
+    "persistent_volume_count": {}
+  },
+  "required": [
+    "ClusterName",
+    "Timestamp",
+    "Type",
+    "Version",
+    "CloudWatchMetrics"
+  ]
+}
