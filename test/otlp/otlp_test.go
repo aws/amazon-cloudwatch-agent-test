@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -141,24 +140,16 @@ func (t *OtlpTestRunner) validateLogs() status.TestResult {
 		&since,
 		&until,
 		awsservice.AssertLogsNotEmpty(),
+		awsservice.AssertPerLog(
+			awsservice.AssertLogContainsSubstring("\"otlp_emf_"),
+			awsservice.AssertLogContainsSubstring(fmt.Sprintf("\"InstanceId\":\"%s\"", t.env.InstanceId)),
+		),
 	)
 	if err != nil {
 		testResult.Reason = err
 		return testResult
 	}
 
-	events, err := awsservice.GetLogsSince(logGroup, *streams[0].LogStreamName, nil, nil)
-	if err != nil {
-		testResult.Reason = err
-		return testResult
-	}
-
-	for _, event := range events {
-		if !strings.Contains(*event.Message, "otlp_emf_") {
-			testResult.Reason = fmt.Errorf("log entry is missing otlp_emf*")
-			return testResult
-		}
-	}
 	testResult.Status = status.SUCCESSFUL
 	return testResult
 }
@@ -168,7 +159,7 @@ func (t *OtlpTestRunner) GetAgentRunDuration() time.Duration { return agentRunti
 func (t *OtlpTestRunner) GetMeasuredMetrics() []string {
 	return []string{"otlp_counter", "otlp_gauge"}
 }
-func (t *OtlpTestRunner) GetAgentConfigFileName() string { return "shared-config.json" }
+func (t *OtlpTestRunner) GetAgentConfigFileName() string { return "shared_config.json" }
 
 func (t *OtlpTestRunner) SetupAfterAgentRun() error {
 	// trace generation
