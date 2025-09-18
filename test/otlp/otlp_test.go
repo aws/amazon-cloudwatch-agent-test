@@ -11,9 +11,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -49,17 +51,19 @@ func (t *OtlpTestRunner) Validate() status.TestGroupResult {
 	// Validate traces
 	var result status.TestResult
 	result = t.validateTraces()
+	fmt.Printf("traces result: %s\n", result.Status)
 	results = append(results, result)
 
 	// Validate metrics
 	for _, metricName := range t.GetMeasuredMetrics() {
 		result = t.validateMetric(metricName)
-		fmt.Printf("metric (%s) result: %s", metricName, result.Status)
+		fmt.Printf("metric (%s) result: %s\n", metricName, result.Status)
 		results = append(results, result)
 	}
 
 	// Validate logs
 	result = t.validateLogs()
+	fmt.Printf("logs result: %s\n", result.Status)
 	results = append(results, result)
 
 	return status.TestGroupResult{
@@ -132,7 +136,7 @@ func (t *OtlpTestRunner) validateLogs() status.TestResult {
 		return testResult
 	}
 
-	since := time.Now().Add(-5 * time.Minute)
+	since := time.Now().Add(-agentRuntime)
 	until := time.Now()
 	err := awsservice.ValidateLogs(
 		logGroup,
@@ -141,8 +145,13 @@ func (t *OtlpTestRunner) validateLogs() status.TestResult {
 		&until,
 		awsservice.AssertLogsNotEmpty(),
 		awsservice.AssertPerLog(
-			awsservice.AssertLogContainsSubstring("\"otlp_emf_"),
 			awsservice.AssertLogContainsSubstring(fmt.Sprintf("\"InstanceId\":\"%s\"", t.env.InstanceId)),
+			func(event types.OutputLogEvent) error {
+				if strings.Contains(*event.Message, "\"test.type\":\"otlp_integration_logs_test\"") && !strings.Contains(*event.Message, "\"otlp_emf_") {
+					return fmt.Errorf("log event message missing substring (%s): %s", "otlp_emf", *event.Message)
+				}
+				return nil
+			},
 		),
 	)
 	if err != nil {

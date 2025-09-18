@@ -46,7 +46,7 @@
                       {
                         "key": "test.type",
                         "value": {
-                          "stringValue": "otlp_integration_test"
+                          "stringValue": "otlp_integration_logs_test"
                         }
                       }
                     ]
@@ -73,7 +73,7 @@
                       {
                         "key": "test.type",
                         "value": {
-                          "stringValue": "otlp_integration_test"
+                          "stringValue": "otlp_integration_logs_test"
                         }
                       }
                     ]
