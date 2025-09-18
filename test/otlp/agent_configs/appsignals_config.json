@@ -1,0 +1,40 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "traces": {
+    "traces_collected": {
+      "application_signals": {},
+      "otlp": {
+        "http_endpoint": "127.0.0.1:4318",
+        "grpc_endpoint": "127.0.0.1:4317"
+      }
+    }
+  },
+  "metrics": {
+    "namespace": "CWAgent/OTLP",
+    "metrics_collected": {
+      "otlp": {
+        "http_endpoint": "127.0.0.1:4318",
+        "grpc_endpoint": "127.0.0.1:4317"
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ]
+  },
+  "logs": {
+    "metrics_collected": {
+      "application_signals": {},
+      "otlp": {
+        "http_endpoint": "127.0.0.1:4318",
+        "grpc_endpoint": "127.0.0.1:4317"
+      }
+    }
+  }
+}

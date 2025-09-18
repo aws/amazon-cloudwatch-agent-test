@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -42,7 +43,9 @@ func init() {
 
 type OtlpTestRunner struct {
 	test_runner.BaseTestRunner
-	env *environment.MetaData
+	env        *environment.MetaData
+	testType   string
+	configName string
 }
 
 func (t *OtlpTestRunner) Validate() status.TestGroupResult {
@@ -63,7 +66,7 @@ func (t *OtlpTestRunner) Validate() status.TestGroupResult {
 
 	// Validate logs
 	result = t.validateLogs()
-	fmt.Printf("logs result: %s\n", result.Status)
+	fmt.Printf("logs result: %s, err:%+v\n", result.Status, result.Reason)
 	results = append(results, result)
 
 	return status.TestGroupResult{
@@ -74,12 +77,12 @@ func (t *OtlpTestRunner) Validate() status.TestGroupResult {
 
 func (t *OtlpTestRunner) validateTraces() status.TestResult {
 	annotations := map[string]interface{}{
-		"test_type":   "otlp",
+		"test_type":   fmt.Sprintf("otlp_traces_%s", t.testType),
 		"instance_id": t.env.InstanceId,
 	}
 
 	err := base.ValidateTraceSegments(
-		time.Now().Add(-5*time.Minute),
+		time.Now().Add(-agentRuntime),
 		time.Now(),
 		annotations,
 		nil,
@@ -104,6 +107,18 @@ func (t *OtlpTestRunner) validateMetric(metricName string) status.TestResult {
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "test.type",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String(fmt.Sprintf("otlp_metrics_%s", t.testType))},
+		},
+		{
+			Key:   "service.name",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("otlp-test-service")},
+		},
+		{
+			Key:   "service.version",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("1.0.0")},
 		},
 	})
 	if len(failed) > 0 {
@@ -136,6 +151,8 @@ func (t *OtlpTestRunner) validateLogs() status.TestResult {
 		return testResult
 	}
 
+	testTypeSubstr := fmt.Sprintf("\"test.type\":\"otlp_logs_%s\"", t.testType)
+
 	since := time.Now().Add(-agentRuntime)
 	until := time.Now()
 	err := awsservice.ValidateLogs(
@@ -145,9 +162,9 @@ func (t *OtlpTestRunner) validateLogs() status.TestResult {
 		&until,
 		awsservice.AssertLogsNotEmpty(),
 		awsservice.AssertPerLog(
-			awsservice.AssertLogContainsSubstring(fmt.Sprintf("\"InstanceId\":\"%s\"", t.env.InstanceId)),
+			awsservice.AssertLogContainsSubstring(fmt.Sprintf("InstanceId\":\"%s\"", t.env.InstanceId)),
 			func(event types.OutputLogEvent) error {
-				if strings.Contains(*event.Message, "\"test.type\":\"otlp_integration_logs_test\"") && !strings.Contains(*event.Message, "\"otlp_emf_") {
+				if strings.Contains(*event.Message, testTypeSubstr) && !strings.Contains(*event.Message, "\"otlp_emf_") {
 					return fmt.Errorf("log event message missing substring (%s): %s", "otlp_emf", *event.Message)
 				}
 				return nil
@@ -168,14 +185,14 @@ func (t *OtlpTestRunner) GetAgentRunDuration() time.Duration { return agentRunti
 func (t *OtlpTestRunner) GetMeasuredMetrics() []string {
 	return []string{"otlp_counter", "otlp_gauge"}
 }
-func (t *OtlpTestRunner) GetAgentConfigFileName() string { return "shared_config.json" }
+func (t *OtlpTestRunner) GetAgentConfigFileName() string { return t.configName }
 
 func (t *OtlpTestRunner) SetupAfterAgentRun() error {
 	// trace generation
 	go t.generateTraces()
 
 	cmd := exec.Command("/bin/bash", "resources/otlp_pusher.sh")
-	cmd.Env = append(os.Environ(), fmt.Sprintf("INSTANCE_ID=%s", t.env.InstanceId))
+	cmd.Env = append(os.Environ(), fmt.Sprintf("INSTANCE_ID=%s", t.env.InstanceId), fmt.Sprintf("TEST_TYPE=%s", t.testType))
 	return cmd.Start()
 }
 
@@ -183,12 +200,12 @@ func (t *OtlpTestRunner) generateTraces() {
 	generator := otlp.NewLoadGenerator(&base.TraceGeneratorConfig{
 		Interval: 15 * time.Second,
 		Annotations: map[string]interface{}{
-			"test_type":   "otlp",
+			"test_type":   fmt.Sprintf("otlp_traces_%s", t.testType),
 			"instance_id": t.env.InstanceId,
 			"commit_sha":  t.env.CwaCommitSha,
 		},
 		Attributes: []attribute.KeyValue{
-			attribute.String("test_type", "otlp"),
+			attribute.String("test_type", fmt.Sprintf("otlp_traces_%s", t.testType)),
 			attribute.String("instance_id", t.env.InstanceId),
 		},
 	})
@@ -200,12 +217,17 @@ var _ test_runner.ITestRunner = (*OtlpTestRunner)(nil)
 func TestOTLP(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 
-	// shared receiver test
-	testRunner := &OtlpTestRunner{env: env}
-	runner := &test_runner.TestRunner{TestRunner: testRunner}
+	configs := map[string]string{
+		"shared":     "shared_config.json",
+		"appsignals": "appsignals_config.json",
+	}
+	for ttype, name := range configs {
+		testRunner := &OtlpTestRunner{env: env, testType: ttype, configName: name}
+		runner := &test_runner.TestRunner{TestRunner: testRunner}
 
-	result := runner.Run()
-	require.Equal(t, status.SUCCESSFUL, result.GetStatus(), result.TestResults[0].Reason)
+		result := runner.Run()
+		require.Equal(t, status.SUCCESSFUL, result.GetStatus(), result.TestResults[0].Reason)
+	}
 
 	// traces only tests
 	testCases := map[string]struct {
