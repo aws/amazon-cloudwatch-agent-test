@@ -167,9 +167,19 @@ resource "kubernetes_namespace" "namespace" {
   }
 }
 
+# Create a manual storage class for testing
+resource "kubernetes_storage_class" "manual" {
+  depends_on = [aws_eks_node_group.this]
+  metadata {
+    name = "manual"
+  }
+  storage_provisioner = "kubernetes.io/no-provisioner"
+  volume_binding_mode = "WaitForFirstConsumer"
+}
+
 # Create a sample PersistentVolume for testing PV metrics
 resource "kubernetes_persistent_volume" "test_pv" {
-  depends_on = [aws_eks_node_group.this]
+  depends_on = [aws_eks_node_group.this, kubernetes_storage_class.manual]
   metadata {
     name = "test-pv-${module.common.testing_id}"
   }
@@ -181,9 +191,21 @@ resource "kubernetes_persistent_volume" "test_pv" {
     persistent_volume_source {
       host_path {
         path = "/tmp/test-pv"
+        type = "DirectoryOrCreate"
       }
     }
     storage_class_name = "manual"
+    node_affinity {
+      required {
+        node_selector_term {
+          match_expressions {
+            key      = "kubernetes.io/os"
+            operator = "In"
+            values   = ["linux"]
+          }
+        }
+      }
+    }
   }
 }
 
@@ -202,12 +224,49 @@ resource "kubernetes_persistent_volume_claim" "test_pvc" {
       }
     }
     storage_class_name = "manual"
+    volume_name = kubernetes_persistent_volume.test_pv.metadata[0].name
+  }
+}
+
+# Create a test deployment to back the service
+resource "kubernetes_deployment" "test_app" {
+  depends_on = [kubernetes_namespace.namespace]
+  metadata {
+    name      = "test-app-${module.common.testing_id}"
+    namespace = "amazon-cloudwatch"
+    labels = {
+      app = "test-app"
+    }
+  }
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        app = "test-app"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "test-app"
+        }
+      }
+      spec {
+        container {
+          name  = "test-app"
+          image = "nginx:alpine"
+          port {
+            container_port = 80
+          }
+        }
+      }
+    }
   }
 }
 
 # Create a sample Service for the Ingress
 resource "kubernetes_service" "test_service" {
-  depends_on = [kubernetes_namespace.namespace]
+  depends_on = [kubernetes_namespace.namespace, kubernetes_deployment.test_app]
   metadata {
     name      = "test-service-${module.common.testing_id}"
     namespace = "amazon-cloudwatch"
@@ -218,7 +277,7 @@ resource "kubernetes_service" "test_service" {
     }
     port {
       port        = 80
-      target_port = 8080
+      target_port = 80
     }
     type = "ClusterIP"
   }
@@ -230,8 +289,12 @@ resource "kubernetes_ingress_v1" "test_ingress" {
   metadata {
     name      = "test-ingress-${module.common.testing_id}"
     namespace = "amazon-cloudwatch"
+    annotations = {
+      "kubernetes.io/ingress.class" = "nginx"
+    }
   }
   spec {
+    ingress_class_name = "nginx"
     rule {
       host = "test.example.com"
       http {
@@ -514,9 +577,14 @@ resource "null_resource" "validator" {
     kubernetes_daemonset.service,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
+    kubernetes_persistent_volume_claim.test_pvc,
+    kubernetes_ingress_v1.test_ingress,
+    kubernetes_deployment.test_app,
   ]
   provisioner "local-exec" {
     command = <<-EOT
+      echo "Waiting for resources to be ready before running tests..."
+      sleep 120
       echo "Validating EKS metrics/logs"
       cd ../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
