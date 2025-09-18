@@ -57,7 +57,6 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 		containerMemTotal, containerMemUsed, containerPower, containerTemp, containerUtil, containerMemUtil, containerTensorCoreUtil,
 		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCoreUtil,
 		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil, nodeTensorCoreUtil,
-		nodeUnreservedCapacity, nodeAvailableCapacity,
 	},
 	"ClusterName-Namespace": {
 		podMemTotal, podMemUsed, podPower, podTemp, podUtil, podMemUtil, podTensorCoreUtil,
@@ -85,7 +84,6 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 	},
 	"ClusterName-InstanceId-NodeName": {
 		nodeMemTotal, nodeMemUsed, nodePower, nodeTemp, nodeUtil, nodeMemUtil, nodeTensorCoreUtil,
-		nodeUnreservedCapacity, nodeAvailableCapacity,
 		//nodeCountTotal, nodeCountRequest, nodeCountLimit,
 	},
 	"ClusterName-GpuDevice-InstanceId-InstanceType-NodeName": {
@@ -106,10 +104,10 @@ func (t *NvidiaTestRunner) Validate() status.TestGroupResult {
 	expectedDimsToMetrics := expectedDimsToMetricsIntegTest
 	if *useE2EMetrics {
 		// add GPU count metrics
-		expectedDimsToMetricsIntegTest["ClusterName"] = append(expectedDimsToMetricsIntegTest["ClusterName"], podReserved, podRequest, podCountTotal, podLimit, nodeCountTotal, nodeCountLimit, nodeReserved)
+		expectedDimsToMetricsIntegTest["ClusterName"] = append(expectedDimsToMetricsIntegTest["ClusterName"], podReserved, podRequest, podCountTotal, podLimit, nodeCountTotal, nodeCountLimit, nodeReserved, nodeUnreservedCapacity, nodeAvailableCapacity)
 		expectedDimsToMetricsIntegTest["ClusterName-Namespace-PodName"] = append(expectedDimsToMetricsIntegTest["ClusterName-Namespace-PodName"], podCountTotal, podRequest, podReserved, podLimit)
 		expectedDimsToMetricsIntegTest["ClusterName-FullPodName-Namespace-PodName"] = append(expectedDimsToMetricsIntegTest["ClusterName-FullPodName-Namespace-PodName"], podCountTotal, podRequest, podReserved, podLimit)
-		expectedDimsToMetricsIntegTest["ClusterName-InstanceId-NodeName"] = append(expectedDimsToMetricsIntegTest["ClusterName-InstanceId-NodeName"], nodeCountLimit, nodeCountTotal, nodeReserved)
+		expectedDimsToMetricsIntegTest["ClusterName-InstanceId-NodeName"] = append(expectedDimsToMetricsIntegTest["ClusterName-InstanceId-NodeName"], nodeCountLimit, nodeCountTotal, nodeReserved, nodeUnreservedCapacity, nodeAvailableCapacity)
 	}
 	testResults = append(testResults, metric.ValidateMetrics(t.env, gpuMetricIndicator, expectedDimsToMetrics)...)
 	testResults = append(testResults, metric.ValidateLogs(t.env))
