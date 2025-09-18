@@ -8,27 +8,28 @@
     "ClusterName": {},
     "Namespace": {},
     "NodeName": {},
-    "PodName": {},
+    "PersistentVolumeClaimName": {},
     "PlatformType": {},
     "Sources": {},
     "Timestamp": {},
     "Type": {},
     "Version": {},
-    "replicas_desired": {},
-    "replicas_ready": {},
-    "status_replicas_available": {},
-    "status_replicas_unavailable": {}
+    "persistent_volume_claim_status_bound": {},
+    "persistent_volume_claim_status_lost": {},
+    "persistent_volume_claim_status_pending": {},
+    "persistent_volume_claim_count": {}
   },
   "required": [
     "ClusterName",
     "Namespace",
-    "NodeName", 
-    "PodName",
-    "PlatformType",
-    "Sources",
+    "PersistentVolumeClaimName",
     "Timestamp",
     "Type",
     "Version",
-    "CloudWatchMetrics"
+    "CloudWatchMetrics",
+    "persistent_volume_claim_status_bound",
+    "persistent_volume_claim_status_lost",
+    "persistent_volume_claim_status_pending",
+    "persistent_volume_claim_count"
   ]
 }

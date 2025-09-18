@@ -25,6 +25,7 @@ var expectedDimsToMetrics = map[string][]string{
 		NodeNeuronCoreMemUsageModel, NodeNeuronCoreMemUsageScratchpad, NodeNeuronCoreMemUsageRuntime,
 		NodeNeuronCoreMemUsageTensors, NodeExecutionErrorsTotal, NodeNeuronDeviceRuntimeMemoryUsed,
 		NodeNeuronExecutionLatency, NodeNeuronDeviceHwEccEvents,
+		NodeNeuronCoreUnreservedCapacity, NodeNeuronCoreAvailableCapacity,
 	},
 	"ClusterName-UltraServer": {
 		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageTotal, NodeNeuronCoreMemUsageConstants,
@@ -37,6 +38,7 @@ var expectedDimsToMetrics = map[string][]string{
 		NodeNeuronCoreMemUsageModel, NodeNeuronCoreMemUsageScratchpad, NodeNeuronCoreMemUsageRuntime,
 		NodeNeuronCoreMemUsageTensors, NodeExecutionErrorsTotal, NodeNeuronDeviceRuntimeMemoryUsed,
 		NodeNeuronExecutionLatency, NodeNeuronDeviceHwEccEvents,
+		NodeNeuronCoreUnreservedCapacity, NodeNeuronCoreAvailableCapacity,
 	},
 	"ClusterName-InstanceId-InstanceType-NeuronCore-NeuronDevice-NodeName": {
 		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageTotal, NodeNeuronCoreMemUsageConstants,

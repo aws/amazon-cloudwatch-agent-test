@@ -64,6 +64,10 @@ var (
 	eksNodeEfaSchema string
 	//go:embed test_schemas/node_ebs.json
 	eksNodeEBSSchema string
+	//go:embed test_schemas/persistent_volume_claim.json
+	eksPersistentVolumeClaimSchema string
+	//go:embed test_schemas/persistent_volume.json
+	eksPersistentVolumeSchema string
 
 	EksClusterValidationMap = map[string]string{
 		"Cluster":                eksClusterSchema,
@@ -93,6 +97,8 @@ var (
 		"PodEFA":                 eksPodEfaSchema,
 		"NodeEFA":                eksNodeEfaSchema,
 		"NodeEBS":                eksNodeEBSSchema,
+		"PersistentVolumeClaim":  eksPersistentVolumeClaimSchema,
+		"PersistentVolume":       eksPersistentVolumeSchema,
 	}
 
 	EksClusterFrequencyValidationMap = map[string]int{
@@ -174,6 +180,15 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"container_cpu_request",
 			"pod_cpu_usage_total",
 			"pod_memory_working_set",
+			"persistent_volume_claim_status_bound",
+			"persistent_volume_claim_status_lost",
+			"persistent_volume_claim_status_pending",
+			"persistent_volume_claim_count",
+			"persistent_volume_count",
+			"replicas_desired",
+			"replicas_ready",
+			"status_replicas_available",
+			"status_replicas_unavailable",
 		},
 		"ClusterName-FullPodName-Namespace-PodName": {
 			"pod_network_tx_bytes",
@@ -236,6 +251,10 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_memory_limit",
 			"pod_cpu_usage_total",
 			"pod_memory_working_set",
+			"replicas_desired",
+			"replicas_ready",
+			"status_replicas_available",
+			"status_replicas_unavailable",
 		},
 
 		"ClusterName-InstanceId-NodeName": {
@@ -304,6 +323,17 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_interface_network_tx_dropped",
 			"pod_cpu_utilization",
 			"pod_network_tx_bytes",
+			"namespace_ingress_count",
+			"persistent_volume_claim_status_bound",
+			"persistent_volume_claim_status_lost",
+			"persistent_volume_claim_status_pending",
+			"persistent_volume_claim_count",
+		},
+		"ClusterName-Namespace-PersistentVolumeClaimName": {
+			"persistent_volume_claim_status_bound",
+			"persistent_volume_claim_status_lost",
+			"persistent_volume_claim_status_pending",
+			"persistent_volume_claim_count",
 		},
 	}
 

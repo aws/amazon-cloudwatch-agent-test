@@ -167,6 +167,91 @@ resource "kubernetes_namespace" "namespace" {
   }
 }
 
+# Create a sample PersistentVolume for testing PV metrics
+resource "kubernetes_persistent_volume" "test_pv" {
+  depends_on = [aws_eks_node_group.this]
+  metadata {
+    name = "test-pv-${module.common.testing_id}"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteOnce"]
+    persistent_volume_source {
+      host_path {
+        path = "/tmp/test-pv"
+      }
+    }
+    storage_class_name = "manual"
+  }
+}
+
+# Create a sample PersistentVolumeClaim for testing PVC metrics
+resource "kubernetes_persistent_volume_claim" "test_pvc" {
+  depends_on = [kubernetes_namespace.namespace, kubernetes_persistent_volume.test_pv]
+  metadata {
+    name      = "test-pvc-${module.common.testing_id}"
+    namespace = "amazon-cloudwatch"
+  }
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    resources {
+      requests = {
+        storage = "1Gi"
+      }
+    }
+    storage_class_name = "manual"
+  }
+}
+
+# Create a sample Service for the Ingress
+resource "kubernetes_service" "test_service" {
+  depends_on = [kubernetes_namespace.namespace]
+  metadata {
+    name      = "test-service-${module.common.testing_id}"
+    namespace = "amazon-cloudwatch"
+  }
+  spec {
+    selector = {
+      app = "test-app"
+    }
+    port {
+      port        = 80
+      target_port = 8080
+    }
+    type = "ClusterIP"
+  }
+}
+
+# Create a sample Ingress for testing ingress metrics
+resource "kubernetes_ingress_v1" "test_ingress" {
+  depends_on = [kubernetes_namespace.namespace, kubernetes_service.test_service]
+  metadata {
+    name      = "test-ingress-${module.common.testing_id}"
+    namespace = "amazon-cloudwatch"
+  }
+  spec {
+    rule {
+      host = "test.example.com"
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = kubernetes_service.test_service.metadata[0].name
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 # TODO: how do we support different deployment types? Should they be in separate terraform
 #       files, and spawn separate tests?
 resource "kubernetes_daemonset" "service" {
@@ -393,6 +478,16 @@ resource "kubernetes_cluster_role" "clusterrole" {
     verbs      = ["list", "watch", "get"]
     resources  = ["endpointslices"]
     api_groups = ["discovery.k8s.io"]
+  }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["persistentvolumes", "persistentvolumeclaims"]
+    api_groups = [""]
+  }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["ingresses"]
+    api_groups = ["networking.k8s.io"]
   }
 }
 

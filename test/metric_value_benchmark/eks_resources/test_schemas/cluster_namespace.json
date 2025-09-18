@@ -11,6 +11,7 @@
     "Version":{},
     "Namespace":{},
     "namespace_number_of_running_pods":{},
+    "namespace_ingress_count":{},
     "CloudWatchMetrics": {},
     "kubernetes": {
       "type": "object",

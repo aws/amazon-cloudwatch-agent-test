@@ -56,6 +56,12 @@
     "node_status_condition_memory_pressure": {},
     "node_status_condition_pid_pressure": {},
     "node_status_condition_ready": {},
+    "node_gpu_unreserved_capacity": {},
+    "node_gpu_available_capacity": {},
+    "node_neuroncore_unreserved_capacity": {},
+    "node_neuroncore_available_capacity": {},
+    "node_efa_unreserved_capacity": {},
+    "node_efa_available_capacity": {},
     "kubernetes": {
       "type": "object",
       "properties": {

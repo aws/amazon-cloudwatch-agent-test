@@ -29,6 +29,8 @@ const (
 	NodeNeuronCoreMemUsageRuntime          = "node_neuroncore_memory_usage_runtime_memory"
 	NodeNeuronCoreMemUsageTensors          = "node_neuroncore_memory_usage_tensors"
 	NodeNeuronCoreMemUsageTotal            = "node_neuroncore_memory_usage_total"
+	NodeNeuronCoreUnreservedCapacity       = "node_neuroncore_unreserved_capacity"
+	NodeNeuronCoreAvailableCapacity        = "node_neuroncore_available_capacity"
 	NodeNeuronDeviceHwEccEvents            = "node_neurondevice_hw_ecc_events_total"
 	NodeExecutionErrorsTotal               = "node_neuron_execution_errors_total"
 	NodeExecutionErrorsGeneric             = "node_neuron_execution_errors_generic"
