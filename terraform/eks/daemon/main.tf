@@ -513,7 +513,7 @@ resource "kubernetes_cluster_role" "clusterrole" {
   }
   rule {
     verbs      = ["list", "watch"]
-    resources  = ["replicasets"]
+    resources  = ["replicasets", "deployments"]
     api_groups = ["apps"]
   }
   rule {
