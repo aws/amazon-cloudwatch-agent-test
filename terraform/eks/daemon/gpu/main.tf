@@ -301,12 +301,25 @@ resource "kubernetes_daemonset" "exporter" {
             host_port      = 9400
             protocol       = "TCP"
           }
-          command = [
-            "/bin/sh",
-            "-c",
-          ]
+          command = ["/bin/sh", "-c"]
           args = [
-            "/bin/echo 'DCGM_FI_DEV_GPU_UTIL{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_FB_FREE{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_FB_USED{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_FB_TOTAL{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_FB_USED_PERCENT{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_GPU_TEMP{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_POWER_USAGE{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_PROF_PIPE_TENSOR_ACTIVE{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1' >> /usr/local/apache2/htdocs/metrics && sed -i -e \"s/hostname1/$HOST_NAME/g\" /usr/local/apache2/htdocs/metrics && httpd-foreground -k restart"
+            <<-EOT
+            cat > /usr/local/apache2/htdocs/metrics << 'EOF'
+            DCGM_FI_DEV_GPU_UTIL{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
+            DCGM_FI_DEV_FB_FREE{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
+            DCGM_FI_DEV_FB_USED{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
+            DCGM_FI_DEV_FB_TOTAL{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
+            DCGM_FI_DEV_FB_USED_PERCENT{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
+            DCGM_FI_DEV_GPU_TEMP{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
+            DCGM_FI_DEV_POWER_USAGE{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
+            DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
+            EOF
+            
+            sed -i -e "s/hostname1/$HOST_NAME/g" /usr/local/apache2/htdocs/metrics
+            sed -i -e "s/pod1/$POD_NAME/g" /usr/local/apache2/htdocs/metrics
+            
+            httpd-foreground -k restart
+            EOT
           ]
           volume_mount {
             mount_path = "/etc/amazon-cloudwatch-observability-dcgm-cert"
@@ -346,6 +359,14 @@ resource "kubernetes_daemonset" "exporter" {
             value_from {
               field_ref {
                 field_path = "metadata.namespace"
+              }
+            }
+          }
+          env {
+            name = "POD_NAME"
+            value_from {
+              field_ref {
+                field_path = "metadata.name"
               }
             }
           }
@@ -389,6 +410,8 @@ resource "kubernetes_service" "exporter" {
     namespace = "amazon-cloudwatch"
     labels = {
       "k8s-app" : "dcgm-exporter-service"
+      "app" : "dcgm-exporter"
+      "component" : "gpu-metrics"
     }
     annotations = {
       "prometheus.io/scrape" : "true"
