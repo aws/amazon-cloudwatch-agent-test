@@ -164,6 +164,29 @@ def process_neuron_hardware_info(metric_objects, data, instance_data):
         metric_objects['neuron_hardware_info'].info(neuron_labels)
 
 
+def process_neuroncore_capacity(group_obj, data, labels):
+    """Generate neuron core capacity metrics"""
+    # Calculate total neuron cores
+    total_cores = data['neuron_device_count'] * data['neuroncore_per_device_count']
+    
+    # For testing purposes, simulate some reserved capacity
+    # In a real environment, this would come from Kubernetes resource allocation
+    reserved_cores = int(total_cores * 0.25)  # 25% reserved
+    unreserved_cores = total_cores - reserved_cores
+    available_cores = total_cores  # All cores are available for allocation
+    
+    # Create capacity metrics
+    gauge_name = 'neuroncore_unreserved_capacity'
+    if gauge_name not in group_obj:
+        group_obj[gauge_name] = Gauge(gauge_name, 'Unreserved neuron core capacity', labels.keys())
+    group_obj[gauge_name].labels(**labels).set(unreserved_cores)
+    
+    gauge_name = 'neuroncore_available_capacity'
+    if gauge_name not in group_obj:
+        group_obj[gauge_name] = Gauge(gauge_name, 'Available neuron core capacity', labels.keys())
+    group_obj[gauge_name].labels(**labels).set(available_cores)
+
+
 def process_instance_info(metric_objects, instance_data):
     if 'instance_info' not in metric_objects:
         metric_objects['instance_info'] = Info('instance', 'EC2 instance information')
@@ -207,6 +230,10 @@ def process_data(metric_objects, monitor_data, instance_info):
     process_instance_info(metric_objects, instance_info)
     if monitor_data['neuron_hardware_info'] is not None:
         process_neuron_hardware_info(metric_objects, monitor_data['neuron_hardware_info'], instance_info)
+        # Process neuron core capacity metrics
+        if 'neuroncore_capacity' not in metric_objects:
+            metric_objects['neuroncore_capacity'] = {}
+        process_neuroncore_capacity(metric_objects['neuroncore_capacity'], monitor_data['neuron_hardware_info'], instance_info)
 
 def clear_gauges_from_metric_objects(all_metric_objects):
     for _, metricGroupedObjects in all_metric_objects.items():
