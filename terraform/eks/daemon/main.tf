@@ -9,7 +9,6 @@ module "common" {
 
 module "basic_components" {
   source = "../../basic_components"
-
   region = var.region
 }
 
@@ -167,106 +166,85 @@ resource "kubernetes_namespace" "namespace" {
   }
 }
 
-# Create a manual storage class for testing
-resource "kubernetes_storage_class" "manual" {
-  depends_on = [aws_eks_node_group.this]
-  metadata {
-    name = "manual"
-  }
-  storage_provisioner = "kubernetes.io/no-provisioner"
-  volume_binding_mode = "WaitForFirstConsumer"
-}
-
 # Create a sample PersistentVolume for testing PV metrics
-resource "kubernetes_persistent_volume" "test_pv" {
-  depends_on = [aws_eks_node_group.this, kubernetes_storage_class.manual]
+resource "kubernetes_persistent_volume" "test_pv_available" {
+  depends_on = [aws_eks_node_group.this, kubernetes_namespace.namespace]
   metadata {
-    name = "test-pv-${module.common.testing_id}"
+    name = "test-pv-available"
   }
   spec {
-    capacity = {
-      storage = "1Gi"
-    }
+    capacity     = { storage = "1Gi" }
     access_modes = ["ReadWriteOnce"]
     persistent_volume_source {
-      host_path {
-        path = "/tmp/test-pv"
-        type = "DirectoryOrCreate"
-      }
-    }
-    storage_class_name = "manual"
-    node_affinity {
-      required {
-        node_selector_term {
-          match_expressions {
-            key      = "kubernetes.io/os"
-            operator = "In"
-            values   = ["linux"]
-          }
-        }
-      }
+      host_path { path = "/tmp/pv-available" }
     }
   }
 }
 
 # Create a sample PersistentVolumeClaim for testing PVC metrics
-resource "kubernetes_persistent_volume_claim" "test_pvc" {
-  depends_on = [kubernetes_namespace.namespace, kubernetes_persistent_volume.test_pv]
+resource "kubernetes_persistent_volume_claim" "test_pvc_bound" {
+  depends_on = [kubernetes_persistent_volume.test_pv_available]
   metadata {
-    name      = "test-pvc-${module.common.testing_id}"
+    name      = "test-pvc-bound"
     namespace = "amazon-cloudwatch"
   }
   spec {
     access_modes = ["ReadWriteOnce"]
     resources {
-      requests = {
-        storage = "1Gi"
-      }
+      requests = { storage = "1Gi" }
     }
-    storage_class_name = "manual"
-    volume_name        = kubernetes_persistent_volume.test_pv.metadata[0].name
+    volume_name = kubernetes_persistent_volume.test_pv_available.metadata[0].name
   }
 }
 
 # Create a test deployment to back the service and use the PVC
 resource "kubernetes_deployment" "test_app" {
-  depends_on = [kubernetes_namespace.namespace, kubernetes_persistent_volume_claim.test_pvc]
   metadata {
-    name      = "test-app-${module.common.testing_id}"
+    name      = "test-app"
     namespace = "amazon-cloudwatch"
     labels = {
       app = "test-app"
     }
   }
+
   spec {
     replicas = 1
+
     selector {
       match_labels = {
         app = "test-app"
       }
     }
+
     template {
       metadata {
         labels = {
           app = "test-app"
         }
       }
+
       spec {
         container {
-          name  = "test-app"
-          image = "nginx:alpine"
+          name  = "nginx"
+          image = "nginx:latest"
+
           port {
             container_port = 80
           }
+
+          # This is correct: mount path inside the container
           volume_mount {
             name       = "test-storage"
-            mount_path = "/usr/share/nginx/html/data"
+            mount_path = "/usr/share/nginx/html"
           }
         }
+
+        # This is correct: define the volume at the pod level
         volume {
           name = "test-storage"
+
           persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.test_pvc.metadata[0].name
+            claim_name = kubernetes_persistent_volume_claim.test_pvc_bound.metadata[0].name
           }
         }
       }
@@ -583,7 +561,7 @@ resource "null_resource" "validator" {
     kubernetes_daemonset.service,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
-    kubernetes_persistent_volume_claim.test_pvc,
+    kubernetes_persistent_volume_claim.test_pvc_bound,
     kubernetes_ingress_v1.test_ingress,
     kubernetes_deployment.test_app,
   ]

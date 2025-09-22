@@ -525,6 +525,7 @@ resource "kubernetes_daemonset" "service" {
         node_selector = {
           "kubernetes.io/os" : "linux"
         }
+
         container {
           name              = "cwagent"
           image             = "${var.cwagent_image_repo}:${var.cwagent_image_tag}"
@@ -565,6 +566,34 @@ resource "kubernetes_daemonset" "service" {
             value_from {
               field_ref {
                 field_path = "metadata.namespace"
+              }
+            }
+          }
+          env {
+            name  = "CLUSTER_NAME"
+            value = aws_eks_cluster.this.name
+          }
+          env {
+            name = "INSTANCE_ID"
+            value_from {
+              field_ref {
+                field_path = "spec.nodeName"
+              }
+            }
+          }
+          env {
+            name = "NODE_NAME"
+            value_from {
+              field_ref {
+                field_path = "spec.nodeName"
+              }
+            }
+          }
+          env {
+            name = "INSTANCE_TYPE"
+            value_from {
+              field_ref {
+                field_path = "metadata.labels['node.kubernetes.io/instance-type']"
               }
             }
           }
@@ -612,6 +641,7 @@ resource "kubernetes_daemonset" "service" {
             name       = "kubelet-podresources"
             read_only  = true
           }
+
         }
         volume {
           name = "cwagentconfig"
@@ -671,6 +701,7 @@ resource "kubernetes_daemonset" "service" {
             }
           }
         }
+
         service_account_name             = "cloudwatch-agent"
         termination_grace_period_seconds = 60
       }
