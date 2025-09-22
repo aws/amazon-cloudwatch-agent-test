@@ -228,9 +228,9 @@ resource "kubernetes_persistent_volume_claim" "test_pvc" {
   }
 }
 
-# Create a test deployment to back the service
+# Create a test deployment to back the service and use the PVC
 resource "kubernetes_deployment" "test_app" {
-  depends_on = [kubernetes_namespace.namespace]
+  depends_on = [kubernetes_namespace.namespace, kubernetes_persistent_volume_claim.test_pvc]
   metadata {
     name      = "test-app-${module.common.testing_id}"
     namespace = "amazon-cloudwatch"
@@ -258,6 +258,16 @@ resource "kubernetes_deployment" "test_app" {
           port {
             container_port = 80
           }
+          volume_mount {
+            name       = "test-storage"
+            mount_path = "/usr/share/nginx/html/data"
+          }
+        }
+        volume {
+          name = "test-storage"
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.test_pvc.metadata[0].name
+          }
         }
       }
     }
@@ -283,18 +293,14 @@ resource "kubernetes_service" "test_service" {
   }
 }
 
-# Create a sample Ingress for testing ingress metrics
+# Create a simple Ingress for testing ingress metrics (no controller needed for metrics)
 resource "kubernetes_ingress_v1" "test_ingress" {
   depends_on = [kubernetes_namespace.namespace, kubernetes_service.test_service]
   metadata {
     name      = "test-ingress-${module.common.testing_id}"
     namespace = "amazon-cloudwatch"
-    annotations = {
-      "kubernetes.io/ingress.class" = "nginx"
-    }
   }
   spec {
-    ingress_class_name = "nginx"
     rule {
       host = "test.example.com"
       http {
@@ -584,7 +590,8 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Waiting for resources to be ready before running tests..."
-      sleep 120
+      echo "Waiting for CloudWatch agent to start collecting metrics..."
+      sleep 300
       echo "Validating EKS metrics/logs"
       cd ../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
