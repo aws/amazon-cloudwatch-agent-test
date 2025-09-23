@@ -97,7 +97,6 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   role       = aws_iam_role.node_role.name
 }
 
-# TODO: these security groups be created once and then reused
 # EKS Cluster Security Group
 resource "aws_security_group" "eks_cluster_sg" {
   name        = "cwagent-eks-cluster-sg-${module.common.testing_id}"
@@ -166,6 +165,12 @@ resource "kubernetes_namespace" "namespace" {
   }
 }
 
+resource "kubernetes_namespace" "test_namespace" {
+  metadata {
+    name = "test-namespace"
+  }
+}
+
 # Create a sample PersistentVolume for testing PV metrics
 resource "kubernetes_persistent_volume" "test_pv_available" {
   depends_on = [aws_eks_node_group.this, kubernetes_namespace.namespace]
@@ -183,10 +188,10 @@ resource "kubernetes_persistent_volume" "test_pv_available" {
 
 # Create a sample PersistentVolumeClaim for testing PVC metrics
 resource "kubernetes_persistent_volume_claim" "test_pvc_bound" {
-  depends_on = [kubernetes_persistent_volume.test_pv_available]
+  depends_on = [kubernetes_persistent_volume.test_pv_available, kubernetes_namespace.test_namespace]
   metadata {
     name      = "test-pvc-bound"
-    namespace = "amazon-cloudwatch"
+    namespace = "test-namespace"
   }
   spec {
     access_modes = ["ReadWriteOnce"]
@@ -201,7 +206,7 @@ resource "kubernetes_persistent_volume_claim" "test_pvc_bound" {
 resource "kubernetes_deployment" "test_app" {
   metadata {
     name      = "test-app"
-    namespace = "amazon-cloudwatch"
+    namespace = "test-namespace"
     labels = {
       app = "test-app"
     }
@@ -232,14 +237,12 @@ resource "kubernetes_deployment" "test_app" {
             container_port = 80
           }
 
-          # This is correct: mount path inside the container
           volume_mount {
             name       = "test-storage"
             mount_path = "/usr/share/nginx/html"
           }
         }
 
-        # This is correct: define the volume at the pod level
         volume {
           name = "test-storage"
 
@@ -254,10 +257,10 @@ resource "kubernetes_deployment" "test_app" {
 
 # Create a sample Service for the Ingress
 resource "kubernetes_service" "test_service" {
-  depends_on = [kubernetes_namespace.namespace, kubernetes_deployment.test_app]
+  depends_on = [kubernetes_namespace.test_namespace, kubernetes_deployment.test_app]
   metadata {
     name      = "test-service-${module.common.testing_id}"
-    namespace = "amazon-cloudwatch"
+    namespace = "test-namespace"
   }
   spec {
     selector = {
@@ -273,10 +276,10 @@ resource "kubernetes_service" "test_service" {
 
 # Create a simple Ingress for testing ingress metrics (no controller needed for metrics)
 resource "kubernetes_ingress_v1" "test_ingress" {
-  depends_on = [kubernetes_namespace.namespace, kubernetes_service.test_service]
+  depends_on = [kubernetes_namespace.test_namespace, kubernetes_service.test_service]
   metadata {
     name      = "test-ingress-${module.common.testing_id}"
-    namespace = "amazon-cloudwatch"
+    namespace = "test-namespace"
   }
   spec {
     rule {
@@ -299,14 +302,16 @@ resource "kubernetes_ingress_v1" "test_ingress" {
   }
 }
 
-# TODO: how do we support different deployment types? Should they be in separate terraform
-#       files, and spawn separate tests?
 resource "kubernetes_daemonset" "service" {
   depends_on = [
     kubernetes_namespace.namespace,
+    kubernetes_namespace.test_namespace,
     kubernetes_config_map.cwagentconfig,
     kubernetes_service_account.cwagentservice,
-    aws_eks_node_group.this
+    aws_eks_node_group.this,
+    kubernetes_persistent_volume_claim.test_pvc_bound,
+    kubernetes_ingress_v1.test_ingress,
+    kubernetes_deployment.test_app,
   ]
   metadata {
     name      = "cloudwatch-agent"
@@ -450,9 +455,7 @@ resource "kubernetes_daemonset" "service" {
   }
 }
 
-##########################################
-# Template Files
-##########################################
+# CloudWatch Agent Configuration
 locals {
   cwagent_config = fileexists("../../../${var.test_dir}/resources/config.json") ? "../../../${var.test_dir}/resources/config.json" : "./default_resources/default_amazon_cloudwatch_agent.json"
 }
@@ -568,7 +571,6 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Waiting for resources to be ready before running tests..."
-      echo "Waiting for CloudWatch agent to start collecting metrics..."
       sleep 300
       echo "Validating EKS metrics/logs"
       cd ../../..
