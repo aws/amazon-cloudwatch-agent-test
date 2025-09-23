@@ -180,6 +180,7 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"container_cpu_request",
 			"pod_cpu_usage_total",
 			"pod_memory_working_set",
+			"namespace_ingress_count",
 			"persistent_volume_claim_status_bound",
 			"persistent_volume_claim_status_lost",
 			"persistent_volume_claim_status_pending",
