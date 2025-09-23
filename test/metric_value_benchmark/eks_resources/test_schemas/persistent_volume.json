@@ -19,7 +19,6 @@
     "Timestamp",
     "Type",
     "Version",
-    "CloudWatchMetrics",
-    "persistent_volume_count"
+    "CloudWatchMetrics"
   ]
 }

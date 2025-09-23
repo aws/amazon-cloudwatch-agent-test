@@ -26,10 +26,6 @@
     "Timestamp",
     "Type",
     "Version",
-    "CloudWatchMetrics",
-    "persistent_volume_claim_status_bound",
-    "persistent_volume_claim_status_lost",
-    "persistent_volume_claim_status_pending",
-    "persistent_volume_claim_count"
+    "CloudWatchMetrics"
   ]
 }
