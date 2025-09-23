@@ -305,14 +305,14 @@ resource "kubernetes_daemonset" "exporter" {
           args = [
             <<-EOT
             cat > /usr/local/apache2/htdocs/metrics << 'EOF'
-            DCGM_FI_DEV_GPU_UTIL{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
-            DCGM_FI_DEV_FB_FREE{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
-            DCGM_FI_DEV_FB_USED{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
-            DCGM_FI_DEV_FB_TOTAL{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
-            DCGM_FI_DEV_FB_USED_PERCENT{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
-            DCGM_FI_DEV_GPU_TEMP{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
-            DCGM_FI_DEV_POWER_USAGE{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
-            DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash"} 1
+            DCGM_FI_DEV_GPU_UTIL{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash",service="dcgm-exporter-service"} 1
+            DCGM_FI_DEV_FB_FREE{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash",service="dcgm-exporter-service"} 1
+            DCGM_FI_DEV_FB_USED{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash",service="dcgm-exporter-service"} 1
+            DCGM_FI_DEV_FB_TOTAL{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash",service="dcgm-exporter-service"} 1
+            DCGM_FI_DEV_FB_USED_PERCENT{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash",service="dcgm-exporter-service"} 1
+            DCGM_FI_DEV_GPU_TEMP{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash",service="dcgm-exporter-service"} 1
+            DCGM_FI_DEV_POWER_USAGE{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash",service="dcgm-exporter-service"} 1
+            DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{PodName="pod1",gpu="0",UUID="uuid0",device="nvidia0",modelName="Tesla T4",Hostname="hostname1",container="main",namespace="amazon-cloudwatch",pod="pod1-hash",service="dcgm-exporter-service"} 1
             EOF
             
             sed -i -e "s/hostname1/$HOST_NAME/g" /usr/local/apache2/htdocs/metrics
