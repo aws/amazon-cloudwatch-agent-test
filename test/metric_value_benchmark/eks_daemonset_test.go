@@ -93,7 +93,7 @@ func (e *EKSDaemonTestRunner) validateInstanceMetrics(name string) status.TestRe
 	}
 
 	valueFetcher := metric.MetricValueFetcher{}
-	values, err := valueFetcher.Fetch(metric.ContainerInsightsNamespace, name, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
+	values, err := valueFetcher.Fetch(metric.ContainerInsightsNamespace, name, dims, metric.AVERAGE, metric.MinuteStatPeriod)
 	if err != nil {
 		log.Println("failed to fetch metrics", err)
 		return testResult
