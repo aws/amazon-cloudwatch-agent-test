@@ -1,0 +1,78 @@
+{
+  "agent": {
+    "metrics_collection_interval": 1,
+    "debug": true,
+    "aws_sdk_log_level": "LogDebug",
+    "use_dualstack_endpoint": true
+  },
+  "metrics": {
+    "force_flush_interval": 10,
+    "append_dimensions": {
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
+    "namespace": "IPv6AllClientsTest",
+    "metrics_collected": {
+      "cpu": {
+        "resources": ["*"],
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_USAGE_IDLE",
+            "unit": "unit"
+          },
+          {
+            "name": "cpu_usage_nice",
+            "unit": "unit"
+          },
+          "cpu_usage_guest",
+          "time_active",
+          "usage_active"
+        ],
+        "totalcpu": false,
+        "metrics_collection_interval": 10,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      },
+      "processes": {
+        "measurement": [
+          "blocked",
+          "running",
+          "sleeping",
+          "stopped",
+          "total",
+          "dead",
+          "idle",
+          "paging",
+          "total_threads",
+          "zombies"
+        ],
+        "metrics_collection_interval": 10,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      }
+    }
+  },
+  "logs": {
+    "force_flush_interval": 5,
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "dualstack-ipv4-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          }
+        ]
+      }
+    }
+  }
+}
