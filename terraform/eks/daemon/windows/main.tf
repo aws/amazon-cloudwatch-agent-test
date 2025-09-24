@@ -263,6 +263,142 @@ resource "kubernetes_namespace" "namespace" {
   }
 }
 
+# Create test namespace for test resources
+resource "kubernetes_namespace" "test_namespace" {
+  depends_on = [aws_eks_node_group.this]
+  metadata {
+    name = "test-namespace"
+  }
+}
+
+# Create a sample PersistentVolume for testing PV metrics
+resource "kubernetes_persistent_volume" "test_pv_available" {
+  depends_on = [aws_eks_node_group.this, kubernetes_namespace.test_namespace]
+  metadata {
+    name = "test-pv-available-${module.common.testing_id}"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteOnce"]
+    persistent_volume_source {
+      host_path {
+        path = "/tmp/pv-available"
+      }
+    }
+  }
+}
+
+# Create a sample PersistentVolumeClaim for testing PVC metrics
+resource "kubernetes_persistent_volume_claim" "test_pvc_bound" {
+  depends_on = [kubernetes_persistent_volume.test_pv_available, kubernetes_namespace.test_namespace]
+  metadata {
+    name      = "test-pvc-bound-${module.common.testing_id}"
+    namespace = "test-namespace"
+  }
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    resources {
+      requests = {
+        storage = "1Gi"
+      }
+    }
+    volume_name = kubernetes_persistent_volume.test_pv_available.metadata[0].name
+  }
+}
+
+# Create a test deployment to back the service and use the PVC
+resource "kubernetes_deployment" "test_app" {
+  depends_on = [kubernetes_namespace.test_namespace, kubernetes_persistent_volume_claim.test_pvc_bound]
+  metadata {
+    name      = "test-app-${module.common.testing_id}"
+    namespace = "test-namespace"
+    labels = {
+      app = "test-app"
+    }
+  }
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        app = "test-app"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "test-app"
+        }
+      }
+      spec {
+        container {
+          name  = "test-container"
+          image = "nginx:latest"
+          port {
+            container_port = 80
+          }
+          volume_mount {
+            name       = "test-storage"
+            mount_path = "/usr/share/nginx/html"
+          }
+        }
+        volume {
+          name = "test-storage"
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.test_pvc_bound.metadata[0].name
+          }
+        }
+      }
+    }
+  }
+}
+
+# Create a service for the test deployment
+resource "kubernetes_service" "test_service" {
+  depends_on = [kubernetes_namespace.test_namespace, kubernetes_deployment.test_app]
+  metadata {
+    name      = "test-service-${module.common.testing_id}"
+    namespace = "test-namespace"
+  }
+  spec {
+    selector = {
+      app = "test-app"
+    }
+    port {
+      port        = 80
+      target_port = 80
+    }
+  }
+}
+
+# Create a simple Ingress for testing ingress metrics (no controller needed for metrics)
+resource "kubernetes_ingress_v1" "test_ingress" {
+  depends_on = [kubernetes_namespace.test_namespace, kubernetes_service.test_service]
+  metadata {
+    name      = "test-ingress-${module.common.testing_id}"
+    namespace = "test-namespace"
+  }
+  spec {
+    rule {
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = kubernetes_service.test_service.metadata[0].name
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 # TODO: how do we support different deployment types? Should they be in separate terraform
 #       files, and spawn separate tests?
 resource "kubernetes_daemonset" "service" {
@@ -499,7 +635,7 @@ resource "kubernetes_cluster_role" "clusterrole" {
   }
   rule {
     verbs      = ["list", "watch"]
-    resources  = ["replicasets"]
+    resources  = ["replicasets", "deployments"]
     api_groups = ["apps"]
   }
   rule {
@@ -528,6 +664,16 @@ resource "kubernetes_cluster_role" "clusterrole" {
     resources  = ["endpointslices"]
     api_groups = ["discovery.k8s.io"]
   }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["persistentvolumes", "persistentvolumeclaims"]
+    api_groups = [""]
+  }
+  rule {
+    verbs      = ["list", "watch"]
+    resources  = ["ingresses"]
+    api_groups = ["networking.k8s.io"]
+  }
 }
 
 resource "kubernetes_cluster_role_binding" "rolebinding" {
@@ -553,7 +699,10 @@ resource "null_resource" "validator" {
     kubernetes_daemonset.service,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
-    null_resource.windows-cwagent
+    null_resource.windows-cwagent,
+    kubernetes_persistent_volume_claim.test_pvc_bound,
+    kubernetes_ingress_v1.test_ingress,
+    kubernetes_deployment.test_app,
   ]
   provisioner "local-exec" {
     command = <<-EOT
