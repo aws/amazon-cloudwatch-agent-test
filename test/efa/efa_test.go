@@ -37,6 +37,10 @@ const (
 	podEfaRdmaReadBytes      = "pod_efa_rdma_read_bytes"
 	podEfaRdmaWriteBytes     = "pod_efa_rdma_write_bytes"
 	podEfaRdmaWriteRecvBytes = "pod_efa_rdma_write_recv_bytes"
+	podEfaLimit              = "pod_efa_limit"
+	podEfaRequest            = "pod_efa_request"
+	podEfaUsageTotal         = "pod_efa_usage_total"
+	podEfaReservedCapacity   = "pod_efa_reserved_capacity"
 
 	nodeEfaRxBytes            = "node_efa_rx_bytes"
 	nodeEfaTxBytes            = "node_efa_tx_bytes"
@@ -44,6 +48,11 @@ const (
 	nodeEfaRdmaReadBytes      = "node_efa_rdma_read_bytes"
 	nodeEfaRdmaWriteBytes     = "node_efa_rdma_write_bytes"
 	nodeEfaRdmaWriteRecvBytes = "node_efa_rdma_write_recv_bytes"
+	nodeEfaLimit              = "node_efa_limit"
+	nodeEfaUsageTotal         = "node_efa_usage_total"
+	nodeEfaReservedCapacity   = "node_efa_reserved_capacity"
+	nodeEfaUnreservedCapacity = "node_efa_unreserved_capacity"
+	nodeEfaAvailableCapacity  = "node_efa_available_capacity"
 )
 
 var expectedDimsToMetricsIntegTest = map[string][]string{
@@ -51,6 +60,8 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 		//containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
 		//podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
+		podEfaLimit, podEfaRequest, podEfaUsageTotal, podEfaReservedCapacity,
+		nodeEfaLimit, nodeEfaUsageTotal, nodeEfaReservedCapacity, nodeEfaUnreservedCapacity, nodeEfaAvailableCapacity,
 	},
 	//"ClusterName-Namespace-PodName-ContainerName": {
 	//	containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
@@ -61,17 +72,23 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 	//"ClusterName-Namespace": {
 	//	podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
 	//},
-	//"ClusterName-Namespace-Service": {
-	//	podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
-	//},
-	//"ClusterName-Namespace-PodName": {
-	//	podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
-	//},
+	"ClusterName-Namespace-Service": {
+		// podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
+		podEfaLimit, podEfaRequest, podEfaUsageTotal, podEfaReservedCapacity,
+	},
+	"ClusterName-Namespace-PodName": {
+		//	podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
+		podEfaLimit, podEfaRequest, podEfaUsageTotal, podEfaReservedCapacity,
+	},
 	//"ClusterName-Namespace-PodName-FullPodName": {
 	//	podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
 	//},
+	"ClusterName-FullPodName-Namespace-PodName": {
+		podEfaLimit, podEfaRequest, podEfaUsageTotal, podEfaReservedCapacity,
+	},
 	"ClusterName-InstanceId-NodeName": {
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
+		nodeEfaLimit, nodeEfaUsageTotal, nodeEfaReservedCapacity, nodeEfaUnreservedCapacity, nodeEfaAvailableCapacity,
 	},
 	"ClusterName-InstanceId-InstanceType-NetworkInterfaceId-NodeName": {
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
