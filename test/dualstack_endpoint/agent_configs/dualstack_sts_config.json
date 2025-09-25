@@ -1,0 +1,21 @@
+{
+  "agent": {
+    "metrics_collection_interval": 1,
+    "debug": true,
+    "aws_sdk_log_level": "LogDebug",
+    "use_dualstack_endpoint": true,
+    "credentials": {
+      "role_arn": "TempArnForTesting123"
+    }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "time_guest"
+        ]
+      }
+    },
+    "force_flush_interval": 5
+  }
+}
