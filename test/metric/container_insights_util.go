@@ -113,6 +113,26 @@ func getMetricsInClusterDimension(env *environment.MetaData, metricFilter string
 		return nil
 	}
 
+	log.Printf("DEBUG: Total metrics fetched: %d", len(metrics))
+	log.Printf("DEBUG: Using metric filter: '%s'", metricFilter)
+
+	// Log ALL metric names for comprehensive debugging
+	log.Printf("DEBUG: Complete list of all %d metric names:", len(metrics))
+	for i, m := range metrics {
+		log.Printf("DEBUG: Metric %d: %s", i+1, *m.MetricName)
+	}
+
+	// Count and log filtered metrics
+	var filteredCount int
+	log.Printf("DEBUG: Metrics matching filter '%s':", metricFilter)
+	for _, m := range metrics {
+		if metricFilter != "" && strings.Contains(*m.MetricName, metricFilter) {
+			filteredCount++
+			log.Printf("DEBUG: Filtered metric %d: %s", filteredCount, *m.MetricName)
+		}
+	}
+	log.Printf("DEBUG: Total filtered metrics: %d out of %d", filteredCount, len(metrics))
+
 	var results []dimToMetrics
 	for _, m := range metrics {
 		// filter by metric name filter
@@ -125,7 +145,7 @@ func getMetricsInClusterDimension(env *environment.MetaData, metricFilter string
 		}
 		sort.Sort(sort.StringSlice(dims))
 		dimsKey := strings.Join(dims, dimDelimiter)
-		log.Printf("processing dims: %s", dimsKey)
+		log.Printf("processing dims: %s for metric: %s", dimsKey, *m.MetricName)
 
 		var dtm dimToMetrics
 		for _, ele := range results {
