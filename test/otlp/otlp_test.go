@@ -8,6 +8,7 @@ package otlp
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,6 +27,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/otlp"
 )
@@ -157,7 +159,7 @@ func (t *OtlpTestRunner) validateLogs() status.TestResult {
 	until := time.Now()
 	err := awsservice.ValidateLogs(
 		logGroup,
-		*streams[0].LogStreamName,
+		t.env.InstanceId,
 		&since,
 		&until,
 		awsservice.AssertLogsNotEmpty(),
@@ -188,6 +190,19 @@ func (t *OtlpTestRunner) GetMeasuredMetrics() []string {
 func (t *OtlpTestRunner) GetAgentConfigFileName() string { return t.configName }
 
 func (t *OtlpTestRunner) SetupAfterAgentRun() error {
+	// the idea is here to stop the agent started by the base_runner, then modifies yaml config with log_stream and restart the agent
+	// this is a temp workaround and needs to be updated after https://issues.amazon.com/issues/CWQS-1693
+	common.StopAgent()
+	time.Sleep(15 * time.Second)
+	err := modifyAgentYaml(t.env.InstanceId)
+	if err != nil {
+		log.Fatal(fmt.Sprint(err))
+	}
+	err = startAgent()
+	if err != nil {
+		log.Fatal(fmt.Sprint(err))
+	}
+
 	// trace generation
 	go t.generateTraces()
 
@@ -273,4 +288,30 @@ func TestOTLP(t *testing.T) {
 
 		})
 	}
+}
+
+func modifyAgentYaml(instanceId string) error {
+	ampCommands := []string{
+		// translator does not move logs::log_stream_name setting to the emf exporter so do it ourselves to ensure the log stream is created
+		fmt.Sprintf(`sudo sed -i 's/log_stream_name: ""/log_stream_name: "%s"/g' /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml`, instanceId),
+	}
+	err := common.RunCommands(ampCommands)
+	if err != nil {
+		return fmt.Errorf("failed to modify agent configuration: %w", err)
+	}
+	return nil
+}
+
+func startAgent() error {
+	agentStartWithoutTranslatorCommand := `sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent \
+		-envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json \
+		-config /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml \
+		-otelconfig /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml \
+		-pidfile /opt/aws/amazon-cloudwatch-agent/var/amazon-cloudwatch-agent.pid &`
+
+	err := common.RunAsyncCommand(agentStartWithoutTranslatorCommand)
+	if err != nil {
+		return err
+	}
+	return nil
 }
