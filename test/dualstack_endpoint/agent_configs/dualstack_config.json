@@ -1,6 +1,5 @@
 {
   "agent": {
-    "metrics_collection_interval": 1,
     "debug": true,
     "aws_sdk_log_level": "LogDebug",
     "use_dualstack_endpoint": true
@@ -13,43 +12,10 @@
       "InstanceId": "${aws:InstanceId}",
       "InstanceType": "${aws:InstanceType}"
     },
-    "namespace": "IPv6AllClientsTest",
     "metrics_collected": {
-      "cpu": {
-        "resources": ["*"],
-        "measurement": [
-          {
-            "name": "cpu_usage_idle",
-            "rename": "CPU_USAGE_IDLE",
-            "unit": "unit"
-          },
-          {
-            "name": "cpu_usage_nice",
-            "unit": "unit"
-          },
-          "cpu_usage_guest",
-          "time_active",
-          "usage_active"
-        ],
-        "totalcpu": false,
-        "metrics_collection_interval": 10,
-        "append_dimensions": {
-          "d1": "foo",
-          "d2": "bar"
-        }
-      },
       "processes": {
         "measurement": [
-          "blocked",
-          "running",
-          "sleeping",
-          "stopped",
-          "total",
-          "dead",
-          "idle",
-          "paging",
-          "total_threads",
-          "zombies"
+          "blocked"
         ],
         "metrics_collection_interval": 10,
         "append_dimensions": {
@@ -60,7 +26,7 @@
     }
   },
   "logs": {
-    "force_flush_interval": 5,
+    "force_flush_interval": 10,
     "logs_collected": {
       "files": {
         "collect_list": [
