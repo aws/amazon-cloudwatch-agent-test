@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
@@ -28,6 +27,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/otlp"
 )
