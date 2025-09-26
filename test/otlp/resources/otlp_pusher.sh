@@ -5,7 +5,10 @@ if [ -z "$INSTANCE_ID" ]; then
     exit 1
 fi
 
-echo "Starting OTLP data generation with INSTANCE_ID: $INSTANCE_ID"
+if [ -z "$TEST_TYPE" ]; then
+    echo "Error: TEST_TYPE environment variable is not set"
+    exit 1
+fi
 
 COUNTER=0
 SEQUENCE=0
@@ -22,6 +25,7 @@ while true; do
         -e "s/START_TIME_NANO/$START_TIME_NANO/g" \
         -e "s/COUNTER_VALUE/$COUNTER/g" \
         -e "s/GAUGE_VALUE/$((RANDOM % 100))/g" \
+        -e "s/\$TEST_TYPE/$TEST_TYPE/g" \
         -e "s/\$INSTANCE_ID/$INSTANCE_ID/g" > otlp_metrics_temp.json
 
     curl -s -X POST http://127.0.0.1:4318/v1/metrics \
@@ -34,6 +38,7 @@ while true; do
         -e "s/START_TIME_NANO/$START_TIME_NANO/g" \
         -e "s/COUNTER_VALUE/$((COUNTER + 2))/g" \
         -e "s/GAUGE_VALUE/$((RANDOM % 100))/g" \
+        -e "s/\$TEST_TYPE/$TEST_TYPE/g" \
         -e "s/\$INSTANCE_ID/$INSTANCE_ID/g" > otlp_logs_temp.json
 
     curl -s -X POST http://127.0.0.1:4318/v1/metrics \

@@ -8,12 +8,16 @@ package otlp
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -23,6 +27,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/otlp"
 )
@@ -40,7 +45,9 @@ func init() {
 
 type OtlpTestRunner struct {
 	test_runner.BaseTestRunner
-	env *environment.MetaData
+	env        *environment.MetaData
+	testType   string
+	configName string
 }
 
 func (t *OtlpTestRunner) Validate() status.TestGroupResult {
@@ -49,17 +56,19 @@ func (t *OtlpTestRunner) Validate() status.TestGroupResult {
 	// Validate traces
 	var result status.TestResult
 	result = t.validateTraces()
+	fmt.Printf("traces result: %s\n", result.Status)
 	results = append(results, result)
 
 	// Validate metrics
 	for _, metricName := range t.GetMeasuredMetrics() {
 		result = t.validateMetric(metricName)
-		fmt.Printf("metric (%s) result: %s", metricName, result.Status)
+		fmt.Printf("metric (%s) result: %s\n", metricName, result.Status)
 		results = append(results, result)
 	}
 
 	// Validate logs
 	result = t.validateLogs()
+	fmt.Printf("logs result: %s, err:%+v\n", result.Status, result.Reason)
 	results = append(results, result)
 
 	return status.TestGroupResult{
@@ -70,12 +79,12 @@ func (t *OtlpTestRunner) Validate() status.TestGroupResult {
 
 func (t *OtlpTestRunner) validateTraces() status.TestResult {
 	annotations := map[string]interface{}{
-		"test_type":   "otlp",
+		"test_type":   fmt.Sprintf("otlp_traces_%s", t.testType),
 		"instance_id": t.env.InstanceId,
 	}
 
 	err := base.ValidateTraceSegments(
-		time.Now().Add(-5*time.Minute),
+		time.Now().Add(-agentRuntime),
 		time.Now(),
 		annotations,
 		nil,
@@ -100,6 +109,18 @@ func (t *OtlpTestRunner) validateMetric(metricName string) status.TestResult {
 		{
 			Key:   "InstanceId",
 			Value: dimension.UnknownDimensionValue(),
+		},
+		{
+			Key:   "test.type",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String(fmt.Sprintf("otlp_metrics_%s", t.testType))},
+		},
+		{
+			Key:   "service.name",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("otlp-test-service")},
+		},
+		{
+			Key:   "service.version",
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("1.0.0")},
 		},
 	})
 	if len(failed) > 0 {
@@ -132,17 +153,24 @@ func (t *OtlpTestRunner) validateLogs() status.TestResult {
 		return testResult
 	}
 
-	since := time.Now().Add(-5 * time.Minute)
+	testTypeSubstr := fmt.Sprintf("\"test.type\":\"otlp_logs_%s\"", t.testType)
+
+	since := time.Now().Add(-agentRuntime)
 	until := time.Now()
 	err := awsservice.ValidateLogs(
 		logGroup,
-		*streams[0].LogStreamName,
+		t.env.InstanceId,
 		&since,
 		&until,
 		awsservice.AssertLogsNotEmpty(),
 		awsservice.AssertPerLog(
-			awsservice.AssertLogContainsSubstring("\"otlp_emf_"),
-			awsservice.AssertLogContainsSubstring(fmt.Sprintf("\"InstanceId\":\"%s\"", t.env.InstanceId)),
+			awsservice.AssertLogContainsSubstring(fmt.Sprintf("InstanceId\":\"%s\"", t.env.InstanceId)),
+			func(event types.OutputLogEvent) error {
+				if strings.Contains(*event.Message, testTypeSubstr) && !strings.Contains(*event.Message, "\"otlp_emf_") {
+					return fmt.Errorf("log event message missing substring (%s): %s", "otlp_emf", *event.Message)
+				}
+				return nil
+			},
 		),
 	)
 	if err != nil {
@@ -159,14 +187,27 @@ func (t *OtlpTestRunner) GetAgentRunDuration() time.Duration { return agentRunti
 func (t *OtlpTestRunner) GetMeasuredMetrics() []string {
 	return []string{"otlp_counter", "otlp_gauge"}
 }
-func (t *OtlpTestRunner) GetAgentConfigFileName() string { return "shared_config.json" }
+func (t *OtlpTestRunner) GetAgentConfigFileName() string { return t.configName }
 
 func (t *OtlpTestRunner) SetupAfterAgentRun() error {
+	// the idea is here to stop the agent started by the base_runner, then modifies yaml config with log_stream and restart the agent
+	// this is a temp workaround and needs to be updated after https://issues.amazon.com/issues/CWQS-1693
+	common.StopAgent()
+	time.Sleep(15 * time.Second)
+	err := modifyAgentYaml(t.env.InstanceId)
+	if err != nil {
+		log.Fatal(fmt.Sprint(err))
+	}
+	err = startAgent()
+	if err != nil {
+		log.Fatal(fmt.Sprint(err))
+	}
+
 	// trace generation
 	go t.generateTraces()
 
 	cmd := exec.Command("/bin/bash", "resources/otlp_pusher.sh")
-	cmd.Env = append(os.Environ(), fmt.Sprintf("INSTANCE_ID=%s", t.env.InstanceId))
+	cmd.Env = append(os.Environ(), fmt.Sprintf("INSTANCE_ID=%s", t.env.InstanceId), fmt.Sprintf("TEST_TYPE=%s", t.testType))
 	return cmd.Start()
 }
 
@@ -174,12 +215,12 @@ func (t *OtlpTestRunner) generateTraces() {
 	generator := otlp.NewLoadGenerator(&base.TraceGeneratorConfig{
 		Interval: 15 * time.Second,
 		Annotations: map[string]interface{}{
-			"test_type":   "otlp",
+			"test_type":   fmt.Sprintf("otlp_traces_%s", t.testType),
 			"instance_id": t.env.InstanceId,
 			"commit_sha":  t.env.CwaCommitSha,
 		},
 		Attributes: []attribute.KeyValue{
-			attribute.String("test_type", "otlp"),
+			attribute.String("test_type", fmt.Sprintf("otlp_traces_%s", t.testType)),
 			attribute.String("instance_id", t.env.InstanceId),
 		},
 	})
@@ -191,12 +232,17 @@ var _ test_runner.ITestRunner = (*OtlpTestRunner)(nil)
 func TestOTLP(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 
-	// shared receiver test
-	testRunner := &OtlpTestRunner{env: env}
-	runner := &test_runner.TestRunner{TestRunner: testRunner}
+	configs := map[string]string{
+		"shared":     "shared_config.json",
+		"appsignals": "appsignals_config.json",
+	}
+	for ttype, name := range configs {
+		testRunner := &OtlpTestRunner{env: env, testType: ttype, configName: name}
+		runner := &test_runner.TestRunner{TestRunner: testRunner}
 
-	result := runner.Run()
-	require.Equal(t, status.SUCCESSFUL, result.GetStatus(), result.TestResults[0].Reason)
+		result := runner.Run()
+		require.Equal(t, status.SUCCESSFUL, result.GetStatus(), result.TestResults[0].Reason)
+	}
 
 	// traces only tests
 	testCases := map[string]struct {
@@ -242,4 +288,30 @@ func TestOTLP(t *testing.T) {
 
 		})
 	}
+}
+
+func modifyAgentYaml(instanceId string) error {
+	ampCommands := []string{
+		// translator does not move logs::log_stream_name setting to the emf exporter so do it ourselves to ensure the log stream is created
+		fmt.Sprintf(`sudo sed -i 's/log_stream_name: ""/log_stream_name: "%s"/g' /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml`, instanceId),
+	}
+	err := common.RunCommands(ampCommands)
+	if err != nil {
+		return fmt.Errorf("failed to modify agent configuration: %w", err)
+	}
+	return nil
+}
+
+func startAgent() error {
+	agentStartWithoutTranslatorCommand := `sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent \
+		-envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json \
+		-config /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml \
+		-otelconfig /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml \
+		-pidfile /opt/aws/amazon-cloudwatch-agent/var/amazon-cloudwatch-agent.pid &`
+
+	err := common.RunAsyncCommand(agentStartWithoutTranslatorCommand)
+	if err != nil {
+		return err
+	}
+	return nil
 }

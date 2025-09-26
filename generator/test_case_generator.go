@@ -154,6 +154,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/otlp",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
+		{
+			testDir: "./test/dualstack_endpoint",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+
 	},
 	testTypeKeyEc2SELinux: {
 		//skip test until test is not flakey
@@ -209,6 +214,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/assume_role",
 			terraformDir: "terraform/ec2/assume_role",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/dualstack_endpoint",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 	},
 	/*
