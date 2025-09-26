@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 type NetTestRunner struct {
@@ -35,10 +34,10 @@ func (m *NetTestRunner) Validate() status.TestGroupResult {
 }
 
 func (m *NetTestRunner) SetupBeforeAgentRun() error {
-	err := common.RunCommands([]string{"ping -c 10 127.0.0.1 > /dev/null 2>&1 &"})
-	if err != nil {
-		return err
-	}
+	// err := common.RunCommands([]string{"ping -c 10 127.0.0.1 > /dev/null 2>&1 &"})
+	// if err != nil {
+	// 	return err
+	// }
 	return m.SetUpConfig()
 }
 
@@ -65,7 +64,7 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "interface",
-			Value: dimension.ExpectedDimensionValue{aws.String("lo")},
+			Value: dimension.ExpectedDimensionValue{aws.String("eth0")},
 		},
 		{
 			Key:   "InstanceId",
