@@ -14,6 +14,7 @@
     "NodeName": {},
     "Timestamp": {},
     "Type": {},
+    "UltraServer": {},
     "Version": {},
     "availability_zone": {},
     "kubernetes": {},
@@ -36,6 +37,7 @@
     "NodeName",
     "Timestamp",
     "Type",
+    "UltraServer",
     "Version",
     "CloudWatchMetrics"
   ]

@@ -18,6 +18,8 @@ def get_instance_labels(instance_info):
         'region': instance_info['instance_region'],
         'subnet_id': instance_info['subnet_id']
     }
+    if 'ultraserver_id' in instance_info:
+        instance_labels['ultraserver_id'] = instance_info['ultraserver_id']
     return instance_labels
 
 
