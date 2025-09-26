@@ -85,7 +85,7 @@ resource "aws_instance" "cwagent" {
   ephemeral_block_device {
     device_name  = "/dev/sdc"
     virtual_name = "ephemeral1"
- 
+  }
 
   metadata_options {
     http_endpoint = "enabled"
