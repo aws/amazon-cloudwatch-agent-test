@@ -75,6 +75,11 @@ resource "aws_instance" "cwagent" {
     volume_size = 200
   }
 
+  ephemeral_block_device {
+    device_name  = "/dev/sdb"
+    virtual_name = "ephemeral0"
+  }
+
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
