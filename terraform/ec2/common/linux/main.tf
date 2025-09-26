@@ -30,6 +30,9 @@ resource "aws_key_pair" "aws_ssh_key" {
 locals {
   ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  instance_type = length(regexall("metric_value_benchmark", var.test_dir)) > 0 ? (
+    var.arc == "arm64" ? "m6gd.large" : "i3en.large"
+  ) : var.ec2_instance_type
 }
 
 # create a proxy instance for tests using proxy instsance
@@ -49,7 +52,7 @@ module "proxy_instance" {
 #####################################################################
 resource "aws_instance" "cwagent" {
   ami                                  = data.aws_ami.latest.id
-  instance_type                        = var.ec2_instance_type
+  instance_type                        = local.instance_type
   key_name                             = local.ssh_key_name
   iam_instance_profile                 = module.basic_components.instance_profile
   vpc_security_group_ids               = [module.basic_components.security_group]
@@ -75,17 +78,6 @@ resource "aws_instance" "cwagent" {
     volume_size = 200
   }
 
-  # Configure instance store volumes for diskio_instance_store_test
-  # These will appear as NVMe devices on supported instance types
-  ephemeral_block_device {
-    device_name  = "/dev/sdb"
-    virtual_name = "ephemeral0"
-  }
-
-  ephemeral_block_device {
-    device_name  = "/dev/sdc"
-    virtual_name = "ephemeral1"
-  }
 
   metadata_options {
     http_endpoint = "enabled"
