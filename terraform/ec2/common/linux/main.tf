@@ -75,10 +75,17 @@ resource "aws_instance" "cwagent" {
     volume_size = 200
   }
 
+  # Configure instance store volumes for diskio_instance_store_test
+  # These will appear as NVMe devices on supported instance types
   ephemeral_block_device {
     device_name  = "/dev/sdb"
     virtual_name = "ephemeral0"
   }
+
+  ephemeral_block_device {
+    device_name  = "/dev/sdc"
+    virtual_name = "ephemeral1"
+ 
 
   metadata_options {
     http_endpoint = "enabled"

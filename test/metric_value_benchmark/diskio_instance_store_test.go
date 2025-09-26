@@ -142,7 +142,7 @@ func (m *DiskIOInstanceStoreTestRunner) validateInstanceStoreEntity(metricName s
         ]
     }`, namespace, metricName, env.InstanceId, serialID))
 
-	req, err := common.BuildListEntitiesForMetricRequest(requestBody, region)
+	req, err := common.BuildListEntitiesForMetricRequest(requestBody, "us-west-2")
 	if err != nil {
 		log.Printf("Failed to build ListEntitiesForMetric request for metric: '%s': %v", metricName, err)
 		return testResult
