@@ -33,6 +33,17 @@
     "family": "linux"
   },
   {
+    "os": "ubuntu-25",
+    "username": "ubuntu",
+    "instanceType":"t3.medium",
+    "installAgentCommand": "go run ./install/install_agent.go deb",
+    "ami": "cloudwatch-agent-integration-test-ubuntu-25*",
+    "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux"
+  },
+  {
     "os": "debian-12",
     "username": "admin",
     "instanceType": "c6g.large",
