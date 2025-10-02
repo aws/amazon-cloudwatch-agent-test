@@ -13,7 +13,7 @@
   {
     "os": "ubuntu-24",
     "username": "ubuntu",
-    "instanceType":"t3.medium",
+    "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go deb",
     "ami": "cloudwatch-agent-integration-test-ubuntu-24*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
@@ -24,7 +24,7 @@
   {
     "os": "ubuntu-25",
     "username": "ubuntu",
-    "instanceType":"t3.medium",
+    "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go deb",
     "ami": "cloudwatch-agent-integration-test-ubuntu-25*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
@@ -35,7 +35,7 @@
   {
     "os": "debian-12",
     "username": "admin",
-    "instanceType": "c6g.large",
+    "instanceType": "t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go deb",
     "ami": "cloudwatch-agent-integration-test-debian-12-arm64*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
@@ -57,7 +57,7 @@
   {
     "os": "al2",
     "username": "ec2-user",
-    "instanceType":"m7g.medium",
+    "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-arm64-al2*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -79,7 +79,7 @@
   {
     "os": "al2023",
     "username": "ec2-user",
-    "instanceType":"m6g.medium",
+    "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-aarch64-al2023*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
