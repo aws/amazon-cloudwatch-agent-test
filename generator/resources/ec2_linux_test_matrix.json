@@ -13,7 +13,7 @@
   {
     "os": "ubuntu-24",
     "username": "ubuntu",
-    "instanceType":"t3.medium",
+    "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go deb",
     "ami": "cloudwatch-agent-integration-test-ubuntu-24*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
@@ -24,7 +24,7 @@
   {
     "os": "ubuntu-25",
     "username": "ubuntu",
-    "instanceType":"t3.medium",
+    "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go deb",
     "ami": "cloudwatch-agent-integration-test-ubuntu-25*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
