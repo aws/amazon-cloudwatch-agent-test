@@ -46,7 +46,7 @@
   {
     "os": "al2",
     "username": "ec2-user",
-    "instanceType":"m7g.medium",
+    "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-al2*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -57,7 +57,7 @@
   {
     "os": "al2",
     "username": "ec2-user",
-    "instanceType":"t3a.medium",
+    "instanceType":"m7g.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-arm64-al2*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -79,7 +79,7 @@
   {
     "os": "al2023",
     "username": "ec2-user",
-    "instanceType":"t3a.medium",
+    "instanceType":"m6g.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-aarch64-al2023*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
@@ -90,7 +90,7 @@
   {
     "os": "ol8",
     "username": "ec2-user",
-    "instanceType":"m6g.medium",
+    "instanceType":"t3a.medium",
     "installAgentCommand": "go run ./install/install_agent.go rpm",
     "ami": "cloudwatch-agent-integration-test-ol8*",
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
