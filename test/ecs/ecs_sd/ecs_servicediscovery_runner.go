@@ -51,6 +51,8 @@ func (t ECSServiceDiscoveryTestRunner) GetAgentConfigFileName() string {
 		return "./resources/config_task_definition_list.json"
 	case "serviceNameList":
 		return "./resources/config_service_name_list.json"
+	case "combined":
+		return "./resources/config_combined.json"
 	default:
 		return ""
 	}

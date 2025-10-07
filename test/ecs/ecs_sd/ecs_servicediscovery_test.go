@@ -52,6 +52,11 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 				RunStrategy: &test_runner.ECSAgentRunStrategy{},
 				Env:         *env,
 			},
+			{
+				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "combined"},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
+			},
 		}
 	}
 	return ecsTestRunners
