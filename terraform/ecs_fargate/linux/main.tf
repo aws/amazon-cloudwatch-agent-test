@@ -148,6 +148,7 @@ resource "null_resource" "validator" {
       echo "Validating metrics/logs"
       cd ../../..
       go test ${var.test_dir} \
+      -timeout 1h \
       -computeType=ECS \
       -ecsLaunchType=FARGATE \
       -ecsDeploymentStrategy=DAEMON \
