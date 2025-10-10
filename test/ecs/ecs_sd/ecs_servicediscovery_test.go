@@ -57,6 +57,15 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 				RunStrategy: &test_runner.ECSAgentRunStrategy{},
 				Env:         *env,
 			},
+			{
+				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "targetDeduplication"},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
+			}, {
+				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "targetDeduplication2"},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
+			},
 		}
 	}
 	return ecsTestRunners

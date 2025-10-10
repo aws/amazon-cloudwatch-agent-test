@@ -26,10 +26,44 @@ const (
 	ECSLogGroupNameFormat = "/aws/ecs/containerinsights/%s/prometheus"
 	// Log stream based on job name in extra_apps.tpl:https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/test/ecs/ecs_sd/resources/extra_apps.tpl#L41
 	LogStreamName = "prometheus-redis"
+
+	// Scenario names
+	ScenarioDockerLabel          = "dockerLabel"
+	ScenarioTaskDefinitionList   = "taskDefinitionList"
+	ScenarioServiceNameList      = "serviceNameList"
+	ScenarioCombined             = "combined"
+	ScenarioTargetDeduplication  = "targetDeduplication"
+	ScenarioTargetDeduplication2 = "targetDeduplication2"
+
+	// Custom values for specific scenarios
+	CustomLogStreamName     = "custom-job-name"
+	TargetDeduplicationJob  = "prometheus-redis-service-name-list-job"
+	TargetDeduplication2Job = "prometheus-redis-task-def-list-job"
 )
 
 //go:embed resources/emf_prometheus_redis_schema.json
 var schema string
+
+type ValidationConfig struct {
+	LogStreamName string
+}
+
+func (t ECSServiceDiscoveryTestRunner) getValidationConfig(env *environment.MetaData) ValidationConfig {
+	switch t.scenarioName {
+	case ScenarioTargetDeduplication:
+		return ValidationConfig{
+			LogStreamName: TargetDeduplicationJob,
+		}
+	case ScenarioTargetDeduplication2:
+		return ValidationConfig{
+			LogStreamName: TargetDeduplication2Job,
+		}
+	default:
+		return ValidationConfig{
+			LogStreamName: LogStreamName,
+		}
+	}
+}
 
 type ECSServiceDiscoveryTestRunner struct {
 	test_runner.BaseTestRunner
@@ -45,14 +79,18 @@ func (t ECSServiceDiscoveryTestRunner) GetTestName() string {
 
 func (t ECSServiceDiscoveryTestRunner) GetAgentConfigFileName() string {
 	switch t.scenarioName {
-	case "dockerLabel":
+	case ScenarioDockerLabel:
 		return ""
-	case "taskDefinitionList":
+	case ScenarioTaskDefinitionList:
 		return "./resources/config_task_definition_list.json"
-	case "serviceNameList":
+	case ScenarioServiceNameList:
 		return "./resources/config_service_name_list.json"
-	case "combined":
+	case ScenarioCombined:
 		return "./resources/config_combined.json"
+	case ScenarioTargetDeduplication:
+		return "./resources/config_target_deduplication.json"
+	case ScenarioTargetDeduplication2:
+		return "./resources/config_target_deduplication_2.json"
 	default:
 		return ""
 	}
@@ -76,53 +114,67 @@ func (t ECSServiceDiscoveryTestRunner) Validate() status.TestGroupResult {
 func (t ECSServiceDiscoveryTestRunner) ValidateCloudWatchLogs() status.TestResult {
 	env := environment.GetEnvironmentMetaData()
 	logGroupName := fmt.Sprintf(ECSLogGroupNameFormat, env.EcsClusterName)
+	config := t.getValidationConfig(env)
 
 	testResult := status.TestResult{
-		Name:   fmt.Sprintf("Retrieve Test LogGroup: %s", logGroupName),
+		Name:   fmt.Sprintf("Retrieve Test LogGroup: %s (scenario: %s)", logGroupName, t.scenarioName),
 		Status: status.FAILED,
 	}
 
-	logGroupFound, err := t.ValidateLogGroupFormat(logGroupName)
+	logGroupFound, err := t.ValidateLogGroupFormat(logGroupName, config)
 
 	if logGroupFound {
 		if err != nil {
-			log.Printf("ECS ServiceDiscovery Test LogGroups invalid: %s\n", err)
-			testResult.Name = err.Error()
+			log.Printf("ECS ServiceDiscovery Test LogGroups invalid for scenario %s: %s\n", t.scenarioName, err)
+			testResult.Name = fmt.Sprintf("Scenario %s: %s", t.scenarioName, err.Error())
 			testResult.Status = status.FAILED
 		} else {
 			testResult.Status = status.SUCCESSFUL
 		}
-		awsservice.DeleteLogGroupAndStream(logGroupName, LogStreamName)
+		awsservice.DeleteLogGroupAndStream(logGroupName, config.LogStreamName)
 	}
 	return testResult
 }
 
-func (t ECSServiceDiscoveryTestRunner) ValidateLogGroupFormat(logGroupName string) (bool, error) {
+func (t ECSServiceDiscoveryTestRunner) ValidateLogGroupFormat(logGroupName string, config ValidationConfig) (bool, error) {
 	start := time.Now()
 
-	log.Println("Sleeping to allow metric collection in CloudWatch Logs.")
+	log.Printf("Scenario %s: Sleeping to allow metric collection in CloudWatch Logs.", t.scenarioName)
 	time.Sleep(2 * time.Minute)
 
-	log.Printf("Searching for LogGroup: %s\n", logGroupName)
+	log.Printf("Scenario %s: Searching for LogGroup: %s\n", t.scenarioName, logGroupName)
 
 	for retries := 0; retries < MaxRetryCount; retries++ {
 		if awsservice.IsLogGroupExists(logGroupName) {
 			end := time.Now()
-			return true, t.ValidateLogsContent(logGroupName, start, end)
+			return true, t.ValidateLogsContent(logGroupName, config, start, end)
 		}
 
-		log.Printf("Retry %d/%d: Log group not found. Waiting 20 seconds...\n", retries+1, MaxRetryCount)
+		log.Printf("Scenario %s: Retry %d/%d: Log group not found. Waiting 20 seconds...\n", t.scenarioName, retries+1, MaxRetryCount)
 		time.Sleep(20 * time.Second)
 	}
 
-	log.Printf("ECS ServiceDiscovery Test has exhausted %v retry times", MaxRetryCount)
-	return false, fmt.Errorf("Test Retries Exhausted: %d", MaxRetryCount)
+	log.Printf("Scenario %s: ECS ServiceDiscovery Test has exhausted %v retry times", t.scenarioName, MaxRetryCount)
+	return false, fmt.Errorf("scenario %s: test retries exhausted: %d", t.scenarioName, MaxRetryCount)
 }
 
-func (t ECSServiceDiscoveryTestRunner) ValidateLogsContent(logGroupName string, start time.Time, end time.Time) error {
+func (t ECSServiceDiscoveryTestRunner) ValidateLogsContent(logGroupName string, config ValidationConfig, start time.Time, end time.Time) error {
+	// Combined validation function for all fields
+	combinedValidation := func(event types.OutputLogEvent) error {
+		message := *event.Message
+
+		// Job Name validation
+		expectedJob := fmt.Sprintf("\"job\":\"%s\"", config.LogStreamName)
+		if !strings.Contains(message, expectedJob) {
+			return fmt.Errorf("scenario %s: expected job field %s not found in log: %s", t.scenarioName, expectedJob, message)
+		}
+
+		return nil
+	}
+
 	return awsservice.ValidateLogs(
 		logGroupName,
-		LogStreamName,
+		config.LogStreamName,
 		&start,
 		&end,
 		awsservice.AssertLogsNotEmpty(),
@@ -131,11 +183,11 @@ func (t ECSServiceDiscoveryTestRunner) ValidateLogsContent(logGroupName string, 
 			func(event types.OutputLogEvent) error {
 				if strings.Contains(*event.Message, "CloudWatchMetrics") &&
 					!strings.Contains(*event.Message, "\"Namespace\":\"ECS/ContainerInsights/Prometheus\"") {
-					return fmt.Errorf("emf log found for non ECS/ContainerInsights/Prometheus namespace: %s", *event.Message)
+					return fmt.Errorf("scenario %s: emf log found for non ECS/ContainerInsights/Prometheus namespace: %s", t.scenarioName, *event.Message)
 				}
 				return nil
 			},
-			awsservice.AssertLogContainsSubstring("\"job\":\"prometheus-redis\""),
+			combinedValidation,
 		),
 	)
 }
