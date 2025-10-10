@@ -40,8 +40,7 @@
       "ECS_PROMETHEUS_EXPORTER_PORT": "9121",
       "job": "prometheus-redis",
       "other_job": "custom-docker-label-job-name",
-      "app_x": "redis_exporter",
-      "empty": ""
+      "app_x": "redis_exporter"
     },
     "logConfiguration": {
       "logDriver": "awslogs",
