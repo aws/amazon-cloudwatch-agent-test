@@ -102,7 +102,6 @@ func checkServiceEndpoints() error {
 		return fmt.Errorf("no dualstack endpoints found in agent logs")
 	}
 
-
 	for _, expectedEndpoint := range expectedEndpoints {
 		if !strings.Contains(output, expectedEndpoint) {
 			return fmt.Errorf("expected dualstack endpoint %s not found in agent logs", expectedEndpoint)
