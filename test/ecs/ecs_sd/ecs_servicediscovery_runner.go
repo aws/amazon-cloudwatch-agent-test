@@ -36,9 +36,8 @@ const (
 	ScenarioTargetDeduplication2 = "targetDeduplication2"
 
 	// Custom values for specific scenarios
-	CustomLogStreamName     = "custom-job-name"
-	TargetDeduplicationJob  = "prometheus-redis-service-name-list-job"
-	TargetDeduplication2Job = "prometheus-redis-task-def-list-job"
+	CustomServiceNameJob = "prometheus-redis-service-name-list-job"
+	CustomDockerLabelJob = "custom-docker-label-job-name"
 )
 
 //go:embed resources/emf_prometheus_redis_schema.json
@@ -52,11 +51,11 @@ func (t ECSServiceDiscoveryTestRunner) getValidationConfig(env *environment.Meta
 	switch t.scenarioName {
 	case ScenarioTargetDeduplication:
 		return ValidationConfig{
-			LogStreamName: TargetDeduplicationJob,
+			LogStreamName: CustomServiceNameJob,
 		}
 	case ScenarioTargetDeduplication2:
 		return ValidationConfig{
-			LogStreamName: TargetDeduplication2Job,
+			LogStreamName: CustomDockerLabelJob,
 		}
 	default:
 		return ValidationConfig{

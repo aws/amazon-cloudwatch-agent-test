@@ -15,7 +15,7 @@
           "docker_label": {
             "sd_metrics_path_label" : "ECS_PROMETHEUS_METRICS_PATH",
             "sd_port_label": "ECS_PROMETHEUS_EXPORTER_PORT",
-            "sd_job_name_label": "job"
+            "sd_job_name_label": "other_job"
           },
           "task_definition_list": [
             {
