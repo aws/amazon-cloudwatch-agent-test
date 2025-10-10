@@ -158,7 +158,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/dualstack_endpoint",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
-
 	},
 	testTypeKeyEc2SELinux: {
 		//skip test until test is not flakey
