@@ -34,7 +34,7 @@ const (
 	ScenarioCombined                        = "combined"
 	ScenarioTargetDeduplication             = "targetDeduplication"
 	ScenarioTargetDeduplication2            = "targetDeduplication2"
-	ScenarioInvalidJobLabelAndCustomCluster = "invalidJobLabelAndCustomClusterName"
+	ScenarioInvalidJobLabelAndCustomCluster = "invalidJobLabel"
 
 	// Custom values for specific scenarios
 	CustomServiceNameJob = "prometheus-redis-service-name-list-job"
@@ -52,7 +52,7 @@ type ValidationConfig struct {
 
 func (t ECSServiceDiscoveryTestRunner) getValidationConfig(env *environment.MetaData) ValidationConfig {
 	switch t.scenarioName {
-	case ScenarioInvalidJobLabelAndCustomCluster:
+	case ScenarioCombined:
 		return ValidationConfig{
 			LogStreamName: LogStreamName,
 			ClusterName:   CustomClusterName,
@@ -102,7 +102,7 @@ func (t ECSServiceDiscoveryTestRunner) GetAgentConfigFileName() string {
 	case ScenarioTargetDeduplication2:
 		return "./resources/config_target_deduplication_2.json"
 	case ScenarioInvalidJobLabelAndCustomCluster:
-		return "./resources/config_invalid_joblabel_and_custom_clustername.json"
+		return "./resources/config_invalid_joblabel.json"
 	default:
 		return ""
 	}
@@ -181,10 +181,15 @@ func (t ECSServiceDiscoveryTestRunner) ValidateLogsContent(logGroupName string, 
 			return fmt.Errorf("scenario %s: expected job field %s not found in log: %s", t.scenarioName, expectedJob, message)
 		}
 
-		// Cluster Name validation
+		// ClusterName validation
 		expectedCluster := fmt.Sprintf("\"ClusterName\":\"%s\"", config.ClusterName)
 		if !strings.Contains(message, expectedCluster) {
 			return fmt.Errorf("scenario %s: expected ClusterName field %s not found in log: %s", t.scenarioName, expectedCluster, message)
+		}
+
+		// Invalid/empty label removal validation
+		if strings.Contains(message, "\"empty\":") {
+			return fmt.Errorf("scenario %s: unexpected empty field found in metric: %s", t.scenarioName, message)
 		}
 
 		return nil
