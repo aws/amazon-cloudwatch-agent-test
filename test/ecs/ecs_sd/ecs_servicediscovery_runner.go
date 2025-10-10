@@ -34,10 +34,12 @@ const (
 	ScenarioCombined             = "combined"
 	ScenarioTargetDeduplication  = "targetDeduplication"
 	ScenarioTargetDeduplication2 = "targetDeduplication2"
+	ScenarioInvalidJobLabel      = "invalidJobLabel"
 
 	// Custom values for specific scenarios
 	CustomServiceNameJob = "prometheus-redis-service-name-list-job"
 	CustomDockerLabelJob = "custom-docker-label-job-name"
+	CustomClusterName    = "CustomClusterName"
 )
 
 //go:embed resources/emf_prometheus_redis_schema.json
@@ -45,21 +47,30 @@ var schema string
 
 type ValidationConfig struct {
 	LogStreamName string
+	ClusterName   string
 }
 
 func (t ECSServiceDiscoveryTestRunner) getValidationConfig(env *environment.MetaData) ValidationConfig {
 	switch t.scenarioName {
+	case ScenarioCombined:
+		return ValidationConfig{
+			LogStreamName: LogStreamName,
+			ClusterName:   CustomClusterName,
+		}
 	case ScenarioTargetDeduplication:
 		return ValidationConfig{
 			LogStreamName: CustomServiceNameJob,
+			ClusterName:   env.EcsClusterName,
 		}
 	case ScenarioTargetDeduplication2:
 		return ValidationConfig{
 			LogStreamName: CustomDockerLabelJob,
+			ClusterName:   env.EcsClusterName,
 		}
 	default:
 		return ValidationConfig{
 			LogStreamName: LogStreamName,
+			ClusterName:   env.EcsClusterName,
 		}
 	}
 }
@@ -90,6 +101,8 @@ func (t ECSServiceDiscoveryTestRunner) GetAgentConfigFileName() string {
 		return "./resources/config_target_deduplication.json"
 	case ScenarioTargetDeduplication2:
 		return "./resources/config_target_deduplication_2.json"
+	case ScenarioInvalidJobLabel:
+		return "./resources/config_invalid_joblabel.json"
 	default:
 		return ""
 	}
@@ -166,6 +179,17 @@ func (t ECSServiceDiscoveryTestRunner) ValidateLogsContent(logGroupName string, 
 		expectedJob := fmt.Sprintf("\"job\":\"%s\"", config.LogStreamName)
 		if !strings.Contains(message, expectedJob) {
 			return fmt.Errorf("scenario %s: expected job field %s not found in log: %s", t.scenarioName, expectedJob, message)
+		}
+
+		// ClusterName validation
+		expectedCluster := fmt.Sprintf("\"ClusterName\":\"%s\"", config.ClusterName)
+		if !strings.Contains(message, expectedCluster) {
+			return fmt.Errorf("scenario %s: expected ClusterName field %s not found in log: %s", t.scenarioName, expectedCluster, message)
+		}
+
+		// Invalid/empty label removal validation
+		if strings.Contains(message, "\"empty\":") {
+			return fmt.Errorf("scenario %s: unexpected empty field found in metric: %s", t.scenarioName, message)
 		}
 
 		return nil
