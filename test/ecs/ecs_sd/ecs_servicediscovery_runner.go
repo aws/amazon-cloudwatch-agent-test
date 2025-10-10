@@ -28,13 +28,13 @@ const (
 	LogStreamName = "prometheus-redis"
 
 	// Scenario names
-	ScenarioDockerLabel                     = "dockerLabel"
-	ScenarioTaskDefinitionList              = "taskDefinitionList"
-	ScenarioServiceNameList                 = "serviceNameList"
-	ScenarioCombined                        = "combined"
-	ScenarioTargetDeduplication             = "targetDeduplication"
-	ScenarioTargetDeduplication2            = "targetDeduplication2"
-	ScenarioInvalidJobLabelAndCustomCluster = "invalidJobLabel"
+	ScenarioDockerLabel          = "dockerLabel"
+	ScenarioTaskDefinitionList   = "taskDefinitionList"
+	ScenarioServiceNameList      = "serviceNameList"
+	ScenarioCombined             = "combined"
+	ScenarioTargetDeduplication  = "targetDeduplication"
+	ScenarioTargetDeduplication2 = "targetDeduplication2"
+	ScenarioInvalidJobLabel      = "invalidJobLabel"
 
 	// Custom values for specific scenarios
 	CustomServiceNameJob = "prometheus-redis-service-name-list-job"
@@ -101,7 +101,7 @@ func (t ECSServiceDiscoveryTestRunner) GetAgentConfigFileName() string {
 		return "./resources/config_target_deduplication.json"
 	case ScenarioTargetDeduplication2:
 		return "./resources/config_target_deduplication_2.json"
-	case ScenarioInvalidJobLabelAndCustomCluster:
+	case ScenarioInvalidJobLabel:
 		return "./resources/config_invalid_joblabel.json"
 	default:
 		return ""

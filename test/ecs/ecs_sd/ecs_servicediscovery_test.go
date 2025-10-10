@@ -67,7 +67,7 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 				Env:         *env,
 			},
 			{
-				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "invalidJobLabelAndCustomClusterName"},
+				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "invalidJobLabel"},
 				RunStrategy: &test_runner.ECSAgentRunStrategy{},
 				Env:         *env,
 			},

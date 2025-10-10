@@ -41,7 +41,7 @@
       "job": "prometheus-redis",
       "other_job": "custom-docker-label-job-name",
       "app_x": "redis_exporter",
-      "empty": " "
+      "empty": ""
     },
     "logConfiguration": {
       "logDriver": "awslogs",
