@@ -29,12 +29,13 @@ var (
 func Validate() error {
 	log.Println("Starting SSM Document validation tests")
 
-	documentName := "Test-ManageAgent"
+	// Generate unique ID to guarantee uniqueness
+	uniqueID := uuid.New().String()[:8]
+	documentName := "Test-ManageAgent-" + uniqueID
 	metadata := environment.GetEnvironmentMetaData()
 	instanceIds := []string{metadata.InstanceId}
 
 	log.Printf("Creating SSM document: %s", documentName)
-	_ = awsservice.DeleteSSMDocument(documentName)
 	err := awsservice.CreateSSMDocument(documentName, manageAgentDoc, types.DocumentTypeCommand)
 	if err != nil {
 		return err
@@ -92,6 +93,12 @@ func Validate() error {
 			"optionalConfigurationLocation": {"agentConfig2"},
 		},
 		"configure (append)", "running", "configured"); err != nil {
+		return err
+	}
+
+	log.Printf("Deleting SSM document: %s", documentName)
+	err = awsservice.DeleteSSMDocument(documentName)
+	if err != nil {
 		return err
 	}
 
