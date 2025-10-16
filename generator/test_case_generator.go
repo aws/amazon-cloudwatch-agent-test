@@ -270,7 +270,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/stress/windows/system"},
 	},
 	"ecs_fargate": {
-		{testDir: "./test/ecs/ecs_sd"},
+		{testDir: "./test/ecs/service_discovery"},
 	},
 	"ecs_ec2_daemon": {
 		{
@@ -290,7 +290,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 		{
-			testDir: "./test/ecs/ecs_sd",
+			testDir: "./test/ecs/service_discovery",
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},

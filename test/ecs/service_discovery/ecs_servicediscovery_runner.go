@@ -24,7 +24,7 @@ const (
 	MaxRetryCount = 15
 	// Log group format: https://github.com/aws/amazon-cloudwatch-agent/blob/5ef3dba446cb56a4c2306878592b5d14300ae82f/translator/translate/otel/exporter/awsemf/prometheus.go#L38
 	ECSLogGroupNameFormat = "/aws/ecs/containerinsights/%s/prometheus"
-	// Log stream based on job name in extra_apps.tpl:https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/test/ecs/ecs_sd/resources/extra_apps.tpl#L41
+	// Log stream based on job name in extra_apps.tpl:https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/test/ecs/service_discovery/resources/extra_apps.tpl#L41
 	LogStreamName = "prometheus-redis"
 
 	// Scenario names
