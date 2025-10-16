@@ -13,12 +13,11 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/ssm_document/helper"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 var (
-	//go:embed resources/test_manage_agent.json
+	//go:embed resources/test_amazoncloudwatch_manageagent.json
 	manageAgentDoc string
 	//go:embed resources/agent_config1.json
 	agentConfig1 string
@@ -31,7 +30,7 @@ func Validate() error {
 
 	// Generate unique ID to guarantee uniqueness
 	uniqueID := uuid.New().String()[:8]
-	documentName := "Test-ManageAgent-" + uniqueID
+	documentName := testManageAgentDocument + uniqueID
 	metadata := environment.GetEnvironmentMetaData()
 	instanceIds := []string{metadata.InstanceId}
 
@@ -42,57 +41,35 @@ func Validate() error {
 	}
 
 	// Test start action
-	if err := helper.RunSSMAction(documentName, instanceIds,
-		map[string][]string{"action": {"start"}},
-		"start", "running", "configured"); err != nil {
+	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[0]); err != nil {
 		return err
 	}
 
 	// Test stop action
-	if err := helper.RunSSMAction(documentName, instanceIds,
-		map[string][]string{"action": {"stop"}},
-		"stop", "stopped", "configured"); err != nil {
+	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[1]); err != nil {
 		return err
 	}
 
 	// Test configure (remove) action
-	if err := helper.RunSSMAction(documentName, instanceIds,
-		map[string][]string{
-			"action":                      {"configure (remove)"},
-			"optionalConfigurationSource": {"all"},
-			"optionalRestart":             {"no"},
-		},
-		"configure (remove)", "stopped", "not configured"); err != nil {
+	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[2]); err != nil {
 		return err
 	}
 
 	// Test configure action
-	log.Printf("Putting SSM parameter: agentConfig1")
-	if err := awsservice.PutStringParameter("agentConfig1", agentConfig1); err != nil {
+	log.Printf("Putting SSM parameter: %s", agentConfigFile1)
+	if err := awsservice.PutStringParameter(agentConfigFile1, agentConfig1); err != nil {
 		return err
 	}
-	if err := helper.RunSSMAction(documentName, instanceIds,
-		map[string][]string{
-			"action":                        {"configure"},
-			"optionalConfigurationSource":   {"ssm"},
-			"optionalConfigurationLocation": {"agentConfig1"},
-		},
-		"configure", "running", "configured"); err != nil {
+	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[3]); err != nil {
 		return err
 	}
 
 	// Test configure (append) action
-	log.Printf("Putting SSM parameter: agentConfig2")
-	if err := awsservice.PutStringParameter("agentConfig2", agentConfig2); err != nil {
+	log.Printf("Putting SSM parameter: %s", agentConfigFile2)
+	if err := awsservice.PutStringParameter(agentConfigFile2, agentConfig2); err != nil {
 		return err
 	}
-	if err := helper.RunSSMAction(documentName, instanceIds,
-		map[string][]string{
-			"action":                        {"configure (append)"},
-			"optionalConfigurationSource":   {"ssm"},
-			"optionalConfigurationLocation": {"agentConfig2"},
-		},
-		"configure (append)", "running", "configured"); err != nil {
+	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[4]); err != nil {
 		return err
 	}
 

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package helper
+package ssm_document
 
 import (
 	"encoding/json"
@@ -14,30 +14,23 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
-type AgentStatus struct {
-	Status       string `json:"status"`
-	ConfigStatus string `json:"configstatus"`
-	Version      string `json:"version"`
-	StartTime    string `json:"starttime"`
-}
+func RunAndVerifySSMAction(documentName string, instanceIds []string, tc TestCase) error {
+	log.Printf("Testing %s action", tc.actionName)
 
-func RunSSMAction(documentName string, instanceIds []string, params map[string][]string, actionName, expectedStatus, expectedConfigStatus string) error {
-	log.Printf("Testing %s action", actionName)
-
-	out, err := awsservice.RunSSMDocument(documentName, instanceIds, params)
+	out, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
 	if err != nil {
-		return fmt.Errorf("%s action failed: %v", actionName, err)
+		return fmt.Errorf("%s action failed: %v", tc.actionName, err)
 	}
 
-	if err := VerifyAgentActionError(out, instanceIds[0], documentName, expectedStatus, expectedConfigStatus); err != nil {
-		return fmt.Errorf("%s verification failed: %v", actionName, err)
+	if err := VerifyAgentAction(out, instanceIds[0], documentName, tc); err != nil {
+		return fmt.Errorf("%s verification failed: %v", tc.actionName, err)
 	}
 
-	log.Printf("%s action completed successfully", actionName)
+	log.Printf("%s action completed successfully", tc.actionName)
 	return nil
 }
 
-func VerifyAgentActionError(out *ssm.SendCommandOutput, instanceId, documentName, expectedAgentStatus string, expectedConfigStatus string) error {
+func VerifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName string, tc TestCase) error {
 	var status AgentStatus
 
 	//Wait for command completion
@@ -74,11 +67,11 @@ func VerifyAgentActionError(out *ssm.SendCommandOutput, instanceId, documentName
 		}
 	}
 
-	if status.Status != expectedAgentStatus {
-		return fmt.Errorf("agent status verification failed. Expected: %s, Output: %s", expectedAgentStatus, status.Status)
+	if status.Status != tc.expectedAgentStatus {
+		return fmt.Errorf("agent status verification failed. Expected: %s, Output: %s", tc.expectedAgentStatus, status.Status)
 	}
-	if status.ConfigStatus != expectedConfigStatus {
-		return fmt.Errorf("config status verification failed. Expected: %s, Output: %s", expectedConfigStatus, status.ConfigStatus)
+	if status.ConfigStatus != tc.expectedConfigStatus {
+		return fmt.Errorf("config status verification failed. Expected: %s, Output: %s", tc.expectedConfigStatus, status.ConfigStatus)
 	}
 
 	return nil
