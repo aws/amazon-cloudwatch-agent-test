@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package ecs_sd
+package service_discovery
 
 import (
 	"testing"
