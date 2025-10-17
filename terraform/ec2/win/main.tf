@@ -187,7 +187,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      "C:\\validator.exe --test-name=${var.test_dir}"
+      "C:\\validator.exe --test-name=${var.test_dir} --bucket=${var.s3_bucket} --computeType=EC2"
     ]
   }
 }

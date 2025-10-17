@@ -23,11 +23,12 @@ func init() {
 }
 
 const (
-	agentRuntime         = 1 * time.Second
-	agentConfigLocalPath = "agent_configs/minimum_config.json"
-	agentConfigPath      = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	agentConfigCopiedDir = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d"
-	translatedTomlPath   = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"
+	agentRuntime          = 1 * time.Second
+	agentConfigLocalPath  = "agent_configs/minimum_config.json"
+	agentConfigPath       = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	agentConfigCopiedDir  = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d"
+	translatedTomlPath    = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"
+	workloadDiscoveryPath = "/opt/aws/amazon-cloudwatch-agent/bin/workload-discovery"
 )
 
 func TestFilePermissions(t *testing.T) {
@@ -49,7 +50,7 @@ func TestFilePermissions(t *testing.T) {
 }
 
 func createGroupResult() status.TestGroupResult {
-	testResults := make([]status.TestResult, 3)
+	testResults := make([]status.TestResult, 4)
 	testGroupResult := status.TestGroupResult{
 		Name:        "FilePermissions",
 		TestResults: testResults,
@@ -57,6 +58,7 @@ func createGroupResult() status.TestGroupResult {
 	testResults[0] = onlyUserCanWriteToFilepath("root", agentConfigPath)
 	testResults[1] = onlyUserCanWriteToFilepath("cwagent", agentConfigCopiedDir)
 	testResults[2] = onlyUserCanWriteToFilepath("cwagent", translatedTomlPath)
+	testResults[3] = onlyUserCanWriteToFilepath("root", workloadDiscoveryPath)
 	return testGroupResult
 }
 
