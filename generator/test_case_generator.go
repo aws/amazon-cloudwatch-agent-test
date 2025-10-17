@@ -65,7 +65,18 @@ const (
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
-		{testDir: "./test/nvidia_gpu"},
+		{
+			testDir: "./test/nvidia_gpu",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/workload_discovery",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "../../../test/workload_discovery",
+			targets: map[string]map[string]struct{}{"os": {"win-11": {}, "win-2016": {}, "win-2019": {}, "win-2022": {}, "win-2025": {}}},
+		},
 	},
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
@@ -94,6 +105,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
+		{testDir: "./test/workload_discovery"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/otlp"},
 		{
@@ -228,6 +240,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
 		{testDir: "../../../test/restart"},
+		{testDir: "../../../test/workload_discovery"},
 		{testDir: "../../../test/acceptance"},
 		{testDir: "../../../test/feature/windows/event_logs"},
 		{testDir: "../../../test/feature/windows/eventid_logs"},
