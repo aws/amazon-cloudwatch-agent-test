@@ -157,6 +157,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/dualstack_endpoint",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
+		{
+			testDir: "./test/ssm_document",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
@@ -224,6 +228,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	*/
 	"ec2_mac": {
 		{testDir: "../../../test/feature/mac"},
+		{testDir: "../../../test/ssm_document"},
 	},
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
@@ -242,6 +247,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "../../../test/feature/windows/custom_start/ssm_start",
 			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
 		},
+		{testDir: "../../../test/ssm_document"},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
