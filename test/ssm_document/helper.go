@@ -14,7 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
-func RunAndVerifySSMAction(documentName string, instanceIds []string, tc TestCase) error {
+func RunAndVerifySSMAction(documentName string, instanceIds []string, tc testCase) error {
 	log.Printf("Testing %s action", tc.actionName)
 
 	out, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
@@ -30,8 +30,8 @@ func RunAndVerifySSMAction(documentName string, instanceIds []string, tc TestCas
 	return nil
 }
 
-func VerifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName string, tc TestCase) error {
-	var status AgentStatus
+func VerifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName string, tc testCase) error {
+	var status agentStatus
 
 	//Wait for command completion
 	_, err := awsservice.WaitForCommandCompletion(*out.Command.CommandId, instanceId)

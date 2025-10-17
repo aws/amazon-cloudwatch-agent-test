@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/google/uuid"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
@@ -42,17 +41,39 @@ func Validate() error {
 	}
 
 	// Test start action
-	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[0]); err != nil {
+	startTest := testCase{
+		parameters:           map[string][]string{paramAction: {actionStart}},
+		actionName:           actionStart,
+		expectedAgentStatus:  agentStatusRunning,
+		expectedConfigStatus: configStatusConfigured,
+	}
+	if err := RunAndVerifySSMAction(documentName, instanceIds, startTest); err != nil {
 		return err
 	}
 
 	// Test stop action
-	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[1]); err != nil {
+	stopTest := testCase{
+		parameters:           map[string][]string{paramAction: {actionStop}},
+		actionName:           actionStop,
+		expectedAgentStatus:  agentStatusStopped,
+		expectedConfigStatus: configStatusConfigured,
+	}
+	if err := RunAndVerifySSMAction(documentName, instanceIds, stopTest); err != nil {
 		return err
 	}
 
 	// Test configure (remove) action
-	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[2]); err != nil {
+	removeTest := testCase{
+		parameters: map[string][]string{
+			paramAction:                      {actionConfigureRemove},
+			paramOptionalConfigurationSource: {configSourceAll},
+			paramOptionalRestart:             {restartNo},
+		},
+		actionName:           actionConfigureRemove,
+		expectedAgentStatus:  agentStatusStopped,
+		expectedConfigStatus: configStatusNotConfigured,
+	}
+	if err := RunAndVerifySSMAction(documentName, instanceIds, removeTest); err != nil {
 		return err
 	}
 
@@ -61,7 +82,17 @@ func Validate() error {
 	if err := awsservice.PutStringParameter(agentConfigFile1, agentConfig1); err != nil {
 		return err
 	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[3]); err != nil {
+	configureTest := testCase{
+		parameters: map[string][]string{
+			paramAction:                        {actionConfigure},
+			paramOptionalConfigurationSource:   {configSourceSSM},
+			paramOptionalConfigurationLocation: {agentConfigFile1},
+		},
+		actionName:           actionConfigure,
+		expectedAgentStatus:  agentStatusRunning,
+		expectedConfigStatus: configStatusConfigured,
+	}
+	if err := RunAndVerifySSMAction(documentName, instanceIds, configureTest); err != nil {
 		return err
 	}
 
@@ -70,7 +101,17 @@ func Validate() error {
 	if err := awsservice.PutStringParameter(agentConfigFile2, agentConfig2); err != nil {
 		return err
 	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, testCases[4]); err != nil {
+	appendTest := testCase{
+		parameters: map[string][]string{
+			paramAction:                        {actionConfigureAppend},
+			paramOptionalConfigurationSource:   {configSourceSSM},
+			paramOptionalConfigurationLocation: {agentConfigFile2},
+		},
+		actionName:           actionConfigureAppend,
+		expectedAgentStatus:  agentStatusRunning,
+		expectedConfigStatus: configStatusConfigured,
+	}
+	if err := RunAndVerifySSMAction(documentName, instanceIds, appendTest); err != nil {
 		return err
 	}
 
