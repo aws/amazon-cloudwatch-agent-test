@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "2.0",
+  "version": "${AGENT_VERSION}",
+  "publisher": "AWS CloudWatch",
+  "packages": {
+    "windows": {
+      "_any": {
+        "_any": {
+          "file": "windows/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        }
+      }
+    },
+    "amazon": {
+      "_any": {
+        "_any": {
+          "file": "linux/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        },
+        "arm64": {
+          "file": "linux/arm64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        }
+      }
+    },
+    "debian": {
+      "_any": {
+        "_any": {
+          "file": "linux/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        }
+      }
+    },
+    "ubuntu": {
+      "_any": {
+        "_any": {
+          "file": "linux/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        },
+        "arm64": {
+          "file": "linux/arm64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        }
+      }
+    },
+    "redhat": {
+      "_any": {
+        "_any": {
+          "file": "linux/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        },
+        "arm64": {
+          "file": "linux/arm64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        }
+      }
+    },
+    "centos": {
+      "_any": {
+        "_any": {
+          "file": "linux/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        },
+        "arm64": {
+          "file": "linux/arm64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        }
+      }
+    },
+    "suse": {
+      "_any": {
+        "_any": {
+          "file": "linux/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        },
+        "arm64": {
+          "file": "linux/arm64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        }
+      }
+    },
+    "oracle": {
+      "_any": {
+        "_any": {
+          "file": "linux/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        }
+      }
+    },
+    "mac_os_x": {
+      "_any": {
+        "_any": {
+          "file": "darwin/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        },
+        "arm64": {
+          "file": "darwin/arm64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip"
+        }
+      }
+    }
+  },
+  "files": {
+    "windows/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip": {
+      "checksums": {
+        "sha256": "${WINDOWS_AMD64_SHA}"
+      }
+    },
+    "linux/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip": {
+      "checksums": {
+        "sha256": "${LINUX_AMD64_SHA}"
+      }
+    },
+    "linux/arm64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip": {
+      "checksums": {
+        "sha256": "${LINUX_ARM64_SHA}"
+      }
+    },
+    "darwin/amd64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip": {
+      "checksums": {
+        "sha256": "${DARWIN_AMD64_SHA}"
+      }
+    },
+    "darwin/arm64/${AGENT_VERSION}/AmazonCloudWatchAgent.zip": {
+      "checksums": {
+        "sha256": "${DARWIN_ARM64_SHA}"
+      }
+    }
+  }
+}

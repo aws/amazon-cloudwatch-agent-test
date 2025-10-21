@@ -35,6 +35,7 @@ type MetaData struct {
 	EC2PluginTests                              map[string]struct{} // set of EC2 plugin names
 	ExcludedTests                               map[string]struct{} // set of excluded names
 	Bucket                                      string
+	Branch                                      string
 	S3Key                                       string
 	CwaCommitSha                                string
 	CaCertPath                                  string
@@ -81,6 +82,7 @@ type MetaDataStrings struct {
 	EC2PluginTests                              string // input comma delimited list of plugin names
 	ExcludedTests                               string // Exclude specific tests from OS
 	Bucket                                      string
+	Branch                                      string
 	S3Key                                       string
 	CwaCommitSha                                string
 	CaCertPath                                  string
@@ -121,6 +123,9 @@ func registerComputeType(dataString *MetaDataStrings) {
 }
 func registerBucket(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.Bucket), "bucket", "", "s3 bucket ex cloudwatch-agent-integration-bucket")
+}
+func registerBranch(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.Branch), "branch", "main", "cloudwatch agent test branch")
 }
 func registerS3Key(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.S3Key), "s3key", "release/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm",
@@ -320,6 +325,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerEKSData(registeredMetaDataStrings)
 	registerEKSE2ETestData(registeredMetaDataStrings)
 	registerBucket(registeredMetaDataStrings)
+	registerBranch(registeredMetaDataStrings)
 	registerS3Key(registeredMetaDataStrings)
 	registerCwaCommitSha(registeredMetaDataStrings)
 	registerCaCertPath(registeredMetaDataStrings)
@@ -349,6 +355,7 @@ func GetEnvironmentMetaData() *MetaData {
 	fillEC2PluginTests(metaDataStorage, registeredMetaDataStrings)
 	fillExcludedTests(metaDataStorage, registeredMetaDataStrings)
 	metaDataStorage.Bucket = registeredMetaDataStrings.Bucket
+	metaDataStorage.Branch = registeredMetaDataStrings.Branch
 	metaDataStorage.S3Key = registeredMetaDataStrings.S3Key
 	metaDataStorage.CwaCommitSha = registeredMetaDataStrings.CwaCommitSha
 	metaDataStorage.CaCertPath = registeredMetaDataStrings.CaCertPath
