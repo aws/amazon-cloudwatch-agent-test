@@ -6,6 +6,23 @@
 install_java17() {
     BUCKET="$1"
 
+    # override existing java installation from ami (TODO: remove when ami uses jdk17 by default)
+    if type -P dnf >/dev/null 2>&1; then
+        sudo dnf install -y java-17-amazon-corretto-devel 2>/dev/null
+    fi
+    
+    if type -P yum >/dev/null 2>&1; then
+        sudo yum install -y java-17-amazon-corretto-devel 2>/dev/null
+    fi
+
+    if type -P apt-get >/dev/null 2>&1; then
+        sudo apt-get install -y java-17-amazon-corretto-jdk 2>/dev/null
+    fi
+    
+    if type -P zypper >/dev/null 2>&1; then
+        sudo zypper install -y java-17-amazon-corretto-devel 2>/dev/null
+    fi
+
     # main java installation
     ARCH=$(uname -m)
     if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
@@ -24,30 +41,6 @@ install_java17() {
     sudo ln -sf "$JAVA_DIR/bin/jar" /usr/local/bin/jar
     export JAVA_HOME="$JAVA_DIR"
     export PATH="$JAVA_DIR/bin:$PATH"
-
-    # override existing java installation from ami (TODO: remove when ami uses jdk17 by default)
-    sudo rpm --import https://yum.corretto.aws/corretto.key 2>/dev/null
-    
-    if type -P yum >/dev/null 2>&1; then
-        sudo curl -L --silent -o /etc/yum.repos.d/corretto.repo https://yum.corretto.aws/corretto.repo 2>/dev/null
-        sudo yum install -y java-17-amazon-corretto-devel 2>/dev/null
-    elif type -P dnf >/dev/null 2>&1; then
-        sudo curl -L --silent -o /etc/yum.repos.d/corretto.repo https://yum.corretto.aws/corretto.repo 2>/dev/null
-        sudo dnf install -y java-17-amazon-corretto-devel 2>/dev/null
-    fi
-
-    if type -P apt-get >/dev/null 2>&1; then
-        curl --silent https://apt.corretto.aws/corretto.key | sudo apt-key add - 2>/dev/null
-        echo "deb https://apt.corretto.aws stable main" | sudo tee /etc/apt/sources.list.d/corretto.list >/dev/null 2>&1
-        sudo apt-get update 2>/dev/null
-        sudo apt-get install -y java-17-amazon-corretto-jdk 2>/dev/null
-    fi
-    
-    if type -P zypper >/dev/null 2>&1; then
-        sudo zypper addrepo https://yum.corretto.aws/corretto.repo 2>/dev/null
-        sudo zypper refresh 2>/dev/null
-        sudo zypper install -y java-17-amazon-corretto-devel 2>/dev/null
-    fi
 }
 
 setup_jar() {
@@ -94,18 +87,18 @@ EOF
 setup_tomcat() {
     VERSION="${1:-apache-tomcat-9.0.110}"
     BUCKET="$2"
-    aws s3 cp "s3://$BUCKET/tomcat/$VERSION.tar.gz" "/tmp/$VERSION.tar.gz"
-    sudo tar -xzf "/tmp/$VERSION.tar.gz" -C /tmp
-    TOMCAT_DIR="/tmp/$VERSION"
+    aws s3 cp "s3://$BUCKET/tomcat/$VERSION.tar.gz" "/tmp/tomcat/$VERSION.tar.gz"
+    sudo tar -xzf "/tmp/tomcat/$VERSION.tar.gz" -C /tmp/tomcat
+    TOMCAT_DIR="/tmp/tomcat/$VERSION"
     sudo chmod -R 755 "$TOMCAT_DIR"
 }
 
 setup_kafka() {
     VERSION="${1:-kafka_2.13-3.5.0}"
     BUCKET="$2"
-    aws s3 cp "s3://$BUCKET/kafka/$VERSION.tgz" "/tmp/$VERSION.tgz"
-    sudo tar -xzf "/tmp/$VERSION.tgz" -C /tmp
-    KAFKA_DIR="/tmp/$VERSION"
+    aws s3 cp "s3://$BUCKET/kafka/$VERSION.tgz" "/tmp/kafka/$VERSION.tgz"
+    sudo tar -xzf "/tmp/kafka/$VERSION.tgz" -C /tmp/kafka
+    KAFKA_DIR="/tmp/kafka/$VERSION"
     sudo chmod -R 755 "$KAFKA_DIR"
 }
 
@@ -195,35 +188,20 @@ tear_down_kafka() {
     unset KAFKA_JMX_OPTS
 }
 
+# this mimics the registration of an nvidia device since the actual registration requires reboot
 setup_nvidia_device() {
     sudo mknod /dev/nvidia0 c 195 0
     sudo chmod 666 /dev/nvidia0
 }
 
 install_nvidia_driver() {
-    BUCKET="$1"
-    
-    if grep -q "Oracle Linux" /etc/os-release; then
-        sudo tee /usr/bin/nvidia-smi > /dev/null << 'EOF'
-#!/bin/bash
-exit 0
-EOF
-        sudo chmod +x /usr/bin/nvidia-smi
-        return
-    fi
-    
+    BUCKET="$1"    
     aws s3 cp "s3://$BUCKET/nvidia/linux/latest/NVIDIA-Linux-x86_64-580.95.05-grid-aws.run" /tmp/nvidia-driver.run
     sudo chmod +x /tmp/nvidia-driver.run
     sudo /tmp/nvidia-driver.run --silent --no-questions --ui=none --no-kernel-module
 }
 
 uninstall_nvidia() {
-    if grep -q "Oracle Linux" /etc/os-release; then
-        sudo rm -rf /dev/nvidia0
-        sudo rm -rf /usr/bin/nvidia-smi
-        return
-    fi
-
     sudo /tmp/nvidia-driver.run --uninstall --silent --no-questions --ui=none
     sudo rm -rf /dev/nvidia0
     sudo rm -rf /tmp/nvidia-driver.run

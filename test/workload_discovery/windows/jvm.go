@@ -102,8 +102,8 @@ func testJVMCase(jarName string, manifestData map[string]string, expectedName st
 	pidNoJMX := strings.TrimSpace(string(output))
 	log.Printf("Started JVM process without port, PID: %s", pidNoJMX)
 
-	time.Sleep(util.MediumSleep)
-	if err := util.CheckJavaStatusWithRetry("NEEDS_SETUP/JMX_PORT", expectedName, "JVM", JVMPort); err != nil {
+	time.Sleep(util.WorkloadUptimeSleep)
+	if err := util.CheckStatusWithRetry(util.JMXSetupStatus, expectedName, "JVM", JVMPort); err != nil {
 		exec.Command("powershell", "-File", "C:\\scripts.ps1", "Stop-JVM", "-ProcessId", pidNoJMX).Run()
 		return fmt.Errorf("JVM NEEDS_SETUP status check failed: %v", err)
 	}
@@ -118,13 +118,13 @@ func testJVMCase(jarName string, manifestData map[string]string, expectedName st
 	pidJMX := strings.TrimSpace(string(output))
 	log.Printf("Started JVM process with port, PID: %s", pidJMX)
 
-	time.Sleep(util.MediumSleep)
-	if err := util.CheckJavaStatusWithRetry("READY", expectedName, "JVM", JVMPort); err != nil {
+	time.Sleep(util.WorkloadUptimeSleep)
+	if err := util.CheckStatusWithRetry(util.Ready, expectedName, "JVM", JVMPort); err != nil {
 		exec.Command("powershell", "-File", "C:\\scripts.ps1", "Stop-JVM", "-ProcessId", pidJMX).Run()
 		return fmt.Errorf("JVM READY status check failed: %v", err)
 	}
 	exec.Command("powershell", "-File", "C:\\scripts.ps1", "Stop-JVM", "-ProcessId", pidJMX).Run()
-	time.Sleep(util.LongSleep)
+	time.Sleep(util.RaceConditionSleep)
 
 	return nil
 }

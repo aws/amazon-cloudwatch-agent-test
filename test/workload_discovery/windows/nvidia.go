@@ -21,7 +21,7 @@ import (
 
 func RunNVIDIATest() error {
 	// Test NEEDS_SETUP phase
-	if err := checkNVIDIAStatus("NEEDS_SETUP/NVIDIA_DRIVER"); err != nil {
+	if err := checkNVIDIAStatus(util.NVIDIASetupStatus); err != nil {
 		return fmt.Errorf("initial NVIDIA status check failed: %v", err)
 	}
 
@@ -29,7 +29,7 @@ func RunNVIDIATest() error {
 	if err := installNVIDIADriver(); err != nil {
 		return fmt.Errorf("failed to install NVIDIA driver: %v", err)
 	}
-	if err := checkNVIDIAStatus("READY"); err != nil {
+	if err := checkNVIDIAStatus(util.Ready); err != nil {
 		return fmt.Errorf("post-install NVIDIA status check failed: %v", err)
 	}
 
@@ -96,7 +96,7 @@ func testCombinedWorkloads() error {
 	defer exec.Command("powershell", "-File", "C:\\scripts.ps1", "Stop-JVM", "-ProcessId", pid).Run()
 
 	log.Printf("Started JVM process with PID: %s", pid)
-	time.Sleep(util.LongSleep)
+	time.Sleep(util.WorkloadUptimeSleep)
 	return checkCombinedWorkloads()
 }
 

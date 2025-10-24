@@ -102,8 +102,8 @@ func testJVMCase(jarName string, manifestData map[string]string, expectedName st
 	pidNoJMX := strings.TrimSpace(string(output))
 	log.Printf("Started JVM process without port, PID: %s", pidNoJMX)
 
-	time.Sleep(util.MediumSleep)
-	if err := util.CheckJavaStatusWithRetry("NEEDS_SETUP/JMX_PORT", expectedName, "JVM", JVMPort); err != nil {
+	time.Sleep(util.WorkloadUptimeSleep)
+	if err := util.CheckStatusWithRetry(util.JMXSetupStatus, expectedName, "JVM", JVMPort); err != nil {
 		exec.Command("./unix/util/scripts", "tear_down_jvm", pidNoJMX).Run()
 		return fmt.Errorf("JVM NEEDS_SETUP status check failed: %v", err)
 	}
@@ -118,13 +118,13 @@ func testJVMCase(jarName string, manifestData map[string]string, expectedName st
 	pidJMX := strings.TrimSpace(string(output))
 	log.Printf("Started JVM process with port, PID: %s", pidJMX)
 
-	time.Sleep(util.MediumSleep)
-	if err := util.CheckJavaStatusWithRetry("READY", expectedName, "JVM", JVMPort); err != nil {
+	time.Sleep(util.WorkloadUptimeSleep)
+	if err := util.CheckStatusWithRetry(util.Ready, expectedName, "JVM", JVMPort); err != nil {
 		exec.Command("./unix/util/scripts", "tear_down_jvm", pidJMX).Run()
 		return fmt.Errorf("JVM READY status check failed: %v", err)
 	}
 	exec.Command("./unix/util/scripts", "tear_down_jvm", pidJMX).Run()
-	time.Sleep(util.LongSleep)
+	time.Sleep(util.RaceConditionSleep)
 
 	return nil
 }

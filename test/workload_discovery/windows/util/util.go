@@ -6,9 +6,11 @@
 package util
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -17,10 +19,15 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 )
 
+//go:embed scripts.ps1
+var scriptsPS1 string
+
 const (
-	ShortSleep  = 2 * time.Second
-	MediumSleep = 5 * time.Second
-	LongSleep   = 10 * time.Second
+	RaceConditionSleep  = 5 * time.Second
+	WorkloadUptimeSleep = 10 * time.Second
+	JMXSetupStatus      = "NEEDS_SETUP/JMX_PORT"
+	NVIDIASetupStatus   = "NEEDS_SETUP/NVIDIA_DRIVER"
+	Ready               = "READY"
 )
 
 type WorkloadStatus struct {
@@ -105,7 +112,7 @@ func Contains(slice []string, item string) bool {
 	return false
 }
 
-func CheckJavaStatus(expectedStatus string, expectedName string, workloadType string, port int) error {
+func CheckStatus(expectedStatus string, expectedName string, workloadType string, port int) error {
 	workloads, err := GetWorkloads()
 	if err != nil {
 		return fmt.Errorf("failed to get workloads: %v", err)
@@ -128,38 +135,22 @@ func CheckJavaStatus(expectedStatus string, expectedName string, workloadType st
 	return fmt.Errorf("workload %s with status %s not found", expectedName, expectedStatus)
 }
 
-func CheckJavaStatusWithRetry(expectedStatus string, expectedName string, workloadType string, port int) error {
+func CheckStatusWithRetry(expectedStatus string, expectedName string, workloadType string, port int) error {
 	var lastErr error
 	for i := 0; i < 3; i++ {
-		if err := CheckJavaStatus(expectedStatus, expectedName, workloadType, port); err == nil {
+		if err := CheckStatus(expectedStatus, expectedName, workloadType, port); err == nil {
 			return nil
 		} else {
 			lastErr = err
-			log.Printf("CheckJavaStatus attempt %d failed: %v", i+1, err)
+			log.Printf("CheckStatus attempt %d failed: %v", i+1, err)
 			if i < 2 {
-				time.Sleep(LongSleep)
+				time.Sleep(RaceConditionSleep)
 			}
 		}
 	}
-	return fmt.Errorf("CheckJavaStatus failed after 3 attempts: %v", lastErr)
+	return fmt.Errorf("CheckStatus failed after 3 attempts: %v", lastErr)
 }
 
-func SetupJavaWorkload(version string, workloadType string) error {
-	var setupFunc string
-	switch workloadType {
-	case "tomcat":
-		setupFunc = "Setup-Tomcat"
-	case "kafka":
-		setupFunc = "Setup-Kafka"
-	default:
-		return fmt.Errorf("unknown workload type: %s", workloadType)
-	}
-
-	env := environment.GetEnvironmentMetaData()
-	cmd := exec.Command("powershell", "-File", "C:\\scripts.ps1", setupFunc, "-Version", version, "-Bucket", env.Bucket)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("SetupJavaWorkload failed: %v, output: %s", err, string(output))
-	}
-	return nil
+func WriteEmbeddedScript() error {
+	return os.WriteFile("C:\\scripts.ps1", []byte(scriptsPS1), 0644)
 }

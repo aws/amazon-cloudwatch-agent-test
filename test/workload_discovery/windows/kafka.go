@@ -9,6 +9,7 @@ package windows
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -43,8 +44,8 @@ func RunKafkaTest() error {
 
 func testKafkaVersion(version string) error {
 	defer func() {
-		time.Sleep(util.ShortSleep)
-		exec.Command("powershell", "-Command", fmt.Sprintf("Remove-Item -Path 'C:\\tmp\\%s*' -Recurse -Force -ErrorAction SilentlyContinue", version)).Run()
+		time.Sleep(util.RaceConditionSleep)
+		os.RemoveAll("C:\\tmp\\kafka")
 	}()
 	// Setup Kafka
 	env := environment.GetEnvironmentMetaData()
@@ -52,34 +53,34 @@ func testKafkaVersion(version string) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to setup Kafka %s: %v", version, err)
 	}
-	kafkaDir := fmt.Sprintf("C:\\tmp\\%s", version)
-	time.Sleep(util.MediumSleep)
+	kafkaDir := fmt.Sprintf("C:\\tmp\\kafka\\%s", version)
+	time.Sleep(util.RaceConditionSleep)
 
 	// Test NEEDS_SETUP phase
 	cmd = exec.Command("powershell", "-File", "C:\\scripts.ps1", "Start-Kafka", "-KafkaDir", kafkaDir, "-Version", version)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to start Kafka without JMX: %v", err)
 	}
-	time.Sleep(util.MediumSleep)
-	if err := util.CheckJavaStatusWithRetry("NEEDS_SETUP/JMX_PORT", "Kafka Broker", "KAFKA/BROKER", KafkaPort); err != nil {
+	time.Sleep(util.WorkloadUptimeSleep)
+	if err := util.CheckStatusWithRetry(util.JMXSetupStatus, "Kafka Broker", "KAFKA/BROKER", KafkaPort); err != nil {
 		exec.Command("powershell", "-File", "C:\\scripts.ps1", "Stop-Kafka", "-KafkaDir", kafkaDir, "-Version", version).Run()
 		return fmt.Errorf("initial Kafka status check failed for %s: %v", version, err)
 	}
 	exec.Command("powershell", "-File", "C:\\scripts.ps1", "Stop-Kafka", "-KafkaDir", kafkaDir, "-Version", version).Run()
-	time.Sleep(util.MediumSleep)
+	time.Sleep(util.RaceConditionSleep)
 
 	// Test READY phase
 	cmd = exec.Command("powershell", "-File", "C:\\scripts.ps1", "Start-Kafka", "-KafkaDir", kafkaDir, "-Version", version, "-Port", strconv.Itoa(KafkaPort))
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to start Kafka with JMX: %v", err)
 	}
-	time.Sleep(util.MediumSleep)
-	if err := util.CheckJavaStatusWithRetry("READY", "Kafka Broker", "KAFKA/BROKER", KafkaPort); err != nil {
+	time.Sleep(util.WorkloadUptimeSleep)
+	if err := util.CheckStatusWithRetry(util.Ready, "Kafka Broker", "KAFKA/BROKER", KafkaPort); err != nil {
 		exec.Command("powershell", "-File", "C:\\scripts.ps1", "Stop-Kafka", "-KafkaDir", kafkaDir, "-Version", version).Run()
 		return fmt.Errorf("post-start Kafka status check failed for %s: %v", version, err)
 	}
 	exec.Command("powershell", "-File", "C:\\scripts.ps1", "Stop-Kafka", "-KafkaDir", kafkaDir, "-Version", version).Run()
-	time.Sleep(util.LongSleep)
+	time.Sleep(util.RaceConditionSleep)
 
 	return nil
 }

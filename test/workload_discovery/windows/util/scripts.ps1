@@ -3,25 +3,12 @@
 
 function Install-Java17 {
     param([string]$Bucket)
-    
-    # main java installation
+
     $s3Key = "jdk17/windows/microsoft-jdk-17-windows-x64.zip"
     $localPath = "C:\tmp\jdk17.zip"
     
     Copy-S3Object -BucketName $Bucket -Key $s3Key -LocalFile $localPath
     Expand-Archive -Path $localPath -DestinationPath "C:\tmp\jdk17" -Force
-
-    # override existing java installation from ami (TODO: remove when ami uses jdk17 by default)
-    & "C:\ProgramData\chocolatey\bin\choco.exe" install openjdk --version=17.0.2 --confirm --force
-    
-    $currentPath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
-    $newPath = $currentPath -replace "C:\\Program Files\\OpenJDK\\jdk-15\.[^;]*\\bin;?", ""
-    $newPath = "C:\Program Files\OpenJDK\jdk-17.0.2\bin;$newPath"
-    [Environment]::SetEnvironmentVariable("PATH", $newPath, "Machine")
-    
-    $env:JAVA_HOME = "C:\Program Files\OpenJDK\jdk-17.0.2"
-    $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
-    [Environment]::SetEnvironmentVariable("JAVA_HOME", "C:\Program Files\OpenJDK\jdk-17.0.2", "Machine")
 }
 
 function Setup-Jar {
@@ -89,19 +76,19 @@ function Setup-Tomcat {
     
     $isWin2016 = (Get-WmiObject -Class Win32_OperatingSystem).Caption -match "2016"
     
-    Copy-S3Object -BucketName $Bucket -Key "tomcat/$Version.tar.gz" -LocalFile "C:\tmp\$Version.tar.gz"
+    Copy-S3Object -BucketName $Bucket -Key "tomcat/$Version.tar.gz" -LocalFile "C:\tmp\tomcat\$Version.tar.gz"
     
     if ($isWin2016) {
         $originalLocation = Get-Location
         try {
-            Set-Location "C:\tmp"
+            Set-Location "C:\tmp\tomcat"
             & "C:\Program Files\Git\usr\bin\gzip.exe" -d "$Version.tar.gz"
             & "C:\Program Files\Git\usr\bin\tar.exe" -xf "$Version.tar"
         } finally {
             Set-Location $originalLocation
         }
     } else {
-        tar -xzf "C:\tmp\$Version.tar.gz" -C "C:\tmp"
+        tar -xzf "C:\tmp\tomcat\$Version.tar.gz" -C "C:\tmp\tomcat"
     }
 }
 
@@ -113,22 +100,22 @@ function Setup-Kafka {
     
     $isWin2016 = (Get-WmiObject -Class Win32_OperatingSystem).Caption -match "2016"
     
-    Copy-S3Object -BucketName $Bucket -Key "kafka/$Version.tgz" -LocalFile "C:\tmp\$Version.tgz"
+    Copy-S3Object -BucketName $Bucket -Key "kafka/$Version.tgz" -LocalFile "C:\tmp\kafka\$Version.tgz"
     
     if ($isWin2016) {
         $originalLocation = Get-Location
         try {
-            Set-Location "C:\tmp"
+            Set-Location "C:\tmp\kafka"
             & "C:\Program Files\Git\usr\bin\gzip.exe" -d "$Version.tgz"
             & "C:\Program Files\Git\usr\bin\tar.exe" -xf "$Version.tar"
         } finally {
             Set-Location $originalLocation
         }
     } else {
-        tar -xzf "C:\tmp\$Version.tgz" -C "C:\tmp"
+        tar -xzf "C:\tmp\kafka\$Version.tgz" -C "C:\tmp\kafka"
     }
     
-    $kafkaDir = "C:\tmp\$Version"
+    $kafkaDir = "C:\tmp\kafka\$Version"
 }
 
 function Start-JVM {

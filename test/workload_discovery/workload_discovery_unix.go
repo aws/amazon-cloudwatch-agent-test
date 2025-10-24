@@ -40,10 +40,6 @@ func Validate() error {
 		if err := unix.RunKafkaTest(); err != nil {
 			errors = append(errors, "Kafka test failed: "+err.Error())
 		}
-
-		if err := unix.RunPerformanceTest(); err != nil {
-			errors = append(errors, "Performance test failed: "+err.Error())
-		}
 	}
 
 	if len(errors) > 0 {

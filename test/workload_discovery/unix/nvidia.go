@@ -23,7 +23,7 @@ func RunNVIDIATest() error {
 	if err := setupNVIDIADevice(); err != nil {
 		return fmt.Errorf("failed to mask nvidia-smi: %v", err)
 	}
-	if err := checkNVIDIAStatus("NEEDS_SETUP/NVIDIA_DRIVER"); err != nil {
+	if err := checkNVIDIAStatus(util.NVIDIASetupStatus); err != nil {
 		return fmt.Errorf("initial NVIDIA status check failed: %v", err)
 	}
 
@@ -31,7 +31,7 @@ func RunNVIDIATest() error {
 	if err := installNVIDIADriver(); err != nil {
 		return fmt.Errorf("failed to unmask nvidia-smi: %v", err)
 	}
-	if err := checkNVIDIAStatus("READY"); err != nil {
+	if err := checkNVIDIAStatus(util.Ready); err != nil {
 		return fmt.Errorf("post-install NVIDIA status check failed: %v", err)
 	}
 
@@ -107,7 +107,7 @@ func testCombinedWorkloads() error {
 	defer exec.Command("./unix/util/scripts", "tear_down_jvm", pid).Run()
 
 	log.Printf("Started JVM process with PID: %s", pid)
-	time.Sleep(util.LongSleep)
+	time.Sleep(util.WorkloadUptimeSleep)
 	return checkCombinedWorkloads()
 }
 

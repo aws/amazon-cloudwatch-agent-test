@@ -67,7 +67,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
 	},
-	"ec2_linux_nvidia": {
+	"ec2_linux_wd": {
+		{testDir: "./test/workload_discovery"},
+	},
+	"ec2_linux_wd_nvidia": {
 		{testDir: "./test/workload_discovery"},
 	},
 	testTypeKeyEc2Linux: {
@@ -97,7 +100,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
 		{testDir: "./test/restart"},
-		{testDir: "./test/workload_discovery"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/otlp"},
 		{
@@ -234,13 +236,15 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/mac"},
 		{testDir: "../../../test/ssm_document"},
 	},
-	"ec2_windows_nvidia": {
+	"ec2_windows_wd": {
+		{testDir: "../../../test/workload_discovery"},
+	},
+	"ec2_windows_wd_nvidia": {
 		{testDir: "../../../test/workload_discovery"},
 	},
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
 		{testDir: "../../../test/restart"},
-		{testDir: "../../../test/workload_discovery"},
 		{testDir: "../../../test/acceptance"},
 		{testDir: "../../../test/feature/windows/event_logs"},
 		{testDir: "../../../test/feature/windows/eventid_logs"},

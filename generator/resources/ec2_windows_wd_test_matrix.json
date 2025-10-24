@@ -1,0 +1,8 @@
+[
+  {
+    "os": "win-11",
+    "instanceType":"t3a.medium",
+    "ami": "cloudwatch-agent-integration-test-win-11*",
+    "useSSM": false
+  }
+]
