@@ -6,7 +6,7 @@
 install_java17() {
     BUCKET="$1"
 
-    # override existing java installation from ami (TODO: remove when ami uses jdk17 by default)
+    # Override existing JDK11 installation from AMI (TODO: Remove when AMI uses JDK17 by default)
     if type -P dnf >/dev/null 2>&1; then
         sudo dnf install -y java-17-amazon-corretto-devel 2>/dev/null
     fi
@@ -23,7 +23,7 @@ install_java17() {
         sudo zypper install -y java-17-amazon-corretto-devel 2>/dev/null
     fi
 
-    # main java installation
+    # Main JDK17 installation
     ARCH=$(uname -m)
     if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
         S3_KEY="jdk17/linux/amazon-corretto-17-aarch64-linux-jdk.tar.gz"
@@ -116,10 +116,12 @@ spin_up_jvm() {
              -Dcom.sun.management.jmxremote.host=localhost \
              -Djava.rmi.server.hostname=localhost \
              -jar "$JAR_PATH" >/dev/null 2>&1 &
+        PID=$!
+        echo $PID
     else
         java -jar "$JAR_PATH" >/dev/null 2>&1 &
+        echo $!
     fi
-    echo $!
 }
 
 tear_down_jvm() {
@@ -139,56 +141,83 @@ spin_up_tomcat() {
         export CATALINA_OPTS="-Dcom.sun.management.jmxremote.port=$PORT -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
     fi
     
-    sudo -E "$TOMCAT_DIR/bin/startup.sh"
-    sleep 10
+    sudo -E "$TOMCAT_DIR/bin/startup.sh" >/dev/null 2>&1
+    
+    sleep 5
+    TOMCAT_PID=$(pgrep -f "$TOMCAT_DIR" | head -1)
+    echo "$TOMCAT_PID"
 }
 
 tear_down_tomcat() {
-    TOMCAT_DIR="$1"
+    PID="$1"
+    TOMCAT_DIR="$2"
+    
+    sudo "$TOMCAT_DIR/bin/shutdown.sh" >/dev/null 2>&1
+    sudo pkill -f tomcat 2>/dev/null
+    
+    if [ -n "$PID" ]; then
+        kill "$PID" 2>/dev/null
+        while kill -0 "$PID" 2>/dev/null; do
+            sleep 0.1
+        done
+    fi
+    
     unset CATALINA_OPTS CATALINA_BASE
-    sudo "$TOMCAT_DIR/bin/shutdown.sh"
 }
 
 spin_up_kafka() {
     KAFKA_DIR="$1"
     VERSION="$2"
     PORT="$3"
+
+    sudo rm -rf /tmp/zookeeper /tmp/kafka-logs /tmp/kraft-controller-logs 2>/dev/null
     
     MAJOR_VERSION=$(echo "$VERSION" | cut -d'-' -f2 | cut -d'.' -f1)
     if [ "$MAJOR_VERSION" -lt 4 ]; then
-        sudo -E "$KAFKA_DIR/bin/zookeeper-server-start.sh" "$KAFKA_DIR/config/zookeeper.properties" &
-        sleep 10
+        sudo -E "$KAFKA_DIR/bin/zookeeper-server-start.sh" "$KAFKA_DIR/config/zookeeper.properties" >/dev/null 2>&1 &
         CONFIG_FILE="$KAFKA_DIR/config/server.properties"
     else
         CONFIG_FILE="$KAFKA_DIR/config/controller.properties"
         UUID=$("$KAFKA_DIR/bin/kafka-storage.sh" random-uuid)
-        "$KAFKA_DIR/bin/kafka-storage.sh" format -t "$UUID" -c "$CONFIG_FILE" --standalone
+        "$KAFKA_DIR/bin/kafka-storage.sh" format -t "$UUID" -c "$CONFIG_FILE" --standalone >/dev/null 2>&1
     fi
     
     if [ -n "$PORT" ]; then
         export KAFKA_JMX_OPTS="-Dcom.sun.management.jmxremote.port=$PORT -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
     fi
     
-    sudo -E "$KAFKA_DIR/bin/kafka-server-start.sh" "$CONFIG_FILE" &
-    sleep 10
+    sudo -E "$KAFKA_DIR/bin/kafka-server-start.sh" "$CONFIG_FILE" >/dev/null 2>&1 &
+    KAFKA_PID=$!
+    
+    sleep 5
+    echo "$KAFKA_PID"
 }
 
 tear_down_kafka() {
-    KAFKA_DIR="$1"
-    VERSION="$2"
+    PID="$1"
+    KAFKA_DIR="$2"
+    VERSION="$3"
     
-    sudo "$KAFKA_DIR/bin/kafka-server-stop.sh"
+    sudo "$KAFKA_DIR/bin/kafka-server-stop.sh" >/dev/null 2>&1
     
     MAJOR_VERSION=$(echo "$VERSION" | cut -d'-' -f2 | cut -d'.' -f1)
     if [ "$MAJOR_VERSION" -lt 4 ]; then
-        sudo "$KAFKA_DIR/bin/zookeeper-server-stop.sh"
+        sudo "$KAFKA_DIR/bin/zookeeper-server-stop.sh" >/dev/null 2>&1
     fi
     
-    sudo rm -rf /tmp/zookeeper /tmp/kafka-logs /tmp/kraft-controller-logs
+    sudo pkill -f kafka 2>/dev/null
+    
+    if [ -n "$PID" ]; then
+        kill "$PID" 2>/dev/null
+        while kill -0 "$PID" 2>/dev/null; do
+            sleep 0.1
+        done
+    fi
+    
     unset KAFKA_JMX_OPTS
 }
 
-# this mimics the registration of an nvidia device since the actual registration requires reboot
+# Mimics the registration of an NVIDIA device since actual registration requires reboot
 setup_nvidia_device() {
     sudo mknod /dev/nvidia0 c 195 0
     sudo chmod 666 /dev/nvidia0
