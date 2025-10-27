@@ -63,7 +63,6 @@ public class Main {
         & "$jdkPath\bin\jar.exe" cfm "C:\tmp\$JarName" "META-INF\MANIFEST.MF" "*.class"
     } finally {
         Set-Location $originalLocation
-        Start-Sleep -Seconds 1
         Remove-Item -Path $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
@@ -170,12 +169,18 @@ function Start-Tomcat {
         $env:CATALINA_OPTS = "-Dcom.sun.management.jmxremote.port=$Port -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
     }
     
-    & "$TomcatDir\bin\startup.bat"
-    Start-Sleep -Seconds 10
+    Start-Process -FilePath "$TomcatDir\bin\startup.bat" -WindowStyle Hidden -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 15
+    
+    $tomcatProcess = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -match "java" -and $_.CommandLine -match $TomcatDir } | Select-Object -First 1
+    if ($tomcatProcess) { return $tomcatProcess.Id } else { return 0 }
 }
 
 function Stop-Tomcat {
-    param([string]$TomcatDir)
+    param(
+        [int]$ProcessId,
+        [string]$TomcatDir
+    )
     
     $jdkPath = Get-ChildItem -Path "C:\tmp\jdk17" -Directory | Select-Object -First 1 -ExpandProperty FullName
     $TomcatDir = $TomcatDir.TrimEnd('\')
@@ -183,8 +188,23 @@ function Stop-Tomcat {
     $env:CATALINA_HOME = $TomcatDir
     $env:CATALINA_BASE = $TomcatDir
 
-    & "$TomcatDir\bin\shutdown.bat"
-    Remove-Item -Path "env:CATALINA_OPTS", "env:CATALINA_BASE", "env:CATALINA_HOME", "env:JAVA_HOME" -ErrorAction SilentlyContinue
+    & "$TomcatDir\bin\shutdown.bat" | Out-Null
+    
+    if ($ProcessId -eq 0) {
+        $tomcatProcess = Get-Process | Where-Object { $_.ProcessName -match "java" -and $_.CommandLine -match $TomcatDir } | Select-Object -First 1
+        if ($tomcatProcess) { $ProcessId = $tomcatProcess.Id } else { $ProcessId = 0 }
+    }
+    
+    if ($ProcessId -ne 0) {
+        Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+        while (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) {
+            Start-Sleep -Milliseconds 100
+        }
+    } else {
+        Get-Process -Name java -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue # If still can't find the Tomcat process, then reset Java processes
+    }
+    
+    Remove-Item -Path "env:CATALINA_OPTS", "env:CATALINA_BASE", "env:CATALINA_HOME" -ErrorAction SilentlyContinue
 }
 
 function Start-Kafka {
@@ -198,30 +218,34 @@ function Start-Kafka {
     $env:JAVA_HOME = $jdkPath
     $env:KAFKA_HEAP_OPTS = "-Xmx256M -Xms256M"
     $env:PATH = "$jdkPath\bin;$env:PATH"
+
+    Remove-Item -Path "C:\tmp\zookeeper", "C:\tmp\kafka-logs", "C:\tmp\kraft-controller-logs" -Recurse -Force -ErrorAction SilentlyContinue
     
     $majorVersion = ($Version -split '-')[1] -split '\.' | Select-Object -First 1
     
     if ([int]$majorVersion -lt 4) {
-        Start-Process -FilePath "$KafkaDir\bin\windows\zookeeper-server-start.bat" -ArgumentList "$KafkaDir\config\zookeeper.properties"
-        Start-Sleep -Seconds 10
+        Start-Process -FilePath "$KafkaDir\bin\windows\zookeeper-server-start.bat" -ArgumentList "$KafkaDir\config\zookeeper.properties" -WindowStyle Hidden
         $configFile = "$KafkaDir\config\server.properties"
     } else {
         $configFile = "$KafkaDir\config\controller.properties"
         $uuid = (& "$KafkaDir\bin\windows\kafka-storage.bat" random-uuid) | Select-Object -Last 1
         $uuid = $uuid.Trim()
-        & "$KafkaDir\bin\windows\kafka-storage.bat" format --cluster-id $uuid --config $configFile --standalone
+        & "$KafkaDir\bin\windows\kafka-storage.bat" format --cluster-id $uuid --config $configFile --standalone | Out-Null
     }
     
     if ($Port) {
         $env:KAFKA_JMX_OPTS = "-Dcom.sun.management.jmxremote.port=$Port -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
     }
     
-    Start-Process -FilePath "$KafkaDir\bin\windows\kafka-server-start.bat" -ArgumentList $configFile
-    Start-Sleep -Seconds 10
+    $kafkaProcess = Start-Process -FilePath "$KafkaDir\bin\windows\kafka-server-start.bat" -ArgumentList $configFile -WindowStyle Hidden -PassThru
+    Start-Sleep -Seconds 5
+    
+    return $kafkaProcess.Id
 }
 
 function Stop-Kafka {
     param(
+        [int]$ProcessId,
         [string]$KafkaDir,
         [string]$Version
     )
@@ -229,15 +253,21 @@ function Stop-Kafka {
     $jdkPath = Get-ChildItem -Path "C:\tmp\jdk17" -Directory | Select-Object -First 1 -ExpandProperty FullName
     $env:JAVA_HOME = $jdkPath
     
-    & "$KafkaDir\bin\windows\kafka-server-stop.bat"
+    & "$KafkaDir\bin\windows\kafka-server-stop.bat" | Out-Null
     
     $majorVersion = ($Version -split '-')[1] -split '\.' | Select-Object -First 1
     if ([int]$majorVersion -lt 4) {
-        & "$KafkaDir\bin\windows\zookeeper-server-stop.bat"
+        & "$KafkaDir\bin\windows\zookeeper-server-stop.bat" | Out-Null
     }
     
-    Remove-Item -Path "C:\tmp\zookeeper", "C:\tmp\kafka-logs", "C:\tmp\kraft-controller-logs" -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path "env:KAFKA_JMX_OPTS", "env:JAVA_HOME", "env:KAFKA_HEAP_OPTS" -ErrorAction SilentlyContinue
+    if ($ProcessId) {
+        Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+        while (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) {
+            Start-Sleep -Milliseconds 100
+        }
+    }
+    
+    Remove-Item -Path "env:KAFKA_JMX_OPTS", "env:KAFKA_HEAP_OPTS" -ErrorAction SilentlyContinue
 }
 
 function Install-NvidiaDriver {
