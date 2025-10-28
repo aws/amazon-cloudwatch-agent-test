@@ -10,7 +10,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
@@ -29,10 +28,6 @@ const (
 var (
 	expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use", "nvidia_smi utilization_gpu", "nvidia_smi utilization_memory", "nvidia_smi power_draw", "nvidia_smi temperature_gpu"}
 )
-
-func init() {
-	environment.RegisterEnvironmentMetaDataFlags()
-}
 
 func Validate() error {
 	err := common.CopyFile(configWindowsJSON, configWindowsOutputPath)

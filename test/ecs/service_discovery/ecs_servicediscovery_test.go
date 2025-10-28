@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package ecs_sd
+package service_discovery
 
 import (
 	"testing"
@@ -49,6 +49,25 @@ func getEcsTestRunners(env *environment.MetaData) []*test_runner.ECSTestRunner {
 			},
 			{
 				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "serviceNameList"},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
+			},
+			{
+				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "combined"},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
+			},
+			{
+				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "targetDeduplication"},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
+			}, {
+				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "targetDeduplication2"},
+				RunStrategy: &test_runner.ECSAgentRunStrategy{},
+				Env:         *env,
+			},
+			{
+				Runner:      &ECSServiceDiscoveryTestRunner{scenarioName: "invalidJobLabel"},
 				RunStrategy: &test_runner.ECSAgentRunStrategy{},
 				Env:         *env,
 			},

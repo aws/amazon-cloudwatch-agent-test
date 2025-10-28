@@ -67,9 +67,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
 	},
+	"ec2_linux_wd": {
+		{testDir: "./test/workload_discovery"},
+	},
+	"ec2_linux_wd_nvidia": {
+		{testDir: "./test/workload_discovery"},
+	},
 	testTypeKeyEc2Linux: {
-		//Skipping this test for now until test is not flakey
-		//{testDir: "./test/ca_bundle"},
+		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
 			testDir: "./test/log_state/logfile",
@@ -158,11 +163,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/dualstack_endpoint",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
-
+		{
+			testDir: "./test/ssm_document",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 	},
 	testTypeKeyEc2SELinux: {
-		//skip test until test is not flakey
-		//{testDir: "./test/ca_bundle"},
+		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
 			testDir: "./test/metrics_number_dimension",
@@ -227,6 +234,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 	*/
 	"ec2_mac": {
 		{testDir: "../../../test/feature/mac"},
+		{testDir: "../../../test/ssm_document"},
+	},
+	"ec2_windows_wd": {
+		{testDir: "../../../test/workload_discovery"},
+	},
+	"ec2_windows_wd_nvidia": {
+		{testDir: "../../../test/workload_discovery"},
 	},
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
@@ -245,6 +259,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "../../../test/feature/windows/custom_start/ssm_start",
 			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
 		},
+		{testDir: "../../../test/ssm_document"},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
@@ -273,7 +288,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/stress/windows/system"},
 	},
 	"ecs_fargate": {
-		{testDir: "./test/ecs/ecs_sd"},
+		{testDir: "./test/ecs/service_discovery"},
 	},
 	"ecs_ec2_daemon": {
 		{
@@ -293,7 +308,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 		{
-			testDir: "./test/ecs/ecs_sd",
+			testDir: "./test/ecs/service_discovery",
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},
