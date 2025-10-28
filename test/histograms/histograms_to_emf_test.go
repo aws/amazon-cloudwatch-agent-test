@@ -64,19 +64,19 @@ func TestOTLPMetrics(t *testing.T) {
 				},
 				{
 					stat:  types.StatisticMaximum,
-					value: 2,
+					value: 4,
 				},
 				{
 					stat:  types.StatisticSum,
-					value: 12, // we send Sum=2 six times in one minute
+					value: 36,
 				},
 				{
 					stat:  types.StatisticAverage,
-					value: 1, // sum / samplecount = 2/2
+					value: 1.5,
 				},
 				{
 					stat:  types.StatisticSampleCount,
-					value: 12, // we send Count=2 six times in one minute
+					value: 24,
 				},
 			},
 		},
@@ -114,7 +114,7 @@ func TestOTLPMetrics(t *testing.T) {
 				},
 				{
 					stat:  types.StatisticAverage,
-					value: 1,
+					value: 1, // we send Sum=2, Count=2 every time
 				},
 				{
 					stat:  types.StatisticSampleCount,
@@ -216,12 +216,12 @@ func TestOTLPMetrics(t *testing.T) {
 			for _, e := range m.expected {
 				values, err := fetcher.Fetch(namespace, m.name, m.dimensions, e.stat, metric.MinuteStatPeriod)
 				require.NoError(t, err)
-				require.GreaterOrEqual(t, len(values), 3, "Not enough metrics retrieved for namespace {%s} metric Name {%s} stat {%s}", namespace, m.name, e.stat)
+				assert.GreaterOrEqual(t, len(values), 3, "Not enough metrics retrieved for namespace {%s} metric Name {%s} stat {%s}", namespace, m.name, e.stat)
 
 				// omit first/last metric as the 1m collection intervals may be missing data points from when the agent was started/stopped
 				middleValues := values[1 : len(values)-1]
 				err = metric.IsAllValuesGreaterThanOrEqualToExpectedValueWithError(m.name, middleValues, e.value)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 		})
 	}
