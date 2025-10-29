@@ -353,6 +353,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 		{
+			testDir: "./test/gpu_high_frequency_metrics", terraformDir: "terraform/eks/daemon/gpu",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
 			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
