@@ -35,3 +35,13 @@ variable "instance_type" {
   type    = string
   default = "g4dn.xlarge"
 }
+
+variable "ip_family" {
+  type    = string
+  default = "ipv4"
+  description = "IP family for the cluster. Valid values: ipv4, ipv6"
+  validation {
+    condition     = contains(["ipv4", "ipv6"], var.ip_family)
+    error_message = "IP family must be either ipv4 or ipv6"
+  }
+}

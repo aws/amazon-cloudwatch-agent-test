@@ -32,6 +32,10 @@ resource "aws_eks_cluster" "this" {
     subnet_ids         = module.basic_components.public_subnet_ids
     security_group_ids = [module.basic_components.security_group]
   }
+  
+  kubernetes_network_config {
+    ip_family = var.ip_family
+  }
 }
 
 # EKS Node Groups
