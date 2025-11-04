@@ -29,8 +29,8 @@ resource "aws_eks_cluster" "this" {
     "scheduler"
   ]
   vpc_config {
-    subnet_ids         = module.basic_components.public_subnet_ids
-    security_group_ids = [module.basic_components.security_group]
+    subnet_ids         = local.subnet_ids
+    security_group_ids = [local.security_group_id]
   }
   
   kubernetes_network_config {
@@ -43,7 +43,7 @@ resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "cwagent-eks-integ-node"
   node_role_arn   = aws_iam_role.node_role.arn
-  subnet_ids      = module.basic_components.public_subnet_ids
+  subnet_ids      = local.subnet_ids
 
   scaling_config {
     desired_size = 1
@@ -107,7 +107,7 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
 resource "aws_security_group" "eks_cluster_sg" {
   name        = "cwagent-eks-cluster-sg-${module.common.testing_id}"
   description = "Cluster communication with worker nodes"
-  vpc_id      = module.basic_components.vpc_id
+  vpc_id      = local.vpc_id
 }
 
 resource "aws_security_group_rule" "cluster_inbound" {
@@ -135,7 +135,7 @@ resource "aws_security_group_rule" "cluster_outbound" {
 resource "aws_security_group" "eks_nodes_sg" {
   name        = "cwagent-eks-node-sg-${module.common.testing_id}"
   description = "Security group for all nodes in the cluster"
-  vpc_id      = module.basic_components.vpc_id
+  vpc_id      = local.vpc_id
 
   egress {
     from_port   = 0
