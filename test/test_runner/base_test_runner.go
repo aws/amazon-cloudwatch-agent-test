@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
@@ -33,6 +34,7 @@ type ITestRunner interface {
 	GetMeasuredMetrics() []string
 	SetupBeforeAgentRun() error
 	SetupAfterAgentRun() error
+	CleanupAfterTest() error // New method for cleanup
 	UseSSM() bool
 	SSMParameterName() string
 	SetUpConfig() error
@@ -84,6 +86,33 @@ func (t *BaseTestRunner) SetupAfterAgentRun() error {
 	return nil
 }
 
+// CleanupAfterTest provides default cleanup behavior for EMF and Container Insights logs
+func (t *BaseTestRunner) CleanupAfterTest() error {
+	// Check if cleanup is disabled via environment variable
+	if skipCleanup, _ := strconv.ParseBool(os.Getenv("CWAGENT_SKIP_LOG_CLEANUP")); skipCleanup {
+		log.Printf("Log cleanup skipped due to CWAGENT_SKIP_LOG_CLEANUP environment variable")
+		return nil
+	}
+
+	// Check if we should do a dry run (default behavior for safety)
+	dryRun := true
+	if forceCleanup, _ := strconv.ParseBool(os.Getenv("CWAGENT_FORCE_LOG_CLEANUP")); forceCleanup {
+		dryRun = false
+		log.Printf("Performing actual log cleanup due to CWAGENT_FORCE_LOG_CLEANUP environment variable")
+	}
+
+	// Perform cleanup
+	log.Printf("Starting log cleanup (dry run: %v)", dryRun)
+	err := awsservice.CleanupTestLogGroups(dryRun)
+	if err != nil {
+		log.Printf("Warning: Log cleanup failed: %v", err)
+		// Don't fail the test due to cleanup issues
+		return nil
+	}
+
+	return nil
+}
+
 func (t *BaseTestRunner) GetAgentRunDuration() time.Duration {
 	return 30 * time.Second
 }
@@ -100,9 +129,22 @@ func (t *BaseTestRunner) SetAgentConfig(agentConfig AgentConfig) {
 	t.AgentConfig = agentConfig
 }
 
+// Run executes the test and includes cleanup
 func (t *TestRunner) Run() status.TestGroupResult {
 	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)
+	
+	// Store cleanup error separately to avoid masking test results
+	var cleanupErr error
+	defer func() {
+		// Always attempt cleanup, even if test failed
+		log.Printf("Performing cleanup for test: %s", testName)
+		cleanupErr = t.TestRunner.CleanupAfterTest()
+		if cleanupErr != nil {
+			log.Printf("Cleanup completed with warnings: %v", cleanupErr)
+		}
+	}()
+	
 	err := t.RunAgent()
 	if err != nil {
 		log.Printf("%v test group failed while running agent: %v", testName, err)
@@ -117,7 +159,19 @@ func (t *TestRunner) Run() status.TestGroupResult {
 			},
 		}
 	}
-	return t.TestRunner.Validate()
+	
+	result := t.TestRunner.Validate()
+	
+	// Add cleanup status to test results if there were any issues
+	if cleanupErr != nil {
+		result.TestResults = append(result.TestResults, status.TestResult{
+			Name:   "Log Cleanup",
+			Status: status.SUCCESSFUL, // We don't fail tests due to cleanup issues
+			Reason: fmt.Errorf("cleanup completed with warnings: %w", cleanupErr),
+		})
+	}
+	
+	return result
 }
 
 func (t *TestRunner) RunAgent() error {
