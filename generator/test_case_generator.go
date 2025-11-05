@@ -67,6 +67,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
 	},
+	"ec2_linux_wd": {
+		{testDir: "./test/workload_discovery"},
+	},
+	"ec2_linux_wd_nvidia": {
+		{testDir: "./test/workload_discovery"},
+	},
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
@@ -229,6 +235,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_mac": {
 		{testDir: "../../../test/feature/mac"},
 		{testDir: "../../../test/ssm_document"},
+	},
+	"ec2_windows_wd": {
+		{testDir: "../../../test/workload_discovery"},
+	},
+	"ec2_windows_wd_nvidia": {
+		{testDir: "../../../test/workload_discovery"},
 	},
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
