@@ -19,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/nvidia_gpu"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/ssm_document"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/workload_discovery"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
@@ -51,6 +52,8 @@ func main() {
 		switch splitNames[len(splitNames)-1] {
 		case "restart":
 			err = restart.Validate()
+		case "workload_discovery":
+			err = workload_discovery.Validate()
 		case "nvidia_gpu":
 			err = nvidia_gpu.Validate()
 		case "acceptance":

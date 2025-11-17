@@ -55,6 +55,8 @@ type testConfig struct {
 	targets map[string]map[string]struct{}
 	// maxAttempts limits the number of times a test will be run.
 	maxAttempts int
+	// instanceTypeByArch allows specifying different instance types based on architecture
+	instanceTypeByArch map[string]string
 }
 
 const (
@@ -66,6 +68,12 @@ const (
 var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
+	},
+	"ec2_linux_wd": {
+		{testDir: "./test/workload_discovery"},
+	},
+	"ec2_linux_wd_nvidia": {
+		{testDir: "./test/workload_discovery"},
 	},
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
@@ -89,7 +97,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			maxAttempts: 2,
 		},
 		{testDir: "./test/entity_metrics_benchmark"},
-		{testDir: "./test/metric_value_benchmark"},
+		{
+			testDir: "./test/metric_value_benchmark",
+			instanceTypeByArch: map[string]string{
+				"amd64": "i3en.large",
+				"arm64": "i4g.large",
+			},
+		},
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
@@ -229,6 +243,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_mac": {
 		{testDir: "../../../test/feature/mac"},
 		{testDir: "../../../test/ssm_document"},
+	},
+	"ec2_windows_wd": {
+		{testDir: "../../../test/workload_discovery"},
+	},
+	"ec2_windows_wd_nvidia": {
+		{testDir: "../../../test/workload_discovery"},
 	},
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
@@ -503,6 +523,12 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			}
 			if testConfig.instanceType != "" {
 				row.InstanceType = testConfig.instanceType
+			}
+			// Apply architecture-specific instance type if configured
+			if testConfig.instanceTypeByArch != nil {
+				if instanceType, ok := testConfig.instanceTypeByArch[row.Arc]; ok {
+					row.InstanceType = instanceType
+				}
 			}
 
 			if len(ami) != 0 && !slices.Contains(ami, row.Ami) {
