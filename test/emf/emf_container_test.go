@@ -6,6 +6,8 @@
 package emf
 
 import (
+	"log"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -15,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 type EMFTestRunner struct {
@@ -52,6 +55,47 @@ func (t *EMFTestRunner) GetAgentRunDuration() time.Duration {
 
 func (t *EMFTestRunner) GetMeasuredMetrics() []string {
 	return []string{"EMFCounter"}
+}
+
+// CleanupAfterTest implements EMF-specific cleanup
+func (t *EMFTestRunner) CleanupAfterTest() error {
+	// Check if cleanup is disabled
+	if skipCleanup := os.Getenv("CWAGENT_SKIP_LOG_CLEANUP"); skipCleanup == "true" {
+		log.Printf("EMF log cleanup skipped due to CWAGENT_SKIP_LOG_CLEANUP environment variable")
+		return nil
+	}
+
+	// EMF-specific cleanup patterns
+	emfCleanupConfig := awsservice.LogGroupCleanupConfig{
+		IncludePatterns: []string{
+			"EMFECSNameSpace", // ECS test namespace
+			"EMFEKSNameSpace", // EKS test namespace  
+			".*EMF.*",         // General EMF patterns
+			".*emf.*",         // Lowercase variants
+		},
+		ExcludePatterns: []string{
+			".*production.*",
+			".*prod.*",
+		},
+		DryRun: os.Getenv("CWAGENT_FORCE_LOG_CLEANUP") != "true",
+	}
+
+	// Add age constraint for safety - only clean logs older than 1 hour
+	maxAge := 1 * time.Hour
+	emfCleanupConfig.MaxAge = &maxAge
+
+	log.Printf("Starting EMF-specific log cleanup (dry run: %v)", emfCleanupConfig.DryRun)
+	result, err := awsservice.CleanupLogGroupsByPattern(emfCleanupConfig)
+	if err != nil {
+		log.Printf("Warning: EMF log cleanup failed: %v", err)
+		// Don't fail the test due to cleanup issues
+		return nil
+	}
+
+	log.Printf("EMF log cleanup completed. Deleted: %d, Skipped: %d, Errors: %d", 
+		len(result.DeletedLogGroups), len(result.SkippedLogGroups), len(result.Errors))
+
+	return nil
 }
 
 func (t *EMFTestRunner) validateEMFMetrics(metricName string) status.TestResult {
