@@ -15,17 +15,17 @@ import (
 )
 
 const (
-	nvmeInstanceStoreMetricIndicator = "_diskio_instance_store_"
+	nvmeInstanceStoreMetricIndicator = "node_diskio_instance_store_"
 
-	nvmeInstanceStoreReadOpsTotal        = "node_diskio_instance_store_total_read_ops"
-	nvmeInstanceStoreWriteOpsTotal       = "node_diskio_instance_store_total_write_ops"
-	nvmeInstanceStoreReadBytesTotal      = "node_diskio_instance_store_total_read_bytes"
-	nvmeInstanceStoreWriteBytesTotal     = "node_diskio_instance_store_total_write_bytes"
-	nvmeInstanceStoreReadTime            = "node_diskio_instance_store_total_read_time"
-	nvmeInstanceStoreWriteTime           = "node_diskio_instance_store_total_write_time"
-	nvmeInstanceStoreExceededIOPS        = "node_diskio_instance_store_ec2_instance_performance_exceeded_iops"
-	nvmeInstanceStoreExceededTP          = "node_diskio_instance_store_ec2_instance_performance_exceeded_tp"
-	nvmeInstanceStoreVolumeQueueLength   = "node_diskio_instance_store_volume_queue_length"
+	nvmeInstanceStoreReadOpsTotal      = "node_diskio_instance_store_total_read_ops"
+	nvmeInstanceStoreWriteOpsTotal     = "node_diskio_instance_store_total_write_ops"
+	nvmeInstanceStoreReadBytesTotal    = "node_diskio_instance_store_total_read_bytes"
+	nvmeInstanceStoreWriteBytesTotal   = "node_diskio_instance_store_total_write_bytes"
+	nvmeInstanceStoreReadTime          = "node_diskio_instance_store_total_read_time"
+	nvmeInstanceStoreWriteTime         = "node_diskio_instance_store_total_write_time"
+	nvmeInstanceStoreExceededIOPS      = "node_diskio_instance_store_ec2_instance_performance_exceeded_iops"
+	nvmeInstanceStoreExceededTP        = "node_diskio_instance_store_ec2_instance_performance_exceeded_tp"
+	nvmeInstanceStoreVolumeQueueLength = "node_diskio_instance_store_volume_queue_length"
 )
 
 var expectedDimsToMetricsIntegTest = map[string][]string{

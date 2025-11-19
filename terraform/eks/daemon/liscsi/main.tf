@@ -118,16 +118,15 @@ resource "helm_release" "aws_observability" {
   namespace        = "amazon-cloudwatch"
   create_namespace = true
 
-  set = [
-    {
-      name  = "clusterName"
-      value = aws_eks_cluster.this.name
-    },
-    {
-      name  = "region"
-      value = var.region
-    }
-  ]
+  set {
+    name  = "clusterName"
+    value = aws_eks_cluster.this.name
+  }
+  
+  set {
+    name  = "region"
+    value = var.region
+  }
   depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, data.external.clone_helm_chart]
 }
 
@@ -183,7 +182,11 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating CloudWatch Agent with LIS CSI NVME instance store metrics"
       cd ../../../..
-      go test ${var.test_dir} -timeout 1h -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -instanceId=${data.aws_instance.eks_node_detail.instance_id}
+      go test ${var.test_dir} \
+      -eksClusterName=${aws_eks_cluster.this.name} \
+      -computeType=EKS -v \
+      -eksDeploymentStrategy=DAEMON \
+      -instanceId=${data.aws_instance.eks_node_detail.instance_id}
     EOT
   }
 }

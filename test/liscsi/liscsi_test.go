@@ -6,7 +6,6 @@
 package liscsi
 
 import (
-	"fmt"
 	"log"
 	"testing"
 
@@ -24,13 +23,8 @@ type LISCSITestSuite struct {
 	test_runner.TestSuite
 }
 
-func (suite *LISCSITestSuite) SetupSuite() {
-	fmt.Println(">>>> Starting LIS CSI Container Insights TestSuite")
-}
-
-func (suite *LISCSITestSuite) TearDownSuite() {
-	suite.Result.Print()
-	fmt.Println(">>>> Finished LIS CSI Container Insights TestSuite")
+func (suite *LISCSITestSuite) GetSuiteName() string {
+	return "LIS CSI Container Insights"
 }
 
 func init() {
@@ -59,7 +53,7 @@ func (suite *LISCSITestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData()
 	switch env.ComputeType {
 	case computetype.EKS:
-		log.Println("Environment compute type is EKS")
+		log.Printf("Environment compute type is EKS")
 		for _, testRunner := range getEksTestRunners(env) {
 			testRunner.Run(suite, env)
 		}
