@@ -23,6 +23,9 @@ module "eks" {
   vpc_id     = module.basic_components.vpc_id
   subnet_ids = module.basic_components.public_subnet_ids
 
+  # Disable KMS key creation to avoid permission issues
+  create_kms_key = false
+
   # CloudWatch logging - renamed from cluster_enabled_log_types
   enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
