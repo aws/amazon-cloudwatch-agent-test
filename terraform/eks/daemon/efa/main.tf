@@ -30,7 +30,7 @@ module "eks" {
     efa_nodes = {
       # EFA configuration - only at node group level in v21
       enable_efa_support = true
-      ami_type           = "AL2023_x86_64_NVIDIA"
+      ami_type           = "AL2_x86_64_GPU"
       instance_types     = [var.instance_type]
 
       min_size     = 1
