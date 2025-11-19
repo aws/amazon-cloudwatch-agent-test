@@ -24,26 +24,41 @@ import (
 const (
 	efaMetricIndicator = "_efa_"
 
-	containerEfaRxBytes            = "container_efa_rx_bytes"
-	containerEfaTxBytes            = "container_efa_tx_bytes"
-	containerEfaRxDropped          = "container_efa_rx_dropped"
-	containerEfaRdmaReadBytes      = "container_efa_rdma_read_bytes"
-	containerEfaRdmaWriteBytes     = "container_efa_rdma_write_bytes"
-	containerEfaRdmaWriteRecvBytes = "container_efa_rdma_write_recv_bytes"
+	containerEfaRxBytes                  = "container_efa_rx_bytes"
+	containerEfaTxBytes                  = "container_efa_tx_bytes"
+	containerEfaRxDropped                = "container_efa_rx_dropped"
+	containerEfaRdmaReadBytes            = "container_efa_rdma_read_bytes"
+	containerEfaRdmaWriteBytes           = "container_efa_rdma_write_bytes"
+	containerEfaRdmaWriteRecvBytes       = "container_efa_rdma_write_recv_bytes"
+	containerEfaUnresponsiveRemoteEvents = "container_efa_unresponsive_remote_events"
+	containerEfaRetransBytes             = "container_efa_retrans_bytes"
+	containerEfaRetransPkts              = "container_efa_retrans_pkts"
+	containerefaImpairedRemoteConnEvents = "container_efa_impaired_remote_conn_events"
+	containerEfaretransTimeoutEvents     = "container_efa_retrans_timeout_events"
 
-	podEfaRxBytes            = "pod_efa_rx_bytes"
-	podEfaTxBytes            = "pod_efa_tx_bytes"
-	podEfaRxDropped          = "pod_efa_rx_dropped"
-	podEfaRdmaReadBytes      = "pod_efa_rdma_read_bytes"
-	podEfaRdmaWriteBytes     = "pod_efa_rdma_write_bytes"
-	podEfaRdmaWriteRecvBytes = "pod_efa_rdma_write_recv_bytes"
+	podEfaRxBytes                  = "pod_efa_rx_bytes"
+	podEfaTxBytes                  = "pod_efa_tx_bytes"
+	podEfaRxDropped                = "pod_efa_rx_dropped"
+	podEfaRdmaReadBytes            = "pod_efa_rdma_read_bytes"
+	podEfaRdmaWriteBytes           = "pod_efa_rdma_write_bytes"
+	podEfaRdmaWriteRecvBytes       = "pod_efa_rdma_write_recv_bytes"
+	podEfaUnresponsiveRemoteEvents = "pod_efa_unresponsive_remote_events"
+	podEfaRetransBytes             = "pod_efa_retrans_bytes"
+	podEfaRetransPkts              = "pod_efa_retrans_pkts"
+	podefaImpairedRemoteConnEvents = "pod_efa_impaired_remote_conn_events"
+	podEfaRetransTimeoutEvents     = "pod_efa_retrans_timeout_events"
 
-	nodeEfaRxBytes            = "node_efa_rx_bytes"
-	nodeEfaTxBytes            = "node_efa_tx_bytes"
-	nodeEfaRxDropped          = "node_efa_rx_dropped"
-	nodeEfaRdmaReadBytes      = "node_efa_rdma_read_bytes"
-	nodeEfaRdmaWriteBytes     = "node_efa_rdma_write_bytes"
-	nodeEfaRdmaWriteRecvBytes = "node_efa_rdma_write_recv_bytes"
+	nodeEfaRxBytes                  = "node_efa_rx_bytes"
+	nodeEfaTxBytes                  = "node_efa_tx_bytes"
+	nodeEfaRxDropped                = "node_efa_rx_dropped"
+	nodeEfaRdmaReadBytes            = "node_efa_rdma_read_bytes"
+	nodeEfaRdmaWriteBytes           = "node_efa_rdma_write_bytes"
+	nodeEfaRdmaWriteRecvBytes       = "node_efa_rdma_write_recv_bytes"
+	nodeEfaUnresponsiveRemoteEvents = "node_efa_unresponsive_remote_events"
+	nodeEfaRetransBytes             = "node_efa_retrans_bytes"
+	nodeEfaRetransPkts              = "node_efa_retrans_pkts"
+	nodeEfaImpairedRemoteConnEvents = "node_efa_impaired_remote_conn_events"
+	nodeEfaRetransTimeoutEvents     = "node_efa_retrans_timeout_events"
 )
 
 var expectedDimsToMetricsIntegTest = map[string][]string{
@@ -51,6 +66,7 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 		//containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
 		//podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
+		nodeEfaImpairedRemoteConnEvents, nodeEfaUnresponsiveRemoteEvents, nodeEfaRetransPkts, nodeEfaRetransBytes, nodeEfaRetransTimeoutEvents,
 	},
 	//"ClusterName-Namespace-PodName-ContainerName": {
 	//	containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
@@ -72,9 +88,11 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 	//},
 	"ClusterName-InstanceId-NodeName": {
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
+		nodeEfaImpairedRemoteConnEvents, nodeEfaUnresponsiveRemoteEvents, nodeEfaRetransPkts, nodeEfaRetransBytes, nodeEfaRetransTimeoutEvents,
 	},
 	"ClusterName-InstanceId-InstanceType-NetworkInterfaceId-NodeName": {
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
+		nodeEfaImpairedRemoteConnEvents, nodeEfaUnresponsiveRemoteEvents, nodeEfaRetransPkts, nodeEfaRetransBytes, nodeEfaRetransTimeoutEvents,
 	},
 }
 

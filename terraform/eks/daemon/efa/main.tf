@@ -251,7 +251,7 @@ resource "kubernetes_daemonset" "service" {
           args = [
             # creates EFA data files under an expected location by EFA receiver infiniband/{deviceName}/ports/{port}/hw_counters
             # also changes mod on infiniband folder as the receiver expects the location is only writable by the root (sysfs)
-            "cd /work-dir && mkdir -p infiniband/device1/ports/1/hw_counters && echo 10 > infiniband/device1/ports/1/hw_counters/rdma_read_bytes && echo 20 > infiniband/device1/ports/1/hw_counters/rdma_write_bytes && echo 30 > infiniband/device1/ports/1/hw_counters/rdma_write_recv_bytes && echo 100 > infiniband/device1/ports/1/hw_counters/rx_bytes && echo 200 > infiniband/device1/ports/1/hw_counters/rx_drops && echo 300 > infiniband/device1/ports/1/hw_counters/tx_bytes && chmod 755 infiniband"
+            "cd /work-dir && mkdir -p infiniband/device1/ports/1/hw_counters && echo 10 > infiniband/device1/ports/1/hw_counters/rdma_read_bytes && echo 20 > infiniband/device1/ports/1/hw_counters/rdma_write_bytes && echo 30 > infiniband/device1/ports/1/hw_counters/rdma_write_recv_bytes && echo 100 > infiniband/device1/ports/1/hw_counters/rx_bytes && echo 200 > infiniband/device1/ports/1/hw_counters/rx_drops && echo 300 > infiniband/device1/ports/1/hw_counters/tx_bytes && echo 400 > infiniband/device1/ports/1/hw_counters/unresponsive_remote_events && echo 500 > infiniband/device1/ports/1/hw_counters/retrans_bytes && echo 600 > infiniband/device1/ports/1/hw_counters/retrans_pkts && echo 700 > infiniband/device1/ports/1/hw_counters/impaired_remote_conn_events && echo 800 > infiniband/device1/ports/1/hw_counters/retrans_timeout_events && chmod 755 infiniband"
           ]
           volume_mount {
             name       = "sysefa"
