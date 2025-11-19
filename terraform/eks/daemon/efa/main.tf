@@ -37,6 +37,9 @@ module "eks" {
       max_size     = 1
       desired_size = 1
 
+      # Force public IP assignment
+      associate_public_ip_address = true
+
       labels = {
         "vpc.amazonaws.com/efa.present" = "true"
         "nvidia.com/gpu.present"        = "true"
