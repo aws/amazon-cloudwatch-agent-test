@@ -7,12 +7,6 @@ module "common" {
   cwagent_image_tag  = var.cwagent_image_tag
 }
 
-module "basic_components" {
-  source = "../../../basic_components"
-
-  region = var.region
-}
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
@@ -20,8 +14,8 @@ module "eks" {
   name               = "integ-${module.common.testing_id}"
   kubernetes_version = var.k8s_version
 
-  vpc_id     = module.basic_components.vpc_id
-  subnet_ids = module.basic_components.public_subnet_ids
+  vpc_id     = aws_vpc.efa_test_vpc.id
+  subnet_ids = aws_subnet.efa_test_public_subnet[*].id
 
   # CloudWatch logging - renamed from cluster_enabled_log_types
   enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
@@ -37,8 +31,8 @@ module "eks" {
       max_size     = 1
       desired_size = 1
 
-      # Force public IP assignment
-      associate_public_ip_address = true
+      # Use private subnets for nodes
+      subnet_ids = aws_subnet.efa_test_private_subnet[*].id
 
       labels = {
         "vpc.amazonaws.com/efa.present" = "true"
