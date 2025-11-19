@@ -371,7 +371,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		//Skipping test until efa team implements fix
 		{
 			testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.8xlarge",
 		},
 		//{
 		//	testDir: "./test/metric_value_benchmark", terraformDir: "terraform/eks/daemon/credentials/pod_identity",
