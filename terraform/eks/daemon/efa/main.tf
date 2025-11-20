@@ -47,6 +47,14 @@ module "eks" {
 
   # EKS Addons - renamed from cluster_addons, most_recent = true is now default
   addons = {
+    coredns = {}
+    eks-pod-identity-agent = {
+      before_compute = true
+    }
+    kube-proxy = {}
+    vpc-cni = {
+      before_compute = true
+    }
     "amazon-cloudwatch-observability" = {}
   }
 
