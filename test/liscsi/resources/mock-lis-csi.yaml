@@ -14,24 +14,46 @@ data:
     	"os"
     )
     
-    const metricsTemplate = `aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
+    const metricsTemplate = `# HELP aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total The total time, in seconds, that the NVMe device exceeded the attached Amazon EC2 instance's maximum IOPS performance
+    # TYPE aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total counter
+    aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
     aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
+    # HELP aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total The total time, in seconds, that the NVMe device exceeded the attached Amazon EC2 instance's maximum throughput performance
+    # TYPE aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total counter
     aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
     aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
+    # HELP aws_ec2_instance_store_csi_nvme_collector_errors_total Total number of NVMe collector scrape errors.
+    # TYPE aws_ec2_instance_store_csi_nvme_collector_errors_total counter
     aws_ec2_instance_store_csi_nvme_collector_errors_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal"} 0
-    aws_ec2_instance_store_csi_nvme_collector_scrapes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal"} 845
-    aws_ec2_instance_store_csi_read_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 1.8214912e+09
-    aws_ec2_instance_store_csi_read_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 1.8214912e+09
-    aws_ec2_instance_store_csi_read_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 789681
-    aws_ec2_instance_store_csi_read_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 789681
-    aws_ec2_instance_store_csi_read_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 20.537499
-    aws_ec2_instance_store_csi_read_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 20.522662
+    # HELP aws_ec2_instance_store_csi_nvme_collector_scrapes_total Total number of NVMe collector scrapes.
+    # TYPE aws_ec2_instance_store_csi_nvme_collector_scrapes_total counter
+    aws_ec2_instance_store_csi_nvme_collector_scrapes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal"} 2293
+    # HELP aws_ec2_instance_store_csi_read_bytes_total The total number of read bytes transferred
+    # TYPE aws_ec2_instance_store_csi_read_bytes_total counter
+    aws_ec2_instance_store_csi_read_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 1.928654848e+09
+    aws_ec2_instance_store_csi_read_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 1.928654848e+09
+    # HELP aws_ec2_instance_store_csi_read_ops_total The total number of completed read operations
+    # TYPE aws_ec2_instance_store_csi_read_ops_total counter
+    aws_ec2_instance_store_csi_read_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 836193
+    aws_ec2_instance_store_csi_read_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 836193
+    # HELP aws_ec2_instance_store_csi_read_seconds_total The total time spent on read operations in seconds
+    # TYPE aws_ec2_instance_store_csi_read_seconds_total counter
+    aws_ec2_instance_store_csi_read_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 21.77302
+    aws_ec2_instance_store_csi_read_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 21.712962
+    # HELP aws_ec2_instance_store_csi_volume_queue_length The number of read and write operations waiting to be completed
+    # TYPE aws_ec2_instance_store_csi_volume_queue_length gauge
     aws_ec2_instance_store_csi_volume_queue_length{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 1
     aws_ec2_instance_store_csi_volume_queue_length{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 1
+    # HELP aws_ec2_instance_store_csi_write_bytes_total The total number of write bytes transferred
+    # TYPE aws_ec2_instance_store_csi_write_bytes_total counter
     aws_ec2_instance_store_csi_write_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
     aws_ec2_instance_store_csi_write_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
+    # HELP aws_ec2_instance_store_csi_write_ops_total The total number of completed write operations
+    # TYPE aws_ec2_instance_store_csi_write_ops_total counter
     aws_ec2_instance_store_csi_write_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
     aws_ec2_instance_store_csi_write_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
+    # HELP aws_ec2_instance_store_csi_write_seconds_total The total time spent on write operations in seconds
+    # TYPE aws_ec2_instance_store_csi_write_seconds_total counter
     aws_ec2_instance_store_csi_write_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
     aws_ec2_instance_store_csi_write_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
     `
