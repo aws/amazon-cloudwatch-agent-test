@@ -17,6 +17,8 @@ module "eks" {
   vpc_id     = aws_vpc.efa_test_vpc.id
   subnet_ids = aws_subnet.efa_test_public_subnet[*].id
 
+  cluster_endpoint_public_access = true
+
   # CloudWatch logging - renamed from cluster_enabled_log_types
   enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
@@ -66,4 +68,23 @@ module "eks" {
 # Data source for cluster auth (needed for Kubernetes provider)
 data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
+}
+
+resource "null_resource" "validator" {
+  depends_on = [
+    module.eks,
+  ]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      cd ../../../..
+      i=0
+      while [ $i -lt 10 ]; do
+        i=$((i+1))
+        go test ${var.test_dir} -eksClusterName=${module.eks.cluster_name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON && exit 0
+        sleep 60
+      done
+      exit 1
+    EOT
+  }
 }
