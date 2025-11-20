@@ -1,5 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
+locals {
+  aws_eks = "aws eks --region ${var.region}"
+}
 
 module "common" {
   source             = "../../../common"
@@ -81,9 +84,86 @@ data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
 }
 
+# Deploy EFA test DaemonSet
+resource "kubernetes_daemonset" "efa_test" {
+  depends_on = [module.eks]
+
+  metadata {
+    name      = "my-training-job-2"
+    namespace = "default"
+    labels = {
+      app = "my-training-job-2"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        app = "my-training-job-2"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "my-training-job-2"
+        }
+      }
+
+      spec {
+        container {
+          name    = "efa-device-holder"
+          image   = "busybox:latest"
+          command = ["/bin/sh", "-c", "sleep infinity"]
+
+          resources {
+            limits = {
+              "vpc.amazonaws.com/efa" = "1"
+            }
+            requests = {
+              "vpc.amazonaws.com/efa" = "1"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "null_resource" "kubectl" {
+  depends_on = [
+    module.eks,
+    kubernetes_daemonset.efa_test,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.aws_eks} update-kubeconfig --name ${module.eks.cluster_name}
+      ${local.aws_eks} list-clusters --output text
+      ${local.aws_eks} describe-cluster --name ${module.eks.cluster_name} --output text
+    EOT
+  }
+}
+
+resource "null_resource" "update_image" {
+  depends_on = [module.eks, kubernetes_daemonset.efa_test, null_resource.kubectl]
+  triggers = {
+    timestamp = "${timestamp()}" # Forces re-run on every apply
+  }
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
+      kubectl set image deployment/amazon-cloudwatch-observability-controller-manager -n amazon-cloudwatch manager=public.ecr.aws/cloudwatch-agent/cloudwatch-agent-operator:latest
+      sleep 10
+    EOT
+  }
+}
+
 resource "null_resource" "validator" {
   depends_on = [
     module.eks,
+    kubernetes_daemonset.efa_test,
+    null_resource.kubectl,
+    null_resource.update_image
   ]
 
   provisioner "local-exec" {
