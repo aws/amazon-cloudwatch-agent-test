@@ -109,54 +109,6 @@ resource "helm_release" "aws_efa_device_plugin" {
   ]
 }
 
-
-
-# Deploy EFA test DaemonSet
-resource "kubernetes_daemonset" "efa_test" {
-  depends_on = [module.eks, helm_release.aws_efa_device_plugin, helm_release.nvidia_device_plugin]
-
-  metadata {
-    name      = "my-training-job-2"
-    namespace = "default"
-    labels = {
-      app = "my-training-job-2"
-    }
-  }
-
-  spec {
-    selector {
-      match_labels = {
-        app = "my-training-job-2"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          app = "my-training-job-2"
-        }
-      }
-
-      spec {
-        container {
-          name    = "efa-device-holder"
-          image   = "busybox:latest"
-          command = ["/bin/sh", "-c", "sleep infinity"]
-
-          resources {
-            limits = {
-              "vpc.amazonaws.com/efa.present" = "1"
-            }
-            requests = {
-              "vpc.amazonaws.com/efa" = "1"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
 resource "null_resource" "kubectl" {
   depends_on = [
     module.eks,
