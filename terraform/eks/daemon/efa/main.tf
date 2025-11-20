@@ -57,7 +57,19 @@ module "eks" {
     vpc-cni = {
       before_compute = true
     }
-    "amazon-cloudwatch-observability" = {}
+    amazon-cloudwatch-observability = {
+      pod_identity_associations = [
+        {
+          service_account = "cloudwatch-agent"
+          role_arn        = aws_iam_role.cloudwatch_observability.arn
+        },
+        {
+          service_account = "fluent-bit"
+          role_arn        = aws_iam_role.cloudwatch_observability.arn
+        }
+      ]
+    }
+  }
   }
 
   tags = {
