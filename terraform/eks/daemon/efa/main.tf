@@ -79,9 +79,41 @@ module "eks" {
   }
 }
 
+resource "helm_release" "nvidia_device_plugin" {
+  name             = "nvidia-device-plugin"
+  repository       = "https://nvidia.github.io/k8s-device-plugin"
+  chart            = "nvidia-device-plugin"
+  version          = "0.17.1"
+  namespace        = "nvidia-device-plugin"
+  create_namespace = true
+  wait             = true
+}
+
+resource "helm_release" "aws_efa_device_plugin" {
+  name       = "aws-efa-k8s-device-plugin"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-efa-k8s-device-plugin"
+  version    = "v0.5.7"
+  namespace  = "kube-system"
+  wait       = true
+
+  values = [
+    <<-EOT
+      nodeSelector:
+        vpc.amazonaws.com/efa.present: 'true'
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+    EOT
+  ]
+}
+
+
+
 # Deploy EFA test DaemonSet
 resource "kubernetes_daemonset" "efa_test" {
-  depends_on = [module.eks]
+  depends_on = [module.eks, helm_release.aws_efa_device_plugin, helm_release.nvidia_device_plugin]
 
   metadata {
     name      = "my-training-job-2"
@@ -113,7 +145,7 @@ resource "kubernetes_daemonset" "efa_test" {
 
           resources {
             limits = {
-              "vpc.amazonaws.com/efa" = "1"
+              "vpc.amazonaws.com/efa.present" = "1"
             }
             requests = {
               "vpc.amazonaws.com/efa" = "1"
