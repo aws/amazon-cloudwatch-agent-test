@@ -128,22 +128,49 @@ resource "kubernetes_daemonset" "efa_test" {
 resource "null_resource" "kubectl" {
   depends_on = [
     module.eks,
-    kubernetes_daemonset.efa_test,
   ]
   provisioner "local-exec" {
     command = <<-EOT
+      # Update kubeconfig
       ${local.aws_eks} update-kubeconfig --name ${module.eks.cluster_name}
-      ${local.aws_eks} list-clusters --output text
-      ${local.aws_eks} describe-cluster --name ${module.eks.cluster_name} --output text
+      
+      # Deploy EFA test DaemonSet
+      kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: my-training-job-2
+  namespace: default
+  labels:
+    app: my-training-job-2
+spec:
+  selector:
+    matchLabels:
+      app: my-training-job-2
+  template:
+    metadata:
+      labels:
+        app: my-training-job-2
+    spec:
+      containers:
+        - name: efa-device-holder
+          image: busybox:latest
+          command: ["/bin/sh", "-c", "sleep infinity"]
+          resources:
+            limits:
+              vpc.amazonaws.com/efa: 1
+            requests:
+              vpc.amazonaws.com/efa: 1
+EOF
+      
+      # Wait for DaemonSet to be ready
+      kubectl rollout status daemonset/my-training-job-2 --timeout=300s
     EOT
   }
 }
 
 resource "null_resource" "update_image" {
-  depends_on = [module.eks, kubernetes_daemonset.efa_test, null_resource.kubectl]
-  triggers = {
-    timestamp = "${timestamp()}" # Forces re-run on every apply
-  }
+  depends_on = [module.eks, null_resource.kubectl]
   provisioner "local-exec" {
     command = <<-EOT
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
@@ -156,7 +183,6 @@ resource "null_resource" "update_image" {
 resource "null_resource" "validator" {
   depends_on = [
     module.eks,
-    kubernetes_daemonset.efa_test,
     null_resource.kubectl,
     null_resource.update_image
   ]
