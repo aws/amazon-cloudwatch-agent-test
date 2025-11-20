@@ -73,7 +73,7 @@ func (t *LISCSITestRunner) GetAgentConfigFileName() string {
 }
 
 func (t *LISCSITestRunner) GetAgentRunDuration() time.Duration {
-	return 5 * time.Minute
+	return 2 * time.Minute
 }
 
 func (t *LISCSITestRunner) GetMeasuredMetrics() []string {
