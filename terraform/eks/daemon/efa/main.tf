@@ -17,7 +17,7 @@ module "eks" {
   vpc_id     = aws_vpc.efa_test_vpc.id
   subnet_ids = aws_subnet.efa_test_public_subnet[*].id
 
-  cluster_endpoint_public_access = true
+  endpoint_public_access = true
 
   # CloudWatch logging - renamed from cluster_enabled_log_types
   enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
