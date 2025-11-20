@@ -70,7 +70,6 @@ module "eks" {
       ]
     }
   }
-  }
 
   tags = {
     Owner = "default"
