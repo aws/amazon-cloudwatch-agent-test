@@ -21,7 +21,7 @@ module "eks" {
   subnet_ids = aws_subnet.efa_test_public_subnet[*].id
 
   endpoint_public_access = true
-
+  enable_cluster_creator_admin_permissions = true
   # CloudWatch logging - renamed from cluster_enabled_log_types
   enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
