@@ -79,11 +79,6 @@ module "eks" {
   }
 }
 
-# Data source for cluster auth (needed for Kubernetes provider)
-data "aws_eks_cluster_auth" "this" {
-  name = module.eks.cluster_name
-}
-
 # Deploy EFA test DaemonSet
 resource "kubernetes_daemonset" "efa_test" {
   depends_on = [module.eks]
