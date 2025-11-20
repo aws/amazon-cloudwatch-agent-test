@@ -122,7 +122,7 @@ resource "helm_release" "aws_observability" {
     name  = "clusterName"
     value = aws_eks_cluster.this.name
   }
-  
+
   set {
     name  = "region"
     value = var.region
