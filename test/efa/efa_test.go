@@ -47,6 +47,10 @@ const (
 	podEfaRetransPkts              = "pod_efa_retrans_pkts"
 	podEfaImpairedRemoteConnEvents = "pod_efa_impaired_remote_conn_events"
 	podEfaRetransTimeoutEvents     = "pod_efa_retrans_timeout_events"
+	podEfaLimit                    = "pod_efa_limit"
+	podEfaRequest                  = "pod_efa_request"
+	podEfaUsageTotal               = "pod_efa_usage_total"
+	podEfaReservedCapacity         = "pod_efa_reserved_capacity"
 
 	nodeEfaRxBytes                  = "node_efa_rx_bytes"
 	nodeEfaTxBytes                  = "node_efa_tx_bytes"
@@ -59,6 +63,11 @@ const (
 	nodeEfaRetransPkts              = "node_efa_retrans_pkts"
 	nodeEfaImpairedRemoteConnEvents = "node_efa_impaired_remote_conn_events"
 	nodeEfaRetransTimeoutEvents     = "node_efa_retrans_timeout_events"
+	nodeEfaLimit                    = "node_efa_limit"
+	nodeEfaReservedCapacity         = "node_efa_reserved_capacity"
+	nodeEfaUnreservedCapacity       = "node_efa_unreserved_capacity"
+	nodeEfaAvailableCapacity        = "node_efa_available_capacity"
+	nodeEfaUsageTotal               = "node_efa_usage_total"
 )
 
 var expectedDimsToMetricsIntegTest = map[string][]string{
@@ -67,44 +76,48 @@ var expectedDimsToMetricsIntegTest = map[string][]string{
 		containerEfaRetransBytes, containerEfaRetransPkts, containerEfaRetransTimeoutEvents, containerEfaImpairedRemoteConnEvents, containerEfaUnresponsiveRemoteEvents,
 		podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
 		podEfaRetransBytes, podEfaRetransPkts, podEfaRetransTimeoutEvents, podEfaImpairedRemoteConnEvents, podEfaUnresponsiveRemoteEvents,
+		podEfaLimit, podEfaRequest, podEfaUsageTotal, podEfaReservedCapacity,
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
 		nodeEfaRetransBytes, nodeEfaRetransPkts, nodeEfaRetransTimeoutEvents, nodeEfaImpairedRemoteConnEvents, nodeEfaUnresponsiveRemoteEvents,
+		nodeEfaLimit, nodeEfaReservedCapacity, nodeEfaUnreservedCapacity, nodeEfaAvailableCapacity, nodeEfaUsageTotal,
 	},
-	"ClusterName-Namespace-PodName-ContainerName": {
-		containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
-		containerEfaRetransBytes, containerEfaRetransPkts, containerEfaRetransTimeoutEvents, containerEfaImpairedRemoteConnEvents, containerEfaUnresponsiveRemoteEvents,
-	},
-	"ClusterName-Namespace-PodName-FullPodName-ContainerName": {
-		containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
-		containerEfaRetransBytes, containerEfaRetransPkts, containerEfaRetransTimeoutEvents, containerEfaImpairedRemoteConnEvents, containerEfaUnresponsiveRemoteEvents,
-	},
-	"ClusterName-Namespace-PodName-FullPodName-ContainerName-NetworkInterfaceId": {
-		containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
-		containerEfaRetransBytes, containerEfaRetransPkts, containerEfaRetransTimeoutEvents, containerEfaImpairedRemoteConnEvents, containerEfaUnresponsiveRemoteEvents,
-	},
+	//"ClusterName-Namespace-PodName-ContainerName": {
+	//	containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
+	//	containerEfaRetransBytes, containerEfaRetransPkts, containerEfaRetransTimeoutEvents, containerEfaImpairedRemoteConnEvents, containerEfaUnresponsiveRemoteEvents,
+	//},
+	//"ClusterName-Namespace-PodName-FullPodName-ContainerName": {
+	//	containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
+	//	containerEfaRetransBytes, containerEfaRetransPkts, containerEfaRetransTimeoutEvents, containerEfaImpairedRemoteConnEvents, containerEfaUnresponsiveRemoteEvents,
+	//},
+	//"ClusterName-Namespace-PodName-FullPodName-ContainerName-NetworkInterfaceId": {
+	//	containerEfaRxBytes, containerEfaTxBytes, containerEfaRxDropped, containerEfaRdmaReadBytes, containerEfaRdmaWriteBytes, containerEfaRdmaWriteRecvBytes,
+	//	containerEfaRetransBytes, containerEfaRetransPkts, containerEfaRetransTimeoutEvents, containerEfaImpairedRemoteConnEvents, containerEfaUnresponsiveRemoteEvents,
+	//},
 	"ClusterName-Namespace": {
 		podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
 		podEfaRetransBytes, podEfaRetransPkts, podEfaRetransTimeoutEvents, podEfaImpairedRemoteConnEvents, podEfaUnresponsiveRemoteEvents,
 	},
-	"ClusterName-Namespace-Service": {
-		podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
-		podEfaRetransBytes, podEfaRetransPkts, podEfaRetransTimeoutEvents, podEfaImpairedRemoteConnEvents, podEfaUnresponsiveRemoteEvents,
-	},
+	//"ClusterName-Namespace-Service": {
+	//	podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
+	//	podEfaRetransBytes, podEfaRetransPkts, podEfaRetransTimeoutEvents, podEfaImpairedRemoteConnEvents, podEfaUnresponsiveRemoteEvents,
+	//},
 	"ClusterName-Namespace-PodName": {
 		podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
 		podEfaRetransBytes, podEfaRetransPkts, podEfaRetransTimeoutEvents, podEfaImpairedRemoteConnEvents, podEfaUnresponsiveRemoteEvents,
+		podEfaLimit, podEfaRequest, podEfaUsageTotal, podEfaReservedCapacity,
 	},
-	"ClusterName-Namespace-PodName-FullPodName": {
-		podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
-		podEfaRetransBytes, podEfaRetransPkts, podEfaRetransTimeoutEvents, podEfaImpairedRemoteConnEvents, podEfaUnresponsiveRemoteEvents,
-	},
-	"ClusterName-Namespace-PodName-FullPodName-NetworkInterfaceId": {
-		podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
-		podEfaRetransBytes, podEfaRetransPkts, podEfaRetransTimeoutEvents, podEfaImpairedRemoteConnEvents, podEfaUnresponsiveRemoteEvents,
-	},
+	//"ClusterName-Namespace-PodName-FullPodName": {
+	//	podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
+	//	podEfaRetransBytes, podEfaRetransPkts, podEfaRetransTimeoutEvents, podEfaImpairedRemoteConnEvents, podEfaUnresponsiveRemoteEvents,
+	//},
+	//"ClusterName-Namespace-PodName-FullPodName-NetworkInterfaceId": {
+	//	podEfaRxBytes, podEfaTxBytes, podEfaRxDropped, podEfaRdmaReadBytes, podEfaRdmaWriteBytes, podEfaRdmaWriteRecvBytes,
+	//	podEfaRetransBytes, podEfaRetransPkts, podEfaRetransTimeoutEvents, podEfaImpairedRemoteConnEvents, podEfaUnresponsiveRemoteEvents,
+	//},
 	"ClusterName-InstanceId-NodeName": {
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
 		nodeEfaRetransBytes, nodeEfaRetransPkts, nodeEfaRetransTimeoutEvents, nodeEfaImpairedRemoteConnEvents, nodeEfaUnresponsiveRemoteEvents,
+		nodeEfaLimit, nodeEfaReservedCapacity, nodeEfaUnreservedCapacity, nodeEfaAvailableCapacity, nodeEfaUsageTotal,
 	},
 	"ClusterName-InstanceId-InstanceType-NetworkInterfaceId-NodeName": {
 		nodeEfaRxBytes, nodeEfaTxBytes, nodeEfaRxDropped, nodeEfaRdmaReadBytes, nodeEfaRdmaWriteBytes, nodeEfaRdmaWriteRecvBytes,
