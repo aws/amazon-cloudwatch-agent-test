@@ -12,7 +12,7 @@ module "eks" {
   version = "~> 21.0"
 
   name               = "integ-${module.common.testing_id}"
-  kubernetes_version = var.k8s_version
+  kubernetes_version = "1.31"
 
   vpc_id     = aws_vpc.efa_test_vpc.id
   subnet_ids = aws_subnet.efa_test_public_subnet[*].id
