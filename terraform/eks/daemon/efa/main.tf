@@ -79,7 +79,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       cd ../../../..
       i=0
-      while [ $i -lt 10 ]; do
+      while [ $i -lt 3 ]; do
         i=$((i+1))
         go test ${var.test_dir} -eksClusterName=${module.eks.cluster_name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON && exit 0
         sleep 60
