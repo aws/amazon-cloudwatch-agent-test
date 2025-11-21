@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mock-lis-csi-code
+  namespace: kube-system
+data:
+  main.go: |
+    package main
+    
+    import (
+    	"fmt"
+    	"log"
+    	"net/http"
+    	"os"
+    )
+    
+    const metricsTemplate = `# HELP aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total The total time, in seconds, that the NVMe device exceeded the attached Amazon EC2 instance's maximum IOPS performance
+    # TYPE aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total counter
+    aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
+    aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
+    # HELP aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total The total time, in seconds, that the NVMe device exceeded the attached Amazon EC2 instance's maximum throughput performance
+    # TYPE aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total counter
+    aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
+    aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
+    # HELP aws_ec2_instance_store_csi_nvme_collector_errors_total Total number of NVMe collector scrape errors.
+    # TYPE aws_ec2_instance_store_csi_nvme_collector_errors_total counter
+    aws_ec2_instance_store_csi_nvme_collector_errors_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal"} 0
+    # HELP aws_ec2_instance_store_csi_nvme_collector_scrapes_total Total number of NVMe collector scrapes.
+    # TYPE aws_ec2_instance_store_csi_nvme_collector_scrapes_total counter
+    aws_ec2_instance_store_csi_nvme_collector_scrapes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal"} 2293
+    # HELP aws_ec2_instance_store_csi_read_bytes_total The total number of read bytes transferred
+    # TYPE aws_ec2_instance_store_csi_read_bytes_total counter
+    aws_ec2_instance_store_csi_read_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 1.928654848e+09
+    aws_ec2_instance_store_csi_read_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 1.928654848e+09
+    # HELP aws_ec2_instance_store_csi_read_ops_total The total number of completed read operations
+    # TYPE aws_ec2_instance_store_csi_read_ops_total counter
+    aws_ec2_instance_store_csi_read_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 836193
+    aws_ec2_instance_store_csi_read_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 836193
+    # HELP aws_ec2_instance_store_csi_read_seconds_total The total time spent on read operations in seconds
+    # TYPE aws_ec2_instance_store_csi_read_seconds_total counter
+    aws_ec2_instance_store_csi_read_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 21.77302
+    aws_ec2_instance_store_csi_read_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 21.712962
+    # HELP aws_ec2_instance_store_csi_volume_queue_length The number of read and write operations waiting to be completed
+    # TYPE aws_ec2_instance_store_csi_volume_queue_length gauge
+    aws_ec2_instance_store_csi_volume_queue_length{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 1
+    aws_ec2_instance_store_csi_volume_queue_length{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 1
+    # HELP aws_ec2_instance_store_csi_write_bytes_total The total number of write bytes transferred
+    # TYPE aws_ec2_instance_store_csi_write_bytes_total counter
+    aws_ec2_instance_store_csi_write_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
+    aws_ec2_instance_store_csi_write_bytes_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
+    # HELP aws_ec2_instance_store_csi_write_ops_total The total number of completed write operations
+    # TYPE aws_ec2_instance_store_csi_write_ops_total counter
+    aws_ec2_instance_store_csi_write_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
+    aws_ec2_instance_store_csi_write_ops_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
+    # HELP aws_ec2_instance_store_csi_write_seconds_total The total time spent on write operations in seconds
+    # TYPE aws_ec2_instance_store_csi_write_seconds_total counter
+    aws_ec2_instance_store_csi_write_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme1n1"} 0
+    aws_ec2_instance_store_csi_write_seconds_total{instance_id="ip-192-168-31-5.us-west-2.compute.internal",volume_id="/dev/nvme2n1"} 0
+    `
+    
+    func metricsHandler(w http.ResponseWriter, r *http.Request) {
+    	w.Header().Set("Content-Type", "text/plain")
+    	fmt.Fprint(w, metricsTemplate)
+    }
+    
+    func main() {
+    	port := os.Getenv("PORT")
+    	if port == "" {
+    		port = "8101"
+    	}
+    
+    	http.HandleFunc("/metrics", metricsHandler)
+    	log.Printf("Mock LIS CSI server starting on port %s", port)
+    	log.Fatal(http.ListenAndServe(":"+port, nil))
+    }
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: mock-nvme-csi-plugin
+  namespace: kube-system
+  labels:
+    app: nvme-csi-plugin
+spec:
+  selector:
+    matchLabels:
+      app: nvme-csi-plugin
+  template:
+    metadata:
+      labels:
+        app: nvme-csi-plugin
+    spec:
+      containers:
+      - name: mock-lis-csi
+        image: golang:1.21-alpine
+        command: ["sh", "-c", "cd /app && go run main.go"]
+        ports:
+        - containerPort: 8101
+          name: metrics
+        env:
+        - name: PORT
+          value: "8101"
+        volumeMounts:
+        - name: code
+          mountPath: /app
+      volumes:
+      - name: code
+        configMap:
+          name: mock-lis-csi-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: instance-store-csi-metrics
+  namespace: kube-system
+  labels:
+    app: nvme-csi-plugin
+spec:
+  selector:
+    app: nvme-csi-plugin
+  ports:
+  - port: 8101
+    targetPort: 8101
+    name: metrics
