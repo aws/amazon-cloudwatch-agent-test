@@ -15,21 +15,18 @@ module "eks" {
   version = "~> 21.0"
 
   name               = "integ-${module.common.testing_id}"
-  kubernetes_version = "1.31"
+  kubernetes_version = var.k8s_version
 
   vpc_id     = aws_vpc.efa_test_vpc.id
   subnet_ids = aws_subnet.efa_test_public_subnet[*].id
 
-  endpoint_public_access = true
   enable_cluster_creator_admin_permissions = true
-  # CloudWatch logging - renamed from cluster_enabled_log_types
-  enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   eks_managed_node_groups = {
     efa_nodes = {
       # EFA configuration - only at node group level in v21
       enable_efa_support = true
-      ami_type           = "AL2_x86_64_GPU"
+      ami_type           = var.ami_type
       instance_types     = [var.instance_type]
 
       min_size     = 1
