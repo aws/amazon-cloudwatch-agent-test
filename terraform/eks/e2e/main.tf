@@ -31,29 +31,28 @@ resource "aws_eks_cluster" "this" {
 }
 
 resource "aws_eks_node_group" "this" {
-  cluster_name    = aws_eks_cluster.this.name
+  cluster_name = aws_eks_cluster.this.name
   node_group_name = "${local.cluster_name}-node"
-  node_role_arn   = aws_iam_role.node_role.arn
-  subnet_ids      = module.basic_components.public_subnet_ids
-
+  node_role_arn = aws_iam_role.node_role.arn
+  subnet_ids = module.basic_components.public_subnet_ids
   scaling_config {
     desired_size = var.nodes
-    max_size     = var.nodes
-    min_size     = var.nodes
+    max_size = var.nodes
+    min_size = var.nodes
   }
-
-  ami_type       = var.ami_type
-  capacity_type  = "ON_DEMAND"
-  disk_size      = 20
+  ami_type = var.ami_type
+  capacity_type = "ON_DEMAND"
+  disk_size = 20
   instance_types = [var.instance_type]
-
-  depends_on = [
-    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
-    aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
-    aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
-    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
-    var.ip_family == "ipv6" ? aws_iam_role_policy_attachment.node_CNI_IPv6_Policy[0] : null
-  ]
+  depends_on = concat(
+    [
+      aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
+      aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
+      aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
+      aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
+    ],
+    var.ip_family == "ipv6" ? [aws_iam_role_policy_attachment.node_CNI_IPv6_Policy[0]] : []
+  )
 }
 
 resource "aws_security_group_rule" "nodeport_inbound" {
