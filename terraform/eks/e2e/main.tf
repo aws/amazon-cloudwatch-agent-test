@@ -22,7 +22,7 @@ resource "aws_eks_cluster" "this" {
   
   vpc_config {
     subnet_ids         = module.basic_components.public_subnet_ids
-    security_group_ids = [module.basic_components.security_group]
+    security_group_ids = var.vpc_name == "" ? [module.basic_components.security_group] : []
   }
 
   kubernetes_network_config {
