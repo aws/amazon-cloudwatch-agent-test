@@ -44,15 +44,13 @@ resource "aws_eks_node_group" "this" {
   capacity_type = "ON_DEMAND"
   disk_size = 20
   instance_types = [var.instance_type]
-  depends_on = concat(
-    [
-      aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
-      aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
-      aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
-      aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
-    ],
-    var.ip_family == "ipv6" ? [aws_iam_role_policy_attachment.node_CNI_IPv6_Policy[0]] : []
-  )
+  depends_on = [
+    aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
+    aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
+    aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.node_CNI_IPv6_Policy
+  ]
 }
 
 resource "aws_security_group_rule" "nodeport_inbound" {
