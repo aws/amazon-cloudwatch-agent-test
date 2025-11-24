@@ -20,7 +20,7 @@ module "eks" {
   vpc_id     = aws_vpc.efa_test_vpc.id
   subnet_ids = aws_subnet.efa_test_public_subnet[*].id
 
-  endpoint_public_access = true
+  endpoint_public_access                   = true
   enable_cluster_creator_admin_permissions = true
 
   eks_managed_node_groups = {
