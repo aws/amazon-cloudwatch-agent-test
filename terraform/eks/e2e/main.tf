@@ -52,6 +52,7 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy
+    var.ip_family == "ipv6" ? aws_iam_role_policy_attachment.node_CNI_IPv6_Policy[0] : null
   ]
 }
 
@@ -101,6 +102,46 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
 
 resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.node_role.name
+}
+
+resource "aws_iam_policy" "node_CNI_IPv6_Policy" {
+  count = var.ip_family == "ipv6" ? 1 : 0
+
+  name = "AmazonEKS_CNI_IPv6_Policy-${module.common.testing_id}"
+  description = "EKS VPC CNI policy for IPv6 prefix delegation"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AssignIpv6Addresses",
+          "ec2:DescribeInstances",
+          "ec2:DescribeTags",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeInstanceTypes"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateTags"
+        ]
+        Resource = [
+          "arn:aws:ec2:*:*:network-interface/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "node_CNI_IPv6_Policy" {
+  count = var.ip_family == "ipv6" ? 1 : 0
+
+  policy_arn = aws_iam_policy.node_CNI_IPv6_Policy[0].arn
   role       = aws_iam_role.node_role.name
 }
 
