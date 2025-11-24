@@ -3,7 +3,8 @@ module "common" {
 }
 
 module "basic_components" {
-  source = "../../basic_components"
+  source   = "../../basic_components"
+  vpc_name = var.vpc_name
 }
 
 locals {
@@ -18,9 +19,14 @@ resource "aws_eks_cluster" "this" {
   name     = "${local.cluster_name}-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
+  
   vpc_config {
     subnet_ids         = module.basic_components.public_subnet_ids
     security_group_ids = [module.basic_components.security_group]
+  }
+
+  kubernetes_network_config {
+    ip_family = var.ip_family
   }
 }
 
@@ -54,7 +60,8 @@ resource "aws_security_group_rule" "nodeport_inbound" {
   from_port         = 30080
   to_port           = 30080
   protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
+  cidr_blocks       = var.ip_family == "ipv4" ? ["0.0.0.0/0"] : []
+  ipv6_cidr_blocks  = var.ip_family == "ipv6" ? ["::/0"] : []
   security_group_id = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
 }
 
