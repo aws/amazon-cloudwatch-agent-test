@@ -68,6 +68,7 @@ type MetaData struct {
 	EKSInstallationType                         eksinstallationtype.EKSInstallationType
 	PerformanceMetricMapName                    string
 	PerformanceTestName                         string
+	IpFamily                                    string
 }
 
 type MetaDataStrings struct {
@@ -114,6 +115,7 @@ type MetaDataStrings struct {
 	EKSInstallationType                         string
 	PerformanceMetricMapName                    string
 	PerformanceTestName                         string
+	IpFamily                                    string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -167,6 +169,7 @@ func registerEKSE2ETestData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.OtelConfig), "otel_config", "", "OpenTelemetry configuration file path")
 	flag.StringVar(&(dataString.SampleApp), "sample_app", "", "Sample application manifest file path")
 	flag.StringVar(&(dataString.EKSInstallationType), "eks_installation_type", "HELM_CHART", "Installation type (HELM_CHART or EKS_ADDON)")
+	flag.StringVar(&(dataString.IpFamily), "ip_family", "ipv4", "IP family for the EKS cluster (ipv4 or ipv6)")
 }
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
@@ -378,6 +381,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.OtelConfig = registeredMetaDataStrings.OtelConfig
 	metaDataStorage.SampleApp = registeredMetaDataStrings.SampleApp
 	metaDataStorage.AccountId = registeredMetaDataStrings.AccountId
+	metaDataStorage.IpFamily = registeredMetaDataStrings.IpFamily
 	fillEKSInstallationType(metaDataStorage, registeredMetaDataStrings)
 
 	return metaDataStorage
