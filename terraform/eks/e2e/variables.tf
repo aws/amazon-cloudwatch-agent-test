@@ -126,9 +126,9 @@ variable "eks_installation_type" {
 }
 
 variable "vpc_name" {
-  type    = string
-  default = ""
-  description = "Name of an existing VPC to use. If empty, uses default VPC. For IPv6 testing, use 'eksctl-ipv6-eks-nodes-cluster/VPC'"
+  type        = string
+  default     = ""
+  description = "Name of an existing VPC to use. If empty and ip_family is ipv4, uses default VPC. If empty and ip_family is ipv6, creates a new IPv6 VPC"
 }
 
 variable "ip_family" {

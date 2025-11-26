@@ -3,8 +3,10 @@ module "common" {
 }
 
 module "basic_components" {
-  source   = "../../basic_components"
-  vpc_name = var.vpc_name
+  source          = "../../basic_components"
+  vpc_name        = var.vpc_name
+  ip_family       = var.ip_family
+  create_ipv6_vpc = var.ip_family == "ipv6" && var.vpc_name == ""
 }
 
 locals {
@@ -243,7 +245,8 @@ resource "null_resource" "validator" {
       ${var.otel_config != "" ? "-otel_config=\"${var.test_dir}/${var.otel_config}\"" : ""} \
       ${var.prometheus_config != "" ? "-prometheus_config=\"${var.test_dir}/${var.prometheus_config}\"" : ""} \
       -sample_app="${var.test_dir}/${var.sample_app}" \
-      -eks_installation_type=${var.eks_installation_type}
+      -eks_installation_type=${var.eks_installation_type} \
+      -ip_family=${var.ip_family}
     EOT
   }
 

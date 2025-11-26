@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 output "vpc_id" {
-  value = data.aws_vpc.vpc.id
+  value = local.vpc_id
 }
 
 output "security_group" {
-  value = data.aws_security_group.security_group.id
+  value = local.security_group_id
 }
 
 output "public_subnet_ids" {
-  value = data.aws_subnets.public_subnet_ids.ids
+  value = local.subnet_ids
 }
 
 output "role_arn" {
