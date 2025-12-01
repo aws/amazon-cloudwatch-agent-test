@@ -28,6 +28,11 @@ var (
 func Validate() error {
 	log.Println("Starting SSM Document validation tests")
 
+	// Verify shell compatibility and log shell type
+	if err := VerifyShellCompatibility(); err != nil {
+		log.Printf("Warning: Shell compatibility verification failed: %v", err)
+	}
+
 	// Generate unique ID to guarantee uniqueness
 	uniqueID := uuid.New().String()[:8]
 	documentName := testManageAgentDocument + uniqueID

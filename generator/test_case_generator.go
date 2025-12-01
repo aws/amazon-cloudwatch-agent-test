@@ -173,7 +173,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{
 			testDir: "./test/ssm_document",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 	},
 	testTypeKeyEc2SELinux: {

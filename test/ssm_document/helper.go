@@ -17,6 +17,12 @@ import (
 func RunAndVerifySSMAction(documentName string, instanceIds []string, tc testCase) error {
 	log.Printf("Testing %s action", tc.actionName)
 
+	// Log shell type for this test action
+	shellInfo, err := GetShellType()
+	if err == nil {
+		log.Printf("  Shell type: %s (%s)", shellInfo.ShellType, shellInfo.ShellPath)
+	}
+
 	out, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
 	if err != nil {
 		return fmt.Errorf("%s action failed: %v", tc.actionName, err)
