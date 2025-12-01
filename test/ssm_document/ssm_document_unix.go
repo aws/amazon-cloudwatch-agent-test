@@ -7,7 +7,10 @@ package ssm_document
 
 import (
 	_ "embed"
+	"fmt"
 	"log"
+	"os/exec"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/google/uuid"
@@ -127,5 +130,64 @@ func Validate() error {
 	}
 
 	log.Println("All SSM Document validation tests completed successfully")
+	return nil
+}
+
+// ShellInfo contains information about the detected shell
+type shellInfo struct {
+	shellPath string
+	shellType string
+	isPOSIX   bool
+}
+
+// getShellType returns the shell type for /bin/sh
+func getShellType() (*shellInfo, error) {
+	// Use readlink to resolve the /bin/sh symlink
+	cmd := exec.Command("readlink", "-f", "/bin/sh")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve /bin/sh symlink: %w", err)
+	}
+
+	shellPath := strings.TrimSpace(string(output))
+	shellType := "unknown"
+	isPOSIX := false
+
+	// Determine shell type based on the resolved path
+	if strings.Contains(shellPath, "dash") {
+		shellType = "dash"
+		isPOSIX = true
+	} else if strings.Contains(shellPath, "bash") {
+		shellType = "bash"
+		isPOSIX = true
+	} else if strings.Contains(shellPath, "sh") {
+		// Generic sh, assume POSIX-compliant
+		shellType = "sh"
+		isPOSIX = true
+	}
+
+	return &shellInfo{
+		shellPath: shellPath,
+		shellType: shellType,
+		isPOSIX:   isPOSIX,
+	}, nil
+}
+
+// VerifyShellCompatibility checks if the system shell is compatible and logs the information
+func VerifyShellCompatibility() error {
+	shellInfo, err := getShellType()
+	if err != nil {
+		return fmt.Errorf("shell compatibility check failed: %w", err)
+	}
+
+	log.Printf("Shell compatibility check:")
+	log.Printf("  /bin/sh resolves to: %s", shellInfo.shellPath)
+	log.Printf("  Detected shell type: %s", shellInfo.shellType)
+	log.Printf("  POSIX-compliant: %v", shellInfo.isPOSIX)
+
+	if !shellInfo.isPOSIX {
+		log.Printf("WARNING: Shell may not be POSIX-compliant")
+	}
+
 	return nil
 }

@@ -89,3 +89,42 @@ func putParameter(name, value string, paramType types.ParameterType) error {
 
 	return err
 }
+
+// GetCommandInvocationDetails retrieves detailed command output for debugging
+func GetCommandInvocationDetails(commandId, instanceId string) string {
+	result, err := SsmClient.ListCommandInvocations(ctx, &ssm.ListCommandInvocationsInput{
+		CommandId:  aws.String(commandId),
+		InstanceId: aws.String(instanceId),
+		Details:    true,
+	})
+	if err != nil {
+		return "Failed to retrieve command output: " + err.Error()
+	}
+
+	if len(result.CommandInvocations) == 0 {
+		return "No command invocations found"
+	}
+
+	invocation := result.CommandInvocations[0]
+	output := "Command Status: " + string(invocation.Status) + "\n"
+	
+	if invocation.StatusDetails != nil {
+		output += "Status Details: " + *invocation.StatusDetails + "\n"
+	}
+
+	for _, plugin := range invocation.CommandPlugins {
+		output += "\nPlugin: " + *plugin.Name + "\n"
+		output += "  Status: " + string(plugin.Status) + "\n"
+		if plugin.StatusDetails != nil {
+			output += "  Status Details: " + *plugin.StatusDetails + "\n"
+		}
+		if plugin.Output != nil && *plugin.Output != "" {
+			output += "  Output:\n" + *plugin.Output + "\n"
+		}
+		if plugin.ResponseCode != 0 {
+			output += "  Response Code: " + string(rune(plugin.ResponseCode)) + "\n"
+		}
+	}
+
+	return output
+}
