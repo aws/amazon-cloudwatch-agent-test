@@ -119,14 +119,15 @@ resource "null_resource" "integration_test" {
       "sudo installer -pkg amazon-cloudwatch-agent.pkg -target /",
 
       # Install Golang (direct download, more reliable than Homebrew on old macOS)
-      "echo Install golang",
-      "curl -L https://go.dev/dl/go1.22.9.darwin-${var.arc == "amd64" ? "amd64" : "arm64"}.tar.gz -o /tmp/go.tar.gz",
+      "echo Install golang for ${var.arc}",
+      "curl -L -f https://go.dev/dl/go1.22.9.darwin-${var.arc == "amd64" ? "amd64" : "arm64"}.tar.gz -o /tmp/go.tar.gz || exit 1",
       "sudo rm -rf /usr/local/go",
-      "sudo tar -C /usr/local -xzf /tmp/go.tar.gz",
+      "sudo tar -C /usr/local -xzf /tmp/go.tar.gz || exit 1",
       "rm /tmp/go.tar.gz",
+      "test -f /usr/local/go/bin/go || exit 1",
       "sudo ln -sf /usr/local/go/bin/go /usr/local/bin/go",
       "sudo ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt",
-      "go version",
+      "/usr/local/go/bin/go version",
 
       # Run Integration test
       "echo Execute integration tests",
@@ -136,8 +137,8 @@ resource "null_resource" "integration_test" {
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
       "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
       "cd ~/amazon-cloudwatch-agent-test",
-      "echo run sanity test && sudo go test ./test/sanity -p 1 -v",
-      "sudo go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v",
+      "echo run sanity test && sudo /usr/local/go/bin/go test ./test/sanity -p 1 -v",
+      "sudo /usr/local/go/bin/go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v",
     ]
   }
 

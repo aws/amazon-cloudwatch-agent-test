@@ -134,7 +134,8 @@ func WaitForSSMAgentReady(instanceId string) error {
 	waitTime := 1 * time.Second
 	maxWait := 30 * time.Second
 	totalWait := 0 * time.Second
-	timeout := 5 * time.Minute // Increased to 5 minutes
+	timeout := 2 * time.Minute
+	lastStatus := "not found"
 	
 	for totalWait < timeout {
 		time.Sleep(waitTime)
@@ -151,6 +152,7 @@ func WaitForSSMAgentReady(instanceId string) error {
 		
 		if err == nil && len(result.InstanceInformationList) > 0 {
 			instance := result.InstanceInformationList[0]
+			lastStatus = string(instance.PingStatus)
 			if instance.PingStatus == types.PingStatusOnline {
 				return nil
 			}
@@ -163,5 +165,5 @@ func WaitForSSMAgentReady(instanceId string) error {
 		}
 	}
 	
-	return errors.New("SSM agent did not become ready within 5 minutes")
+	return errors.New("SSM agent did not become ready within 2 minutes. Last status: " + lastStatus)
 }
