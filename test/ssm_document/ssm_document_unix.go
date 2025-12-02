@@ -42,6 +42,13 @@ func Validate() error {
 	metadata := environment.GetEnvironmentMetaData()
 	instanceIds := []string{metadata.InstanceId}
 
+	// Wait for SSM agent to be ready before running tests
+	log.Printf("Waiting for SSM agent to be ready on instance %s", metadata.InstanceId)
+	if err := awsservice.WaitForSSMAgentReady(metadata.InstanceId); err != nil {
+		return fmt.Errorf("SSM agent not ready: %v", err)
+	}
+	log.Println("SSM agent is ready")
+
 	log.Printf("Creating SSM document: %s", documentName)
 	err := awsservice.CreateSSMDocument(documentName, manageAgentDoc, types.DocumentTypeCommand)
 	if err != nil {
