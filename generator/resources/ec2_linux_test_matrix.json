@@ -42,5 +42,5 @@
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
     "family": "linux"
-  },
+  }
 ]
