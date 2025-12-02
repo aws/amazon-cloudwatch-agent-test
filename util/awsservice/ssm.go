@@ -129,41 +129,4 @@ func GetCommandInvocationDetails(commandId, instanceId string) string {
 	return output
 }
 
-// WaitForSSMAgentReady waits for the SSM agent to be online and ready with exponential backoff
-func WaitForSSMAgentReady(instanceId string) error {
-	waitTime := 1 * time.Second
-	maxWait := 30 * time.Second
-	totalWait := 0 * time.Second
-	timeout := 2 * time.Minute
-	lastStatus := "not found"
-	
-	for totalWait < timeout {
-		time.Sleep(waitTime)
-		totalWait += waitTime
-		
-		result, err := SsmClient.DescribeInstanceInformation(ctx, &ssm.DescribeInstanceInformationInput{
-			Filters: []types.InstanceInformationStringFilter{
-				{
-					Key:    aws.String("InstanceIds"),
-					Values: []string{instanceId},
-				},
-			},
-		})
-		
-		if err == nil && len(result.InstanceInformationList) > 0 {
-			instance := result.InstanceInformationList[0]
-			lastStatus = string(instance.PingStatus)
-			if instance.PingStatus == types.PingStatusOnline {
-				return nil
-			}
-		}
-		
-		// Increase wait time for next iteration, up to maxWait
-		waitTime = waitTime * 2
-		if waitTime > maxWait {
-			waitTime = maxWait
-		}
-	}
-	
-	return errors.New("SSM agent did not become ready within 2 minutes. Last status: " + lastStatus)
-}
+
