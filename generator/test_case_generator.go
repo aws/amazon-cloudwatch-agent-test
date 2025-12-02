@@ -17,29 +17,30 @@ import (
 )
 
 type matrixRow struct {
-	TestName            string `json:"testName"`
-	TestDir             string `json:"test_dir"`
-	Os                  string `json:"os"`
-	Family              string `json:"family"`
-	TestType            string `json:"testType"`
-	Arc                 string `json:"arc"`
-	InstanceType        string `json:"instanceType"`
-	Ami                 string `json:"ami"`
-	BinaryName          string `json:"binaryName"`
-	Username            string `json:"username"`
-	InstallAgentCommand string `json:"installAgentCommand"`
-	AgentStartCommand   string `json:"agentStartCommand"`
-	CaCertPath          string `json:"caCertPath"`
-	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
-	K8sVersion          string `json:"k8sVersion"`
-	Nodes               int    `json:"nodes"`
-	DeploymentStrategy  string `json:"deploymentStrategy"`
-	TerraformDir        string `json:"terraform_dir"`
-	UseSSM              bool   `json:"useSSM"`
-	ExcludedTests       string `json:"excludedTests"`
-	MetadataEnabled     string `json:"metadataEnabled"`
-	MaxAttempts         int    `json:"max_attempts"`
-	SELinuxBranch       string `json:"selinux_branch"`
+	TestName            string `json:"testName" mapstructure:"testName"`
+	TestDir             string `json:"test_dir" mapstructure:"test_dir"`
+	Os                  string `json:"os" mapstructure:"os"`
+	Family              string `json:"family" mapstructure:"family"`
+	TestType            string `json:"testType" mapstructure:"testType"`
+	Arc                 string `json:"arc" mapstructure:"arc"`
+	InstanceType        string `json:"instanceType" mapstructure:"instanceType"`
+	Ami                 string `json:"ami" mapstructure:"ami"`
+	BinaryName          string `json:"binaryName" mapstructure:"binaryName"`
+	Username            string `json:"username" mapstructure:"username"`
+	InstallAgentCommand string `json:"installAgentCommand" mapstructure:"installAgentCommand"`
+	AgentStartCommand   string `json:"agentStartCommand" mapstructure:"agentStartCommand"`
+	CaCertPath          string `json:"caCertPath" mapstructure:"caCertPath"`
+	ValuesPerMinute     int    `json:"values_per_minute" mapstructure:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
+	K8sVersion          string `json:"k8sVersion" mapstructure:"k8sVersion"`
+	Nodes               int    `json:"nodes" mapstructure:"nodes"`
+	DeploymentStrategy  string `json:"deploymentStrategy" mapstructure:"deploymentStrategy"`
+	TerraformDir        string `json:"terraform_dir" mapstructure:"terraform_dir"`
+	UseSSM              bool   `json:"useSSM" mapstructure:"useSSM"`
+	ExcludedTests       string `json:"excludedTests" mapstructure:"excludedTests"`
+	MetadataEnabled     string `json:"metadataEnabled" mapstructure:"metadataEnabled"`
+	MaxAttempts         int    `json:"max_attempts" mapstructure:"max_attempts"`
+	SELinuxBranch       string `json:"selinux_branch" mapstructure:"selinux_branch"`
+	IpFamily            string `json:"ip_family" mapstructure:"ip_family"`
 }
 
 type testConfig struct {
@@ -559,6 +560,8 @@ func shouldAddTest(row *matrixRow, targets map[string]map[string]struct{}) bool 
 			rowVal = row.Os
 		} else if key == "metadataEnabled" {
 			rowVal = row.MetadataEnabled
+		} else if key == "ip_family" {
+			rowVal = row.IpFamily
 		}
 
 		if rowVal == "" {

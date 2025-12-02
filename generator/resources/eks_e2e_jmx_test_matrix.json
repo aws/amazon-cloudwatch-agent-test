@@ -1,5 +1,10 @@
 [
   {
-    "nodes": 2
+    "nodes": 2,
+    "ip_family": "ipv4"
+  },
+  {
+    "nodes": 2,
+    "ip_family": "ipv6"
   }
 ]
