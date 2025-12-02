@@ -3,7 +3,9 @@ module "common" {
 }
 
 module "basic_components" {
-  source = "../../basic_components"
+  source    = "../../basic_components"
+  vpc_name  = var.vpc_name
+  ip_family = var.ip_family
 }
 
 locals {
@@ -18,9 +20,14 @@ resource "aws_eks_cluster" "this" {
   name     = "${local.cluster_name}-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
+
   vpc_config {
     subnet_ids         = module.basic_components.public_subnet_ids
-    security_group_ids = [module.basic_components.security_group]
+    security_group_ids = var.vpc_name == "" ? [module.basic_components.security_group] : []
+  }
+
+  kubernetes_network_config {
+    ip_family = var.ip_family
   }
 }
 
@@ -29,23 +36,21 @@ resource "aws_eks_node_group" "this" {
   node_group_name = "${local.cluster_name}-node"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
-
   scaling_config {
     desired_size = var.nodes
     max_size     = var.nodes
     min_size     = var.nodes
   }
-
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
   instance_types = [var.instance_type]
-
   depends_on = [
     aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
-    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy
+    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.node_CNI_IPv6_Policy
   ]
 }
 
@@ -54,7 +59,8 @@ resource "aws_security_group_rule" "nodeport_inbound" {
   from_port         = 30080
   to_port           = 30080
   protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
+  cidr_blocks       = var.ip_family == "ipv4" ? ["0.0.0.0/0"] : []
+  ipv6_cidr_blocks  = var.ip_family == "ipv6" ? ["::/0"] : []
   security_group_id = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
 }
 
@@ -94,6 +100,46 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
 
 resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.node_role.name
+}
+
+resource "aws_iam_policy" "node_CNI_IPv6_Policy" {
+  count = var.ip_family == "ipv6" ? 1 : 0
+
+  name        = "AmazonEKS_CNI_IPv6_Policy-${module.common.testing_id}"
+  description = "EKS VPC CNI policy for IPv6 prefix delegation"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AssignIpv6Addresses",
+          "ec2:DescribeInstances",
+          "ec2:DescribeTags",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeInstanceTypes"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateTags"
+        ]
+        Resource = [
+          "arn:aws:ec2:*:*:network-interface/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "node_CNI_IPv6_Policy" {
+  count = var.ip_family == "ipv6" ? 1 : 0
+
+  policy_arn = aws_iam_policy.node_CNI_IPv6_Policy[0].arn
   role       = aws_iam_role.node_role.name
 }
 
@@ -198,7 +244,8 @@ resource "null_resource" "validator" {
       ${var.otel_config != "" ? "-otel_config=\"${var.test_dir}/${var.otel_config}\"" : ""} \
       ${var.prometheus_config != "" ? "-prometheus_config=\"${var.test_dir}/${var.prometheus_config}\"" : ""} \
       -sample_app="${var.test_dir}/${var.sample_app}" \
-      -eks_installation_type=${var.eks_installation_type}
+      -eks_installation_type=${var.eks_installation_type} \
+      -ip_family=${var.ip_family}
     EOT
   }
 

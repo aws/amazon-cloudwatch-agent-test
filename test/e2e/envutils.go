@@ -69,6 +69,11 @@ func applyHelmResources(k8ctl *utils.K8CtlManager, helmManager *utils.HelmManage
 		"manager.image.repositoryDomainMap.public": utils.NewHelmValue(env.CloudwatchAgentOperatorRepositoryURL),
 	}
 
+	// Enable dualstack endpoints for IPv6 clusters
+	if env.IpFamily == "ipv6" {
+		values["useDualstackEndpoint"] = utils.NewHelmValue("true")
+	}
+
 	if env.AgentConfig != "" {
 		if agentConfigContent, err := os.ReadFile(env.AgentConfig); err == nil {
 			values["agent.config"] = utils.HelmValue{

@@ -14,13 +14,30 @@ data "aws_iam_role" "cwagent_iam_role" {
 }
 
 data "aws_vpc" "vpc" {
-  default = true
+  default = var.vpc_name == "" ? true : null
+
+  dynamic "filter" {
+    for_each = var.vpc_name != "" ? [1] : []
+    content {
+      name   = "tag:Name"
+      values = [var.vpc_name]
+    }
+  }
 }
 
 data "aws_subnets" "public_subnet_ids" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.vpc.id]
+  }
+
+  # When using IPv6, filter for subnets with IPv6 CIDR blocks
+  dynamic "filter" {
+    for_each = var.ip_family == "ipv6" ? [1] : []
+    content {
+      name   = "ipv6-cidr-block-association.ipv6-cidr-block"
+      values = ["*"]
+    }
   }
 }
 
