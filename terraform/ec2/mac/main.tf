@@ -118,9 +118,15 @@ resource "null_resource" "integration_test" {
       "/usr/local/bin/aws s3 cp s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/darwin/${var.arc}/validator .",
       "sudo installer -pkg amazon-cloudwatch-agent.pkg -target /",
 
-      # Install Golang
+      # Install Golang (direct download, more reliable than Homebrew on old macOS)
       "echo Install golang",
-      "NONINTERACTIVE=1 brew install go",
+      "curl -L https://go.dev/dl/go1.22.9.darwin-${var.arc == "amd64" ? "amd64" : "arm64"}.tar.gz -o /tmp/go.tar.gz",
+      "sudo rm -rf /usr/local/go",
+      "sudo tar -C /usr/local -xzf /tmp/go.tar.gz",
+      "rm /tmp/go.tar.gz",
+      "sudo ln -sf /usr/local/go/bin/go /usr/local/bin/go",
+      "sudo ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt",
+      "go version",
 
       # Run Integration test
       "echo Execute integration tests",

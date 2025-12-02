@@ -131,10 +131,10 @@ func GetCommandInvocationDetails(commandId, instanceId string) string {
 
 // WaitForSSMAgentReady waits for the SSM agent to be online and ready with exponential backoff
 func WaitForSSMAgentReady(instanceId string) error {
-	waitTime := 5 * time.Second
+	waitTime := 1 * time.Second
 	maxWait := 30 * time.Second
 	totalWait := 0 * time.Second
-	timeout := 3 * time.Minute
+	timeout := 5 * time.Minute // Increased to 5 minutes
 	
 	for totalWait < timeout {
 		time.Sleep(waitTime)
@@ -163,5 +163,5 @@ func WaitForSSMAgentReady(instanceId string) error {
 		}
 	}
 	
-	return errors.New("SSM agent did not become ready within 3 minutes")
+	return errors.New("SSM agent did not become ready within 5 minutes")
 }
