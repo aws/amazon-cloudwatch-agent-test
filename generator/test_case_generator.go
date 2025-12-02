@@ -177,6 +177,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:    "./test/ssm_document",
 			excludedOs: map[string]struct{}{"ubuntu-24": {}},
 		},
+	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
