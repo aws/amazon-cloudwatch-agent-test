@@ -109,9 +109,11 @@ resource "null_resource" "download_test_repo_and_vendor_from_s3" {
 }
 
 module "amp" {
-  count           = length(regexall("/amp", var.test_dir)) > 0 ? 1 : 0
-  source          = "terraform-aws-modules/managed-service-prometheus/aws"
-  workspace_alias = "cwagent-integ-test-${module.linux_common.testing_id}"
+  count                    = length(regexall("/amp", var.test_dir)) > 0 ? 1 : 0
+  source                   = "terraform-aws-modules/managed-service-prometheus/aws"
+  workspace_alias          = "cwagent-integ-test-${module.linux_common.testing_id}"
+  retention_period_in_days = 7
+  limits_per_label_set     = []
 }
 
 resource "null_resource" "integration_test_run" {
