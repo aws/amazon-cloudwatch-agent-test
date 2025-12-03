@@ -5,6 +5,7 @@ package awsservice
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -122,7 +123,7 @@ func GetCommandInvocationDetails(commandId, instanceId string) string {
 			output += "  Output:\n" + *plugin.Output + "\n"
 		}
 		if plugin.ResponseCode != 0 {
-			output += "  Response Code: " + string(rune(plugin.ResponseCode)) + "\n"
+			output += fmt.Sprintf("  Response Code: %d\n", plugin.ResponseCode)
 		}
 	}
 
