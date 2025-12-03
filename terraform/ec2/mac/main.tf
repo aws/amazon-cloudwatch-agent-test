@@ -120,7 +120,7 @@ resource "null_resource" "integration_test" {
 
       # Install Golang (direct download, more reliable than Homebrew on old macOS)
       "echo Install golang for ${var.arc}",
-      "curl -L -f https://go.dev/dl/go1.22.9.darwin-${var.arc == "amd64" ? "amd64" : "arm64"}.tar.gz -o /tmp/go.tar.gz || exit 1",
+      "curl -L -f https://go.dev/dl/go${var.go_version}.darwin-${var.arc == "amd64" ? "amd64" : "arm64"}.tar.gz -o /tmp/go.tar.gz || exit 1",
       "sudo rm -rf /usr/local/go",
       "sudo tar -C /usr/local -xzf /tmp/go.tar.gz || exit 1",
       "rm /tmp/go.tar.gz",
