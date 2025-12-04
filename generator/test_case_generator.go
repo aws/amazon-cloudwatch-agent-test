@@ -173,10 +173,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/dualstack_endpoint",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
-		{
-			testDir:    "./test/ssm_document",
-			excludedOs: map[string]struct{}{"ubuntu-24": {}},
-		},
+		{testDir: "./test/ssm_document"},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
