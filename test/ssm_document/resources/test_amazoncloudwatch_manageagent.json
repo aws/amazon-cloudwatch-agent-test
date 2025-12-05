@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "2.2",
+  "schemaVersion": "2.4",
   "description": "Send commands to Amazon CloudWatch Agent",
   "parameters": {
     "action": {
