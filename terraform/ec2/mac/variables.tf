@@ -76,3 +76,8 @@ variable "user" {
   default = "ec2-user"
 }
 
+variable "go_version" {
+  type    = string
+  default = "1.22.9"
+}
+

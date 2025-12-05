@@ -53,6 +53,8 @@ type testConfig struct {
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
 	targets map[string]map[string]struct{}
+	// excludedOs allows excluding specific OSes from the test
+	excludedOs map[string]struct{}
 	// maxAttempts limits the number of times a test will be run.
 	maxAttempts int
 	// instanceTypeByArch allows specifying different instance types based on architecture
@@ -171,10 +173,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/dualstack_endpoint",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
-		{
-			testDir: "./test/ssm_document",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
+		{testDir: "./test/ssm_document"},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
@@ -540,6 +539,13 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 				continue
 			}
 
+			// Skip if OS is in excluded list
+			if testConfig.excludedOs != nil {
+				if _, excluded := testConfig.excludedOs[row.Os]; excluded {
+					continue
+				}
+			}
+			
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}

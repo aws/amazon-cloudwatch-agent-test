@@ -36,7 +36,9 @@ func VerifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName stri
 	//Wait for command completion
 	_, err := awsservice.WaitForCommandCompletion(*out.Command.CommandId, instanceId)
 	if err != nil {
-		return fmt.Errorf("failed to get command result: %v", err)
+		// Try to get command output even on failure for better error reporting
+		commandOutput := awsservice.GetCommandInvocationDetails(*out.Command.CommandId, instanceId)
+		return fmt.Errorf("failed to get command result: %v\nCommand output:\n%s", err, commandOutput)
 	}
 
 	// Verify agent status
@@ -76,3 +78,4 @@ func VerifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName stri
 
 	return nil
 }
+
