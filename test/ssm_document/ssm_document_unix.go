@@ -11,6 +11,7 @@ import (
 	"log"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/google/uuid"
@@ -41,6 +42,13 @@ func Validate() error {
 	documentName := testManageAgentDocument + uniqueID
 	metadata := environment.GetEnvironmentMetaData()
 	instanceIds := []string{metadata.InstanceId}
+
+	// Wait for SSM agent to be ready before running tests
+	log.Printf("Waiting for instance %s to be SSM-ready...", metadata.InstanceId)
+	if err := awsservice.WaitForSSMReady(instanceIds, 5*time.Minute); err != nil {
+		return fmt.Errorf("instance not SSM-ready: %v", err)
+	}
+	log.Println("Instance is SSM-ready")
 
 	log.Printf("Creating SSM document: %s", documentName)
 	err := awsservice.CreateSSMDocument(documentName, manageAgentDoc, types.DocumentTypeCommand)

@@ -33,6 +33,50 @@ func RunSSMDocument(name string, instanceIds []string, parameters map[string][]s
 	return out, err
 }
 
+// WaitForSSMReady waits for instances to be registered and online with SSM.
+// This is necessary because there's a delay between EC2 instance launch and SSM agent registration.
+func WaitForSSMReady(instanceIds []string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		allReady := true
+		for _, instanceId := range instanceIds {
+			result, err := SsmClient.DescribeInstanceInformation(ctx, &ssm.DescribeInstanceInformationInput{
+				Filters: []types.InstanceInformationStringFilter{
+					{
+						Key:    aws.String("InstanceIds"),
+						Values: []string{instanceId},
+					},
+				},
+			})
+			if err != nil {
+				allReady = false
+				break
+			}
+
+			if len(result.InstanceInformationList) == 0 {
+				allReady = false
+				break
+			}
+
+			// Check if the instance is online
+			info := result.InstanceInformationList[0]
+			if info.PingStatus != types.PingStatusOnline {
+				allReady = false
+				break
+			}
+		}
+
+		if allReady {
+			return nil
+		}
+
+		time.Sleep(10 * time.Second)
+	}
+
+	return fmt.Errorf("instances %v did not become SSM-ready within %v", instanceIds, timeout)
+}
+
 func DeleteSSMDocument(name string) error {
 	_, err := SsmClient.DeleteDocument(ctx, &ssm.DeleteDocumentInput{
 		Name: aws.String(name),
@@ -108,7 +152,7 @@ func GetCommandInvocationDetails(commandId, instanceId string) string {
 
 	invocation := result.CommandInvocations[0]
 	output := "Command Status: " + string(invocation.Status) + "\n"
-	
+
 	if invocation.StatusDetails != nil {
 		output += "Status Details: " + *invocation.StatusDetails + "\n"
 	}
@@ -129,5 +173,3 @@ func GetCommandInvocationDetails(commandId, instanceId string) string {
 
 	return output
 }
-
-
