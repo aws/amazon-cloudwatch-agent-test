@@ -64,7 +64,7 @@ func (m *NetTestRunner) GetMeasuredMetrics() []string {
 
 func getNetworkInterface() string {
 	if data, err := os.ReadFile("/etc/redhat-release"); err == nil {
-		if strings.Contains(string(data), "Red Hat Enterprise Linux release 10") {
+		if strings.Contains(string(data), "Red Hat Enterprise Linux release 10") || strings.Contains(string(data), "Rocky Linux release 10") {
 			return "ens5"
 		}
 	}
