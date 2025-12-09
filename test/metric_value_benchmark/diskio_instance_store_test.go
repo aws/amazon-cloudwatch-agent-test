@@ -22,27 +22,23 @@ import (
 )
 
 const (
-	entityResourceType = "AWS::EC2::Instance"
-	entityType         = "AWS::Resource"
-	region             = "us-west-2"
+	instanceStoreEntityResourceType = "AWS::EC2::Instance"
+	instanceStoreEntityType         = "AWS::Resource"
 )
 
-type DiskIOEBSTestRunner struct {
+type DiskIOInstanceStoreTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
-var _ test_runner.ITestRunner = (*DiskIOEBSTestRunner)(nil)
+var _ test_runner.ITestRunner = (*DiskIOInstanceStoreTestRunner)(nil)
 
-func (m *DiskIOEBSTestRunner) Validate() status.TestGroupResult {
+func (m *DiskIOInstanceStoreTestRunner) Validate() status.TestGroupResult {
 	metricsToFetch := m.GetMeasuredMetrics()
-	// Double the length for testing the metric and entity
 	testResults := make([]status.TestResult, 2*len(metricsToFetch))
 	for i, name := range metricsToFetch {
-		testResults[i] = m.validateEBSMetric(name)
-		// We cannot validate entity in ITAR/CN
+		testResults[i] = m.validateInstanceStoreMetric(name)
 		if os.Getenv("AWS_REGION") == "us-west-2" {
-			// Offset to latter half of the array
-			testResults[i+len(metricsToFetch)] = m.validateEBSEntity(name)
+			testResults[i+len(metricsToFetch)] = m.validateInstanceStoreEntity(name)
 		}
 	}
 
@@ -52,15 +48,15 @@ func (m *DiskIOEBSTestRunner) Validate() status.TestGroupResult {
 	}
 }
 
-func (m *DiskIOEBSTestRunner) GetTestName() string {
-	return "DiskIOEBS"
+func (m *DiskIOInstanceStoreTestRunner) GetTestName() string {
+	return "DiskIOInstanceStore"
 }
 
-func (m *DiskIOEBSTestRunner) GetAgentConfigFileName() string {
-	return "diskio_ebs_config.json"
+func (m *DiskIOInstanceStoreTestRunner) GetAgentConfigFileName() string {
+	return "diskio_instance_store_config.json"
 }
 
-func (m *DiskIOEBSTestRunner) SetupBeforeAgentRun() error {
+func (m *DiskIOInstanceStoreTestRunner) SetupBeforeAgentRun() error {
 	err := m.BaseTestRunner.SetupBeforeAgentRun()
 	if err != nil {
 		return err
@@ -73,27 +69,25 @@ func (m *DiskIOEBSTestRunner) SetupBeforeAgentRun() error {
 	return m.SetUpConfig()
 }
 
-func (m *DiskIOEBSTestRunner) GetMeasuredMetrics() []string {
+func (m *DiskIOInstanceStoreTestRunner) GetMeasuredMetrics() []string {
 	return []string{
-		"diskio_ebs_total_read_ops",
-		"diskio_ebs_total_write_ops",
-		"diskio_ebs_total_read_bytes",
-		"diskio_ebs_total_write_bytes",
-		"diskio_ebs_total_read_time",
-		"diskio_ebs_total_write_time",
-		"diskio_ebs_volume_performance_exceeded_iops",
-		"diskio_ebs_volume_performance_exceeded_tp",
-		"diskio_ebs_ec2_instance_performance_exceeded_iops",
-		"diskio_ebs_ec2_instance_performance_exceeded_tp",
-		"diskio_ebs_volume_queue_length",
+		"diskio_instance_store_total_read_ops",
+		"diskio_instance_store_total_write_ops",
+		"diskio_instance_store_total_read_bytes",
+		"diskio_instance_store_total_write_bytes",
+		"diskio_instance_store_total_read_time",
+		"diskio_instance_store_total_write_time",
+		"diskio_instance_store_performance_exceeded_iops",
+		"diskio_instance_store_performance_exceeded_tp",
+		"diskio_instance_store_volume_queue_length",
 	}
 }
 
-func (m *DiskIOEBSTestRunner) GetAgentRunDuration() time.Duration {
+func (m *DiskIOInstanceStoreTestRunner) GetAgentRunDuration() time.Duration {
 	return 4 * time.Minute
 }
 
-func (m *DiskIOEBSTestRunner) validateEBSMetric(metricName string) status.TestResult {
+func (m *DiskIOInstanceStoreTestRunner) validateInstanceStoreMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
 		Status: status.FAILED,
@@ -105,7 +99,7 @@ func (m *DiskIOEBSTestRunner) validateEBSMetric(metricName string) status.TestRe
 			Value: dimension.UnknownDimensionValue(),
 		},
 		{
-			Key:   "VolumeId",
+			Key:   "SerialId",
 			Value: dimension.UnknownDimensionValue(),
 		},
 	})
@@ -128,25 +122,25 @@ func (m *DiskIOEBSTestRunner) validateEBSMetric(metricName string) status.TestRe
 	return testResult
 }
 
-func (m *DiskIOEBSTestRunner) validateEBSEntity(metricName string) status.TestResult {
+func (m *DiskIOInstanceStoreTestRunner) validateInstanceStoreEntity(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   fmt.Sprintf("%s_entity", metricName),
 		Status: status.FAILED,
 	}
 	env := environment.GetEnvironmentMetaData()
-	volumeID, err := common.GetAnyEBSVolumeID()
+	serialID, err := common.GetAnyInstanceStoreSerialID()
 	if err != nil {
 		return testResult
 	}
 
 	requestBody := []byte(fmt.Sprintf(`{
-                "Namespace": "%s",
-                "MetricName": "%s",
-                "Dimensions": [
-                    {"Name": "InstanceId", "Value": "%s"},
-                    {"Name": "VolumeId", "Value": "%s"}
-                ]
-            }`, namespace, metricName, env.InstanceId, volumeID))
+        "Namespace": "%s",
+        "MetricName": "%s",
+        "Dimensions": [
+            {"Name": "InstanceId", "Value": "%s"},
+            {"Name": "SerialId", "Value": "%s"}
+        ]
+    }`, namespace, metricName, env.InstanceId, serialID))
 
 	req, err := common.BuildListEntitiesForMetricRequest(requestBody, region)
 	if err != nil {
@@ -154,7 +148,6 @@ func (m *DiskIOEBSTestRunner) validateEBSEntity(metricName string) status.TestRe
 		return testResult
 	}
 
-	// send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -163,7 +156,6 @@ func (m *DiskIOEBSTestRunner) validateEBSEntity(metricName string) status.TestRe
 	}
 	defer resp.Body.Close()
 
-	// parse and verify the response
 	var response struct {
 		Entities []struct {
 			KeyAttributes struct {
@@ -186,8 +178,8 @@ func (m *DiskIOEBSTestRunner) validateEBSEntity(metricName string) status.TestRe
 
 	entity := response.Entities[0]
 	if entity.KeyAttributes.Identifier != env.InstanceId ||
-		entity.KeyAttributes.ResourceType != entityResourceType ||
-		entity.KeyAttributes.Type != entityType {
+		entity.KeyAttributes.ResourceType != instanceStoreEntityResourceType ||
+		entity.KeyAttributes.Type != instanceStoreEntityType {
 
 		log.Printf("Entity mismatch for metric '%s':\n"+
 			"Expected:\n"+
@@ -199,8 +191,8 @@ func (m *DiskIOEBSTestRunner) validateEBSEntity(metricName string) status.TestRe
 			"  ResourceType: %s\n"+
 			"  InstanceId: %s",
 			metricName,
-			entityType,
-			entityResourceType,
+			instanceStoreEntityType,
+			instanceStoreEntityResourceType,
 			env.InstanceId,
 			entity.KeyAttributes.Type,
 			entity.KeyAttributes.ResourceType,

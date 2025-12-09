@@ -14,7 +14,15 @@ data "aws_iam_role" "cwagent_iam_role" {
 }
 
 data "aws_vpc" "vpc" {
-  default = true
+  default = var.vpc_name == "" ? true : null
+
+  dynamic "filter" {
+    for_each = var.vpc_name != "" ? [1] : []
+    content {
+      name   = "tag:Name"
+      values = [var.vpc_name]
+    }
+  }
 }
 
 data "aws_subnets" "public_subnet_ids" {

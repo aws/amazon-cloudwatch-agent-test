@@ -26,7 +26,7 @@
       },
       "mem": {
         "measurement": [
-          "active", "available", "available_percent", "buffered", "cached", "free", "inactive", "total",
+          "active", "available", "available_percent", "buffered", "cached", "free", "inactive", "shared", "total",
           "used", "used_percent"
         ]
       },

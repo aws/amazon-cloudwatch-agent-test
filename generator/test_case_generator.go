@@ -53,8 +53,12 @@ type testConfig struct {
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
 	targets map[string]map[string]struct{}
+	// excludedOs allows excluding specific OSes from the test
+	excludedOs map[string]struct{}
 	// maxAttempts limits the number of times a test will be run.
 	maxAttempts int
+	// instanceTypeByArch allows specifying different instance types based on architecture
+	instanceTypeByArch map[string]string
 }
 
 const (
@@ -95,7 +99,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			maxAttempts: 2,
 		},
 		{testDir: "./test/entity_metrics_benchmark"},
-		{testDir: "./test/metric_value_benchmark"},
+		{
+			testDir: "./test/metric_value_benchmark",
+			instanceTypeByArch: map[string]string{
+				"amd64": "i3en.large",
+				"arm64": "i4g.large",
+			},
+		},
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
@@ -163,10 +173,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/dualstack_endpoint",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
-		{
-			testDir: "./test/ssm_document",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
+		{testDir: "./test/ssm_document"},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
@@ -378,6 +385,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			terraformDir: "terraform/eks/daemon/ebs",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
+		{
+			testDir:      "./test/liscsi",
+			terraformDir: "terraform/eks/daemon/liscsi",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
 	},
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
@@ -520,11 +532,24 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			if testConfig.instanceType != "" {
 				row.InstanceType = testConfig.instanceType
 			}
+			// Apply architecture-specific instance type if configured
+			if testConfig.instanceTypeByArch != nil {
+				if instanceType, ok := testConfig.instanceTypeByArch[row.Arc]; ok {
+					row.InstanceType = instanceType
+				}
+			}
 
 			if len(ami) != 0 && !slices.Contains(ami, row.Ami) {
 				continue
 			}
 
+			// Skip if OS is in excluded list
+			if testConfig.excludedOs != nil {
+				if _, excluded := testConfig.excludedOs[row.Os]; excluded {
+					continue
+				}
+			}
+			
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}
