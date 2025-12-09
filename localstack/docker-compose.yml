@@ -21,6 +21,7 @@ services:
       - KINESIS_ERROR_PROBABILITY=${KINESIS_ERROR_PROBABILITY- }
       - DOCKER_HOST=unix:///var/run/docker.sock
       - HOST_TMP_FOLDER=${TMPDIR}
+      - USE_SSL=1
     volumes:
       - "${PWD}/ls_tmp:/tmp/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
