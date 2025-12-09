@@ -60,8 +60,9 @@ resource "null_resource" "integration_test_setup" {
       # check for vendor directory specifically instead of overall test repo to avoid issues with SELinux
       "if [ ! -d amazon-cloudwatch-agent-test/vendor ]; then",
       "echo 'Vendor directory (test repo dependencies) not found, cloning...'",
-      "sudo rm -r amazon-cloudwatch-agent-test",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q",
+      "sudo rm -rf amazon-cloudwatch-agent-test || true",
+      # Retry git clone up to 3 times with 30 second delay to handle transient network issues
+      "for i in 1 2 3; do git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q && break || { echo \"git clone attempt $i failed, retrying in 30s...\"; sleep 30; }; done",
       "else",
       "echo 'Test repo already exists, skipping clone'",
       "fi",

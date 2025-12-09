@@ -67,7 +67,8 @@ resource "aws_instance" "integration-test" {
         "echo clone the agent and start the localstack",
         "if [ ! -d amazon-cloudwatch-agent-test ]; then",
         "echo 'Test repo not found, cloning...'",
-        "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+        # Retry git clone up to 3 times with 30 second delay to handle transient network issues
+        "for i in 1 2 3; do git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} && break || { echo \"git clone attempt $i failed, retrying in 30s...\"; sleep 30; }; done",
         "else",
         "echo 'Test repo already exists, skipping clone.'",
         "fi",
