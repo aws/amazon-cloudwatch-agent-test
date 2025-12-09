@@ -1,0 +1,18 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "logs": {
+    "metrics_collected": {
+      "kubernetes": {
+        "enhanced_container_insights": true,
+        "accelerated_compute_metrics": true,
+        "accelerated_compute_gpu_metrics_collection_interval": 1
+      }
+    },
+    "force_flush_interval": 5
+  }
+}
