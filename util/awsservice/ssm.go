@@ -42,7 +42,7 @@ func RunSSMDocument(name string, instanceIds []string, parameters map[string][]s
 		result, checkErr := SsmClient.ListCommandInvocations(ctx, &ssm.ListCommandInvocationsInput{
 			CommandId: out.Command.CommandId,
 		})
-		
+
 		if checkErr == nil && len(result.CommandInvocations) > 0 {
 			invocation := result.CommandInvocations[0]
 			if invocation.StatusDetails != nil && *invocation.StatusDetails == "Undeliverable" {
@@ -114,7 +114,7 @@ func DeleteSSMDocument(name string) error {
 }
 
 func WaitForCommandCompletion(commandId, instanceId string) (*ssm.ListCommandInvocationsOutput, error) {
-	for i := 0; i < 12; i++ {
+	for i := 0; i < 12*5; i++ {
 		time.Sleep(5 * time.Second)
 		result, err := SsmClient.ListCommandInvocations(ctx, &ssm.ListCommandInvocationsInput{
 			CommandId:  aws.String(commandId),
@@ -132,7 +132,7 @@ func WaitForCommandCompletion(commandId, instanceId string) (*ssm.ListCommandInv
 			}
 		}
 	}
-	return nil, errors.New("commands did not complete within 1 minute")
+	return nil, errors.New("commands did not complete within 5 minutes")
 }
 
 func PutStringParameter(name, value string) error {
