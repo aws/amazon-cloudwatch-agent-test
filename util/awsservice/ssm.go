@@ -24,13 +24,41 @@ func CreateSSMDocument(name string, content string, documentType types.DocumentT
 }
 
 func RunSSMDocument(name string, instanceIds []string, parameters map[string][]string) (*ssm.SendCommandOutput, error) {
-	out, err := SsmClient.SendCommand(ctx, &ssm.SendCommandInput{
-		DocumentName: aws.String(name),
-		InstanceIds:  instanceIds,
-		Parameters:   parameters,
-	})
+	maxRetries := 5
+	retryDelay := 30 * time.Second
 
-	return out, err
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		out, err := SsmClient.SendCommand(ctx, &ssm.SendCommandInput{
+			DocumentName: aws.String(name),
+			InstanceIds:  instanceIds,
+			Parameters:   parameters,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// Wait briefly and check if command is deliverable
+		time.Sleep(10 * time.Second)
+		result, checkErr := SsmClient.ListCommandInvocations(ctx, &ssm.ListCommandInvocationsInput{
+			CommandId: out.Command.CommandId,
+		})
+		
+		if checkErr == nil && len(result.CommandInvocations) > 0 {
+			invocation := result.CommandInvocations[0]
+			if invocation.StatusDetails != nil && *invocation.StatusDetails == "Undeliverable" {
+				if attempt < maxRetries {
+					fmt.Printf("SSM command undeliverable (attempt %d/%d), retrying in %v...\n", attempt, maxRetries, retryDelay)
+					time.Sleep(retryDelay)
+					continue
+				}
+				return nil, fmt.Errorf("SSM command failed after %d attempts: %s", maxRetries, *invocation.StatusDetails)
+			}
+		}
+
+		return out, nil
+	}
+
+	return nil, fmt.Errorf("SSM command failed after %d attempts", maxRetries)
 }
 
 // WaitForSSMReady waits for instances to be registered and online with SSM.
