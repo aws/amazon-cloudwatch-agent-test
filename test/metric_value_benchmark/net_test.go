@@ -18,6 +18,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
+const (
+	rhel10  = "Red Hat Enterprise Linux release 10"
+	rocky10 = "Rocky Linux release 10"
+)
+
 type NetTestRunner struct {
 	test_runner.BaseTestRunner
 }
@@ -64,8 +69,10 @@ func (m *NetTestRunner) GetMeasuredMetrics() []string {
 
 func getNetworkInterface() string {
 	if data, err := os.ReadFile("/etc/redhat-release"); err == nil {
-		if strings.Contains(string(data), "Red Hat Enterprise Linux release 10") {
-			return "ens5"
+		for _, release := range []string{rhel10, rocky10} {
+			if strings.Contains(string(data), release) {
+				return "ens5"
+			}
 		}
 	}
 	return "docker0"
