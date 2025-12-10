@@ -435,7 +435,11 @@ func copyAllEC2LinuxTestForOnpremTesting() {
 	*/
 	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
 		{
-			testDir: "./test/lvm",
+			testDir: "./test/cloudwatchlogs",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 	}
