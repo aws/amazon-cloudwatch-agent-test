@@ -62,6 +62,11 @@ variable "local_stack_host_name" {
   default = "localhost.localstack.cloud"
 }
 
+variable "is_selinux_test" {
+  type    = bool
+  default = false
+}
+
 variable "s3_bucket" {
   type    = string
   default = ""
@@ -75,6 +80,11 @@ variable "test_name" {
 variable "test_dir" {
   type    = string
   default = ""
+}
+
+variable "selinux_branch" {
+  type    = string
+  default = "main"
 }
 
 variable "cwa_github_sha" {
@@ -100,6 +110,17 @@ variable "is_canary" {
 variable "plugin_tests" {
   type    = string
   default = ""
+}
+
+
+variable "excluded_tests" {
+  type    = string
+  default = ""
+}
+
+variable "pre_test_setup" {
+  type    = string
+  default = "echo no pre-test setup"
 }
 
 variable "agent_start" {
