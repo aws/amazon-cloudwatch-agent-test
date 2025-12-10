@@ -81,7 +81,14 @@ resource "aws_instance" "integration-test" {
         "cat snakeoil.pem > server.test.pem.crt",
         "cd ~/amazon-cloudwatch-agent-test/localstack",
         "docker-compose up -d --force-recreate",
-        "aws s3 cp ls_tmp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} --recursive"
+        "aws s3 cp ls_tmp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.cwa_github_sha} --recursive",
+        "echo 'Setting up cron job for docker-compose on reboot'",
+        "HOMEPATH=$(readlink -f ~)",
+        "echo '#!/bin/bash' > $HOMEPATH/start-localstack.sh",
+        "echo \"cd $HOMEPATH/amazon-cloudwatch-agent-test/localstack\" >> $HOMEPATH/start-localstack.sh",
+        "echo 'docker-compose up -d' >> $HOMEPATH/start-localstack.sh",
+        "chmod +x $HOMEPATH/start-localstack.sh",
+        "(crontab -l 2>/dev/null; echo \"@reboot $HOMEPATH/start-localstack.sh\") | crontab -"
     ])
     connection {
       type        = "ssh"
