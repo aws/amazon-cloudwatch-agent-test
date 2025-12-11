@@ -95,7 +95,12 @@ func init() {
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
-	instanceId := awsservice.GetInstanceId()
+	env := environment.GetEnvironmentMetaData()
+	instanceId := env.InstanceId
+	if instanceId == "" {
+		// Fallback to IMDS if not provided via command line (for backward compatibility)
+		instanceId = awsservice.GetInstanceId()
+	}
 	log.Printf("Found instance id %s", instanceId)
 
 	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
