@@ -23,7 +23,7 @@ variable "cwagent_image_tag" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.30"
+  default = "1.33"
 }
 
 variable "ami_type" {
@@ -34,5 +34,5 @@ variable "ami_type" {
 # NCCL only works on certain P instance types https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start-nccl.html
 variable "instance_type" {
   type    = string
-  default = "g4dn.8xlarge"
+  default = "c6in.32xlarge"
 }
