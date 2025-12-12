@@ -28,13 +28,13 @@ variable "ssh_key_value" {
 
 variable "user" {
   type    = string
-  default = ""
+  default = "ubuntu"
 }
 
 variable "install_agent" {
   description = "go run ./install/install_agent.go deb or go run ./install/install_agent.go rpm"
   type        = string
-  default     = "go run ./install/install_agent.go rpm"
+  default     = "go run ./install/install_agent.go deb"
 }
 
 variable "ca_cert_path" {
