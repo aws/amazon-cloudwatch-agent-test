@@ -162,6 +162,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 		{
+			testDir:      "./test/credential_chain",
+			terraformDir: "terraform/ec2/assume_role",
+		},
+		{
 			testDir: "./test/detailed_metrics",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
