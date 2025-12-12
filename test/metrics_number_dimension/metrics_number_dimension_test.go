@@ -6,10 +6,8 @@
 package metrics_number_dimension
 
 import (
-	"flag"
 	"fmt"
 	"log"
-	"os"
 	"testing"
 	"time"
 
