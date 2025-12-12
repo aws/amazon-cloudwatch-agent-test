@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "persistent volume claim schema",
+  "description": "json schema for persistent volume claim metrics",
+  "type": "object",
+  "properties": {
+    "CloudWatchMetrics": {},
+    "ClusterName": {},
+    "Namespace": {},
+    "PersistentVolumeClaimName": {},
+    "Timestamp": {},
+    "Type": {},
+    "Version": {},
+    "kubernetes": {},
+    "persistent_volume_claim_count": {},
+    "persistent_volume_claim_status_bound": {},
+    "persistent_volume_claim_status_pending": {},
+    "persistent_volume_claim_status_lost": {}
+  },
+  "required": [
+    "ClusterName",
+    "Namespace",
+    "PersistentVolumeClaimName",
+    "Timestamp",
+    "Type",
+    "Version",
+    "CloudWatchMetrics"
+  ]
+}

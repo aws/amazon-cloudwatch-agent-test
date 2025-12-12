@@ -77,4 +77,3 @@ func (suite *EBSCSITestSuite) AddToSuiteResult(r status.TestGroupResult) {
 func TestEBSCSISuite(t *testing.T) {
 	suite.Run(t, new(EBSCSITestSuite))
 }
-

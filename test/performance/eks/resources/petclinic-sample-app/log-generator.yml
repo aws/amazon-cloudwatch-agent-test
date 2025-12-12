@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: log-generator
+  namespace: default
+spec:
+  containers:
+    - name: log-generator
+      image: busybox
+      command: ["/bin/sh", "-c"]
+      args: ["while true; do echo \"Log entry at $(date)\"; sleep 1; done"]
+  restartPolicy: Always

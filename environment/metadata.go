@@ -66,6 +66,9 @@ type MetaData struct {
 	SampleApp                                   string
 	AccountId                                   string
 	EKSInstallationType                         eksinstallationtype.EKSInstallationType
+	PerformanceMetricMapName                    string
+	PerformanceTestName                         string
+	IPFamily                                    string
 }
 
 type MetaDataStrings struct {
@@ -110,6 +113,9 @@ type MetaDataStrings struct {
 	SampleApp                                   string
 	AccountId                                   string
 	EKSInstallationType                         string
+	PerformanceMetricMapName                    string
+	PerformanceTestName                         string
+	IPFamily                                    string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -140,6 +146,8 @@ func registerEKSData(d *MetaDataStrings) {
 	flag.StringVar(&(d.EKSClusterName), "eksClusterName", "", "EKS cluster name")
 	flag.StringVar(&(d.EksDeploymentStrategy), "eksDeploymentStrategy", "", "Daemon/Replica/Sidecar")
 	flag.StringVar(&(d.EksGpuType), "eksGpuType", "", "nvidia/inferentia")
+	flag.StringVar(&(d.PerformanceMetricMapName), "performanceMetricMapName", "", "name of eks performance metric map within directory")
+	flag.StringVar(&(d.PerformanceTestName), "performanceTestName", "", "name of eks performance test")
 }
 
 func registerEKSE2ETestData(dataString *MetaDataStrings) {
@@ -161,6 +169,7 @@ func registerEKSE2ETestData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.OtelConfig), "otel_config", "", "OpenTelemetry configuration file path")
 	flag.StringVar(&(dataString.SampleApp), "sample_app", "", "Sample application manifest file path")
 	flag.StringVar(&(dataString.EKSInstallationType), "eks_installation_type", "HELM_CHART", "Installation type (HELM_CHART or EKS_ADDON)")
+	flag.StringVar(&(dataString.IPFamily), "ip_family", "ipv4", "IP family for the EKS cluster (ipv4 or ipv6)")
 }
 
 func registerPluginTestsToExecute(dataString *MetaDataStrings) {
@@ -282,6 +291,8 @@ func fillEKSData(e *MetaData, data *MetaDataStrings) {
 
 	e.EKSClusterName = data.EKSClusterName
 	e.EksGpuType = data.EksGpuType
+	e.PerformanceMetricMapName = data.PerformanceMetricMapName
+	e.PerformanceTestName = data.PerformanceTestName
 }
 
 func fillEKSInstallationType(e *MetaData, data *MetaDataStrings) {
@@ -370,6 +381,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.OtelConfig = registeredMetaDataStrings.OtelConfig
 	metaDataStorage.SampleApp = registeredMetaDataStrings.SampleApp
 	metaDataStorage.AccountId = registeredMetaDataStrings.AccountId
+	metaDataStorage.IPFamily = registeredMetaDataStrings.IPFamily
 	fillEKSInstallationType(metaDataStorage, registeredMetaDataStrings)
 
 	return metaDataStorage

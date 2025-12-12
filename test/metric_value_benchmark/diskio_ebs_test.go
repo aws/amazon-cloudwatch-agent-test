@@ -134,7 +134,7 @@ func (m *DiskIOEBSTestRunner) validateEBSEntity(metricName string) status.TestRe
 		Status: status.FAILED,
 	}
 	env := environment.GetEnvironmentMetaData()
-	volumeID, err := common.GetAnyNvmeVolumeID()
+	volumeID, err := common.GetAnyEBSVolumeID()
 	if err != nil {
 		return testResult
 	}

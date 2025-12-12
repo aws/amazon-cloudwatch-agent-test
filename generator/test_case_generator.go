@@ -53,8 +53,12 @@ type testConfig struct {
 	// define target matrix field as set(s)
 	// empty map means a testConfig will be created with a test entry for each entry from *_test_matrix.json
 	targets map[string]map[string]struct{}
+	// excludedOs allows excluding specific OSes from the test
+	excludedOs map[string]struct{}
 	// maxAttempts limits the number of times a test will be run.
 	maxAttempts int
+	// instanceTypeByArch allows specifying different instance types based on architecture
+	instanceTypeByArch map[string]string
 }
 
 const (
@@ -67,9 +71,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
 	},
+	"ec2_linux_wd": {
+		{testDir: "./test/workload_discovery"},
+	},
+	"ec2_linux_wd_nvidia": {
+		{testDir: "./test/workload_discovery"},
+	},
 	testTypeKeyEc2Linux: {
-		//Skipping this test for now until test is not flakey
-		//{testDir: "./test/ca_bundle"},
+		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
 			testDir: "./test/log_state/logfile",
@@ -90,7 +99,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			maxAttempts: 2,
 		},
 		{testDir: "./test/entity_metrics_benchmark"},
-		{testDir: "./test/metric_value_benchmark"},
+		{
+			testDir: "./test/metric_value_benchmark",
+			instanceTypeByArch: map[string]string{
+				"amd64": "i3en.large",
+				"arm64": "i4g.large",
+			},
+		},
 		{testDir: "./test/run_as_user"},
 		{testDir: "./test/collection_interval"},
 		{testDir: "./test/metric_dimension"},
@@ -150,10 +165,18 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/detailed_metrics",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
+		{
+			testDir: "./test/otlp",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/dualstack_endpoint",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{testDir: "./test/ssm_document"},
 	},
 	testTypeKeyEc2SELinux: {
-		//skip test until test is not flakey
-		//{testDir: "./test/ca_bundle"},
+		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
 			testDir: "./test/metrics_number_dimension",
@@ -206,6 +229,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			terraformDir: "terraform/ec2/assume_role",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
+		{
+			testDir: "./test/dualstack_endpoint",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
@@ -214,12 +241,21 @@ var testTypeToTestConfig = map[string][]testConfig{
 	*/
 	"ec2_mac": {
 		{testDir: "../../../test/feature/mac"},
+		{testDir: "../../../test/ssm_document"},
+	},
+	"ec2_windows_wd": {
+		{testDir: "../../../test/workload_discovery"},
+	},
+	"ec2_windows_wd_nvidia": {
+		{testDir: "../../../test/workload_discovery"},
 	},
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
 		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
 		{testDir: "../../../test/feature/windows/event_logs"},
+		{testDir: "../../../test/feature/windows/eventid_logs"},
+		{testDir: "../../../test/feature/windows/event_regex_logs"},
 		{testDir: "../../../test/log_state/logfile"},
 		{testDir: "../../../test/log_state/windows_event_log"},
 		{
@@ -230,6 +266,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "../../../test/feature/windows/custom_start/ssm_start",
 			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
 		},
+		{testDir: "../../../test/ssm_document"},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
@@ -258,7 +295,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/stress/windows/system"},
 	},
 	"ecs_fargate": {
-		{testDir: "./test/ecs/ecs_sd"},
+		{testDir: "./test/ecs/service_discovery"},
 	},
 	"ecs_ec2_daemon": {
 		{
@@ -278,7 +315,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 		{
-			testDir: "./test/ecs/ecs_sd",
+			testDir: "./test/ecs/service_discovery",
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},
@@ -330,11 +367,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
-		//Skipping test until efa team implements fix
-		//{
-		//	testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
-		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		//},
+		{
+			testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+		},
 		{
 			testDir: "./test/metric_value_benchmark", terraformDir: "terraform/eks/daemon/credentials/pod_identity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
@@ -342,7 +379,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir:      "./test/ebscsi",
 			terraformDir: "terraform/eks/daemon/ebs",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/liscsi",
+			terraformDir: "terraform/eks/daemon/liscsi",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 	},
 	"eks_deployment": {
@@ -486,11 +528,24 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			if testConfig.instanceType != "" {
 				row.InstanceType = testConfig.instanceType
 			}
+			// Apply architecture-specific instance type if configured
+			if testConfig.instanceTypeByArch != nil {
+				if instanceType, ok := testConfig.instanceTypeByArch[row.Arc]; ok {
+					row.InstanceType = instanceType
+				}
+			}
 
 			if len(ami) != 0 && !slices.Contains(ami, row.Ami) {
 				continue
 			}
 
+			// Skip if OS is in excluded list
+			if testConfig.excludedOs != nil {
+				if _, excluded := testConfig.excludedOs[row.Os]; excluded {
+					continue
+				}
+			}
+			
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}

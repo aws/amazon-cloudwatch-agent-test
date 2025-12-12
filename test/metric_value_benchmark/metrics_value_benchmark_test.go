@@ -128,10 +128,13 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &JMXKafkaTestRunner{BaseTestRunner: test_runner.BaseTestRunner{DimensionFactory: factory}, env: env}},
 		}
 
-		// Only add the Disk IO EBS test if not running on SELinux
+		// Only add the Disk IO EBS and Instance Store test if not running on SELinux
 		runningOnSELinux, _ := common.SELinuxEnforced()
 		if !runningOnSELinux {
-			ec2TestRunners = append(ec2TestRunners, &test_runner.TestRunner{TestRunner: &DiskIOEBSTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}})
+			ec2TestRunners = append(ec2TestRunners,
+				&test_runner.TestRunner{TestRunner: &DiskIOEBSTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				&test_runner.TestRunner{TestRunner: &DiskIOInstanceStoreTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			)
 		}
 	}
 	return ec2TestRunners

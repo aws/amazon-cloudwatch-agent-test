@@ -64,6 +64,12 @@ var (
 	eksNodeEfaSchema string
 	//go:embed test_schemas/node_ebs.json
 	eksNodeEBSSchema string
+	//go:embed test_schemas/persistent_volume.json
+	eksPersistentVolumeSchema string
+	//go:embed test_schemas/persistent_volume_claim.json
+	eksPersistentVolumeClaimSchema string
+	//go:embed test_schemas/node_instance_store.json
+	eksNodeInstanceStoreSchema string
 
 	EksClusterValidationMap = map[string]string{
 		"Cluster":                eksClusterSchema,
@@ -93,6 +99,9 @@ var (
 		"PodEFA":                 eksPodEfaSchema,
 		"NodeEFA":                eksNodeEfaSchema,
 		"NodeEBS":                eksNodeEBSSchema,
+		"PersistentVolume":       eksPersistentVolumeSchema,
+		"PersistentVolumeClaim":  eksPersistentVolumeClaimSchema,
+		"NodeInstanceStore":      eksNodeInstanceStoreSchema,
 	}
 
 	EksClusterFrequencyValidationMap = map[string]int{

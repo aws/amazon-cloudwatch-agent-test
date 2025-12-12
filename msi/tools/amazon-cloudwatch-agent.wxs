@@ -44,6 +44,7 @@
       <ComponentRef Id='SchemaJSON' />
       <ComponentRef Id='DownloaderEXE' />
       <ComponentRef Id='TranslatorEXE' />
+      <ComponentRef Id='WorkloadDiscoveryEXE' />
       <ComponentRef Id='OtelJmxJar' />
       <ComponentRef Id='CWAGENT_VERSION' />
       <ComponentRef Id='LICENSE' />
@@ -125,6 +126,9 @@
         </Component>
         <Component Id='TranslatorEXE' Guid='f4527006-edcb-4271-a971-039848bc8bb7' Win64='yes'>
             <File Source='config-translator.exe' KeyPath='yes' Checksum='yes'/>
+        </Component>
+        <Component Id='WorkloadDiscoveryEXE' Guid='58ca9c86-6cf4-4513-9625-7403c3c1af68' Win64='yes'>
+            <File Source='workload-discovery.exe' KeyPath='yes' Checksum='yes'/>
         </Component>
         <Component Id='OtelJmxJar' Guid='5af08c39-c483-4b08-8315-c99345684c4d' Win64='yes'>
             <File Source='opentelemetry-jmx-metrics.jar' KeyPath='yes'/>

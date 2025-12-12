@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: petclinic-instrumentation-default-env
+  annotations:
+    instrumentation.opentelemetry.io/inject-java: "true"
+  labels:
+    app: petclinic
+spec:
+  containers:
+    - name: petclinic
+      image: 506463145083.dkr.ecr.us-west-2.amazonaws.com/cwagent-integ-test-petclinic:latest
+      ports:
+        - containerPort: 8080
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: petclinic-custom-service-name

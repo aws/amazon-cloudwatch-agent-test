@@ -103,28 +103,24 @@ func (t *BaseTestRunner) SetAgentConfig(agentConfig AgentConfig) {
 func (t *TestRunner) Run() status.TestGroupResult {
 	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)
-	testGroupResult, err := t.RunAgent()
-	if err == nil {
-		testGroupResult = t.TestRunner.Validate()
+	err := t.RunAgent()
+	if err != nil {
+		log.Printf("%v test group failed while running agent: %v", testName, err)
+		return status.TestGroupResult{
+			Name: t.TestRunner.GetTestName(),
+			TestResults: []status.TestResult{
+				{
+					Name:   "Starting Agent",
+					Status: status.FAILED,
+					Reason: err,
+				},
+			},
+		}
 	}
-	if testGroupResult.GetStatus() != status.SUCCESSFUL {
-		log.Printf("%v test group failed due to %v", testName, err)
-	}
-
-	return testGroupResult
+	return t.TestRunner.Validate()
 }
 
-func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
-	testGroupResult := status.TestGroupResult{
-		Name: t.TestRunner.GetTestName(),
-		TestResults: []status.TestResult{
-			{
-				Name:   "Starting Agent",
-				Status: status.SUCCESSFUL,
-			},
-		},
-	}
-
+func (t *TestRunner) RunAgent() error {
 	agentConfig := AgentConfig{
 		ConfigFileName:   t.TestRunner.GetAgentConfigFileName(),
 		SSMParameterName: t.TestRunner.SSMParameterName(),
@@ -133,8 +129,7 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	t.TestRunner.SetAgentConfig(agentConfig)
 	err := t.TestRunner.SetupBeforeAgentRun()
 	if err != nil {
-		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
+		return fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
 
 	if t.TestRunner.UseSSM() {
@@ -144,14 +139,12 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 	}
 
 	if err != nil {
-		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Agent could not start due to: %w", err)
+		return fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
 	err = t.TestRunner.SetupAfterAgentRun()
 	if err != nil {
-		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
+		return fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
 	}
 
 	runningDuration := t.TestRunner.GetAgentRunDuration()
@@ -161,9 +154,8 @@ func (t *TestRunner) RunAgent() (status.TestGroupResult, error) {
 
 	err = common.DeleteFile(configOutputPath)
 	if err != nil {
-		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %w", err)
+		return fmt.Errorf("Failed to cleanup config file after agent run due to: %w", err)
 	}
 
-	return testGroupResult, nil
+	return nil
 }

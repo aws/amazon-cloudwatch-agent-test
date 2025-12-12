@@ -27,6 +27,7 @@ RUN apt-get update \
  && rm -rf /tmp/tmp* \
  && apt-get clean
 
+COPY neuron-monitor-output.json /opt/aws/neuron/bin/neuron-monitor-output.json
 COPY dummy_neuron_monitor.py /opt/aws/neuron/bin/dummy_neuron_monitor.py
 RUN chmod 755 /opt/aws/neuron/bin/dummy_neuron_monitor.py
 RUN pip3 install prometheus_client boto3 requests
