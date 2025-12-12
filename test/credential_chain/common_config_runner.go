@@ -79,7 +79,7 @@ func (t *CommonConfigTestRunner) SetupBeforeAgentRun() error {
 	log.Println("Created common-config.toml with shared credentials configuration")
 
 	// Setup invalid credentials at user home to validate common-config takes higher priority
-	userCredentialsPath := filepath.Join(util.UserCWAgent, util.AwsCredentialsPath)
+	userCredentialsPath := filepath.Join(util.UserCWAgentHomeDir, util.AwsCredentialsPath)
 	if err = util.SetupSharedCredentialsFile(
 		filepath.Join("agent_configs", "credentials"),
 		util.DefaultProfile,

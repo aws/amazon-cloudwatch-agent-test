@@ -549,7 +549,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 					continue
 				}
 			}
-			
+
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}
