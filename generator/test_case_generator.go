@@ -162,6 +162,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 		{
+			testDir:      "./test/credential_chain",
+			terraformDir: "terraform/ec2/assume_role",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
 			testDir: "./test/detailed_metrics",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
@@ -545,7 +550,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 					continue
 				}
 			}
-			
+
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}

@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	ConfigOutputPath = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\config.json"
-	AgentLogFile     = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+	ConfigOutputPath      = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\config.json"
+	AgentLogFile          = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+	AgentCommonConfigFile = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\common-config.toml"
 )
 
 func CopyFile(pathIn string, pathOut string) error {
