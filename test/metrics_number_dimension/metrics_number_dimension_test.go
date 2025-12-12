@@ -6,8 +6,10 @@
 package metrics_number_dimension
 
 import (
+	"flag"
 	"fmt"
 	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -105,7 +107,12 @@ func buildDimensionFilterList(appendDimension int) []types.DimensionFilter {
 	// we append dimension from 0 to max number - 2
 	// then we add dimension instance id
 	// thus for max dimension 10, 0 to 8 + instance id = 10 dimension
-	ec2InstanceId := awsservice.GetInstanceId()
+	env := environment.GetEnvironmentMetaData()
+	ec2InstanceId := env.InstanceId
+	if ec2InstanceId == "" {
+		// Fallback to IMDS if not provided via command line (for backward compatibility)
+		ec2InstanceId = awsservice.GetInstanceId()
+	}
 	dimensionFilter := make([]types.DimensionFilter, appendDimension)
 	for i := 0; i < appendDimension-1; i++ {
 		dimensionFilter[i] = types.DimensionFilter{
