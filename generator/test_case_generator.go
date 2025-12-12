@@ -77,6 +77,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_linux_wd_nvidia": {
 		{testDir: "./test/workload_discovery"},
 	},
+	"ec2_linux_onprem": {
+		{testDir: "./test/cloudwatchlogs"},
+	}
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
@@ -450,9 +453,7 @@ func main() {
 	flag.Parse()
 
 	configMap := testTypeToTestConfig
-	if !*useE2E {
-		copyAllEC2LinuxTestForOnpremTesting()
-	} else {
+	if *useE2E {
 		configMap = testTypeToTestConfigE2E
 	}
 
