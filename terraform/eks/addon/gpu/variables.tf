@@ -40,3 +40,15 @@ variable "beta_endpoint" {
   type    = string
   default = "https://api.beta.us-west-2.wesley.amazonaws.com"
 }
+
+variable "cwagent_image_repo" {
+  type        = string
+  description = "CloudWatch Agent image repository"
+  default     = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
+}
+
+variable "cwagent_image_tag" {
+  type        = string
+  description = "CloudWatch Agent image tag"
+  default     = "latest"
+}
