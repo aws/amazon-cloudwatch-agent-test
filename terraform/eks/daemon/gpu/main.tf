@@ -706,12 +706,145 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
     namespace = "amazon-cloudwatch"
   }
 }
+# NVIDIA Device Plugin DaemonSet
+resource "kubernetes_daemonset" "nvidia_device_plugin" {
+  depends_on = [
+    kubernetes_namespace.namespace,
+    aws_eks_node_group.this,
+  ]
+  metadata {
+    name      = "nvidia-device-plugin-daemonset"
+    namespace = "kube-system"
+  }
+  spec {
+    selector {
+      match_labels = {
+        name = "nvidia-device-plugin-ds"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          name = "nvidia-device-plugin-ds"
+        }
+      }
+      spec {
+        toleration {
+          key      = "nvidia.com/gpu"
+          operator = "Exists"
+          effect   = "NoSchedule"
+        }
+        priority_class_name = "system-node-critical"
+        container {
+          name  = "nvidia-device-plugin-ctr"
+          image = "nvcr.io/nvidia/k8s-device-plugin:v0.17.0"
+          args  = ["--fail-on-init-error=false"]
+          security_context {
+            allow_privilege_escalation = false
+            capabilities {
+              drop = ["ALL"]
+            }
+          }
+          volume_mount {
+            name       = "device-plugin"
+            mount_path = "/var/lib/kubelet/device-plugins"
+          }
+        }
+        volume {
+          name = "device-plugin"
+          host_path {
+            path = "/var/lib/kubelet/device-plugins"
+          }
+        }
+      }
+    }
+  }
+}
+
+# GPU Burner Deployment - Real GPU workload for testing
+resource "kubernetes_deployment" "gpu_burner" {
+  depends_on = [
+    kubernetes_namespace.namespace,
+    kubernetes_service_account.cwagentservice,
+    aws_eks_node_group.this,
+    kubernetes_daemonset.nvidia_device_plugin,
+  ]
+  metadata {
+    name      = "gpu-burn"
+    namespace = "amazon-cloudwatch"
+    labels = {
+      app = "gpu-burn"
+    }
+  }
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        app = "gpu-burn"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "gpu-burn"
+        }
+      }
+      spec {
+        container {
+          name              = "main"
+          image             = "oguzpastirmaci/gpu-burn"
+          image_pull_policy = "IfNotPresent"
+          command = [
+            "bash",
+            "-c",
+            "while true; do /app/gpu_burn 20; sleep 20; done"
+          ]
+          resources {
+            limits = {
+              "nvidia.com/gpu" = "1"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# GPU Burner Service
+resource "kubernetes_service" "gpu_burner_service" {
+  depends_on = [
+    kubernetes_namespace.namespace,
+    kubernetes_deployment.gpu_burner,
+  ]
+  metadata {
+    name      = "gpu-burn-service"
+    namespace = "amazon-cloudwatch"
+    labels = {
+      app = "gpu-burn"
+    }
+  }
+  spec {
+    type = "ClusterIP"
+    selector = {
+      app = "gpu-burn"
+    }
+    port {
+      port        = 80
+      target_port = 80
+      protocol    = "TCP"
+    }
+  }
+}
+
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
     kubernetes_daemonset.service,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
+    kubernetes_daemonset.nvidia_device_plugin,
+    kubernetes_deployment.gpu_burner,
+    kubernetes_service.gpu_burner_service,
   ]
 
   provisioner "local-exec" {
