@@ -28,7 +28,7 @@ variable "k8s_version" {
 
 variable "ami_type" {
   type    = string
-  default = "AL2_x86_64"
+  default = "AL2_x86_64_GPU"
 }
 
 variable "instance_type" {
