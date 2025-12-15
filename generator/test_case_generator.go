@@ -253,22 +253,18 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/workload_discovery"},
 	},
 	"ec2_windows": {
-		{
-			testDir: "../../../test/feature/windows",
-			targets: map[string]map[string]struct{}{"os": {"win-2025": {}}},
-		},
-		// {testDir: "../../../test/feature/windows"},
-		// {testDir: "../../../test/restart"},
+		{testDir: "../../../test/feature/windows"},
+		{testDir: "../../../test/restart"},
 		// {testDir: "../../../test/acceptance"},
 		// {testDir: "../../../test/feature/windows/event_logs"},
 		// {testDir: "../../../test/feature/windows/eventid_logs"},
 		// {testDir: "../../../test/feature/windows/event_regex_logs"},
 		// {testDir: "../../../test/log_state/logfile"},
 		// {testDir: "../../../test/log_state/windows_event_log"},
-		// {
-		// 	testDir: "../../../test/feature/windows/custom_start/userdata",
-		// 	targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
-		// },
+		{
+			testDir: "../../../test/feature/windows/custom_start/userdata",
+			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
+		},
 		// {
 		// 	testDir: "../../../test/feature/windows/custom_start/ssm_start",
 		// 	targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
