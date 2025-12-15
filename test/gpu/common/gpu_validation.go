@@ -69,6 +69,7 @@ var ExpectedDimsToMetricsIntegTest = map[string][]string{
 	},
 	"ClusterName-Namespace-Service": {
 		PodMemTotal, PodMemUsed, PodPower, PodTemp, PodUtil, PodMemUtil, PodTensorUtil,
+		PodReserved, PodRequest, PodUsageTotal, PodLimit,
 	},
 	"ClusterName-Namespace-PodName": {
 		PodMemTotal, PodMemUsed, PodPower, PodTemp, PodUtil, PodMemUtil, PodTensorUtil,
