@@ -23,7 +23,7 @@ variable "cwagent_image_tag" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.28"
+  default = "1.34"
 }
 
 variable "ami_type" {

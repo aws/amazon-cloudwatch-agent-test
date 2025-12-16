@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "../../../../test/gpu"
+  default = "./test/gpu"
 }
 
 variable "addon_name" {
@@ -18,7 +18,7 @@ variable "addon_name" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.31"
+  default = "1.34"
 }
 
 variable "ami_type" {
