@@ -81,12 +81,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/cloudwatchlogs"},
 	},
 	testTypeKeyEc2Linux: {
-		// {testDir: "./test/ca_bundle"},
-		// {testDir: "./test/cloudwatchlogs"},
-		// {
-		// 	testDir: "./test/log_state/logfile",
-		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		// },
+		{testDir: "./test/ca_bundle"},
+		{testDir: "./test/cloudwatchlogs"},
+		{
+			testDir: "./test/log_state/logfile",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
 		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -430,22 +430,6 @@ var partitionTests = map[string]partition{
 		tests: []string{testTypeKeyEc2Linux},
 		ami:   []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 	},
-}
-
-func copyAllEC2LinuxTestForOnpremTesting() {
-	/* Some tests need to be fixed in order to run in both environment, so for now for PoC, run one that works.
-	   testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
-	*/
-	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
-		{
-			testDir: "./test/cloudwatchlogs",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/metrics_number_dimension",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-	}
 }
 
 func main() {
