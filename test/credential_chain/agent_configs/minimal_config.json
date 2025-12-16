@@ -1,0 +1,24 @@
+{
+  "agent": {
+    "run_as_user": "PLACEHOLDER_USER",
+    "debug": true
+  },
+  "metrics": {
+    "namespace": "PLACEHOLDER_NAMESPACE",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "append_dimensions": {
+          "TestName": "PLACEHOLDER_TEST_NAME"
+        },
+        "measurement": [
+          "cpu_usage_active"
+        ],
+        "metrics_collection_interval": 10,
+        "totalcpu": true
+      }
+    }
+  }
+}

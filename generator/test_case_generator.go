@@ -162,6 +162,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 		{
+			testDir:      "./test/credential_chain",
+			terraformDir: "terraform/ec2/assume_role",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
 			testDir: "./test/detailed_metrics",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
@@ -371,11 +376,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
-		//Skipping test until efa team implements fix
-		//{
-		//	testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
-		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		//},
+		{
+			testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+		},
 		{
 			testDir: "./test/metric_value_benchmark", terraformDir: "terraform/eks/daemon/credentials/pod_identity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
@@ -549,7 +554,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 					continue
 				}
 			}
-			
+
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}
