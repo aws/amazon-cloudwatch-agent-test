@@ -33,7 +33,7 @@ variable "instance_type" {
 
 variable "beta" {
   type    = bool
-  default = true
+  default = false
 }
 
 variable "beta_endpoint" {
