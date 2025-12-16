@@ -255,27 +255,23 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/workload_discovery"},
 	},
 	"ec2_windows": {
+		{testDir: "../../../test/feature/windows"},
+		{testDir: "../../../test/restart"},
+		{testDir: "../../../test/acceptance"},
+		{testDir: "../../../test/feature/windows/event_logs"},
+		{testDir: "../../../test/feature/windows/eventid_logs"},
+		{testDir: "../../../test/feature/windows/event_regex_logs"},
+		{testDir: "../../../test/log_state/logfile"},
+		{testDir: "../../../test/log_state/windows_event_log"},
 		{
-			testDir: "../../../test/feature/windows",
-			targets: map[string]map[string]struct{}{"os": {"win-2025": {}}},
+			testDir: "../../../test/feature/windows/custom_start/userdata",
+			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
 		},
-		// {testDir: "../../../test/feature/windows"},
-		// {testDir: "../../../test/restart"},
-		// {testDir: "../../../test/acceptance"},
-		// {testDir: "../../../test/feature/windows/event_logs"},
-		// {testDir: "../../../test/feature/windows/eventid_logs"},
-		// {testDir: "../../../test/feature/windows/event_regex_logs"},
-		// {testDir: "../../../test/log_state/logfile"},
-		// {testDir: "../../../test/log_state/windows_event_log"},
-		// {
-		// 	testDir: "../../../test/feature/windows/custom_start/userdata",
-		// 	targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
-		// },
-		// {
-		// 	testDir: "../../../test/feature/windows/custom_start/ssm_start",
-		// 	targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
-		// },
-		// {testDir: "../../../test/ssm_document"},
+		{
+			testDir: "../../../test/feature/windows/custom_start/ssm_start",
+			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
+		},
+		{testDir: "../../../test/ssm_document"},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
@@ -380,11 +376,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
-		//Skipping test until efa team implements fix
-		//{
-		//	testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
-		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		//},
+		{
+			testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+		},
 		{
 			testDir: "./test/metric_value_benchmark", terraformDir: "terraform/eks/daemon/credentials/pod_identity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
