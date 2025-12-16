@@ -184,11 +184,6 @@ resource "null_resource" "integration_test_run" {
     destination = module.validator.instance_agent_config
   }
 
-  provisioner "file" {
-    source      = "${path.module}/setup-jmx-workload.ps1"
-    destination = "C:\\setup-jmx-workload.ps1"
-  }
-
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
@@ -222,6 +217,11 @@ resource "null_resource" "integration_test_run_validator" {
   provisioner "file" {
     source      = module.validator.validator_config
     destination = module.validator.instance_validator_config
+  }
+
+  provisioner "file" {
+    source      = "${path.module}/setup-jmx-workload.ps1"
+    destination = "C:\\setup-jmx-workload.ps1"
   }
 
   //runs validator and sets up prometheus java agent
