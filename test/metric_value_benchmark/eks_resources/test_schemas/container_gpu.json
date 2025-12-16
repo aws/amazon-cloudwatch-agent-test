@@ -26,6 +26,7 @@
     "container_gpu_temperature": {},
     "container_gpu_utilization": {},
     "container_gpu_memory_utilization": {},
+    "container_gpu_tensor_core_utilization": {},
     "Service":{}
   },
   "required": [
