@@ -115,7 +115,7 @@ while ($retries -lt $maxRetries) {
         }
     } catch {
         $retries++
-        Write-Output "Attempt $retries/$maxRetries: JMX endpoint not ready, retrying..."
+        Write-Output "Attempt ${retries}/${maxRetries}: JMX endpoint not ready, retrying..."
         
         if ($retries -lt $maxRetries) {
             Start-Sleep -s 10
