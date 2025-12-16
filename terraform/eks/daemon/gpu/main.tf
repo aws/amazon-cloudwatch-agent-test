@@ -581,6 +581,7 @@ resource "kubernetes_daemonset" "service" {
 # Template Files
 ##########################################
 locals {
+  aws_eks          = "aws eks --region ${var.region}"
   httpd_config     = "../../../../${var.test_dir}/resources/httpd.conf"
   httpd_ssl_config = "../../../../${var.test_dir}/resources/httpd-ssl.conf"
   cwagent_config   = fileexists("../../../../${var.test_dir}/resources/config.json") ? "../../../../${var.test_dir}/resources/config.json" : "../default_resources/default_amazon_cloudwatch_agent.json"
@@ -761,13 +762,34 @@ resource "kubernetes_daemonset" "nvidia_device_plugin" {
   }
 }
 
+# Set up kubectl configuration for EKS cluster
+resource "null_resource" "kubectl" {
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
+      ${local.aws_eks} list-clusters --output text
+      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
+    EOT
+  }
+}
+
 # Wait for NVIDIA device plugin to be truly ready
 resource "null_resource" "wait_for_nvidia_ready" {
-  depends_on = [kubernetes_daemonset.nvidia_device_plugin]
+  depends_on = [
+    null_resource.kubectl,
+    kubernetes_daemonset.nvidia_device_plugin
+  ]
   
   provisioner "local-exec" {
     command = <<-EOT
+      # Wait for NVIDIA device plugin to be ready
       kubectl wait --for=condition=ready pod -l name=nvidia-device-plugin-ds -n kube-system --timeout=300s
+      
+      # Verify GPU resources are available on nodes
       kubectl get nodes -o jsonpath='{.items[*].status.allocatable.nvidia\.com/gpu}' | grep -q "1"
     EOT
   }
