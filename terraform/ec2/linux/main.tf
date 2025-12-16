@@ -95,7 +95,7 @@ resource "null_resource" "integration_test_setup" {
         "echo waiting for IMDS to be fully disabled",
         "sleep 10",
         "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc",
-        "printf '[credentials]\\n  shared_credential_profile = \"default\"\\n  shared_credential_file = \"/home/ubuntu/.aws/credentials\"\\n' | sudo tee /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml>/dev/null",
+        "printf '[credentials]\\n  shared_credential_profile = \"default\"\\n  shared_credential_file = \"/home/${var.user}/.aws/credentials\"\\n' | sudo tee /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml>/dev/null",
         "echo setting environment variables for agent",
         "echo 'RUN_IN_AWS=false' | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/env-config",
         "echo 'INSTANCE_ID=${module.linux_common.cwagent_id}' | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/env-config",
