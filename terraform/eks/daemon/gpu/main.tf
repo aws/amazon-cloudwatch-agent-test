@@ -306,7 +306,7 @@ resource "kubernetes_daemonset" "exporter" {
             "-c",
           ]
           args = [
-            "/bin/echo 'DCGM_FI_DEV_GPU_UTIL{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_FB_FREE{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_FB_USED{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_FB_TOTAL{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_FB_USED_PERCENT{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_GPU_TEMP{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_DEV_POWER_USAGE{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1\nDCGM_FI_PROF_PIPE_TENSOR_ACTIVE{PodName=\"pod1\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"pod1-hash\"} 1' >> /usr/local/apache2/htdocs/metrics && sed -i -e \"s/hostname1/$HOST_NAME/g\" /usr/local/apache2/htdocs/metrics && httpd-foreground -k restart"
+            "/bin/echo 'DCGM_FI_DEV_GPU_UTIL{PodName=\"gpu-burn\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"gpu-burn-0\"} 1\nDCGM_FI_DEV_FB_FREE{PodName=\"gpu-burn\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"gpu-burn-0\"} 1\nDCGM_FI_DEV_FB_USED{PodName=\"gpu-burn\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"gpu-burn-0\"} 1\nDCGM_FI_DEV_FB_TOTAL{PodName=\"gpu-burn\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"gpu-burn-0\"} 1\nDCGM_FI_DEV_FB_USED_PERCENT{PodName=\"gpu-burn\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"gpu-burn-0\"} 1\nDCGM_FI_DEV_GPU_TEMP{PodName=\"gpu-burn\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"gpu-burn-0\"} 1\nDCGM_FI_DEV_POWER_USAGE{PodName=\"gpu-burn\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"gpu-burn-0\"} 1\nDCGM_FI_PROF_PIPE_TENSOR_ACTIVE{PodName=\"gpu-burn\",gpu=\"0\",UUID=\"uuid0\",device=\"nvidia0\",modelName=\"Tesla T4\",Hostname=\"hostname1\",container=\"main\",namespace=\"amazon-cloudwatch\",pod=\"gpu-burn-0\"} 1' >> /usr/local/apache2/htdocs/metrics && sed -i -e \"s/hostname1/$HOST_NAME/g\" /usr/local/apache2/htdocs/metrics && httpd-foreground -k restart"
           ]
           volume_mount {
             mount_path = "/etc/amazon-cloudwatch-observability-dcgm-cert"
@@ -761,13 +761,25 @@ resource "kubernetes_daemonset" "nvidia_device_plugin" {
   }
 }
 
-# GPU Burner Deployment - Real GPU workload for testing
-resource "kubernetes_deployment" "gpu_burner" {
+# Wait for NVIDIA device plugin to be truly ready
+resource "null_resource" "wait_for_nvidia_ready" {
+  depends_on = [kubernetes_daemonset.nvidia_device_plugin]
+  
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl wait --for=condition=ready pod -l name=nvidia-device-plugin-ds -n kube-system --timeout=300s
+      kubectl get nodes -o jsonpath='{.items[*].status.allocatable.nvidia\.com/gpu}' | grep -q "1"
+    EOT
+  }
+}
+
+# GPU Burner StatefulSet - Real GPU workload for testing with predictable pod names
+resource "kubernetes_stateful_set" "gpu_burner" {
   depends_on = [
     kubernetes_namespace.namespace,
     kubernetes_service_account.cwagentservice,
     aws_eks_node_group.this,
-    kubernetes_daemonset.nvidia_device_plugin,
+    null_resource.wait_for_nvidia_ready,
   ]
   metadata {
     name      = "gpu-burn"
@@ -777,7 +789,8 @@ resource "kubernetes_deployment" "gpu_burner" {
     }
   }
   spec {
-    replicas = 1
+    replicas     = 1
+    service_name = "gpu-burn-service"
     selector {
       match_labels = {
         app = "gpu-burn"
@@ -814,7 +827,7 @@ resource "kubernetes_deployment" "gpu_burner" {
 resource "kubernetes_service" "gpu_burner_service" {
   depends_on = [
     kubernetes_namespace.namespace,
-    kubernetes_deployment.gpu_burner,
+    kubernetes_stateful_set.gpu_burner,
   ]
   metadata {
     name      = "gpu-burn-service"
@@ -843,7 +856,7 @@ resource "null_resource" "validator" {
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
     kubernetes_daemonset.nvidia_device_plugin,
-    kubernetes_deployment.gpu_burner,
+    kubernetes_stateful_set.gpu_burner,
     kubernetes_service.gpu_burner_service,
   ]
 
