@@ -1,18 +1,26 @@
 # JMX Workload Setup Script
 # This script sets up JMX monitoring with Prometheus for CloudWatch Agent testing
 
+# Configuration - Update these variables to change JAR versions
+$JMX_AGENT_JAR = "jmx_prometheus_javaagent-0.12.0.jar"
+$SAMPLE_APP_JAR = "SampleJavaApplication-1.0-SNAPSHOT.jar"
+$WORKLOAD_DIR = "C:\jmx_workload"
+$JMX_PORT = "9404"
+
 Write-Output "Starting JMX workload setup..."
+Write-Output "JMX Agent JAR: $JMX_AGENT_JAR"
+Write-Output "Sample App JAR: $SAMPLE_APP_JAR"
 
 # Create working directory
-New-Item -ItemType Directory -Path "C:\jmx_workload" -Force
-Write-Output "Created JMX workload directory"
+New-Item -ItemType Directory -Path $WORKLOAD_DIR -Force
+Write-Output "Created JMX workload directory: $WORKLOAD_DIR"
 
 # Create JMX exporter config file
 @"
 ---
 rules:
 - pattern: ".*"
-"@ | Set-Content -Path "C:\jmx_workload\exporter_config.yaml"
+"@ | Set-Content -Path "$WORKLOAD_DIR\exporter_config.yaml"
 Write-Output "Created JMX exporter config file"
 
 # Create Prometheus config file
@@ -24,8 +32,8 @@ scrape_configs:
   - job_name: jmx-exporter
     sample_limit: 10000
     file_sd_configs:
-      - files: [ "C:\\jmx_workload\\prometheus_file_sd.yaml" ]
-"@ | Set-Content -Path "C:\jmx_workload\prometheus.yaml"
+      - files: [ "$($WORKLOAD_DIR.Replace('\', '\\'))\\prometheus_file_sd.yaml" ]
+"@ | Set-Content -Path "$WORKLOAD_DIR\prometheus.yaml"
 Write-Output "Created Prometheus config file"
 
 # Get instance metadata and create Prometheus service discovery file
@@ -35,11 +43,11 @@ $InstanceId = Invoke-RestMethod -Uri 'http://169.254.169.254/latest/meta-data/in
 
 @"
 - targets:
-  - 127.0.0.1:9404
+  - 127.0.0.1:$JMX_PORT
   labels:
     application: test-app
     InstanceId: $InstanceId
-"@ | Set-Content -Path "C:\jmx_workload\prometheus_file_sd.yaml"
+"@ | Set-Content -Path "$WORKLOAD_DIR\prometheus_file_sd.yaml"
 Write-Output "Created Prometheus service discovery file with Instance ID: $InstanceId"
 
 # Download JMX Prometheus agent and sample Java application
@@ -48,16 +56,16 @@ Write-Output "Downloading JMX Prometheus agent and sample application..."
 
 try {
     (New-Object Net.WebClient).DownloadFile(
-        'https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/jmx_prometheus_javaagent-0.12.0.jar',
-        'C:\jmx_workload\jmx_prometheus_javaagent-0.12.0.jar'
+        "https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/$JMX_AGENT_JAR",
+        "$WORKLOAD_DIR\$JMX_AGENT_JAR"
     )
-    Write-Output "Downloaded JMX Prometheus agent"
+    Write-Output "Downloaded JMX Prometheus agent: $JMX_AGENT_JAR"
     
     (New-Object Net.WebClient).DownloadFile(
-        'https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/SampleJavaApplication-1.0-SNAPSHOT.jar',
-        'C:\jmx_workload\SampleJavaApplication-1.0-SNAPSHOT.jar'
+        "https://cwagent-prometheus-test.s3-us-west-2.amazonaws.com/$SAMPLE_APP_JAR",
+        "$WORKLOAD_DIR\$SAMPLE_APP_JAR"
     )
-    Write-Output "Downloaded sample Java application"
+    Write-Output "Downloaded sample Java application: $SAMPLE_APP_JAR"
 } catch {
     Write-Error "Failed to download files: $_"
     exit 1
@@ -83,8 +91,8 @@ Write-Output "Using Java at: $javaPath"
 
 # Start the Java application with JMX agent
 $javaArgs = @(
-    "-javaagent:C:\jmx_workload\jmx_prometheus_javaagent-0.12.0.jar=9404:C:\jmx_workload\exporter_config.yaml",
-    "-cp", "C:\jmx_workload\SampleJavaApplication-1.0-SNAPSHOT.jar",
+    "-javaagent:$WORKLOAD_DIR\$JMX_AGENT_JAR=$JMX_PORT:$WORKLOAD_DIR\exporter_config.yaml",
+    "-cp", "$WORKLOAD_DIR\$SAMPLE_APP_JAR",
     "com.gubupt.sample.app.App"
 )
 
@@ -107,7 +115,7 @@ $maxRetries = 5
 
 while ($retries -lt $maxRetries) {
     try {
-        $response = Invoke-WebRequest -Uri "http://localhost:9404/metrics" -UseBasicParsing -TimeoutSec 5
+        $response = Invoke-WebRequest -Uri "http://localhost:$JMX_PORT/metrics" -UseBasicParsing -TimeoutSec 5
         
         if ($response.StatusCode -eq 200 -and $response.Content -match 'jvm_threads_current') {
             Write-Output "JMX metrics endpoint is working and jvm_threads_current is available"
