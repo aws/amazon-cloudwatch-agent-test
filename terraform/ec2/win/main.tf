@@ -309,7 +309,7 @@ resource "null_resource" "integration_test_run_validator_custom_start" {
     inline = [
       "set AWS_REGION=${var.region}",
       "C:\\validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
-      "powershell.exe \"& 'C:ProgramFiles\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -m ec2 -a status\"",
+      "powershell.exe \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -m ec2 -a status\"",
       "C:\\validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
     ]
   }
