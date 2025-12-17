@@ -77,6 +77,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_linux_wd_nvidia": {
 		{testDir: "./test/workload_discovery"},
 	},
+	"ec2_linux_onprem": {
+		{testDir: "./test/cloudwatchlogs"},
+	},
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
@@ -433,26 +436,12 @@ var partitionTests = map[string]partition{
 	},
 }
 
-func copyAllEC2LinuxTestForOnpremTesting() {
-	/* Some tests need to be fixed in order to run in both environment, so for now for PoC, run one that works.
-	   testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
-	*/
-	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
-		{
-			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-	}
-}
-
 func main() {
 	useE2E := flag.Bool("e2e", false, "Use e2e test matrix generation")
 	flag.Parse()
 
 	configMap := testTypeToTestConfig
-	if !*useE2E {
-		copyAllEC2LinuxTestForOnpremTesting()
-	} else {
+	if *useE2E {
 		configMap = testTypeToTestConfigE2E
 	}
 
