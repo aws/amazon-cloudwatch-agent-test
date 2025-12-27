@@ -135,7 +135,7 @@ resource "null_resource" "validator_windows" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
-      "${local.install_validator} --validator-config=${module.validator.instance_validator_config}--preparation-mode=true",
+      "${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       local.start_command,
       "${local.install_validator} --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
     ]
