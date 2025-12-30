@@ -6,6 +6,9 @@
 package metric_value_benchmark
 
 import (
+	"os"
+	"strings"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
@@ -13,6 +16,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+)
+
+const (
+	rhel10  = "Red Hat Enterprise Linux release 10"
+	rocky10 = "Rocky Linux release 10"
 )
 
 type NetTestRunner struct {
@@ -35,9 +43,12 @@ func (m *NetTestRunner) Validate() status.TestGroupResult {
 }
 
 func (m *NetTestRunner) SetupBeforeAgentRun() error {
-	err := common.RunCommands([]string{"sudo systemctl restart docker"})
-	if err != nil {
-		return err
+	networkInterface := getNetworkInterface()
+	if networkInterface == "docker0" {
+		err := common.RunCommands([]string{"sudo systemctl restart docker"})
+		if err != nil {
+			return err
+		}
 	}
 	return m.SetUpConfig()
 }
@@ -56,6 +67,16 @@ func (m *NetTestRunner) GetMeasuredMetrics() []string {
 		"net_err_out", "net_packets_sent", "net_packets_recv"}
 }
 
+func getNetworkInterface() string {
+	if data, err := os.ReadFile("/etc/redhat-release"); err == nil {
+		for _, release := range []string{rhel10, rocky10} {
+			if strings.Contains(string(data), release) {
+				return "ens5"
+			}
+		}
+	}
+	return "docker0"
+}
 func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
 		Name:   metricName,
@@ -65,7 +86,7 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "interface",
-			Value: dimension.ExpectedDimensionValue{aws.String("docker0")},
+			Value: dimension.ExpectedDimensionValue{aws.String(getNetworkInterface())},
 		},
 		{
 			Key:   "InstanceId",

@@ -145,9 +145,15 @@ func setUpLocalstackConfig(metadata *environment.MetaData) {
 	}
 
 	// generate localstack crt files
-	writeFile(localstackConfigPath+originalPem, readFile(metadata.CaCertPath))
-	writeFile(localstackConfigPath+combinePem, readFile(metadata.CaCertPath))
-	writeFile(localstackConfigPath+combinePem, readFile(localstackConfigPath+snakeOilPem))
+	systemCA := readFile(metadata.CaCertPath)
+	localstackCA := readFile(localstackConfigPath + snakeOilPem)
+
+	// original.pem = system CA bundle only
+	writeFile(localstackConfigPath+originalPem, systemCA)
+
+	// combine.pem = system CA bundle + LocalStack cert
+	combinedCA := append(systemCA, localstackCA...)
+	writeFile(localstackConfigPath+combinePem, combinedCA)
 
 	// copy crt files to agent directory
 	writeFile(tmpDirectory+originalPem, readFile(localstackConfigPath+originalPem))

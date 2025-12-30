@@ -23,11 +23,12 @@ const (
 	agentWindowsLogPath     = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
 	agentCopiedConfigPath   = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Configs\\file_config.json"
 	translatedTomlPath      = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.toml"
+	workloadDiscoveryPath   = "C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\workload-discovery.exe"
 
 	agentWindowsRuntime = 1 * time.Minute
 )
 
-var filePermissionsPath = []string{agentWindowsLogPath, agentCopiedConfigPath, translatedTomlPath}
+var filePermissionsPath = []string{agentWindowsLogPath, agentCopiedConfigPath, translatedTomlPath, workloadDiscoveryPath}
 
 func Validate() error {
 	log.Printf("testing windows filepermissions")

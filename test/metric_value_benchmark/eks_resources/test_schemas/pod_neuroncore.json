@@ -17,6 +17,7 @@
     "Service": {},
     "Timestamp": {},
     "Type": {},
+    "UltraServer": {},
     "Version": {},
     "availability_zone": {},
     "kubernetes": {},
@@ -43,6 +44,7 @@
     "Service",
     "Timestamp",
     "Type",
+    "UltraServer",
     "Version",
     "CloudWatchMetrics"
   ]

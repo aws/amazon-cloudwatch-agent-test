@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,7 +40,22 @@ type dimToMetrics struct {
 
 func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDimsToMetrics map[string][]string) []status.TestResult {
 	var results []status.TestResult
+	log.Printf("Expected %d dimension groups", len(expectedDimsToMetrics))
+	for dims, metrics := range expectedDimsToMetrics {
+		log.Printf("Expected dimension group: %s with %d metrics", dims, len(metrics))
+		for _, metricName := range metrics {
+			log.Printf("  Expected metric: %s", metricName)
+		}
+	}
+
 	dimsToMetrics := getMetricsInClusterDimension(env, metricFilter)
+	log.Printf("Found %d dimension groups", len(dimsToMetrics))
+	for _, dtm := range dimsToMetrics {
+		log.Printf("Dimension group: %s with %d metrics", dtm.dimStr, len(dtm.metrics))
+		for metricName, dimSets := range dtm.metrics {
+			log.Printf("  Metric: %s has %d dimension sets", metricName, len(dimSets))
+		}
+	}
 	for dims, metrics := range expectedDimsToMetrics {
 		var actual map[string][][]types.Dimension
 		// find matching dim set from fetched and processed metric-dims groups
@@ -63,10 +80,10 @@ func ValidateMetrics(env *environment.MetaData, metricFilter string, expectedDim
 			// this is to prevent panic with rand.Intn when metrics are not yet ready in a cluster
 			if _, ok := actual[m]; !ok {
 				results = append(results, status.TestResult{
-					Name:   dims,
+					Name:   m + "/" + dims,
 					Status: status.FAILED,
 				})
-				log.Printf("ValidateMetrics failed with missing metric: %s", m)
+				log.Printf("ValidateMetrics failed with missing metric: %s, dimensions: %s", m, dims)
 				continue
 			}
 			// pick a random dimension set to test metric data OR test all dimension sets which might be overkill
@@ -233,7 +250,7 @@ func ValidateLogs(env *environment.MetaData) status.TestResult {
 					//log.Printf("eksClusterType is: %s", eksClusterType.Type)
 					jsonSchema, ok := eks_resources.EksClusterValidationMap[eksClusterType.Type]
 					if !ok {
-						return "", errors.New("invalid cluster type provided")
+						return "", errors.New("invalid type provided: " + eksClusterType.Type)
 					}
 					return jsonSchema, nil
 				}),
@@ -294,5 +311,67 @@ func ValidateLogsFrequency(env *environment.MetaData) status.TestResult {
 	}
 
 	testResult.Status = status.SUCCESSFUL
+	return testResult
+}
+
+func ValidateNeuronCoreUtilizationValuesLogs(env *environment.MetaData) status.TestResult {
+	const core = "core"
+	testResult := status.TestResult{
+		Name:   "emf-logs-neuron-core-utilization",
+		Status: status.SUCCESSFUL,
+	}
+	var testFailed = false
+
+	end := time.Now().Add(-2 * time.Minute).Truncate(time.Minute)
+	start := end.Add(-1 * time.Minute)
+	group := fmt.Sprintf("/aws/containerinsights/%s/performance", env.EKSClusterName)
+
+	// need to get the instances used for the EKS cluster
+	eKSInstances, err := awsservice.GetEKSInstances(env.EKSClusterName)
+	if err != nil {
+		log.Println("failed to get EKS instances", err)
+		testResult.Status = status.FAILED
+		return testResult
+	}
+
+	for _, instance := range eKSInstances {
+		stream := *instance.InstanceName
+		coreMap, err := awsservice.GetNeuronCoreUtilizationPerCore(group, stream, &start, &end)
+
+		if err != nil {
+			log.Printf("log validation (%s/%s) failed: %v, start time : %s, error is : %s", group, stream, err, start, err)
+			testResult.Status = status.FAILED
+			return testResult
+		}
+
+		// We expect 32 Cores from the current test, anything less or more is a bug
+		if len(coreMap) != 32 {
+			log.Printf("32 Cores not found")
+			var coreMapStr strings.Builder
+			for k, v := range coreMap {
+				coreMapStr.WriteString(fmt.Sprintf("%s: %f, ", k, v))
+			}
+			log.Printf("coreMap: %s", coreMapStr.String())
+			testResult.Status = status.FAILED
+			return testResult
+		}
+
+		// Check if coreMap has the expected core utilization values
+		for coreKey, actualValue := range coreMap {
+			if strings.HasPrefix(coreKey, core) {
+				coreNumStr := strings.TrimPrefix(coreKey, core)
+				expectedValue, err := strconv.Atoi(coreNumStr)
+				if err != nil || math.Round(actualValue) != float64(expectedValue) {
+					log.Printf("Core utilization validation failed: expected %s:%d, got %v",
+						coreKey, expectedValue, actualValue)
+					testFailed = true
+				}
+			}
+		}
+	}
+
+	if testFailed {
+		testResult.Status = status.FAILED
+	}
 	return testResult
 }

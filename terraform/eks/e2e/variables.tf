@@ -23,7 +23,7 @@ variable "nodes" {
 
 variable "ami_type" {
   type    = string
-  default = "AL2_x86_64"
+  default = "AL2023_x86_64_STANDARD"
 }
 
 variable "instance_type" {
@@ -123,4 +123,20 @@ variable "eks_installation_type" {
     condition     = contains(["HELM_CHART", "EKS_ADDON"], var.eks_installation_type)
     error_message = "eks_installation_type must be either 'HELM_CHART' or 'EKS_ADDON'"
   }
+}
+
+variable "vpc_name" {
+  type        = string
+  default     = ""
+  description = "Name of an existing VPC to use. If empty, uses default VPC. For IPv6 testing, use 'ipv6-eks-integ-test/VPC'"
+}
+
+variable "ip_family" {
+  type    = string
+  default = "ipv4"
+  validation {
+    condition     = contains(["ipv4", "ipv6"], var.ip_family)
+    error_message = "ip_family must be either 'ipv4' or 'ipv6'"
+  }
+  description = "IP family for the EKS cluster. Use 'ipv6' for dual-stack clusters"
 }

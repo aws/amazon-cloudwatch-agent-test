@@ -242,7 +242,8 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating metrics/logs"
       cd ../../..
-      go test ${var.test_dir} -timeout 0 \
+      go test ${var.test_dir} \
+      -timeout 1h \
       -computeType=ECS \
       -ecsLaunchType=EC2 \
       -ecsDeploymentStrategy=DAEMON \

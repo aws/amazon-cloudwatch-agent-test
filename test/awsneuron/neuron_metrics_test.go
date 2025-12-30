@@ -21,9 +21,30 @@ const (
 
 var expectedDimsToMetrics = map[string][]string{
 	"ClusterName": {
-		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageConstants, NodeNeuronCoreMemUsageModel, NodeNeuronCoreMemUsageScratchpad,
-		NodeNeuronCoreMemUsageRuntime, NodeNeuronCoreMemUsageTensors, NodeNeuronCoreMemUsageTotal, NodeNeuronDeviceHwEccEvents,
-		NodeExecutionErrorsTotal, NodeNeuronDeviceRuntimeMemoryUsed, NodeNeuronExecutionLatency,
+		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageTotal, NodeNeuronCoreMemUsageConstants,
+		NodeNeuronCoreMemUsageModel, NodeNeuronCoreMemUsageScratchpad, NodeNeuronCoreMemUsageRuntime,
+		NodeNeuronCoreMemUsageTensors, NodeExecutionErrorsTotal, NodeNeuronDeviceRuntimeMemoryUsed,
+		NodeNeuronExecutionLatency, NodeNeuronDeviceHwEccEvents,
+	},
+	"ClusterName-UltraServer": {
+		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageTotal, NodeNeuronCoreMemUsageConstants,
+		NodeNeuronCoreMemUsageModel, NodeNeuronCoreMemUsageScratchpad, NodeNeuronCoreMemUsageRuntime,
+		NodeNeuronCoreMemUsageTensors, NodeExecutionErrorsTotal, NodeNeuronDeviceRuntimeMemoryUsed,
+		NodeNeuronExecutionLatency, NodeNeuronDeviceHwEccEvents,
+	},
+	"ClusterName-InstanceId-NodeName": {
+		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageTotal, NodeNeuronCoreMemUsageConstants,
+		NodeNeuronCoreMemUsageModel, NodeNeuronCoreMemUsageScratchpad, NodeNeuronCoreMemUsageRuntime,
+		NodeNeuronCoreMemUsageTensors, NodeExecutionErrorsTotal, NodeNeuronDeviceRuntimeMemoryUsed,
+		NodeNeuronExecutionLatency, NodeNeuronDeviceHwEccEvents,
+	},
+	"ClusterName-InstanceId-InstanceType-NeuronCore-NeuronDevice-NodeName": {
+		NodeNeuronCoreUtil, NodeNeuronCoreMemUsageTotal, NodeNeuronCoreMemUsageConstants,
+		NodeNeuronCoreMemUsageModel, NodeNeuronCoreMemUsageScratchpad, NodeNeuronCoreMemUsageRuntime,
+		NodeNeuronCoreMemUsageTensors,
+	},
+	"ClusterName-InstanceId-NeuronDevice-NodeName": {
+		NodeNeuronDeviceHwEccEvents,
 	},
 }
 
@@ -40,6 +61,7 @@ func (t *AwsNeuronTestRunner) Validate() status.TestGroupResult {
 	testResults = append(testResults, metric.ValidateMetrics(t.env, awsNeuronMetricIndicator, expectedDimsToMetrics)...)
 	testResults = append(testResults, metric.ValidateLogs(t.env))
 	testResults = append(testResults, metric.ValidateLogsFrequency(t.env))
+	testResults = append(testResults, metric.ValidateNeuronCoreUtilizationValuesLogs(t.env))
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
 		TestResults: testResults,

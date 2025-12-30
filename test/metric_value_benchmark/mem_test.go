@@ -42,7 +42,7 @@ func (m *MemTestRunner) GetAgentConfigFileName() string {
 func (m *MemTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"mem_active", "mem_available", "mem_available_percent", "mem_buffered", "mem_cached",
-		"mem_free", "mem_inactive", "mem_total", "mem_used", "mem_used_percent"}
+		"mem_free", "mem_inactive", "mem_shared", "mem_total", "mem_used", "mem_used_percent"}
 }
 
 func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {

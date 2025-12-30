@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: traffic-generator-instrumentation-default-env
+spec:
+  containers:
+    - name: traffic-generator
+      image: alpine
+      command: ["/bin/sh", "-c"]
+      args: ["apk add --no-cache curl && while true; do curl -s http://petclinic-service:8080/client-call; sleep 1; done"]

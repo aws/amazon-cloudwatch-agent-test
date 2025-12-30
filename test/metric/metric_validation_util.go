@@ -4,6 +4,7 @@
 package metric
 
 import (
+	"fmt"
 	"log"
 	"math"
 )
@@ -16,17 +17,19 @@ var CpuMetrics = []string{"cpu_time_active", "cpu_time_guest", "cpu_time_guest_n
 // IsAllValuesGreaterThanOrEqualToExpectedValue will compare if the given array is larger than 0
 // and check if the average value for the array is not la
 // https://github.com/aws/amazon-cloudwatch-agent-test/pull/162
-func IsAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []float64, expectedValue float64) bool {
+func IsAllValuesGreaterThanOrEqualToExpectedValueWithError(metricName string, values []float64, expectedValue float64) error {
 	if len(values) == 0 {
-		log.Printf("No values found %v", metricName)
-		return false
+		err := fmt.Errorf("No values found %v", metricName)
+		log.Println(err)
+		return err
 	}
 
 	totalSum := 0.0
 	for _, value := range values {
 		if value < 0 && expectedValue >= 0 {
-			log.Printf("Values are not all greater than or equal to zero for %s", metricName)
-			return false
+			err := fmt.Errorf("Values are not all greater than or equal to zero for %s", metricName)
+			log.Println(err)
+			return err
 		}
 		totalSum += value
 	}
@@ -35,14 +38,23 @@ func IsAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []fl
 	upperBoundValue := expectedValue * (1 + metricErrorBound)
 	lowerBoundValue := expectedValue * (1 - metricErrorBound)
 	if expectedValue > 0 && (metricAverageValue > upperBoundValue || metricAverageValue < lowerBoundValue) {
-		log.Printf("The average value %f for metric %s are not within bound [%f, %f]",
+		err := fmt.Errorf("The average value %f for metric %s are not within bound [%f, %f]",
 			metricAverageValue, metricName, lowerBoundValue, upperBoundValue)
-		return false
+		log.Println(err)
+		return err
 	}
 
 	log.Printf("The average value %f for metric %s are within bound [%f, %f]",
 		metricAverageValue, metricName, lowerBoundValue, upperBoundValue)
-	return true
+	return nil
+}
+
+// IsAllValuesGreaterThanOrEqualToExpectedValue will compare if the given array is larger than 0
+// and check if the average value for the array is not la
+// https://github.com/aws/amazon-cloudwatch-agent-test/pull/162
+func IsAllValuesGreaterThanOrEqualToExpectedValue(metricName string, values []float64, expectedValue float64) bool {
+	err := IsAllValuesGreaterThanOrEqualToExpectedValueWithError(metricName, values, expectedValue)
+	return err == nil
 }
 
 func FloatEqualWithEpsilon(a, b, epsilon float64) bool {

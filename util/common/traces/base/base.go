@@ -6,6 +6,7 @@ package base
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -90,32 +91,65 @@ func TraceTest(t *testing.T, traceTest TraceTestConfig) error {
 func SegmentValidationTest(t *testing.T, traceTest TraceTestConfig, segments []types.Segment) error {
 	t.Helper()
 	cfg := traceTest.Generator.GetGeneratorConfig()
+	return validateSegments(segments, cfg.Annotations, cfg.Metadata)
+}
+
+// ValidateTraceSegments validates traces by fetching and validating segments
+func ValidateTraceSegments(startTime, endTime time.Time, annotations map[string]interface{}, metadata map[string]map[string]interface{}) error {
+	traceIDs, err := awsservice.GetTraceIDs(startTime, endTime, awsservice.FilterExpression(annotations))
+	if err != nil {
+		return fmt.Errorf("unable to get trace IDs: %w", err)
+	}
+	if len(traceIDs) == 0 {
+		return fmt.Errorf("no traces found")
+	}
+
+	segments, err := awsservice.GetSegments(traceIDs)
+	if err != nil {
+		return fmt.Errorf("unable to get segments: %w", err)
+	}
+
+	return validateSegments(segments, annotations, metadata)
+}
+
+// validateSegments contains the core validation logic
+func validateSegments(segments []types.Segment, expectedAnnotations map[string]interface{}, expectedMetadata map[string]map[string]interface{}) error {
 	for _, segment := range segments {
 		var result map[string]interface{}
-		require.NoError(t, json.Unmarshal([]byte(*segment.Document), &result))
-		if _, ok := result["parent_id"]; ok {
-			// skip subsegments
-			continue
+		if err := json.Unmarshal([]byte(*segment.Document), &result); err != nil {
+			return err
 		}
+		if _, ok := result["parent_id"]; ok {
+			continue // skip subsegments
+		}
+
 		annotations, ok := result["annotations"]
-		assert.True(t, ok, "missing annotations")
-		assert.True(t, reflect.DeepEqual(annotations, cfg.Annotations), "mismatching annotations")
-		metadataByNamespace, ok := result["metadata"].(map[string]interface{})
-		assert.True(t, ok, "missing metadata")
-		for namespace, wantMetadata := range cfg.Metadata {
-			var gotMetadata map[string]interface{}
-			gotMetadata, ok = metadataByNamespace[namespace].(map[string]interface{})
-			assert.Truef(t, ok, "missing metadata in namespace: %s", namespace)
-			for key, wantValue := range wantMetadata {
-				var gotValue interface{}
-				gotValue, ok = gotMetadata[key]
-				assert.Truef(t, ok, "missing expected metadata key: %s", key)
-				assert.Truef(t, reflect.DeepEqual(gotValue, wantValue), "mismatching values for key (%s):\ngot\n\t%v\nwant\n\t%v", key, gotValue, wantValue)
+		if !ok || !reflect.DeepEqual(annotations, expectedAnnotations) {
+			return fmt.Errorf("annotation validation failed")
+		}
+
+		if expectedMetadata != nil {
+			metadataByNamespace, ok := result["metadata"].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("missing metadata")
+			}
+
+			for namespace, wantMetadata := range expectedMetadata {
+				gotMetadata, ok := metadataByNamespace[namespace].(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("missing metadata in namespace: %s", namespace)
+				}
+
+				for key, wantValue := range wantMetadata {
+					gotValue, ok := gotMetadata[key]
+					if !ok || !reflect.DeepEqual(gotValue, wantValue) {
+						return fmt.Errorf("metadata validation failed for key: %s", key)
+					}
+				}
 			}
 		}
 	}
 	return nil
-
 }
 func GenerateTraces(traceTest TraceTestConfig) error {
 	common.CopyFile(traceTest.AgentConfigPath, common.ConfigOutputPath)

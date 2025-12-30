@@ -10,3 +10,9 @@ scrape_configs:
         target_label: 'my_name'
         action: replace
         regex: '(.*)'
+      - source_labels: ['prom_type','include']
+        separator: '@'
+        regex: '^(.*)@(.*)$'
+        target_label: 'my_replacement_test'
+        action: replace
+        replacement: '${2}/$1'

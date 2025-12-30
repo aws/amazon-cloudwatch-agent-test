@@ -39,7 +39,9 @@
       "CWAgent-Usage-invalid-prometheus-label": "Prometheus-Monitoring-Workload-Demo",
       "ECS_PROMETHEUS_EXPORTER_PORT": "9121",
       "job": "prometheus-redis",
-      "app_x": "redis_exporter"
+      "other_job": "custom-docker-label-job-name",
+      "app_x": "redis_exporter",
+      "empty": ""
     },
     "logConfiguration": {
       "logDriver": "awslogs",

@@ -1,0 +1,14 @@
+# Receivers that agent needs to tests
+receivers: ["system"]
+
+#Test case name
+test_case: "win_restart"
+validate_type: "feature"
+data_type: "logs"
+number_monitored_logs: 1
+values_per_minute: "2"
+agent_collection_period: 60
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+metric_namespace: "CloudWatchAgentWinFeature"
+metric_validation:
+log_validation:
