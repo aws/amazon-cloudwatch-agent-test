@@ -77,6 +77,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_linux_wd_nvidia": {
 		{testDir: "./test/workload_discovery"},
 	},
+	"ec2_linux_onprem": {
+		{testDir: "./test/cloudwatchlogs"},
+	},
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
@@ -158,6 +161,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{
 			testDir:      "./test/assume_role",
+			terraformDir: "terraform/ec2/assume_role",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir:      "./test/credential_chain",
 			terraformDir: "terraform/ec2/assume_role",
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
@@ -360,6 +368,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 		{
+			testDir: "./test/gpu_high_frequency_metrics", terraformDir: "terraform/eks/daemon/gpu",
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
 			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
@@ -367,11 +379,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
-		//Skipping test until efa team implements fix
-		//{
-		//	testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
-		//	targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
-		//},
+		{
+			testDir: "./test/efa", terraformDir: "terraform/eks/daemon/efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+		},
 		{
 			testDir: "./test/metric_value_benchmark", terraformDir: "terraform/eks/daemon/credentials/pod_identity",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
@@ -424,26 +436,12 @@ var partitionTests = map[string]partition{
 	},
 }
 
-func copyAllEC2LinuxTestForOnpremTesting() {
-	/* Some tests need to be fixed in order to run in both environment, so for now for PoC, run one that works.
-	   testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
-	*/
-	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
-		{
-			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-	}
-}
-
 func main() {
 	useE2E := flag.Bool("e2e", false, "Use e2e test matrix generation")
 	flag.Parse()
 
 	configMap := testTypeToTestConfig
-	if !*useE2E {
-		copyAllEC2LinuxTestForOnpremTesting()
-	} else {
+	if *useE2E {
 		configMap = testTypeToTestConfigE2E
 	}
 
@@ -545,7 +543,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 					continue
 				}
 			}
-			
+
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}

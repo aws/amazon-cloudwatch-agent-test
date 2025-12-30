@@ -20,9 +20,7 @@ import (
 )
 
 const (
-	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentConfigDirectory = "agent_configs"
-	extraConfigDirectory = "extra_configs"
 )
 
 type ITestRunner interface {
@@ -37,6 +35,8 @@ type ITestRunner interface {
 	SSMParameterName() string
 	SetUpConfig() error
 	SetAgentConfig(config AgentConfig)
+	RegisterCleanup(f func() error)
+	Cleanup()
 }
 
 type TestRunner struct {
@@ -46,6 +46,7 @@ type TestRunner struct {
 type BaseTestRunner struct {
 	DimensionFactory dimension.Factory
 	AgentConfig      AgentConfig
+	CleanupFns       []func() error
 }
 
 type AgentConfig struct {
@@ -61,7 +62,7 @@ func (t *BaseTestRunner) SetupBeforeAgentRun() error {
 func (t *BaseTestRunner) SetUpConfig() error {
 	agentConfigPath := filepath.Join(agentConfigDirectory, t.AgentConfig.ConfigFileName)
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
-	common.CopyFile(agentConfigPath, configOutputPath)
+	common.CopyFile(agentConfigPath, common.ConfigOutputPath)
 	if t.AgentConfig.UseSSM {
 		log.Printf("Starting agent from ssm parameter %s", agentConfigPath)
 		agentConfigByteArray, err := os.ReadFile(agentConfigPath)
@@ -100,7 +101,21 @@ func (t *BaseTestRunner) SetAgentConfig(agentConfig AgentConfig) {
 	t.AgentConfig = agentConfig
 }
 
+func (t *BaseTestRunner) RegisterCleanup(f func() error) {
+	t.CleanupFns = append(t.CleanupFns, f)
+}
+
+func (t *BaseTestRunner) Cleanup() {
+	for _, cleanupFn := range t.CleanupFns {
+		if err := cleanupFn(); err != nil {
+			log.Printf("Failed to cleanup test runner: %v", err)
+		}
+	}
+	t.CleanupFns = nil
+}
+
 func (t *TestRunner) Run() status.TestGroupResult {
+	defer t.TestRunner.Cleanup()
 	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)
 	err := t.RunAgent()
@@ -135,7 +150,7 @@ func (t *TestRunner) RunAgent() error {
 	if t.TestRunner.UseSSM() {
 		err = common.StartAgent(t.TestRunner.SSMParameterName(), false, true)
 	} else {
-		err = common.StartAgent(configOutputPath, false, false)
+		err = common.StartAgent(common.ConfigOutputPath, false, false)
 	}
 
 	if err != nil {
@@ -152,7 +167,7 @@ func (t *TestRunner) RunAgent() error {
 	log.Printf("Agent has been running for : %s", runningDuration.String())
 	common.StopAgent()
 
-	err = common.DeleteFile(configOutputPath)
+	err = common.DeleteFile(common.ConfigOutputPath)
 	if err != nil {
 		return fmt.Errorf("Failed to cleanup config file after agent run due to: %w", err)
 	}

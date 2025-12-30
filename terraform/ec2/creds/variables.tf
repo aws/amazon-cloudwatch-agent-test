@@ -122,3 +122,9 @@ variable "agent_start" {
   type        = string
   default     = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c "
 }
+
+variable "is_onprem" {
+  description = "Whether to run in on-premises mode instead of EC2 mode"
+  type        = bool
+  default     = false
+}
