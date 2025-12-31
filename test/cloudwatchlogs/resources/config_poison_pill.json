@@ -1,0 +1,30 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/access_granted_test.log",
+            "log_group_name": "log-stream-ple-access-granted-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_test.log",
+            "log_group_name": "aws-restricted-log-group-name-log-stream-ple-access-denied-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          }
+        ]
+      }
+    },
+    "force_flush_interval": 5000,
+    "concurrency": 4
+  }
+}
