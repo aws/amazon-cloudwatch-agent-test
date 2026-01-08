@@ -23,12 +23,12 @@ variable "cwagent_image_tag" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.28"
+  default = "1.34"
 }
 
 variable "ami_type" {
   type    = string
-  default = "AL2_x86_64"
+  default = "AL2_x86_64_GPU"
 }
 
 variable "instance_type" {

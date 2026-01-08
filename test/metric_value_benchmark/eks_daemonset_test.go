@@ -136,6 +136,11 @@ func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
 		"node_network_total_bytes",
 		"node_number_of_running_containers",
 		"node_number_of_running_pods",
+		"persistent_volume_count",
+		"persistent_volume_claim_count",
+		"persistent_volume_claim_status_bound",
+		"persistent_volume_claim_status_lost",
+		"persistent_volume_claim_status_pending",
 		"pod_cpu_reserved_capacity",
 		"pod_cpu_utilization",
 		"pod_cpu_utilization_over_pod_limit",
@@ -148,7 +153,7 @@ func (e *EKSDaemonTestRunner) GetMeasuredMetrics() []string {
 	}
 }
 
-func (t *EKSDaemonTestRunner) SetAgentConfig(config test_runner.AgentConfig) {}
+func (t *EKSDaemonTestRunner) SetAgentConfig(_ test_runner.AgentConfig) {}
 
 func (e *EKSDaemonTestRunner) SetupAfterAgentRun() error {
 	return nil
