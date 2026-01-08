@@ -56,6 +56,16 @@ func Validate() error {
 		return err
 	}
 
+	// Ensure SSM document is cleaned up regardless of test outcome
+	defer func() {
+		log.Printf("Cleaning up SSM document: %s", documentName)
+		if deleteErr := awsservice.DeleteSSMDocument(documentName); deleteErr != nil {
+			log.Printf("Warning: Failed to delete SSM document %s: %v", documentName, deleteErr)
+		} else {
+			log.Printf("Successfully deleted SSM document: %s", documentName)
+		}
+	}()
+
 	// Test start action
 	startTest := testCase{
 		parameters:           map[string][]string{paramAction: {actionStart}},
@@ -98,6 +108,7 @@ func Validate() error {
 	if err := awsservice.PutStringParameter(agentConfigFile1, agentConfig1); err != nil {
 		return err
 	}
+
 	configureTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                        {actionConfigure},
@@ -117,6 +128,17 @@ func Validate() error {
 	if err := awsservice.PutStringParameter(agentConfigFile2, agentConfig2); err != nil {
 		return err
 	}
+
+	// Ensure SSM parameters are cleaned up
+	defer func() {
+		for _, paramName := range []string{agentConfigFile1, agentConfigFile2} {
+			log.Printf("Cleaning up SSM parameter: %s", paramName)
+			if deleteErr := awsservice.DeleteParameter(paramName); deleteErr != nil {
+				log.Printf("Warning: Failed to delete SSM parameter %s: %v", paramName, deleteErr)
+			}
+		}
+	}()
+
 	appendTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                        {actionConfigureAppend},
@@ -128,12 +150,6 @@ func Validate() error {
 		expectedConfigStatus: configStatusConfigured,
 	}
 	if err := RunAndVerifySSMAction(documentName, instanceIds, appendTest); err != nil {
-		return err
-	}
-
-	log.Printf("Deleting SSM document: %s", documentName)
-	err = awsservice.DeleteSSMDocument(documentName)
-	if err != nil {
 		return err
 	}
 
