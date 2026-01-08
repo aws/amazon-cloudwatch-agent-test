@@ -3,7 +3,7 @@
     "k8sVersion": "1.31",
     "ami": "AL2_x86_64_GPU",
     "terraform_dir": "terraform/eks/addon/gpu",
-    "test_dir": "../../../../test/gpu",
+    "test_dir": "./test/gpu",
     "instanceType":"g4dn.xlarge"
   }
 ]
