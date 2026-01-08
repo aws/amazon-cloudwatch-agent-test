@@ -56,6 +56,16 @@ func Validate() error {
 		return err
 	}
 
+	// Ensure SSM document is cleaned up regardless of test outcome
+	defer func() {
+		log.Printf("Cleaning up SSM document: %s", documentName)
+		if deleteErr := awsservice.DeleteSSMDocument(documentName); deleteErr != nil {
+			log.Printf("Warning: Failed to delete SSM document %s: %v", documentName, deleteErr)
+		} else {
+			log.Printf("Successfully deleted SSM document: %s", documentName)
+		}
+	}()
+
 	// Test start action
 	startTest := testCase{
 		parameters:           map[string][]string{paramAction: {actionStart}},
@@ -98,6 +108,14 @@ func Validate() error {
 	if err := awsservice.PutStringParameter(agentConfigFile1, agentConfig1); err != nil {
 		return err
 	}
+	// Ensure SSM parameter is cleaned up
+	defer func() {
+		log.Printf("Cleaning up SSM parameter: %s", agentConfigFile1)
+		if deleteErr := awsservice.DeleteParameter(agentConfigFile1); deleteErr != nil {
+			log.Printf("Warning: Failed to delete SSM parameter %s: %v", agentConfigFile1, deleteErr)
+		}
+	}()
+
 	configureTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                        {actionConfigure},
@@ -117,6 +135,14 @@ func Validate() error {
 	if err := awsservice.PutStringParameter(agentConfigFile2, agentConfig2); err != nil {
 		return err
 	}
+	// Ensure SSM parameter is cleaned up
+	defer func() {
+		log.Printf("Cleaning up SSM parameter: %s", agentConfigFile2)
+		if deleteErr := awsservice.DeleteParameter(agentConfigFile2); deleteErr != nil {
+			log.Printf("Warning: Failed to delete SSM parameter %s: %v", agentConfigFile2, deleteErr)
+		}
+	}()
+
 	appendTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                        {actionConfigureAppend},
@@ -128,12 +154,6 @@ func Validate() error {
 		expectedConfigStatus: configStatusConfigured,
 	}
 	if err := RunAndVerifySSMAction(documentName, instanceIds, appendTest); err != nil {
-		return err
-	}
-
-	log.Printf("Deleting SSM document: %s", documentName)
-	err = awsservice.DeleteSSMDocument(documentName)
-	if err != nil {
 		return err
 	}
 
