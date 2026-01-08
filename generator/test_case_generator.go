@@ -48,6 +48,7 @@ type testConfig struct {
 	testDir       string
 	terraformDir  string
 	instanceType  string
+	ami           string
 	runMockServer bool
 	selinuxBranch string
 	// define target matrix field as set(s)
@@ -329,7 +330,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"eks_addon": {
 		{
-			testDir:      "../../../../test/gpu",
+			testDir:      "./test/gpu",
 			terraformDir: "terraform/eks/addon/gpu",
 		},
 	},
@@ -338,6 +339,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/metric_value_benchmark",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "g4dn.xlarge",
+			ami:          "AL2_x86_64_GPU",
 		},
 		{
 			testDir:      "./test/metric_value_benchmark",
@@ -365,11 +367,15 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
 		{
 			testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+			ami:          "AL2_x86_64_GPU",
 		},
 		{
 			testDir: "./test/gpu_high_frequency_metrics", terraformDir: "terraform/eks/daemon/gpu",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+			ami:          "AL2_x86_64_GPU",
 		},
 		{
 			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
@@ -525,6 +531,9 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			}
 			if testConfig.instanceType != "" {
 				row.InstanceType = testConfig.instanceType
+			}
+			if testConfig.ami != "" {
+				row.Ami = testConfig.ami
 			}
 			// Apply architecture-specific instance type if configured
 			if testConfig.instanceTypeByArch != nil {
