@@ -108,13 +108,6 @@ func Validate() error {
 	if err := awsservice.PutStringParameter(agentConfigFile1, agentConfig1); err != nil {
 		return err
 	}
-	// Ensure SSM parameter is cleaned up
-	defer func() {
-		log.Printf("Cleaning up SSM parameter: %s", agentConfigFile1)
-		if deleteErr := awsservice.DeleteParameter(agentConfigFile1); deleteErr != nil {
-			log.Printf("Warning: Failed to delete SSM parameter %s: %v", agentConfigFile1, deleteErr)
-		}
-	}()
 
 	configureTest := testCase{
 		parameters: map[string][]string{
@@ -135,11 +128,14 @@ func Validate() error {
 	if err := awsservice.PutStringParameter(agentConfigFile2, agentConfig2); err != nil {
 		return err
 	}
-	// Ensure SSM parameter is cleaned up
+
+	// Ensure SSM parameters are cleaned up
 	defer func() {
-		log.Printf("Cleaning up SSM parameter: %s", agentConfigFile2)
-		if deleteErr := awsservice.DeleteParameter(agentConfigFile2); deleteErr != nil {
-			log.Printf("Warning: Failed to delete SSM parameter %s: %v", agentConfigFile2, deleteErr)
+		for _, paramName := range []string{agentConfigFile1, agentConfigFile2} {
+			log.Printf("Cleaning up SSM parameter: %s", paramName)
+			if deleteErr := awsservice.DeleteParameter(paramName); deleteErr != nil {
+				log.Printf("Warning: Failed to delete SSM parameter %s: %v", paramName, deleteErr)
+			}
 		}
 	}()
 
