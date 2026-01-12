@@ -55,7 +55,7 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids               = [module.basic_components.security_group]
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
-  # Provide a user_data script to disable SSH password authentication
+  # Provide a user_data script to disable SSH password authentication and install SSM agent
   user_data = <<-EOT
     #!/bin/bash
     # Disable password authentication for SSH
@@ -69,6 +69,33 @@ resource "aws_instance" "cwagent" {
 
     # Restart SSH service to apply changes
     sudo systemctl restart sshd
+
+    # Install SSM agent if not already installed (needed for RHEL 10, Rocky Linux 9, and other newer distros)
+    if ! systemctl list-unit-files | grep -q amazon-ssm-agent; then
+      echo "SSM agent not found, installing..."
+      # Detect architecture
+      ARCH=$(uname -m)
+      if [ "$ARCH" = "x86_64" ]; then
+        SSM_ARCH="amd64"
+      elif [ "$ARCH" = "aarch64" ]; then
+        SSM_ARCH="arm64"
+      else
+        SSM_ARCH="amd64"
+      fi
+      
+      # Try to install SSM agent using dnf/yum first (for RHEL/Rocky/Fedora)
+      if command -v dnf &> /dev/null; then
+        sudo dnf install -y "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_$SSM_ARCH/amazon-ssm-agent.rpm" || true
+      elif command -v yum &> /dev/null; then
+        sudo yum install -y "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_$SSM_ARCH/amazon-ssm-agent.rpm" || true
+      fi
+    fi
+
+    # Ensure SSM agent is enabled and started
+    sudo systemctl enable amazon-ssm-agent || true
+    sudo systemctl start amazon-ssm-agent || true
+    echo "SSM agent status:"
+    sudo systemctl status amazon-ssm-agent --no-pager || true
   EOT
 
   root_block_device {

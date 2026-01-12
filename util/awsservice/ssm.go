@@ -6,6 +6,7 @@ package awsservice
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -35,10 +36,14 @@ func RunSSMDocument(name string, instanceIds []string, parameters map[string][]s
 
 // WaitForSSMReady waits for instances to be registered and online with SSM.
 // This is necessary because there's a delay between EC2 instance launch and SSM agent registration.
+// Increased timeout to 10 minutes for newer OS distributions (RHEL 10, Rocky Linux 9) that may take longer.
 func WaitForSSMReady(instanceIds []string, timeout time.Duration) error {
+	log.Printf("[SSM-READY] Starting SSM readiness check for instances %v with timeout %v", instanceIds, timeout)
 	deadline := time.Now().Add(timeout)
+	checkCount := 0
 
 	for time.Now().Before(deadline) {
+		checkCount++
 		allReady := true
 		for _, instanceId := range instanceIds {
 			result, err := SsmClient.DescribeInstanceInformation(ctx, &ssm.DescribeInstanceInformationInput{
@@ -50,11 +55,13 @@ func WaitForSSMReady(instanceIds []string, timeout time.Duration) error {
 				},
 			})
 			if err != nil {
+				log.Printf("[SSM-READY] Check #%d: Error querying SSM for instance %s: %v", checkCount, instanceId, err)
 				allReady = false
 				break
 			}
 
 			if len(result.InstanceInformationList) == 0 {
+				log.Printf("[SSM-READY] Check #%d: Instance %s not yet registered with SSM", checkCount, instanceId)
 				allReady = false
 				break
 			}
@@ -62,12 +69,15 @@ func WaitForSSMReady(instanceIds []string, timeout time.Duration) error {
 			// Check if the instance is online
 			info := result.InstanceInformationList[0]
 			if info.PingStatus != types.PingStatusOnline {
+				log.Printf("[SSM-READY] Check #%d: Instance %s registered but PingStatus=%s (waiting for Online)", checkCount, instanceId, info.PingStatus)
 				allReady = false
 				break
 			}
+			log.Printf("[SSM-READY] Check #%d: Instance %s is Online", checkCount, instanceId)
 		}
 
 		if allReady {
+			log.Printf("[SSM-READY] All instances are SSM-ready after %d checks", checkCount)
 			return nil
 		}
 

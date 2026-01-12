@@ -183,10 +183,14 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 }
 
 func getBaseDir() string {
+	var baseDir string
 	if runtime.GOOS == "windows" {
-		return "C:\\Users\\Administrator\\amazon-cloudwatch-agent-test\\test\\app_signals\\resources\\traces"
+		baseDir = filepath.Join("C:", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "traces")
+	} else {
+		baseDir = filepath.Join("/", "Users", "ec2-user", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "traces")
 	}
-	return "/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/traces"
+	fmt.Printf("[UPDATED-PATH-FIX-2025] getBaseDir using filepath.Join for traces, OS=%s, path=%s\n", runtime.GOOS, baseDir)
+	return baseDir
 }
 
 func generateTraceID() [16]byte {
@@ -336,7 +340,8 @@ func processFile(filePath string, startTime int64) error {
 }
 
 func SendAppSignalMetrics(duration time.Duration) error {
-	// The bash script to be executed asynchronously.
+	fmt.Println("[UPDATED-PATH-FIX-2025] SendAppSignalMetrics using fixed filepath.Join paths")
+
 	dir, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Error getting current directory:", err)
@@ -345,14 +350,15 @@ func SendAppSignalMetrics(duration time.Duration) error {
 	fmt.Println("Current Directory:", dir)
 
 	// Determine the base directory for the files based on the OS
+	// NOTE: Using filepath.Join("C:", ...) instead of filepath.Join("C:\\", ...) to avoid invalid C:\/ paths
 	var baseDir string
 	if runtime.GOOS == "windows" {
-		baseDir = filepath.Join("C:\\", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
+		baseDir = filepath.Join("C:", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
 	} else { // assuming macOS or Unix-like system
 		baseDir = filepath.Join("/", "Users", "ec2-user", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
 	}
 
-	fmt.Println("Base directory:", baseDir)
+	fmt.Printf("[UPDATED-PATH-FIX-2025] SendAppSignalMetrics OS=%s, baseDir=%s\n", runtime.GOOS, baseDir)
 
 	for i := 0; i < int(duration/SleepDuration); i++ {
 		if err != nil {

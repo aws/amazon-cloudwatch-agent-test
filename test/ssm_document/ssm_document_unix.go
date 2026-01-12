@@ -44,8 +44,9 @@ func Validate() error {
 	instanceIds := []string{metadata.InstanceId}
 
 	// Wait for SSM agent to be ready before running tests
+	// Using 10 minute timeout for newer OS distributions (RHEL 10, Rocky Linux 9) that may take longer
 	log.Printf("Waiting for instance %s to be SSM-ready...", metadata.InstanceId)
-	if err := awsservice.WaitForSSMReady(instanceIds, 5*time.Minute); err != nil {
+	if err := awsservice.WaitForSSMReady(instanceIds, 10*time.Minute); err != nil {
 		return fmt.Errorf("instance not SSM-ready: %v", err)
 	}
 	log.Println("Instance is SSM-ready")
