@@ -499,13 +499,27 @@ resource "kubernetes_pod" "test_pod_with_pvc" {
   }
 }
 
+# Wait for PVC to be bound before running tests
+resource "null_resource" "wait_for_pvc_bound" {
+  depends_on = [kubernetes_pod.test_pod_with_pvc]
+  
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Waiting for PVC to be bound..."
+      kubectl wait --for=condition=Bound pvc/test-pvc-${module.common.testing_id} -n amazon-cloudwatch --timeout=300s
+      echo "PVC is now bound, waiting additional 30 seconds for metrics to be generated..."
+      sleep 30
+    EOT
+  }
+}
+
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
     kubernetes_daemonset.service,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
-    kubernetes_pod.test_pod_with_pvc,
+    null_resource.wait_for_pvc_bound,
   ]
   provisioner "local-exec" {
     command = <<-EOT

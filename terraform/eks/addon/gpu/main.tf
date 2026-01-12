@@ -333,6 +333,11 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<-EOT
+      echo "Waiting for GPU workload to be ready and generating metrics..."
+      kubectl wait --for=condition=available deployment/gpu-burn -n amazon-cloudwatch --timeout=300s
+      echo "GPU workload is ready, waiting additional 60 seconds for metrics to be generated..."
+      sleep 60
+      
       cd ../../../..
       i=0
       while [ $i -lt 10 ]; do
