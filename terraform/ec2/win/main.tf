@@ -231,18 +231,27 @@ resource "null_resource" "integration_test_run_validator" {
       # Setup JMX workload using PowerShell script
       "powershell.exe -ExecutionPolicy Bypass -File C:\\setup-jmx-workload.ps1",
       "set AWS_REGION=${var.region}",
+      "cd C:\\Users\\Administrator",
+      "echo Current directory before git clone:",
+      "cd",
+      "if exist amazon-cloudwatch-agent-test rmdir /s /q amazon-cloudwatch-agent-test",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
+      "echo Current directory after cd:",
+      "cd",
+      "echo Listing test resources:",
       "dir test\\app_signals\\resources\\traces",
       "dir test\\app_signals\\resources\\metrics",
       "go test ./test/sanity -p 1 -v",
-      "cd ..",
+      "cd C:\\Users\\Administrator",
 
       # Retry logic for amazon-cloudwatch-agent-ctl.ps1 with timeout
       "powershell.exe -Command \"$maxRetries = 50; $retryCount = 0; while (-not (Test-Path 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1') -and $retryCount -lt $maxRetries) { Start-Sleep -s 10; $retryCount++ }; if ($retryCount -eq $maxRetries) { throw 'Timeout: amazon-cloudwatch-agent-ctl.ps1 not found' }\"",
 
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
       "cd C:\\Users\\Administrator\\amazon-cloudwatch-agent-test",
+      "echo Current directory before validator:",
+      "cd",
       "C:\\validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
     ]
   }
