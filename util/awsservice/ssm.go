@@ -86,7 +86,7 @@ func DeleteSSMDocument(name string) error {
 }
 
 func WaitForCommandCompletion(commandId, instanceId string) (*ssm.ListCommandInvocationsOutput, error) {
-	for i := 0; i < 12; i++ {
+	for i := 0; i < 60; i++ {
 		time.Sleep(5 * time.Second)
 		result, err := SsmClient.ListCommandInvocations(ctx, &ssm.ListCommandInvocationsInput{
 			CommandId:  aws.String(commandId),
@@ -104,7 +104,7 @@ func WaitForCommandCompletion(commandId, instanceId string) (*ssm.ListCommandInv
 			}
 		}
 	}
-	return nil, errors.New("commands did not complete within 1 minute")
+	return nil, errors.New("commands did not complete within 5 minutes")
 }
 
 func PutStringParameter(name, value string) error {

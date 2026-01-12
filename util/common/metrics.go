@@ -347,7 +347,7 @@ func SendAppSignalMetrics(duration time.Duration) error {
 	// Determine the base directory for the files based on the OS
 	var baseDir string
 	if runtime.GOOS == "windows" {
-		baseDir = filepath.Join("C:", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
+		baseDir = filepath.Join("C:\\", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
 	} else { // assuming macOS or Unix-like system
 		baseDir = filepath.Join("/", "Users", "ec2-user", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
 	}

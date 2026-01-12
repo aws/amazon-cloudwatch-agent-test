@@ -130,6 +130,7 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
       "echo clone and install agent",
+      "sudo rm -rf amazon-cloudwatch-agent-test",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
       "aws s3 cp s3://${local.binary_uri} .",
@@ -165,6 +166,7 @@ resource "null_resource" "integration_test_run" {
       var.is_selinux_test ? [
         "sudo setenforce 1",
         "echo Running SELinux test setup...",
+        "sudo rm -rf amazon-cloudwatch-agent-selinux",
         "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "sudo chmod +x amazon_cloudwatch_agent.sh",

@@ -402,7 +402,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir:      "./test/liscsi",
 			terraformDir: "terraform/eks/daemon/liscsi",
-			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceTypeByArch: map[string]string{
+				"amd64": "i3en.large",
+				"arm64": "i4g.large",
+			},
+			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 	},
 	"eks_deployment": {

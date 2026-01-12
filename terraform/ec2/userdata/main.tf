@@ -77,6 +77,7 @@ resource "null_resource" "integration_test" {
       var.is_selinux_test ? [
         "sudo setenforce 1",
         "echo Running SELinux test setup...",
+        "sudo rm -rf amazon-cloudwatch-agent-selinux",
         "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
@@ -92,6 +93,7 @@ resource "null_resource" "integration_test" {
         "export AWS_REGION=${var.region}",
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
         "echo run integration test",
+        "sudo rm -rf amazon-cloudwatch-agent-test",
         "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
         "echo waiting for test directory...",
         "timeout 120 bash -c 'until [ -f /home/ec2-user/amazon-cloudwatch-agent-test/test/sanity/resources/verifyUnixCtlScript.sh ]; do echo \"Waiting for verifyUnixCtlScript.sh...\"; sleep 2; done'",

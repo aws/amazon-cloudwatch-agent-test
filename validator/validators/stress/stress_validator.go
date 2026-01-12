@@ -140,7 +140,7 @@ var (
 				"net_packets_sent":     float64(120),
 			},
 			"prometheus": {
-				"procstat_cpu_usage":   float64(13),
+				"procstat_cpu_usage":   float64(25),
 				"procstat_memory_rss":  float64(130000000),
 				"procstat_memory_swap": float64(0),
 				"procstat_memory_vms":  float64(1400000000),
@@ -221,8 +221,8 @@ var (
 				"procstat_memory_vms":  float64(2000000000),
 				"procstat_memory_data": float64(600000000),
 				"procstat_num_fds":     float64(18),
-				"net_bytes_sent":       float64(1700000),
-				"net_packets_sent":     float64(1400),
+				"net_bytes_sent":       float64(2500000),
+				"net_packets_sent":     float64(2100),
 			},
 			"collectd": {
 				"procstat_cpu_usage":   float64(220),
