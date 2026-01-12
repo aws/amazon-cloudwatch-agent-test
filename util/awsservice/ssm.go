@@ -86,6 +86,8 @@ func DeleteSSMDocument(name string) error {
 }
 
 func WaitForCommandCompletion(commandId, instanceId string) (*ssm.ListCommandInvocationsOutput, error) {
+	// Increased from 12 iterations (1 minute) to 60 iterations (5 minutes) to handle slower SSM agent startup
+	// Note: Test binaries need to be rebuilt for this change to take effect in CI/CD environments
 	for i := 0; i < 60; i++ {
 		time.Sleep(5 * time.Second)
 		result, err := SsmClient.ListCommandInvocations(ctx, &ssm.ListCommandInvocationsInput{
