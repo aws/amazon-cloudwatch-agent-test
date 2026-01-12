@@ -187,6 +187,7 @@ resource "null_resource" "integration_test_run" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
+      "cd C:\\Users\\Administrator\\amazon-cloudwatch-agent-test",
       "C:\\validator.exe --test-name=${var.test_dir} --computeType=EC2 --instanceId=${aws_instance.cwagent.id} --bucket=${var.s3_bucket}"
     ]
   }
@@ -232,6 +233,8 @@ resource "null_resource" "integration_test_run_validator" {
       "set AWS_REGION=${var.region}",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
+      "dir test\\app_signals\\resources\\traces",
+      "dir test\\app_signals\\resources\\metrics",
       "go test ./test/sanity -p 1 -v",
       "cd ..",
 
@@ -239,6 +242,7 @@ resource "null_resource" "integration_test_run_validator" {
       "powershell.exe -Command \"$maxRetries = 50; $retryCount = 0; while (-not (Test-Path 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1') -and $retryCount -lt $maxRetries) { Start-Sleep -s 10; $retryCount++ }; if ($retryCount -eq $maxRetries) { throw 'Timeout: amazon-cloudwatch-agent-ctl.ps1 not found' }\"",
 
       var.use_ssm ? "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c ssm:${local.ssm_parameter_name}\"" : "powershell \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}\"",
+      "cd C:\\Users\\Administrator\\amazon-cloudwatch-agent-test",
       "C:\\validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
     ]
   }
@@ -308,6 +312,7 @@ resource "null_resource" "integration_test_run_validator_custom_start" {
   provisioner "remote-exec" {
     inline = [
       "set AWS_REGION=${var.region}",
+      "cd C:\\Users\\Administrator\\amazon-cloudwatch-agent-test",
       "C:\\validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
       "powershell.exe \"& 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1' -m ec2 -a status\"",
       "C:\\validator.exe --validator-config=${module.validator.instance_validator_config} --preparation-mode=false"
