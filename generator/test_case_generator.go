@@ -442,8 +442,8 @@ var partitionTests = map[string]partition{
 		ami:        []string{},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
+				targets: map[string]map[string]struct{}{"arc": {"arm64": {}}},
 				instanceTypeByArch: map[string]string{
-					"amd64": "i3en.large",
 					"arm64": "r6gd.large", // r6gd.large has local NVMe storage
 				},
 			},
@@ -455,8 +455,8 @@ var partitionTests = map[string]partition{
 		ami:        []string{},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
+				targets: map[string]map[string]struct{}{"arc": {"arm64": {}}},
 				instanceTypeByArch: map[string]string{
-					"amd64": "i3en.large",
 					"arm64": "r6gd.large", // r6gd.large has local NVMe storage
 				},
 			},
@@ -539,6 +539,9 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 					}
 					if override.instanceType != "" {
 						testConfig.instanceType = override.instanceType
+					}
+					if override.targets != nil {
+						testConfig.targets = override.targets
 					}
 				}
 			}
