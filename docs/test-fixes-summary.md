@@ -18,22 +18,24 @@ ITAR/China partitions only run with `cloudwatch-agent-integration-test-aarch64-a
 ### Fix Applied
 **File:** `generator/test_case_generator.go`
 
-Changed arm64 instance type from `i4g.large` to `c6gd.large`:
+Changed arm64 instance type from `i4g.large` to `r6gd.large`:
 ```go
 {
     testDir: "./test/metric_value_benchmark",
     instanceTypeByArch: map[string]string{
         "amd64": "i3en.large",
-        "arm64": "c6gd.large", // i4g/m6g not available in GovCloud/China regions, c6gd has NVMe storage
+        "arm64": "r6gd.large", // r6gd available in GovCloud/China, has NVMe storage
     },
 },
 ```
 
-`c6gd.large` is available in GovCloud and China regions, and includes NVMe instance storage which may be needed for the benchmark test.
+`r6gd.large` is available in GovCloud and China regions, and includes NVMe instance storage needed for the benchmark test.
 
 ---
 
-## Issue 2: SELinux Tests - Go Version Incompatibility
+## Issue 2: SELinux Tests - Go Version Incompatibility (REVERTED)
+
+### Status: REVERTED - Fix caused more test failures
 
 ### Error
 ```
@@ -41,38 +43,14 @@ Changed arm64 instance type from `i4g.large` to `c6gd.large`:
 /usr/lib/golang/src/internal/runtime/syscall/asm_linux_amd64.s:27: ABI selector only permitted when compiling runtime
 ```
 
-Additional error after initial fix:
-```
-error executing "/tmp/terraform_527675858.sh": wait: remote command exited without exit status or exit signal
-```
-
 ### Root Cause
-1. SELinux AMIs (`CloudwatchSelinuxAL2v4*`, `CloudwatchSelinuxAL2023*`) don't have Go pre-installed at `/usr/local/go`. Tests fall back to system Go at `/usr/lib/golang` (Go 1.18/1.19) which is incompatible with test code requiring Go 1.20+.
+SELinux AMIs don't have Go pre-installed at `/usr/local/go`. Tests fall back to system Go at `/usr/lib/golang` (Go 1.18/1.19) which is incompatible with test code requiring Go 1.20+.
 
-2. Initial fix had multi-line `if` statements split across terraform array elements, which doesn't work - each array element runs as a separate command.
+### Attempted Fix (REVERTED)
+Added Go 1.22.5 installation for SELinux tests in terraform setup files. However, this fix caused more tests to fail, so all changes were reverted using `git checkout origin/main`.
 
-### Fix Applied
-Added Go 1.22.5 installation for SELinux tests in terraform setup, with commands combined into single lines.
-
-**Files Modified:**
-- `terraform/ec2/linux/main.tf`
-- `terraform/ec2/assume_role/main.tf`
-- `terraform/ec2/creds/main.tf`
-- `terraform/ec2/userdata/main.tf`
-
-**Code Added (conditional on `is_selinux_test`):**
-```hcl
-var.is_selinux_test ? [
-  "echo 'Installing Go for SELinux test...'",
-  "if [ ! -f /usr/local/go/bin/go ]; then echo 'Go not found at /usr/local/go, installing...'; curl -sL --retry 3 --retry-delay 5 https://go.dev/dl/go1.22.5.linux-amd64.tar.gz -o /tmp/go.tar.gz && sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tar.gz && rm /tmp/go.tar.gz; fi",
-  "echo 'Go version:' && /usr/local/go/bin/go version",
-] : [],
-```
-
-Key changes:
-- Combined `if` block into single line with `&&` chaining
-- Added `--retry 3 --retry-delay 5` to curl for network resilience
-- Removed `go` from yum install in `assume_role/main.tf` (was installing old system Go)
+### Current Status
+This issue remains unresolved. The SELinux tests continue to fail due to Go version incompatibility. A different approach is needed.
 
 ---
 

@@ -126,29 +126,16 @@ resource "null_resource" "integration_test_setup" {
 
   # Prepare Integration Test
   provisioner "remote-exec" {
-    inline = concat(
-      [
-        "echo sha ${var.cwa_github_sha}",
-        "sudo cloud-init status --wait",
-      ],
-
-      # Install Go for SELinux tests (SELinux AMIs don't have Go pre-installed at /usr/local/go)
-      var.is_selinux_test ? [
-        "echo 'Installing Go for SELinux test...'",
-        "if [ ! -f /usr/local/go/bin/go ]; then echo 'Go not found at /usr/local/go, installing...'; curl -sL --retry 3 --retry-delay 5 https://go.dev/dl/go1.22.5.linux-amd64.tar.gz -o /tmp/go.tar.gz && sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tar.gz && rm /tmp/go.tar.gz; fi",
-        "echo 'Go version:' && /usr/local/go/bin/go version",
-      ] : [],
-
-      [
-        "echo clone and install agent",
-        "sudo rm -rf amazon-cloudwatch-agent-test",
-        "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-        "cd amazon-cloudwatch-agent-test",
-        "aws s3 cp s3://${local.binary_uri} .",
-        "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-        var.install_agent,
-      ]
-    )
+    inline = [
+      "echo sha ${var.cwa_github_sha}",
+      "sudo cloud-init status --wait",
+      "echo clone and install agent",
+      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "cd amazon-cloudwatch-agent-test",
+      "aws s3 cp s3://${local.binary_uri} .",
+      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
+      var.install_agent,
+    ]
   }
 
   depends_on = [
@@ -178,7 +165,6 @@ resource "null_resource" "integration_test_run" {
       var.is_selinux_test ? [
         "sudo setenforce 1",
         "echo Running SELinux test setup...",
-        "sudo rm -rf amazon-cloudwatch-agent-selinux",
         "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
         "sudo chmod +x amazon_cloudwatch_agent.sh",
