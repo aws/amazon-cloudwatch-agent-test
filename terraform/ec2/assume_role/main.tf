@@ -170,16 +170,25 @@ resource "null_resource" "integration_test_setup" {
 
   # Prepare Integration Test
   provisioner "remote-exec" {
-    inline = [
-      "echo sha ${var.cwa_github_sha}",
-      "sudo cloud-init status --wait",
-      "echo clone and install agent",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
-      "cd amazon-cloudwatch-agent-test",
-      "aws s3 cp s3://${local.binary_uri} .",
-      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
-      var.install_agent,
-    ]
+    inline = concat(
+      # For SELinux tests, temporarily set permissive mode during setup
+      # SELinux will be set to enforcing in integration_test_run after policy is installed
+      var.is_selinux_test ? [
+        "echo 'SELinux test detected, setting permissive mode for setup...'",
+        "sudo setenforce 0 || true",
+      ] : [],
+
+      [
+        "echo sha ${var.cwa_github_sha}",
+        "sudo cloud-init status --wait",
+        "echo clone and install agent",
+        "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+        "cd amazon-cloudwatch-agent-test",
+        "aws s3 cp s3://${local.binary_uri} .",
+        "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
+        var.install_agent,
+      ]
+    )
   }
 
   depends_on = [
