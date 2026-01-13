@@ -230,7 +230,16 @@ resource "null_resource" "integration_test_run_validator" {
       # Setup JMX workload using PowerShell script
       "powershell.exe -ExecutionPolicy Bypass -File C:\\setup-jmx-workload.ps1",
       "set AWS_REGION=${var.region}",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+
+      # Configure git to use OpenSSL instead of Windows schannel to avoid SSL/TLS handshake failures
+      "git config --global http.sslBackend openssl",
+
+      # Git clone with retry logic and error checking
+      "powershell.exe -ExecutionPolicy Bypass -Command \"$maxRetries = 5; $retryCount = 0; $success = $false; while ($retryCount -lt $maxRetries -and -not $success) { $retryCount++; Write-Host \\\"Git clone attempt $retryCount of $maxRetries...\\\"; $result = git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} 2>&1; if ($LASTEXITCODE -eq 0 -and (Test-Path 'amazon-cloudwatch-agent-test')) { $success = $true; Write-Host 'Git clone succeeded'; } else { Write-Host \\\"Git clone failed: $result\\\"; if ($retryCount -lt $maxRetries) { $sleepTime = [math]::Pow(2, $retryCount) * 5; Write-Host \\\"Retrying in $sleepTime seconds...\\\"; Start-Sleep -Seconds $sleepTime; } } }; if (-not $success) { Write-Host 'ERROR: Git clone failed after all retries'; exit 1 }\"",
+
+      # Verify the clone succeeded before proceeding
+      "if not exist amazon-cloudwatch-agent-test (echo ERROR: amazon-cloudwatch-agent-test directory not found after git clone & exit 1)",
+
       "cd amazon-cloudwatch-agent-test",
       "go test ./test/sanity -p 1 -v",
       "cd ..",

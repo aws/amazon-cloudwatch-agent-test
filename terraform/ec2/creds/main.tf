@@ -137,10 +137,18 @@ resource "null_resource" "integration_test_setup" {
       [
         "echo sha ${var.cwa_github_sha}",
         "sudo cloud-init status --wait",
-        "echo clone and install agent",
-        "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+        "echo clone ${var.github_test_repo} branch ${var.github_test_repo_branch} and install agent",
+        # check for vendor directory specifically instead of overall test repo to avoid issues with SELinux
+        "if [ ! -d amazon-cloudwatch-agent-test/vendor ]; then",
+        "echo 'Vendor directory (test repo dependencies) not found, cloning...'",
+        "sudo rm -rf amazon-cloudwatch-agent-test",
+        "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q",
+        "else",
+        "echo 'Test repo already exists, skipping clone'",
+        "fi",
         "cd amazon-cloudwatch-agent-test",
-        "aws s3 cp s3://${local.binary_uri} .",
+        "git rev-parse --short HEAD",
+        "aws s3 cp --no-progress s3://${local.binary_uri} .",
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
         var.install_agent,
       ]
@@ -168,16 +176,23 @@ resource "null_resource" "integration_test_run" {
     inline = concat(
       [
         "echo Preparing environment...",
+        "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
       ],
 
       # SELinux test setup (if enabled)
       var.is_selinux_test ? [
-        "sudo setenforce 1",
+        "sudo yum install amazon-cloudwatch-agent -y",
         "echo Running SELinux test setup...",
+        "sudo yum install selinux-policy selinux-policy-targeted policycoreutils-python-utils selinux-policy-devel -y",
+        "sudo setenforce 1",
+        "echo below is either Permissive/Enforcing",
+        "sudo getenforce",
+        "sudo rm -rf amazon-cloudwatch-agent-selinux",
         "git clone --branch ${var.selinux_branch} https://github.com/aws/amazon-cloudwatch-agent-selinux.git",
         "cd amazon-cloudwatch-agent-selinux",
-        "sudo chmod +x amazon_cloudwatch_agent.sh",
-        "sudo ./amazon_cloudwatch_agent.sh -y"
+        "cat amazon_cloudwatch_agent.te",
+        "chmod +x ./amazon_cloudwatch_agent.sh",
+        "sudo ./amazon_cloudwatch_agent.sh -y",
         ] : [
         "echo SELinux test not enabled"
       ],
@@ -189,7 +204,6 @@ resource "null_resource" "integration_test_run" {
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
         "echo run integration test",
         "cd ~/amazon-cloudwatch-agent-test",
-        "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "echo assume role arn is ${aws_iam_role.assume_role.arn}",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id} -v"
