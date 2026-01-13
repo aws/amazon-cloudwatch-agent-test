@@ -133,8 +133,13 @@ func getEc2TestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 		if !runningOnSELinux {
 			ec2TestRunners = append(ec2TestRunners,
 				&test_runner.TestRunner{TestRunner: &DiskIOEBSTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
-				&test_runner.TestRunner{TestRunner: &DiskIOInstanceStoreTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			)
+			// Only add Instance Store test if the instance has local storage
+			if common.HasInstanceStore() {
+				ec2TestRunners = append(ec2TestRunners,
+					&test_runner.TestRunner{TestRunner: &DiskIOInstanceStoreTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+				)
+			}
 		}
 	}
 	return ec2TestRunners

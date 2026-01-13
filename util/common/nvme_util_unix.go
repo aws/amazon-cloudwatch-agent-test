@@ -45,6 +45,12 @@ func GetAnyEBSVolumeID() (string, error) {
 	return "", fmt.Errorf("could not find an EBS NVMe device")
 }
 
+// HasInstanceStore returns true if the instance has NVMe instance store devices available.
+func HasInstanceStore() bool {
+	_, err := GetAnyInstanceStoreSerialID()
+	return err == nil
+}
+
 // GetAnyInstanceStoreSerialID returns the serial ID of the first NVMe instance store device found.
 func GetAnyInstanceStoreSerialID() (string, error) {
 	entries, err := os.ReadDir(sysClassNvmeDirPath)
