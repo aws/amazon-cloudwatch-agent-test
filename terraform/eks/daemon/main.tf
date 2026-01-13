@@ -480,6 +480,7 @@ resource "kubernetes_pod" "test_pod_with_pvc" {
     }
   }
   spec {
+    termination_grace_period_seconds = 0
     container {
       name    = "test-container"
       image   = "busybox"
