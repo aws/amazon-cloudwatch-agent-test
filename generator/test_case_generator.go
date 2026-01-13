@@ -439,10 +439,9 @@ var partitionTests = map[string]partition{
 	"itar": {
 		configName: "_itar",
 		tests:      []string{testTypeKeyEc2Linux},
-		ami:        []string{},
+		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
-				targets: map[string]map[string]struct{}{"arc": {"arm64": {}}},
 				instanceTypeByArch: map[string]string{
 					"arm64": "r6gd.large", // r6gd.large has local NVMe storage
 				},
@@ -452,10 +451,9 @@ var partitionTests = map[string]partition{
 	"china": {
 		configName: "_china",
 		tests:      []string{testTypeKeyEc2Linux},
-		ami:        []string{},
+		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
-				targets: map[string]map[string]struct{}{"arc": {"arm64": {}}},
 				instanceTypeByArch: map[string]string{
 					"arm64": "r6gd.large", // r6gd.large has local NVMe storage
 				},
