@@ -208,7 +208,16 @@ resource "null_resource" "integration_test_run" {
 
       # SELinux test setup (if enabled)
       var.is_selinux_test ? [
-        "sudo yum install -y audit policycoreutils-python-utils go",
+        "echo 'Installing Go for SELinux test...'",
+        "if [ ! -f /usr/local/go/bin/go ]; then",
+        "  echo 'Go not found at /usr/local/go, installing...'",
+        "  curl -sL https://go.dev/dl/go1.22.5.linux-amd64.tar.gz -o /tmp/go.tar.gz",
+        "  sudo rm -rf /usr/local/go",
+        "  sudo tar -C /usr/local -xzf /tmp/go.tar.gz",
+        "  rm /tmp/go.tar.gz",
+        "fi",
+        "echo 'Go version:' && /usr/local/go/bin/go version",
+        "sudo yum install -y audit policycoreutils-python-utils",
         "sudo setenforce 1",
         "echo Running SELinux test setup...",
         "sudo rm -rf amazon-cloudwatch-agent-selinux",

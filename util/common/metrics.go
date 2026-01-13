@@ -185,11 +185,12 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 func getBaseDir() string {
 	var baseDir string
 	if runtime.GOOS == "windows" {
-		baseDir = filepath.Join("C:", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "traces")
+		// Use explicit Windows path - filepath.Join("C:", ...) doesn't add backslash after drive letter
+		baseDir = "C:\\Users\\Administrator\\amazon-cloudwatch-agent-test\\test\\app_signals\\resources\\traces"
 	} else {
-		baseDir = filepath.Join("/", "Users", "ec2-user", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "traces")
+		baseDir = "/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/traces"
 	}
-	fmt.Printf("[UPDATED-PATH-FIX-2025] getBaseDir using filepath.Join for traces, OS=%s, path=%s\n", runtime.GOOS, baseDir)
+	fmt.Printf("[UPDATED-PATH-FIX-2025-v2] getBaseDir OS=%s, path=%s\n", runtime.GOOS, baseDir)
 	return baseDir
 }
 
@@ -340,7 +341,7 @@ func processFile(filePath string, startTime int64) error {
 }
 
 func SendAppSignalMetrics(duration time.Duration) error {
-	fmt.Println("[UPDATED-PATH-FIX-2025] SendAppSignalMetrics using fixed filepath.Join paths")
+	fmt.Println("[UPDATED-PATH-FIX-2025-v2] SendAppSignalMetrics using explicit paths")
 
 	dir, err := os.Getwd()
 	if err != nil {
@@ -350,15 +351,15 @@ func SendAppSignalMetrics(duration time.Duration) error {
 	fmt.Println("Current Directory:", dir)
 
 	// Determine the base directory for the files based on the OS
-	// NOTE: Using filepath.Join("C:", ...) instead of filepath.Join("C:\\", ...) to avoid invalid C:\/ paths
+	// NOTE: Using explicit paths because filepath.Join("C:", ...) doesn't add backslash after drive letter on Windows
 	var baseDir string
 	if runtime.GOOS == "windows" {
-		baseDir = filepath.Join("C:", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
+		baseDir = "C:\\Users\\Administrator\\amazon-cloudwatch-agent-test\\test\\app_signals\\resources\\metrics"
 	} else { // assuming macOS or Unix-like system
-		baseDir = filepath.Join("/", "Users", "ec2-user", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
+		baseDir = "/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/metrics"
 	}
 
-	fmt.Printf("[UPDATED-PATH-FIX-2025] SendAppSignalMetrics OS=%s, baseDir=%s\n", runtime.GOOS, baseDir)
+	fmt.Printf("[UPDATED-PATH-FIX-2025-v2] SendAppSignalMetrics OS=%s, baseDir=%s\n", runtime.GOOS, baseDir)
 
 	for i := 0; i < int(duration/SleepDuration); i++ {
 		if err != nil {
