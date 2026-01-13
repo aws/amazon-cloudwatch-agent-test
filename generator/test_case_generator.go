@@ -439,14 +439,12 @@ var partitionTests = map[string]partition{
 	"itar": {
 		configName: "_itar",
 		tests:      []string{testTypeKeyEc2Linux},
-		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+		ami:        []string{},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
-				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
-				excludedTests: "diskioinstancestore,diskioebs",
 				instanceTypeByArch: map[string]string{
 					"amd64": "i3en.large",
-					"arm64": "m6g.large", // Use m6g.large since instance store tests are excluded
+					"arm64": "r6gd.large", // r6gd.large has local NVMe storage
 				},
 			},
 		},
@@ -454,14 +452,12 @@ var partitionTests = map[string]partition{
 	"china": {
 		configName: "_china",
 		tests:      []string{testTypeKeyEc2Linux},
-		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+		ami:        []string{},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
-				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
-				excludedTests: "diskioinstancestore,diskioebs",
 				instanceTypeByArch: map[string]string{
 					"amd64": "i3en.large",
-					"arm64": "m6g.large", // Use m6g.large since instance store tests are excluded
+					"arm64": "r6gd.large", // r6gd.large has local NVMe storage
 				},
 			},
 		},
