@@ -41,13 +41,18 @@ Changed arm64 instance type from `i4g.large` to `c6gd.large`:
 /usr/lib/golang/src/internal/runtime/syscall/asm_linux_amd64.s:27: ABI selector only permitted when compiling runtime
 ```
 
-### Root Cause
-SELinux AMIs (`CloudwatchSelinuxAL2v4*`, `CloudwatchSelinuxAL2023*`) don't have Go pre-installed at `/usr/local/go`. Tests fall back to system Go at `/usr/lib/golang` (Go 1.18/1.19) which is incompatible with test code requiring Go 1.20+.
+Additional error after initial fix:
+```
+error executing "/tmp/terraform_527675858.sh": wait: remote command exited without exit status or exit signal
+```
 
-Regular test AMIs have Go pre-installed at `/usr/local/go`, but SELinux AMIs don't.
+### Root Cause
+1. SELinux AMIs (`CloudwatchSelinuxAL2v4*`, `CloudwatchSelinuxAL2023*`) don't have Go pre-installed at `/usr/local/go`. Tests fall back to system Go at `/usr/lib/golang` (Go 1.18/1.19) which is incompatible with test code requiring Go 1.20+.
+
+2. Initial fix had multi-line `if` statements split across terraform array elements, which doesn't work - each array element runs as a separate command.
 
 ### Fix Applied
-Added Go 1.22.5 installation for SELinux tests in terraform setup.
+Added Go 1.22.5 installation for SELinux tests in terraform setup, with commands combined into single lines.
 
 **Files Modified:**
 - `terraform/ec2/linux/main.tf`
@@ -59,17 +64,15 @@ Added Go 1.22.5 installation for SELinux tests in terraform setup.
 ```hcl
 var.is_selinux_test ? [
   "echo 'Installing Go for SELinux test...'",
-  "if [ ! -f /usr/local/go/bin/go ]; then",
-  "  curl -sL https://go.dev/dl/go1.22.5.linux-amd64.tar.gz -o /tmp/go.tar.gz",
-  "  sudo rm -rf /usr/local/go",
-  "  sudo tar -C /usr/local -xzf /tmp/go.tar.gz",
-  "  rm /tmp/go.tar.gz",
-  "fi",
+  "if [ ! -f /usr/local/go/bin/go ]; then echo 'Go not found at /usr/local/go, installing...'; curl -sL --retry 3 --retry-delay 5 https://go.dev/dl/go1.22.5.linux-amd64.tar.gz -o /tmp/go.tar.gz && sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tar.gz && rm /tmp/go.tar.gz; fi",
   "echo 'Go version:' && /usr/local/go/bin/go version",
 ] : [],
 ```
 
-Also removed `go` from yum install in `assume_role/main.tf` (was installing old system Go).
+Key changes:
+- Combined `if` block into single line with `&&` chaining
+- Added `--retry 3 --retry-delay 5` to curl for network resilience
+- Removed `go` from yum install in `assume_role/main.tf` (was installing old system Go)
 
 ---
 

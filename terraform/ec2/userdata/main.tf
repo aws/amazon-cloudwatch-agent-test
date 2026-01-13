@@ -76,13 +76,7 @@ resource "null_resource" "integration_test" {
       # Install Go for SELinux tests (SELinux AMIs don't have Go pre-installed at /usr/local/go)
       var.is_selinux_test ? [
         "echo 'Installing Go for SELinux test...'",
-        "if [ ! -f /usr/local/go/bin/go ]; then",
-        "  echo 'Go not found at /usr/local/go, installing...'",
-        "  curl -sL https://go.dev/dl/go1.22.5.linux-amd64.tar.gz -o /tmp/go.tar.gz",
-        "  sudo rm -rf /usr/local/go",
-        "  sudo tar -C /usr/local -xzf /tmp/go.tar.gz",
-        "  rm /tmp/go.tar.gz",
-        "fi",
+        "if [ ! -f /usr/local/go/bin/go ]; then echo 'Go not found at /usr/local/go, installing...'; curl -sL --retry 3 --retry-delay 5 https://go.dev/dl/go1.22.5.linux-amd64.tar.gz -o /tmp/go.tar.gz && sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tar.gz && rm /tmp/go.tar.gz; fi",
         "echo 'Go version:' && /usr/local/go/bin/go version",
       ] : [],
 
