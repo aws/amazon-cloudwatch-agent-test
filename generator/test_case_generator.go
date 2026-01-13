@@ -107,7 +107,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/metric_value_benchmark",
 			instanceTypeByArch: map[string]string{
 				"amd64": "i3en.large",
-				"arm64": "m6g.large", // i4g not available in GovCloud/China regions
+				"arm64": "c6gd.large",
 			},
 		},
 		{testDir: "./test/run_as_user"},

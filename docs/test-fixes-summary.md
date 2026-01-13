@@ -18,18 +18,18 @@ ITAR/China partitions only run with `cloudwatch-agent-integration-test-aarch64-a
 ### Fix Applied
 **File:** `generator/test_case_generator.go`
 
-Changed arm64 instance type from `i4g.large` to `m6g.large`:
+Changed arm64 instance type from `i4g.large` to `c6gd.large`:
 ```go
 {
     testDir: "./test/metric_value_benchmark",
     instanceTypeByArch: map[string]string{
         "amd64": "i3en.large",
-        "arm64": "m6g.large", // i4g not available in GovCloud/China regions
+        "arm64": "c6gd.large", // i4g/m6g not available in GovCloud/China regions, c6gd has NVMe storage
     },
 },
 ```
 
-`m6g.large` is available in all regions including GovCloud and China.
+`c6gd.large` is available in GovCloud and China regions, and includes NVMe instance storage which may be needed for the benchmark test.
 
 ---
 
@@ -89,3 +89,65 @@ After modifying `test_case_generator.go`, run:
 cd amazon-cloudwatch-agent-test
 go run generator/test_case_generator.go
 ```
+
+---
+
+## Issue 3: Windows Tests - App Signals Resource Files Not Found (DEBUGGING)
+
+### Error
+```
+Error processing trace file: open C:\Users\Administrator\amazon-cloudwatch-agent-test\test\app_signals\resources\traces\traces.json: The system cannot find the path specified.
+Error reading file: open C:\Users\Administrator\amazon-cloudwatch-agent-test\test\app_signals\resources\metrics\server_consumer.json: The system cannot find the path specified.
+```
+
+### Symptoms
+- Path construction is correct (absolute Windows path)
+- Files exist in git repository and are tracked
+- Files exist on the branch being cloned (`paramadon/TestFixHarderIssues`)
+- Validator binary uses hardcoded absolute paths in `util/common/metrics.go`
+
+### Investigation Findings
+1. **Files verified to exist in repo:**
+   - `test/app_signals/resources/traces/traces.json` ✓
+   - `test/app_signals/resources/metrics/server_consumer.json` ✓
+   - `test/app_signals/resources/metrics/client_producer.json` ✓
+
+2. **Path construction in code (`util/common/metrics.go`):**
+   ```go
+   baseDir = "C:\\Users\\Administrator\\amazon-cloudwatch-agent-test\\test\\app_signals\\resources\\traces"
+   ```
+
+3. **Terraform shows `cd` command not persisting:**
+   ```
+   Current directory before validator:
+   C:\Users\Administrator  // Should be C:\Users\Administrator\amazon-cloudwatch-agent-test
+   ```
+
+### Hypothesis
+The git clone may be failing silently or the directory structure is different than expected. The `cd` command in Windows batch doesn't persist across terraform remote-exec commands.
+
+### Debugging Fix Applied
+**File:** `terraform/ec2/win/main.tf`
+
+Added comprehensive error checking and debugging:
+```batch
+"git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+"if %errorlevel% neq 0 (echo Git clone failed with error %errorlevel% & exit 1)",
+"if not exist amazon-cloudwatch-agent-test (echo ERROR: directory not found after clone & exit 1)",
+"if not exist amazon-cloudwatch-agent-test\\test\\app_signals\\resources\\traces\\traces.json (echo ERROR: traces.json not found)",
+```
+
+### Next Steps
+1. Run the test with debugging to see actual git clone output
+2. Verify if git clone succeeds and creates expected directory structure
+3. Check if there are permission issues on Windows
+4. Consider if the branch name or repo URL is incorrect
+
+### Key Files
+| Component | File Path |
+|-----------|-----------|
+| Windows terraform | `terraform/ec2/win/main.tf` |
+| Path construction | `util/common/metrics.go` (lines 188-193, 356-361) |
+| Resource files | `test/app_signals/resources/traces/traces.json` |
+| | `test/app_signals/resources/metrics/server_consumer.json` |
+| | `test/app_signals/resources/metrics/client_producer.json` |
