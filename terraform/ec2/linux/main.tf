@@ -192,6 +192,13 @@ resource "null_resource" "integration_test_run" {
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       ],
 
+      # CN region specific setup - use vendor mode to avoid GitHub connectivity issues
+      startswith(var.region, "cn-") ? [
+        "export GO111MODULE=on",
+        "export GOFLAGS=-mod=vendor",
+        "echo 'CN region detected - using vendor mode for Go modules'",
+      ] : [],
+
       [
         "echo Running integration test...",
         "cd ~/amazon-cloudwatch-agent-test",
