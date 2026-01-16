@@ -60,6 +60,8 @@ type testConfig struct {
 	maxAttempts int
 	// instanceTypeByArch allows specifying different instance types based on architecture
 	instanceTypeByArch map[string]string
+	// excludedTests is a comma-separated list of test names to exclude (e.g., "diskioinstancestore,diskioebs")
+	excludedTests string
 }
 
 const (
@@ -423,6 +425,9 @@ type partition struct {
 	configName string
 	tests      []string
 	ami        []string
+	// testConfigOverrides allows partition-specific test configurations
+	// key is testDir, value is the override config
+	testConfigOverrides map[string]testConfig
 }
 
 var partitionTests = map[string]partition{
@@ -435,10 +440,31 @@ var partitionTests = map[string]partition{
 		configName: "_itar",
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+		testConfigOverrides: map[string]testConfig{
+			"./test/metric_value_benchmark": {
+				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
+				excludedTests: "diskioinstancestore,diskioebs",
+				instanceTypeByArch: map[string]string{
+					"amd64": "i3en.large",
+					"arm64": "m6g.large", // Use m6g.large since instance store tests are excluded
+				},
+			},
+		},
 	},
-	"china": {configName: "_china",
-		tests: []string{testTypeKeyEc2Linux},
-		ami:   []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+	"china": {
+		configName: "_china",
+		tests:      []string{testTypeKeyEc2Linux},
+		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+		testConfigOverrides: map[string]testConfig{
+			"./test/metric_value_benchmark": {
+				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
+				excludedTests: "diskioinstancestore,diskioebs",
+				instanceTypeByArch: map[string]string{
+					"amd64": "i3en.large",
+					"arm64": "m6g.large", // Use m6g.large since instance store tests are excluded
+				},
+			},
+		},
 	},
 }
 
@@ -456,7 +482,7 @@ func main() {
 			if len(partition.tests) != 0 && !slices.Contains(partition.tests, testType) {
 				continue
 			}
-			testMatrix := genMatrix(testType, testConfigs, partition.ami)
+			testMatrix := genMatrix(testType, testConfigs, partition.ami, partition.testConfigOverrides)
 			writeTestMatrixFile(testType+partition.configName, testMatrix)
 		}
 	}
@@ -486,7 +512,7 @@ func generateTestName(testType string, test_directory string) string {
 
 	return strings.Join(cleaned, "_")
 }
-func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrixRow {
+func genMatrix(testType string, testConfigs []testConfig, ami []string, overrides map[string]testConfig) []matrixRow {
 	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
 
 	if err != nil {
@@ -506,6 +532,21 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
+			// Apply partition-specific overrides if available
+			if overrides != nil {
+				if override, ok := overrides[testConfig.testDir]; ok {
+					if override.excludedTests != "" {
+						testConfig.excludedTests = override.excludedTests
+					}
+					if override.instanceTypeByArch != nil {
+						testConfig.instanceTypeByArch = override.instanceTypeByArch
+					}
+					if override.instanceType != "" {
+						testConfig.instanceType = override.instanceType
+					}
+				}
+			}
+
 			//This is to have selinux negative test
 			if testConfig.selinuxBranch == "" {
 				testConfig.selinuxBranch = "main"
@@ -518,6 +559,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 				TestType:      testType,
 				TerraformDir:  testConfig.terraformDir,
 				MaxAttempts:   testConfig.maxAttempts,
+				ExcludedTests: testConfig.excludedTests,
 			}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
