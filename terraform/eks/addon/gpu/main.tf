@@ -193,11 +193,20 @@ resource "null_resource" "wait_for_nvidia_ready" {
         kubectl describe pods -n kube-system -l name=nvidia-device-plugin-ds
         exit 1
       fi
-      if ! kubectl get nodes -o jsonpath='{.items[*].status.allocatable.nvidia\.com/gpu}' | grep -q "1"; then
-        echo "ERROR: No GPU resources found on nodes"
-        kubectl get nodes -o json | jq '.items[].status.allocatable'
-        exit 1
-      fi
+      
+      echo "Waiting for GPU resources to be registered with kubelet..."
+      for i in $(seq 1 30); do
+        if kubectl get nodes -o jsonpath='{.items[*].status.allocatable.nvidia\.com/gpu}' | grep -q "1"; then
+          echo "GPU resources found on node"
+          exit 0
+        fi
+        echo "Attempt $i/30: GPU not yet available, waiting 10s..."
+        sleep 10
+      done
+      
+      echo "ERROR: No GPU resources found on nodes after 5 minutes"
+      kubectl get nodes -o json | jq '.items[].status.allocatable'
+      exit 1
     EOT
   }
 }
