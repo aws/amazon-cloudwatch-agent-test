@@ -306,6 +306,7 @@ resource "null_resource" "patch_agent_image" {
 
   provisioner "local-exec" {
     command = <<-EOT
+      set -e
       echo "Waiting for CloudWatch Agent DaemonSet to be ready before patching..."
       kubectl rollout status daemonset/cloudwatch-agent -n amazon-cloudwatch --timeout=300s
       
@@ -315,7 +316,13 @@ resource "null_resource" "patch_agent_image" {
         -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
       
       echo "Waiting for CloudWatch Agent DaemonSet rollout after patching..."
-      kubectl rollout status daemonset/cloudwatch-agent -n amazon-cloudwatch --timeout=300s
+      if ! kubectl rollout status daemonset/cloudwatch-agent -n amazon-cloudwatch --timeout=600s; then
+        echo "ERROR: CloudWatch Agent rollout failed. Debugging info:"
+        kubectl get pods -n amazon-cloudwatch -o wide
+        kubectl describe pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent
+        kubectl logs -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent --tail=100 || true
+        exit 1
+      fi
       
       echo "CloudWatch Agent image patched and rolled out successfully"
     EOT
