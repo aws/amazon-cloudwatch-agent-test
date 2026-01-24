@@ -563,7 +563,7 @@ resource "kubernetes_storage_class" "test_storage_class" {
 
 # PersistentVolume
 resource "kubernetes_persistent_volume" "test_pv" {
-  depends_on = [kubernetes_storage_class.test_storage_class]
+  depends_on = [kubernetes_storage_class.test_storage_class, aws_eks_node_group.this]
   metadata {
     name = "test-pv-${module.common.testing_id}"
   }
@@ -576,6 +576,17 @@ resource "kubernetes_persistent_volume" "test_pv" {
     persistent_volume_source {
       host_path {
         path = "/tmp/test-pv"
+      }
+    }
+    node_affinity {
+      required {
+        node_selector_term {
+          match_expressions {
+            key      = "kubernetes.io/os"
+            operator = "In"
+            values   = ["linux"]
+          }
+        }
       }
     }
   }
@@ -649,6 +660,8 @@ resource "null_resource" "validator" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
+      echo "Waiting for PVC test pod to be ready"
+      ./kubectl wait --for=condition=Ready pod/test-pod-with-pvc-${module.common.testing_id} -n amazon-cloudwatch --timeout=300s
       echo "Validating EKS metrics/logs"
       cd ../../../../..
       go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -instancePlatform=windows
