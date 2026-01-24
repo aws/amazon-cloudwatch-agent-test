@@ -130,21 +130,8 @@ resource "helm_release" "aws_observability" {
   depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, data.external.clone_helm_chart]
 }
 
-resource "null_resource" "update_image" {
-  depends_on = [helm_release.aws_observability, null_resource.kubectl]
-  triggers = {
-    timestamp = "${timestamp()}"
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
-      sleep 10
-    EOT
-  }
-}
-
 resource "null_resource" "deploy_mock_lis_csi" {
-  depends_on = [null_resource.kubectl]
+  depends_on = [helm_release.aws_observability, null_resource.kubectl]
   provisioner "local-exec" {
     command = <<-EOT
       kubectl apply -f ../../../../test/liscsi/resources/mock-lis-csi.yaml
@@ -158,6 +145,21 @@ resource "null_resource" "deploy_mock_lis_csi" {
         echo "Waiting for mock LIS CSI service... attempt $i/60"
         sleep 5
       done
+    EOT
+  }
+}
+
+resource "null_resource" "update_image" {
+  depends_on = [helm_release.aws_observability, null_resource.kubectl, null_resource.deploy_mock_lis_csi]
+  triggers = {
+    timestamp = "${timestamp()}"
+  }
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
+      echo "Waiting for CloudWatch Agent to restart and discover LIS CSI metrics..."
+      kubectl -n amazon-cloudwatch rollout status daemonset/cloudwatch-agent --timeout=300s
+      sleep 60
     EOT
   }
 }
