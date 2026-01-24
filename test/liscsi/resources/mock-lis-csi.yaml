@@ -100,6 +100,14 @@ spec:
         env:
         - name: PORT
           value: "8101"
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 8101
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 12
         volumeMounts:
         - name: code
           mountPath: /app

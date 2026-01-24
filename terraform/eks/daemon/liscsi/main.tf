@@ -149,6 +149,15 @@ resource "null_resource" "deploy_mock_lis_csi" {
     command = <<-EOT
       kubectl apply -f ../../../../test/liscsi/resources/mock-lis-csi.yaml
       kubectl rollout status daemonset/mock-nvme-csi-plugin -n kube-system --timeout=300s
+      echo "Waiting for mock LIS CSI service to be ready..."
+      for i in $(seq 1 60); do
+        if kubectl run curl-test --image=curlimages/curl --rm -i --restart=Never --timeout=30s -- curl -s http://instance-store-csi-metrics.kube-system.svc.cluster.local:8101/metrics | grep -q "aws_ec2_instance_store_csi"; then
+          echo "Mock LIS CSI service is ready"
+          break
+        fi
+        echo "Waiting for mock LIS CSI service... attempt $i/60"
+        sleep 5
+      done
     EOT
   }
 }
