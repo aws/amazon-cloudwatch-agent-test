@@ -38,5 +38,5 @@ variable "ami_type" {
 
 variable "instance_type" {
   type    = string
-  default = "t3a.medium"
+  default = "c5d.large"
 }

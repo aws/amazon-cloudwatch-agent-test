@@ -130,36 +130,18 @@ resource "helm_release" "aws_observability" {
   depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, data.external.clone_helm_chart]
 }
 
-resource "null_resource" "deploy_mock_lis_csi" {
-  depends_on = [helm_release.aws_observability, null_resource.kubectl]
-  provisioner "local-exec" {
-    command = <<-EOT
-      kubectl apply -f ../../../../test/liscsi/resources/mock-lis-csi.yaml
-      kubectl rollout status daemonset/mock-nvme-csi-plugin -n kube-system --timeout=300s
-      echo "Waiting for mock LIS CSI service to be ready..."
-      for i in $(seq 1 60); do
-        if kubectl run curl-test --image=curlimages/curl --rm -i --restart=Never --timeout=30s -- curl -s http://instance-store-csi-metrics.kube-system.svc.cluster.local:8101/metrics | grep -q "aws_ec2_instance_store_csi"; then
-          echo "Mock LIS CSI service is ready"
-          break
-        fi
-        echo "Waiting for mock LIS CSI service... attempt $i/60"
-        sleep 5
-      done
-    EOT
-  }
-}
-
 resource "null_resource" "update_image" {
-  depends_on = [helm_release.aws_observability, null_resource.kubectl, null_resource.deploy_mock_lis_csi]
+  depends_on = [helm_release.aws_observability, null_resource.kubectl]
   triggers = {
     timestamp = "${timestamp()}"
   }
   provisioner "local-exec" {
     command = <<-EOT
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
-      echo "Waiting for CloudWatch Agent to restart and discover LIS CSI metrics..."
+      echo "Waiting for CloudWatch Agent to restart and discover NVMe instance store metrics..."
       kubectl -n amazon-cloudwatch rollout status daemonset/cloudwatch-agent --timeout=300s
-      sleep 60
+      echo "Waiting for metrics to be collected and published..."
+      sleep 120
     EOT
   }
 }
@@ -182,7 +164,6 @@ resource "null_resource" "validator" {
     aws_eks_node_group.this,
     helm_release.aws_observability,
     null_resource.update_image,
-    null_resource.deploy_mock_lis_csi,
   ]
 
   triggers = {
@@ -191,7 +172,7 @@ resource "null_resource" "validator" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Validating CloudWatch Agent with LIS CSI NVME instance store metrics"
+      echo "Validating CloudWatch Agent with NVMe instance store metrics"
       cd ../../../..
       go test ${var.test_dir} \
       -eksClusterName=${aws_eks_cluster.this.name} \
