@@ -130,32 +130,15 @@ resource "helm_release" "aws_observability" {
   depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, data.external.clone_helm_chart]
 }
 
-resource "null_resource" "add_nvme_mounts" {
-  depends_on = [helm_release.aws_observability, null_resource.kubectl]
-  provisioner "local-exec" {
-    command = <<-EOT
-      echo "Adding NVMe device mounts to CloudWatch Agent for instance store metrics..."
-      kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[
-        {"op": "add", "path": "/spec/volumeMounts/-", "value": {"mountPath": "/dev", "name": "dev", "readOnly": true}},
-        {"op": "add", "path": "/spec/volumeMounts/-", "value": {"mountPath": "/sys/class/nvme", "name": "sysnvme", "readOnly": true}},
-        {"op": "add", "path": "/spec/volumes/-", "value": {"hostPath": {"path": "/dev"}, "name": "dev"}},
-        {"op": "add", "path": "/spec/volumes/-", "value": {"hostPath": {"path": "/sys/class/nvme"}, "name": "sysnvme"}}
-      ]'
-      echo "Waiting for CloudWatch Agent to restart with NVMe mounts..."
-      kubectl -n amazon-cloudwatch rollout status daemonset/cloudwatch-agent --timeout=300s
-    EOT
-  }
-}
-
 resource "null_resource" "update_image" {
-  depends_on = [null_resource.add_nvme_mounts]
+  depends_on = [helm_release.aws_observability, null_resource.kubectl]
   triggers = {
     timestamp = "${timestamp()}"
   }
   provisioner "local-exec" {
     command = <<-EOT
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
-      echo "Waiting for CloudWatch Agent to restart and discover NVMe instance store metrics..."
+      echo "Waiting for CloudWatch Agent to restart..."
       kubectl -n amazon-cloudwatch rollout status daemonset/cloudwatch-agent --timeout=300s
       echo "Waiting for metrics to be collected and published..."
       sleep 180
