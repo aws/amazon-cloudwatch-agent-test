@@ -1,0 +1,14 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "priority": "info",
+        "start_at": "end"
+      }
+    }
+  }
+}
