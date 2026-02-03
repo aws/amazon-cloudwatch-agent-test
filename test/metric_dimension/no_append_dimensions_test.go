@@ -6,12 +6,6 @@
 package metric_dimension
 
 import (
-	"log"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
@@ -48,37 +42,6 @@ func (t *NoAppendDimensionTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *NoAppendDimensionTestRunner) validateNoAppendDimensionMetric(metricName string) status.TestResult {
-	testResult := status.TestResult{
-		Name:   metricName,
-		Status: status.FAILED,
-	}
-
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "host",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "cpu",
-			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
-		},
-	})
-
-	if len(failed) > 0 {
-		return testResult
-	}
-
-	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricAppendDimensionTest", metricName, dims, metric.AVERAGE, metric.HighResolutionStatPeriod)
-	log.Printf("metric values are %v", values)
-	if err != nil {
-		return testResult
-	}
-
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
-		return testResult
-	}
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+	specs := []DimensionSpec{HostDim(), ExactDim("cpu", "cpu-total")}
+	return ValidateDimensionsPresent(&t.BaseTestRunner, "MetricAppendDimensionTest", metricName, specs)
 }
