@@ -30,8 +30,7 @@ const (
 	UserCWAgentHomeDir = "/home/cwagent"
 	AwsCredentialsPath = ".aws/credentials"
 
-	ProviderNameSharedCredentials = "SharedCredentialsProvider"
-	ProviderNameSharedConfig      = "SharedConfigCredentials"
+	ProviderNameSharedCredentials = "SharedConfigCredentials"
 )
 
 var (

@@ -129,7 +129,7 @@ func (t *HomeEnvTestRunner) Validate() status.TestGroupResult {
 	return util.ValidateCredentialTest(t.GetTestName(), util.ExpectedResults{
 		Namespace:              util.SharedTestNamespace,
 		MetricName:             util.MetricNameCpuUsageActive,
-		CredentialProviderName: util.ProviderNameSharedConfig,
+		CredentialProviderName: util.ProviderNameSharedCredentials,
 		AccessKeyID:            t.accessKeyID,
 	}, metadata)
 }

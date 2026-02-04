@@ -421,30 +421,31 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) validateFoundConfusedDeputyHeaders(
 
 	inHttpDebug := false
 	isStsAssumeRoleRequest := false
-	httpDebugLog := []string{}
+	var httpDebugLog []string
 
 	// Example HTTP debug log
 	//
-	// ---[ REQUEST POST-SIGN ]-----------------------------
+	// 2026-01-16T22:23:39Z D! Request
 	// POST / HTTP/1.1
-	// Host: sts.us-west-2.amazonaws.com
-	// User-Agent: aws-sdk-go/1.48.6 (go1.22.11; linux; arm64)
-	// Content-Length: 199
-	// Authorization: AWS4-HMAC-SHA256 Credential=<snip>/<snip>/us-west-2/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-amz-security-token;x-amz-source-account;x-amz-source-arn, Signature=<snip>
-	// Content-Type: application/x-www-form-urlencoded; charset=utf-8
-	// X-Amz-Date: 20250129T170140Z
+	// Host: sts.us-east-1.amazonaws.com
+	// User-Agent: aws-sdk-go-v2/1.41.1 ua/2.1 os/linux lang/go#1.25.5 md/GOOS#linux md/GOARCH#amd64 api/sts#1.41.6 m/0,E
+	// Content-Length: 176
+	// Amz-Sdk-Invocation-Id: <snip>
+	// Amz-Sdk-Request: attempt=1; max=3
+	// Authorization: AWS4-HMAC-SHA256 Credential=<snip>/<snip>/us-east-1/sts/aws4_request, SignedHeaders=amz-sdk-invocation-id;amz-sdk-request;content-length;content-type;host;x-amz-date;x-amz-security-token, Signature=<snip>
+	// Content-Type: application/x-www-form-urlencoded
+	// X-Amz-Date: 20260116T222339Z
 	// X-Amz-Security-Token: <token>
 	// X-Amz-Source-Account: 0123456789012
 	// X-Amz-Source-Arn: arn:aws:ec2:us-west-2:123456789012:instance/i-1234567890abcdef0
 	// Accept-Encoding: gzip
 	//
-	// Action=AssumeRole&DurationSeconds=900&RoleArn=arn%3Aaws%3Aiam%3A%3A506463145083%3Arole%2Fcwa-integ-assume-role-5be6d1574e9843bb-all_context_keys&RoleSessionName=1738170071781577224&Version=2011-06-15
-	// -----------------------------------------------------
+	// Action=AssumeRole&DurationSeconds=900&RoleArn=arn%3Aaws%3Aiam%3A%3A<account-id>%3Arole%2F<role-name>&RoleSessionName=aws-go-sdk-1768602822777741576&Version=2011-06-15
 	for scanner.Scan() {
 		line := scanner.Text()
 
 		// Look for the start of an HTTP request debug log
-		if strings.Contains(line, "---[ REQUEST POST-SIGN ]-----------------------------") {
+		if strings.Contains(line, "D! Request") {
 			inHttpDebug = true
 			httpDebugLog = []string{}
 			isStsAssumeRoleRequest = false
@@ -463,7 +464,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) validateFoundConfusedDeputyHeaders(
 		}
 
 		// Look for the end of an HTTP request debug log
-		if strings.Contains(line, "-----------------------------------------------------") {
+		if strings.Contains(line, "D! Response") {
 
 			if isStsAssumeRoleRequest && checkForConfusedDeputyHeaders(httpDebugLog) {
 				log.Println("Found confused deputy headers in the HTTP debug log")
@@ -479,7 +480,7 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) validateFoundConfusedDeputyHeaders(
 
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		log.Printf("Error reading file: %v\n", err)
 	}
 
