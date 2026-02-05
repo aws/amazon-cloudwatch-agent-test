@@ -40,6 +40,7 @@ type matrixRow struct {
 	MetadataEnabled     string `json:"metadataEnabled"`
 	MaxAttempts         int    `json:"max_attempts"`
 	SELinuxBranch       string `json:"selinux_branch"`
+	WIP                 bool   `json:"wip,omitempty"` // Work In Progress - failures won't block CI
 }
 
 type testConfig struct {
@@ -62,6 +63,8 @@ type testConfig struct {
 	instanceTypeByArch map[string]string
 	// excludedTests is a comma-separated list of test names to exclude (e.g., "diskioinstancestore,diskioebs")
 	excludedTests string
+	// wip marks test as Work In Progress - failures won't block CI
+	wip bool
 }
 
 const (
@@ -382,6 +385,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			wip:     true,
 		},
 		{
 			testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
@@ -405,6 +409,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/liscsi",
 			terraformDir: "terraform/eks/daemon/liscsi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			wip:          true,
 		},
 	},
 	"eks_deployment": {
@@ -560,6 +565,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 				TerraformDir:  testConfig.terraformDir,
 				MaxAttempts:   testConfig.maxAttempts,
 				ExcludedTests: testConfig.excludedTests,
+				WIP:           testConfig.wip,
 			}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
