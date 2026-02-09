@@ -152,6 +152,10 @@ func setUpLocalstackConfig(metadata *environment.MetaData) {
 	writeFile(localstackConfigPath+originalPem, systemCA)
 
 	// combine.pem = system CA bundle + LocalStack cert
+	// Ensure newline between certificates for proper PEM formatting
+	if len(systemCA) > 0 && systemCA[len(systemCA)-1] != '\n' {
+		systemCA = append(systemCA, '\n')
+	}
 	combinedCA := append(systemCA, localstackCA...)
 	writeFile(localstackConfigPath+combinePem, combinedCA)
 
