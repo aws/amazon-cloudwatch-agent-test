@@ -7,8 +7,10 @@ package ca_bundle
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -52,9 +54,43 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
+// waitForLocalStack waits for LocalStack to be ready, retrying for up to 2 minutes
+func waitForLocalStack(t *testing.T) error {
+	t.Helper()
+	// Skip TLS verification since we're just checking if LocalStack is up
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	localstackURL := "https://localhost.localstack.cloud:4566/_localstack/health"
+	maxRetries := 24 // 2 minutes with 5 second intervals
+	for i := 0; i < maxRetries; i++ {
+		resp, err := client.Get(localstackURL)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			t.Log("LocalStack is ready")
+			return nil
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+		t.Logf("Waiting for LocalStack to be ready (attempt %d/%d)...", i+1, maxRetries)
+		time.Sleep(5 * time.Second)
+	}
+	return fmt.Errorf("LocalStack not ready after %d attempts", maxRetries)
+}
+
 // Must run this test with parallel 1 since this will fail if more than one test is running at the same time
 // This test uses a pem file created for the local stack endpoint to be able to connect via ssl
 func TestBundle(t *testing.T) {
+	// Wait for LocalStack to be ready before running tests
+	if err := waitForLocalStack(t); err != nil {
+		t.Fatalf("LocalStack health check failed: %v", err)
+	}
+
 	metadata := environment.GetEnvironmentMetaData()
 	t.Logf("metadata required for test cwa sha %s bucket %s ca cert path %s", metadata.CwaCommitSha, metadata.Bucket, metadata.CaCertPath)
 	setUpLocalstackConfig(metadata)
