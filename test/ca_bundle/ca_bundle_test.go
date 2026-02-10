@@ -65,7 +65,11 @@ func waitForLocalStack(t *testing.T) error {
 		},
 	}
 
-	localstackURL := "https://localhost.localstack.cloud:4566/_localstack/health"
+	localstackHost := os.Getenv("LOCAL_STACK_HOST_NAME")
+	if localstackHost == "" {
+		localstackHost = "localhost.localstack.cloud"
+	}
+	localstackURL := fmt.Sprintf("https://%s:4566/_localstack/health", localstackHost)
 	maxRetries := 24 // 2 minutes with 5 second intervals
 	for i := 0; i < maxRetries; i++ {
 		resp, err := client.Get(localstackURL)
