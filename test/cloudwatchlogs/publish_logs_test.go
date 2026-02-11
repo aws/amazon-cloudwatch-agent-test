@@ -70,23 +70,6 @@ var (
 			logGroupClass: types.LogGroupClassInfrequentAccess,
 		},
 	}
-	concurrentLogPublishingTestParameters = []struct {
-		testName           string
-		configPath         string
-		accessGrantedLogGroup    string
-		accessDeniedLogGroup     string
-		expectedAccessGrantedLogs int
-		expectedAccessDeniedLogs int
-	}{
-		{
-			testName:            "Test concurrency log publishing",
-			configPath:          "resources/config_poison_pill.json",
-			accessGrantedLogGroup:     "log-stream-ple-access-granted-{instance_id}",
-			accessDeniedLogGroup:      "aws-restricted-log-group-name-log-stream-ple-access-denied-{instance_id}",
-			expectedAccessGrantedLogs: 20, // 10 iterations * 2 logLineIds
-			expectedAccessDeniedLogs:  0,
-		},
-	}
 )
 
 type writeToCloudWatchTestInput struct {
@@ -376,81 +359,4 @@ func checkData(t *testing.T, start time.Time, lineCount int) {
 		awsservice.AssertNoDuplicateLogs(),
 	)
 	assert.NoError(t, err)
-}
-// TestConcurrentLogPublishing tests that the agent can write to normal log groups but fails on restricted ones
-func TestConcurrentLogPublishing(t *testing.T) {
-	env := environment.GetEnvironmentMetaData()
-	instanceId := env.InstanceId
-	if instanceId == "" {
-		instanceId = awsservice.GetInstanceId()
-	}
-	
-	for _, param := range concurrentLogPublishingTestParameters {
-		t.Run(param.testName, func(t *testing.T) {
-			accessGrantedLogGroup := strings.ReplaceAll(param.accessGrantedLogGroup, "{instance_id}", instanceId)
-			accessDeniedLogGroup := strings.ReplaceAll(param.accessDeniedLogGroup, "{instance_id}", instanceId)
-			
-			defer awsservice.DeleteLogGroupAndStream(accessGrantedLogGroup, instanceId)
-			defer awsservice.DeleteLogGroupAndStream(accessDeniedLogGroup, instanceId)
-			
-			// Create log files
-			accessGrantedLogFile := "/tmp/access_granted_test.log"
-			accessDeniedLogFile := "/tmp/access_denied_test.log"
-			
-			accessGrantedFile, err := os.Create(accessGrantedLogFile)
-			assert.NoError(t, err)
-			defer accessGrantedFile.Close()
-			defer os.Remove(accessGrantedLogFile)
-			
-			accessDeniedFile, err := os.Create(accessDeniedLogFile)
-			assert.NoError(t, err)
-			defer accessDeniedFile.Close()
-			defer os.Remove(accessDeniedLogFile)
-			
-			common.DeleteFile(common.AgentLogFile)
-			common.TouchFile(common.AgentLogFile)
-			start := time.Now()
-			
-			common.CopyFile(param.configPath, configOutputPath)
-			common.StartAgent(configOutputPath, true, false)
-			
-			time.Sleep(sleepForFlush)
-			
-			// Write logs to both files using the standard writeLogLines function
-			writeLogLines(t, accessGrantedFile, 10)
-			writeLogLines(t, accessDeniedFile, 10)
-			
-			time.Sleep(sleepForFlush)
-			common.StopAgent()
-			end := time.Now()
-			
-			// Validate access granted log group has logs
-			err = awsservice.ValidateLogs(
-				accessGrantedLogGroup,
-				instanceId,
-				&start,
-				&end,
-				awsservice.AssertLogsCount(param.expectedAccessGrantedLogs),
-			)
-			assert.NoError(t, err, "Access granted log group should have logs")
-			
-			// Validate access denied log group has no logs (due to access denied)
-			err = awsservice.ValidateLogs(
-				accessDeniedLogGroup,
-				instanceId,
-				&start,
-				&end,
-				awsservice.AssertLogsCount(param.expectedAccessDeniedLogs),
-			)
-			assert.NoError(t, err, "Access denied log group should have no logs due to restricted permissions policy")
-			
-			// Check agent logs for access denied errors
-			agentLog, err := os.ReadFile(common.AgentLogFile)
-			if err == nil {
-				logContent := string(agentLog)
-				assert.Contains(t, logContent, "AccessDenied", "Agent logs should contain AccessDenied error for access denied log group")
-				t.Logf("Agent logs: %s", logContent)
-			}
-		})
-	}
 }

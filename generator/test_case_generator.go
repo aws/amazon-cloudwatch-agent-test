@@ -85,10 +85,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"ec2_linux_onprem": {
 		{testDir: "./test/cloudwatchlogs"},
+		{testDir: "./test/cloudwatchlogs_concurrency"},
 	},
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
+		{testDir: "./test/cloudwatchlogs_concurrency"},
 		{
 			testDir: "./test/log_state/logfile",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -192,6 +194,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
+		{testDir: "./test/cloudwatchlogs_concurrency"},
 		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},

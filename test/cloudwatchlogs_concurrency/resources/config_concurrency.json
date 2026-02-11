@@ -1,0 +1,93 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/access_granted.log",
+            "log_group_name": "access-granted-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_0.log",
+            "log_group_name": "aws-restricted-denied-0-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_1.log",
+            "log_group_name": "aws-restricted-denied-1-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_2.log",
+            "log_group_name": "aws-restricted-denied-2-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_3.log",
+            "log_group_name": "aws-restricted-denied-3-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_4.log",
+            "log_group_name": "aws-restricted-denied-4-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_5.log",
+            "log_group_name": "aws-restricted-denied-5-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_6.log",
+            "log_group_name": "aws-restricted-denied-6-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_7.log",
+            "log_group_name": "aws-restricted-denied-7-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_8.log",
+            "log_group_name": "aws-restricted-denied-8-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/access_denied_9.log",
+            "log_group_name": "aws-restricted-denied-9-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          }
+        ]
+      }
+    },
+    "force_flush_interval": 5,
+    "concurrency": 2
+  }
+}
