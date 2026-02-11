@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "../../../../test/gpu"
+  default = "./test/gpu"
 }
 
 variable "addon_name" {
@@ -18,7 +18,7 @@ variable "addon_name" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.31"
+  default = "1.34"
 }
 
 variable "ami_type" {
@@ -33,10 +33,22 @@ variable "instance_type" {
 
 variable "beta" {
   type    = bool
-  default = true
+  default = false
 }
 
 variable "beta_endpoint" {
   type    = string
   default = "https://api.beta.us-west-2.wesley.amazonaws.com"
+}
+
+variable "cwagent_image_repo" {
+  type        = string
+  description = "CloudWatch Agent image repository"
+  default     = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
+}
+
+variable "cwagent_image_tag" {
+  type        = string
+  description = "CloudWatch Agent image tag"
+  default     = "latest"
 }

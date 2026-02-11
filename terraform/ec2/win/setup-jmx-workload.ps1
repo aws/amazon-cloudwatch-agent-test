@@ -90,9 +90,13 @@ if (-not $javaPath -or -not (Test-Path $javaPath)) {
 Write-Output "Using Java at: $javaPath"
 
 # Start the Java application with JMX agent
+$jmxAgentPath = Join-Path $WORKLOAD_DIR $JMX_AGENT_JAR
+$exporterConfigPath = Join-Path $WORKLOAD_DIR "exporter_config.yaml"
+$sampleAppPath = Join-Path $WORKLOAD_DIR $SAMPLE_APP_JAR
+
 $javaArgs = @(
-    "-javaagent:$WORKLOAD_DIR\$JMX_AGENT_JAR=$JMX_PORT:$WORKLOAD_DIR\exporter_config.yaml",
-    "-cp", "$WORKLOAD_DIR\$SAMPLE_APP_JAR",
+    "-javaagent:${jmxAgentPath}=${JMX_PORT}:${exporterConfigPath}",
+    "-cp", $sampleAppPath,
     "com.gubupt.sample.app.App"
 )
 

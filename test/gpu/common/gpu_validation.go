@@ -7,7 +7,6 @@ package common
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"strings"
@@ -40,7 +39,7 @@ const (
 	PodTensorUtil       = "pod_gpu_tensor_core_utilization"
 	PodLimit            = "pod_gpu_limit"
 	PodRequest          = "pod_gpu_request"
-	PodCountTotal       = "pod_gpu_usage_total"
+	PodUsageTotal       = "pod_gpu_usage_total"
 	PodReserved         = "pod_gpu_reserved_capacity"
 	NodeMemTotal        = "node_gpu_memory_total"
 	NodeMemUsed         = "node_gpu_memory_used"
@@ -49,30 +48,32 @@ const (
 	NodeUtil            = "node_gpu_utilization"
 	NodeMemUtil         = "node_gpu_memory_utilization"
 	NodeTensorUtil      = "node_gpu_tensor_core_utilization"
-	NodeCountTotal      = "node_gpu_usage_total"
-	NodeCountLimit      = "node_gpu_limit"
+	NodeUsageTotal      = "node_gpu_usage_total"
+	NodeLimit           = "node_gpu_limit"
 	NodeReserved        = "node_gpu_reserved_capacity"
 	NodeUnreserved      = "node_gpu_unreserved_capacity"
 	NodeAvailable       = "node_gpu_available_capacity"
 )
-
-var UseE2EMetrics = flag.Bool("useE2EMetrics", false, "Use E2E metrics mapping which uses latest build CWA")
 
 // ExpectedDimsToMetricsIntegTest defines the expected dimensions and metrics for GPU validation
 var ExpectedDimsToMetricsIntegTest = map[string][]string{
 	"ClusterName": {
 		ContainerMemTotal, ContainerMemUsed, ContainerPower, ContainerTemp, ContainerUtil, ContainerMemUtil, ContainerTensorUtil,
 		PodMemTotal, PodMemUsed, PodPower, PodTemp, PodUtil, PodMemUtil, PodTensorUtil,
+		PodReserved, PodRequest, PodUsageTotal, PodLimit,
 		NodeMemTotal, NodeMemUsed, NodePower, NodeTemp, NodeUtil, NodeMemUtil, NodeTensorUtil,
+		NodeUsageTotal, NodeLimit, NodeReserved, NodeUnreserved, NodeAvailable,
 	},
 	"ClusterName-Namespace": {
 		PodMemTotal, PodMemUsed, PodPower, PodTemp, PodUtil, PodMemUtil, PodTensorUtil,
 	},
-	//"ClusterName-Namespace-Service": {
-	//	PodMemTotal, PodMemUsed, PodPower, PodTemp, PodUtil, PodMemUtil,
-	//},
+	"ClusterName-Namespace-Service": {
+		PodMemTotal, PodMemUsed, PodPower, PodTemp, PodUtil, PodMemUtil, PodTensorUtil,
+		PodReserved, PodRequest, PodUsageTotal, PodLimit,
+	},
 	"ClusterName-Namespace-PodName": {
 		PodMemTotal, PodMemUsed, PodPower, PodTemp, PodUtil, PodMemUtil, PodTensorUtil,
+		PodUsageTotal, PodRequest, PodReserved, PodLimit,
 	},
 	"ClusterName-ContainerName-Namespace-PodName": {
 		ContainerMemTotal, ContainerMemUsed, ContainerPower, ContainerTemp, ContainerUtil, ContainerMemUtil, ContainerTensorUtil,
@@ -85,13 +86,14 @@ var ExpectedDimsToMetricsIntegTest = map[string][]string{
 	},
 	"ClusterName-FullPodName-Namespace-PodName": {
 		PodMemTotal, PodMemUsed, PodPower, PodTemp, PodUtil, PodMemUtil, PodTensorUtil,
+		PodUsageTotal, PodRequest, PodReserved, PodLimit,
 	},
 	"ClusterName-FullPodName-GpuDevice-Namespace-PodName": {
 		PodMemTotal, PodMemUsed, PodPower, PodTemp, PodUtil, PodMemUtil, PodTensorUtil,
 	},
 	"ClusterName-InstanceId-NodeName": {
 		NodeMemTotal, NodeMemUsed, NodePower, NodeTemp, NodeUtil, NodeMemUtil, NodeTensorUtil,
-		//NodeCountTotal, NodeCountRequest, NodeCountLimit,
+		NodeLimit, NodeUsageTotal, NodeReserved, NodeUnreserved, NodeAvailable,
 	},
 	"ClusterName-GpuDevice-InstanceId-InstanceType-NodeName": {
 		NodeMemTotal, NodeMemUsed, NodePower, NodeTemp, NodeUtil, NodeMemUtil, NodeTensorUtil,
@@ -102,34 +104,8 @@ var ExpectedDimsToMetricsIntegTest = map[string][]string{
 func ValidateGPUMetrics(env *environment.MetaData) []status.TestResult {
 	var testResults []status.TestResult
 
-	// Create a copy of the expected dimensions to metrics map
-	expectedDimsToMetrics := make(map[string][]string)
-	for k, v := range ExpectedDimsToMetricsIntegTest {
-		expectedDimsToMetrics[k] = append([]string{}, v...)
-	}
-
-	// Add GPU count metrics if using E2E metrics
-	if *UseE2EMetrics {
-		expectedDimsToMetrics["ClusterName"] = append(
-			expectedDimsToMetrics["ClusterName"],
-			PodReserved, PodRequest, PodCountTotal, PodLimit, NodeCountTotal, NodeCountLimit, NodeReserved, NodeUnreserved, NodeAvailable,
-		)
-		expectedDimsToMetrics["ClusterName-Namespace-PodName"] = append(
-			expectedDimsToMetrics["ClusterName-Namespace-PodName"],
-			PodCountTotal, PodRequest, PodReserved, PodLimit,
-		)
-		expectedDimsToMetrics["ClusterName-FullPodName-Namespace-PodName"] = append(
-			expectedDimsToMetrics["ClusterName-FullPodName-Namespace-PodName"],
-			PodCountTotal, PodRequest, PodReserved, PodLimit,
-		)
-		expectedDimsToMetrics["ClusterName-InstanceId-NodeName"] = append(
-			expectedDimsToMetrics["ClusterName-InstanceId-NodeName"],
-			NodeCountLimit, NodeCountTotal, NodeReserved, NodeUnreserved, NodeAvailable,
-		)
-	}
-
-	// Validate metrics and logs
-	testResults = append(testResults, metric.ValidateMetrics(env, GPUMetricIndicator, expectedDimsToMetrics)...)
+	// Validate metrics and logs using the complete expected metrics map
+	testResults = append(testResults, metric.ValidateMetrics(env, GPUMetricIndicator, ExpectedDimsToMetricsIntegTest)...)
 	testResults = append(testResults, metric.ValidateLogs(env))
 
 	return testResults

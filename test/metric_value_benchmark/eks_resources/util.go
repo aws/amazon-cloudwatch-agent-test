@@ -183,6 +183,11 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"container_cpu_request",
 			"pod_cpu_usage_total",
 			"pod_memory_working_set",
+			"persistent_volume_claim_status_bound",
+			"persistent_volume_claim_status_lost",
+			"persistent_volume_claim_status_pending",
+			"persistent_volume_claim_count",
+			"persistent_volume_count",
 		},
 		"ClusterName-FullPodName-Namespace-PodName": {
 			"pod_network_tx_bytes",
@@ -313,6 +318,16 @@ func GetExpectedDimsToMetrics(env *environment.MetaData) map[string][]string {
 			"pod_interface_network_tx_dropped",
 			"pod_cpu_utilization",
 			"pod_network_tx_bytes",
+			"persistent_volume_claim_status_bound",
+			"persistent_volume_claim_status_lost",
+			"persistent_volume_claim_status_pending",
+			"persistent_volume_claim_count",
+		},
+		"ClusterName-Namespace-PersistentVolumeClaimName": {
+			"persistent_volume_claim_status_bound",
+			"persistent_volume_claim_status_lost",
+			"persistent_volume_claim_status_pending",
+			"persistent_volume_claim_count",
 		},
 	}
 
