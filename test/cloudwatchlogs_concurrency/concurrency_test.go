@@ -48,7 +48,7 @@ func TestConcurrencyPoisonPill(t *testing.T) {
 	deniedLogGroups := make([]string, 10)
 	deniedLogFiles := make([]string, 10)
 	for i := 0; i < 10; i++ {
-		deniedLogGroups[i] = fmt.Sprintf("aws-restricted-denied-%d-%s", i, instanceId)
+		deniedLogGroups[i] = fmt.Sprintf("aws-restricted-log-group-name-%d-%s", i, instanceId)
 		deniedLogFiles[i] = fmt.Sprintf("/tmp/access_denied_%d.log", i)
 	}
 
