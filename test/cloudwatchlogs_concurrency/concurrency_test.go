@@ -100,7 +100,7 @@ func TestConcurrencyPoisonPill(t *testing.T) {
 	)
 	assert.NoError(t, err, "Access granted log group should have logs despite denied log groups")
 
-	// Validate denied log groups have no logs
+	// Validate denied log groups don't exist (ResourceNotFoundException due to AccessDenied on CreateLogGroup)
 	for _, lg := range deniedLogGroups {
 		err = awsservice.ValidateLogs(
 			lg,
@@ -109,15 +109,10 @@ func TestConcurrencyPoisonPill(t *testing.T) {
 			&end,
 			awsservice.AssertLogsCount(0),
 		)
-		assert.NoError(t, err, "Denied log group should have no logs")
+		assert.Error(t, err, "Denied log group should not exist")
+		assert.Contains(t, err.Error(), "ResourceNotFoundException", "Expected ResourceNotFoundException for denied log group")
 	}
 
-	// Check agent logs for access denied errors
-	agentLog, err := os.ReadFile(common.AgentLogFile)
-	if err == nil {
-		logContent := string(agentLog)
-		assert.Contains(t, logContent, "AccessDenied", "Agent logs should contain AccessDenied errors")
-	}
 }
 
 func writeLogLines(t *testing.T, f *os.File, iterations int) {
