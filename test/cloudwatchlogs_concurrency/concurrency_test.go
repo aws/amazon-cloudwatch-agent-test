@@ -8,7 +8,6 @@ package cloudwatchlogs_concurrency
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
