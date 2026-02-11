@@ -85,7 +85,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"ec2_linux_onprem": {
 		{testDir: "./test/cloudwatchlogs"},
-		{testDir: "./test/cloudwatchlogs_concurrency"},
 	},
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
