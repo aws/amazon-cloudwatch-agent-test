@@ -432,6 +432,8 @@ type partition struct {
 	configName string
 	tests      []string
 	ami        []string
+	// excludedTestDirs allows excluding specific test directories from this partition
+	excludedTestDirs map[string]struct{}
 	// testConfigOverrides allows partition-specific test configurations
 	// key is testDir, value is the override config
 	testConfigOverrides map[string]testConfig
@@ -447,6 +449,9 @@ var partitionTests = map[string]partition{
 		configName: "_itar",
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+		excludedTestDirs: map[string]struct{}{
+			"./test/cloudwatchlogs_concurrency": {}, // IAM deny policy not deployed to ITAR account
+		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
 				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
@@ -462,6 +467,9 @@ var partitionTests = map[string]partition{
 		configName: "_china",
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+		excludedTestDirs: map[string]struct{}{
+			"./test/cloudwatchlogs_concurrency": {}, // IAM deny policy not deployed to China account
+		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
 				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
@@ -489,7 +497,7 @@ func main() {
 			if len(partition.tests) != 0 && !slices.Contains(partition.tests, testType) {
 				continue
 			}
-			testMatrix := genMatrix(testType, testConfigs, partition.ami, partition.testConfigOverrides)
+			testMatrix := genMatrix(testType, testConfigs, partition.ami, partition.testConfigOverrides, partition.excludedTestDirs)
 			writeTestMatrixFile(testType+partition.configName, testMatrix)
 		}
 	}
@@ -519,7 +527,7 @@ func generateTestName(testType string, test_directory string) string {
 
 	return strings.Join(cleaned, "_")
 }
-func genMatrix(testType string, testConfigs []testConfig, ami []string, overrides map[string]testConfig) []matrixRow {
+func genMatrix(testType string, testConfigs []testConfig, ami []string, overrides map[string]testConfig, excludedTestDirs map[string]struct{}) []matrixRow {
 	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
 
 	if err != nil {
@@ -539,6 +547,13 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
+			// Skip excluded test directories
+			if excludedTestDirs != nil {
+				if _, excluded := excludedTestDirs[testConfig.testDir]; excluded {
+					continue
+				}
+			}
+
 			// Apply partition-specific overrides if available
 			if overrides != nil {
 				if override, ok := overrides[testConfig.testDir]; ok {
