@@ -1,0 +1,25 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+exporters:
+  awsemf:
+    namespace: "OtelConfigTest"
+    log_group_name: "OtelConfigTest/$INSTANCE_ID"
+    log_retention: 1
+    dimension_rollup_option: "NoDimensionRollup"
+    log_stream_name: "fetch_yaml"
+    resource_to_telemetry_conversion:
+      enabled: true
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [awsemf]
