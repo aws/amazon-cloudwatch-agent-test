@@ -88,6 +88,9 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
       "s3:GetObject",
       "s3:ListBucket",
       "s3:PutObject",
+      "iam:PutRolePolicy",
+      "iam:DeleteRolePolicy",
+      "iam:GetInstanceProfile",
     ]
     resources = ["*"]
   }

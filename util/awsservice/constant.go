@@ -18,6 +18,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	// "github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -57,6 +59,7 @@ var (
 	S3Client             *s3.Client
 	CloudformationClient *cloudformation.Client
 	XrayClient           *xray.Client
+	IamClient            *iam.Client
 )
 
 func init() {
@@ -99,6 +102,7 @@ func ConfigureAWSClients(region string) error {
 	S3Client = s3.NewFromConfig(awsCfg)
 	CloudformationClient = cloudformation.NewFromConfig(awsCfg)
 	XrayClient = xray.NewFromConfig(awsCfg)
+	IamClient = iam.NewFromConfig(awsCfg)
 
 	return nil
 }
