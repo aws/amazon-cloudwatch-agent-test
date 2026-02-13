@@ -204,6 +204,12 @@ resource "null_resource" "integration_test_run" {
         "cd ~/amazon-cloudwatch-agent-test",
       ],
 
+      # Restore Go build/module cache from S3 (non-fatal if unavailable)
+      var.cache_key != "" ? [
+        "echo 'Restoring Go build cache from S3...'",
+        "bash ./scripts/restore-go-cache.sh '${var.s3_bucket}' '${var.cache_key}'",
+      ] : [],
+
       # On-premises specific environment variables
       local.is_onprem ? [
         "export RUN_IN_AWS=false",

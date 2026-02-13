@@ -247,6 +247,14 @@ resource "null_resource" "integration_test_run" {
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
         "echo run integration test",
         "cd ~/amazon-cloudwatch-agent-test",
+      ],
+
+      # Restore Go build/module cache from S3 (non-fatal if unavailable)
+      var.cache_key != "" ? [
+        "bash ./scripts/restore-go-cache.sh '${var.s3_bucket}' '${var.cache_key}'",
+      ] : [],
+
+      [
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"

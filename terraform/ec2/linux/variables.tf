@@ -134,3 +134,9 @@ variable "is_onprem" {
   type        = bool
   default     = false
 }
+
+variable "cache_key" {
+  description = "Key for pre-warmed Go build/module cache in S3 (e.g. main-go1.22.2-linux-amd64). Empty string disables caching."
+  type        = string
+  default     = ""
+}
