@@ -29,6 +29,7 @@ import (
 	"github.com/DataDog/datadog-go/statsd"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/prozz/aws-embedded-metrics-golang/emf"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -475,7 +476,10 @@ func SendEMFMetrics(metricPerInterval int, metricLogGroup, metricNamespace strin
 //	    "Dimensions": [{"Name": "InstanceId", "Value": "i-0123456789012"}, { "Name": "cpu", "Value": "cpu-total"}]
 //	  }'
 func BuildListEntitiesForMetricRequest(body []byte, region string) (*http.Request, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(region),
+		config.WithEC2IMDSClientEnableState(imds.ClientEnabled),
+	)
 	if err != nil {
 		return nil, err
 	}

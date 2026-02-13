@@ -79,7 +79,10 @@ func ConfigureAWSClients(region string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	awsCfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(region),
+		config.WithEC2IMDSClientEnableState(imds.ClientEnabled),
+	)
 	if err != nil {
 		// handle error
 		fmt.Println("There was an error trying to load default config: ", err)

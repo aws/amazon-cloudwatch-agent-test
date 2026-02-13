@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
@@ -111,7 +112,9 @@ func setUpLocalstackConfig(metadata *environment.MetaData) {
 	// Download localstack config files
 	prefix := fmt.Sprintf(localstackS3Key, metadata.CwaCommitSha)
 	cxt := context.Background()
-	cfg, err := config.LoadDefaultConfig(cxt)
+	cfg, err := config.LoadDefaultConfig(cxt,
+		config.WithEC2IMDSClientEnableState(imds.ClientEnabled),
+	)
 	if err != nil {
 		log.Fatalf("Can't get config error: %v", err)
 	}
