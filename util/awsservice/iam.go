@@ -6,11 +6,8 @@ package awsservice
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 )
 
@@ -53,26 +50,4 @@ func DeleteRoleInlinePolicy(roleName, policyName string) error {
 		return fmt.Errorf("failed to delete role policy: %w", err)
 	}
 	return nil
-}
-
-// GetInstanceRoleName returns the IAM role name attached to this EC2 instance.
-func GetInstanceRoleName() (string, error) {
-	resp, err := ImdsClient.GetMetadata(ctx, &imds.GetMetadataInput{
-		Path: "iam/security-credentials/",
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to get role from IMDS: %w", err)
-	}
-	defer resp.Content.Close()
-
-	content, err := io.ReadAll(resp.Content)
-	if err != nil {
-		return "", fmt.Errorf("failed to read IMDS response: %w", err)
-	}
-
-	roleName := strings.TrimSpace(string(content))
-	if roleName == "" {
-		return "", fmt.Errorf("no IAM role attached to instance")
-	}
-	return roleName, nil
 }

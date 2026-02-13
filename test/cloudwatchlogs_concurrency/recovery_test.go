@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	recoveryPolicyName  = "cwagent-recovery-test-deny"
-	logGroupPattern     = "arn:aws:logs:*:*:log-group:recovery-test-*:*"
-	iamPropagationDelay = 30 * time.Second
+	recoveryPolicyName = "cwagent-recovery-test-deny"
+	logGroupPattern    = "arn:aws:logs:*:*:log-group:recovery-test-*:*"
+	iamRoleName        = "cwa-e2e-iam-role"
+	iamPropagationWait = 30 * time.Second
 )
 
 // TestConcurrencyRecovery validates that the agent recovers and publishes logs
@@ -34,25 +35,20 @@ func TestConcurrencyRecovery(t *testing.T) {
 		instanceId = awsservice.GetInstanceId()
 	}
 
-	// Discover instance role
-	roleName, err := awsservice.GetInstanceRoleName()
-	require.NoError(t, err, "Failed to get instance role name")
-
 	// Create inline deny policy (separate from the static Terraform-managed deny)
-	err = awsservice.PutRoleDenyPolicy(roleName, recoveryPolicyName, logGroupPattern)
+	err := awsservice.PutRoleDenyPolicy(iamRoleName, recoveryPolicyName, logGroupPattern)
 	require.NoError(t, err, "Failed to create deny policy")
 
 	policyCreated := true
 	defer func() {
 		if policyCreated {
-			if cleanupErr := awsservice.DeleteRoleInlinePolicy(roleName, recoveryPolicyName); cleanupErr != nil {
+			if cleanupErr := awsservice.DeleteRoleInlinePolicy(iamRoleName, recoveryPolicyName); cleanupErr != nil {
 				t.Logf("Warning: failed to cleanup deny policy: %v", cleanupErr)
 			}
 		}
 	}()
 
-	// Wait for IAM policy to propagate
-	time.Sleep(iamPropagationDelay)
+	time.Sleep(iamPropagationWait)
 
 	allowedLogGroup := fmt.Sprintf("recovery-allowed-%s", instanceId)
 	recoveryLogGroup := fmt.Sprintf("recovery-test-target-%s", instanceId)
@@ -99,12 +95,12 @@ func TestConcurrencyRecovery(t *testing.T) {
 	assert.Contains(t, err.Error(), "ResourceNotFoundException")
 
 	// Phase 2 — Remove deny policy to grant permission
-	err = awsservice.DeleteRoleInlinePolicy(roleName, recoveryPolicyName)
+	err = awsservice.DeleteRoleInlinePolicy(iamRoleName, recoveryPolicyName)
 	assert.NoError(t, err, "Failed to delete deny policy")
 	policyCreated = false
 
-	t.Logf("Deny policy removed, waiting %v for IAM propagation...", iamPropagationDelay)
-	time.Sleep(iamPropagationDelay)
+	t.Logf("Deny policy removed, waiting %v for IAM propagation...", iamPropagationWait)
+	time.Sleep(iamPropagationWait)
 
 	// Phase 3 — Write more logs after permission restored
 	recoveryStart := time.Now()
