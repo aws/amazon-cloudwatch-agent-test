@@ -1,8 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-// All variables match terraform/ec2/linux/variables.tf
-
 variable "region" {
   type    = string
   default = "us-west-2"
@@ -34,8 +32,9 @@ variable "user" {
 }
 
 variable "install_agent" {
-  type    = string
-  default = "go run ./install/install_agent.go rpm"
+  description = "go run ./install/install_agent.go deb or go run ./install/install_agent.go rpm"
+  type        = string
+  default     = "go run ./install/install_agent.go rpm"
 }
 
 variable "ca_cert_path" {
@@ -46,6 +45,11 @@ variable "ca_cert_path" {
 variable "arc" {
   type    = string
   default = "amd64"
+
+  validation {
+    condition     = contains(["amd64", "arm64"], var.arc)
+    error_message = "Valid values for arc are (amd64, arm64)."
+  }
 }
 
 variable "binary_name" {
@@ -56,6 +60,11 @@ variable "binary_name" {
 variable "local_stack_host_name" {
   type    = string
   default = "localhost.localstack.cloud"
+}
+
+variable "is_selinux_test" {
+  type    = bool
+  default = false
 }
 
 variable "s3_bucket" {
@@ -71,6 +80,11 @@ variable "test_name" {
 variable "test_dir" {
   type    = string
   default = ""
+}
+
+variable "selinux_branch" {
+  type    = string
+  default = "main"
 }
 
 variable "cwa_github_sha" {
@@ -91,4 +105,32 @@ variable "github_test_repo_branch" {
 variable "is_canary" {
   type    = bool
   default = false
+}
+
+variable "plugin_tests" {
+  type    = string
+  default = ""
+}
+
+
+variable "excluded_tests" {
+  type    = string
+  default = ""
+}
+
+variable "pre_test_setup" {
+  type    = string
+  default = "echo no pre-test setup"
+}
+
+variable "agent_start" {
+  description = "default command should be for ec2 with linux"
+  type        = string
+  default     = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c "
+}
+
+variable "is_onprem" {
+  description = "Whether to run in on-premises mode instead of EC2 mode"
+  type        = bool
+  default     = false
 }
