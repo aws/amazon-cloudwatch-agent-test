@@ -55,9 +55,3 @@ variable "is_canary" {
   type    = bool
   default = false
 }
-
-variable "iam_instance_profile" {
-  type        = string
-  default     = ""
-  description = "Override IAM instance profile. If empty, uses the default cwa-e2e-iam-instance-profile"
-}

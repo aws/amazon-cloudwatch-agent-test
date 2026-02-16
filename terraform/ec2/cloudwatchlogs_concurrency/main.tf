@@ -1,15 +1,40 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-// This module wraps terraform/ec2/linux and adds a per-test IAM role
-// with self-modify permissions for the recovery test.
-
 module "common" {
   source = "../../common"
 }
 
+module "basic_components" {
+  source = "../../basic_components"
+
+  region = var.region
+}
+
 locals {
   iam_role_name = "cwa-concurrency-${module.common.testing_id}"
+}
+
+#####################################################################
+# Generate EC2 Key Pair for log in access to EC2
+#####################################################################
+
+resource "tls_private_key" "ssh_key" {
+  count     = var.ssh_key_name == "" ? 1 : 0
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "aws_ssh_key" {
+  count      = var.ssh_key_name == "" ? 1 : 0
+  key_name   = "ec2-key-pair-${module.common.testing_id}"
+  public_key = tls_private_key.ssh_key[0].public_key_openssh
+}
+
+locals {
+  ssh_key_name        = var.ssh_key_name != "" ? var.ssh_key_name : aws_key_pair.aws_ssh_key[0].key_name
+  private_key_content = var.ssh_key_name != "" ? var.ssh_key_value : tls_private_key.ssh_key[0].private_key_pem
+  binary_uri          = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
 }
 
 #####################################################################
@@ -79,27 +104,36 @@ resource "aws_iam_instance_profile" "cwagent_instance_profile" {
 }
 
 #####################################################################
-# Use the standard linux module with custom IAM
+# Generate EC2 Instance
 #####################################################################
 
-module "linux_common" {
-  source = "../common/linux"
+resource "aws_instance" "cwagent" {
+  ami                                  = data.aws_ami.latest.id
+  instance_type                        = var.ec2_instance_type
+  key_name                             = local.ssh_key_name
+  iam_instance_profile                 = aws_iam_instance_profile.cwagent_instance_profile.name
+  vpc_security_group_ids               = [module.basic_components.security_group]
+  associate_public_ip_address          = true
+  instance_initiated_shutdown_behavior = "terminate"
 
-  region               = var.region
-  ec2_instance_type    = var.ec2_instance_type
-  ssh_key_name         = var.ssh_key_name
-  ami                  = var.ami
-  ssh_key_value        = var.ssh_key_value
-  user                 = var.user
-  arc                  = var.arc
-  test_name            = var.test_name
-  test_dir             = var.test_dir
-  is_canary            = var.is_canary
-  iam_instance_profile = aws_iam_instance_profile.cwagent_instance_profile.name
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
+
+  tags = {
+    Name = "cwagent-integ-test-ec2-${var.test_name}-${module.common.testing_id}"
+  }
 }
 
-locals {
-  binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
+data "aws_ami" "latest" {
+  most_recent = true
+  owners      = ["self", "amazon"]
+
+  filter {
+    name   = "name"
+    values = [var.ami]
+  }
 }
 
 #####################################################################
@@ -110,45 +144,51 @@ resource "null_resource" "integration_test_setup" {
   connection {
     type        = "ssh"
     user        = var.user
-    private_key = module.linux_common.private_key_content
-    host        = module.linux_common.cwagent_public_ip
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
   }
 
   provisioner "remote-exec" {
     inline = [
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
-      "echo clone ${var.github_test_repo} branch ${var.github_test_repo_branch}",
+      "echo clone ${var.github_test_repo} branch ${var.github_test_repo_branch} and install agent",
       "if [ ! -d amazon-cloudwatch-agent-test/vendor ]; then",
+      "echo 'Vendor directory not found, cloning...'",
       "sudo rm -rf amazon-cloudwatch-agent-test",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q",
       "fi",
       "cd amazon-cloudwatch-agent-test",
+      "git rev-parse --short HEAD",
       "aws s3 cp --no-progress s3://${local.binary_uri} .",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       var.install_agent,
     ]
   }
 
-  depends_on = [module.linux_common]
+  depends_on = [
+    aws_iam_role.cwagent_role,
+    aws_iam_role_policy.cwagent_policy
+  ]
 }
 
 resource "null_resource" "integration_test_run" {
   connection {
     type        = "ssh"
     user        = var.user
-    private_key = module.linux_common.private_key_content
-    host        = module.linux_common.cwagent_public_ip
+    private_key = local.private_key_content
+    host        = aws_instance.cwagent.public_ip
   }
 
   provisioner "remote-exec" {
     inline = [
+      "echo Preparing environment...",
       "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
       "export AWS_REGION=${var.region}",
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "cd ~/amazon-cloudwatch-agent-test",
-      "go test ./test/sanity -p 1 -v",
-      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${module.linux_common.cwagent_id} -iamRoleName=${local.iam_role_name} -v"
+      "echo run sanity test && go test ./test/sanity -p 1 -v",
+      "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -iamRoleName=${local.iam_role_name} -v"
     ]
   }
 

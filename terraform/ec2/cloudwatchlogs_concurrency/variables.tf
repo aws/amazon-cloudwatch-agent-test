@@ -6,6 +6,16 @@ variable "region" {
   default = "us-west-2"
 }
 
+variable "is_selinux_test" {
+  type    = bool
+  default = false
+}
+
+variable "selinux_branch" {
+  type    = string
+  default = "main"
+}
+
 variable "ec2_instance_type" {
   type    = string
   default = "t3a.medium"
@@ -62,11 +72,6 @@ variable "local_stack_host_name" {
   default = "localhost.localstack.cloud"
 }
 
-variable "is_selinux_test" {
-  type    = bool
-  default = false
-}
-
 variable "s3_bucket" {
   type    = string
   default = ""
@@ -80,11 +85,6 @@ variable "test_name" {
 variable "test_dir" {
   type    = string
   default = ""
-}
-
-variable "selinux_branch" {
-  type    = string
-  default = "main"
 }
 
 variable "cwa_github_sha" {
@@ -107,20 +107,14 @@ variable "is_canary" {
   default = false
 }
 
-variable "plugin_tests" {
-  type    = string
-  default = ""
-}
-
-
 variable "excluded_tests" {
   type    = string
   default = ""
 }
 
-variable "pre_test_setup" {
+variable "plugin_tests" {
   type    = string
-  default = "echo no pre-test setup"
+  default = ""
 }
 
 variable "agent_start" {
