@@ -21,7 +21,6 @@ import (
 
 const (
 	recoveryPolicyPrefix = "cwagent-recovery-deny-"
-	iamRoleName          = "cwa-e2e-iam-role"
 	iamPropagationWait   = 30 * time.Second
 )
 
@@ -32,6 +31,11 @@ func TestConcurrencyRecovery(t *testing.T) {
 	instanceId := env.InstanceId
 	if instanceId == "" {
 		instanceId = awsservice.GetInstanceId()
+	}
+
+	iamRoleName := env.IamRoleName
+	if iamRoleName == "" {
+		t.Skip("Skipping TestConcurrencyRecovery: -iamRoleName not provided (requires per-test IAM role with self-modify permissions)")
 	}
 
 	allowedLogGroup := fmt.Sprintf("recovery-allowed-%s", instanceId)
