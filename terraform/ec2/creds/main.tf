@@ -220,9 +220,9 @@ resource "null_resource" "integration_test_run" {
       ] : [],
 
       var.test_binaries_prefix != "" ? [
-        "echo run sanity test && ~/test-binaries/sanity.test -test.v",
+        "echo run sanity test && cd ~/amazon-cloudwatch-agent-test/test/sanity && ~/test-binaries/sanity.test -test.v",
         "echo assume role arn is ${aws_iam_role.assume_role.arn}",
-        "~/test-binaries/${basename(var.test_dir)}.test -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id}"
+        "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${basename(var.test_dir)}.test -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id}"
       ] : [
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "echo assume role arn is ${aws_iam_role.assume_role.arn}",
