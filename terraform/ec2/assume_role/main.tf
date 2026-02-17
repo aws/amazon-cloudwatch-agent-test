@@ -250,11 +250,23 @@ resource "null_resource" "integration_test_run" {
       ],
 
       # Restore Go build/module cache from S3 (non-fatal if unavailable)
-      var.cache_key != "" ? [
+      var.cache_key != "" && var.test_binaries_prefix == "" ? [
         "bash ./scripts/restore-go-cache.sh '${var.s3_bucket}' '${var.cache_key}'",
       ] : [],
 
-      [
+      # Download pre-compiled test binaries from S3
+      var.test_binaries_prefix != "" ? [
+        "mkdir -p ~/test-binaries",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/sanity.test ~/test-binaries/sanity.test --quiet",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/${basename(var.test_dir)}.test ~/test-binaries/${basename(var.test_dir)}.test --quiet",
+        "chmod +x ~/test-binaries/*",
+      ] : [],
+
+      var.test_binaries_prefix != "" ? [
+        "echo run sanity test && ~/test-binaries/sanity.test -test.v",
+        "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
+        "~/test-binaries/${basename(var.test_dir)}.test -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id}"
+      ] : [
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"

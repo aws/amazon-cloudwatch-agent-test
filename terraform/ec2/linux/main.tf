@@ -43,6 +43,10 @@ locals {
 
   // Pre-test setup command
   pre_test_setup_cmd = local.is_onprem ? "echo 'Pre-test setup: Replacing {instance_id} and $${aws:InstanceId} placeholders in test resource configs'; find . -path '*/resources/*.json' -exec sed -i 's/{instance_id}/${module.linux_common.cwagent_id}/g' {} \\; -exec sed -i 's/$${aws:InstanceId}/${module.linux_common.cwagent_id}/g' {} \\; && echo 'Updated all config files in resources directories'" : var.pre_test_setup
+
+  // Pre-compiled test binary support
+  use_test_binaries = var.test_binaries_prefix != ""
+  test_binary_name  = "${basename(var.test_dir)}.test"
 }
 
 #####################################################################
@@ -205,9 +209,19 @@ resource "null_resource" "integration_test_run" {
       ],
 
       # Restore Go build/module cache from S3 (non-fatal if unavailable)
-      var.cache_key != "" ? [
+      var.cache_key != "" && !local.use_test_binaries ? [
         "echo 'Restoring Go build cache from S3...'",
         "bash ./scripts/restore-go-cache.sh '${var.s3_bucket}' '${var.cache_key}'",
+      ] : [],
+
+      # Download pre-compiled test binaries from S3
+      local.use_test_binaries ? [
+        "echo 'Downloading pre-compiled test binaries from S3...'",
+        "mkdir -p ~/test-binaries",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/sanity.test ~/test-binaries/sanity.test --quiet",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/${local.test_binary_name} ~/test-binaries/${local.test_binary_name} --quiet",
+        "chmod +x ~/test-binaries/*",
+        "echo 'Test binaries downloaded'",
       ] : [],
 
       # On-premises specific environment variables
@@ -228,15 +242,18 @@ resource "null_resource" "integration_test_run" {
         "echo 'Testing agent credentials:'",
         "sudo aws sts get-caller-identity || echo 'Agent credentials test failed'",
         "echo 'Pre-test setup: Replacing {instance_id} and $${aws:InstanceId} placeholders in test resource configs'; find . -path '${var.test_dir}/resources/*.json' -exec sed -i 's/{instance_id}/${module.linux_common.cwagent_id}/g' {} \\; -exec sed -i 's/$${aws:InstanceId}/${module.linux_common.cwagent_id}/g' {} \\; && echo 'Updated all config files in resources directories'"
-        ] : [
+        ] : local.use_test_binaries ? [
+        "echo Running sanity test with pre-compiled binary...",
+        "~/test-binaries/sanity.test -test.v",
+      ] : [
         "echo Running sanity test...",
         "go test ./test/sanity -p 1 -v",
       ],
 
       [
         var.pre_test_setup,
-        # Integration test execution with conditional agent start command
-        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
+        # Integration test execution — use pre-compiled binary or go test
+        local.use_test_binaries ? "~/test-binaries/${local.test_binary_name} -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}" : "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
       ],
     )
   }

@@ -134,3 +134,9 @@ variable "cache_key" {
   type        = string
   default     = ""
 }
+
+variable "test_binaries_prefix" {
+  description = "S3 prefix for pre-compiled test binaries. Empty string uses go test compilation."
+  type        = string
+  default     = ""
+}
