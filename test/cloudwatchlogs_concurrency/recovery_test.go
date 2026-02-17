@@ -101,15 +101,14 @@ func TestConcurrencyRecovery(t *testing.T) {
 	t.Logf("Deny policy removed, waiting %v for IAM propagation...", iamPropagationWait)
 	time.Sleep(iamPropagationWait)
 
-	recoveryStart := time.Now()
 	writeLogLines(t, recoveryFile, 10)
 	time.Sleep(sleepForFlush)
 
 	common.StopAgent()
 	end := time.Now()
 
-	err = awsservice.ValidateLogs(recoveryLogGroup, instanceId, &recoveryStart, &end,
-		awsservice.AssertLogsCount(20))
+	err = awsservice.ValidateLogs(recoveryLogGroup, instanceId, &start, &end,
+		awsservice.AssertLogsCount(40))
 	if err != nil {
 		printAgentLogs(t)
 	}
