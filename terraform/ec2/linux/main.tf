@@ -218,8 +218,8 @@ resource "null_resource" "integration_test_run" {
       local.use_test_binaries ? [
         "echo 'Downloading pre-compiled test binaries from S3...'",
         "mkdir -p ~/test-binaries",
-        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/sanity.test ~/test-binaries/sanity.test --quiet",
-        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/${local.test_binary_name} ~/test-binaries/${local.test_binary_name} --quiet",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/linux/${var.arc}/sanity.test ~/test-binaries/sanity.test --quiet",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/linux/${var.arc}/${local.test_binary_name} ~/test-binaries/${local.test_binary_name} --quiet",
         "chmod +x ~/test-binaries/*",
         "echo 'Test binaries downloaded'",
       ] : [],

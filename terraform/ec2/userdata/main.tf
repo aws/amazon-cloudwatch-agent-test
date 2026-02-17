@@ -107,8 +107,8 @@ resource "null_resource" "integration_test" {
       # Download pre-compiled test binaries from S3
       var.test_binaries_prefix != "" ? [
         "mkdir -p ~/test-binaries",
-        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/sanity.test ~/test-binaries/sanity.test --quiet",
-        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/${basename(var.test_dir)}.test ~/test-binaries/${basename(var.test_dir)}.test --quiet",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/linux/${var.arc}/sanity.test ~/test-binaries/sanity.test --quiet",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/linux/${var.arc}/${basename(var.test_dir)}.test ~/test-binaries/${basename(var.test_dir)}.test --quiet",
         "chmod +x ~/test-binaries/*",
       ] : [],
 
