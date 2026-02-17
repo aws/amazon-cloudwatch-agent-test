@@ -74,12 +74,12 @@ func TestConcurrencyRecovery(t *testing.T) {
 	common.TouchFile(common.AgentLogFile)
 
 	common.CopyFile("resources/config_recovery.json", configOutputPath)
+	start := time.Now()
 	common.StartAgent(configOutputPath, true, false)
 	defer common.StopAgent()
 
 	time.Sleep(sleepForFlush)
 
-	start := time.Now()
 	writeLogLines(t, allowedFile, 10)
 	writeLogLines(t, recoveryFile, 10)
 	time.Sleep(sleepForFlush)
