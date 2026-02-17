@@ -62,6 +62,12 @@ resource "aws_iam_role_policy" "cwagent_policy" {
     Version = "2012-10-17"
     Statement = [
       {
+        Sid    = "DenyRestrictedLogGroups"
+        Effect = "Deny"
+        Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+        Resource = "arn:aws:logs:*:*:log-group:aws-restricted-log-group-name-*"
+      },
+      {
         Effect = "Allow"
         Action = [
           "cloudwatch:PutMetricData",

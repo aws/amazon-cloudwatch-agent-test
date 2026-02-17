@@ -110,5 +110,45 @@ func TestConcurrencyRecovery(t *testing.T) {
 
 	err = awsservice.ValidateLogs(recoveryLogGroup, instanceId, &recoveryStart, &end,
 		awsservice.AssertLogsCount(20))
+	if err != nil {
+		printAgentLogs(t)
+	}
 	assert.NoError(t, err, "Recovery log group should have logs after permissions restored")
+}
+
+func printAgentLogs(t *testing.T) {
+	t.Log("=== CloudWatch Agent Logs (last 100 lines) ===")
+	content, err := os.ReadFile(common.AgentLogFile)
+	if err != nil {
+		t.Logf("Failed to read agent log: %v", err)
+		return
+	}
+	lines := string(content)
+	// Print last ~100 lines
+	lineSlice := splitLines(lines)
+	start := 0
+	if len(lineSlice) > 100 {
+		start = len(lineSlice) - 100
+	}
+	for i := start; i < len(lineSlice); i++ {
+		t.Log(lineSlice[i])
+	}
+	t.Log("=== End Agent Logs ===")
+}
+
+func splitLines(s string) []string {
+	var lines []string
+	for len(s) > 0 {
+		idx := 0
+		for idx < len(s) && s[idx] != '\n' {
+			idx++
+		}
+		lines = append(lines, s[:idx])
+		if idx < len(s) {
+			s = s[idx+1:]
+		} else {
+			break
+		}
+	}
+	return lines
 }
