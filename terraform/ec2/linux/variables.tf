@@ -134,3 +134,9 @@ variable "is_onprem" {
   type        = bool
   default     = false
 }
+
+variable "test_profiling" {
+  description = "Enable test profiling (CWA_TEST_PROFILING=1)"
+  type        = bool
+  default     = false
+}
