@@ -75,7 +75,6 @@ func TestConcurrencyRecovery(t *testing.T) {
 	common.TouchFile(common.AgentLogFile)
 
 	common.CopyFile("resources/config_recovery.json", configOutputPath)
-	start := time.Now()
 	common.StartAgent(configOutputPath, true, false)
 	defer common.StopAgent()
 
@@ -84,13 +83,12 @@ func TestConcurrencyRecovery(t *testing.T) {
 	writeLogLines(t, allowedFile, 10)
 	writeLogLines(t, recoveryFile, 10)
 	time.Sleep(sleepForFlush)
-	phase1End := time.Now()
 
-	err = awsservice.ValidateLogs(allowedLogGroup, instanceId, &start, &phase1End,
+	err = awsservice.ValidateLogs(allowedLogGroup, instanceId, nil, nil,
 		awsservice.AssertLogsCount(20))
 	assert.NoError(t, err, "Allowed log group should have logs")
 
-	err = awsservice.ValidateLogs(recoveryLogGroup, instanceId, &start, &phase1End,
+	err = awsservice.ValidateLogs(recoveryLogGroup, instanceId, nil, nil,
 		awsservice.AssertLogsCount(0))
 	assert.Error(t, err, "Recovery log group should not exist while denied")
 	assert.Contains(t, err.Error(), "ResourceNotFoundException")
@@ -106,9 +104,8 @@ func TestConcurrencyRecovery(t *testing.T) {
 	time.Sleep(sleepForFlush)
 
 	common.StopAgent()
-	end := time.Now()
 
-	err = awsservice.ValidateLogs(recoveryLogGroup, instanceId, &start, &end,
+	err = awsservice.ValidateLogs(recoveryLogGroup, instanceId, nil, nil,
 		awsservice.AssertLogsCount(40))
 	if err != nil {
 		printAgentLogs(t)
