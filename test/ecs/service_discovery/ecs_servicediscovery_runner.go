@@ -152,7 +152,7 @@ func (t ECSServiceDiscoveryTestRunner) ValidateLogGroupFormat(logGroupName strin
 	start := time.Now()
 
 	log.Printf("Scenario %s: Sleeping to allow metric collection in CloudWatch Logs.", t.scenarioName)
-	time.Sleep(2 * time.Minute)
+	time.Sleep(1 * time.Minute)
 
 	log.Printf("Scenario %s: Searching for LogGroup: %s\n", t.scenarioName, logGroupName)
 

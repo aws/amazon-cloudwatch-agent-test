@@ -91,15 +91,6 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
     ]
     resources = ["*"]
   }
-
-  statement {
-    effect = "Deny"
-    actions = [
-      "logs:PutLogEvents",
-      "logs:CreateLogStream"
-    ]
-    resources = ["arn:aws:logs:*:*:log-group:aws-restricted-log-group-name-*:*"]
-  }
 }
 
 resource "aws_iam_policy" "cwagent_iam_policy" {
