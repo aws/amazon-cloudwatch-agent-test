@@ -89,7 +89,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
-		{testDir: "./test/cloudwatchlogs_concurrency"},
 		{
 			testDir: "./test/log_state/logfile",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -193,7 +192,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
-		{testDir: "./test/cloudwatchlogs_concurrency"},
 		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -432,8 +430,6 @@ type partition struct {
 	configName string
 	tests      []string
 	ami        []string
-	// excludedTestDirs allows excluding specific test directories from this partition
-	excludedTestDirs map[string]struct{}
 	// testConfigOverrides allows partition-specific test configurations
 	// key is testDir, value is the override config
 	testConfigOverrides map[string]testConfig
@@ -449,9 +445,6 @@ var partitionTests = map[string]partition{
 		configName: "_itar",
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
-		excludedTestDirs: map[string]struct{}{
-			"./test/cloudwatchlogs_concurrency": {}, // IAM deny policy not deployed to ITAR account
-		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
 				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
@@ -467,9 +460,6 @@ var partitionTests = map[string]partition{
 		configName: "_china",
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
-		excludedTestDirs: map[string]struct{}{
-			"./test/cloudwatchlogs_concurrency": {}, // IAM deny policy not deployed to China account
-		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
 				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
@@ -497,7 +487,7 @@ func main() {
 			if len(partition.tests) != 0 && !slices.Contains(partition.tests, testType) {
 				continue
 			}
-			testMatrix := genMatrix(testType, testConfigs, partition.ami, partition.testConfigOverrides, partition.excludedTestDirs)
+			testMatrix := genMatrix(testType, testConfigs, partition.ami, partition.testConfigOverrides)
 			writeTestMatrixFile(testType+partition.configName, testMatrix)
 		}
 	}
@@ -527,7 +517,7 @@ func generateTestName(testType string, test_directory string) string {
 
 	return strings.Join(cleaned, "_")
 }
-func genMatrix(testType string, testConfigs []testConfig, ami []string, overrides map[string]testConfig, excludedTestDirs map[string]struct{}) []matrixRow {
+func genMatrix(testType string, testConfigs []testConfig, ami []string, overrides map[string]testConfig) []matrixRow {
 	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
 
 	if err != nil {
@@ -547,13 +537,6 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
-			// Skip excluded test directories
-			if excludedTestDirs != nil {
-				if _, excluded := excludedTestDirs[testConfig.testDir]; excluded {
-					continue
-				}
-			}
-
 			// Apply partition-specific overrides if available
 			if overrides != nil {
 				if override, ok := overrides[testConfig.testDir]; ok {
