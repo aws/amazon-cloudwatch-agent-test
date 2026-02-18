@@ -57,8 +57,9 @@ func TestConcurrencyRecovery(t *testing.T) {
 
 	time.Sleep(iamPropagationWait)
 
-	defer awsservice.DeleteLogGroupAndStream(allowedLogGroup, instanceId)
-	defer awsservice.DeleteLogGroupAndStream(recoveryLogGroup, instanceId)
+	// Temporarily disabled for debugging - keep log groups after test
+	// defer awsservice.DeleteLogGroupAndStream(allowedLogGroup, instanceId)
+	// defer awsservice.DeleteLogGroupAndStream(recoveryLogGroup, instanceId)
 
 	allowedFile, err := os.Create("/tmp/recovery_allowed.log")
 	require.NoError(t, err)
