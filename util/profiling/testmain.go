@@ -49,17 +49,19 @@ func RunWithProfiling(m *testing.M) int {
 
 	trace.Stop()
 
-	// Write span-level profiling report
+	prof := Global()
+
+	// Write local report file
 	reportPath := os.Getenv("CWA_TEST_PROFILE_PATH")
 	if reportPath == "" {
 		reportPath = defaultReportPath
 	}
-	if err := Global().WriteReport(reportPath); err != nil {
+	if err := prof.WriteReport(reportPath); err != nil {
 		log.Printf("profiling: failed to write report: %v", err)
-	} else {
-		log.Printf("profiling: report written to %s", reportPath)
-		log.Printf("profiling: trace written to %s (view with: go tool trace %s)", defaultTracePath, defaultTracePath)
 	}
+
+	// Emit JSON between markers so GHA runner can parse from Terraform output
+	prof.EmitSummary()
 
 	return code
 }
