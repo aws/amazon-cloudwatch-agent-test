@@ -223,7 +223,7 @@ resource "null_resource" "integration_test_run" {
         "echo run sanity test && cd ~/amazon-cloudwatch-agent-test/test/sanity && ~/test-binaries/sanity.test -test.v",
         "echo assume role arn is ${aws_iam_role.assume_role.arn}",
         "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${basename(var.test_dir)}.test -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id}"
-      ] : [
+        ] : [
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "echo assume role arn is ${aws_iam_role.assume_role.arn}",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id} -v"

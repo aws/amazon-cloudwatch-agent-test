@@ -245,7 +245,7 @@ resource "null_resource" "integration_test_run" {
         ] : local.use_test_binaries ? [
         "echo Running sanity test with pre-compiled binary...",
         "cd ~/amazon-cloudwatch-agent-test/test/sanity && ~/test-binaries/sanity.test -test.v",
-      ] : [
+        ] : [
         "echo Running sanity test...",
         "go test ./test/sanity -p 1 -v",
       ],

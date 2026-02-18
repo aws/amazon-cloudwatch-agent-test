@@ -266,7 +266,7 @@ resource "null_resource" "integration_test_run" {
         "echo run sanity test && cd ~/amazon-cloudwatch-agent-test/test/sanity && ~/test-binaries/sanity.test -test.v",
         "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
         "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${basename(var.test_dir)}.test -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id}"
-      ] : [
+        ] : [
         "echo run sanity test && go test ./test/sanity -p 1 -v",
         "echo base assume role arn is ${aws_iam_role.roles["no_context_keys"].arn}",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -assumeRoleArn=${aws_iam_role.roles["no_context_keys"].arn} -instanceArn=${aws_instance.cwagent.arn} -accountId=${data.aws_caller_identity.account_id.account_id} -v"
