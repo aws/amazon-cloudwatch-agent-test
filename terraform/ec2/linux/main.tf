@@ -47,6 +47,9 @@ locals {
   // Pre-compiled test binary support
   use_test_binaries = var.test_binaries_prefix != ""
   test_binary_name  = "${basename(var.test_dir)}.test"
+
+  // Sanity test doesn't use standard test flags
+  is_sanity_test = var.test_dir == "./test/sanity"
 }
 
 #####################################################################
@@ -240,7 +243,12 @@ resource "null_resource" "integration_test_run" {
       [
         var.pre_test_setup,
         # Integration test execution — use pre-compiled binary or go test
-        local.use_test_binaries ? "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${local.test_binary_name} -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}" : "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
+        # Sanity test doesn't use standard test flags (computeType, bucket, etc.)
+        local.is_sanity_test ? (
+          local.use_test_binaries ? "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${local.test_binary_name} -test.v" : "go test ${var.test_dir} -p 1 -v"
+        ) : (
+          local.use_test_binaries ? "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${local.test_binary_name} -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}" : "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
+        )
       ],
     )
   }
