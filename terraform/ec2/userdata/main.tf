@@ -99,11 +99,6 @@ resource "null_resource" "integration_test" {
         "sudo chmod 777 ~/amazon-cloudwatch-agent-test/test/sanity/resources/verifyUnixCtlScript.sh",
       ],
 
-      # Restore Go build/module cache from S3 (non-fatal if unavailable)
-      var.cache_key != "" && var.test_binaries_prefix == "" ? [
-        "bash ./scripts/restore-go-cache.sh '${var.s3_bucket}' '${var.cache_key}'",
-      ] : [],
-
       # Download pre-compiled test binaries from S3
       var.test_binaries_prefix != "" ? [
         "mkdir -p ~/test-binaries",

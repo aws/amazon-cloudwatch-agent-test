@@ -208,12 +208,6 @@ resource "null_resource" "integration_test_run" {
         "cd ~/amazon-cloudwatch-agent-test",
       ],
 
-      # Restore Go build/module cache from S3 (non-fatal if unavailable)
-      var.cache_key != "" && !local.use_test_binaries ? [
-        "echo 'Restoring Go build cache from S3...'",
-        "bash ./scripts/restore-go-cache.sh '${var.s3_bucket}' '${var.cache_key}'",
-      ] : [],
-
       # Download pre-compiled test binaries from S3
       local.use_test_binaries ? [
         "echo 'Downloading pre-compiled test binaries from S3...'",

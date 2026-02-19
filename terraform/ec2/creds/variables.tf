@@ -129,12 +129,6 @@ variable "is_onprem" {
   default     = false
 }
 
-variable "cache_key" {
-  description = "Key for pre-warmed Go build/module cache in S3. Empty string disables caching."
-  type        = string
-  default     = ""
-}
-
 variable "test_binaries_prefix" {
   description = "S3 prefix for pre-compiled test binaries. Empty string uses go test compilation."
   type        = string
