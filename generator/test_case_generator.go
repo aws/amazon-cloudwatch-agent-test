@@ -87,6 +87,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/cloudwatchlogs"},
 	},
 	testTypeKeyEc2Linux: {
+		{testDir: "./test/sanity"},
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{testDir: "./test/cloudwatchlogs_concurrency"},

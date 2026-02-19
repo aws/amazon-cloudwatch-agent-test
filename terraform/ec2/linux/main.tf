@@ -212,7 +212,6 @@ resource "null_resource" "integration_test_run" {
       local.use_test_binaries ? [
         "echo 'Downloading pre-compiled test binaries from S3...'",
         "mkdir -p ~/test-binaries",
-        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/linux/${var.arc}/sanity.test ~/test-binaries/sanity.test --quiet",
         "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/linux/${var.arc}/${local.test_binary_name} ~/test-binaries/${local.test_binary_name} --quiet",
         "chmod +x ~/test-binaries/*",
         "echo 'Test binaries downloaded'",
@@ -236,13 +235,7 @@ resource "null_resource" "integration_test_run" {
         "echo 'Testing agent credentials:'",
         "sudo aws sts get-caller-identity || echo 'Agent credentials test failed'",
         "echo 'Pre-test setup: Replacing {instance_id} and $${aws:InstanceId} placeholders in test resource configs'; find . -path '${var.test_dir}/resources/*.json' -exec sed -i 's/{instance_id}/${module.linux_common.cwagent_id}/g' {} \\; -exec sed -i 's/$${aws:InstanceId}/${module.linux_common.cwagent_id}/g' {} \\; && echo 'Updated all config files in resources directories'"
-        ] : local.use_test_binaries ? [
-        "echo Running sanity test with pre-compiled binary...",
-        "cd ~/amazon-cloudwatch-agent-test/test/sanity && ~/test-binaries/sanity.test -test.v",
-        ] : [
-        "echo Running sanity test...",
-        "go test ./test/sanity -p 1 -v",
-      ],
+      ] : [],
 
       [
         var.pre_test_setup,
