@@ -229,6 +229,7 @@ resource "null_resource" "integration_test_run" {
 
       [
         var.pre_test_setup,
+        var.test_profiling ? "export CWA_TEST_PROFILING=1" : "echo profiling disabled",
         # Integration test execution with conditional agent start command
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
       ],

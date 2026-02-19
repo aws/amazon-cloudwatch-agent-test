@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/profiling"
 )
 
 const (
@@ -118,6 +119,11 @@ func (t *TestRunner) Run() status.TestGroupResult {
 	defer t.TestRunner.Cleanup()
 	testName := t.TestRunner.GetTestName()
 	log.Printf("Running %v", testName)
+
+	prof := profiling.Global()
+	prof.StartTest(testName)
+	defer prof.EndTest(testName)
+
 	err := t.RunAgent()
 	if err != nil {
 		log.Printf("%v test group failed while running agent: %v", testName, err)
@@ -132,38 +138,54 @@ func (t *TestRunner) Run() status.TestGroupResult {
 			},
 		}
 	}
-	return t.TestRunner.Validate()
+
+	timer := prof.StartSpan(testName, "Validate", profiling.CategoryValidation)
+	result := t.TestRunner.Validate()
+	timer.Stop()
+	return result
 }
 
 func (t *TestRunner) RunAgent() error {
+	testName := t.TestRunner.GetTestName()
+	prof := profiling.Global()
+
 	agentConfig := AgentConfig{
 		ConfigFileName:   t.TestRunner.GetAgentConfigFileName(),
 		SSMParameterName: t.TestRunner.SSMParameterName(),
 		UseSSM:           t.TestRunner.UseSSM(),
 	}
 	t.TestRunner.SetAgentConfig(agentConfig)
+
+	timer := prof.StartSpan(testName, "SetupBeforeAgentRun", profiling.CategorySetup)
 	err := t.TestRunner.SetupBeforeAgentRun()
+	timer.Stop()
 	if err != nil {
 		return fmt.Errorf("Failed to complete setup before agent run due to: %w", err)
 	}
 
+	timer = prof.StartSpan(testName, "StartAgent", profiling.CategorySetup)
 	if t.TestRunner.UseSSM() {
 		err = common.StartAgent(t.TestRunner.SSMParameterName(), false, true)
 	} else {
 		err = common.StartAgent(common.ConfigOutputPath, false, false)
 	}
+	timer.Stop()
 
 	if err != nil {
 		return fmt.Errorf("Agent could not start due to: %w", err)
 	}
 
+	timer = prof.StartSpan(testName, "SetupAfterAgentRun", profiling.CategorySetup)
 	err = t.TestRunner.SetupAfterAgentRun()
+	timer.Stop()
 	if err != nil {
 		return fmt.Errorf("Failed to complete setup after agent run due to: %w", err)
 	}
 
 	runningDuration := t.TestRunner.GetAgentRunDuration()
+	timer = prof.StartSpan(testName, fmt.Sprintf("AgentRunSleep(%s)", runningDuration), profiling.CategoryAgentWait)
 	time.Sleep(runningDuration)
+	timer.Stop()
 	log.Printf("Agent has been running for : %s", runningDuration.String())
 	common.StopAgent()
 
