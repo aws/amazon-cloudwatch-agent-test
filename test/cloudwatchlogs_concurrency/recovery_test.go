@@ -8,6 +8,7 @@ package cloudwatchlogs_concurrency
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,9 +58,8 @@ func TestConcurrencyRecovery(t *testing.T) {
 
 	time.Sleep(iamPropagationWait)
 
-	// Temporarily disabled for debugging - keep log groups after test
-	// defer awsservice.DeleteLogGroupAndStream(allowedLogGroup, instanceId)
-	// defer awsservice.DeleteLogGroupAndStream(recoveryLogGroup, instanceId)
+	defer awsservice.DeleteLogGroupAndStream(allowedLogGroup, instanceId)
+	defer awsservice.DeleteLogGroupAndStream(recoveryLogGroup, instanceId)
 
 	allowedFile, err := os.Create("/tmp/recovery_allowed.log")
 	require.NoError(t, err)
@@ -120,32 +120,13 @@ func printAgentLogs(t *testing.T) {
 		t.Logf("Failed to read agent log: %v", err)
 		return
 	}
-	lines := string(content)
-	// Print last ~100 lines
-	lineSlice := splitLines(lines)
+	lines := strings.Split(string(content), "\n")
 	start := 0
-	if len(lineSlice) > 100 {
-		start = len(lineSlice) - 100
+	if len(lines) > 100 {
+		start = len(lines) - 100
 	}
-	for i := start; i < len(lineSlice); i++ {
-		t.Log(lineSlice[i])
+	for i := start; i < len(lines); i++ {
+		t.Log(lines[i])
 	}
 	t.Log("=== End Agent Logs ===")
-}
-
-func splitLines(s string) []string {
-	var lines []string
-	for len(s) > 0 {
-		idx := 0
-		for idx < len(s) && s[idx] != '\n' {
-			idx++
-		}
-		lines = append(lines, s[:idx])
-		if idx < len(s) {
-			s = s[idx+1:]
-		} else {
-			break
-		}
-	}
-	return lines
 }

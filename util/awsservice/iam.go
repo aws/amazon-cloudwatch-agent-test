@@ -11,15 +11,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 )
 
-// PutRoleDenyPolicy creates an inline deny policy on a role for logs:PutLogEvents
-// and logs:CreateLogStream on the given log group ARN pattern.
+// PutRoleDenyPolicy creates an inline deny policy on a role for logs:CreateLogGroup,
+// logs:PutLogEvents, and logs:CreateLogStream on the given log group ARN pattern.
 func PutRoleDenyPolicy(roleName, policyName, logGroupPattern string) error {
 	policy := map[string]interface{}{
 		"Version": "2012-10-17",
 		"Statement": []map[string]interface{}{
 			{
 				"Effect":   "Deny",
-				"Action":   []string{"logs:PutLogEvents", "logs:CreateLogStream"},
+				"Action":   []string{"logs:CreateLogGroup", "logs:PutLogEvents", "logs:CreateLogStream"},
 				"Resource": logGroupPattern,
 			},
 		},
