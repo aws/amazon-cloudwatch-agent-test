@@ -50,6 +50,9 @@ locals {
 
   // Sanity test doesn't use standard test flags
   is_sanity_test = var.test_dir == "./test/sanity"
+
+  // Test function filter - when test_func is set, only run that specific test
+  test_run_filter = var.test_func != "" ? "-test.run='^${var.test_func}$$'" : ""
 }
 
 #####################################################################
@@ -243,13 +246,13 @@ resource "null_resource" "integration_test_run" {
       [
         var.pre_test_setup,
         # DEBUG: Log test execution context (TODO: remove after debugging)
-        "echo '[DEBUG] is_sanity_test=${local.is_sanity_test} use_test_binaries=${local.use_test_binaries} test_dir=${var.test_dir}'",
+        "echo '[DEBUG] is_sanity_test=${local.is_sanity_test} use_test_binaries=${local.use_test_binaries} test_dir=${var.test_dir} test_func=${var.test_func}'",
         # Integration test execution — use pre-compiled binary or go test
         # Sanity test doesn't use standard test flags (computeType, bucket, etc.)
         local.is_sanity_test ? (
-          local.use_test_binaries ? "echo '[DEBUG] Running sanity with pre-compiled binary' && cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${local.test_binary_name} -test.v" : "echo '[DEBUG] Running sanity with go test (no flags)' && go test ${var.test_dir} -p 1 -v"
+          local.use_test_binaries ? "echo '[DEBUG] Running sanity with pre-compiled binary' && cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${local.test_binary_name} -test.v ${local.test_run_filter}" : "echo '[DEBUG] Running sanity with go test (no flags)' && go test ${var.test_dir} -p 1 -v ${local.test_run_filter}"
         ) : (
-          local.use_test_binaries ? "echo '[DEBUG] Running test with pre-compiled binary' && cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${local.test_binary_name} -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}" : "echo '[DEBUG] Running test with go test (with flags)' && go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
+          local.use_test_binaries ? "echo '[DEBUG] Running test with pre-compiled binary' && cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${local.test_binary_name} -test.parallel 1 -test.timeout 1h -test.v ${local.test_run_filter} -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}" : "echo '[DEBUG] Running test with go test (with flags)' && go test ${var.test_dir} -p 1 -timeout 1h ${local.test_run_filter} -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
         )
       ],
     )

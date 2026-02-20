@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
@@ -19,6 +20,7 @@ import (
 type matrixRow struct {
 	TestName            string `json:"testName"`
 	TestDir             string `json:"test_dir"`
+	TestFunc            string `json:"testFunc,omitempty"` // Specific test function to run
 	Os                  string `json:"os"`
 	Family              string `json:"family"`
 	TestType            string `json:"testType"`
@@ -65,6 +67,8 @@ type testConfig struct {
 	excludedTests string
 	// wip marks test as Work In Progress - failures won't block CI
 	wip bool
+	// splitByTestFunc splits this test directory into separate matrix entries per test function
+	splitByTestFunc bool
 }
 
 const (
@@ -89,7 +93,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/sanity"},
 		{testDir: "./test/ca_bundle"},
-		{testDir: "./test/cloudwatchlogs"},
+		{testDir: "./test/cloudwatchlogs", splitByTestFunc: true},
 		{
 			testDir: "./test/log_state/logfile",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -603,6 +607,19 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 			}
 
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
+				// If splitByTestFunc is enabled, create separate entries for each test function
+				if testConfig.splitByTestFunc {
+					testFuncs := listTestFunctions(testConfig.testDir)
+					if len(testFuncs) > 0 {
+						for _, fn := range testFuncs {
+							splitRow := row
+							splitRow.TestFunc = fn
+							splitRow.TestName = row.TestName + "/" + fn
+							testMatrixComplete = append(testMatrixComplete, splitRow)
+						}
+						continue
+					}
+				}
 				testMatrixComplete = append(testMatrixComplete, row)
 			}
 		}
@@ -643,4 +660,24 @@ func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
 	if err != nil {
 		log.Panicf("Can't write json to file for target os %v, err %v", testType, err)
 	}
+}
+
+
+// listTestFunctions runs "go test -list" to get test function names from a test directory
+func listTestFunctions(testDir string) []string {
+	cmd := exec.Command("go", "test", "-list", ".*", testDir)
+	output, err := cmd.Output()
+	if err != nil {
+		log.Printf("Warning: could not list tests for %s: %v", testDir, err)
+		return nil
+	}
+
+	var funcs []string
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "Test") {
+			funcs = append(funcs, line)
+		}
+	}
+	return funcs
 }

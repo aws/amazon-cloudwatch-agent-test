@@ -82,6 +82,12 @@ variable "test_dir" {
   default = ""
 }
 
+variable "test_func" {
+  type        = string
+  default     = ""
+  description = "Specific test function to run (e.g., TestWriteLogsToCloudWatch). If empty, runs all tests."
+}
+
 variable "selinux_branch" {
   type    = string
   default = "main"
