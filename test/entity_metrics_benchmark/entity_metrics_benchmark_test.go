@@ -54,8 +54,6 @@ func getEntityTestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &CollectDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &StatsDEntityServiceAndEnvironmentFallback{test_runner.BaseTestRunner{DimensionFactory: factory}, make(chan bool)}},
 		}
-	} else {
-		log.Println("Not in us-west-2 (likely in cn/itar), so skipping entity metric tests")
 	}
 	return entityTestRunners
 }
@@ -65,13 +63,20 @@ func (suite *EntityMetricBenchmarkTestSuite) TestAllInSuite() {
 
 	// Entity tests are only supported in EC2 environment
 	if env.ComputeType != computetype.EC2 {
-		log.Println("Not in EC2, skipping entity metric tests")
-		return
+		suite.T().Skip("Not in EC2, skipping entity metric tests")
+	}
+
+	// Entity tests only supported in us-west-2 (no ListEntitiesForMetric in CN/ITAR)
+	if os.Getenv("AWS_REGION") != "us-west-2" {
+		suite.T().Skip("Not in us-west-2 (likely in cn/itar), skipping entity metric tests")
 	}
 
 	log.Println("Environment compute type is EC2")
 	for _, testRunner := range getEntityTestRunners(env) {
-		suite.AddToSuiteResult(testRunner.Run())
+		testRunner := testRunner
+		suite.T().Run(testRunner.TestRunner.GetTestName(), func(t *testing.T) {
+			suite.AddToSuiteResult(testRunner.Run())
+		})
 	}
 
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Entity Metric Benchmark Test Suite Failed")
