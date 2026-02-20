@@ -51,8 +51,8 @@ locals {
   // Sanity test doesn't use standard test flags
   is_sanity_test = var.test_dir == "./test/sanity"
 
-  // Test function filter - when test_func is set, only run that specific test
-  test_run_filter = var.test_func != "" ? "-test.run='^${var.test_func}$$'" : ""
+  // Test function filter - passed from generator as a -test.run pattern
+  test_run_filter = var.test_run_filter != "" ? "-test.run='${var.test_run_filter}'" : ""
 }
 
 #####################################################################

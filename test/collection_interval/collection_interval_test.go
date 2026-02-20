@@ -6,7 +6,6 @@
 package collection_interval
 
 import (
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -72,8 +71,7 @@ func TestCollectionInterval(t *testing.T) {
 	}
 
 	for _, parameter := range parameters {
-		t.Run(fmt.Sprintf("test description %s resource file location %s number of metrics lower bound %d and upper bound %d",
-			parameter.testDescription, parameter.dataInput, parameter.lowerBoundInclusive, parameter.upperBoundInclusive), func(t *testing.T) {
+		t.Run(parameter.testDescription, func(t *testing.T) {
 			common.CopyFile(parameter.dataInput, common.ConfigOutputPath)
 			hostName, err := os.Hostname()
 			if err != nil {

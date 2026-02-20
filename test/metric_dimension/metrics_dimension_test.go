@@ -57,7 +57,10 @@ func getTestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 func (suite *MetricsAppendDimensionTestSuite) TestAllInSuite() {
 	env := environment.GetEnvironmentMetaData()
 	for _, testRunner := range getTestRunners(env) {
-		suite.AddToSuiteResult(testRunner.Run())
+		testRunner := testRunner
+		suite.T().Run(testRunner.TestRunner.GetTestName(), func(t *testing.T) {
+			suite.AddToSuiteResult(testRunner.Run())
+		})
 	}
 	suite.Assert().Equal(status.SUCCESSFUL, suite.Result.GetStatus(), "Metric Append Dimension Test Suite Failed")
 }
