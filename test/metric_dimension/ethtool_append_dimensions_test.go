@@ -66,7 +66,7 @@ func (t *EthtoolAppendDimensionsTestRunner) validateEthtoolAppendDimensionMetric
 	ns := "EthtoolAppendDimensionsTest"
 	presentSpecs := append(EC2Dims(),
 		ExactDim("interface", ifaceName),
-		ExactDim("driver", "ena"),
+		ExactDim("driver", "ena"), // EC2 Elastic Network Adapter; tests run on EC2 instances only
 	)
 	droppedSpecs := []DimensionSpec{HostDim(), ExactDim("interface", ifaceName)}
 
