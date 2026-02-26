@@ -23,8 +23,8 @@ import (
 type matrixRow struct {
 	TestName            string `json:"testName"`
 	TestDir             string `json:"test_dir"`
-	TestFunc            string `json:"-"`                                    // internal, used to build TestRunFilter
-	TestRunFilter       string `json:"testRunFilter,omitempty"`               // -test.run regex pattern
+	TestFunc            string `json:"-"`                       // internal, used to build TestRunFilter
+	TestRunFilter       string `json:"testRunFilter,omitempty"` // -test.run regex pattern
 	Os                  string `json:"os"`
 	Family              string `json:"family"`
 	TestType            string `json:"testType"`
@@ -706,7 +706,6 @@ func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
 		log.Panicf("Can't write json to file for target os %v, err %v", testType, err)
 	}
 }
-
 
 // listTestFunctions gets test function/subtest names from a test directory.
 // For suites with splitByTestFunc, it parses GetTestName() return values using Go AST.
