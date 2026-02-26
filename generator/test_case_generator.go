@@ -31,22 +31,22 @@ type matrixRow struct {
 	Arc                 string `json:"arc"`
 	InstanceType        string `json:"instanceType"`
 	Ami                 string `json:"ami"`
-	BinaryName          string `json:"binaryName"`
-	Username            string `json:"username"`
-	InstallAgentCommand string `json:"installAgentCommand"`
-	AgentStartCommand   string `json:"agentStartCommand"`
-	CaCertPath          string `json:"caCertPath"`
-	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
-	K8sVersion          string `json:"k8sVersion"`
-	Nodes               int    `json:"nodes"`
-	DeploymentStrategy  string `json:"deploymentStrategy"`
-	TerraformDir        string `json:"terraform_dir"`
-	UseSSM              bool   `json:"useSSM"`
-	ExcludedTests       string `json:"excludedTests"`
-	MetadataEnabled     string `json:"metadataEnabled"`
-	MaxAttempts         int    `json:"max_attempts"`
-	SELinuxBranch       string `json:"selinux_branch"`
-	WIP                 bool   `json:"wip,omitempty"` // Work In Progress - failures won't block CI
+	BinaryName          string `json:"binaryName,omitempty"`
+	Username            string `json:"username,omitempty"`
+	InstallAgentCommand string `json:"installAgentCommand,omitempty"`
+	AgentStartCommand   string `json:"agentStartCommand,omitempty"`
+	CaCertPath          string `json:"caCertPath,omitempty"`
+	ValuesPerMinute     int    `json:"values_per_minute,omitempty"`
+	K8sVersion          string `json:"k8sVersion,omitempty"`
+	Nodes               int    `json:"nodes,omitempty"`
+	DeploymentStrategy  string `json:"deploymentStrategy,omitempty"`
+	TerraformDir        string `json:"terraform_dir,omitempty"`
+	UseSSM              bool   `json:"useSSM,omitempty"`
+	ExcludedTests       string `json:"excludedTests,omitempty"`
+	MetadataEnabled     string `json:"metadataEnabled,omitempty"`
+	MaxAttempts         int    `json:"max_attempts,omitempty"`
+	SELinuxBranch       string `json:"selinux_branch,omitempty"`
+	WIP                 bool   `json:"wip,omitempty"`
 }
 
 type testConfig struct {
