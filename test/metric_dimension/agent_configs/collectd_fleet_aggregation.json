@@ -1,0 +1,27 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "CollectdFleetAggregationTest",
+    "aggregation_dimensions": [
+      ["Component", "type", "InstanceId"],
+      ["Component", "type"],
+      ["Component", "type", "host"]
+    ],
+    "metrics_collected": {
+      "collectd": {
+        "metrics_aggregation_interval": 30,
+        "collectd_security_level": "none",
+        "append_dimensions": {
+          "InstanceId": "${aws:InstanceId}",
+          "Component": "WebServer"
+        }
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

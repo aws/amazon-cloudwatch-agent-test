@@ -1,0 +1,24 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "CpuGlobalAppendDimensionsTest",
+    "aggregation_dimensions": [
+      ["InstanceId", "InstanceType", "cpu"]
+    ],
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "measurement": ["time_active"]
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

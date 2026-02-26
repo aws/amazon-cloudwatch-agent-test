@@ -29,6 +29,7 @@ func (suite *MetricsAppendDimensionTestSuite) SetupSuite() {
 
 func (suite *MetricsAppendDimensionTestSuite) TearDownSuite() {
 	suite.Result.Print()
+	printTestSummaryTable(suite.Result)
 	fmt.Println(">>>> Finished MetricAppendDimensionTestSuite")
 }
 
@@ -49,6 +50,14 @@ func getTestRunners(env *environment.MetaData) []*test_runner.TestRunner {
 			{TestRunner: &OneAggregateDimensionTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &AggregationDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 			{TestRunner: &DropOriginalMetricsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			// Collectd tests: baseline (no append_dimensions) vs with append_dimensions
+			{TestRunner: &CollectdNoAppendDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CollectdGlobalAppendDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CollectdAppendDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CollectdFleetAggregationTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &CpuGlobalAppendDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &EthtoolAppendDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
+			{TestRunner: &EthtoolPluginAppendDimensionsTestRunner{test_runner.BaseTestRunner{DimensionFactory: factory}}},
 		}
 	}
 	return testRunners
