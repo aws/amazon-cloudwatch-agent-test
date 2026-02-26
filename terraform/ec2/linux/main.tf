@@ -264,7 +264,7 @@ resource "null_resource" "integration_test_run" {
       [
         var.pre_test_setup,
         # DEBUG: Log test execution context (TODO: remove after debugging)
-        "echo '[DEBUG] is_sanity_test=${local.is_sanity_test} use_test_binaries=${local.use_test_binaries} test_dir=${var.test_dir} test_func=${var.test_func}'",
+        "echo '[DEBUG] is_sanity_test=${local.is_sanity_test} use_test_binaries=${local.use_test_binaries} test_dir=${var.test_dir} test_run_filter=${var.test_run_filter}'",
         # Integration test execution
         local.test_command
       ],
