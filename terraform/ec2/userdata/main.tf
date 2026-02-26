@@ -97,7 +97,18 @@ resource "null_resource" "integration_test" {
         "timeout 120 bash -c 'until [ -f /home/ec2-user/amazon-cloudwatch-agent-test/test/sanity/resources/verifyUnixCtlScript.sh ]; do echo \"Waiting for verifyUnixCtlScript.sh...\"; sleep 2; done'",
         "cd ~/amazon-cloudwatch-agent-test",
         "sudo chmod 777 ~/amazon-cloudwatch-agent-test/test/sanity/resources/verifyUnixCtlScript.sh",
-        "echo run sanity test && go test ./test/sanity -p 1 -v",
+      ],
+
+      # Download pre-compiled test binaries from S3
+      var.test_binaries_prefix != "" ? [
+        "mkdir -p ~/test-binaries",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/linux/${var.arc}/${basename(var.test_dir)}.test ~/test-binaries/${basename(var.test_dir)}.test --quiet",
+        "chmod +x ~/test-binaries/*",
+      ] : [],
+
+      var.test_binaries_prefix != "" ? [
+        "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${basename(var.test_dir)}.test -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path}"
+        ] : [
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -v"
       ],
     )

@@ -204,7 +204,19 @@ resource "null_resource" "integration_test_run" {
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
         "echo run integration test",
         "cd ~/amazon-cloudwatch-agent-test",
-        "echo run sanity test && go test ./test/sanity -p 1 -v",
+      ],
+
+      # Download pre-compiled test binaries from S3
+      var.test_binaries_prefix != "" ? [
+        "mkdir -p ~/test-binaries",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/linux/${var.arc}/${basename(var.test_dir)}.test ~/test-binaries/${basename(var.test_dir)}.test --quiet",
+        "chmod +x ~/test-binaries/*",
+      ] : [],
+
+      var.test_binaries_prefix != "" ? [
+        "echo assume role arn is ${aws_iam_role.assume_role.arn}",
+        "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${basename(var.test_dir)}.test -test.parallel 1 -test.timeout 1h -test.v -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id}"
+        ] : [
         "echo assume role arn is ${aws_iam_role.assume_role.arn}",
         "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -assumeRoleArn=${aws_iam_role.assume_role.arn} -instanceId=${aws_instance.cwagent.id} -v"
       ],

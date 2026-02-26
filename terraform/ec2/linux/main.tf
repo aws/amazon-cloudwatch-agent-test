@@ -43,6 +43,34 @@ locals {
 
   // Pre-test setup command
   pre_test_setup_cmd = local.is_onprem ? "echo 'Pre-test setup: Replacing {instance_id} and $${aws:InstanceId} placeholders in test resource configs'; find . -path '*/resources/*.json' -exec sed -i 's/{instance_id}/${module.linux_common.cwagent_id}/g' {} \\; -exec sed -i 's/$${aws:InstanceId}/${module.linux_common.cwagent_id}/g' {} \\; && echo 'Updated all config files in resources directories'" : var.pre_test_setup
+
+  // Pre-compiled test binary support
+  use_test_binaries = var.test_binaries_prefix != ""
+  test_binary_name  = "${basename(var.test_dir)}.test"
+
+  // Sanity test doesn't use standard test flags
+  is_sanity_test = var.test_dir == "./test/sanity"
+
+  // Test function filter - passed from generator as a -test.run pattern
+  test_run_filter = var.test_run_filter != "" ? "-test.run='${var.test_run_filter}'" : ""
+
+  // Common test flags used by most tests (not sanity)
+  common_test_flags = "-computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id}"
+  onprem_flag       = local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""
+  amp_flag          = length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id}" : ""
+
+  // Test execution commands broken into readable pieces
+  test_cmd_binary_sanity = "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${local.test_binary_name} -test.v ${local.test_run_filter}"
+  test_cmd_binary_full   = "cd ~/amazon-cloudwatch-agent-test/${var.test_dir} && ~/test-binaries/${local.test_binary_name} -test.parallel 1 -test.timeout 1h -test.v ${local.test_run_filter} ${local.common_test_flags} ${local.onprem_flag} ${local.amp_flag}"
+  test_cmd_go_sanity     = "go test ${var.test_dir} -p 1 -v ${local.test_run_filter}"
+  test_cmd_go_full       = "go test ${var.test_dir} -p 1 -timeout 1h -v ${local.test_run_filter} ${local.common_test_flags} ${local.onprem_flag} ${local.amp_flag}"
+
+  // Final test command selection
+  test_command = local.is_sanity_test ? (
+    local.use_test_binaries ? local.test_cmd_binary_sanity : local.test_cmd_go_sanity
+    ) : (
+    local.use_test_binaries ? local.test_cmd_binary_full : local.test_cmd_go_full
+  )
 }
 
 #####################################################################
@@ -204,6 +232,15 @@ resource "null_resource" "integration_test_run" {
         "cd ~/amazon-cloudwatch-agent-test",
       ],
 
+      # Download pre-compiled test binaries from S3 (fail fast if download fails)
+      local.use_test_binaries ? [
+        "echo 'Downloading pre-compiled test binary from S3...'",
+        "mkdir -p ~/test-binaries",
+        "aws s3 cp s3://${var.s3_bucket}/${var.test_binaries_prefix}/linux/${var.arc}/${local.test_binary_name} ~/test-binaries/${local.test_binary_name} --quiet || { echo 'ERROR: Failed to download test binary'; exit 1; }",
+        "chmod +x ~/test-binaries/${local.test_binary_name}",
+        "echo 'Test binary downloaded successfully'",
+      ] : [],
+
       # On-premises specific environment variables
       local.is_onprem ? [
         "export RUN_IN_AWS=false",
@@ -222,15 +259,14 @@ resource "null_resource" "integration_test_run" {
         "echo 'Testing agent credentials:'",
         "sudo aws sts get-caller-identity || echo 'Agent credentials test failed'",
         "echo 'Pre-test setup: Replacing {instance_id} and $${aws:InstanceId} placeholders in test resource configs'; find . -path '${var.test_dir}/resources/*.json' -exec sed -i 's/{instance_id}/${module.linux_common.cwagent_id}/g' {} \\; -exec sed -i 's/$${aws:InstanceId}/${module.linux_common.cwagent_id}/g' {} \\; && echo 'Updated all config files in resources directories'"
-        ] : [
-        "echo Running sanity test...",
-        "go test ./test/sanity -p 1 -v",
-      ],
+      ] : [],
 
       [
         var.pre_test_setup,
-        # Integration test execution with conditional agent start command
-        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
+        # DEBUG: Log test execution context (TODO: remove after debugging)
+        "echo '[DEBUG] is_sanity_test=${local.is_sanity_test} use_test_binaries=${local.use_test_binaries} test_dir=${var.test_dir} test_run_filter=${var.test_run_filter}'",
+        # Integration test execution
+        local.test_command
       ],
     )
   }

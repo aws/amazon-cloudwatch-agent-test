@@ -7,9 +7,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
@@ -19,28 +23,30 @@ import (
 type matrixRow struct {
 	TestName            string `json:"testName"`
 	TestDir             string `json:"test_dir"`
+	TestFunc            string `json:"-"`                       // internal, used to build TestRunFilter
+	TestRunFilter       string `json:"testRunFilter,omitempty"` // -test.run regex pattern
 	Os                  string `json:"os"`
 	Family              string `json:"family"`
 	TestType            string `json:"testType"`
 	Arc                 string `json:"arc"`
 	InstanceType        string `json:"instanceType"`
 	Ami                 string `json:"ami"`
-	BinaryName          string `json:"binaryName"`
-	Username            string `json:"username"`
-	InstallAgentCommand string `json:"installAgentCommand"`
-	AgentStartCommand   string `json:"agentStartCommand"`
-	CaCertPath          string `json:"caCertPath"`
-	ValuesPerMinute     int    `json:"values_per_minute"` // Number of metrics to be sent or number of log lines to write
-	K8sVersion          string `json:"k8sVersion"`
-	Nodes               int    `json:"nodes"`
-	DeploymentStrategy  string `json:"deploymentStrategy"`
-	TerraformDir        string `json:"terraform_dir"`
-	UseSSM              bool   `json:"useSSM"`
-	ExcludedTests       string `json:"excludedTests"`
-	MetadataEnabled     string `json:"metadataEnabled"`
-	MaxAttempts         int    `json:"max_attempts"`
-	SELinuxBranch       string `json:"selinux_branch"`
-	WIP                 bool   `json:"wip,omitempty"` // Work In Progress - failures won't block CI
+	BinaryName          string `json:"binaryName,omitempty"`
+	Username            string `json:"username,omitempty"`
+	InstallAgentCommand string `json:"installAgentCommand,omitempty"`
+	AgentStartCommand   string `json:"agentStartCommand,omitempty"`
+	CaCertPath          string `json:"caCertPath,omitempty"`
+	ValuesPerMinute     int    `json:"values_per_minute,omitempty"`
+	K8sVersion          string `json:"k8sVersion,omitempty"`
+	Nodes               int    `json:"nodes,omitempty"`
+	DeploymentStrategy  string `json:"deploymentStrategy,omitempty"`
+	TerraformDir        string `json:"terraform_dir,omitempty"`
+	UseSSM              bool   `json:"useSSM,omitempty"`
+	ExcludedTests       string `json:"excludedTests,omitempty"`
+	MetadataEnabled     string `json:"metadataEnabled,omitempty"`
+	MaxAttempts         int    `json:"max_attempts,omitempty"`
+	SELinuxBranch       string `json:"selinux_branch,omitempty"`
+	WIP                 bool   `json:"wip,omitempty"`
 }
 
 type testConfig struct {
@@ -65,6 +71,12 @@ type testConfig struct {
 	excludedTests string
 	// wip marks test as Work In Progress - failures won't block CI
 	wip bool
+	// splitByTestFunc splits this test directory into separate matrix entries per test function
+	splitByTestFunc bool
+	// splitNames is a hardcoded list of subtest names to split on (when AST parsing isn't possible)
+	splitNames []string
+	// skip excludes this test entirely from the matrix
+	skip bool
 }
 
 const (
@@ -87,8 +99,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/cloudwatchlogs"},
 	},
 	testTypeKeyEc2Linux: {
+		{testDir: "./test/sanity"},
 		{testDir: "./test/ca_bundle"},
-		{testDir: "./test/cloudwatchlogs"},
+		{testDir: "./test/cloudwatchlogs", splitByTestFunc: true},
 		{
 			testDir: "./test/log_state/logfile",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -107,17 +120,23 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
 			maxAttempts: 2,
 		},
-		{testDir: "./test/entity_metrics_benchmark"},
+		{testDir: "./test/entity_metrics_benchmark", splitByTestFunc: true},
 		{
 			testDir: "./test/metric_value_benchmark",
 			instanceTypeByArch: map[string]string{
 				"amd64": "i3en.large",
 				"arm64": "i4g.large",
 			},
+			splitByTestFunc: true,
 		},
 		{testDir: "./test/run_as_user"},
-		{testDir: "./test/collection_interval"},
-		{testDir: "./test/metric_dimension"},
+		{testDir: "./test/collection_interval", splitNames: []string{
+			"No collection interval given default to 60s",
+			"Agent has 10s second collection interval",
+			"Metric disk has 10s collection interval",
+			"Agent has 60s collection interval, disk has 10s collection interval use disk collection interval",
+		}},
+		{testDir: "./test/metric_dimension", splitByTestFunc: true},
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/otlp"},
@@ -207,8 +226,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		//{testDir: "./test/metric_value_benchmark"}, // Skipping test until it is fixed!
 		{testDir: "./test/run_as_user"},
-		{testDir: "./test/collection_interval"},
-		{testDir: "./test/metric_dimension"},
+		{testDir: "./test/collection_interval", splitNames: []string{
+			"No collection interval given default to 60s",
+			"Agent has 10s second collection interval",
+			"Metric disk has 10s collection interval",
+			"Agent has 60s collection interval, disk has 10s collection interval use disk collection interval",
+		}},
+		{testDir: "./test/metric_dimension", splitByTestFunc: true},
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/selinux_negative_test"},
@@ -454,6 +478,9 @@ var partitionTests = map[string]partition{
 					"arm64": "m6g.large", // Use m6g.large since instance store tests are excluded
 				},
 			},
+			"./test/entity_metrics_benchmark": {
+				skip: true, // ListEntitiesForMetric API not available in ITAR
+			},
 		},
 	},
 	"china": {
@@ -468,6 +495,9 @@ var partitionTests = map[string]partition{
 					"amd64": "i3en.large",
 					"arm64": "m6g.large", // Use m6g.large since instance store tests are excluded
 				},
+			},
+			"./test/entity_metrics_benchmark": {
+				skip: true, // ListEntitiesForMetric API not available in China
 			},
 		},
 	},
@@ -540,6 +570,9 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 			// Apply partition-specific overrides if available
 			if overrides != nil {
 				if override, ok := overrides[testConfig.testDir]; ok {
+					if override.skip {
+						continue // Skip this test entirely for this partition
+					}
 					if override.excludedTests != "" {
 						testConfig.excludedTests = override.excludedTests
 					}
@@ -602,6 +635,36 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 			}
 
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
+				// If splitByTestFunc is enabled, create separate entries for each test function
+				if testConfig.splitByTestFunc || len(testConfig.splitNames) > 0 {
+					var testFuncs []string
+					// splitNames = plain t.Run subtests (2 levels: TestFunc/name)
+					// splitByTestFunc = testify suite subtests (3 levels: Suite/TestAll/name)
+					isSuiteSubtest := false
+					if len(testConfig.splitNames) > 0 {
+						testFuncs = testConfig.splitNames
+					} else {
+						testFuncs = listTestFunctions(testConfig.testDir)
+						isSuiteSubtest = true
+					}
+					if len(testFuncs) > 0 {
+						for _, fn := range testFuncs {
+							splitRow := row
+							splitRow.TestFunc = fn
+							splitRow.TestName = row.TestName + "/" + fn
+							normalized := strings.ReplaceAll(fn, " ", "_")
+							if strings.HasPrefix(fn, "Test") {
+								splitRow.TestRunFilter = "^" + normalized + "$"
+							} else if isSuiteSubtest {
+								splitRow.TestRunFilter = ".*/.*/^" + normalized + "$"
+							} else {
+								splitRow.TestRunFilter = ".*/^" + normalized + "$"
+							}
+							testMatrixComplete = append(testMatrixComplete, splitRow)
+						}
+						continue
+					}
+				}
 				testMatrixComplete = append(testMatrixComplete, row)
 			}
 		}
@@ -642,4 +705,63 @@ func writeTestMatrixFile(testType string, testMatrix []matrixRow) {
 	if err != nil {
 		log.Panicf("Can't write json to file for target os %v, err %v", testType, err)
 	}
+}
+
+// listTestFunctions gets test function/subtest names from a test directory.
+// For suites with splitByTestFunc, it parses GetTestName() return values using Go AST.
+// Otherwise falls back to "go test -list".
+func listTestFunctions(testDir string) []string {
+	// Try AST parsing for GetTestName() methods (used by metric_value_benchmark)
+	if names := parseGetTestNames(testDir); len(names) > 0 {
+		return names
+	}
+
+	// Fall back to go test -list for top-level test functions
+	cmd := exec.Command("go", "test", "-list", ".*", testDir)
+	output, err := cmd.Output()
+	if err != nil {
+		log.Printf("Warning: could not list tests for %s: %v", testDir, err)
+		return nil
+	}
+
+	var funcs []string
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "Test") {
+			funcs = append(funcs, line)
+		}
+	}
+	return funcs
+}
+
+// parseGetTestNames uses Go AST to extract return values from GetTestName() methods
+func parseGetTestNames(dir string) []string {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dir, func(fi os.FileInfo) bool {
+		return strings.HasSuffix(fi.Name(), "_test.go")
+	}, 0)
+	if err != nil {
+		return nil
+	}
+
+	var names []string
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			ast.Inspect(file, func(n ast.Node) bool {
+				fn, ok := n.(*ast.FuncDecl)
+				if !ok || fn.Name.Name != "GetTestName" || fn.Recv == nil {
+					return true
+				}
+				if fn.Body != nil && len(fn.Body.List) > 0 {
+					if ret, ok := fn.Body.List[0].(*ast.ReturnStmt); ok && len(ret.Results) > 0 {
+						if lit, ok := ret.Results[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+							names = append(names, strings.Trim(lit.Value, `"`))
+						}
+					}
+				}
+				return true
+			})
+		}
+	}
+	return names
 }
