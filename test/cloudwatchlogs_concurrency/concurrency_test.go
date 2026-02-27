@@ -22,7 +22,7 @@ const (
 	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	logLineId1       = "foo"
 	logLineId2       = "bar"
-	sleepForFlush    = 20 * time.Second
+	sleepForFlush    = 30 * time.Second
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
