@@ -1,0 +1,30 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/recovery_allowed.log",
+            "log_group_name": "recovery-allowed-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/tmp/recovery_target.log",
+            "log_group_name": "recovery-test-target-{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "retention_in_days": 7
+          }
+        ]
+      }
+    },
+    "force_flush_interval": 5,
+    "concurrency": 2
+  }
+}
