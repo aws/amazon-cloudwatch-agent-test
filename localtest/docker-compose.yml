@@ -1,7 +1,18 @@
 services:
+  imds-mock:
+    build: ./imds
+    volumes:
+      - ~/.aws:/root/.aws:ro
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+
   cwagent-test:
     build: .
     privileged: true
+    depends_on:
+      - imds-mock
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - ..:/workspace
@@ -9,7 +20,4 @@ services:
       - /run
       - /tmp
     environment:
-      - AWS_ACCESS_KEY_ID
-      - AWS_SECRET_ACCESS_KEY
-      - AWS_SESSION_TOKEN
-      - AWS_REGION
+      - AWS_EC2_METADATA_SERVICE_ENDPOINT=http://imds-mock:1338
