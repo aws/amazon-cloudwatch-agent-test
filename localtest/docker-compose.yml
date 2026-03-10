@@ -1,0 +1,15 @@
+services:
+  cwagent-test:
+    build: .
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - ..:/workspace
+    tmpfs:
+      - /run
+      - /tmp
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - AWS_REGION
