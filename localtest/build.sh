@@ -10,6 +10,7 @@ case "$(uname -m)" in
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
 
+[ -d "$AGENT_REPO" ] || { echo "Agent repo not found at $AGENT_REPO. Set AGENT_REPO env var."; exit 1; }
 cd "$AGENT_REPO"
 make amazon-cloudwatch-agent-linux package-rpm
 
