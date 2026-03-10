@@ -21,4 +21,4 @@ cd "$SCRIPT_DIR"
 docker-compose build
 docker-compose up -d
 
-echo "Container started. Run tests with: docker-compose exec cwagent-test bash /usr/local/bin/run-tests.sh"
+echo "Container started. Attach with: docker-compose exec cwagent-test bash"
