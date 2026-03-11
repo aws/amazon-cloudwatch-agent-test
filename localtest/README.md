@@ -1,6 +1,6 @@
-# Local Integration Test Environment
+# Local Development Environment
 
-Docker Compose-based local testing environment that simulates an EC2 instance for running CloudWatch Agent `metric_value_benchmark` integration tests without real AWS infrastructure.
+Docker Compose-based local environment that simulates an EC2 instance for running the CloudWatch Agent locally without real AWS infrastructure.
 
 ## Architecture
 
@@ -33,7 +33,7 @@ The `imds-mock` container runs [amazon-ec2-metadata-mock](https://github.com/aws
 
 A systemd drop-in override (`/etc/systemd/system/amazon-cloudwatch-agent.service.d/override.conf`) passes `AWS_EC2_METADATA_SERVICE_ENDPOINT=http://imds-mock:1338` to the agent service, directing credential lookups to the mock.
 
-The entire test repo is mounted at `/workspace` inside `cwagent-test`, so code changes to tests are immediately available without rebuilding. Only agent source code changes require an RPM rebuild.
+The entire repo is mounted at `/workspace` inside `cwagent-test`, so changes are immediately available without rebuilding. Only agent source code changes require an RPM rebuild.
 
 Simulated metadata defaults:
 
@@ -72,12 +72,6 @@ Attach to the container:
 
 ```bash
 docker-compose exec cwagent-test bash
-```
-
-Run tests inside the container:
-
-```bash
-cd /workspace && go test ./test/metric_value_benchmark -timeout 1h -v
 ```
 
 Start the agent with a config:
@@ -150,6 +144,5 @@ localtest/
 
 ## Notes
 
-- Only `metric_value_benchmark` tests are designed for this environment. EKS/ECS-specific tests won't work locally.
-- Code changes in the test repo are reflected immediately via the volume mount, but agent code changes require rebuilding the RPM via `build.sh`.
+- Changes in the repo are reflected immediately via the volume mount, but agent code changes require rebuilding the RPM via `build.sh`.
 - The container runs in privileged mode with cgroup access — this is required for systemd.
