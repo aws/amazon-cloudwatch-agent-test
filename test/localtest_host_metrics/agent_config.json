@@ -1,0 +1,87 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "run_as_user": "root",
+    "debug": true
+  },
+  "metrics": {
+    "namespace": "LocalTestHostMetrics",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "usage_active",
+          "usage_idle",
+          "usage_system",
+          "usage_user"
+        ],
+        "totalcpu": true,
+        "resources": ["*"]
+      },
+      "mem": {
+        "measurement": [
+          "available",
+          "total",
+          "used",
+          "used_percent"
+        ]
+      },
+      "disk": {
+        "measurement": [
+          "free",
+          "total",
+          "used",
+          "used_percent"
+        ],
+        "resources": ["*"]
+      },
+      "diskio": {
+        "measurement": [
+          "reads",
+          "writes",
+          "read_bytes",
+          "write_bytes"
+        ],
+        "resources": ["*"]
+      },
+      "net": {
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv",
+          "packets_sent",
+          "packets_recv"
+        ],
+        "resources": ["*"]
+      },
+      "netstat": {
+        "measurement": [
+          "tcp_established",
+          "tcp_time_wait"
+        ]
+      },
+      "swap": {
+        "measurement": [
+          "free",
+          "used",
+          "used_percent"
+        ]
+      },
+      "processes": {
+        "measurement": [
+          "running",
+          "sleeping",
+          "total"
+        ]
+      },
+      "procstat": [
+        {
+          "pattern": "amazon-cloudwatch-agent",
+          "measurement": [
+            "cpu_usage",
+            "memory_rss"
+          ]
+        }
+      ]
+    },
+    "force_flush_interval": 5
+  }
+}
