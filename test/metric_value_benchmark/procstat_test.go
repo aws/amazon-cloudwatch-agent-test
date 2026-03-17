@@ -60,11 +60,11 @@ func (m *ProcStatTestRunner) validateProcStatMetric(metricName string) status.Te
 	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "exe",
-			Value: dimension.ExpectedDimensionValue{aws.String("cloudwatch-agent")},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("cloudwatch-agent")},
 		},
 		{
 			Key:   "process_name",
-			Value: dimension.ExpectedDimensionValue{aws.String("amazon-cloudwatch-agent")},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("amazon-cloudwatch-agent")},
 		},
 		{
 			Key:   "InstanceId",

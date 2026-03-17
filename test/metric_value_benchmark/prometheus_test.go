@@ -114,39 +114,39 @@ func (t *PrometheusTestRunner) validatePrometheusMetric(metricName string) statu
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_type",
-				Value: dimension.ExpectedDimensionValue{aws.String("counter")},
+				Value: dimension.ExpectedDimensionValue{Value: aws.String("counter")},
 			},
 		})
 	case "prometheus_test_gauge":
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_type",
-				Value: dimension.ExpectedDimensionValue{aws.String("gauge")},
+				Value: dimension.ExpectedDimensionValue{Value: aws.String("gauge")},
 			},
 		})
 	case "prometheus_test_summary_count":
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_type",
-				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
+				Value: dimension.ExpectedDimensionValue{Value: aws.String("summary")},
 			},
 		})
 	case "prometheus_test_summary_sum":
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_type",
-				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
+				Value: dimension.ExpectedDimensionValue{Value: aws.String("summary")},
 			},
 		})
 	case "prometheus_test_summary":
 		dims, failed = t.DimensionFactory.GetDimensions([]dimension.Instruction{
 			{
 				Key:   "prom_type",
-				Value: dimension.ExpectedDimensionValue{aws.String("summary")},
+				Value: dimension.ExpectedDimensionValue{Value: aws.String("summary")},
 			},
 			{
 				Key:   "quantile",
-				Value: dimension.ExpectedDimensionValue{aws.String("0.5")},
+				Value: dimension.ExpectedDimensionValue{Value: aws.String("0.5")},
 			},
 		})
 	default:

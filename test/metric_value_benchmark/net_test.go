@@ -75,7 +75,10 @@ func getNetworkInterface() string {
 			}
 		}
 	}
-	return "docker0"
+	if _, err := os.Stat("/sys/class/net/docker0"); err == nil {
+		return "docker0"
+	}
+	return "eth0"
 }
 func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 	testResult := status.TestResult{
@@ -86,7 +89,7 @@ func (m *NetTestRunner) validateNetMetric(metricName string) status.TestResult {
 	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "interface",
-			Value: dimension.ExpectedDimensionValue{aws.String(getNetworkInterface())},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String(getNetworkInterface())},
 		},
 		{
 			Key:   "InstanceId",
