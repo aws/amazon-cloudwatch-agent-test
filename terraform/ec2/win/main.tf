@@ -34,6 +34,40 @@ locals {
 }
 
 #####################################################################
+# Per-run Security Group for WinRM access from CI runner
+#####################################################################
+
+resource "aws_security_group" "winrm_runner" {
+  name        = "cwagent-integ-win-sg-${module.common.testing_id}"
+  description = "WinRM access from CI runner for test ${module.common.testing_id}"
+  vpc_id      = module.basic_components.vpc_id
+
+  ingress {
+    description = "WinRM HTTP from CI runner"
+    from_port   = 5985
+    to_port     = 5985
+    protocol    = "tcp"
+    cidr_blocks = [var.runner_ip]
+  }
+
+  ingress {
+    description = "WinRM HTTPS from CI runner"
+    from_port   = 5986
+    to_port     = 5986
+    protocol    = "tcp"
+    cidr_blocks = [var.runner_ip]
+  }
+
+  ingress {
+    description = "RDP from CI runner"
+    from_port   = 3389
+    to_port     = 3389
+    protocol    = "tcp"
+    cidr_blocks = [var.runner_ip]
+  }
+}
+
+#####################################################################
 # Prepare Parameters Tests
 #####################################################################
 
@@ -59,7 +93,7 @@ resource "aws_instance" "cwagent" {
   instance_type                        = var.ec2_instance_type
   key_name                             = local.ssh_key_name
   iam_instance_profile                 = module.basic_components.instance_profile
-  vpc_security_group_ids               = [module.basic_components.security_group]
+  vpc_security_group_ids               = [module.basic_components.security_group, aws_security_group.winrm_runner.id]
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
   user_data                            = length(regexall("/feature/windows/custom_start/userdata", var.test_dir)) > 0 ? data.template_file.user_data.rendered : ""

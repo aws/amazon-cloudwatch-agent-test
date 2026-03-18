@@ -70,3 +70,9 @@ variable "github_test_repo_branch" {
   type    = string
   default = "main"
 }
+
+variable "runner_ip" {
+  type        = string
+  description = "CIDR of the CI runner (e.g. 1.2.3.4/32) allowed to connect via WinRM"
+  default     = "127.0.0.1/32"
+}

@@ -61,14 +61,6 @@ resource "aws_security_group" "ec2_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  // OpenSSH and others ssh into EC2 Instance
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   // localstack http and https
   ingress {
     from_port   = 4566
@@ -77,27 +69,15 @@ resource "aws_security_group" "ec2_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  // WinRM http https://developer.hashicorp.com/terraform/language/resources/provisioners/connection#argument-reference
-  ingress {
-    from_port   = 5985
-    to_port     = 5985
-    protocol    = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  // Management ports (WinRM, RDP) are NOT in the shared SG.
+  // They are created per-run in the compute-specific modules (ec2/win)
+  // scoped to the CI runner's IP. See terraform/ec2/win/main.tf.
 
-  // WinRM https https://developer.hashicorp.com/terraform/language/resources/provisioners/connection#argument-reference
+  // SSH: still in shared SG until Linux modules are updated to use per-run SGs.
   ingress {
-    from_port   = 5986
-    to_port     = 5986
+    from_port   = 22
+    to_port     = 22
     protocol    = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  // RDP https://en.wikipedia.org/wiki/Remote_Desktop_Protocol
-  ingress {
-    from_port   = 3389
-    to_port     = 3389
-    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
