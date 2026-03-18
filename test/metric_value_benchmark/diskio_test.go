@@ -56,7 +56,7 @@ func (m *DiskIOTestRunner) validateDiskMetric(metricName string) status.TestResu
 	dims, failed := m.DimensionFactory.GetDimensions([]dimension.Instruction{
 		{
 			Key:   "name",
-			Value: dimension.ExpectedDimensionValue{aws.String("nvme0n1")},
+			Value: dimension.ExpectedDimensionValue{Value: aws.String("nvme0n1")},
 		},
 		{
 			Key:   "InstanceId",
