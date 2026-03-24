@@ -69,6 +69,7 @@ type MetaData struct {
 	PerformanceMetricMapName                    string
 	PerformanceTestName                         string
 	IPFamily                                    string
+	IamRoleName                                 string
 }
 
 type MetaDataStrings struct {
@@ -116,6 +117,7 @@ type MetaDataStrings struct {
 	PerformanceMetricMapName                    string
 	PerformanceTestName                         string
 	IPFamily                                    string
+	IamRoleName                                 string
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
@@ -317,6 +319,10 @@ func registerAccountId(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.AccountId), "accountId", "", "AWS account Id")
 }
 
+func registerIamRoleName(dataString *MetaDataStrings) {
+	flag.StringVar(&(dataString.IamRoleName), "iamRoleName", "", "IAM role name for the EC2 instance")
+}
+
 func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerComputeType(registeredMetaDataStrings)
 	registerECSData(registeredMetaDataStrings)
@@ -336,6 +342,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerAgentStartCommand(registeredMetaDataStrings)
 	registerAmpWorkspaceId(registeredMetaDataStrings)
 	registerAccountId(registeredMetaDataStrings)
+	registerIamRoleName(registeredMetaDataStrings)
 
 	return registeredMetaDataStrings
 }
@@ -382,6 +389,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.SampleApp = registeredMetaDataStrings.SampleApp
 	metaDataStorage.AccountId = registeredMetaDataStrings.AccountId
 	metaDataStorage.IPFamily = registeredMetaDataStrings.IPFamily
+	metaDataStorage.IamRoleName = registeredMetaDataStrings.IamRoleName
 	fillEKSInstallationType(metaDataStorage, registeredMetaDataStrings)
 
 	return metaDataStorage
