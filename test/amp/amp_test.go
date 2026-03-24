@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	sigv4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/suite"
 
@@ -130,7 +131,10 @@ func (suite *AmpTestSuite) TestAllInSuite() {
 
 	ctx := context.Background()
 	var err error
-	awsConfig, err = config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))
+	awsConfig, err = config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-west-2"),
+		config.WithEC2IMDSClientEnableState(imds.ClientEnabled),
+	)
 	if err != nil {
 		log.Println("There was an error trying to load default config: ", err)
 	}
