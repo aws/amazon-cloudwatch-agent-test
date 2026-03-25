@@ -98,6 +98,7 @@ func main() {
 
 func validate(vConfig models.ValidateConfig) error {
 	var err error
+	retryDelay := 5 * time.Second
 	for i := 0; i < awsservice.StandardRetries; i++ {
 		err = validators.LaunchValidator(vConfig)
 
@@ -105,9 +106,13 @@ func validate(vConfig models.ValidateConfig) error {
 			log.Printf("Test case: %s, validate type: %s has been successfully validated", vConfig.GetTestCase(), vConfig.GetValidateType())
 			return nil
 		}
-		time.Sleep(60 * time.Second)
-		log.Printf("test case: %s, validate type: %s, error: %v", vConfig.GetTestCase(), vConfig.GetValidateType(), err)
-		continue
+		log.Printf("test case: %s, validate type: %s, retry %d/%d after %s, error: %v",
+			vConfig.GetTestCase(), vConfig.GetValidateType(), i+1, awsservice.StandardRetries, retryDelay, err)
+		time.Sleep(retryDelay)
+		retryDelay = time.Duration(float64(retryDelay) * 2) // exponential: 5s, 10s, 20s
+		if retryDelay > 60*time.Second {
+			retryDelay = 60 * time.Second // cap at original max
+		}
 	}
 
 	return fmt.Errorf("test case: %s, validate type: %s, error: %v", vConfig.GetTestCase(), vConfig.GetValidateType(), err)

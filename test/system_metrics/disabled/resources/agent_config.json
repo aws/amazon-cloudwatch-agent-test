@@ -1,5 +1,6 @@
 {
   "metrics": {
+    "force_flush_interval": 60,
     "metrics_collected": {
       "cpu": {
         "measurement": ["cpu_usage_idle"]

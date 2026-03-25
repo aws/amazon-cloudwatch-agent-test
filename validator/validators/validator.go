@@ -52,12 +52,26 @@ func LaunchValidator(vConfig models.ValidateConfig) error {
 	}
 
 	time.Sleep(agentCollectionPeriod)
-	log.Printf("Start to sleep 120s for CloudWatch to process all the metrics")
-	time.Sleep(2 * time.Minute)
 
-	err = validator.CheckData(startTimeValidation, endTimeValidation)
-	if err != nil {
-		return err
+	// Adaptive polling: wait for CloudWatch to process metrics.
+	// Initial 30s wait for ingestion pipeline, then poll every 15s up to 120s total.
+	log.Printf("Waiting up to 120s for CloudWatch to process metrics (adaptive polling)...")
+	time.Sleep(30 * time.Second)
+	var checkErr error
+	deadline := time.Now().Add(90 * time.Second) // 30s already elapsed, 90s remaining = 120s total max
+	for {
+		checkErr = validator.CheckData(startTimeValidation, endTimeValidation)
+		if checkErr == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			break
+		}
+		log.Printf("Metrics not yet available, retrying in 15s... (%v)", checkErr)
+		time.Sleep(15 * time.Second)
+	}
+	if checkErr != nil {
+		return checkErr
 	}
 
 	err = validator.Cleanup()

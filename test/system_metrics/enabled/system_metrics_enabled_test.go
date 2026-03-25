@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,10 +25,13 @@ import (
 
 const (
 	namespace = "CWAgent/System"
-	// Wait for batch flush (15 min) plus buffer for scrape + publish latency.
-	agentRunDuration = 18 * time.Minute
+	// With force_flush_interval=60s in test config, 2min run is sufficient.
+	agentRunDuration = 2 * time.Minute
 	// Number of mock JVM agents to start.
 	mockJVMCount = 2
+	// Timeout for polling CloudWatch after agent stops.
+	metricPollTimeout = 3 * time.Minute
+	metricPollTick    = 10 * time.Second
 )
 
 func init() {
@@ -87,44 +91,51 @@ func getInstanceDims() []types.Dimension {
 	}
 }
 
-// assertMetricExists verifies a metric exists in CloudWatch for this instance.
+// assertMetricExists polls CloudWatch until the metric exists for this instance.
 func assertMetricExists(t *testing.T, metricName string) {
 	t.Helper()
-	err := awsservice.ValidateMetric(metricName, namespace, getInstanceDimFilter())
-	assert.NoError(t, err, "metric %s should exist in %s", metricName, namespace)
+	require.Eventually(t, func() bool {
+		return awsservice.ValidateMetric(metricName, namespace, getInstanceDimFilter()) == nil
+	}, metricPollTimeout, metricPollTick, "metric %s should exist in %s", metricName, namespace)
 }
 
-// assertMetricValue fetches metric values and asserts they are >= 0.
+// assertMetricValue polls CloudWatch until datapoints are available and asserts they are >= 0.
 func assertMetricValue(t *testing.T, metricName string, startTime, endTime time.Time) {
 	t.Helper()
 	dims := getInstanceDims()
-	data, err := awsservice.GetMetricStatistics(
-		metricName, namespace, dims,
-		startTime, endTime,
-		900, // 15-min period matching batch interval
-		[]types.Statistic{types.StatisticAverage},
-		nil,
-	)
-	require.NoError(t, err, "failed to get statistics for %s", metricName)
-	require.NotEmpty(t, data.Datapoints, "no datapoints for %s", metricName)
+	var data *cloudwatch.GetMetricStatisticsOutput
+	require.Eventually(t, func() bool {
+		var err error
+		data, err = awsservice.GetMetricStatistics(
+			metricName, namespace, dims,
+			startTime, endTime,
+			60, // 60s period matching force_flush_interval
+			[]types.Statistic{types.StatisticAverage},
+			nil,
+		)
+		return err == nil && len(data.Datapoints) > 0
+	}, metricPollTimeout, metricPollTick, "no datapoints for %s", metricName)
 	for _, dp := range data.Datapoints {
 		assert.GreaterOrEqual(t, *dp.Average, float64(0), "metric %s should be >= 0", metricName)
 	}
 }
 
-// assertAggregateJVMCount verifies aggregate_jvm_count equals the expected count.
+// assertAggregateJVMCount polls until aggregate_jvm_count datapoints appear, then verifies the expected count.
 func assertAggregateJVMCount(t *testing.T, expected float64, startTime, endTime time.Time) {
 	t.Helper()
 	dims := getInstanceDims()
-	data, err := awsservice.GetMetricStatistics(
-		"aggregate_jvm_count", namespace, dims,
-		startTime, endTime,
-		900,
-		[]types.Statistic{types.StatisticAverage},
-		nil,
-	)
-	require.NoError(t, err, "failed to get statistics for aggregate_jvm_count")
-	require.NotEmpty(t, data.Datapoints, "no datapoints for aggregate_jvm_count")
+	var data *cloudwatch.GetMetricStatisticsOutput
+	require.Eventually(t, func() bool {
+		var err error
+		data, err = awsservice.GetMetricStatistics(
+			"aggregate_jvm_count", namespace, dims,
+			startTime, endTime,
+			60,
+			[]types.Statistic{types.StatisticAverage},
+			nil,
+		)
+		return err == nil && len(data.Datapoints) > 0
+	}, metricPollTimeout, metricPollTick, "no datapoints for aggregate_jvm_count")
 	assert.InDelta(t, expected, *data.Datapoints[0].Average, 0.5, "aggregate_jvm_count should be %v", expected)
 }
 

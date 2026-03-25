@@ -22,8 +22,8 @@ import (
 
 const (
 	namespace = "CWAgent/System"
-	// Wait the full batch interval to prove nothing leaks through.
-	agentRunDuration = 18 * time.Minute
+	// With force_flush_interval=60s in test config, 2min is enough to prove nothing leaks.
+	agentRunDuration = 2 * time.Minute
 )
 
 func init() {
