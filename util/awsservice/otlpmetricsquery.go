@@ -40,9 +40,8 @@ func QueryOtlpMetrics(region string, promql string) (PrometheusResponse, error) 
 	ctx := context.Background()
 	endpoint := fmt.Sprintf("https://monitoring.%s.amazonaws.com/api/v1/query", region)
 	body := url.Values{"query": {promql}}.Encode()
-	bodyBytes := []byte(body)
 
-	h := sha256.Sum256(bodyBytes)
+	h := sha256.Sum256([]byte(body))
 	payloadHash := hex.EncodeToString(h[:])
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
@@ -76,6 +75,10 @@ func QueryOtlpMetrics(region string, promql string) (PrometheusResponse, error) 
 	respBytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return PrometheusResponse{}, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return PrometheusResponse{}, fmt.Errorf("unexpected status %d: %s", res.StatusCode, string(respBytes))
 	}
 
 	var resp PrometheusResponse

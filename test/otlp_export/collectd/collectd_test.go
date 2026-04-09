@@ -63,7 +63,9 @@ const yamlConfigPath = "/tmp/config.yaml"
 const yamlStartCommand = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -s -c "
 
 func (t *CollectdOtlpTestRunner) run() status.TestGroupResult {
-	exec.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl", "-a", "remove-config").Run()
+	if err := exec.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl", "-a", "remove-config").Run(); err != nil {
+		log.Printf("remove-config failed: %v", err)
+	}
 	common.CopyFile(filepath.Join("agent_configs", t.GetAgentConfigFileName()), yamlConfigPath)
 	if err := common.StartAgentWithCommand(yamlConfigPath, false, false, yamlStartCommand); err != nil {
 		return status.TestGroupResult{
@@ -124,7 +126,7 @@ func sendCollectdHTTPMetrics(duration time.Duration) error {
 		}
 		resp, err := http.Post("http://127.0.0.1:25826/", "application/json", bytes.NewReader(body))
 		if err != nil {
-			// continue on transient errors
+			log.Printf("collectd post error: %v", err)
 		} else {
 			resp.Body.Close()
 		}
