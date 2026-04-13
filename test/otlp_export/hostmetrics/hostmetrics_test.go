@@ -109,7 +109,6 @@ func (t *HostMetricsOtlpTestRunner) GetMeasuredMetrics() []string {
 		"system.network.errors",
 		"system.network.connections",
 		// paging scraper
-		"system.paging.usage",
 		"system.paging.operations",
 		"system.paging.faults",
 		// processes scraper
