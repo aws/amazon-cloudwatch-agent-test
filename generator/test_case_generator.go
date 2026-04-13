@@ -68,9 +68,8 @@ type testConfig struct {
 }
 
 const (
-	testTypeKeyEc2Linux           = "ec2_linux"
-	testTypeKeyEc2LinuxOtlpExport = "ec2_linux_otlp_export"
-	testTypeKeyEc2SELinux         = "ec2_selinux"
+	testTypeKeyEc2Linux   = "ec2_linux"
+	testTypeKeyEc2SELinux = "ec2_selinux"
 )
 
 // you can't have a const map in golang
@@ -197,8 +196,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/system_metrics/disabled",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
-	},
-	testTypeKeyEc2LinuxOtlpExport: {
 		{testDir: "./test/otlp_export/hostmetrics"},
 		{testDir: "./test/otlp_export/statsd"},
 		{testDir: "./test/otlp_export/collectd"},

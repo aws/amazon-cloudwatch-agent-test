@@ -14,19 +14,28 @@ import (
 )
 
 func ValidateOtlpMetrics(testName string, region string, metrics []string) status.TestGroupResult {
-	results := make([]status.TestResult, len(metrics))
-	for i, m := range metrics {
+	results := make([]status.TestResult, 0, len(metrics)+1)
+	successCount := 0
+	for _, m := range metrics {
 		promql := fmt.Sprintf(`{__name__="%s"}`, m)
 		resp, err := awsservice.QueryOtlpMetricsWithRetry(region, promql, 10, 30*time.Second)
 		if err != nil {
-			results[i] = status.TestResult{Name: m, Status: status.FAILED, Reason: err}
+			results = append(results, status.TestResult{Name: m, Status: status.FAILED, Reason: err})
 			continue
 		}
 		if len(resp.Data.Result) == 0 {
-			results[i] = status.TestResult{Name: m, Status: status.FAILED, Reason: fmt.Errorf("no results for %s", m)}
+			results = append(results, status.TestResult{Name: m, Status: status.FAILED, Reason: fmt.Errorf("no results for %s", m)})
 			continue
 		}
-		results[i] = status.TestResult{Name: m, Status: status.SUCCESSFUL}
+		results = append(results, status.TestResult{Name: m, Status: status.SUCCESSFUL})
+		successCount++
+	}
+	if successCount != len(metrics) {
+		results = append(results, status.TestResult{
+			Name:   "MetricCountCheck",
+			Status: status.FAILED,
+			Reason: fmt.Errorf("expected %d metrics, but only %d were successfully validated", len(metrics), successCount),
+		})
 	}
 	return status.TestGroupResult{Name: testName, TestResults: results}
 }

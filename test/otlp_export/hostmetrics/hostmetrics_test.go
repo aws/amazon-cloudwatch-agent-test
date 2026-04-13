@@ -81,7 +81,25 @@ func (t *HostMetricsOtlpTestRunner) GetAgentRunDuration() time.Duration {
 	return 4 * time.Minute
 }
 func (t *HostMetricsOtlpTestRunner) GetMeasuredMetrics() []string {
-	return []string{"system.cpu.load_average.1m", "system.memory.usage", "system.cpu.utilization"}
+	return []string{
+		// cpu scraper
+		"system.cpu.time",
+		"system.cpu.utilization",
+		// memory scraper
+		"system.memory.usage",
+		// disk scraper
+		"system.disk.io",
+		"system.disk.io_time",
+		"system.disk.merged",
+		"system.disk.operation_time",
+		"system.disk.operations",
+		"system.disk.pending_operations",
+		"system.disk.weighted_io_time",
+		// load scraper
+		"system.cpu.load_average.1m",
+		"system.cpu.load_average.5m",
+		"system.cpu.load_average.15m",
+	}
 }
 
 func (t *HostMetricsOtlpTestRunner) Validate() status.TestGroupResult {
