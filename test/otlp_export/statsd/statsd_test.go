@@ -89,7 +89,7 @@ func (t *StatsdOtlpTestRunner) GetAgentRunDuration() time.Duration {
 	return 4 * time.Minute
 }
 func (t *StatsdOtlpTestRunner) GetMeasuredMetrics() []string {
-	return metric.StatsdMetricNames
+	return []string{"statsd_counter_1", "statsd_gauge_2"}
 }
 
 func (t *StatsdOtlpTestRunner) SetupAfterAgentRun() error {

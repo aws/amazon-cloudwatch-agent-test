@@ -99,6 +99,29 @@ func (t *HostMetricsOtlpTestRunner) GetMeasuredMetrics() []string {
 		"system.cpu.load_average.1m",
 		"system.cpu.load_average.5m",
 		"system.cpu.load_average.15m",
+		// filesystem scraper
+		"system.filesystem.usage",
+		"system.filesystem.inodes.usage",
+		// network scraper
+		"system.network.io",
+		"system.network.packets",
+		"system.network.dropped",
+		"system.network.errors",
+		"system.network.connections",
+		// paging scraper
+		"system.paging.usage",
+		"system.paging.operations",
+		"system.paging.faults",
+		// processes scraper
+		"system.processes.count",
+		"system.processes.created",
+		// process scraper
+		"process.cpu.time",
+		"process.memory.usage",
+		"process.memory.virtual",
+		"process.disk.io",
+		// system scraper
+		"system.uptime",
 	}
 }
 

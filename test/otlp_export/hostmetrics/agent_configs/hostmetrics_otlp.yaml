@@ -9,6 +9,12 @@ receivers:
       memory:
       disk:
       load:
+      filesystem:
+      network:
+      paging:
+      processes:
+      process:
+      system:
 
 exporters:
   otlphttp:
