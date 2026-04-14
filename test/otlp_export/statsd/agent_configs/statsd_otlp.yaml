@@ -1,0 +1,50 @@
+receivers:
+  statsd:
+    endpoint: 127.0.0.1:8125
+    aggregation_interval: 60s
+
+exporters:
+  otlphttp:
+    auth:
+      authenticator: sigv4auth/monitoring
+    endpoint: https://monitoring.us-west-2.amazonaws.com
+
+extensions:
+  sigv4auth/monitoring:
+    region: us-west-2
+    service: monitoring
+
+processors:
+  resourcedetection:
+    detectors:
+      - env
+      - system
+  transform/scope:
+    metric_statements:
+      - context: scope
+        statements:
+          - set(attributes["aws.cloudwatch.source"], "cloudwatch-agent")
+          - set(attributes["aws.cloudwatch.solution"], "cwagent-ec2-metrics")
+  batch:
+    send_batch_size: 500
+    send_batch_max_size: 500
+    timeout: 1m0s
+
+service:
+  extensions:
+    - sigv4auth/monitoring
+  pipelines:
+    metrics/statsd:
+      receivers:
+        - statsd
+      processors:
+        - resourcedetection
+        - transform/scope
+        - batch
+      exporters:
+        - otlphttp
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: None
