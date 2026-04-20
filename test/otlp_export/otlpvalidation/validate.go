@@ -14,18 +14,16 @@ import (
 )
 
 func ValidateOtlpMetrics(testName string, region string, metrics []string) status.TestGroupResult {
-	const maxRetries = 10
-	const retryInterval = 30 * time.Second
+	const maxRetries = 5
+	const retryInterval = 20 * time.Second
 
 	// Track which metrics have been validated
 	validated := make(map[string]bool, len(metrics))
-	var lastFailures []string
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		if attempt > 0 {
 			time.Sleep(retryInterval)
 		}
-		lastFailures = nil
 		for _, m := range metrics {
 			if validated[m] {
 				continue
@@ -33,12 +31,11 @@ func ValidateOtlpMetrics(testName string, region string, metrics []string) statu
 			promql := fmt.Sprintf(`{__name__="%s"}`, m)
 			resp, err := awsservice.QueryOtlpMetrics(region, promql)
 			if err != nil || len(resp.Data.Result) == 0 {
-				lastFailures = append(lastFailures, m)
 				continue
 			}
 			validated[m] = true
 		}
-		if len(lastFailures) == 0 {
+		if len(validated) == len(metrics) {
 			break
 		}
 	}
