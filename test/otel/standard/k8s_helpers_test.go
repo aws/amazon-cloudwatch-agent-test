@@ -82,9 +82,11 @@ func buildGroundTruth() (*k8sGroundTruth, error) {
 		pods:  make(map[string]corev1.Pod, len(podList.Items)),
 	}
 	for _, n := range nodeList.Items {
+		n := n
 		gt.nodes[n.Name] = n
 	}
 	for _, p := range podList.Items {
+		p := p
 		gt.pods[p.Namespace+"/"+p.Name] = p
 	}
 	return gt, nil
@@ -94,6 +96,7 @@ func buildGroundTruth() (*k8sGroundTruth, error) {
 func imageTagFromPod(t *testing.T, gt *k8sGroundTruth, namespace, labelKey, labelValue string) string {
 	t.Helper()
 	for _, p := range gt.pods {
+		p := p
 		if p.Namespace != namespace {
 			continue
 		}
@@ -140,6 +143,7 @@ func (gt *k8sGroundTruth) lookupPod(podName, namespace string) (corev1.Pod, bool
 		return p, ok
 	}
 	for _, p := range gt.pods {
+		p := p
 		if p.Name == podName {
 			return p, true
 		}
