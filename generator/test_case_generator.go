@@ -427,6 +427,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			terraformDir: "terraform/eks/daemon/otel",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
+		{
+			testDir:      "./test/otel/neuron",
+			terraformDir: "terraform/eks/daemon/otel-neuron",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "inf2.xlarge",
+			ami:          "AL2023_x86_64_NEURON",
+		},
 	},
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
