@@ -94,6 +94,18 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
   role       = aws_iam_role.node_role.name
 }
 
+# LIS CSI addon
+resource "aws_eks_addon" "lis_csi_addon" {
+  cluster_name         = aws_eks_cluster.this.name
+  addon_name           = "aws-ec2-local-instance-store-csi-driver"
+  addon_version        = var.lis_csi_addon_version
+  configuration_values = jsonencode({ metrics = { enabled = true } })
+
+  depends_on = [
+    aws_eks_node_group.this,
+  ]
+}
+
 resource "null_resource" "kubectl" {
   depends_on = [aws_eks_cluster.this, aws_eks_node_group.this]
   provisioner "local-exec" {
@@ -143,14 +155,75 @@ resource "null_resource" "update_image" {
   }
 }
 
-resource "null_resource" "deploy_mock_lis_csi" {
-  depends_on = [null_resource.kubectl]
+resource "null_resource" "wait_for_lis_csi" {
+  depends_on = [aws_eks_addon.lis_csi_addon, null_resource.kubectl]
   provisioner "local-exec" {
     command = <<-EOT
-      kubectl apply -f ../../../../test/liscsi/resources/mock-lis-csi.yaml
-      kubectl rollout status daemonset/mock-nvme-csi-plugin -n kube-system --timeout=300s
+      kubectl rollout status daemonset/ec2-instance-store-plugin -n kube-system --timeout=300s
     EOT
   }
+}
+
+resource "kubernetes_persistent_volume_claim" "lis_csi_pvc" {
+  metadata {
+    name      = "liscsi-integ-test-pvc"
+    namespace = "default"
+  }
+  spec {
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = "ec2-instance-store-sc"
+    resources {
+      requests = {
+        storage = "1Gi"
+      }
+    }
+  }
+
+  depends_on = [null_resource.wait_for_lis_csi]
+}
+
+resource "kubernetes_deployment" "lis_csi_io_workload" {
+  metadata {
+    name      = "liscsi-integ-test-io-workload"
+    namespace = "default"
+    labels = {
+      app = "liscsi-integ-test"
+    }
+  }
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        app = "liscsi-integ-test"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "liscsi-integ-test"
+        }
+      }
+      spec {
+        container {
+          name    = "liscsi-integ-test-writer"
+          image   = "busybox:1.35"
+          command = ["sh", "-c", "while true; do dd if=/dev/zero of=/data/out.txt bs=1M count=10; sleep 5; done"]
+          volume_mount {
+            name       = "lis-storage"
+            mount_path = "/data"
+          }
+        }
+        volume {
+          name = "lis-storage"
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.lis_csi_pvc.metadata[0].name
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [kubernetes_persistent_volume_claim.lis_csi_pvc, null_resource.kubectl]
 }
 
 data "aws_instances" "eks_node" {
@@ -171,7 +244,7 @@ resource "null_resource" "validator" {
     aws_eks_node_group.this,
     helm_release.aws_observability,
     null_resource.update_image,
-    null_resource.deploy_mock_lis_csi,
+    kubernetes_deployment.lis_csi_io_workload,
   ]
 
   triggers = {
@@ -182,7 +255,7 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating CloudWatch Agent with LIS CSI NVME instance store metrics"
       cd ../../../..
-      go test ${var.test_dir} \
+      go test ${var.test_dir} -timeout 1h \
       -eksClusterName=${aws_eks_cluster.this.name} \
       -computeType=EKS -v \
       -eksDeploymentStrategy=DAEMON \

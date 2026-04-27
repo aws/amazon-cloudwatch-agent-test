@@ -28,15 +28,20 @@ variable "helm_chart_branch" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.31"
+  default = "1.33"
 }
 
 variable "ami_type" {
   type    = string
-  default = "AL2_x86_64"
+  default = "AL2023_x86_64_STANDARD"
 }
 
 variable "instance_type" {
   type    = string
-  default = "t3a.medium"
+  default = "i7i.xlarge"
+}
+
+variable "lis_csi_addon_version" {
+  type    = string
+  default = "v0.0.1-eksbuild.11"
 }
