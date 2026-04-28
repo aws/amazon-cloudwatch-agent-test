@@ -422,6 +422,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			wip:          true,
 		},
+		{
+			testDir:      "./test/otel/standard",
+			terraformDir: "terraform/eks/daemon/otel",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
 	},
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
