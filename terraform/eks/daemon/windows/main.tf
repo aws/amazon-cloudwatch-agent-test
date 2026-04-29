@@ -47,6 +47,10 @@ resource "aws_eks_cluster" "this" {
     subnet_ids         = module.basic_components.public_subnet_ids
     security_group_ids = [module.basic_components.security_group]
   }
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
 }
 
 ## EKS Cluster Addon
@@ -75,33 +79,17 @@ resource "kubernetes_config_map_v1_data" "amazon_vpc_cni_windows" {
   }
 }
 
-## AWS CONFIGMAP
+# EKS Access Entries (replaces aws-auth ConfigMap)
+resource "aws_eks_access_entry" "node_role" {
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = aws_iam_role.node_role.arn
+  type          = "EC2_LINUX"
+}
 
-resource "kubernetes_config_map" "configmap" {
-  data = {
-    "mapRoles" = <<EOT
-- groups:
-  - system:bootstrappers
-  - system:nodes
-  rolearn: arn:aws:iam::${data.aws_caller_identity.account_id.account_id}:role/cwagent-eks-Worker-Role-${module.common.testing_id}
-  username: system:node:{{EC2PrivateDNSName}}
-- groups:
-  - eks:kube-proxy-windows
-  - system:bootstrappers
-  - system:nodes
-  rolearn: arn:aws:iam::${data.aws_caller_identity.account_id.account_id}:role/cwagent-eks-Worker-Role-${module.common.testing_id}
-  username: system:node:{{EC2PrivateDNSName}}
-- groups:
-  - system:masters
-  rolearn: arn:aws:iam::${data.aws_caller_identity.account_id.account_id}:role/Admin-Windows
-
-EOT
-  }
-
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
+resource "aws_eks_access_entry" "node_role_windows" {
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = aws_iam_role.node_role.arn
+  type          = "EC2_WINDOWS"
 }
 
 # EKS Node Groups
@@ -127,6 +115,7 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
     aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
+    aws_eks_access_entry.node_role,
   ]
 }
 
@@ -169,7 +158,8 @@ resource "aws_eks_node_group" "node_group_windows" {
     aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
-    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy
+    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
+    aws_eks_access_entry.node_role_windows,
   ]
 }
 
