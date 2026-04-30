@@ -424,7 +424,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "i7i.xlarge",
 			ami:          "AL2023_x86_64_STANDARD",
-			k8sVersion:   "1.33",
+			k8sVersion:   "1.35",
 		},
 		{
 			testDir:      "./test/otel/standard",
