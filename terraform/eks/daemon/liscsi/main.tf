@@ -112,8 +112,8 @@ resource "null_resource" "kubectl" {
 
 # LIS CSI addon
 resource "aws_eks_addon" "lis_csi_addon" {
-  depends_on   = [aws_eks_node_group.this]
-  cluster_name = aws_eks_cluster.this.name
+  depends_on           = [aws_eks_node_group.this]
+  cluster_name         = aws_eks_cluster.this.name
   addon_name           = "aws-ec2-local-instance-store-csi-driver"
   configuration_values = jsonencode({ metrics = { enabled = true } })
 }
