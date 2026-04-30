@@ -63,8 +63,6 @@ type testConfig struct {
 	instanceTypeByArch map[string]string
 	// excludedTests is a comma-separated list of test names to exclude (e.g., "diskioinstancestore,diskioebs")
 	excludedTests string
-	// k8sVersion allows overriding the Kubernetes version for a specific test
-	k8sVersion string
 	// wip marks test as Work In Progress - failures won't block CI
 	wip bool
 }
@@ -423,8 +421,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 			terraformDir: "terraform/eks/daemon/liscsi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "i7i.xlarge",
-			ami:          "AL2023_x86_64_STANDARD",
-			k8sVersion:   "1.35",
 		},
 		{
 			testDir:      "./test/otel/standard",
@@ -621,9 +617,6 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 			}
 			if testConfig.ami != "" {
 				row.Ami = testConfig.ami
-			}
-			if testConfig.k8sVersion != "" {
-				row.K8sVersion = testConfig.k8sVersion
 			}
 			// Apply architecture-specific instance type if configured
 			if testConfig.instanceTypeByArch != nil {

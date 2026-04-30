@@ -33,7 +33,7 @@ variable "k8s_version" {
 
 variable "ami_type" {
   type    = string
-  default = "AL2023_x86_64_STANDARD"
+  default = "AL2_x86_64"
 }
 
 variable "instance_type" {
