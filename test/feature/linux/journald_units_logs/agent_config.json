@@ -1,0 +1,20 @@
+{
+    "agent": {
+        "debug": true
+    },
+    "logs": {
+        "logs_collected": {
+            "journald": {
+                "collect_list": [
+                    {
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald",
+                        "units": ["systemd-logind"],
+                        "retention_in_days": 1
+                    }
+                ]
+            }
+        },
+        "force_flush_interval": 5
+    }
+}

@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"go.uber.org/multierr"
@@ -27,6 +28,9 @@ func GenerateLogs(configFilePath string, duration time.Duration, sendingInterval
 		multiErr = multierr.Append(multiErr, err)
 	}
 	if err := GenerateWindowsEvents(validationLog); err != nil {
+		multiErr = multierr.Append(multiErr, err)
+	}
+	if err := GenerateJournaldEntries(validationLog); err != nil {
 		multiErr = multierr.Append(multiErr, err)
 	}
 	return multiErr
@@ -58,6 +62,39 @@ func CreateWindowsEvent(eventLogName string, eventLogLevel string, eventID strin
 	}
 
 	log.Printf("Windows Event is successfully created for logname: %s, loglevel: %s, logeventId: %s, logmsg: %s", eventLogName, eventLogLevel, eventID, msg)
+	return nil
+}
+
+func GenerateJournaldEntries(validationLog []models.LogValidation) error {
+	var multiErr error
+	for _, vLog := range validationLog {
+		if vLog.LogSource == "Journald" {
+			identifier := vLog.LogIdentifier
+			if identifier == "" {
+				identifier = "cwagent-test"
+			}
+			priority := vLog.LogPriority
+			if priority == "" {
+				priority = "info"
+			}
+			err := CreateJournaldEntry(identifier, priority, vLog.LogValue)
+			if err != nil {
+				multiErr = multierr.Append(multiErr, err)
+			}
+		}
+	}
+	return multiErr
+}
+
+func CreateJournaldEntry(identifier string, priority string, msg string) error {
+	cmd := exec.Command("systemd-cat", "--identifier="+identifier, "--priority="+priority)
+	cmd.Stdin = strings.NewReader(msg)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Journald entry creation failed: %v; the output is: %s", err, string(out))
+		return err
+	}
+	log.Printf("Journald entry is successfully created for identifier: %s, priority: %s, msg: %s", identifier, priority, msg)
 	return nil
 }
 

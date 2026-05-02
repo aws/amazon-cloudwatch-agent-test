@@ -1,0 +1,32 @@
+{
+    "agent": {
+        "debug": true
+    },
+    "logs": {
+        "logs_collected": {
+            "journald": {
+                "collect_list": [
+                    {
+                        "priority": "info",
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-info",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "priority": "err",
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-err",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "priority": "warning",
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-warning",
+                        "retention_in_days": 1
+                    }
+                ]
+            }
+        },
+        "force_flush_interval": 5
+    }
+}

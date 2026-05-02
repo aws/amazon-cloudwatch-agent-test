@@ -1,0 +1,40 @@
+{
+    "agent": {
+        "debug": true
+    },
+    "logs": {
+        "logs_collected": {
+            "journald": {
+                "collect_list": [
+                    {
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-regex1",
+                        "retention_in_days": 1,
+                        "filters": [
+                            {"type": "include", "expression": "Database.*failed|Authentication.*|login.*"}
+                        ]
+                    },
+                    {
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-regex2",
+                        "retention_in_days": 1,
+                        "filters": [
+                            {"type": "include", "expression": ".*user.*"},
+                            {"type": "exclude", "expression": ".*failed.*"}
+                        ]
+                    },
+                    {
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-regex3",
+                        "retention_in_days": 1,
+                        "filters": [
+                            {"type": "include", "expression": "Service.*started|CWAgent.*regex"},
+                            {"type": "exclude", "expression": ".*stopped"}
+                        ]
+                    }
+                ]
+            }
+        },
+        "force_flush_interval": 5
+    }
+}

@@ -1,0 +1,18 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "collect_list": [
+          {
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 1
+          }
+        ]
+      }
+    }
+  }
+}

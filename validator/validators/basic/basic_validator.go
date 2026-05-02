@@ -118,7 +118,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		fmt.Println("Traces Metrics are correct!")
 	}
 	for _, logValidation := range logValidations {
-		err := s.ValidateLogs(logValidation.LogStream, logValidation.LogValue, logValidation.LogLevel, logValidation.LogSource, logValidation.LogEventID, logValidation.LogLines, startTime, endTime)
+		err := s.ValidateLogs(logValidation.LogStream, logValidation.LogValue, logValidation.LogLevel, logValidation.LogSource, logValidation.LogEventID, logValidation.LogUnit, logValidation.LogPriority, logValidation.LogIdentifier, logValidation.LogLines, startTime, endTime)
 		if err != nil {
 			multiErr = multierr.Append(multiErr, err)
 		}
@@ -186,7 +186,7 @@ func (s *BasicValidator) ValidateTracesMetrics() error {
 	return nil
 }
 
-func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource, logEventID string, expectedMinimumEventCount int, startTime, endTime time.Time) error {
+func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource, logEventID, logUnit, logPriority, logIdentifier string, expectedMinimumEventCount int, startTime, endTime time.Time) error {
 	logGroup := awsservice.GetInstanceId()
 	log.Printf("Start to validate that substring '%s' has at least %d log event(s) within log group %s, log stream %s, between %v and %v", logLine, expectedMinimumEventCount, logGroup, logStream, startTime, endTime)
 	return awsservice.ValidateLogs(
@@ -208,9 +208,15 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource, l
 					if logEventID != "" && strings.Contains(message, logLine) && strings.Contains(message, logEventID) {
 						actualEventCount += 1
 					}
-				default:
-					if strings.Contains(message, logLine) {
+				case "Journald":
+					if logPriority != "" && strings.Contains(message, logLine) && strings.Contains(message, logPriority) {
 						actualEventCount += 1
+					}
+					if logUnit != "" && strings.Contains(message, logLine) && strings.Contains(message, logUnit) {
+						actualEventCount += 1
+					}
+					if logIdentifier != "" && strings.Contains(message, logLine) && strings.Contains(message, logIdentifier) {
+						actualEventCount +=1
 					}
 				}
 			}
