@@ -98,6 +98,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/feature/linux/journald_logs", targets: map[string]map[string]struct{}{"os": {"al2": {}}}},
 		{testDir: "./test/feature/linux/journald_priority_logs", targets: map[string]map[string]struct{}{"os": {"al2": {}}}},
 		{testDir: "./test/feature/linux/journald_regex_logs", targets: map[string]map[string]struct{}{"os": {"al2": {}}}},
+		{testDir: "./test/feature/linux/journald_matches_logs", targets: map[string]map[string]struct{}{"os": {"al2": {}}}},
 		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},

@@ -1,0 +1,19 @@
+# Receivers that agent needs to tests
+receivers: ["system"]
+
+#Test case name
+test_case: "journald_feature_matches_logs"
+validate_type: "feature"
+data_type: "logs"
+number_monitored_logs: 1
+values_per_minute: "2"
+agent_collection_period: 60
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+metric_namespace: "CloudWatchAgentJournaldFeature"
+metric_validation:
+log_validation:
+  - log_value: "Matched journald entry"
+    log_lines: 1
+    log_stream: "journald-matches"
+    log_source: "Journald"
+    log_identifier: "cwagent-match-test"
