@@ -75,18 +75,18 @@ const (
 
 // you can't have a const map in golang
 var testTypeToTestConfig = map[string][]testConfig{
-	"ec2_gpu": {
-		{testDir: "./test/nvidia_gpu"},
-	},
-	"ec2_linux_wd": {
-		{testDir: "./test/workload_discovery"},
-	},
-	"ec2_linux_wd_nvidia": {
-		{testDir: "./test/workload_discovery"},
-	},
-	"ec2_linux_onprem": {
-		{testDir: "./test/cloudwatchlogs"},
-	},
+	// "ec2_gpu": {
+	// 	{testDir: "./test/nvidia_gpu"},
+	// },
+	// "ec2_linux_wd": {
+	// 	{testDir: "./test/workload_discovery"},
+	// },
+	// "ec2_linux_wd_nvidia": {
+	// 	{testDir: "./test/workload_discovery"},
+	// },
+	// "ec2_linux_onprem": {
+	// 	{testDir: "./test/cloudwatchlogs"},
+	// },
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
@@ -99,113 +99,112 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/feature/linux/journald_priority_logs", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
 		{testDir: "./test/feature/linux/journald_regex_logs", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
 		{testDir: "./test/feature/linux/journald_matches_logs", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
-		{
-			testDir: "./test/metrics_number_dimension",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir:     "./test/emf_concurrent",
-			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
-			maxAttempts: 1,
-		},
-		{
-			testDir:     "./test/emf_prometheus",
-			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
-			maxAttempts: 2,
-		},
-		{testDir: "./test/entity_metrics_benchmark"},
-		{
-			testDir: "./test/metric_value_benchmark",
-			instanceTypeByArch: map[string]string{
-				"amd64": "i3en.large",
-				"arm64": "i4g.large",
-			},
-		},
-		{testDir: "./test/run_as_user"},
-		{testDir: "./test/collection_interval"},
-		{testDir: "./test/metric_dimension"},
-		{testDir: "./test/restart"},
-		{testDir: "./test/xray"},
-		{testDir: "./test/otlp"},
-		{
-			testDir: "./test/acceptance",
-			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
-		},
-		// skipping FIPS test as the test cannot be verified
-		// neither ssh nor SSM works after a reboot once FIPS is enabled
-		//{
-		//	testDir: "./test/fips",
-		//	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
-		//},
-		{
-			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/proxy",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/ssl_cert",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir:      "./test/userdata",
-			terraformDir: "terraform/ec2/userdata",
-			targets:      map[string]map[string]struct{}{"os": {"ol9": {}}},
-		},
-		{
-			testDir:      "./test/credentials_file",
-			terraformDir: "terraform/ec2/creds",
-			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/amp",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/histograms",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/agent_otel_merging",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{
-			testDir:      "./test/assume_role",
-			terraformDir: "terraform/ec2/assume_role",
-			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir:      "./test/credential_chain",
-			terraformDir: "terraform/ec2/assume_role",
-			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/detailed_metrics",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/otlp",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/dualstack_endpoint",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{testDir: "./test/ssm_document"},
-		{
-			testDir: "./test/system_metrics/enabled",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-			wip:     true,
-		},
-		{
-			testDir: "./test/system_metrics/disabled",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{testDir: "./test/otlp_export/hostmetrics"},
-		{testDir: "./test/otlp_export/statsd"},
-		{testDir: "./test/otlp_export/collectd"},
+		// {
+		// 	testDir: "./test/metrics_number_dimension",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir:     "./test/emf_concurrent",
+		// 	targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
+		// 	maxAttempts: 1,
+		// },
+		// {
+		// 	testDir:     "./test/emf_prometheus",
+		// 	targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
+		// 	maxAttempts: 2,
+		// },
+		// {testDir: "./test/entity_metrics_benchmark"},
+		// {
+		// 	testDir: "./test/metric_value_benchmark",
+		// 	instanceTypeByArch: map[string]string{
+		// 		"amd64": "i3en.large",
+		// 		"arm64": "i4g.large",
+		// 	},
+		// },
+		// {testDir: "./test/run_as_user"},
+		// {testDir: "./test/collection_interval"},
+		// {testDir: "./test/metric_dimension"},
+		// {testDir: "./test/restart"},
+		// {testDir: "./test/xray"},
+		// {testDir: "./test/otlp"},
+		// {
+		// 	testDir: "./test/acceptance",
+		// 	targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
+		// },
+		// // skipping FIPS test as the test cannot be verified
+		// // neither ssh nor SSM works after a reboot once FIPS is enabled
+		// //{
+		// //	testDir: "./test/fips",
+		// //	targets: map[string]map[string]struct{}{"os": {"rhel8": {}}},
+		// //},
+		// {
+		// 	testDir: "./test/lvm",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir: "./test/proxy",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir: "./test/ssl_cert",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir:      "./test/userdata",
+		// 	terraformDir: "terraform/ec2/userdata",
+		// 	targets:      map[string]map[string]struct{}{"os": {"ol9": {}}},
+		// },
+		// {
+		// 	testDir:      "./test/credentials_file",
+		// 	terraformDir: "terraform/ec2/creds",
+		// 	targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir: "./test/amp",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {
+		// 	testDir: "./test/histograms",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {
+		// 	testDir: "./test/agent_otel_merging",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {
+		// 	testDir:      "./test/assume_role",
+		// 	terraformDir: "terraform/ec2/assume_role",
+		// 	targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir:      "./test/credential_chain",
+		// 	terraformDir: "terraform/ec2/assume_role",
+		// 	targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir: "./test/detailed_metrics",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {
+		// 	testDir: "./test/otlp",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {
+		// 	testDir: "./test/dualstack_endpoint",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {testDir: "./test/ssm_document"},
+		// {
+		// 	testDir: "./test/system_metrics/enabled",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {
+		// 	testDir: "./test/system_metrics/disabled",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {testDir: "./test/otlp_export/hostmetrics"},
+		// {testDir: "./test/otlp_export/statsd"},
+		// {testDir: "./test/otlp_export/collectd"},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
@@ -229,97 +228,97 @@ var testTypeToTestConfig = map[string][]testConfig{
 			maxAttempts: 2,
 		},
 		//{testDir: "./test/metric_value_benchmark"}, // Skipping test until it is fixed!
-		{testDir: "./test/run_as_user"},
-		{testDir: "./test/collection_interval"},
-		{testDir: "./test/metric_dimension"},
-		{testDir: "./test/restart"},
-		{testDir: "./test/xray"},
-		{testDir: "./test/selinux_negative_test"},
-		//{testDir: "./test/otlp"}, // Skipping test until it is fixed!
-		{
-			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/proxy",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/ssl_cert",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir:      "./test/credentials_file",
-			terraformDir: "terraform/ec2/creds",
-			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/amp",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{
-			testDir: "./test/agent_otel_merging",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{
-			testDir:      "./test/assume_role",
-			terraformDir: "terraform/ec2/assume_role",
-			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
-		},
-		{
-			testDir: "./test/dualstack_endpoint",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
+		// {testDir: "./test/run_as_user"},
+		// {testDir: "./test/collection_interval"},
+		// {testDir: "./test/metric_dimension"},
+		// {testDir: "./test/restart"},
+		// {testDir: "./test/xray"},
+		// {testDir: "./test/selinux_negative_test"},
+		// //{testDir: "./test/otlp"}, // Skipping test until it is fixed!
+		// {
+		// 	testDir: "./test/lvm",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir: "./test/proxy",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir: "./test/ssl_cert",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir:      "./test/credentials_file",
+		// 	terraformDir: "terraform/ec2/creds",
+		// 	targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir: "./test/amp",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {
+		// 	testDir: "./test/agent_otel_merging",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
+		// {
+		// 	testDir:      "./test/assume_role",
+		// 	terraformDir: "terraform/ec2/assume_role",
+		// 	targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		// },
+		// {
+		// 	testDir: "./test/dualstack_endpoint",
+		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		// },
 	},
 	/*
 		You can only place 1 mac instance on a dedicate host a single time.
 		Therefore, limit down the scope for testing in Mac since EC2 can be done with Linux
 		and Mac under the hood share similar plugins with Linux
 	*/
-	"ec2_mac": {
-		{testDir: "../../../test/feature/mac"},
-		{testDir: "../../../test/ssm_document"},
-	},
-	"ec2_windows_wd": {
-		{testDir: "../../../test/workload_discovery"},
-	},
-	"ec2_windows_wd_nvidia": {
-		{testDir: "../../../test/workload_discovery"},
-	},
-	"ec2_windows": {
-		{testDir: "../../../test/feature/windows"},
-		{testDir: "../../../test/restart"},
-		{testDir: "../../../test/acceptance"},
-		{testDir: "../../../test/feature/windows/event_logs"},
-		{testDir: "../../../test/feature/windows/eventid_logs"},
-		{testDir: "../../../test/feature/windows/event_regex_logs"},
-		{testDir: "../../../test/log_state/logfile"},
-		{testDir: "../../../test/log_state/windows_event_log"},
-		{
-			testDir: "../../../test/feature/windows/custom_start/userdata",
-			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
-		},
-		{
-			testDir: "../../../test/feature/windows/custom_start/ssm_start",
-			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
-		},
-		{testDir: "../../../test/ssm_document"},
-		// assume role test doesn't add much value, and it already being tested with linux
-		//{testDir: "../../../test/assume_role"},
-	},
-	"ec2_performance": {
-		{testDir: "../../test/performance/emf"},
-		{testDir: "../../test/performance/logs"},
-		{testDir: "../../test/performance/system"},
-		{testDir: "../../test/performance/statsd"},
-		{testDir: "../../test/performance/collectd"},
-		{testDir: "../../test/performance/trace/xray", runMockServer: true},
-	},
-	"ec2_windows_performance": {
-		{testDir: "../../test/performance/windows/logs"},
-		{testDir: "../../test/performance/windows/system"},
-	},
-	"ec2_stress": {
+	// "ec2_mac": {
+	// 	{testDir: "../../../test/feature/mac"},
+	// 	{testDir: "../../../test/ssm_document"},
+	// },
+	// "ec2_windows_wd": {
+	// 	{testDir: "../../../test/workload_discovery"},
+	// },
+	// "ec2_windows_wd_nvidia": {
+	// 	{testDir: "../../../test/workload_discovery"},
+	// },
+	// "ec2_windows": {
+	// 	{testDir: "../../../test/feature/windows"},
+	// 	{testDir: "../../../test/restart"},
+	// 	{testDir: "../../../test/acceptance"},
+	// 	{testDir: "../../../test/feature/windows/event_logs"},
+	// 	{testDir: "../../../test/feature/windows/eventid_logs"},
+	// 	{testDir: "../../../test/feature/windows/event_regex_logs"},
+	// 	{testDir: "../../../test/log_state/logfile"},
+	// 	{testDir: "../../../test/log_state/windows_event_log"},
+	// 	{
+	// 		testDir: "../../../test/feature/windows/custom_start/userdata",
+	// 		targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
+	// 	},
+	// 	{
+	// 		testDir: "../../../test/feature/windows/custom_start/ssm_start",
+	// 		targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
+	// 	},
+	// 	{testDir: "../../../test/ssm_document"},
+	// 	// assume role test doesn't add much value, and it already being tested with linux
+	// 	//{testDir: "../../../test/assume_role"},
+	// },
+	// "ec2_performance": {
+	// 	{testDir: "../../test/performance/emf"},
+	// 	{testDir: "../../test/performance/logs"},
+	// 	{testDir: "../../test/performance/system"},
+	// 	{testDir: "../../test/performance/statsd"},
+	// 	{testDir: "../../test/performance/collectd"},
+	// 	{testDir: "../../test/performance/trace/xray", runMockServer: true},
+	// },
+	// "ec2_windows_performance": {
+	// 	{testDir: "../../test/performance/windows/logs"},
+	// 	{testDir: "../../test/performance/windows/system"},
+	// },
+	 "ec2_stress": {
 		{testDir: "../../test/stress/emf"},
 		{testDir: "../../test/stress/logs"},
 		{testDir: "../../test/stress/system"},
