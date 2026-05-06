@@ -420,7 +420,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/liscsi",
 			terraformDir: "terraform/eks/daemon/liscsi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
-			wip:          true,
+			instanceType: "i7i.xlarge",
 		},
 		{
 			testDir:      "./test/otel/standard",
