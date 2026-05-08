@@ -428,6 +428,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 		{
+			testDir:      "./test/otel/attr_limit",
+			terraformDir: "terraform/eks/daemon/otel-attr-limit",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
 			testDir:      "./test/otel/neuron",
 			terraformDir: "terraform/eks/daemon/otel-neuron",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
