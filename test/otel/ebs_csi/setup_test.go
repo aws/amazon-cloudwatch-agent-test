@@ -85,12 +85,6 @@ func TestMain(m *testing.M) {
 	}
 
 	hostMappings := []otelmetrics.SourceHostMapping{
-		{Source: otelmetrics.SourceNodeExporter, HostTypes: clusterHostTypes},
-		{Source: otelmetrics.SourceCadvisor, HostTypes: clusterHostTypes},
-		{Source: otelmetrics.SourceKubeletstats, HostTypes: clusterHostTypes},
-		{Source: otelmetrics.SourceControlPlane, HostTypes: nil},
-		{Source: otelmetrics.SourceKubeStateMetrics, HostTypes: nil},
-		{Source: otelmetrics.SourceKSMNodeScoped, HostTypes: nil},
 		{Source: otelmetrics.SourceEBSCSI, HostTypes: nil},
 	}
 

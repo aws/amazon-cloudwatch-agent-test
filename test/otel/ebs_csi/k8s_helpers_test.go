@@ -22,8 +22,7 @@ import (
 )
 
 type k8sGroundTruth struct {
-	nodes map[string]corev1.Node
-	pods  map[string]corev1.Pod
+	pods map[string]corev1.Pod
 }
 
 var (
@@ -59,25 +58,13 @@ func buildGroundTruth() (*k8sGroundTruth, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	nodeList, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("listing nodes: %w", err)
-	}
-	if len(nodeList.Items) == 0 {
-		return nil, fmt.Errorf("K8s API returned 0 nodes")
-	}
 	podList, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("listing pods: %w", err)
 	}
 
 	gt := &k8sGroundTruth{
-		nodes: make(map[string]corev1.Node, len(nodeList.Items)),
-		pods:  make(map[string]corev1.Pod, len(podList.Items)),
-	}
-	for _, n := range nodeList.Items {
-		n := n
-		gt.nodes[n.Name] = n
+		pods: make(map[string]corev1.Pod, len(podList.Items)),
 	}
 	for _, p := range podList.Items {
 		p := p
