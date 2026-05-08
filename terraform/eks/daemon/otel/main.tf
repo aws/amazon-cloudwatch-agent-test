@@ -83,7 +83,6 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
   role       = aws_iam_role.node_role.name
 }
 
-
 # Pod Identity IAM Role
 resource "aws_iam_role" "pod_identity_role" {
   name = "cwagent-otel-pod-identity-${module.common.testing_id}"
@@ -101,6 +100,7 @@ resource "aws_iam_role_policy_attachment" "pod_identity_CloudWatchAgentServerPol
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
   role       = aws_iam_role.pod_identity_role.name
 }
+
 
 # --- EKS Addon: Pod Identity agent ---
 
@@ -211,6 +211,136 @@ resource "kubernetes_deployment_v1" "nginx_test" {
         }
       }
     }
+  }
+}
+
+# --- KSM test workloads ---
+
+resource "kubernetes_stateful_set_v1" "ksm_statefulset" {
+  depends_on = [aws_eks_node_group.this]
+  metadata {
+    name      = "ksm-test-statefulset"
+    namespace = "default"
+  }
+  spec {
+    replicas     = 1
+    service_name = kubernetes_service_v1.ksm_statefulset_headless.metadata[0].name
+    selector { match_labels = { app = "ksm-test-statefulset" } }
+    template {
+      metadata { labels = { app = "ksm-test-statefulset" } }
+      spec {
+        node_selector = { "ci-test.example.com/node-color" = "blue" }
+        container {
+          name  = "pause"
+          image = "registry.k8s.io/pause:3.9"
+          resources { requests = { cpu = "10m", memory = "16Mi" } }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service_v1" "ksm_statefulset_headless" {
+  metadata {
+    name      = "ksm-test-statefulset"
+    namespace = "default"
+  }
+  spec {
+    cluster_ip = "None"
+    selector   = { app = "ksm-test-statefulset" }
+    port {
+      port = 80
+      name = "placeholder"
+    }
+  }
+}
+
+resource "kubernetes_cron_job_v1" "ksm_cronjob" {
+  depends_on = [aws_eks_node_group.this]
+  metadata {
+    name      = "ksm-test-cronjob"
+    namespace = "default"
+  }
+  spec {
+    schedule                      = "*/5 * * * *"
+    successful_jobs_history_limit = 1
+    failed_jobs_history_limit     = 1
+    job_template {
+      metadata {}
+      spec {
+        template {
+          metadata { labels = { app = "ksm-test-cronjob" } }
+          spec {
+            node_selector  = { "ci-test.example.com/node-color" = "blue" }
+            restart_policy = "Never"
+            container {
+              name    = "echo"
+              image   = "busybox:1.36"
+              command = ["echo", "ksm-test"]
+              resources { requests = { cpu = "10m", memory = "16Mi" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_job_v1" "ksm_job" {
+  depends_on = [aws_eks_node_group.this]
+  metadata {
+    name      = "ksm-test-job"
+    namespace = "default"
+  }
+  spec {
+    ttl_seconds_after_finished = 86400
+    template {
+      metadata { labels = { app = "ksm-test-job" } }
+      spec {
+        node_selector  = { "ci-test.example.com/node-color" = "blue" }
+        restart_policy = "Never"
+        container {
+          name    = "echo"
+          image   = "busybox:1.36"
+          command = ["echo", "ksm-test"]
+          resources { requests = { cpu = "10m", memory = "16Mi" } }
+        }
+      }
+    }
+  }
+}
+
+resource "null_resource" "ksm_replicaset" {
+  depends_on = [aws_eks_node_group.this, null_resource.kubectl]
+  provisioner "local-exec" {
+    command = <<-EOT
+      cat <<'EOF' | kubectl apply -f -
+      apiVersion: apps/v1
+      kind: ReplicaSet
+      metadata:
+        name: ksm-test-replicaset
+        namespace: default
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: ksm-test-replicaset
+        template:
+          metadata:
+            labels:
+              app: ksm-test-replicaset
+          spec:
+            nodeSelector:
+              ci-test.example.com/node-color: blue
+            containers:
+            - name: pause
+              image: registry.k8s.io/pause:3.9
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+      EOF
+    EOT
   }
 }
 
