@@ -451,6 +451,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			instanceType: "g4dn.xlarge",
 			ami:          "AL2023_x86_64_NVIDIA",
 		},
+		{
+			testDir:      "./test/otel/multi_efa",
+			terraformDir: "terraform/eks/daemon/otel-multi-efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+		},
 	},
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
