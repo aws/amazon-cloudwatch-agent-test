@@ -7,13 +7,12 @@ validate_type: "feature"
 data_type: "logs"
 number_monitored_logs: 1
 values_per_minute: "2"
-agent_collection_period: 60
+agent_collection_period: 90
 cloudwatch_agent_config: "<cloudwatch_agent_config>"
 metric_namespace: "CloudWatchAgentJournaldFeature"
 metric_validation:
 log_validation:
-  - log_value: "Matched journald entry"
+  - log_value: "_UID"
     log_lines: 1
     log_stream: "journald-matches"
     log_source: "Journald"
-    log_identifier: "cwagent-match-test"

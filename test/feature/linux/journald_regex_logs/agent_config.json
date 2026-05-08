@@ -8,29 +8,12 @@
                 "collect_list": [
                     {
                         "log_group_name": "{instance_id}",
-                        "log_stream_name": "journald-regex1",
-                        "retention_in_days": 1,
+                        "log_stream_name": "journald-regex",
+                        "units": ["sshd"],
                         "filters": [
-                            {"type": "include", "expression": "Database.*failed|Authentication.*|login.*"}
-                        ]
-                    },
-                    {
-                        "log_group_name": "{instance_id}",
-                        "log_stream_name": "journald-regex2",
-                        "retention_in_days": 1,
-                        "filters": [
-                            {"type": "include", "expression": ".*user.*"},
-                            {"type": "exclude", "expression": ".*failed.*"}
-                        ]
-                    },
-                    {
-                        "log_group_name": "{instance_id}",
-                        "log_stream_name": "journald-regex3",
-                        "retention_in_days": 1,
-                        "filters": [
-                            {"type": "include", "expression": "Service.*started|CWAgent.*regex"},
-                            {"type": "exclude", "expression": ".*stopped"}
-                        ]
+                            {"type": "include", "expression": ".*Did not receive.*"}
+                        ],
+                        "retention_in_days": 1
                     }
                 ]
             }

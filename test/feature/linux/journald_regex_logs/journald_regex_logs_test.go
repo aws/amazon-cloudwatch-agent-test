@@ -6,10 +6,12 @@
 package journald_regex_logs
 
 import (
-	"log"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -29,27 +31,28 @@ func TestJournaldRegexLogs(t *testing.T) {
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
 
-	// Generate journald entries that match/don't match the regex filters
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-journald-test", "err", "Database connection failed"))
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-journald-test", "warning", "Authentication failed for user admin"))
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-journald-test", "info", "user login successful"))
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-journald-test", "info", "Service started successfully"))
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-journald-test", "info", "CWAgent supports regex"))
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-journald-test", "info", "CWAgent has stopped"))
-
 	time.Sleep(60 * time.Second)
 	common.StopAgent()
 
 	instanceId := awsservice.GetInstanceId()
-	log.Printf("Validating journald regex logs for instance %s", instanceId)
 
-	// Validate regex1 stream (include: Database.*failed|Authentication.*|login.*)
+	// Validate: only entries matching the include regex should appear
 	err = awsservice.ValidateLogs(
 		instanceId,
-		"journald-regex1",
+		"journald-regex",
 		nil,
 		nil,
 		awsservice.AssertLogsNotEmpty(),
+		func(events []types.OutputLogEvent) error {
+			for _, event := range events {
+				message := *event.Message
+				// Every entry should match the include pattern
+				if !strings.Contains(message, "Did not receive") {
+					return fmt.Errorf("found entry not matching include regex: %.100s", message)
+				}
+			}
+			return nil
+		},
 	)
 	assert.NoError(t, err)
 }

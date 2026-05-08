@@ -6,10 +6,12 @@
 package journald_units_logs
 
 import (
-	"log"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -29,16 +31,11 @@ func TestJournaldUnitsLogs(t *testing.T) {
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
 
-	// Generate journald entries
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-journald-test", "info", "Journald info log"))
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-journald-test", "warning", "Journald warning log"))
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-journald-test", "err", "Journald err log"))
-
-	time.Sleep(60 * time.Second)
+	// sshd naturally produces logs on EC2 instances
+	time.Sleep(90 * time.Second)
 	common.StopAgent()
 
 	instanceId := awsservice.GetInstanceId()
-	log.Printf("Validating journald unit logs for instance %s", instanceId)
 
 	err = awsservice.ValidateLogs(
 		instanceId,
@@ -46,6 +43,15 @@ func TestJournaldUnitsLogs(t *testing.T) {
 		nil,
 		nil,
 		awsservice.AssertLogsNotEmpty(),
+		func(events []types.OutputLogEvent) error {
+			for _, event := range events {
+				message := *event.Message
+				if !strings.Contains(message, "sshd") {
+					return fmt.Errorf("found entry not from sshd: %.100s", message)
+				}
+			}
+			return nil
+		},
 	)
 	assert.NoError(t, err)
 }

@@ -6,10 +6,12 @@
 package journald_matches_logs
 
 import (
-	"log"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -29,17 +31,10 @@ func TestJournaldMatchesLogs(t *testing.T) {
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
 
-	// Generate entry that matches the SYSLOG_IDENTIFIER filter
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-match-test", "info", "Matched journald entry"))
-
-	// Generate entry with different identifier (should NOT be collected)
-	assert.NoError(t, common.CreateJournaldEntry("cwagent-no-match", "info", "This should not appear"))
-
 	time.Sleep(60 * time.Second)
 	common.StopAgent()
 
 	instanceId := awsservice.GetInstanceId()
-	log.Printf("Validating journald matches logs for instance %s", instanceId)
 
 	err = awsservice.ValidateLogs(
 		instanceId,
@@ -47,6 +42,15 @@ func TestJournaldMatchesLogs(t *testing.T) {
 		nil,
 		nil,
 		awsservice.AssertLogsNotEmpty(),
+		func(events []types.OutputLogEvent) error {
+			for _, event := range events {
+				message := *event.Message
+				if !strings.Contains(message, "\"_UID\":\"0\"") {
+					return fmt.Errorf("found entry not matching _UID=0: %.100s", message)
+				}
+			}
+			return nil
+		},
 	)
 	assert.NoError(t, err)
 }
