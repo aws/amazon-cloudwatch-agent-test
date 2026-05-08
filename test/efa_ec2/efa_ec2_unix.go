@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
 	"github.com/aws/amazon-cloudwatch-agent-test/filesystem"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
@@ -26,7 +29,8 @@ const (
 )
 
 var (
-	expectedEfaEC2LinuxMetrics = []string{"efa_tx_bytes", "efa_rx_bytes", "efa_tx_pkts", "efa_rx_pkts", "efa_rx_dropped", "efa_rdma_read_bytes", "efa_rdma_write_bytes", "efa_send_bytes", "efa_recv_bytes"}
+	expectedEfaEC2LinuxMetrics    = []string{"efa_tx_bytes", "efa_rx_bytes", "efa_tx_pkts", "efa_rx_pkts", "efa_rx_dropped", "efa_rdma_read_bytes", "efa_rdma_write_bytes", "efa_send_bytes", "efa_recv_bytes"}
+	expectedEfaDimensionNames     = []string{"device", "port", "eniId"}
 )
 
 func Validate() error {
@@ -41,6 +45,12 @@ func Validate() error {
 		awsservice.ValidateMetric(metricName, metricLinuxNamespace, dimensionFilter)
 	}
 
+	// Validate that EFA metrics use short dimension names (device, port, eniId)
+	// instead of OTel-style dotted names (aws.efa.device, aws.efa.port, aws.efa.eni.id)
+	if err := validateEfaDimensionNames(); err != nil {
+		return err
+	}
+
 	if err := filesystem.CheckFileRights(agentLinuxLogPath); err != nil {
 		return errors.New(fmt.Sprintf("CloudWatchAgent does not have privellege to write and read CWA's log: %v", err))
 	}
@@ -49,5 +59,20 @@ func Validate() error {
 		return errors.New(fmt.Sprintf("CloudWatchAgent does not have right to CWA's log: %v", err))
 	}
 
+	return nil
+}
+
+// validateEfaDimensionNames verifies that EFA metrics are published with short
+// dimension names (device, port, eniId) rather than OTel-style dotted names.
+func validateEfaDimensionNames() error {
+	dimFilter := make([]types.DimensionFilter, len(expectedEfaDimensionNames))
+	for i, name := range expectedEfaDimensionNames {
+		dimFilter[i] = types.DimensionFilter{Name: aws.String(name)}
+	}
+
+	// Check at least one EFA metric exists with the expected short dimension names
+	if err := awsservice.ValidateMetric(expectedEfaEC2LinuxMetrics[0], metricLinuxNamespace, dimFilter); err != nil {
+		return fmt.Errorf("EFA metrics missing expected short dimension names %v: %w", expectedEfaDimensionNames, err)
+	}
 	return nil
 }
