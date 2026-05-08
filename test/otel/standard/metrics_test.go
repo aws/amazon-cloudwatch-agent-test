@@ -81,6 +81,10 @@ var ksmClusterScopedMetrics = []otelmetrics.MetricDefinition{
 	{Name: "kube_deployment_status_replicas_ready", MetricType: "gauge", Scope: otelmetrics.ScopeCluster},
 	{Name: "kube_deployment_status_replicas", MetricType: "gauge", Scope: otelmetrics.ScopeCluster},
 	{Name: "kube_daemonset_status_desired_number_scheduled", MetricType: "gauge", Scope: otelmetrics.ScopeCluster},
+	{Name: "kube_statefulset_replicas", MetricType: "gauge", Scope: otelmetrics.ScopeCluster},
+	{Name: "kube_statefulset_status_replicas_ready", MetricType: "gauge", Scope: otelmetrics.ScopeCluster},
+	{Name: "kube_job_status_active", MetricType: "gauge", Scope: otelmetrics.ScopeCluster},
+	{Name: "kube_cronjob_status_active", MetricType: "gauge", Scope: otelmetrics.ScopeCluster},
 	{Name: "kube_namespace_status_phase", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"phase"}},
 }
 
@@ -116,6 +120,7 @@ func metricNames(defs []otelmetrics.MetricDefinition) []string {
 func metricNamesByScope(defs []otelmetrics.MetricDefinition, scope otelmetrics.MetricScope) []string {
 	var names []string
 	for _, d := range defs {
+		d := d
 		if d.Scope == scope {
 			names = append(names, d.Name)
 		}
@@ -133,6 +138,7 @@ func nodeMetricNames() []string {
 func podMetricNames() []string {
 	var names []string
 	for _, m := range allMetrics {
+		m := m
 		if m.Scope == otelmetrics.ScopePod || m.Scope == otelmetrics.ScopeContainer {
 			names = append(names, m.Name)
 		}
@@ -171,6 +177,7 @@ func prometheusScrapedNames() []string {
 func podScopedCadvisorNames() []string {
 	var names []string
 	for _, m := range cadvisorMetrics {
+		m := m
 		if m.Scope == otelmetrics.ScopePod || m.Scope == otelmetrics.ScopeContainer {
 			names = append(names, m.Name)
 		}
