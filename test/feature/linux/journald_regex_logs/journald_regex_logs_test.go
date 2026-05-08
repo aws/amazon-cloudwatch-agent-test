@@ -7,8 +7,9 @@ package journald_regex_logs
 
 import (
 	"fmt"
-	"strings"
 	"log"
+	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,12 +33,21 @@ func TestJournaldRegexLogs(t *testing.T) {
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
 
+	// Wait for journald receiver to initialize
+	time.Sleep(10 * time.Second)
+
+	// Generate entries that MATCH the include filter: ".*error.*|.*failed.*"
+	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Database connection error occurred").Run()
+	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Authentication failed for user").Run()
+	// Generate entries that should NOT match the filter
+	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.info", "Service started successfully").Run()
+	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.info", "Health check passed").Run()
+
 	time.Sleep(60 * time.Second)
 	common.StopAgent()
 
 	instanceId := awsservice.GetInstanceId()
 
-	// Validate: only entries matching the include regex should appear
 	err = awsservice.ValidateLogs(
 		instanceId,
 		"journald-regex",
@@ -47,8 +57,7 @@ func TestJournaldRegexLogs(t *testing.T) {
 		func(events []types.OutputLogEvent) error {
 			for _, event := range events {
 				message := *event.Message
-				
-				if !strings.Contains(message, "session opened") {
+				if !strings.Contains(message, "Database") && !strings.Contains(message, "failed") {
 					return fmt.Errorf("found entry not matching include regex: %.100s", message)
 				}
 			}

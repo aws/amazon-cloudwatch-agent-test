@@ -37,7 +37,6 @@ func TestJournaldPriorityLogs(t *testing.T) {
 
 	instanceId := awsservice.GetInstanceId()
 
-	// Validate: only priority err and above (0-3) should appear
 	err = awsservice.ValidateLogs(
 		instanceId,
 		"journald-err",
@@ -47,7 +46,7 @@ func TestJournaldPriorityLogs(t *testing.T) {
 		func(events []types.OutputLogEvent) error {
 			for _, event := range events {
 				message := *event.Message
-				// PRIORITY 0-3 are err and above
+				
 				if strings.Contains(message, "\"PRIORITY\":\"4\"") ||
 					strings.Contains(message, "\"PRIORITY\":\"5\"") ||
 					strings.Contains(message, "\"PRIORITY\":\"6\"") ||

@@ -9,9 +9,8 @@
                     {
                         "log_group_name": "{instance_id}",
                         "log_stream_name": "journald-regex",
-                        "units": ["sshd"],
                         "filters": [
-                            {"type": "include", "expression": ".*Did not receive.*"}
+                            {"type": "include", "expression": ".*Database.*|.*failed.*"}
                         ],
                         "retention_in_days": 1
                     }
