@@ -8,6 +8,7 @@ package journald_matches_logs
 import (
 	"fmt"
 	"strings"
+	"log"
 	"testing"
 	"time"
 
@@ -49,6 +50,7 @@ func TestJournaldMatchesLogs(t *testing.T) {
 					return fmt.Errorf("found entry not matching _UID=0: %.100s", message)
 				}
 			}
+			log.Printf("All logs validated: %d entries, all matched!", len(events))
 			return nil
 		},
 	)

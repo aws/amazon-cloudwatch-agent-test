@@ -8,6 +8,7 @@ package journald_priority_logs
 import (
 	"fmt"
 	"strings"
+	"log"
 	"testing"
 	"time"
 
@@ -54,6 +55,7 @@ func TestJournaldPriorityLogs(t *testing.T) {
 					return fmt.Errorf("found entry with priority below err: %.100s", message)
 				}
 			}
+			log.Printf("All logs validated: %d entries, all matched!", len(events))
 			return nil
 		},
 	)

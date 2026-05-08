@@ -8,6 +8,7 @@ package journald_units_logs
 import (
 	"fmt"
 	"strings"
+	"log"
 	"testing"
 	"time"
 
@@ -46,10 +47,11 @@ func TestJournaldUnitsLogs(t *testing.T) {
 		func(events []types.OutputLogEvent) error {
 			for _, event := range events {
 				message := *event.Message
-				if !strings.Contains(message, "sshd") {
-					return fmt.Errorf("found entry not from sshd: %.100s", message)
-				}
+				if !strings.Contains(message, "\"_SYSTEMD_UNIT\":\"sshd.service\"") {
+      				return fmt.Errorf("found entry not from sshd unit: %.100s", message)
+  				}
 			}
+			log.Printf("All logs validated: %d entries, all matched!", len(events))
 			return nil
 		},
 	)

@@ -8,6 +8,7 @@ package journald_regex_logs
 import (
 	"fmt"
 	"strings"
+	"log"
 	"testing"
 	"time"
 
@@ -46,11 +47,12 @@ func TestJournaldRegexLogs(t *testing.T) {
 		func(events []types.OutputLogEvent) error {
 			for _, event := range events {
 				message := *event.Message
-				// Every entry should match the include pattern
-				if !strings.Contains(message, "Did not receive") {
+				
+				if !strings.Contains(message, "session opened") {
 					return fmt.Errorf("found entry not matching include regex: %.100s", message)
 				}
 			}
+			log.Printf("All logs validated: %d entries, all matched!", len(events))
 			return nil
 		},
 	)
