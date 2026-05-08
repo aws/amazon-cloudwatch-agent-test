@@ -196,6 +196,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/system_metrics/disabled",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
+		{testDir: "./test/otlp_export/hostmetrics"},
+		{testDir: "./test/otlp_export/statsd"},
+		{testDir: "./test/otlp_export/collectd"},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
@@ -417,7 +420,22 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/liscsi",
 			terraformDir: "terraform/eks/daemon/liscsi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
-			wip:          true,
+			instanceType: "i7i.xlarge",
+		},
+		{
+			testDir:      "./test/otel/standard",
+			terraformDir: "terraform/eks/daemon/otel",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/otel/attr_limit",
+			terraformDir: "terraform/eks/daemon/otel-attr-limit",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/otel/ebs_csi",
+			terraformDir: "terraform/eks/daemon/otel-ebs-csi",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 		},
 	},
 	"eks_deployment": {
@@ -441,6 +459,8 @@ type partition struct {
 	// testConfigOverrides allows partition-specific test configurations
 	// key is testDir, value is the override config
 	testConfigOverrides map[string]testConfig
+	// excludedTestDirs allows excluding specific test directories from a partition
+	excludedTestDirs map[string]struct{}
 }
 
 var partitionTests = map[string]partition{
@@ -453,6 +473,11 @@ var partitionTests = map[string]partition{
 		configName: "_itar",
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+		excludedTestDirs: map[string]struct{}{
+			"./test/otlp_export/hostmetrics": {},
+			"./test/otlp_export/statsd":      {},
+			"./test/otlp_export/collectd":    {},
+		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
 				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
@@ -468,6 +493,11 @@ var partitionTests = map[string]partition{
 		configName: "_china",
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+		excludedTestDirs: map[string]struct{}{
+			"./test/otlp_export/hostmetrics": {},
+			"./test/otlp_export/statsd":      {},
+			"./test/otlp_export/collectd":    {},
+		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
 				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
@@ -495,7 +525,7 @@ func main() {
 			if len(partition.tests) != 0 && !slices.Contains(partition.tests, testType) {
 				continue
 			}
-			testMatrix := genMatrix(testType, testConfigs, partition.ami, partition.testConfigOverrides)
+			testMatrix := genMatrix(testType, testConfigs, partition.ami, partition.testConfigOverrides, partition.excludedTestDirs)
 			writeTestMatrixFile(testType+partition.configName, testMatrix)
 		}
 	}
@@ -525,7 +555,7 @@ func generateTestName(testType string, test_directory string) string {
 
 	return strings.Join(cleaned, "_")
 }
-func genMatrix(testType string, testConfigs []testConfig, ami []string, overrides map[string]testConfig) []matrixRow {
+func genMatrix(testType string, testConfigs []testConfig, ami []string, overrides map[string]testConfig, excludedTestDirs map[string]struct{}) []matrixRow {
 	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
 
 	if err != nil {
@@ -545,6 +575,13 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
+			// Skip test dirs excluded for this partition
+			if excludedTestDirs != nil {
+				if _, excluded := excludedTestDirs[testConfig.testDir]; excluded {
+					continue
+				}
+			}
+
 			// Apply partition-specific overrides if available
 			if overrides != nil {
 				if override, ok := overrides[testConfig.testDir]; ok {

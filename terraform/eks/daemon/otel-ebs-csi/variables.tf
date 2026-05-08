@@ -8,7 +8,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "./test/liscsi"
+  default = "./test/otel/ebs_csi"
 }
 
 variable "cwagent_image_repo" {
@@ -33,10 +33,10 @@ variable "k8s_version" {
 
 variable "ami_type" {
   type    = string
-  default = "AL2_x86_64"
+  default = "AL2023_x86_64_STANDARD"
 }
 
 variable "instance_type" {
   type    = string
-  default = "i7i.xlarge"
+  default = "t3.medium"
 }
