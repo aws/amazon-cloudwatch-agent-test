@@ -14,6 +14,36 @@ module "basic_components" {
 
 locals {
   aws_eks = "aws eks --region ${var.region}"
+
+  # Sentinel labels planted on nodes as canaries for tier-dropping tests.
+  tier1_sentinels = { "helm.sh/chart" = "test-chart", "release" = "test-release" }
+  tier2_sentinels = { "pod-template-generation" = "1" }
+  tier3_sentinels = { "karpenter.sh/sentinel-known" = "v", "nvidia.com/sentinel-known" = "v" }
+  tier6_sentinels = { "ci-test.example.com/sentinel-customer-a" = "v", "ci-test.example.com/sentinel-customer-b" = "v" }
+
+  # Padding labels to inflate attribute count.
+  pad_108 = { for i in range(1, 109) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
+  pad_120 = { for i in range(1, 121) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
+
+  common_sentinels = merge(local.tier1_sentinels, local.tier2_sentinels, local.tier3_sentinels, local.tier6_sentinels)
+
+  # Pod padding labels for the high nginx deployment (120 labels as YAML lines).
+  high_pod_padding_yaml = join("\n", [for i in range(1, 121) : "        ci-test.example.com/pod-pad-${format("%03d", i)}: v"])
+
+  low_labels = merge(local.common_sentinels, local.pad_108, {
+    "ci-test.example.com/node-color"      = "white"
+    "ci-test.example.com/attr-limit-node" = "node-low"
+  })
+
+  mid_labels = merge(local.common_sentinels, local.pad_120, {
+    "ci-test.example.com/node-color"      = "white"
+    "ci-test.example.com/attr-limit-node" = "node-mid"
+  })
+
+  high_labels = merge(local.common_sentinels, local.pad_120, {
+    "ci-test.example.com/node-color"      = "white"
+    "ci-test.example.com/attr-limit-node" = "node-high"
+  })
 }
 
 resource "aws_eks_cluster" "this" {
@@ -26,27 +56,75 @@ resource "aws_eks_cluster" "this" {
   }
 }
 
-# EKS Node Group — 2x t3.medium with node-color=blue label
-resource "aws_eks_node_group" "this" {
+# --- 3 Node Groups: low, mid, high ---
+
+resource "aws_eks_node_group" "low" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "cwagent-otel-integ-node-${module.common.testing_id}"
+  node_group_name = "cwagent-attr-limit-low-${module.common.testing_id}"
   node_role_arn   = aws_iam_role.node_role.arn
   subnet_ids      = module.basic_components.public_subnet_ids
 
   scaling_config {
-    desired_size = 2
-    max_size     = 2
-    min_size     = 2
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
   }
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
   disk_size      = 20
   instance_types = [var.instance_type]
+  labels         = local.low_labels
 
-  labels = {
-    "ci-test.example.com/node-color" = "blue"
+  depends_on = [
+    aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
+    aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
+  ]
+}
+
+resource "aws_eks_node_group" "mid" {
+  cluster_name    = aws_eks_cluster.this.name
+  node_group_name = "cwagent-attr-limit-mid-${module.common.testing_id}"
+  node_role_arn   = aws_iam_role.node_role.arn
+  subnet_ids      = module.basic_components.public_subnet_ids
+
+  scaling_config {
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
   }
+
+  ami_type       = var.ami_type
+  capacity_type  = "ON_DEMAND"
+  disk_size      = 20
+  instance_types = [var.instance_type]
+  labels         = local.mid_labels
+
+  depends_on = [
+    aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
+    aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
+  ]
+}
+
+resource "aws_eks_node_group" "high" {
+  cluster_name    = aws_eks_cluster.this.name
+  node_group_name = "cwagent-attr-limit-high-${module.common.testing_id}"
+  node_role_arn   = aws_iam_role.node_role.arn
+  subnet_ids      = module.basic_components.public_subnet_ids
+
+  scaling_config {
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
+  }
+
+  ami_type       = var.ami_type
+  capacity_type  = "ON_DEMAND"
+  disk_size      = 20
+  instance_types = [var.instance_type]
+  labels         = local.high_labels
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
@@ -57,7 +135,7 @@ resource "aws_eks_node_group" "this" {
 
 # EKS Node IAM Role
 resource "aws_iam_role" "node_role" {
-  name = "cwagent-otel-eks-Worker-Role-${module.common.testing_id}"
+  name = "cwagent-attr-limit-eks-Worker-Role-${module.common.testing_id}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -85,7 +163,7 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
 
 # Pod Identity IAM Role
 resource "aws_iam_role" "pod_identity_role" {
-  name = "cwagent-otel-pod-identity-${module.common.testing_id}"
+  name = "cwagent-attr-limit-pod-identity-${module.common.testing_id}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -105,7 +183,7 @@ resource "aws_iam_role_policy_attachment" "pod_identity_CloudWatchAgentServerPol
 # --- EKS Addon: Pod Identity agent ---
 
 resource "aws_eks_addon" "pod_identity_agent" {
-  depends_on   = [aws_eks_node_group.this]
+  depends_on   = [aws_eks_node_group.low, aws_eks_node_group.mid, aws_eks_node_group.high]
   cluster_name = aws_eks_cluster.this.name
   addon_name   = "eks-pod-identity-agent"
 }
@@ -113,7 +191,7 @@ resource "aws_eks_addon" "pod_identity_agent" {
 # --- Update kubeconfig ---
 
 resource "null_resource" "kubectl" {
-  depends_on = [aws_eks_cluster.this, aws_eks_node_group.this]
+  depends_on = [aws_eks_cluster.this, aws_eks_node_group.low, aws_eks_node_group.mid, aws_eks_node_group.high]
   provisioner "local-exec" {
     command = "${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}"
   }
@@ -138,7 +216,7 @@ resource "helm_release" "aws_observability" {
 
   set = [
     { name = "clusterName", value = aws_eks_cluster.this.name },
-    { name = "region", value = var.region }
+    { name = "region", value = var.region },
   ]
 
   depends_on = [
@@ -190,155 +268,102 @@ resource "null_resource" "restart_pods" {
   }
 }
 
-# --- Test workload: nginx ---
+# --- Test workloads: 3 nginx deployments via kubectl apply ---
 
-resource "kubernetes_deployment_v1" "nginx_test" {
-  depends_on = [aws_eks_node_group.this]
-  metadata {
-    name      = "nginx-test"
-    namespace = "default"
-  }
-  spec {
-    replicas = 1
-    selector { match_labels = { app = "nginx-test" } }
-    template {
-      metadata { labels = { app = "nginx-test" } }
-      spec {
-        container {
-          name  = "nginx"
-          image = "public.ecr.aws/nginx/nginx:latest"
-          port { container_port = 80 }
-        }
-      }
-    }
-  }
-}
-
-# --- KSM test workloads ---
-
-resource "kubernetes_stateful_set_v1" "ksm_statefulset" {
-  depends_on = [aws_eks_node_group.this]
-  metadata {
-    name      = "ksm-test-statefulset"
-    namespace = "default"
-  }
-  spec {
-    replicas     = 1
-    service_name = kubernetes_service_v1.ksm_statefulset_headless.metadata[0].name
-    selector { match_labels = { app = "ksm-test-statefulset" } }
-    template {
-      metadata { labels = { app = "ksm-test-statefulset" } }
-      spec {
-        node_selector = { "ci-test.example.com/node-color" = "blue" }
-        container {
-          name  = "pause"
-          image = "registry.k8s.io/pause:3.9"
-          resources { requests = { cpu = "10m", memory = "16Mi" } }
-        }
-      }
-    }
-  }
-}
-
-resource "kubernetes_service_v1" "ksm_statefulset_headless" {
-  metadata {
-    name      = "ksm-test-statefulset"
-    namespace = "default"
-  }
-  spec {
-    cluster_ip = "None"
-    selector   = { app = "ksm-test-statefulset" }
-    port {
-      port = 80
-      name = "placeholder"
-    }
-  }
-}
-
-resource "kubernetes_cron_job_v1" "ksm_cronjob" {
-  depends_on = [aws_eks_node_group.this]
-  metadata {
-    name      = "ksm-test-cronjob"
-    namespace = "default"
-  }
-  spec {
-    schedule                      = "*/5 * * * *"
-    successful_jobs_history_limit = 1
-    failed_jobs_history_limit     = 1
-    job_template {
-      metadata {}
-      spec {
-        template {
-          metadata { labels = { app = "ksm-test-cronjob" } }
-          spec {
-            node_selector  = { "ci-test.example.com/node-color" = "blue" }
-            restart_policy = "Never"
-            container {
-              name    = "echo"
-              image   = "busybox:1.36"
-              command = ["echo", "ksm-test"]
-              resources { requests = { cpu = "10m", memory = "16Mi" } }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-resource "kubernetes_job_v1" "ksm_job" {
-  depends_on = [aws_eks_node_group.this]
-  metadata {
-    name      = "ksm-test-job"
-    namespace = "default"
-  }
-  spec {
-    ttl_seconds_after_finished = 86400
-    template {
-      metadata { labels = { app = "ksm-test-job" } }
-      spec {
-        node_selector  = { "ci-test.example.com/node-color" = "blue" }
-        restart_policy = "Never"
-        container {
-          name    = "echo"
-          image   = "busybox:1.36"
-          command = ["echo", "ksm-test"]
-          resources { requests = { cpu = "10m", memory = "16Mi" } }
-        }
-      }
-    }
-  }
-}
-
-resource "null_resource" "ksm_replicaset" {
-  depends_on = [aws_eks_node_group.this, null_resource.kubectl]
+resource "null_resource" "nginx_low" {
+  depends_on = [aws_eks_node_group.low, null_resource.kubectl]
   provisioner "local-exec" {
     command = <<-EOT
       cat <<'EOF' | kubectl apply -f -
       apiVersion: apps/v1
-      kind: ReplicaSet
+      kind: Deployment
       metadata:
-        name: ksm-test-replicaset
+        name: attr-limit-nginx-low
         namespace: default
       spec:
         replicas: 1
         selector:
           matchLabels:
-            app: ksm-test-replicaset
+            app: attr-limit-nginx-low
         template:
           metadata:
             labels:
-              app: ksm-test-replicaset
+              app: attr-limit-nginx-low
           spec:
             nodeSelector:
-              ci-test.example.com/node-color: blue
+              ci-test.example.com/attr-limit-node: node-low
             containers:
-            - name: pause
-              image: registry.k8s.io/pause:3.9
-              resources:
-                requests:
-                  cpu: 10m
-                  memory: 16Mi
+            - name: nginx
+              image: public.ecr.aws/nginx/nginx:latest
+              ports:
+              - containerPort: 80
+      EOF
+    EOT
+  }
+}
+
+resource "null_resource" "nginx_mid" {
+  depends_on = [aws_eks_node_group.mid, null_resource.kubectl]
+  provisioner "local-exec" {
+    command = <<-EOT
+      cat <<'EOF' | kubectl apply -f -
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: attr-limit-nginx-mid
+        namespace: default
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: attr-limit-nginx-mid
+        template:
+          metadata:
+            labels:
+              app: attr-limit-nginx-mid
+          spec:
+            nodeSelector:
+              ci-test.example.com/attr-limit-node: node-mid
+            containers:
+            - name: nginx
+              image: public.ecr.aws/nginx/nginx:latest
+              ports:
+              - containerPort: 80
+      EOF
+    EOT
+  }
+}
+
+resource "null_resource" "nginx_high" {
+  depends_on = [aws_eks_node_group.high, null_resource.kubectl]
+  provisioner "local-exec" {
+    command = <<-EOT
+      cat <<EOF | kubectl apply -f -
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: attr-limit-nginx-high
+        namespace: default
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: attr-limit-nginx-high
+        template:
+          metadata:
+            labels:
+              app: attr-limit-nginx-high
+              app.kubernetes.io/part-of: attr-limit-test
+              ci-test.example.com/sentinel-pod-customer: v
+      ${local.high_pod_padding_yaml}
+          spec:
+            nodeSelector:
+              ci-test.example.com/attr-limit-node: node-high
+            containers:
+            - name: nginx
+              image: public.ecr.aws/nginx/nginx:latest
+              ports:
+              - containerPort: 80
       EOF
     EOT
   }
@@ -349,14 +374,16 @@ resource "null_resource" "ksm_replicaset" {
 resource "null_resource" "validator" {
   depends_on = [
     null_resource.restart_pods,
-    kubernetes_deployment_v1.nginx_test,
+    null_resource.nginx_low,
+    null_resource.nginx_mid,
+    null_resource.nginx_high,
   ]
 
   triggers = { always_run = timestamp() }
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Running OTEL standard cluster integration tests"
+      echo "Running OTEL attr_limit cluster integration tests"
       cd ../../../..
 
       echo "Waiting 3 minutes for metrics to propagate..."

@@ -34,6 +34,7 @@ var resolutionTestMetrics = []struct {
 // TestMetricResolution validates that metrics are scraped at ~30s intervals by
 // querying a 5-minute range and checking sample counts.
 func TestMetricResolution(t *testing.T) {
+	t.Parallel()
 	end := time.Now()
 	start := end.Add(-5 * time.Minute)
 	step := expectedResolution
@@ -42,7 +43,9 @@ func TestMetricResolution(t *testing.T) {
 	minSamples := expectedSamples / 2
 
 	for _, tm := range resolutionTestMetrics {
+		tm := tm
 		t.Run(tm.source+"/"+tm.name, func(t *testing.T) {
+			t.Parallel()
 			escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(cfg.ClusterName)
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`,
 				tm.name, escaped, tm.hostType)
