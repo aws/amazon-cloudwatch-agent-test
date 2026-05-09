@@ -1,0 +1,21 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "traces": {
+    "traces_collected": {
+      "application_signals": {}
+    }
+  },
+  "logs": {
+    "metrics_collected": {
+      "application_signals": {}
+    },
+    "logs_collected": {
+      "application_signals": {
+        "log_group_name": "/test/otlp-dynamic/{service.name}",
+        "log_stream_name": "{host.name}/{service.instance.id}"
+      }
+    }
+  }
+}
