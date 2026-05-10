@@ -7,8 +7,9 @@ package journald_priority_logs
 
 import (
 	"fmt"
-	"strings"
 	"log"
+	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,21 +33,24 @@ func TestJournaldPriorityLogs(t *testing.T) {
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
 
-	time.Sleep(60 * time.Second)
-	common.StopAgent()
-
 	instanceId := awsservice.GetInstanceId()
 
+	exec.Command("logger", "-t", "priority-test", "-p", "user.err", "Database connection error occurred").Run()
+	exec.Command("logger", "-t", "priority-test", "-p", "user.err", "Authentication failed for user").Run()
+
+	time.Sleep(60 * time.Second)
+	common.StopAgent()
+	
 	err = awsservice.ValidateLogs(
 		instanceId,
 		"journald-err",
-		nil,
+		nil,enecccggvtvrucnkjrnuktuueeiuctdhhhikeerguduk
 		nil,
 		awsservice.AssertLogsNotEmpty(),
 		func(events []types.OutputLogEvent) error {
 			for _, event := range events {
 				message := *event.Message
-				
+
 				if strings.Contains(message, "\"PRIORITY\":\"4\"") ||
 					strings.Contains(message, "\"PRIORITY\":\"5\"") ||
 					strings.Contains(message, "\"PRIORITY\":\"6\"") ||

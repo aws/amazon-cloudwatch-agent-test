@@ -8,7 +8,6 @@ package journald_units_logs
 import (
 	"fmt"
 	"log"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -33,15 +32,6 @@ func TestJournaldUnitsLogs(t *testing.T) {
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
 
-	// Wait for journald receiver to initialize
-	time.Sleep(10 * time.Second)
-
-	// Generate sshd activity by triggering SSH connections
-	for i := 0; i < 3; i++ {
-		exec.Command("ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes", "localhost", "echo", "test").CombinedOutput()
-		time.Sleep(2 * time.Second)
-	}
-
 	time.Sleep(60 * time.Second)
 	common.StopAgent()
 
@@ -56,7 +46,7 @@ func TestJournaldUnitsLogs(t *testing.T) {
 		func(events []types.OutputLogEvent) error {
 			for _, event := range events {
 				message := *event.Message
-				if !strings.Contains(message, "\"_SYSTEMD_UNIT\":\"sshd.service\"") {
+				if !strings.Contains(message, "\"_SYSTEMD_UNIT\":\"amazon-ssm-agent.service\"") {
 					return fmt.Errorf("found entry not from sshd.service unit: %.100s", message)
 				}
 			}

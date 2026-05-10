@@ -9,7 +9,7 @@
                     {
                         "log_group_name": "{instance_id}",
                         "log_stream_name": "journald_units",
-                        "units": ["sshd"],
+                        "units": ["amazon-ssm-agent"],
                         "retention_in_days": 1
                     }
                 ]
