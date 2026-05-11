@@ -44,7 +44,7 @@ func TestJournaldPriorityLogs(t *testing.T) {
 	err = awsservice.ValidateLogs(
 		instanceId,
 		"journald-err",
-		nil,enecccggvtvrucnkjrnuktuueeiuctdhhhikeerguduk
+		nil,
 		nil,
 		awsservice.AssertLogsNotEmpty(),
 		func(events []types.OutputLogEvent) error {
