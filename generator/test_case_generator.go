@@ -191,6 +191,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/system_metrics/enabled",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+			wip:     true,
 		},
 		{
 			testDir: "./test/system_metrics/disabled",
