@@ -32,6 +32,9 @@ func TestJournaldMatchesLogs(t *testing.T) {
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
 
+	// Wait for journald receiver to initialize
+	time.Sleep(10 * time.Second)
+
 	time.Sleep(60 * time.Second)
 	common.StopAgent()
 

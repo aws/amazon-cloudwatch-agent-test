@@ -33,6 +33,9 @@ func TestJournaldRegexLogs(t *testing.T) {
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
 
+	// Wait for journald receiver to initialize
+	time.Sleep(10 * time.Second)
+
 	// Generate entries that MATCH the include filter: ".*error.*|.*failed.*"
 	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Database connection error occurred").Run()
 	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Authentication failed for user").Run()

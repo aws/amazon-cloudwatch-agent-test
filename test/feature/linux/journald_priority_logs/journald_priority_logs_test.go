@@ -33,6 +33,9 @@ func TestJournaldPriorityLogs(t *testing.T) {
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
 
+	// Wait for journald receiver to initialize
+	time.Sleep(10 * time.Second)
+
 	instanceId := awsservice.GetInstanceId()
 
 	exec.Command("logger", "-t", "priority-test", "-p", "user.err", "Database connection error occurred").Run()
