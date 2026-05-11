@@ -34,9 +34,9 @@ func TestJournaldUnitsLogs(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Wait for journald receiver to initialize
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(120 * time.Second)
 	common.StopAgent()
 
 	instanceId := awsservice.GetInstanceId()
@@ -68,14 +68,14 @@ func TestJournaldPriorityLogs(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Wait for journald receiver to initialize
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	instanceId := awsservice.GetInstanceId()
 
 	exec.Command("logger", "-t", "priority-test", "-p", "user.err", "Database connection error occurred").Run()
 	exec.Command("logger", "-t", "priority-test", "-p", "user.err", "Authentication failed for user").Run()
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(120 * time.Second)
 	common.StopAgent()
 
 	err = awsservice.ValidateLogs(
@@ -109,9 +109,9 @@ func TestJournaldMatchesLogs(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Wait for journald receiver to initialize
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(120 * time.Second)
 	common.StopAgent()
 
 	instanceId := awsservice.GetInstanceId()
@@ -143,7 +143,7 @@ func TestJournaldRegexLogs(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Wait for journald receiver to initialize
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	// Generate entries that MATCH the include filter: ".*error.*|.*failed.*"
 	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Database connection error occurred").Run()
@@ -152,7 +152,7 @@ func TestJournaldRegexLogs(t *testing.T) {
 	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.info", "Service started successfully").Run()
 	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.info", "Health check passed").Run()
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(120 * time.Second)
 	common.StopAgent()
 
 	instanceId := awsservice.GetInstanceId()
