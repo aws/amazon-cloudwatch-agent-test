@@ -1,0 +1,32 @@
+# Receivers that agent needs to tests
+receivers: ["system"]
+
+#Test case name
+test_case: "journald_feature_logs"
+validate_type: "feature"
+data_type: "logs"
+number_monitored_logs: 1
+values_per_minute: "2"
+agent_collection_period: 90
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+metric_namespace: "CloudWatchAgentJournaldFeature"
+metric_validation:
+log_validation:
+  - log_value: "sshd"
+    log_lines: 1
+    log_stream: "journald-units"
+    log_source: "Journald"
+    log_unit: "sshd.service"
+  - log_value: "error"
+    log_lines: 1
+    log_stream: "journald-priority"
+    log_source: "Journald"
+    log_priority: "3"
+  - log_value: "_UID"
+    log_lines: 1
+    log_stream: "journald-matches"
+    log_source: "Journald"
+  - log_value: "error"
+    log_lines: 1
+    log_stream: "journald-regex"
+    log_source: "Journald"

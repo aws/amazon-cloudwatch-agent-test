@@ -95,10 +95,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 		{testDir: "./test/log_state/journald", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_units_logs", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_priority_logs", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_regex_logs", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_matches_logs", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
+		{testDir: "./test/feature/linux/journald_logs", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
 		// {
 		// 	testDir: "./test/metrics_number_dimension",
 		// 	targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -219,10 +216,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			maxAttempts: 1,
 		},
 		{testDir: "./test/log_state/journald", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_units_logs", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_priority_logs", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_regex_logs", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_matches_logs", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {},"al2023": {}}}},
+		{testDir: "./test/feature/linux/journald_logs", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
 		{
 			testDir:     "./test/emf_prometheus",
 			maxAttempts: 2,
