@@ -43,7 +43,7 @@ func TestJournaldUnitsLogs(t *testing.T) {
 
 	err = awsservice.ValidateLogs(
 		instanceId,
-		"journald_units",
+		"journald-units",
 		nil,
 		nil,
 		awsservice.AssertLogsNotEmpty(),
@@ -80,7 +80,7 @@ func TestJournaldPriorityLogs(t *testing.T) {
 
 	err = awsservice.ValidateLogs(
 		instanceId,
-		"journald-err",
+		"journald-priority",
 		nil,
 		nil,
 		awsservice.AssertLogsNotEmpty(),

@@ -28,7 +28,7 @@
                         "log_group_name": "{instance_id}",
                         "log_stream_name": "journald-regex",
                         "filters": [
-                            {"type": "include", "expression": ".*error.*|.*failed.*"}
+                            {"type": "include", "expression": ".*Database.*|.*failed.*"}
                         ],
                         "retention_in_days": 1
                     }
