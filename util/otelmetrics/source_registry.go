@@ -14,6 +14,7 @@ const (
 	SourceNeuron
 	SourceEFA
 	SourceEBSCSI
+	SourceLISCSI
 	SourceControlPlane
 	SourceKubeStateMetrics
 	SourceKSMNodeScoped
