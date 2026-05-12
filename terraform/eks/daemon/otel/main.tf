@@ -27,6 +27,15 @@ resource "aws_eks_cluster" "this" {
 }
 
 # EKS Node Group — 2x t3.medium with node-color=blue label
+
+resource "aws_launch_template" "node" {
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+}
+
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "cwagent-otel-integ-node-${module.common.testing_id}"
@@ -41,8 +50,12 @@ resource "aws_eks_node_group" "this" {
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 20
   instance_types = [var.instance_type]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   labels = {
     "ci-test.example.com/node-color" = "blue"

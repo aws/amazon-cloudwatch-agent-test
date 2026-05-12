@@ -415,6 +415,7 @@ resource "kubernetes_daemonset" "fluentd_daemon" {
       }
       spec {
         service_account_name             = "fluentd"
+        host_network                     = true
         termination_grace_period_seconds = 30
         init_container {
           name    = "copy-fluentd-config"
