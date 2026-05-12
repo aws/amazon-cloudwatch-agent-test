@@ -41,6 +41,32 @@ module "validator" {
 }
 
 #####################################################################
+# Per-run Security Group for SSH/WinRM access from CI runner
+#####################################################################
+
+resource "aws_security_group" "runner_access" {
+  name        = "cwagent-integ-stress-sg-${module.common.testing_id}"
+  description = "SSH/WinRM access from CI runner for test ${module.common.testing_id}"
+  vpc_id      = module.basic_components.vpc_id
+
+  ingress {
+    description = "SSH from CI runner"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.runner_ip]
+  }
+
+  ingress {
+    description = "WinRM HTTP from CI runner"
+    from_port   = 5985
+    to_port     = 5985
+    protocol    = "tcp"
+    cidr_blocks = [var.runner_ip]
+  }
+}
+
+#####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
 resource "aws_instance" "cwagent" {
@@ -49,7 +75,7 @@ resource "aws_instance" "cwagent" {
   instance_type                        = var.ec2_instance_type
   key_name                             = local.ssh_key_name
   iam_instance_profile                 = module.basic_components.instance_profile
-  vpc_security_group_ids               = [module.basic_components.security_group]
+  vpc_security_group_ids               = [module.basic_components.security_group, aws_security_group.runner_access.id]
   get_password_data                    = local.connection_type == "winrm" ? true : false
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"

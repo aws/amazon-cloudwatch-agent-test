@@ -1,0 +1,12 @@
+{
+  "agent": {
+    "system_metrics_enabled": true
+  },
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "measurement": ["cpu_usage_idle"]
+      }
+    }
+  }
+}

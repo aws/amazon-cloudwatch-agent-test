@@ -1,14 +1,26 @@
 [
   {
-    "os": "al2",
-    "username": "ec2-user",
+    "os": "ubuntu-25",
+    "username": "ubuntu",
     "instanceType":"t3a.medium",
-    "installAgentCommand": "go run ./install/install_agent.go rpm",
-    "agentStartCommand": "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m onPremise -s -c ",
-    "ami": "cloudwatch-agent-integration-test-al2*",
-    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "installAgentCommand": "go run ./install/install_agent.go deb",
+    "ami": "cloudwatch-agent-integration-test-ubuntu-25*",
+    "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
     "arc": "amd64",
-    "binaryName": "amazon-cloudwatch-agent.rpm",
-    "family": "linux"
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux",
+    "agentStartCommand": "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m onPremise -s -c "
+  },
+  {
+    "os": "debian-12",
+    "username": "admin",
+    "instanceType": "c6g.large",
+    "installAgentCommand": "go run ./install/install_agent.go deb",
+    "ami": "cloudwatch-agent-integration-test-debian-12-arm64*",
+    "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
+    "arc": "arm64",
+    "binaryName": "amazon-cloudwatch-agent.deb",
+    "family": "linux",
+    "agentStartCommand": "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m onPremise -s -c "
   }
 ]

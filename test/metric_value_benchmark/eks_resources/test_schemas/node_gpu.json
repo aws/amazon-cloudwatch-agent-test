@@ -26,9 +26,12 @@
     "node_gpu_temperature": {},
     "node_gpu_utilization": {},
     "node_gpu_memory_utilization": {},
+    "node_gpu_tensor_core_utilization": {},
     "node_gpu_total": {},
     "node_gpu_request": {},
     "node_gpu_list": {},
+    "node_gpu_unreserved_capacity": {},
+    "node_gpu_available_capacity": {},
     "Service":{}
   },
   "required": [

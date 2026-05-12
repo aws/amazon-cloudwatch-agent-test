@@ -25,11 +25,15 @@ import (
 const (
 	CatCommand              = "cat "
 	AppOwnerCommand         = "ps -u -p "
-	ConfigOutputPath        = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	Namespace               = "CWAgent"
 	Host                    = "host"
-	AgentLogFile            = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	InstallAgentVersionPath = "/opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION"
+)
+
+const (
+	ConfigOutputPath      = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	AgentLogFile          = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+	AgentCommonConfigFile = "/opt/aws/amazon-cloudwatch-agent/etc/common-config.toml"
 )
 
 type PackageManager int
@@ -61,7 +65,47 @@ func CopyFile(pathIn string, pathOut string) {
 	log.Printf("File : %s copied to : %s", pathIn, pathOut)
 }
 
+func WriteFile(filePath string, content string) error {
+	log.Printf("Writing file %s", filePath)
+
+	// Use tee with sudo to write content to file
+	cmd := fmt.Sprintf("echo '%s' | sudo tee %s > /dev/null", content, filePath)
+	out, err := exec.Command("bash", "-c", cmd).Output()
+
+	if err != nil {
+		log.Printf(fmt.Sprint(err) + string(out))
+		return err
+	}
+
+	log.Printf("Wrote file: %s", filePath)
+	return nil
+
+}
+
+func MkdirAll(path string) error {
+	log.Printf("Creating directory %s", path)
+	absPath, err := filepath.Abs(path)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	out, err := exec.Command("bash", "-c", "sudo mkdir -p "+absPath).Output()
+
+	if err != nil {
+		log.Printf(fmt.Sprint(err) + string(out))
+		return err
+	}
+
+	log.Printf("Created directory: %s", absPath)
+	return nil
+}
+
 func DeleteFile(filePathAbsolute string) error {
+	if _, err := os.Stat(filePathAbsolute); os.IsNotExist(err) {
+		return nil
+	}
+
 	log.Printf("Delete file %s", filePathAbsolute)
 	out, err := exec.Command("bash", "-c", "sudo rm "+filePathAbsolute).Output()
 
@@ -180,6 +224,10 @@ func ReadAgentLogfile(logfile string) string {
 }
 
 func RecreateAgentLogfile(logfile string) {
+	if _, err := os.Stat(logfile); os.IsNotExist(err) {
+		return
+	}
+
 	out, err := exec.Command("bash", "-c",
 		fmt.Sprintf("sudo rm %s", logfile)).
 		Output()
@@ -264,6 +312,35 @@ func DownloadFromS3(bucket string, key string, destPath string) error {
 	_, err = io.Copy(outFile, result.Body)
 	if err != nil {
 		return fmt.Errorf("failed to copy content to %s: %v", destPath, err)
+	}
+
+	return nil
+}
+
+// ReplacePlaceholder replaces a placeholder string with a value in the specified file
+// using sed command. This centralizes placeholder replacement functionality used across tests.
+func ReplacePlaceholder(filePath, placeholder, value string) error {
+	// Escape special characters in the value for sed
+	escapedValue := strings.ReplaceAll(value, "/", "\\/")
+	escapedValue = strings.ReplaceAll(escapedValue, "&", "\\&")
+
+	sedCmd := fmt.Sprintf("sudo sed -i 's|%s|%s|g' %s", placeholder, escapedValue, filePath)
+	out, err := exec.Command("bash", "-c", sedCmd).Output()
+
+	if err != nil {
+		return fmt.Errorf("error replacing placeholder (%s) in %s: %s | %s", placeholder, filePath, err.Error(), string(out))
+	}
+
+	return nil
+}
+
+// ReplacePlaceholders replaces multiple placeholders in a single file
+// placeholders is a map where key is the placeholder and value is the replacement
+func ReplacePlaceholders(filePath string, placeholders map[string]string) error {
+	for placeholder, value := range placeholders {
+		if err := ReplacePlaceholder(filePath, placeholder, value); err != nil {
+			return fmt.Errorf("failed to replace placeholder '%s': %w", placeholder, err)
+		}
 	}
 
 	return nil

@@ -60,6 +60,7 @@ func (n *MetricValueFetcher) Fetch(namespace, metricName string, metricSpecificD
 
 	log.Printf("Metric data input: namespace %v, name %v, stat %v, period %v",
 		namespace, metricName, stat, metricQueryPeriod)
+	log.Printf("Query time window: startTime=%v, endTime=%v", startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
 
 	output, err := awsservice.CwmClient.GetMetricData(context.Background(), &getMetricDataInput)
 	if err != nil {

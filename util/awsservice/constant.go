@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go-v2/service/xray"
 	backoff "github.com/cenkalti/backoff/v4"
 )
@@ -48,6 +49,7 @@ var (
 	Ec2Client            *ec2.Client
 	EcsClient            *ecs.Client
 	SsmClient            *ssm.Client
+	StsClient            *sts.Client
 	ImdsClient           *imds.Client
 	CwmClient            *cloudwatch.Client
 	CwlClient            *cloudwatchlogs.Client
@@ -89,6 +91,7 @@ func ConfigureAWSClients(region string) error {
 	Ec2Client = ec2.NewFromConfig(awsCfg)
 	EcsClient = ecs.NewFromConfig(awsCfg)
 	SsmClient = ssm.NewFromConfig(awsCfg)
+	StsClient = sts.NewFromConfig(awsCfg)
 	ImdsClient = imds.NewFromConfig(awsCfg)
 	CwmClient = cloudwatch.NewFromConfig(awsCfg)
 	CwlClient = cloudwatchlogs.NewFromConfig(awsCfg)

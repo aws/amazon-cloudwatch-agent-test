@@ -95,7 +95,12 @@ func init() {
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
-	instanceId := awsservice.GetInstanceId()
+	env := environment.GetEnvironmentMetaData()
+	instanceId := env.InstanceId
+	if instanceId == "" {
+		// Fallback to IMDS if not provided via command line (for backward compatibility)
+		instanceId = awsservice.GetInstanceId()
+	}
 	log.Printf("Found instance id %s", instanceId)
 
 	defer awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
@@ -181,7 +186,12 @@ func TestAutoRemovalFileRotation(t *testing.T) {
 // 3. The file should be rotated again, and a new log line of size GREATER THAN N should be written
 // 4. All three log lines, in full, should be visible in CloudWatch Logs
 func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
-	instanceId := awsservice.GetInstanceId()
+	env := environment.GetEnvironmentMetaData()
+	instanceId := env.InstanceId
+	if instanceId == "" {
+		// Fallback to IMDS if not provided via command line (for backward compatibility)
+		instanceId = awsservice.GetInstanceId()
+	}
 	cfgFilePath := "resources/config_log_rotated.json"
 
 	log.Printf("Found instance id %s", instanceId)
@@ -238,7 +248,12 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 }
 
 func TestLogGroupClass(t *testing.T) {
-	instanceId := awsservice.GetInstanceId()
+	env := environment.GetEnvironmentMetaData()
+	instanceId := env.InstanceId
+	if instanceId == "" {
+		// Fallback to IMDS if not provided via command line (for backward compatibility)
+		instanceId = awsservice.GetInstanceId()
+	}
 	logFile, err := os.Create(logFilePath)
 	agentRuntime := 20 * time.Second // default flush interval is 5 seconds
 	if err != nil {
@@ -310,7 +325,12 @@ func writeSleepRestart(t *testing.T, f *os.File, configPath string, linesPerLoop
 }
 
 func autoRemovalTestCleanup() {
-	instanceId := awsservice.GetInstanceId()
+	env := environment.GetEnvironmentMetaData()
+	instanceId := env.InstanceId
+	if instanceId == "" {
+		// Fallback to IMDS if not provided via command line (for backward compatibility)
+		instanceId = awsservice.GetInstanceId()
+	}
 	awsservice.DeleteLogGroupAndStream(instanceId, instanceId)
 	paths, _ := filepath.Glob(logFilePath + "*")
 	for _, p := range paths {
@@ -320,7 +340,12 @@ func autoRemovalTestCleanup() {
 
 // checkData queries CWL and verifies the number of log lines.
 func checkData(t *testing.T, start time.Time, lineCount int) {
-	instanceId := awsservice.GetInstanceId()
+	env := environment.GetEnvironmentMetaData()
+	instanceId := env.InstanceId
+	if instanceId == "" {
+		// Fallback to IMDS if not provided via command line (for backward compatibility)
+		instanceId = awsservice.GetInstanceId()
+	}
 	end := time.Now()
 	// Sleep to ensure backend stores logs.
 	time.Sleep(time.Second * 60)

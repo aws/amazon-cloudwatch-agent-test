@@ -26,24 +26,29 @@ type ECSAgentRunStrategy struct {
 func (r *ECSAgentRunStrategy) RunAgentStrategy(e *environment.MetaData, configFilePath string) error {
 	b, err := os.ReadFile(configFilePath)
 	if err != nil {
-		return fmt.Errorf("Failed while reading config file: %s\n", configFilePath)
+		return fmt.Errorf("failed while reading config file: %s\n", configFilePath)
 	}
 
 	agentConfig := string(b)
 
 	err = awsservice.PutStringParameter(e.CwagentConfigSsmParamName, agentConfig)
 	if err != nil {
-		return fmt.Errorf("Failed while reading config file : %s\n", err.Error())
+		return fmt.Errorf("failed while reading config file : %s\n", err.Error())
 	}
 	fmt.Println("Put parameter successful.")
 
 	err = awsservice.RestartDaemonService(e.EcsClusterArn, e.EcsServiceName)
 	if err != nil {
-		fmt.Print(err)
+		return fmt.Errorf("failed to restart service: %v", err)
 	}
-	fmt.Println("CWAgent service is restarting. Sleeping..")
+	fmt.Println("CWAgent service is restarting. Waiting for service to stabilize...")
 
-	time.Sleep(1 * time.Minute)
+	start := time.Now()
+	err = awsservice.WaitForServiceStable(e.EcsClusterArn, e.EcsServiceName, 5*time.Minute)
+	if err != nil {
+		return fmt.Errorf("failed waiting for service to stabilize: %v", err)
+	}
+	fmt.Printf("CWAgent service is stable after %s.\n", time.Since(start))
 
 	return nil
 }

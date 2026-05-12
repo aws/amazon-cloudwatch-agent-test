@@ -111,6 +111,13 @@ func PutStringParameter(name, value string) error {
 	return putParameter(name, value, types.ParameterTypeString)
 }
 
+func DeleteParameter(name string) error {
+	_, err := SsmClient.DeleteParameter(ctx, &ssm.DeleteParameterInput{
+		Name: aws.String(name),
+	})
+	return err
+}
+
 func GetStringParameter(name string) string {
 	parameter, err := SsmClient.GetParameter(ctx, &ssm.GetParameterInput{
 		Name: aws.String(name),

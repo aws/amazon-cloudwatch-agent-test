@@ -75,11 +75,11 @@ func (m *EthtoolTestRunner) validateEthtoolMetric(metricName string) status.Test
 				},
 				{
 					Key:   "driver",
-					Value: dimension.ExpectedDimensionValue{aws.String("ena")},
+					Value: dimension.ExpectedDimensionValue{Value: aws.String("ena")},
 				},
 				{
 					Key:   "interface",
-					Value: dimension.ExpectedDimensionValue{aws.String(iface.Name)},
+					Value: dimension.ExpectedDimensionValue{Value: aws.String(iface.Name)},
 				},
 			})
 

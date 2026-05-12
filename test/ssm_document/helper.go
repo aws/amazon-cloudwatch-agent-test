@@ -78,4 +78,3 @@ func VerifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName stri
 
 	return nil
 }
-

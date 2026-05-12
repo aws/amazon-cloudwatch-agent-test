@@ -66,3 +66,9 @@ variable "family" {
     error_message = "Valid values for family are (windows, linux)."
   }
 }
+
+variable "runner_ip" {
+  type        = string
+  description = "CIDR of the CI runner (e.g. 1.2.3.4/32) allowed to connect via SSH/WinRM"
+  default     = "127.0.0.1/32"
+}

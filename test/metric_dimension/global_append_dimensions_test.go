@@ -6,12 +6,6 @@
 package metric_dimension
 
 import (
-	"log"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
@@ -48,67 +42,15 @@ func (t *GlobalAppendDimensionsTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *GlobalAppendDimensionsTestRunner) validateGlobalAppendDimensionMetric(metricName string) status.TestResult {
-	testResult := status.TestResult{
-		Name:   metricName,
-		Status: status.FAILED,
+	ns := "MetricGlobalAppendDimensionTest"
+
+	presentSpecs := []DimensionSpec{
+		{Key: "ImageId"},
+		{Key: "InstanceId"},
+		{Key: "InstanceType"},
+		ExactDim("cpu", "cpu-total"),
 	}
+	droppedSpecs := []DimensionSpec{HostDim(), ExactDim("cpu", "cpu-total")}
 
-	expDims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "ImageId",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "InstanceId",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "InstanceType",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "cpu",
-			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
-		},
-	})
-
-	if len(failed) > 0 {
-		return testResult
-	}
-
-	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, expDims, metric.AVERAGE, metric.HighResolutionStatPeriod)
-	log.Printf("metric values are %v", values)
-	if err != nil {
-		return testResult
-	}
-
-	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
-		return testResult
-	}
-
-	// this is making sure once dimensions in "append_dimensions" are tagged, the agent does drop the
-	// host dimension. We should not see the same metrics with host dimension anymore
-	dropDims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "host",
-			Value: dimension.UnknownDimensionValue(),
-		},
-		{
-			Key:   "cpu",
-			Value: dimension.ExpectedDimensionValue{aws.String("cpu-total")},
-		},
-	})
-
-	if len(failed) > 0 {
-		return testResult
-	}
-
-	values, err = fetcher.Fetch("MetricGlobalAppendDimensionTest", metricName, dropDims, metric.AVERAGE, metric.HighResolutionStatPeriod)
-	if err != nil || len(values) != 0 {
-		return testResult
-	}
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+	return ValidateGlobalAppendDimensions(&t.BaseTestRunner, ns, metricName, presentSpecs, droppedSpecs)
 }

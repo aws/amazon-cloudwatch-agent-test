@@ -1,0 +1,25 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "CollectdGlobalAppendDimensionsTest",
+    "aggregation_dimensions": [
+      ["InstanceId", "InstanceType", "type"]
+    ],
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
+    "metrics_collected": {
+      "collectd": {
+        "metrics_aggregation_interval": 30,
+        "collectd_security_level": "none"
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

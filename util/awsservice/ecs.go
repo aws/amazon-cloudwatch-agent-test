@@ -4,7 +4,10 @@
 package awsservice
 
 import (
+	"fmt"
+	"log"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
@@ -27,6 +30,29 @@ func RestartService(clusterArn string, desiredCount *int32, serviceName string) 
 	_, err := EcsClient.UpdateService(ctx, updateServiceInput)
 
 	return err
+}
+
+// WaitForServiceStable waits for an ECS service deployment to complete and stabilize
+func WaitForServiceStable(clusterArn, serviceName string, timeout time.Duration) error {
+	log.Printf("Waiting for ECS service %s to stabilize (timeout: %v)...", serviceName, timeout)
+
+	// Use AWS SDK's built-in waiter for service stability
+	waiter := ecs.NewServicesStableWaiter(EcsClient, func(options *ecs.ServicesStableWaiterOptions) {
+		options.MinDelay = 15 * time.Second
+		options.MaxDelay = 15 * time.Second
+	})
+
+	err := waiter.Wait(ctx, &ecs.DescribeServicesInput{
+		Cluster:  aws.String(clusterArn),
+		Services: []string{serviceName},
+	}, timeout)
+
+	if err != nil {
+		return fmt.Errorf("timeout or error waiting for service to stabilize: %w", err)
+	}
+
+	log.Printf("Service %s is stable", serviceName)
+	return nil
 }
 
 type ContainerInstance struct {

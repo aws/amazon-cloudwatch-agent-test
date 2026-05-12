@@ -40,6 +40,7 @@ type matrixRow struct {
 	MetadataEnabled     string `json:"metadataEnabled"`
 	MaxAttempts         int    `json:"max_attempts"`
 	SELinuxBranch       string `json:"selinux_branch"`
+	WIP                 bool   `json:"wip,omitempty"` // Work In Progress - failures won't block CI
 }
 
 type testConfig struct {
@@ -48,6 +49,7 @@ type testConfig struct {
 	testDir       string
 	terraformDir  string
 	instanceType  string
+	ami           string
 	runMockServer bool
 	selinuxBranch string
 	// define target matrix field as set(s)
@@ -59,6 +61,10 @@ type testConfig struct {
 	maxAttempts int
 	// instanceTypeByArch allows specifying different instance types based on architecture
 	instanceTypeByArch map[string]string
+	// excludedTests is a comma-separated list of test names to exclude (e.g., "diskioinstancestore,diskioebs")
+	excludedTests string
+	// wip marks test as Work In Progress - failures won't block CI
+	wip bool
 }
 
 const (
@@ -76,6 +82,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"ec2_linux_wd_nvidia": {
 		{testDir: "./test/workload_discovery"},
+	},
+	"ec2_linux_onprem": {
+		{testDir: "./test/cloudwatchlogs"},
 	},
 	testTypeKeyEc2Linux: {
 		{testDir: "./test/ca_bundle"},
@@ -162,6 +171,11 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
 		{
+			testDir:      "./test/credential_chain",
+			terraformDir: "terraform/ec2/assume_role",
+			targets:      map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
 			testDir: "./test/detailed_metrics",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
@@ -174,6 +188,18 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
 		{testDir: "./test/ssm_document"},
+		{
+			testDir: "./test/system_metrics/enabled",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+			wip:     true,
+		},
+		{
+			testDir: "./test/system_metrics/disabled",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+		},
+		{testDir: "./test/otlp_export/hostmetrics"},
+		{testDir: "./test/otlp_export/statsd"},
+		{testDir: "./test/otlp_export/collectd"},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
@@ -321,7 +347,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"eks_addon": {
 		{
-			testDir:      "../../../../test/gpu",
+			testDir:      "./test/gpu",
 			terraformDir: "terraform/eks/addon/gpu",
 		},
 	},
@@ -330,6 +356,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/metric_value_benchmark",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "g4dn.xlarge",
+			ami:          "AL2_x86_64_GPU",
 		},
 		{
 			testDir:      "./test/metric_value_benchmark",
@@ -357,11 +384,20 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/fluent", terraformDir: "terraform/eks/daemon/fluent/windows/2022"},
 		{
 			testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
-			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+			ami:          "AL2_x86_64_GPU",
+		},
+		{
+			testDir: "./test/gpu_high_frequency_metrics", terraformDir: "terraform/eks/daemon/gpu",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+			ami:          "AL2_x86_64_GPU",
 		},
 		{
 			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",
 			targets: map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			wip:     true,
 		},
 		{
 			testDir: "./test/entity", terraformDir: "terraform/eks/daemon/entity",
@@ -385,6 +421,50 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/liscsi",
 			terraformDir: "terraform/eks/daemon/liscsi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "i7i.xlarge",
+		},
+		{
+			testDir:      "./test/otel/standard",
+			terraformDir: "terraform/eks/daemon/otel",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/otel/attr_limit",
+			terraformDir: "terraform/eks/daemon/otel-attr-limit",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/otel/ebs_csi",
+			terraformDir: "terraform/eks/daemon/otel-ebs-csi",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+		},
+		{
+			testDir:      "./test/otel/efa",
+			terraformDir: "terraform/eks/daemon/otel-efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c5n.9xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+		},
+		{
+			testDir:      "./test/otel/gpu",
+			terraformDir: "terraform/eks/daemon/otel-gpu",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+			ami:          "AL2023_x86_64_NVIDIA",
+		},
+		{
+			testDir:      "./test/otel/multi_efa",
+			terraformDir: "terraform/eks/daemon/otel-multi-efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+		},
+		{
+			testDir:      "./test/otel/neuron",
+			terraformDir: "terraform/eks/daemon/otel-neuron",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "inf2.xlarge",
+			ami:          "AL2023_x86_64_NEURON",
 		},
 	},
 	"eks_deployment": {
@@ -405,6 +485,11 @@ type partition struct {
 	configName string
 	tests      []string
 	ami        []string
+	// testConfigOverrides allows partition-specific test configurations
+	// key is testDir, value is the override config
+	testConfigOverrides map[string]testConfig
+	// excludedTestDirs allows excluding specific test directories from a partition
+	excludedTestDirs map[string]struct{}
 }
 
 var partitionTests = map[string]partition{
@@ -417,23 +502,42 @@ var partitionTests = map[string]partition{
 		configName: "_itar",
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
-	},
-	"china": {configName: "_china",
-		tests: []string{testTypeKeyEc2Linux},
-		ami:   []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
-	},
-}
-
-func copyAllEC2LinuxTestForOnpremTesting() {
-	/* Some tests need to be fixed in order to run in both environment, so for now for PoC, run one that works.
-	   testTypeToTestConfig["ec2_linux_onprem"] = testTypeToTestConfig[testTypeKeyEc2Linux]
-	*/
-	testTypeToTestConfig["ec2_linux_onprem"] = []testConfig{
-		{
-			testDir: "./test/lvm",
-			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		excludedTestDirs: map[string]struct{}{
+			"./test/otlp_export/hostmetrics": {},
+			"./test/otlp_export/statsd":      {},
+			"./test/otlp_export/collectd":    {},
 		},
-	}
+		testConfigOverrides: map[string]testConfig{
+			"./test/metric_value_benchmark": {
+				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
+				excludedTests: "diskioinstancestore,diskioebs",
+				instanceTypeByArch: map[string]string{
+					"amd64": "i3en.large",
+					"arm64": "m6g.large", // Use m6g.large since instance store tests are excluded
+				},
+			},
+		},
+	},
+	"china": {
+		configName: "_china",
+		tests:      []string{testTypeKeyEc2Linux},
+		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
+		excludedTestDirs: map[string]struct{}{
+			"./test/otlp_export/hostmetrics": {},
+			"./test/otlp_export/statsd":      {},
+			"./test/otlp_export/collectd":    {},
+		},
+		testConfigOverrides: map[string]testConfig{
+			"./test/metric_value_benchmark": {
+				// Exclude DiskIOInstanceStore and DiskIOEBS tests - custom AMI doesn't support NVMe instance store metrics
+				excludedTests: "diskioinstancestore,diskioebs",
+				instanceTypeByArch: map[string]string{
+					"amd64": "i3en.large",
+					"arm64": "m6g.large", // Use m6g.large since instance store tests are excluded
+				},
+			},
+		},
+	},
 }
 
 func main() {
@@ -441,9 +545,7 @@ func main() {
 	flag.Parse()
 
 	configMap := testTypeToTestConfig
-	if !*useE2E {
-		copyAllEC2LinuxTestForOnpremTesting()
-	} else {
+	if *useE2E {
 		configMap = testTypeToTestConfigE2E
 	}
 
@@ -452,7 +554,7 @@ func main() {
 			if len(partition.tests) != 0 && !slices.Contains(partition.tests, testType) {
 				continue
 			}
-			testMatrix := genMatrix(testType, testConfigs, partition.ami)
+			testMatrix := genMatrix(testType, testConfigs, partition.ami, partition.testConfigOverrides, partition.excludedTestDirs)
 			writeTestMatrixFile(testType+partition.configName, testMatrix)
 		}
 	}
@@ -482,7 +584,7 @@ func generateTestName(testType string, test_directory string) string {
 
 	return strings.Join(cleaned, "_")
 }
-func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrixRow {
+func genMatrix(testType string, testConfigs []testConfig, ami []string, overrides map[string]testConfig, excludedTestDirs map[string]struct{}) []matrixRow {
 	openTestMatrix, err := os.Open(fmt.Sprintf("generator/resources/%v_test_matrix.json", testType))
 
 	if err != nil {
@@ -502,6 +604,28 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 	testMatrixComplete := make([]matrixRow, 0, len(testMatrix))
 	for _, test := range testMatrix {
 		for _, testConfig := range testConfigs {
+			// Skip test dirs excluded for this partition
+			if excludedTestDirs != nil {
+				if _, excluded := excludedTestDirs[testConfig.testDir]; excluded {
+					continue
+				}
+			}
+
+			// Apply partition-specific overrides if available
+			if overrides != nil {
+				if override, ok := overrides[testConfig.testDir]; ok {
+					if override.excludedTests != "" {
+						testConfig.excludedTests = override.excludedTests
+					}
+					if override.instanceTypeByArch != nil {
+						testConfig.instanceTypeByArch = override.instanceTypeByArch
+					}
+					if override.instanceType != "" {
+						testConfig.instanceType = override.instanceType
+					}
+				}
+			}
+
 			//This is to have selinux negative test
 			if testConfig.selinuxBranch == "" {
 				testConfig.selinuxBranch = "main"
@@ -514,6 +638,8 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 				TestType:      testType,
 				TerraformDir:  testConfig.terraformDir,
 				MaxAttempts:   testConfig.maxAttempts,
+				ExcludedTests: testConfig.excludedTests,
+				WIP:           testConfig.wip,
 			}
 			err = mapstructure.Decode(test, &row)
 			if err != nil {
@@ -527,6 +653,9 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 			}
 			if testConfig.instanceType != "" {
 				row.InstanceType = testConfig.instanceType
+			}
+			if testConfig.ami != "" {
+				row.Ami = testConfig.ami
 			}
 			// Apply architecture-specific instance type if configured
 			if testConfig.instanceTypeByArch != nil {
@@ -545,7 +674,7 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string) []matrix
 					continue
 				}
 			}
-			
+
 			if testConfig.targets == nil || shouldAddTest(&row, testConfig.targets) {
 				testMatrixComplete = append(testMatrixComplete, row)
 			}

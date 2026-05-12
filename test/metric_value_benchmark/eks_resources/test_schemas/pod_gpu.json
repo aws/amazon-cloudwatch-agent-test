@@ -26,6 +26,7 @@
     "pod_gpu_temperature": {},
     "pod_gpu_utilization": {},
     "pod_gpu_memory_utilization": {},
+    "pod_gpu_tensor_core_utilization": {},
     "pod_gpu_total": {},
     "pod_gpu_request": {},
     "pod_gpu_list": {},

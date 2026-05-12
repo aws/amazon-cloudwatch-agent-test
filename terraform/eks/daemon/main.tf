@@ -394,6 +394,11 @@ resource "kubernetes_cluster_role" "clusterrole" {
     resources  = ["endpointslices"]
     api_groups = ["discovery.k8s.io"]
   }
+  rule {
+    verbs      = ["list", "watch", "get"]
+    resources  = ["persistentvolumes", "persistentvolumeclaims"]
+    api_groups = [""]
+  }
 }
 
 resource "kubernetes_cluster_role_binding" "rolebinding" {
@@ -413,12 +418,95 @@ resource "kubernetes_cluster_role_binding" "rolebinding" {
   }
 }
 
+# Storage Class for PV testing (using hostPath for simplicity)
+resource "kubernetes_storage_class" "test_storage_class" {
+  metadata {
+    name = "test-storage-class-${module.common.testing_id}"
+  }
+  storage_provisioner = "kubernetes.io/no-provisioner"
+  volume_binding_mode = "WaitForFirstConsumer"
+}
+
+# PersistentVolume
+resource "kubernetes_persistent_volume" "test_pv" {
+  depends_on = [kubernetes_storage_class.test_storage_class]
+  metadata {
+    name = "test-pv-${module.common.testing_id}"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = kubernetes_storage_class.test_storage_class.metadata[0].name
+    persistent_volume_source {
+      host_path {
+        path = "/tmp/test-pv"
+      }
+    }
+  }
+}
+
+# PersistentVolumeClaim
+resource "kubernetes_persistent_volume_claim" "test_pvc" {
+  depends_on = [
+    kubernetes_namespace.namespace,
+    kubernetes_persistent_volume.test_pv
+  ]
+  metadata {
+    name      = "test-pvc-${module.common.testing_id}"
+    namespace = "amazon-cloudwatch"
+  }
+  spec {
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = kubernetes_storage_class.test_storage_class.metadata[0].name
+    volume_name        = kubernetes_persistent_volume.test_pv.metadata[0].name
+    resources {
+      requests = {
+        storage = "1Gi"
+      }
+    }
+  }
+}
+
+# Pod that uses the PVC (to trigger bound status and generate metrics)
+resource "kubernetes_pod" "test_pod_with_pvc" {
+  depends_on = [kubernetes_persistent_volume_claim.test_pvc]
+  metadata {
+    name      = "test-pod-with-pvc-${module.common.testing_id}"
+    namespace = "amazon-cloudwatch"
+    labels = {
+      app = "pv-test"
+    }
+  }
+  spec {
+    termination_grace_period_seconds = 0
+    container {
+      name    = "test-container"
+      image   = "busybox"
+      command = ["sleep", "3600"]
+      volume_mount {
+        name       = "test-volume"
+        mount_path = "/data"
+      }
+    }
+    volume {
+      name = "test-volume"
+      persistent_volume_claim {
+        claim_name = kubernetes_persistent_volume_claim.test_pvc.metadata[0].name
+      }
+    }
+    restart_policy = "Always"
+  }
+}
+
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
     kubernetes_daemonset.service,
     kubernetes_cluster_role_binding.rolebinding,
     kubernetes_service_account.cwagentservice,
+    kubernetes_pod.test_pod_with_pvc,
   ]
   provisioner "local-exec" {
     command = <<-EOT
