@@ -453,6 +453,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			ami:          "AL2023_x86_64_NVIDIA",
 		},
 		{
+			testDir:      "./test/otel/lis_csi",
+			terraformDir: "terraform/eks/daemon/otel-lis-csi",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "i7i.xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+		},
+		{
 			testDir:      "./test/otel/multi_efa",
 			terraformDir: "terraform/eks/daemon/otel-multi-efa",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
