@@ -75,10 +75,10 @@ type LogValidation struct {
 	LogStream     string `yaml:"log_stream"`
 	LogLevel      string `yaml:"log_level"`
 	LogEventID    string `yaml:"log_event_id"`
-	LogSource  	  string `yaml:"log_source"`
-	LogUnit       string `yaml:"log_unit"`     
-	LogPriority   string `yaml:"log_priority"`   
-	LogIdentifier string `yaml:"log_identifier"` 
+	LogSource     string `yaml:"log_source"`
+	LogUnit       string `yaml:"log_unit"`
+	LogPriority   string `yaml:"log_priority"`
+	LogIdentifier string `yaml:"log_identifier"`
 }
 
 type MetricDimension struct {

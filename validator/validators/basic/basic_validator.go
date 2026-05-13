@@ -216,7 +216,7 @@ func (s *BasicValidator) ValidateLogs(logStream, logLine, logLevel, logSource, l
 						actualEventCount += 1
 					}
 					if logIdentifier != "" && strings.Contains(message, logLine) && strings.Contains(message, logIdentifier) {
-						actualEventCount +=1
+						actualEventCount += 1
 					}
 				}
 			}

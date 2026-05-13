@@ -312,7 +312,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../test/performance/windows/logs"},
 		{testDir: "../../test/performance/windows/system"},
 	},
-	 "ec2_stress": {
+	"ec2_stress": {
 		{testDir: "../../test/stress/emf"},
 		{testDir: "../../test/stress/logs"},
 		{testDir: "../../test/stress/system"},
