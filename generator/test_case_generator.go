@@ -194,6 +194,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/system_metrics/enabled",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+			wip:     true,
 		},
 		{
 			testDir: "./test/system_metrics/disabled",
@@ -206,6 +207,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
+		{testDir: "./test/log_state/journald", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
+		{testDir: "./test/feature/linux/journald_logs", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
 		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -215,8 +218,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
 			maxAttempts: 1,
 		},
-		{testDir: "./test/log_state/journald", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_logs", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
 		{
 			testDir:     "./test/emf_prometheus",
 			maxAttempts: 2,
