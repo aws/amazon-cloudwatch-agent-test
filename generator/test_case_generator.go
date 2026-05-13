@@ -215,8 +215,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:     map[string]map[string]struct{}{"os": {"al2": {}}},
 			maxAttempts: 1,
 		},
-		{testDir: "./test/log_state/journald", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
-		{testDir: "./test/feature/linux/journald_logs", selinuxBranch: "mcommey/journald-selinux-policy", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
+		{testDir: "./test/log_state/journald", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
+		{testDir: "./test/feature/linux/journald_logs", targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}}},
 		{
 			testDir:     "./test/emf_prometheus",
 			maxAttempts: 2,
