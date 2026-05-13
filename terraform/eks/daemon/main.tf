@@ -193,6 +193,7 @@ resource "kubernetes_daemonset" "service" {
         }
       }
       spec {
+        host_network = true
         node_selector = {
           "kubernetes.io/os" : "linux"
         }
