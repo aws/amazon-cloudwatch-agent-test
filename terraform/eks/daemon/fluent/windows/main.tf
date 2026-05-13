@@ -113,6 +113,15 @@ EOT
 }
 
 # EKS Node Groups
+
+resource "aws_launch_template" "node" {
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+}
+
 resource "aws_eks_node_group" "node_group" {
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "cwagent-eks-integ-node"
@@ -127,8 +136,12 @@ resource "aws_eks_node_group" "node_group" {
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 20
   instance_types = [var.instance_type]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
@@ -153,8 +166,12 @@ resource "aws_eks_node_group" "node_group_windows" {
 
   ami_type       = var.windows_ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 50
   instance_types = ["t3.large"]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   depends_on = [
     aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
@@ -492,6 +509,7 @@ resource "kubernetes_daemonset" "agent_daemon" {
             path = "/dev/disk/"
           }
         }
+        host_network                     = true
         termination_grace_period_seconds = 60
         service_account_name             = "cloudwatch-agent"
       }

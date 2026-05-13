@@ -29,6 +29,15 @@ resource "aws_eks_cluster" "this" {
 # --- Node Groups ---
 
 # Standard node group (operator/CoreDNS)
+
+resource "aws_launch_template" "node" {
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+}
+
 resource "aws_eks_node_group" "standard" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "cwagent-otel-standard-${module.common.testing_id}"
@@ -43,8 +52,12 @@ resource "aws_eks_node_group" "standard" {
 
   ami_type       = "AL2023_x86_64_STANDARD"
   capacity_type  = "ON_DEMAND"
-  disk_size      = 20
   instance_types = ["t3.medium"]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
@@ -68,8 +81,12 @@ resource "aws_eks_node_group" "neuron_workload" {
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 50
   instance_types = [var.instance_type]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   labels = {
     "aws.amazon.com/neuron.present"  = "true"
@@ -104,8 +121,12 @@ resource "aws_eks_node_group" "neuron_idle" {
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 50
   instance_types = [var.instance_type]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   labels = {
     "aws.amazon.com/neuron.present"  = "true"
@@ -152,8 +173,12 @@ resource "aws_eks_node_group" "neuron_multi_device" {
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 100
   instance_types = [var.multi_device_instance_type]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   labels = {
     "aws.amazon.com/neuron.present"  = "true"

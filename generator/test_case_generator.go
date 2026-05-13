@@ -356,7 +356,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/metric_value_benchmark",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "g4dn.xlarge",
-			ami:          "AL2_x86_64_GPU",
+			ami:          "AL2023_x86_64_NVIDIA",
 		},
 		{
 			testDir:      "./test/metric_value_benchmark",
@@ -386,13 +386,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/gpu", terraformDir: "terraform/eks/daemon/gpu",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "g4dn.xlarge",
-			ami:          "AL2_x86_64_GPU",
+			ami:          "AL2023_x86_64_NVIDIA",
 		},
 		{
 			testDir: "./test/gpu_high_frequency_metrics", terraformDir: "terraform/eks/daemon/gpu",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "g4dn.xlarge",
-			ami:          "AL2_x86_64_GPU",
+			ami:          "AL2023_x86_64_NVIDIA",
 		},
 		{
 			testDir: "./test/awsneuron", terraformDir: "terraform/eks/daemon/awsneuron",

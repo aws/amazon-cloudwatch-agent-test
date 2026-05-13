@@ -58,6 +58,15 @@ resource "aws_eks_cluster" "this" {
 
 # --- 3 Node Groups: low, mid, high ---
 
+
+resource "aws_launch_template" "node" {
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+}
+
 resource "aws_eks_node_group" "low" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "cwagent-attr-limit-low-${module.common.testing_id}"
@@ -72,8 +81,12 @@ resource "aws_eks_node_group" "low" {
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 20
   instance_types = [var.instance_type]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
   labels         = local.low_labels
 
   depends_on = [
@@ -97,8 +110,12 @@ resource "aws_eks_node_group" "mid" {
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 20
   instance_types = [var.instance_type]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
   labels         = local.mid_labels
 
   depends_on = [
@@ -122,8 +139,12 @@ resource "aws_eks_node_group" "high" {
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 20
   instance_types = [var.instance_type]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
   labels         = local.high_labels
 
   depends_on = [

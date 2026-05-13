@@ -56,6 +56,15 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
 
 # --- Standard Node Group (for operator, CoreDNS, KSM) ---
 
+
+resource "aws_launch_template" "node" {
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+}
+
 resource "aws_eks_node_group" "standard" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "standard-${module.common.testing_id}"
@@ -70,8 +79,12 @@ resource "aws_eks_node_group" "standard" {
 
   ami_type       = "AL2023_x86_64_STANDARD"
   capacity_type  = "ON_DEMAND"
-  disk_size      = 20
   instance_types = ["t3.medium"]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly,
@@ -97,8 +110,12 @@ resource "aws_eks_node_group" "gpu_single" {
 
   ami_type       = var.ami_type
   capacity_type  = "ON_DEMAND"
-  disk_size      = 20
   instance_types = [var.instance_type]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   labels = {
     "nvidia.com/gpu.present"         = "true"
@@ -133,8 +150,12 @@ resource "aws_eks_node_group" "gpu_multi" {
 
   ami_type       = "AL2023_x86_64_NVIDIA"
   capacity_type  = "ON_DEMAND"
-  disk_size      = 20
   instance_types = ["g4dn.12xlarge"]
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   labels = {
     "nvidia.com/gpu.present"         = "true"
