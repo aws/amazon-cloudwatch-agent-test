@@ -13,7 +13,7 @@ variable "test_dir" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.30"
+  default = "1.32"
 }
 
 variable "ami_type" {

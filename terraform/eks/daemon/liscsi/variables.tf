@@ -28,7 +28,7 @@ variable "helm_chart_branch" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.35"
+  default = "1.32"
 }
 
 variable "ami_type" {
