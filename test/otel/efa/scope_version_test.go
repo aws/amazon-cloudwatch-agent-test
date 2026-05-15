@@ -5,9 +5,9 @@
 
 // Scope version test validates that the @instrumentation.@version on EFA
 // metrics matches the cloudwatch-agent pod image tag (EFA is an agent-
-// internal receiver: awsefareceiver). If the image tag is "latest" (dev
-// builds), the agent reports its own build version — in that case we
-// fall back to asserting @version is non-empty and stable across queries.
+// internal receiver: awsefareceiver). When the image tag is "latest" or a
+// git SHA (>=32 chars), the agent reports its own semver build version
+// instead — in that case we fall back to asserting @version is non-empty.
 //
 // Ports the monorepo TestScopeNameAndVersionPerSource/efa subtest.
 
@@ -41,8 +41,9 @@ func TestEFAScopeVersion(t *testing.T) {
 	require.True(t, ok, "efa_rx_bytes missing @instrumentation.@version")
 	require.NotEmpty(t, version, "efa_rx_bytes has empty @instrumentation.@version")
 
-	if agentVersion == "latest" {
-		t.Logf("agent image tag is 'latest' (dev build); scope version = %s", version)
+	if agentVersion == "latest" || len(agentVersion) >= 32 {
+		t.Logf("agent image tag %q is not a release tag (dev/SHA build); scope version = %s",
+			agentVersion, version)
 		return
 	}
 

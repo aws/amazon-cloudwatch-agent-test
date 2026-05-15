@@ -6,8 +6,9 @@
 // Scope version test validates that the @instrumentation.@version on EBS CSI
 // metrics matches the cloudwatch-agent pod image tag (EBS CSI is scraped by
 // the agent's prometheus receiver, so the scope version is the agent's).
-// If the image tag is "latest" (dev builds), the agent reports its own
-// build version — in that case we assert @version is non-empty.
+// When the image tag is "latest" or a git SHA (>=32 chars), the agent reports
+// its own semver build version instead — in that case we fall back to
+// asserting @version is non-empty.
 //
 // Ports the monorepo TestScopeNameAndVersionPerSource/ebs_csi subtest.
 
@@ -41,8 +42,9 @@ func TestEBSCSIScopeVersion(t *testing.T) {
 	require.True(t, ok, "aws_ebs_csi_read_ops_total missing @instrumentation.@version")
 	require.NotEmpty(t, version, "aws_ebs_csi_read_ops_total has empty @instrumentation.@version")
 
-	if agentVersion == "latest" {
-		t.Logf("agent image tag is 'latest' (dev build); scope version = %s", version)
+	if agentVersion == "latest" || len(agentVersion) >= 32 {
+		t.Logf("agent image tag %q is not a release tag (dev/SHA build); scope version = %s",
+			agentVersion, version)
 		return
 	}
 
