@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: disable-wu-reboot
+  namespace: amazon-cloudwatch
+spec:
+  selector:
+    matchLabels:
+      app: disable-wu-reboot
+  template:
+    metadata:
+      labels:
+        app: disable-wu-reboot
+    spec:
+      nodeSelector:
+        kubernetes.io/os: windows
+      tolerations:
+        - operator: Exists
+      securityContext:
+        windowsOptions:
+          hostProcess: true
+          runAsUserName: "NT AUTHORITY\\SYSTEM"
+      hostNetwork: true
+      containers:
+      - name: disable-wu-reboot
+        image: mcr.microsoft.com/windows/nanoserver:ltsc2022
+        command: ["powershell", "-Command"]
+        args:
+          - |
+            Stop-Service wuauserv -Force -ErrorAction SilentlyContinue
+            Set-Service wuauserv -StartupType Disabled -ErrorAction SilentlyContinue
+            Stop-Service UsoSvc -Force -ErrorAction SilentlyContinue
+            Set-Service UsoSvc -StartupType Disabled -ErrorAction SilentlyContinue
+            New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Force
+            Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'NoAutoUpdate' -Value 1
+            Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'NoAutoRebootWithLoggedOnUsers' -Value 1
+            while ($true) { Start-Sleep -Seconds 3600 }

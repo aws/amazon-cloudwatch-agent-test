@@ -138,26 +138,6 @@ resource "aws_eks_node_group" "node_group" {
   ]
 }
 
-# Launch template to disable Windows Update on boot
-resource "aws_launch_template" "windows_node" {
-  name_prefix = "cwagent-eks-win-${module.common.testing_id}"
-
-  user_data = base64encode(<<-EOF
-<powershell>
-Stop-Service wuauserv
-Set-Service wuauserv -StartupType Disabled
-</powershell>
-EOF
-  )
-
-  block_device_mappings {
-    device_name = "/dev/sda1"
-    ebs {
-      volume_size = 50
-    }
-  }
-}
-
 # EKS Windows Node Groups
 resource "aws_eks_node_group" "node_group_windows" {
   cluster_name    = aws_eks_cluster.cluster.name
@@ -173,12 +153,8 @@ resource "aws_eks_node_group" "node_group_windows" {
 
   ami_type       = var.windows_ami_type
   capacity_type  = "ON_DEMAND"
+  disk_size      = 50
   instance_types = ["m5.large"]
-
-  launch_template {
-    id      = aws_launch_template.windows_node.id
-    version = aws_launch_template.windows_node.latest_version
-  }
 
   depends_on = [
     aws_iam_role_policy_attachment.node_CloudWatchAgentServerPolicy,
@@ -607,6 +583,8 @@ resource "null_resource" "fluentbit-windows" {
     command = <<-EOT
       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
       chmod +x kubectl
+      ./kubectl apply -f ./../../../default_resources/disable-wu-reboot-windows.yaml
+      ./kubectl rollout status daemonset disable-wu-reboot -n amazon-cloudwatch --timeout 300s
       ./kubectl apply -f ./../../../default_resources/fluenbit-windows-configmap.yaml
       ./kubectl apply -f ./../../../default_resources/fluenbit-windows-daemonset.yaml
       ./kubectl rollout status daemonset fluent-bit-windows -n amazon-cloudwatch --timeout 1200s

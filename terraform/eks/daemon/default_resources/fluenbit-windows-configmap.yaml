@@ -9,7 +9,7 @@ data:
   fluent-bit.conf: |
     [SERVICE]
         Flush                       5
-        Log_Level                   debug
+        Log_Level                   error
         Daemon                      off
         net.dns.resolver            LEGACY
         Parsers_File                parsers.conf
@@ -128,18 +128,19 @@ data:
   host-log.conf: |
     [INPUT]
         Name                winlog
+        Tag                 hostlog
         Channels            System
         DB                  C:\\var\\fluent-bit\\state\\flb_system_winlog.db
         Interval_Sec        60
 
     [FILTER]
         Name                aws
-        Match               winlog.*
+        Match               hostlog
         imds_version        v2
 
     [OUTPUT]
         Name                cloudwatch_logs
-        Match               winlog.*
+        Match               hostlog
         region              ${AWS_REGION}
         log_group_name      /aws/containerinsights/${CLUSTER_NAME}/host
         log_stream_name     ${HOST_NAME}.windows.system.events
