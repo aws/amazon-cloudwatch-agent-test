@@ -9,7 +9,7 @@ data:
   fluent-bit.conf: |
     [SERVICE]
         Flush                       5
-        Log_Level                   error
+        Log_Level                   debug
         Daemon                      off
         net.dns.resolver            LEGACY
         Parsers_File                parsers.conf
