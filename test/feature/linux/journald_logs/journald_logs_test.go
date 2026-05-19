@@ -34,9 +34,12 @@ func TestJournaldUnitsLogs(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Wait for journald receiver to initialize
-	time.Sleep(30 * time.Second)
+	time.Sleep(60 * time.Second)
 
-	time.Sleep(120 * time.Second)
+	// Generate entries under a custom systemd unit
+	exec.Command("sudo", "systemd-run", "--unit=cwagent-unit-test", "echo", "Unit test message").Run()
+
+	time.Sleep(180 * time.Second)
 	common.StopAgent()
 
 	instanceId := awsservice.GetInstanceId()
@@ -50,8 +53,8 @@ func TestJournaldUnitsLogs(t *testing.T) {
 		func(events []types.OutputLogEvent) error {
 			for _, event := range events {
 				message := *event.Message
-				if !strings.Contains(message, "\"_SYSTEMD_UNIT\":\"amazon-ssm-agent.service\"") {
-					return fmt.Errorf("found entry not from sshd.service unit: %.100s", message)
+				if !strings.Contains(message, "cwagent-unit-test.service") {
+					return fmt.Errorf("found entry not from cwagent-unit-test.service unit: %.100s", message)
 				}
 			}
 			log.Printf("All logs validated: %d entries, all matched!", len(events))
