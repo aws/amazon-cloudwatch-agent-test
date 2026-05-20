@@ -255,7 +255,7 @@ var tier7KnownPodSentinelKeys = []string{
 }
 
 var tier8CustomerPodSentinelKeys = []string{
-	"k8s.pod.label.ci-test.example.com/sentinel-pod-customer",
+	"k8s.pod.label.ci-test.example.com/aaa-sentinel-pod",
 }
 
 // ---------------------------------------------------------------------------
