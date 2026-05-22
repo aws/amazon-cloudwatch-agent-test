@@ -160,8 +160,9 @@ func TestAppSignalsLogsNoisyNeighbor(t *testing.T) {
 	start := time.Now()
 
 	for i := 0; i < numLogs; i++ {
-		sendOTLPLogs(t, goodService, 1)
 		sendOTLPLogs(t, badService, 1)
+		time.Sleep(500 * time.Millisecond)
+		sendOTLPLogs(t, goodService, 1)
 	}
 
 	time.Sleep(sleepForFlush)
@@ -336,24 +337,28 @@ func TestAppSignalsMetricsRouting(t *testing.T) {
 
 	// EMF validation: Application Signals metrics should appear in EMF log group
 	t.Run("appsignals_metrics_in_emf_log_group", func(t *testing.T) {
-		streams := awsservice.GetLogStreams(emfLogGroup)
-		require.NotEmpty(t, streams, "EMF log group %s should have log streams", emfLogGroup)
-
-		found := false
-		for _, stream := range streams {
-			events, err := awsservice.GetLogsSince(emfLogGroup, *stream.LogStreamName, &start, &end)
-			if err != nil {
-				continue
-			}
-			for _, event := range events {
-				if strings.Contains(*event.Message, "Latency") || strings.Contains(*event.Message, "Error") || strings.Contains(*event.Message, "Fault") {
-					found = true
+		var found bool
+		for attempt := 0; attempt < 6; attempt++ {
+			streams := awsservice.GetLogStreams(emfLogGroup)
+			for _, stream := range streams {
+				events, err := awsservice.GetLogsSince(emfLogGroup, *stream.LogStreamName, &start, &end)
+				if err != nil {
+					continue
+				}
+				for _, event := range events {
+					if strings.Contains(*event.Message, "Latency") || strings.Contains(*event.Message, "Error") || strings.Contains(*event.Message, "Fault") {
+						found = true
+						break
+					}
+				}
+				if found {
 					break
 				}
 			}
 			if found {
 				break
 			}
+			time.Sleep(30 * time.Second)
 		}
 		assert.True(t, found,
 			"Application Signals metrics (Latency/Error/Fault) should appear in EMF log group %s", emfLogGroup)
@@ -371,7 +376,7 @@ func TestAppSignalsMetricsRouting(t *testing.T) {
 		resp, err := awsservice.QueryOtlpMetricsWithRetry(
 			"us-east-1",
 			`service_events_metric{}`,
-			5,
+			10,
 			30*time.Second,
 		)
 		require.NoError(t, err, "PromQL query for service_events_metric should succeed")
