@@ -27,6 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otlp_export/otlpvalidation"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
@@ -196,7 +198,7 @@ func TestAppSignalsLogsNoisyNeighbor(t *testing.T) {
 		if !strings.Contains(agentLogStr, "caller") {
 			t.Skip("Agent log file does not contain OTel-level logs")
 		}
-		assert.Contains(t, agentLogStr, "Failed to create log group",
+		assert.Contains(t, agentLogStr, "Failed to create log group/stream",
 			"Agent logs should contain creation failure message for bad service")
 	})
 }
@@ -373,16 +375,13 @@ func TestAppSignalsMetricsRouting(t *testing.T) {
 
 	// OTLP validation: query the PromQL API to confirm the metric was actually ingested
 	t.Run("service_events_metric_queryable_via_promql", func(t *testing.T) {
-		resp, err := awsservice.QueryOtlpMetricsWithRetry(
-			"us-east-1",
-			`service_events_metric{}`,
-			10,
-			30*time.Second,
+		result := otlpvalidation.ValidateOtlpMetrics(
+			"service_events_routing", "us-east-1", []string{"service_events_metric"},
 		)
-		require.NoError(t, err, "PromQL query for service_events_metric should succeed")
-		assert.Equal(t, "success", resp.Status)
-		assert.NotEmpty(t, resp.Data.Result,
-			"service_events_metric should be queryable via CW OTLP PromQL API after export")
+		for _, r := range result.TestResults {
+			assert.Equal(t, status.SUCCESSFUL, r.Status,
+				"metric %s should be queryable via CW OTLP PromQL API: %v", r.Name, r.Reason)
+		}
 	})
 
 	// ServiceEvents metrics should NOT be in EMF log group (routed to OTLP instead)
