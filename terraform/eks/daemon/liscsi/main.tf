@@ -30,6 +30,7 @@ resource "aws_eks_cluster" "this" {
   }
 }
 
+# EKS Node Group
 resource "aws_eks_node_group" "this" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "cwagent-liscsi-eks-integ-node-${module.common.testing_id}"
@@ -55,6 +56,7 @@ resource "aws_eks_node_group" "this" {
   ]
 }
 
+# EKS Node IAM Role
 resource "aws_iam_role" "node_role" {
   name = "cwagent-liscsi-eks-Worker-Role-${module.common.testing_id}"
 
@@ -95,12 +97,25 @@ resource "aws_iam_role_policy_attachment" "node_CloudWatchAgentServerPolicy" {
 }
 
 resource "null_resource" "kubectl" {
-  depends_on = [aws_eks_cluster.this, aws_eks_node_group.this]
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this
+  ]
   provisioner "local-exec" {
     command = <<-EOT
       ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
+      ${local.aws_eks} list-clusters --output text
+      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
     EOT
   }
+}
+
+# LIS CSI addon
+resource "aws_eks_addon" "lis_csi_addon" {
+  depends_on           = [aws_eks_node_group.this]
+  cluster_name         = aws_eks_cluster.this.name
+  addon_name           = "aws-ec2-local-instance-store-csi-driver"
+  configuration_values = jsonencode({ metrics = { enabled = true } })
 }
 
 data "external" "clone_helm_chart" {
@@ -118,16 +133,22 @@ resource "helm_release" "aws_observability" {
   namespace        = "amazon-cloudwatch"
   create_namespace = true
 
-  set {
-    name  = "clusterName"
-    value = aws_eks_cluster.this.name
-  }
+  set = [
+    {
+      name  = "clusterName"
+      value = aws_eks_cluster.this.name
+    },
+    {
+      name  = "region"
+      value = var.region
+    }
+  ]
 
-  set {
-    name  = "region"
-    value = var.region
-  }
-  depends_on = [aws_eks_cluster.this, aws_eks_node_group.this, data.external.clone_helm_chart]
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.this,
+    data.external.clone_helm_chart,
+  ]
 }
 
 resource "null_resource" "update_image" {
@@ -137,41 +158,115 @@ resource "null_resource" "update_image" {
   }
   provisioner "local-exec" {
     command = <<-EOT
+      echo "Patching CWAgent image to ${var.cwagent_image_repo}:${var.cwagent_image_tag}"
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
+      echo "Waiting for CWAgent DaemonSet rollout..."
       sleep 10
+      kubectl rollout status daemonset/cloudwatch-agent -n amazon-cloudwatch --timeout=300s
+      echo "CWAgent pods after rollout:"
+      kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o wide
+      echo "CWAgent image in use:"
+      kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o jsonpath='{.items[*].spec.containers[*].image}'
+      echo ""
     EOT
   }
 }
 
-resource "null_resource" "deploy_mock_lis_csi" {
-  depends_on = [null_resource.kubectl]
+resource "null_resource" "wait_for_lis_csi" {
+  depends_on = [aws_eks_addon.lis_csi_addon, null_resource.kubectl]
   provisioner "local-exec" {
     command = <<-EOT
-      kubectl apply -f ../../../../test/liscsi/resources/mock-lis-csi.yaml
-      kubectl rollout status daemonset/mock-nvme-csi-plugin -n kube-system --timeout=300s
+      echo "Waiting for LIS CSI DaemonSet rollout..."
+      kubectl rollout status daemonset/ec2-instance-store-plugin -n kube-system --timeout=300s
+      echo "LIS CSI pods:"
+      kubectl get pods -n kube-system -l app.kubernetes.io/name=ec2-instance-store-plugin -o wide
+      echo "StorageClasses:"
+      kubectl get sc
+      echo "NVMe devices:"
+      kubectl get nvmedevices 2>/dev/null || echo "nvmedevices CRD not found"
     EOT
   }
 }
 
+resource "kubernetes_deployment_v1" "lis_csi_io_workload" {
+  depends_on = [null_resource.wait_for_lis_csi]
+  metadata {
+    name      = "liscsi-integ-test-io-workload"
+    namespace = "default"
+    labels = {
+      app = "liscsi-integ-test"
+    }
+  }
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        app = "liscsi-integ-test"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "liscsi-integ-test"
+        }
+      }
+      spec {
+        container {
+          name    = "liscsi-integ-test-writer"
+          image   = "busybox:1.35"
+          command = ["sh", "-c", "while true; do dd if=/dev/zero of=/data/out.txt bs=1M count=10; sleep 5; done"]
+          volume_mount {
+            name       = "lis-storage"
+            mount_path = "/data"
+          }
+        }
+        volume {
+          name = "lis-storage"
+          ephemeral {
+            volume_claim_template {
+              spec {
+                access_modes       = ["ReadWriteOnce"]
+                storage_class_name = "ec2-instance-store-sc"
+                resources {
+                  requests = {
+                    storage = "1Gi"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# Get the single instance ID of the node in the node group
 data "aws_instances" "eks_node" {
-  depends_on = [aws_eks_node_group.this]
+  depends_on = [
+    aws_eks_node_group.this
+  ]
   filter {
     name   = "tag:eks:nodegroup-name"
     values = [aws_eks_node_group.this.node_group_name]
   }
 }
 
+# Retrieve details of the single instance to get private DNS
 data "aws_instance" "eks_node_detail" {
-  depends_on  = [data.aws_instances.eks_node]
+  depends_on = [
+    data.aws_instances.eks_node
+  ]
   instance_id = data.aws_instances.eks_node.ids[0]
 }
 
 resource "null_resource" "validator" {
   depends_on = [
     aws_eks_node_group.this,
+    aws_eks_addon.lis_csi_addon,
     helm_release.aws_observability,
     null_resource.update_image,
-    null_resource.deploy_mock_lis_csi,
+    kubernetes_deployment_v1.lis_csi_io_workload,
   ]
 
   triggers = {
@@ -181,12 +276,22 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating CloudWatch Agent with LIS CSI NVME instance store metrics"
+      echo "=== CWAgent pods ==="
+      kubectl get pods -n amazon-cloudwatch -o wide
+      echo "=== CWAgent image ==="
+      kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o jsonpath='{.items[*].spec.containers[*].image}'
+      echo ""
+      echo "=== LIS CSI pods ==="
+      kubectl get pods -n kube-system -l app.kubernetes.io/name=ec2-instance-store-plugin -o wide
+      echo "=== IO workload pods ==="
+      kubectl get pods -n default -l app=liscsi-integ-test -o wide
+      echo "=== PVCs ==="
+      kubectl get pvc -A
+      echo "=== LIS CSI metrics endpoint ==="
+      kubectl get svc -n kube-system -l app.kubernetes.io/name=ec2-instance-store-plugin 2>/dev/null || echo "No LIS CSI service found"
+      echo "=== Running go test ==="
       cd ../../../..
-      go test ${var.test_dir} \
-      -eksClusterName=${aws_eks_cluster.this.name} \
-      -computeType=EKS -v \
-      -eksDeploymentStrategy=DAEMON \
-      -instanceId=${data.aws_instance.eks_node_detail.instance_id}
+      go test ${var.test_dir} -timeout 1h -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -instanceId=${data.aws_instance.eks_node_detail.instance_id}
     EOT
   }
 }

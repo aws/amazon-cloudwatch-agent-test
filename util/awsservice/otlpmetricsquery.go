@@ -90,19 +90,3 @@ func QueryOtlpMetrics(region string, promql string) (PrometheusResponse, error) 
 	return resp, nil
 }
 
-func QueryOtlpMetricsWithRetry(region string, promql string, retries int, retryInterval time.Duration) (PrometheusResponse, error) {
-	var lastErr error
-	for i := 0; i < retries; i++ {
-		resp, err := QueryOtlpMetrics(region, promql)
-		if err == nil && resp.Status == "success" && len(resp.Data.Result) > 0 {
-			return resp, nil
-		}
-		if err != nil {
-			lastErr = err
-		} else {
-			lastErr = fmt.Errorf("otlp query unsuccessful: status=%s, results=%d, error=%s", resp.Status, len(resp.Data.Result), resp.Error)
-		}
-		time.Sleep(retryInterval)
-	}
-	return PrometheusResponse{}, fmt.Errorf("otlp query failed after %d retries: %w", retries, lastErr)
-}
