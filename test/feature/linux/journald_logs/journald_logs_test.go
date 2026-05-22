@@ -37,7 +37,9 @@ func TestJournaldUnitsLogs(t *testing.T) {
 	time.Sleep(60 * time.Second)
 
 	// Generate entries under a custom systemd unit
-	exec.Command("sudo", "systemd-run", "--unit=cwagent-unit-test", "echo", "Unit test message").Run()
+	if err := exec.Command("sudo", "systemd-run", "--unit=cwagent-unit-test", "--wait", "echo", "Unit test message").Run(); err != nil {
+		t.Logf("warning: systemd-run command failed: %v", err)
+	}
 
 	time.Sleep(180 * time.Second)
 	common.StopAgent()
@@ -75,8 +77,12 @@ func TestJournaldPriorityLogs(t *testing.T) {
 
 	instanceId := awsservice.GetInstanceId()
 
-	exec.Command("logger", "-t", "priority-test", "-p", "user.err", "Database connection error occurred").Run()
-	exec.Command("logger", "-t", "priority-test", "-p", "user.err", "Authentication failed for user").Run()
+	if err := exec.Command("logger", "-t", "priority-test", "-p", "user.err", "Database connection error occurred").Run(); err != nil {
+		t.Logf("warning: logger command failed: %v", err)
+	}
+	if err := exec.Command("logger", "-t", "priority-test", "-p", "user.err", "Authentication failed for user").Run(); err != nil {
+		t.Logf("warning: logger command failed: %v", err)
+	}
 
 	time.Sleep(120 * time.Second)
 	common.StopAgent()
@@ -148,12 +154,20 @@ func TestJournaldRegexLogs(t *testing.T) {
 	// Wait for journald receiver to initialize
 	time.Sleep(30 * time.Second)
 
-	// Generate entries that MATCH the include filter: ".*error.*|.*failed.*"
-	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Database connection error occurred").Run()
-	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Authentication failed for user").Run()
+	// Generate entries that MATCH the include filter: ".*Database.*|.*failed.*"
+	if err := exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Database connection error occurred").Run(); err != nil {
+		t.Logf("warning: logger command failed: %v", err)
+	}
+	if err := exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Authentication failed for user").Run(); err != nil {
+		t.Logf("warning: logger command failed: %v", err)
+	}
 	// Generate entries that should NOT match the filter
-	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.info", "Service started successfully").Run()
-	exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.info", "Health check passed").Run()
+	if err := exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.info", "Service started successfully").Run(); err != nil {
+		t.Logf("warning: logger command failed: %v", err)
+	}
+	if err := exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.info", "Health check passed").Run(); err != nil {
+		t.Logf("warning: logger command failed: %v", err)
+	}
 
 	time.Sleep(120 * time.Second)
 	common.StopAgent()
