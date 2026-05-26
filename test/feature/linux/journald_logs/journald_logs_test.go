@@ -27,6 +27,17 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
+func systemdVersion() int {
+	output, _ := exec.Command("systemctl", "--version").CombinedOutput()
+	fields := strings.Fields(strings.Split(string(output), "\n")[0])
+	if len(fields) >= 2 {
+		var version int
+		fmt.Sscanf(fields[1], "%d", &version)
+		return version
+	}
+	return 0
+}
+
 func TestJournaldUnitsLogs(t *testing.T) {
 	common.CopyFile("agent_config.json", configOutputPath)
 
@@ -37,8 +48,17 @@ func TestJournaldUnitsLogs(t *testing.T) {
 	time.Sleep(60 * time.Second)
 
 	// Generate entries under a custom systemd unit
-	if err := exec.Command("sudo", "systemd-run", "--unit=cwagent-unit-test", "--wait", "echo", "Unit test message").Run(); err != nil {
-		t.Logf("warning: systemd-run command failed: %v", err)
+	// Use --wait on systemd 236+ (AL2023) to ensure journal entry is committed
+	// Run twice with delay to handle slower journal flush in some regions
+	for i := 0; i < 2; i++ {
+		args := []string{"systemd-run", "--unit=cwagent-unit-test", "echo", "Unit test message"}
+		if systemdVersion() >= 236 {
+			args = []string{"systemd-run", "--unit=cwagent-unit-test", "--wait", "echo", "Unit test message"}
+		}
+		if output, err := exec.Command("sudo", args...).CombinedOutput(); err != nil {
+			t.Logf("systemd-run attempt %d failed: %v, output: %s", i+1, err, string(output))
+		}
+		time.Sleep(30 * time.Second)
 	}
 
 	time.Sleep(180 * time.Second)
@@ -56,7 +76,7 @@ func TestJournaldUnitsLogs(t *testing.T) {
 			for _, event := range events {
 				message := *event.Message
 				if !strings.Contains(message, "cwagent-unit-test.service") {
-					return fmt.Errorf("found entry not from cwagent-unit-test.service unit: %.100s", message)
+					return fmt.Errorf("found unexpected log entry %.100s", message)
 				}
 			}
 			log.Printf("All logs validated: %d entries, all matched!", len(events))
