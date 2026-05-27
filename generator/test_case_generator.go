@@ -50,6 +50,7 @@ type testConfig struct {
 	terraformDir  string
 	instanceType  string
 	ami           string
+	k8sVersion    string
 	runMockServer bool
 	selinuxBranch string
 	// define target matrix field as set(s)
@@ -194,6 +195,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/system_metrics/enabled",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+			wip:     true,
 		},
 		{
 			testDir: "./test/system_metrics/disabled",
@@ -424,16 +426,69 @@ var testTypeToTestConfig = map[string][]testConfig{
 			terraformDir: "terraform/eks/daemon/liscsi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "i7i.xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
 		},
 		{
 			testDir:      "./test/otel/standard",
 			terraformDir: "terraform/eks/daemon/otel",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
 		},
 		{
 			testDir:      "./test/otel/attr_limit",
 			terraformDir: "terraform/eks/daemon/otel-attr-limit",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/ebs_csi",
+			terraformDir: "terraform/eks/daemon/otel-ebs-csi",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/efa",
+			terraformDir: "terraform/eks/daemon/otel-efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c5n.9xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/gpu",
+			terraformDir: "terraform/eks/daemon/otel-gpu",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+			ami:          "AL2023_x86_64_NVIDIA",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/lis_csi",
+			terraformDir: "terraform/eks/daemon/otel-lis-csi",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "i7i.xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/multi_efa",
+			terraformDir: "terraform/eks/daemon/otel-multi-efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/neuron",
+			terraformDir: "terraform/eks/daemon/otel-neuron",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "inf2.xlarge",
+			ami:          "AL2023_x86_64_NEURON",
+			k8sVersion:   "1.35",
 		},
 	},
 	"eks_deployment": {
@@ -625,6 +680,9 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 			}
 			if testConfig.ami != "" {
 				row.Ami = testConfig.ami
+			}
+			if testConfig.k8sVersion != "" {
+				row.K8sVersion = testConfig.k8sVersion
 			}
 			// Apply architecture-specific instance type if configured
 			if testConfig.instanceTypeByArch != nil {

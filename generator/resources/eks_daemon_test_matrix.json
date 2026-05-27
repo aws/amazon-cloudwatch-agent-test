@@ -1,12 +1,12 @@
 [
   {
-    "k8sVersion": "1.35",
+    "k8sVersion": "1.32",
     "ami": "AL2_x86_64",
     "instanceType":"t3.medium",
     "arc": "amd64"
   },
   {
-    "k8sVersion": "1.35",
+    "k8sVersion": "1.32",
     "ami": "AL2_ARM_64",
     "instanceType":"m6g.large",
     "arc": "arm64"

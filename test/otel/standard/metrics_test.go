@@ -38,7 +38,13 @@ var kubeletstatsNodeMetrics = []otelmetrics.MetricDefinition{
 	{Name: "k8s.node.cpu.utilization", MetricType: "gauge", Scope: otelmetrics.ScopeNode, Unit: "1"},
 	{Name: "k8s.node.memory.working_set", MetricType: "gauge", Scope: otelmetrics.ScopeNode, Unit: "By"},
 	{Name: "k8s.node.filesystem.available", MetricType: "gauge", Scope: otelmetrics.ScopeNode, Unit: "By"},
-	{Name: "k8s.node.network.io", MetricType: "counter", Scope: otelmetrics.ScopeNode, ExpectedLabels: []string{"interface", "direction"}, Unit: "By"},
+	// k8s.node.network.io is not emitted on EKS AL2023 + kubelet 1.35: kubelet's
+	// /stats/summary returns no top-level default-interface aggregate, and the
+	// kubeletstatsreceiver only emits this metric from the top-level fields.
+	// Fixed upstream by collect_all_network_interfaces (contrib v0.131+, PR
+	// open-telemetry/opentelemetry-collector-contrib#38737); the agent currently
+	// pins contrib v0.124.1, so re-enable once the contrib bump lands.
+	// {Name: "k8s.node.network.io", MetricType: "counter", Scope: otelmetrics.ScopeNode, ExpectedLabels: []string{"interface", "direction"}, Unit: "By"},
 }
 
 var kubeletstatsPodMetrics = []otelmetrics.MetricDefinition{
