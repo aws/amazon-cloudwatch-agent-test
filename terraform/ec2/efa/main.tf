@@ -132,7 +132,7 @@ resource "aws_instance" "cwagent" {
   key_name                             = local.ssh_key_name
   iam_instance_profile                 = module.basic_components.instance_profile
   placement_group                      = aws_placement_group.efa.name
-  instance_initiated_shutdown_behavior = "terminate"
+  instance_initiated_shutdown_behavior = "stop"
 
   network_interface {
     device_index         = 0
@@ -141,10 +141,20 @@ resource "aws_instance" "cwagent" {
 
   user_data = <<-EOT
     #!/bin/bash
-    sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-    sudo sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
-    sudo sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
-    sudo systemctl restart sshd
+    # Disable password auth for SSH
+    sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+    sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+    sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
+    systemctl restart sshd
+
+    # Install EFA driver (no interactive tests - reboot handles module reload)
+    cd /tmp
+    curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
+    tar -xf aws-efa-installer-latest.tar.gz
+    cd aws-efa-installer
+    ./efa_installer.sh -y -n
+    # Reboot to load EFA kernel module
+    reboot
   EOT
 
   root_block_device {
@@ -178,13 +188,7 @@ resource "null_resource" "integration_test_setup" {
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
 
-      "# Install EFA driver",
-      "cd /tmp",
-      "curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz",
-      "tar -xf aws-efa-installer-latest.tar.gz",
-      "cd aws-efa-installer",
-      "sudo ./efa_installer.sh -y",
-      "echo 'EFA driver installation complete'",
+      "# Verify EFA is available after user_data reboot",
       "fi_info -p efa 2>/dev/null || { echo 'FATAL: EFA provider not available'; exit 1; }",
       "ls /sys/class/infiniband/ || { echo 'FATAL: No EFA device found at /sys/class/infiniband/'; exit 1; }",
 
