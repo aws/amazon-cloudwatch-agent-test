@@ -146,15 +146,6 @@ resource "aws_instance" "cwagent" {
     sed -i 's/^#*ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
     sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
     systemctl restart sshd
-
-    # Install EFA driver (no interactive tests - reboot handles module reload)
-    cd /tmp
-    curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
-    tar -xf aws-efa-installer-latest.tar.gz
-    cd aws-efa-installer
-    ./efa_installer.sh -y -n
-    # Reboot to load EFA kernel module
-    reboot
   EOT
 
   root_block_device {
@@ -183,12 +174,50 @@ resource "null_resource" "integration_test_setup" {
     host        = aws_eip.efa.public_ip
   }
 
+  # Install EFA driver and trigger reboot
   provisioner "remote-exec" {
     inline = [
       "echo sha ${var.cwa_github_sha}",
       "sudo cloud-init status --wait",
+      "# Install EFA driver",
+      "cd /tmp",
+      "curl -O https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz",
+      "tar -xf aws-efa-installer-latest.tar.gz",
+      "cd aws-efa-installer",
+      "sudo ./efa_installer.sh -y -n",
+      "echo 'EFA driver installed, rebooting...'",
+      "sudo shutdown -r now &",
+    ]
+  }
 
-      "# Verify EFA is available after user_data reboot",
+  depends_on = [
+    aws_instance.cwagent,
+  ]
+}
+
+# Wait for instance to reboot
+resource "null_resource" "integration_test_reboot_wait" {
+  provisioner "local-exec" {
+    command = "echo 'Waiting 60s for instance reboot...' && sleep 60"
+  }
+
+  depends_on = [
+    null_resource.integration_test_setup,
+  ]
+}
+
+# Post-reboot: verify EFA, clone repo, install agent
+resource "null_resource" "integration_test_post_reboot" {
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = local.private_key_content
+    host        = aws_eip.efa.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "# Verify EFA is available after reboot",
       "fi_info -p efa 2>/dev/null || { echo 'FATAL: EFA provider not available'; exit 1; }",
       "ls /sys/class/infiniband/ || { echo 'FATAL: No EFA device found at /sys/class/infiniband/'; exit 1; }",
 
@@ -205,7 +234,7 @@ resource "null_resource" "integration_test_setup" {
   }
 
   depends_on = [
-    aws_instance.cwagent,
+    null_resource.integration_test_reboot_wait,
   ]
 }
 
@@ -235,6 +264,6 @@ resource "null_resource" "integration_test_run" {
   }
 
   depends_on = [
-    null_resource.integration_test_setup,
+    null_resource.integration_test_post_reboot,
   ]
 }
