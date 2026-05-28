@@ -6,7 +6,6 @@
 package efa_ec2
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -42,7 +41,9 @@ func Validate() error {
 
 	dimensionFilter := awsservice.BuildDimensionFilterList(numberofLinuxAppendDimensions)
 	for _, metricName := range expectedEfaEC2LinuxMetrics {
-		awsservice.ValidateMetric(metricName, metricLinuxNamespace, dimensionFilter)
+		if err := awsservice.ValidateMetric(metricName, metricLinuxNamespace, dimensionFilter); err != nil {
+			return err
+		}
 	}
 
 	// Validate that EFA metrics use short dimension names (device, port, eniId)
@@ -52,11 +53,11 @@ func Validate() error {
 	}
 
 	if err := filesystem.CheckFileRights(agentLinuxLogPath); err != nil {
-		return errors.New(fmt.Sprintf("CloudWatchAgent does not have privellege to write and read CWA's log: %v", err))
+		return fmt.Errorf("CloudWatchAgent does not have privilege to write and read CWA's log: %v", err)
 	}
 
 	if err := filesystem.CheckFileOwnerRights(agentLinuxLogPath, agentLinuxPermission); err != nil {
-		return errors.New(fmt.Sprintf("CloudWatchAgent does not have right to CWA's log: %v", err))
+		return fmt.Errorf("CloudWatchAgent does not have right to CWA's log: %v", err)
 	}
 
 	return nil
