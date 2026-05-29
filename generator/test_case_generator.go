@@ -78,6 +78,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
 	},
+	"ec2_efa": {
+		{testDir: "./test/efa_ec2", terraformDir: "terraform/ec2/efa"},
+	},
 	"ec2_linux_wd": {
 		{testDir: "./test/workload_discovery"},
 	},
