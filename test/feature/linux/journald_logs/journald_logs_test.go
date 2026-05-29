@@ -27,19 +27,31 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-func TestJournaldUnitsLogs(t *testing.T) {
-	common.CopyFile("agent_config.json", configOutputPath)
 
+func startAgentAndWaitForInit(t *testing.T) {
+	t.Helper()
+	common.CopyFile("agent_config.json", configOutputPath)
 	err := common.StartAgent(configOutputPath, true, false)
 	assert.NoError(t, err)
+	// Wait for journald receiver to initialize
+	time.Sleep(30 * time.Second)
+}
 
-	// Journal entries for cwagent-unit-test.service are reated by Terraform provisioner.
-	time.Sleep(120 * time.Second)
+// waits for logs to be flushed to CloudWatch, before validation.
+func waitAndStopAgent() {
+	time.Sleep(60 * time.Second)
 	common.StopAgent()
+}
+
+func TestJournaldUnitsLogs(t *testing.T) {
+	startAgentAndWaitForInit(t)
+
+	// Journal entries for cwagent-unit-test.service are created by Terraform provisioner.
+	waitAndStopAgent()
 
 	instanceId := awsservice.GetInstanceId()
 
-	err = awsservice.ValidateLogs(
+	err := awsservice.ValidateLogs(
 		instanceId,
 		"journald-units",
 		nil,
@@ -60,13 +72,7 @@ func TestJournaldUnitsLogs(t *testing.T) {
 }
 
 func TestJournaldPriorityLogs(t *testing.T) {
-	common.CopyFile("agent_config.json", configOutputPath)
-
-	err := common.StartAgent(configOutputPath, true, false)
-	assert.NoError(t, err)
-
-	// Wait for journald receiver to initialize
-	time.Sleep(30 * time.Second)
+	startAgentAndWaitForInit(t)
 
 	instanceId := awsservice.GetInstanceId()
 
@@ -77,10 +83,9 @@ func TestJournaldPriorityLogs(t *testing.T) {
 		t.Logf("warning: logger command failed: %v", err)
 	}
 
-	time.Sleep(120 * time.Second)
-	common.StopAgent()
+	waitAndStopAgent()
 
-	err = awsservice.ValidateLogs(
+	err := awsservice.ValidateLogs(
 		instanceId,
 		"journald-priority",
 		nil,
@@ -105,20 +110,13 @@ func TestJournaldPriorityLogs(t *testing.T) {
 }
 
 func TestJournaldMatchesLogs(t *testing.T) {
-	common.CopyFile("agent_config.json", configOutputPath)
+	startAgentAndWaitForInit(t)
 
-	err := common.StartAgent(configOutputPath, true, false)
-	assert.NoError(t, err)
-
-	// Wait for journald receiver to initialize
-	time.Sleep(30 * time.Second)
-
-	time.Sleep(120 * time.Second)
-	common.StopAgent()
+	waitAndStopAgent()
 
 	instanceId := awsservice.GetInstanceId()
 
-	err = awsservice.ValidateLogs(
+	err := awsservice.ValidateLogs(
 		instanceId,
 		"journald-matches",
 		nil,
@@ -139,13 +137,7 @@ func TestJournaldMatchesLogs(t *testing.T) {
 }
 
 func TestJournaldRegexLogs(t *testing.T) {
-	common.CopyFile("agent_config.json", configOutputPath)
-
-	err := common.StartAgent(configOutputPath, true, false)
-	assert.NoError(t, err)
-
-	// Wait for journald receiver to initialize
-	time.Sleep(30 * time.Second)
+	startAgentAndWaitForInit(t)
 
 	// Generate entries that MATCH the include filter: ".*Database.*|.*failed.*"
 	if err := exec.Command("logger", "-t", "cwagent-regex-test", "-p", "user.err", "Database connection error occurred").Run(); err != nil {
@@ -162,12 +154,11 @@ func TestJournaldRegexLogs(t *testing.T) {
 		t.Logf("warning: logger command failed: %v", err)
 	}
 
-	time.Sleep(120 * time.Second)
-	common.StopAgent()
+	waitAndStopAgent()
 
 	instanceId := awsservice.GetInstanceId()
 
-	err = awsservice.ValidateLogs(
+	err := awsservice.ValidateLogs(
 		instanceId,
 		"journald-regex",
 		nil,
