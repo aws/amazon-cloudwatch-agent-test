@@ -22,13 +22,18 @@ locals {
   tier6_sentinels = { "ci-test.example.com/sentinel-customer-a" = "v", "ci-test.example.com/sentinel-customer-b" = "v" }
 
   # Padding labels to inflate attribute count.
+  pad_20  = { for i in range(1, 21) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
   pad_108 = { for i in range(1, 109) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
   pad_120 = { for i in range(1, 121) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
 
   common_sentinels = merge(local.tier1_sentinels, local.tier2_sentinels, local.tier3_sentinels, local.tier6_sentinels)
 
-  # Pod padding labels for the high nginx deployment (120 labels as YAML lines).
-  high_pod_padding_yaml = join("\n", [for i in range(1, 121) : "        ci-test.example.com/pod-pad-${format("%03d", i)}: v"])
+  # Pod padding labels for the high nginx deployment (135 labels as YAML lines).
+  # 135 padding + 3 explicit (app, app.kubernetes.io/part-of, aaa-sentinel-pod) = 138 pod labels.
+  # After all tier 1-6 node labels are dropped, the processor enters tier 7/8.
+  # The sentinel is named "aaa-sentinel-pod" to sort alphabetically BEFORE the
+  # pod-pad-* labels, ensuring it is dropped first when the processor prunes tier 8.
+  high_pod_padding_yaml = join("\n", [for i in range(1, 136) : "        ci-test.example.com/pod-pad-${format("%03d", i)}: v"])
 
   low_labels = merge(local.common_sentinels, local.pad_108, {
     "ci-test.example.com/node-color"      = "white"
@@ -40,7 +45,7 @@ locals {
     "ci-test.example.com/attr-limit-node" = "node-mid"
   })
 
-  high_labels = merge(local.common_sentinels, local.pad_120, {
+  high_labels = merge(local.common_sentinels, local.pad_20, {
     "ci-test.example.com/node-color"      = "white"
     "ci-test.example.com/attr-limit-node" = "node-high"
   })
@@ -217,6 +222,7 @@ resource "helm_release" "aws_observability" {
   set = [
     { name = "clusterName", value = aws_eks_cluster.this.name },
     { name = "region", value = var.region },
+    { name = "otelContainerInsights.enabled", value = "true" },
   ]
 
   depends_on = [
@@ -354,7 +360,7 @@ resource "null_resource" "nginx_high" {
             labels:
               app: attr-limit-nginx-high
               app.kubernetes.io/part-of: attr-limit-test
-              ci-test.example.com/sentinel-pod-customer: v
+              ci-test.example.com/aaa-sentinel-pod: v
       ${local.high_pod_padding_yaml}
           spec:
             nodeSelector:
