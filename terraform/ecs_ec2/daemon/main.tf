@@ -242,15 +242,21 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating metrics/logs"
       cd ../../..
-      go test ${var.test_dir} \
+      go test "$TF_TEST_DIR" \
       -timeout 1h \
       -computeType=ECS \
       -ecsLaunchType=EC2 \
       -ecsDeploymentStrategy=DAEMON \
-      -cwagentConfigSsmParamName=${local.cwagent_config_ssm_param_name} \
-      -clusterArn=${aws_ecs_cluster.cluster.arn} \
-      -cwagentECSServiceName=${aws_ecs_service.cwagent_service.name} -v
+      -cwagentConfigSsmParamName="$TF_SSM_PARAM" \
+      -clusterArn="$TF_CLUSTER_ARN" \
+      -cwagentECSServiceName="$TF_SERVICE_NAME" -v
     EOT
+    environment = {
+      TF_TEST_DIR     = var.test_dir
+      TF_SSM_PARAM    = local.cwagent_config_ssm_param_name
+      TF_CLUSTER_ARN  = aws_ecs_cluster.cluster.arn
+      TF_SERVICE_NAME = aws_ecs_service.cwagent_service.name
+    }
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service, null_resource.disable_metadata]
 }
@@ -261,11 +267,15 @@ resource "null_resource" "disable_metadata" {
     command = <<-EOT
       echo Sleep for 30 seconds to allow instance to be attached to the cluster
       sleep 30
-      echo Setting metadata option for ECS EC2 instance to ${var.metadataEnabled}
-      INSTANCEID=`aws ec2 describe-instances --filters Name=tag:ClusterName,Values=${aws_ecs_cluster.cluster.name} --query "Reservations[*].Instances[*].InstanceId" --output text`
-      echo Instance ID for ECS instance is $INSTANCEID
-      aws ec2 modify-instance-metadata-options --instance-id $INSTANCEID --http-endpoint ${var.metadataEnabled}
+      echo "Setting metadata option for ECS EC2 instance to $TF_METADATA_ENABLED"
+      INSTANCEID=$(aws ec2 describe-instances --filters "Name=tag:ClusterName,Values=$TF_CLUSTER_NAME" --query "Reservations[*].Instances[*].InstanceId" --output text)
+      echo "Instance ID for ECS instance is $INSTANCEID"
+      aws ec2 modify-instance-metadata-options --instance-id "$INSTANCEID" --http-endpoint "$TF_METADATA_ENABLED"
     EOT
+    environment = {
+      TF_CLUSTER_NAME     = aws_ecs_cluster.cluster.name
+      TF_METADATA_ENABLED = var.metadataEnabled
+    }
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service, aws_autoscaling_group.cluster]
 }
