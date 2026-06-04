@@ -283,9 +283,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/windows"},
 		{testDir: "../../../test/restart"},
 		{testDir: "../../../test/acceptance"},
-		{testDir: "../../../test/feature/windows/event_logs"},
-		{testDir: "../../../test/feature/windows/eventid_logs"},
-		{testDir: "../../../test/feature/windows/event_regex_logs"},
+		{testDir: "../../../test/feature/windows/windows_events"},
 		{testDir: "../../../test/log_state/logfile"},
 		{testDir: "../../../test/log_state/windows_event_log"},
 		{
