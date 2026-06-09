@@ -1,0 +1,40 @@
+{
+    "agent": {
+        "debug": true
+    },
+    "logs": {
+        "logs_collected": {
+            "journald": {
+                "collect_list": [
+                    {
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-units",
+                        "units": ["cwagent-unit-test"],
+                        "retention_in_days": 1
+                    },
+                    {
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-priority",
+                        "priority": "err",
+                        "retention_in_days": 1
+                    },
+                    {
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-matches",
+                        "matches": [{"_UID": "0"}],
+                        "retention_in_days": 1
+                    },
+                    {
+                        "log_group_name": "{instance_id}",
+                        "log_stream_name": "journald-regex",
+                        "filters": [
+                            {"type": "include", "expression": ".*Database.*|.*failed.*"}
+                        ],
+                        "retention_in_days": 1
+                    }
+                ]
+            }
+        },
+        "force_flush_interval": 5
+    }
+}
