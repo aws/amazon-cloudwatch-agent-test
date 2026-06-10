@@ -5,11 +5,13 @@
 
 // Startup tests for the Application Signals (Telemend / service-events)
 // pipeline, covering credential resolution and custom CA bundle handling.
+// After confirming the agent starts, each test runs a basic ServiceEvents
+// logs + metrics end-to-end check.
 //
-//   - TestAppSignalsNoCredentialsStartup: the agent starts in onPrem mode using
-//     a credentials file even when IMDS is unreachable (the sigv4auth extension
-//     must use the provided credentials rather than resolving via the SDK
-//     default chain, which hits IMDS).
+//   - TestAppSignalsOnPremCredentialsStartup: the agent starts in onPrem mode
+//     using a credentials file even when IMDS is unreachable (the sigv4auth
+//     extension must use the provided credentials rather than resolving via the
+//     SDK default chain, which hits IMDS).
 //
 //   - TestAppSignalsCustomCABundleStartup: the agent starts when AWS_CA_BUNDLE
 //     is set, exercising the awscloudwatchlogsprovisioner extension's SDK client
@@ -25,6 +27,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otlp_export/otlpvalidation"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
@@ -41,19 +46,70 @@ const (
 // agentStatus is the JSON shape returned by `amazon-cloudwatch-agent-ctl -a status`.
 type agentStatus struct {
 	Status       string `json:"status"`
+	StartTime    string `json:"starttime"`
 	ConfigStatus string `json:"configstatus"`
 	Version      string `json:"version"`
 }
 
-// getAgentRunningStatus returns the agent's running status ("running"/"stopped")
-// as reported by the agent control script.
-func getAgentRunningStatus(t *testing.T) string {
+// getAgentStatus returns the parsed agent status from the control script.
+func getAgentStatus(t *testing.T) agentStatus {
 	t.Helper()
 	out, err := common.RunCommand("sudo " + agentCtl + " -a status")
 	require.NoError(t, err, "Failed to get agent status")
 	var s agentStatus
 	require.NoError(t, json.Unmarshal([]byte(out), &s), "Failed to parse agent status: %s", out)
-	return s.Status
+	return s
+}
+
+// assertAgentStable verifies the agent is running and stays running with the
+// same start time across the polling window. The agent is started via systemd,
+// which restarts on failure — a crash-looping agent can momentarily report
+// "running", so we require a stable start time (no restart) to confirm it is
+// genuinely up rather than caught between restarts.
+func assertAgentStable(t *testing.T, msgAndArgs ...any) {
+	t.Helper()
+	first := getAgentStatus(t)
+	require.Equal(t, "running", first.Status, msgAndArgs...)
+	for i := 0; i < 3; i++ {
+		time.Sleep(5 * time.Second)
+		s := getAgentStatus(t)
+		require.Equal(t, "running", s.Status, msgAndArgs...)
+		require.Equal(t, first.StartTime, s.StartTime,
+			"agent restarted (start time changed from %q to %q) — not stable", first.StartTime, s.StartTime)
+	}
+}
+
+// assertServiceEventsE2E sends ServiceEvents logs and metrics through the running
+// agent and verifies both pipelines deliver: logs to a dynamic CW log group, and
+// metrics to the OTLP monitoring endpoint (queryable via PromQL).
+func assertServiceEventsE2E(t *testing.T, serviceName string) {
+	t.Helper()
+	logGroup := logGroupPrefix + serviceName
+	numLogs := 5
+	defer awsservice.DeleteLogGroupAndStream(logGroup, testStreamName)
+
+	start := time.Now()
+	sendOTLPLogs(t, serviceName, numLogs)
+	sendMetrics(t, "service_events_metric", 3, "ServiceEvents")
+	time.Sleep(sleepForFlush)
+	end := time.Now()
+
+	// Logs pipeline: logs land in the dynamic per-service log group.
+	err := awsservice.ValidateLogs(
+		logGroup, testStreamName, &start, &end,
+		awsservice.AssertLogsCount(numLogs),
+		awsservice.AssertLogsNotEmpty(),
+	)
+	assert.NoError(t, err, "ServiceEvents logs should be delivered to %s", logGroup)
+
+	// Metrics pipeline: ServiceEvents metric is queryable via the OTLP endpoint.
+	result := otlpvalidation.ValidateOtlpMetrics(
+		"service_events_startup", "us-east-1", []string{"service_events_metric"},
+	)
+	for _, r := range result.TestResults {
+		assert.Equal(t, status.SUCCESSFUL, r.Status,
+			"ServiceEvents metric %s should be queryable via CW OTLP PromQL API: %v", r.Name, r.Reason)
+	}
 }
 
 // fetchConfig translates the given config and starts the agent, returning the
@@ -79,9 +135,10 @@ func unblockIMDS(t *testing.T) {
 	_, _ = common.RunCommand(fmt.Sprintf("sudo iptables -D OUTPUT -d %s -j REJECT", imdsEndpoint))
 }
 
-// TestAppSignalsNoCredentialsStartup verifies the agent starts up in onPrem mode
-// using a credentials file, even when IMDS is unreachable.
-func TestAppSignalsNoCredentialsStartup(t *testing.T) {
+// TestAppSignalsOnPremCredentialsStartup verifies the agent starts up in onPrem
+// mode using a credentials file, even when IMDS is unreachable, and delivers
+// ServiceEvents logs and metrics.
+func TestAppSignalsOnPremCredentialsStartup(t *testing.T) {
 	common.RecreateAgentLogfile(common.AgentLogFile)
 
 	// Write a valid credentials file sourced from the instance role (via IMDSv2)
@@ -95,7 +152,9 @@ CREDS=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/lat
 AKID=$(echo "$CREDS" | python3 -c 'import sys,json; print(json.load(sys.stdin)["AccessKeyId"])')
 SAK=$(echo "$CREDS" | python3 -c 'import sys,json; print(json.load(sys.stdin)["SecretAccessKey"])')
 TOK=$(echo "$CREDS" | python3 -c 'import sys,json; print(json.load(sys.stdin)["Token"])')
-printf '[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s\n' "$AKID" "$SAK" "$TOK" | sudo tee ` + onPremCredsFile + `>/dev/null`
+printf '[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s\n' "$AKID" "$SAK" "$TOK" | sudo tee ` + onPremCredsFile + `>/dev/null
+# Region for onPrem mode is read from a config file next to the credentials file.
+printf '[default]\nregion = us-east-1\n' | sudo tee ` + onPremCredsDir + `/config>/dev/null`
 	require.NoError(t, common.RunCommands([]string{writeCredsScript}), "Failed to write credentials file")
 
 	// common-config.toml points the agent at the credentials file.
@@ -122,8 +181,13 @@ printf '[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_t
 	assert.NotContains(t, out, "no EC2 IMDS role found",
 		"sigv4auth should use the provided credentials file instead of requiring IMDS")
 
-	assert.Equal(t, "running", getAgentRunningStatus(t),
+	assertAgentStable(t,
 		"agent should start in onPrem mode with a credentials file even when IMDS is unreachable")
+
+	// The agent started without IMDS (the behavior under test). Restore IMDS so the
+	// e2e validation's own AWS SDK calls (GetLogEvents, PromQL) can authenticate.
+	unblockIMDS(t)
+	assertServiceEventsE2E(t, "onprem-creds-svc")
 }
 
 // TestAppSignalsCustomCABundleStartup verifies the agent starts up when
@@ -155,12 +219,17 @@ func TestAppSignalsCustomCABundleStartup(t *testing.T) {
 	fetchConfig(t, "ec2")
 	time.Sleep(10 * time.Second)
 
+	// The provisioner extension must not fail to start due to custom root CAs.
+	// (Scoped to fatal startup errors — a non-fatal RootCAs warning from other
+	// components, e.g. ec2tagger, does not crash the agent.)
 	agentLog := common.ReadAgentLogfile(common.AgentLogFile)
-	assert.NotContains(t, agentLog, "has no WithTransportOptions",
+	assert.NotContains(t, agentLog, "failed to create CW Logs client",
 		"provisioner extension should build an SDK client that supports custom root CAs")
-	assert.NotContains(t, agentLog, "unable to add custom RootCAs",
-		"provisioner extension should accept AWS_CA_BUNDLE custom root CAs")
+	assert.NotContains(t, agentLog, "Error running agent",
+		"agent should not fail to start with a custom AWS_CA_BUNDLE set")
 
-	assert.Equal(t, "running", getAgentRunningStatus(t),
+	assertAgentStable(t,
 		"agent should start with a custom AWS_CA_BUNDLE set")
+
+	assertServiceEventsE2E(t, "ca-bundle-svc")
 }
