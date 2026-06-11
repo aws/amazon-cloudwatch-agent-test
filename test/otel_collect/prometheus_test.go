@@ -26,7 +26,7 @@ import (
 var prometheusScrapeConfig string
 
 const (
-	prometheusNamespace = "CWAgent/Prometheus"
+	prometheusNamespace = "CWAgent"
 	prometheusRuntime   = 2 * time.Minute
 )
 

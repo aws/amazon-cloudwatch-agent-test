@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	otlpNamespace = "CWAgent/OTLP"
+	otlpNamespace = "CWAgent"
 	otlpRuntime   = 2 * time.Minute
 	otlpEndpoint  = "http://127.0.0.1:4318"
 )
