@@ -53,8 +53,8 @@ func (t *OtlpCollectTestRunner) validateOtlpMetric(metricName string) status.Tes
 	}
 
 	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
-		Region:         t.env.Region,
-		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", t.env.Region),
+		Region:         getRegion(t.env),
+		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", getRegion(t.env)),
 		Timeout:        30 * time.Second,
 		MaxRetries:     3,
 		SigningService: "monitoring",
