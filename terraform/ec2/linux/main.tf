@@ -152,6 +152,36 @@ module "amp" {
   limits_per_label_set     = []
 }
 
+# create systemd service for journald unit test
+resource "null_resource" "journald_test_setup" {
+  count = length(regexall("journald", var.test_dir)) > 0 ? 1 : 0
+
+  connection {
+    type        = "ssh"
+    user        = var.user
+    private_key = module.linux_common.private_key_content
+    host        = module.linux_common.cwagent_public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo 'Creating systemd service for journald unit test...'",
+      "printf '[Unit]\\nDescription=CWAgent Unit Test Service\\n\\n[Service]\\nType=oneshot\\nExecStart=/usr/bin/logger -t cwagent-unit-test Unit test message\\n' | sudo tee /etc/systemd/system/cwagent-unit-test.service > /dev/null",
+      "sudo systemctl daemon-reload",
+      "sudo systemctl start cwagent-unit-test.service",
+      "sleep 2",
+      "sudo systemctl start cwagent-unit-test.service",
+      "sleep 2",
+      "sudo systemctl start cwagent-unit-test.service",
+      "echo 'Journald unit test setup complete'",
+    ]
+  }
+
+  depends_on = [
+    null_resource.integration_test_setup,
+  ]
+}
+
 resource "null_resource" "integration_test_run" {
   connection {
     type        = "ssh"

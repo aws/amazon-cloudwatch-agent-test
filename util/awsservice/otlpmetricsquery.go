@@ -89,4 +89,3 @@ func QueryOtlpMetrics(region string, promql string) (PrometheusResponse, error) 
 
 	return resp, nil
 }
-

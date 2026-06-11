@@ -264,6 +264,7 @@ resource "helm_release" "aws_observability" {
   set = [
     { name = "clusterName", value = aws_eks_cluster.this.name },
     { name = "region", value = var.region },
+    { name = "otelContainerInsights.enabled", value = "true" },
   ]
 
   depends_on = [

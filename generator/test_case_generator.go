@@ -78,6 +78,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
 	},
+	"ec2_efa": {
+		{testDir: "./test/efa_ec2", terraformDir: "terraform/ec2/efa"},
+	},
 	"ec2_linux_wd": {
 		{testDir: "./test/workload_discovery"},
 	},
@@ -93,6 +96,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/log_state/logfile",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{	
+			testDir: "./test/log_state/journald", 
+			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
+		},
+		{	testDir: "./test/feature/linux/journald_logs", 
+			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
 		},
 		{
 			testDir: "./test/metrics_number_dimension",
@@ -205,6 +215,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
+		{	
+			testDir: "./test/log_state/journald", 
+			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
+		},
+		{	testDir: "./test/feature/linux/journald_logs", 
+			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
+		},
 		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},

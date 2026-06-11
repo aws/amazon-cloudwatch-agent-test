@@ -1,6 +1,10 @@
 variable "region" {
   type    = string
   default = "us-west-2"
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]*$", var.region))
+    error_message = "Region must contain only lowercase letters, digits, and hyphens."
+  }
 }
 
 variable "ami" {
@@ -16,6 +20,10 @@ variable "ec2_instance_type" {
 variable "test_dir" {
   type    = string
   default = "./test/metric_value_benchmark"
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9_./-]+$", var.test_dir))
+    error_message = "test_dir must contain only alphanumeric characters, dots, underscores, hyphens, and forward slashes."
+  }
 }
 
 variable "cwagent_image_repo" {
@@ -31,4 +39,8 @@ variable "cwagent_image_tag" {
 variable "metadataEnabled" {
   type    = string
   default = "enabled"
+  validation {
+    condition     = contains(["enabled", "disabled"], var.metadataEnabled)
+    error_message = "metadataEnabled must be either 'enabled' or 'disabled'."
+  }
 }
