@@ -212,6 +212,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/otlp_export/hostmetrics"},
 		{testDir: "./test/otlp_export/statsd"},
 		{testDir: "./test/otlp_export/collectd"},
+		{
+			testDir: "./test/otlp_export/dbi",
+			targets: map[string]map[string]struct{}{"os": {"al2023": {}}, "arc": {"amd64": {}}},
+		},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
@@ -545,6 +549,7 @@ var partitionTests = map[string]partition{
 			"./test/otlp_export/hostmetrics": {},
 			"./test/otlp_export/statsd":      {},
 			"./test/otlp_export/collectd":    {},
+			"./test/otlp_export/dbi":         {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
@@ -565,6 +570,7 @@ var partitionTests = map[string]partition{
 			"./test/otlp_export/hostmetrics": {},
 			"./test/otlp_export/statsd":      {},
 			"./test/otlp_export/collectd":    {},
+			"./test/otlp_export/dbi":         {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
