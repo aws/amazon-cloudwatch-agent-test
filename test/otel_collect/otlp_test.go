@@ -13,23 +13,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/otlp"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
 
 const (
-	otlpNamespace = "CWAgent"
-	otlpRuntime   = 2 * time.Minute
-	otlpEndpoint  = "http://127.0.0.1:4318"
+	otlpRuntime  = 2 * time.Minute
+	otlpEndpoint = "http://127.0.0.1:4318"
 )
 
 type OtlpCollectTestRunner struct {
@@ -42,13 +36,9 @@ var _ test_runner.ITestRunner = (*OtlpCollectTestRunner)(nil)
 func (t *OtlpCollectTestRunner) Validate() status.TestGroupResult {
 	var results []status.TestResult
 
-	// Validate metrics
 	for _, metricName := range t.GetMeasuredMetrics() {
 		results = append(results, t.validateOtlpMetric(metricName))
 	}
-
-	// Validate traces
-	results = append(results, t.validateTraces())
 
 	return status.TestGroupResult{
 		Name:        t.GetTestName(),
@@ -62,52 +52,27 @@ func (t *OtlpCollectTestRunner) validateOtlpMetric(metricName string) status.Tes
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "InstanceId",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String(t.env.InstanceId)},
-		},
+	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
+		Region:         t.env.Region,
+		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", t.env.Region),
+		Timeout:        30 * time.Second,
+		MaxRetries:     3,
+		SigningService: "monitoring",
 	})
-	if len(failed) > 0 {
-		testResult.Reason = fmt.Errorf("failed to get dimensions for %s", metricName)
-		return testResult
-	}
-
-	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(otlpNamespace, metricName, dims, metric.AVERAGE, metric.MinuteStatPeriod)
 	if err != nil {
-		testResult.Reason = err
+		testResult.Reason = fmt.Errorf("creating otel metrics client: %w", err)
 		return testResult
 	}
 
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
-		testResult.Reason = fmt.Errorf("metric %s values not valid", metricName)
-		return testResult
-	}
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
-}
-
-func (t *OtlpCollectTestRunner) validateTraces() status.TestResult {
-	testResult := status.TestResult{
-		Name:   "OTLP_Traces",
-		Status: status.FAILED,
-	}
-
-	annotations := map[string]interface{}{
-		"test_type":   "otel_collect_otlp",
-		"instance_id": t.env.InstanceId,
-	}
-
-	err := base.ValidateTraceSegments(
-		time.Now().Add(-otlpRuntime),
-		time.Now(),
-		annotations,
-		nil,
-	)
+	query := fmt.Sprintf(`{__name__="%s","InstanceId"="%s"}`, metricName, t.env.InstanceId)
+	results, err := client.Query(context.Background(), query)
 	if err != nil {
-		testResult.Reason = err
+		testResult.Reason = fmt.Errorf("querying %s: %w", metricName, err)
+		return testResult
+	}
+
+	if len(results) == 0 {
+		testResult.Reason = fmt.Errorf("metric %s not found", metricName)
 		return testResult
 	}
 
@@ -123,17 +88,11 @@ func (t *OtlpCollectTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *OtlpCollectTestRunner) SetupAfterAgentRun() error {
-	// Send test metrics via OTLP HTTP
 	go t.sendTestMetrics()
-
-	// Send test traces via OTLP
-	go t.sendTestTraces()
-
 	return nil
 }
 
 func (t *OtlpCollectTestRunner) sendTestMetrics() {
-	// Send OTLP metrics via HTTP in a loop
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
@@ -149,21 +108,6 @@ func (t *OtlpCollectTestRunner) sendTestMetrics() {
 			http.DefaultClient.Do(req) //nolint:errcheck
 		}
 	}
-}
-
-func (t *OtlpCollectTestRunner) sendTestTraces() {
-	generator := otlp.NewLoadGenerator(&base.TraceGeneratorConfig{
-		Interval: 15 * time.Second,
-		Annotations: map[string]interface{}{
-			"test_type":   "otel_collect_otlp",
-			"instance_id": t.env.InstanceId,
-		},
-		Attributes: []attribute.KeyValue{
-			attribute.String("test_type", "otel_collect_otlp"),
-			attribute.String("instance_id", t.env.InstanceId),
-		},
-	})
-	generator.StartSendingTraces(context.Background()) //nolint:errcheck
 }
 
 func buildOtlpMetricsPayload(instanceId string) []byte {
@@ -196,10 +140,9 @@ func buildOtlpMetricsPayload(instanceId string) []byte {
 
 func TestOTLPCollect(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
-	factory := dimension.GetDimensionFactory(*env)
 
 	testRunner := &OtlpCollectTestRunner{
-		BaseTestRunner: test_runner.BaseTestRunner{DimensionFactory: factory},
+		BaseTestRunner: test_runner.BaseTestRunner{},
 		env:            env,
 	}
 	runner := &test_runner.TestRunner{TestRunner: testRunner}

@@ -6,29 +6,25 @@
 package otel_collect
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/metric/dimension"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
 
 //go:embed resources/prometheus_scrape_config.yaml
 var prometheusScrapeConfig string
 
-const (
-	prometheusNamespace = "CWAgent"
-	prometheusRuntime   = 2 * time.Minute
-)
+const prometheusRuntime = 2 * time.Minute
 
 type PrometheusOtelTestRunner struct {
 	test_runner.BaseTestRunner
@@ -55,26 +51,27 @@ func (t *PrometheusOtelTestRunner) validatePrometheusMetric(metricName string) s
 		Status: status.FAILED,
 	}
 
-	dims, failed := t.DimensionFactory.GetDimensions([]dimension.Instruction{
-		{
-			Key:   "job",
-			Value: dimension.ExpectedDimensionValue{Value: aws.String("node")},
-		},
+	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
+		Region:         t.env.Region,
+		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", t.env.Region),
+		Timeout:        30 * time.Second,
+		MaxRetries:     3,
+		SigningService: "monitoring",
 	})
-	if len(failed) > 0 {
-		testResult.Reason = fmt.Errorf("failed to get dimensions for %s", metricName)
-		return testResult
-	}
-
-	fetcher := metric.MetricValueFetcher{}
-	values, err := fetcher.Fetch(prometheusNamespace, metricName, dims, metric.AVERAGE, metric.MinuteStatPeriod)
 	if err != nil {
-		testResult.Reason = err
+		testResult.Reason = fmt.Errorf("creating otel metrics client: %w", err)
 		return testResult
 	}
 
-	if !metric.IsAllValuesGreaterThanOrEqualToExpectedValue(metricName, values, 0) {
-		testResult.Reason = fmt.Errorf("metric %s values not valid", metricName)
+	query := fmt.Sprintf(`{__name__="%s",job="node"}`, metricName)
+	results, err := client.Query(context.Background(), query)
+	if err != nil {
+		testResult.Reason = fmt.Errorf("querying %s: %w", metricName, err)
+		return testResult
+	}
+
+	if len(results) == 0 {
+		testResult.Reason = fmt.Errorf("metric %s not found", metricName)
 		return testResult
 	}
 
@@ -82,9 +79,9 @@ func (t *PrometheusOtelTestRunner) validatePrometheusMetric(metricName string) s
 	return testResult
 }
 
-func (t *PrometheusOtelTestRunner) GetTestName() string             { return "OtelCollectPrometheus" }
+func (t *PrometheusOtelTestRunner) GetTestName() string                { return "OtelCollectPrometheus" }
 func (t *PrometheusOtelTestRunner) GetAgentRunDuration() time.Duration { return prometheusRuntime }
-func (t *PrometheusOtelTestRunner) GetAgentConfigFileName() string  { return "prometheus_config.json" }
+func (t *PrometheusOtelTestRunner) GetAgentConfigFileName() string     { return "prometheus_config.json" }
 func (t *PrometheusOtelTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"node_cpu_seconds_total",
@@ -100,7 +97,6 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
-	// Deploy prometheus scrape config
 	commands := []string{
 		fmt.Sprintf("cat <<'EOF' | sudo tee /opt/aws/prometheus.yml\n%s\nEOF", prometheusScrapeConfig),
 	}
@@ -109,10 +105,9 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 
 func TestPrometheus(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
-	factory := dimension.GetDimensionFactory(*env)
 
 	testRunner := &PrometheusOtelTestRunner{
-		BaseTestRunner: test_runner.BaseTestRunner{DimensionFactory: factory},
+		BaseTestRunner: test_runner.BaseTestRunner{},
 		env:            env,
 	}
 	runner := &test_runner.TestRunner{TestRunner: testRunner}
