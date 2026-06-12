@@ -32,7 +32,7 @@ log_destination = 'stderr'
 logging_collector = on
 log_directory = '/var/log/postgresql'
 log_filename = 'postgresql-%Y-%m-%d.log'
-log_min_duration_statement = 0
+log_min_duration_statement = 50
 EOF
 
 echo "=== [5/8] Configuring pg_hba.conf for monitoring user ==="
