@@ -180,12 +180,12 @@ func dbLoadMetrics() []string {
 
 // topSQLMetrics returns Top SQL metrics produced by the
 // signaltometrics/dbi_topsql connector from pg_stat_statements.
+// Note: postgresql.rows is already validated via counterMetrics.
 func topSQLMetrics() []string {
 	return []string{
 		"postgresql.calls",
 		"postgresql.total_exec_time",
 		"postgresql.total_plan_time",
-		"postgresql.rows",
 		"postgresql.shared_blks_hit",
 		"postgresql.shared_blks_read",
 	}
