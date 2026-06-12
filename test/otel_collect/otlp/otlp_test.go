@@ -3,11 +3,10 @@
 
 //go:build !windows
 
-package otel_collect
+package otlp
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -16,13 +15,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
 
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
+
 const (
-	otlpRuntime  = 2 * time.Minute
+	otlpRuntime  = 3 * time.Minute
 	otlpEndpoint = "http://127.0.0.1:4318"
 )
 
@@ -34,50 +37,7 @@ type OtlpCollectTestRunner struct {
 var _ test_runner.ITestRunner = (*OtlpCollectTestRunner)(nil)
 
 func (t *OtlpCollectTestRunner) Validate() status.TestGroupResult {
-	var results []status.TestResult
-
-	for _, metricName := range t.GetMeasuredMetrics() {
-		results = append(results, t.validateOtlpMetric(metricName))
-	}
-
-	return status.TestGroupResult{
-		Name:        t.GetTestName(),
-		TestResults: results,
-	}
-}
-
-func (t *OtlpCollectTestRunner) validateOtlpMetric(metricName string) status.TestResult {
-	testResult := status.TestResult{
-		Name:   metricName,
-		Status: status.FAILED,
-	}
-
-	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
-		Region:         getRegion(t.env),
-		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", getRegion(t.env)),
-		Timeout:        30 * time.Second,
-		MaxRetries:     3,
-		SigningService: "monitoring",
-	})
-	if err != nil {
-		testResult.Reason = fmt.Errorf("creating otel metrics client: %w", err)
-		return testResult
-	}
-
-	query := fmt.Sprintf(`{__name__="%s","InstanceId"="%s"}`, metricName, t.env.InstanceId)
-	results, err := client.Query(context.Background(), query)
-	if err != nil {
-		testResult.Reason = fmt.Errorf("querying %s: %w", metricName, err)
-		return testResult
-	}
-
-	if len(results) == 0 {
-		testResult.Reason = fmt.Errorf("metric %s not found", metricName)
-		return testResult
-	}
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+	return otlpvalidation.ValidateOtlpMetrics(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics())
 }
 
 func (t *OtlpCollectTestRunner) GetTestName() string                { return "OtelCollectOTLP" }

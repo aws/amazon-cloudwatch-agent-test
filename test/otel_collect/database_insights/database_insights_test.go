@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package dbi
+package database_insights
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/otlp_export/otlpvalidation"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -27,7 +27,6 @@ const (
 	configPath      = "/tmp/dbi_config.json"
 	startCommand    = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c "
 	workloadDur     = 5 * time.Minute
-	instanceName    = "dbi-integ-test"
 	serverLogsGroup = "/aws/self-managed-database-insights/postgresql/server-logs"
 	rawEventsGroup  = "/aws/self-managed-database-insights/postgresql/raw-events"
 )
@@ -69,7 +68,7 @@ var _ test_runner.ITestRunner = (*DbiTestRunner)(nil)
 func (t *DbiTestRunner) run() status.TestGroupResult {
 	// Step 1: Run PostgreSQL setup script
 	log.Println("=== Running PostgreSQL setup ===")
-	setupOut, err := exec.Command("bash", "setup.sh").CombinedOutput()
+	setupOut, err := exec.Command("bash", "resources/database_insights_setup.sh").CombinedOutput()
 	if err != nil {
 		log.Printf("setup.sh output:\n%s", string(setupOut))
 		return status.TestGroupResult{
@@ -84,7 +83,7 @@ func (t *DbiTestRunner) run() status.TestGroupResult {
 	if err := exec.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl", "-a", "remove-config").Run(); err != nil {
 		log.Printf("remove-config failed (non-fatal): %v", err)
 	}
-	common.CopyFile(filepath.Join("agent_configs", "dbi_localhost.json"), configPath)
+	common.CopyFile(filepath.Join("agent_configs", "database_insights_config.json"), configPath)
 
 	// Step 3: Start the agent
 	log.Println("=== Starting agent ===")
@@ -219,7 +218,7 @@ func generateWorkload(duration time.Duration) {
 // validateLogGroupHasEvents checks that a CloudWatch Logs log group exists and
 // contains at least one log stream with events.
 func validateLogGroupHasEvents(logGroup string, testName string) status.TestResult {
-	const maxRetries = 10
+	const maxRetries = 3
 	const retryInterval = 30 * time.Second
 
 	for attempt := 0; attempt < maxRetries; attempt++ {

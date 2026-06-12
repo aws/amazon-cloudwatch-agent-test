@@ -3,28 +3,35 @@
 
 //go:build !windows
 
-package otel_collect
+package prometheus
 
 import (
-	"context"
 	_ "embed"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
 
 //go:embed resources/prometheus_scrape_config.yaml
 var prometheusScrapeConfig string
 
-const prometheusRuntime = 2 * time.Minute
+//go:embed resources/prometheus_metrics
+var prometheusMetrics string
+
+const prometheusRuntime = 3 * time.Minute
 
 type PrometheusOtelTestRunner struct {
 	test_runner.BaseTestRunner
@@ -34,49 +41,7 @@ type PrometheusOtelTestRunner struct {
 var _ test_runner.ITestRunner = (*PrometheusOtelTestRunner)(nil)
 
 func (t *PrometheusOtelTestRunner) Validate() status.TestGroupResult {
-	metricsToFetch := t.GetMeasuredMetrics()
-	testResults := make([]status.TestResult, len(metricsToFetch))
-	for i, metricName := range metricsToFetch {
-		testResults[i] = t.validatePrometheusMetric(metricName)
-	}
-	return status.TestGroupResult{
-		Name:        t.GetTestName(),
-		TestResults: testResults,
-	}
-}
-
-func (t *PrometheusOtelTestRunner) validatePrometheusMetric(metricName string) status.TestResult {
-	testResult := status.TestResult{
-		Name:   metricName,
-		Status: status.FAILED,
-	}
-
-	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
-		Region:         getRegion(t.env),
-		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", getRegion(t.env)),
-		Timeout:        30 * time.Second,
-		MaxRetries:     3,
-		SigningService: "monitoring",
-	})
-	if err != nil {
-		testResult.Reason = fmt.Errorf("creating otel metrics client: %w", err)
-		return testResult
-	}
-
-	query := fmt.Sprintf(`{__name__="%s",job="node"}`, metricName)
-	results, err := client.Query(context.Background(), query)
-	if err != nil {
-		testResult.Reason = fmt.Errorf("querying %s: %w", metricName, err)
-		return testResult
-	}
-
-	if len(results) == 0 {
-		testResult.Reason = fmt.Errorf("metric %s not found", metricName)
-		return testResult
-	}
-
-	testResult.Status = status.SUCCESSFUL
-	return testResult
+	return otlpvalidation.ValidateOtlpMetrics(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics())
 }
 
 func (t *PrometheusOtelTestRunner) GetTestName() string                { return "OtelCollectPrometheus" }
@@ -92,15 +57,30 @@ func (t *PrometheusOtelTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
-	err := t.BaseTestRunner.SetupBeforeAgentRun()
-	if err != nil {
+	if err := t.BaseTestRunner.SetupBeforeAgentRun(); err != nil {
 		return err
 	}
 
+	// Write prometheus scrape config
 	commands := []string{
 		fmt.Sprintf("cat <<'EOF' | sudo tee /opt/aws/prometheus.yml\n%s\nEOF", prometheusScrapeConfig),
 	}
-	return common.RunCommands(commands)
+	if err := common.RunCommands(commands); err != nil {
+		return err
+	}
+
+	// Serve fake metrics on port 9100 (same pattern as test/emf_prometheus)
+	if err := os.WriteFile("/tmp/metrics", []byte(prometheusMetrics), os.ModePerm); err != nil {
+		return fmt.Errorf("unable to write /tmp/metrics: %w", err)
+	}
+	commands = []string{
+		"sudo python3 -m http.server 9100 --directory /tmp &> /dev/null &",
+	}
+	if err := common.RunCommands(commands); err != nil {
+		return err
+	}
+	time.Sleep(2 * time.Second)
+	return nil
 }
 
 func TestPrometheus(t *testing.T) {

@@ -132,7 +132,22 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/otlp"},
-		{testDir: "./test/otel_collect"},
+		{
+			testDir: "./test/otel_collect/database_insights",
+			targets: map[string]map[string]struct{}{"os": {"al2023": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/otel_collect/host_insights",
+			targets: map[string]map[string]struct{}{"os": {"al2023": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/otel_collect/otlp",
+			targets: map[string]map[string]struct{}{"os": {"al2023": {}}, "arc": {"amd64": {}}},
+		},
+		{
+			testDir: "./test/otel_collect/prometheus",
+			targets: map[string]map[string]struct{}{"os": {"al2023": {}}, "arc": {"amd64": {}}},
+		},
 		{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
@@ -208,13 +223,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/system_metrics/disabled",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
-		},
-		{testDir: "./test/otlp_export/hostmetrics"},
-		{testDir: "./test/otlp_export/statsd"},
-		{testDir: "./test/otlp_export/collectd"},
-		{
-			testDir: "./test/otlp_export/dbi",
-			targets: map[string]map[string]struct{}{"os": {"al2023": {}}, "arc": {"amd64": {}}},
 		},
 	},
 	testTypeKeyEc2SELinux: {
@@ -546,10 +554,10 @@ var partitionTests = map[string]partition{
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		excludedTestDirs: map[string]struct{}{
-			"./test/otlp_export/hostmetrics": {},
-			"./test/otlp_export/statsd":      {},
-			"./test/otlp_export/collectd":    {},
-			"./test/otlp_export/dbi":         {},
+			"./test/otel_collect/database_insights": {},
+			"./test/otel_collect/host_insights":      {},
+			"./test/otel_collect/otlp":               {},
+			"./test/otel_collect/prometheus":          {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
@@ -567,10 +575,10 @@ var partitionTests = map[string]partition{
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		excludedTestDirs: map[string]struct{}{
-			"./test/otlp_export/hostmetrics": {},
-			"./test/otlp_export/statsd":      {},
-			"./test/otlp_export/collectd":    {},
-			"./test/otlp_export/dbi":         {},
+			"./test/otel_collect/database_insights": {},
+			"./test/otel_collect/host_insights":      {},
+			"./test/otel_collect/otlp":               {},
+			"./test/otel_collect/prometheus":          {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
