@@ -56,15 +56,13 @@ func (t *OtlpCollectTestRunner) sendTestMetrics() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	counter := 0
 	timeout := time.After(otlpRuntime - 30*time.Second)
 	for {
 		select {
 		case <-timeout:
 			return
 		case <-ticker.C:
-			counter++
-			payload := buildOtlpMetricsPayload(t.env.InstanceId, counter)
+			payload := buildOtlpMetricsPayload(t.env.InstanceId)
 			req, _ := http.NewRequest("POST", otlpEndpoint+"/v1/metrics", bytes.NewReader(payload))
 			req.Header.Set("Content-Type", "application/json")
 			http.DefaultClient.Do(req) //nolint:errcheck
@@ -72,7 +70,9 @@ func (t *OtlpCollectTestRunner) sendTestMetrics() {
 	}
 }
 
-func buildOtlpMetricsPayload(instanceId string, counterValue int) []byte {
+var startTime = time.Now().UnixNano()
+
+func buildOtlpMetricsPayload(instanceId string) []byte {
 	now := time.Now().UnixNano()
 	payload := fmt.Sprintf(`{
   "resourceMetrics": [{
@@ -82,7 +82,7 @@ func buildOtlpMetricsPayload(instanceId string, counterValue int) []byte {
         {
           "name": "otlp_test_counter",
           "sum": {
-            "dataPoints": [{"asInt": "%d", "timeUnixNano": "%d", "attributes": [{"key": "InstanceId", "value": {"stringValue": "%s"}}]}],
+            "dataPoints": [{"asInt": "1", "startTimeUnixNano": "%d", "timeUnixNano": "%d", "attributes": [{"key": "InstanceId", "value": {"stringValue": "%s"}}]}],
             "isMonotonic": true,
             "aggregationTemporality": 2
           }
@@ -96,7 +96,7 @@ func buildOtlpMetricsPayload(instanceId string, counterValue int) []byte {
       ]
     }]
   }]
-}`, instanceId, counterValue, now, instanceId, now, instanceId)
+}`, instanceId, startTime, now, instanceId, now, instanceId)
 	return []byte(payload)
 }
 
