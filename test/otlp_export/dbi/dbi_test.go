@@ -191,30 +191,29 @@ func topSQLMetrics() []string {
 	}
 }
 
-// generateWorkload runs SQL queries against the test database for the specified
-// duration. This populates pg_stat_activity (DB Load), pg_stat_statements
-// (Top SQL), and generates server log entries.
+// generateWorkload uses pgbench to drive concurrent database activity for the
+// specified duration. This produces multiple active sessions in pg_stat_activity
+// (DB Load), accumulates entries in pg_stat_statements (Top SQL), and generates
+// server log entries from queries exceeding log_min_duration_statement.
 func generateWorkload(duration time.Duration) {
-	end := time.Now().Add(duration)
-	iteration := 0
-	for time.Now().Before(end) {
-		iteration++
-		queries := []string{
-			"SELECT count(*) FROM pg_catalog.pg_class;",
-			"SELECT relname, relkind FROM pg_catalog.pg_class LIMIT 10;",
-			"SELECT pg_sleep(0.1);",
-			fmt.Sprintf("SELECT 'workload_iteration_%d';", iteration),
-		}
-		for _, q := range queries {
-			out, err := exec.Command("sudo", "-u", "postgres", "psql", "-d", "testdb", "-c", q).CombinedOutput()
-			if err != nil {
-				log.Printf("workload query failed (query=%s): %v, output: %s", q, err, string(out))
-			}
-		}
-		// Pace the workload: ~1 second between iterations
-		time.Sleep(1 * time.Second)
+	// Initialize pgbench tables (creates pgbench_accounts, pgbench_branches, etc.)
+	log.Println("=== Initializing pgbench tables ===")
+	initOut, err := exec.Command("sudo", "-u", "postgres", "pgbench", "-i", "testdb").CombinedOutput()
+	if err != nil {
+		log.Printf("pgbench init failed: %v, output: %s", err, string(initOut))
+		return
 	}
-	log.Printf("Workload complete: ran %d iterations over %v", iteration, duration)
+
+	// Run pgbench with 10 concurrent connections for the full duration.
+	// This produces 5-10 active sessions visible in pg_stat_activity snapshots.
+	seconds := fmt.Sprintf("%d", int(duration.Seconds()))
+	log.Printf("=== Running pgbench for %s seconds with 10 clients ===", seconds)
+	benchOut, err := exec.Command("sudo", "-u", "postgres", "pgbench", "-c", "10", "-j", "2", "-T", seconds, "testdb").CombinedOutput()
+	if err != nil {
+		log.Printf("pgbench failed: %v, output: %s", err, string(benchOut))
+		return
+	}
+	log.Printf("pgbench output:\n%s", string(benchOut))
 }
 
 // validateLogGroupHasEvents checks that a CloudWatch Logs log group exists and
