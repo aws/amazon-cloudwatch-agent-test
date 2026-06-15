@@ -5,6 +5,10 @@ echo "=== [1/8] Installing PostgreSQL ==="
 # AL2023 uses versioned package names (e.g. postgresql16-server).
 # Find the latest available postgresql*-server package.
 PG_SERVER_PKG=$(dnf list available 'postgresql*-server' 2>/dev/null | awk '/postgresql[0-9]+-server/ {print $1}' | sort -V | tail -1)
+if [[ -z "$PG_SERVER_PKG" ]]; then
+    echo "ERROR: No postgresql*-server package found in available repositories"
+    exit 1
+fi
 PG_CONTRIB_PKG=$(echo "$PG_SERVER_PKG" | sed 's/-server/-contrib/')
 echo "Installing packages: $PG_SERVER_PKG $PG_CONTRIB_PKG"
 sudo dnf install -y "$PG_SERVER_PKG" "$PG_CONTRIB_PKG"

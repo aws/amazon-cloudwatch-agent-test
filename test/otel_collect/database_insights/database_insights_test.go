@@ -9,23 +9,19 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
 
 const (
-	configPath      = "/tmp/dbi_config.json"
-	startCommand    = "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c "
 	workloadDur     = 5 * time.Minute
 	serverLogsGroup = "/aws/self-managed-database-insights/postgresql/server-logs"
 	rawEventsGroup  = "/aws/self-managed-database-insights/postgresql/raw-events"
@@ -35,85 +31,35 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-type DbiTestSuite struct {
-	suite.Suite
-	test_runner.TestSuite
-}
-
-func (s *DbiTestSuite) SetupSuite() {
-	log.Println(">>>> Starting DbiTestSuite")
-}
-
-func (s *DbiTestSuite) TearDownSuite() {
-	s.Result.Print()
-	log.Println(">>>> Finished DbiTestSuite")
-}
-
-func (s *DbiTestSuite) TestAllInSuite() {
-	runner := &DbiTestRunner{}
-	s.AddToSuiteResult(runner.run())
-	s.Assert().Equal(status.SUCCESSFUL, s.Result.GetStatus(), "DBI Test Suite Failed")
-}
-
-func TestDbiSuite(t *testing.T) {
-	suite.Run(t, new(DbiTestSuite))
-}
-
 type DbiTestRunner struct {
 	test_runner.BaseTestRunner
 }
 
 var _ test_runner.ITestRunner = (*DbiTestRunner)(nil)
 
-func (t *DbiTestRunner) run() status.TestGroupResult {
-	// Step 1: Run PostgreSQL setup script
-	log.Println("=== Running PostgreSQL setup ===")
-	setupOut, err := exec.Command("bash", "resources/database_insights_setup.sh").CombinedOutput()
-	if err != nil {
-		log.Printf("setup.sh output:\n%s", string(setupOut))
-		return status.TestGroupResult{
-			Name:        t.GetTestName(),
-			TestResults: []status.TestResult{{Name: "PostgreSQL Setup", Status: status.FAILED, Reason: fmt.Errorf("setup.sh failed: %w", err)}},
-		}
-	}
-	log.Printf("setup.sh output:\n%s", string(setupOut))
-
-	// Step 2: Remove any previous agent config and copy our config
-	log.Println("=== Configuring agent ===")
-	if err := exec.Command("sudo", "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl", "-a", "remove-config").Run(); err != nil {
-		log.Printf("remove-config failed (non-fatal): %v", err)
-	}
-	common.CopyFile(filepath.Join("agent_configs", "database_insights_config.json"), configPath)
-
-	// Step 3: Start the agent
-	log.Println("=== Starting agent ===")
-	if err := common.StartAgentWithCommand(configPath, false, false, startCommand); err != nil {
-		return status.TestGroupResult{
-			Name:        t.GetTestName(),
-			TestResults: []status.TestResult{{Name: "Starting Agent", Status: status.FAILED, Reason: err}},
-		}
-	}
-
-	// Step 4: Generate SQL workload for 5 minutes
-	log.Println("=== Generating SQL workload for 5 minutes ===")
-	generateWorkload(workloadDur)
-
-	// Step 5: Stop the agent
-	log.Println("=== Stopping agent ===")
-	common.StopAgent()
-
-	// Step 6: Validate metrics and logs
-	log.Println("=== Validating results ===")
-	return t.Validate()
-}
-
-func (t *DbiTestRunner) GetTestName() string            { return "DBI" }
-func (t *DbiTestRunner) GetAgentConfigFileName() string { return "dbi_localhost.json" }
-func (t *DbiTestRunner) GetAgentRunDuration() time.Duration {
-	return workloadDur
-}
+func (t *DbiTestRunner) GetTestName() string                { return "DBI" }
+func (t *DbiTestRunner) GetAgentConfigFileName() string     { return "database_insights_config.json" }
+func (t *DbiTestRunner) GetAgentRunDuration() time.Duration { return workloadDur }
 func (t *DbiTestRunner) GetMeasuredMetrics() []string {
 	return append(append(counterMetrics(), dbLoadMetrics()...), topSQLMetrics()...)
+}
+
+func (t *DbiTestRunner) SetupBeforeAgentRun() error {
+	log.Println("=== Running PostgreSQL setup ===")
+	out, err := exec.Command("bash", "resources/database_insights_setup.sh").CombinedOutput()
+	log.Printf("setup.sh output:\n%s", string(out))
+	if err != nil {
+		return fmt.Errorf("setup.sh failed: %w", err)
+	}
+	return t.BaseTestRunner.SetupBeforeAgentRun()
+}
+
+func (t *DbiTestRunner) SetupAfterAgentRun() error {
+	if err := initWorkload(); err != nil {
+		return err
+	}
+	go runWorkload(workloadDur)
+	return nil
 }
 
 func (t *DbiTestRunner) Validate() status.TestGroupResult {
@@ -137,10 +83,22 @@ func (t *DbiTestRunner) Validate() status.TestGroupResult {
 	return status.TestGroupResult{Name: t.GetTestName(), TestResults: results}
 }
 
+func TestDbi(t *testing.T) {
+	environment.GetEnvironmentMetaData()
+
+	testRunner := &DbiTestRunner{
+		BaseTestRunner: test_runner.BaseTestRunner{},
+	}
+	runner := &test_runner.TestRunner{TestRunner: testRunner}
+	result := runner.Run()
+
+	for _, r := range result.TestResults {
+		require.Equal(t, status.SUCCESSFUL, r.Status, "%s failed: %v", r.Name, r.Reason)
+	}
+}
+
 // counterMetrics returns PostgreSQL receiver metrics (enabled: true in golden YAML)
 // that reliably appear on a single-node localhost instance without replication.
-// Excluded: postgresql.replication.data_delay, postgresql.wal.lag (require replica),
-// postgresql.wal.age (requires WAL archiving configured).
 func counterMetrics() []string {
 	return []string{
 		"postgresql.backends",
@@ -182,7 +140,6 @@ func dbLoadMetrics() []string {
 
 // topSQLMetrics returns Top SQL metrics produced by the
 // signaltometrics/dbi_topsql connector from pg_stat_statements.
-// Note: postgresql.rows is already validated via counterMetrics.
 func topSQLMetrics() []string {
 	return []string{
 		"postgresql.calls",
@@ -193,29 +150,25 @@ func topSQLMetrics() []string {
 	}
 }
 
-// generateWorkload uses pgbench to drive concurrent database activity for the
-// specified duration. This produces multiple active sessions in pg_stat_activity
-// (DB Load), accumulates entries in pg_stat_statements (Top SQL), and generates
-// server log entries from queries exceeding log_min_duration_statement.
-func generateWorkload(duration time.Duration) {
-	// Initialize pgbench tables (creates pgbench_accounts, pgbench_branches, etc.)
+func initWorkload() error {
 	log.Println("=== Initializing pgbench tables ===")
-	initOut, err := exec.Command("sudo", "-u", "postgres", "pgbench", "-i", "testdb").CombinedOutput()
+	out, err := exec.Command("sudo", "-u", "postgres", "pgbench", "-i", "testdb").CombinedOutput()
+	log.Printf("pgbench init output:\n%s", string(out))
 	if err != nil {
-		log.Printf("pgbench init failed: %v, output: %s", err, string(initOut))
-		return
+		return fmt.Errorf("pgbench init failed: %w", err)
 	}
+	return nil
+}
 
-	// Run pgbench with 10 concurrent connections for the full duration.
-	// This produces 5-10 active sessions visible in pg_stat_activity snapshots.
+func runWorkload(duration time.Duration) {
 	seconds := fmt.Sprintf("%d", int(duration.Seconds()))
 	log.Printf("=== Running pgbench for %s seconds with 10 clients ===", seconds)
-	benchOut, err := exec.Command("sudo", "-u", "postgres", "pgbench", "-c", "10", "-j", "2", "-T", seconds, "testdb").CombinedOutput()
+	out, err := exec.Command("sudo", "-u", "postgres", "pgbench", "-c", "10", "-j", "2", "-T", seconds, "testdb").CombinedOutput()
 	if err != nil {
-		log.Printf("pgbench failed: %v, output: %s", err, string(benchOut))
+		log.Printf("pgbench failed: %v, output: %s", err, string(out))
 		return
 	}
-	log.Printf("pgbench output:\n%s", string(benchOut))
+	log.Printf("pgbench output:\n%s", string(out))
 }
 
 // validateLogGroupHasEvents checks that a CloudWatch Logs log group exists and
@@ -235,7 +188,6 @@ func validateLogGroupHasEvents(logGroup string, testName string) status.TestResu
 			continue
 		}
 
-		// Check the most recent stream for events
 		streamName := *streams[0].LogStreamName
 		events, err := awsservice.GetLogsSince(logGroup, streamName, nil, nil)
 		if err != nil {
@@ -257,4 +209,3 @@ func validateLogGroupHasEvents(logGroup string, testName string) status.TestResu
 		Reason: fmt.Errorf("no log events found in %s after %d retries", logGroup, maxRetries),
 	}
 }
-

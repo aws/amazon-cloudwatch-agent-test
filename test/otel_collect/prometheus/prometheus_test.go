@@ -79,6 +79,9 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 	if err := common.RunCommands(commands); err != nil {
 		return err
 	}
+	t.RegisterCleanup(func() error {
+		return common.RunCommands([]string{"sudo pkill -f 'python3 -m http.server 9100' || true"})
+	})
 	time.Sleep(2 * time.Second)
 	return nil
 }
