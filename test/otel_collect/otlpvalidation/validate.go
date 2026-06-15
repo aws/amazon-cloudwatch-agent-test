@@ -21,11 +21,6 @@ const (
 	defaultRetryInterval = 30 * time.Second
 )
 
-type ValidateConfig struct {
-	MaxRetries    int
-	RetryInterval time.Duration
-}
-
 func getRegion(region string) string {
 	if region != "" {
 		return region
@@ -40,13 +35,10 @@ func getRegion(region string) string {
 }
 
 func ValidateOtlpMetrics(testName string, region string, metrics []string) status.TestGroupResult {
-	return ValidateOtlpMetricsWithConfig(testName, region, metrics, ValidateConfig{
-		MaxRetries:    defaultMaxRetries,
-		RetryInterval: defaultRetryInterval,
-	})
+	return ValidateOtlpMetricsWithLabels(testName, region, metrics, nil)
 }
 
-func ValidateOtlpMetricsWithConfig(testName string, region string, metrics []string, cfg ValidateConfig) status.TestGroupResult {
+func ValidateOtlpMetricsWithLabels(testName string, region string, metrics []string, labels map[string]string) status.TestGroupResult {
 	region = getRegion(region)
 
 	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
@@ -69,15 +61,19 @@ func ValidateOtlpMetricsWithConfig(testName string, region string, metrics []str
 
 	validated := make(map[string]bool, len(metrics))
 
-	for attempt := 0; attempt < cfg.MaxRetries; attempt++ {
+	for attempt := 0; attempt < defaultMaxRetries; attempt++ {
 		if attempt > 0 {
-			time.Sleep(cfg.RetryInterval)
+			time.Sleep(defaultRetryInterval)
 		}
 		for _, m := range metrics {
 			if validated[m] {
 				continue
 			}
-			promql := fmt.Sprintf(`{__name__="%s"}`, m)
+			promql := fmt.Sprintf(`{__name__="%s"`, m)
+			for k, v := range labels {
+				promql += fmt.Sprintf(`, "%s"="%s"`, k, v)
+			}
+			promql += "}"
 			results, err := client.Query(context.Background(), promql)
 			if err != nil {
 				log.Printf("[%s] attempt %d: error querying %s: %v", testName, attempt+1, m, err)
@@ -91,7 +87,7 @@ func ValidateOtlpMetricsWithConfig(testName string, region string, metrics []str
 		if len(validated) == len(metrics) {
 			break
 		}
-		log.Printf("[%s] attempt %d/%d: validated %d/%d metrics", testName, attempt+1, cfg.MaxRetries, len(validated), len(metrics))
+		log.Printf("[%s] attempt %d/%d: validated %d/%d metrics", testName, attempt+1, defaultMaxRetries, len(validated), len(metrics))
 	}
 
 	results := make([]status.TestResult, 0, len(metrics)+1)
@@ -99,7 +95,7 @@ func ValidateOtlpMetricsWithConfig(testName string, region string, metrics []str
 		if validated[m] {
 			results = append(results, status.TestResult{Name: m, Status: status.SUCCESSFUL})
 		} else {
-			results = append(results, status.TestResult{Name: m, Status: status.FAILED, Reason: fmt.Errorf("metric %s not found after %d retries", m, cfg.MaxRetries)})
+			results = append(results, status.TestResult{Name: m, Status: status.FAILED, Reason: fmt.Errorf("metric %s not found after %d retries", m, defaultMaxRetries)})
 		}
 	}
 	successCount := len(validated)

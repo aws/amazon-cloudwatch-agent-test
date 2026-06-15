@@ -119,8 +119,11 @@ func (t *DbiTestRunner) GetMeasuredMetrics() []string {
 func (t *DbiTestRunner) Validate() status.TestGroupResult {
 	var results []status.TestResult
 
-	// Validate metrics via PromQL
-	metricsResult := otlpvalidation.ValidateOtlpMetrics(t.GetTestName()+" Metrics", "us-west-2", t.GetMeasuredMetrics())
+	// Validate metrics via PromQL with resource attribute labels
+	metricsResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName()+" Metrics", "us-west-2", t.GetMeasuredMetrics(), map[string]string{
+		"@resource.db.system.name":  "postgresql",
+		"@resource.db.instance.name": "dbi-integ-test",
+	})
 	results = append(results, metricsResult.TestResults...)
 
 	// Validate server logs exist
@@ -254,3 +257,4 @@ func validateLogGroupHasEvents(logGroup string, testName string) status.TestResu
 		Reason: fmt.Errorf("no log events found in %s after %d retries", logGroup, maxRetries),
 	}
 }
+
