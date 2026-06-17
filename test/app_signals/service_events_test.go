@@ -40,6 +40,7 @@ const (
 	onPremCredsDir           = "/tmp/.aws"
 	onPremCredsFile          = onPremCredsDir + "/credentials"
 	caBundlePath             = "/tmp/cwagent-ca-bundle.pem"
+	untrustedCABundlePath    = "/tmp/cwagent-untrusted-ca-bundle.pem"
 	systemCABundlePath       = "/etc/pki/tls/certs/ca-bundle.crt"
 	agentCtl                 = "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl"
 	credsTemplatePath        = "agent_configs/credentials"
@@ -186,45 +187,80 @@ func TestAppSignalsOnPremCredentialsStartup(t *testing.T) {
 	assertServiceEventsE2E(t, "onprem-creds-svc")
 }
 
-// TestAppSignalsCustomCABundleStartup verifies the agent starts up when
-// AWS_CA_BUNDLE is set, exercising the awscloudwatchlogsprovisioner extension's
-// need to inject custom root CAs into its SDK HTTP client.
-func TestAppSignalsCustomCABundleStartup(t *testing.T) {
+// startAgentWithCABundle points common-config.toml at the given CA bundle (so the
+// agent runs with AWS_CA_BUNDLE set), starts the agent, and waits for it to settle.
+func startAgentWithCABundle(t *testing.T, bundlePath string) {
+	t.Helper()
 	common.RecreateAgentLogfile(common.AgentLogFile)
 
-	// Use a copy of the system CA bundle as a custom AWS_CA_BUNDLE. This is a
-	// valid bundle (so TLS still works), but its presence forces the SDK to
-	// inject custom root CAs via WithTransportOptions — which a plain
-	// *http.Client does not support.
-	require.NoError(t, common.RunCommands([]string{
-		fmt.Sprintf("sudo cp %s %s", systemCABundlePath, caBundlePath),
-	}), "Failed to copy CA bundle")
-
-	// common-config.toml sets [ssl] ca_bundle_path → ctl emits AWS_CA_BUNDLE into
-	// env-config.json, which the agent service picks up.
+	// [ssl] ca_bundle_path → ctl emits AWS_CA_BUNDLE into env-config.json, which
+	// the agent service picks up.
 	require.NoError(t, common.WriteFile(common.AgentCommonConfigFile,
-		"[ssl]\n  ca_bundle_path = \""+caBundlePath+"\"\n"),
+		"[ssl]\n  ca_bundle_path = \""+bundlePath+"\"\n"),
 		"Failed to write common-config.toml")
-	defer credutil.ResetCommonConfig()
-
 	common.CopyFile(logsConfigPath, common.ConfigOutputPath)
-
-	defer common.StopAgent()
-
 	common.StartAgent(common.ConfigOutputPath, false, false)
 	time.Sleep(10 * time.Second)
+}
 
-	// The provisioner extension must not fail to start due to custom root CAs.
-	// (Scoped to fatal startup errors — a non-fatal RootCAs warning from other
-	// components, e.g. ec2tagger, does not crash the agent.)
-	agentLog := common.ReadAgentLogfile(common.AgentLogFile)
-	assert.NotContains(t, agentLog, "failed to create CW Logs client",
-		"provisioner extension should build an SDK client that supports custom root CAs")
-	assert.NotContains(t, agentLog, "Error running agent",
-		"agent should not fail to start with a custom AWS_CA_BUNDLE set")
+// TestAppSignalsCustomCABundleStartup verifies the awscloudwatchlogsprovisioner
+// extension honors a custom AWS_CA_BUNDLE. The extension must build its SDK
+// client with a BuildableClient so custom root CAs can be injected; a plain
+// *http.Client cannot, which previously crashed the agent on startup.
+func TestAppSignalsCustomCABundleStartup(t *testing.T) {
+	defer common.StopAgent()
+	defer credutil.ResetCommonConfig()
 
-	assertAgentStable(t,
-		"agent should start with a custom AWS_CA_BUNDLE set")
+	// A valid CA bundle (copy of the system store) lets the agent start, accept
+	// the custom root CAs, and export ServiceEvents data end-to-end.
+	t.Run("valid_ca_bundle_exports_data", func(t *testing.T) {
+		require.NoError(t, common.RunCommands([]string{
+			fmt.Sprintf("sudo cp %s %s", systemCABundlePath, caBundlePath),
+		}), "Failed to copy CA bundle")
 
-	assertServiceEventsE2E(t, "ca-bundle-svc")
+		startAgentWithCABundle(t, caBundlePath)
+
+		agentLog := common.ReadAgentLogfile(common.AgentLogFile)
+		assert.NotContains(t, agentLog, "failed to create CW Logs client",
+			"provisioner extension should build an SDK client that supports custom root CAs")
+		assert.NotContains(t, agentLog, "Error running agent",
+			"agent should not fail to start with a custom AWS_CA_BUNDLE set")
+
+		assertAgentStable(t, "agent should start with a valid custom AWS_CA_BUNDLE")
+		assertServiceEventsE2E(t, "ca-bundle-svc")
+	})
+
+	// A standalone self-signed bundle (which does NOT trust the real AWS CAs)
+	// proves the custom bundle is actually consulted: the agent still starts (the
+	// provisioner builds its client without crashing), but its outbound TLS to AWS
+	// fails with x509 — which only happens if the agent loaded OUR bundle instead
+	// of the system trust store. This is the strong signal that AWS_CA_BUNDLE is
+	// honored, not silently ignored.
+	t.Run("custom_ca_bundle_is_honored", func(t *testing.T) {
+		common.StopAgent()
+		generateSelfSignedBundle(t, untrustedCABundlePath)
+
+		startAgentWithCABundle(t, untrustedCABundlePath)
+
+		// Provisioner builds its client without crashing the agent...
+		assertAgentStable(t, "agent should start even with an untrusted custom AWS_CA_BUNDLE")
+
+		// ...and the custom (untrusted) bundle is actually used for outbound TLS.
+		sendOTLPLogs(t, "ca-bundle-untrusted-svc", 1)
+		time.Sleep(sleepForFlush)
+		common.StopAgent()
+		agentLog := common.ReadAgentLogfile(common.AgentLogFile)
+		assert.Contains(t, agentLog, "x509: certificate signed by unknown authority",
+			"agent should use the custom (untrusted) CA bundle for outbound TLS, proving AWS_CA_BUNDLE is honored")
+	})
+}
+
+// generateSelfSignedBundle writes a standalone self-signed certificate to path.
+// It is a valid PEM bundle but does not contain any real AWS root CAs.
+func generateSelfSignedBundle(t *testing.T, path string) {
+	t.Helper()
+	cmd := fmt.Sprintf("sudo openssl req -x509 -newkey rsa:2048 -nodes -keyout /dev/null "+
+		"-subj '/CN=cwagent-test-untrusted' -days 1 -out %s", path)
+	_, err := common.RunCommand(cmd)
+	require.NoError(t, err, "Failed to generate self-signed CA bundle")
 }
