@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	credutil "github.com/aws/amazon-cloudwatch-agent-test/test/credential_chain/util"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/otlp_export/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -34,7 +35,6 @@ import (
 )
 
 const (
-	imdsEndpoint       = "169.254.169.254"
 	onPremCredsDir     = "/tmp/.aws"
 	onPremCredsFile    = onPremCredsDir + "/credentials"
 	caBundlePath       = "/tmp/cwagent-ca-bundle.pem"
@@ -116,18 +116,18 @@ func assertServiceEventsE2E(t *testing.T, serviceName string) {
 // script (common.StartAgent defaults to ec2 mode).
 const onPremiseStartCommand = "sudo " + agentCtl + " -a fetch-config -m onPremise -s -c "
 
-// blockIMDS adds an iptables rule rejecting traffic to the IMDS endpoint so the
-// AWS SDK default credential chain cannot resolve credentials from IMDS.
-func blockIMDS(t *testing.T) {
+// disableIMDS sets AWS_EC2_METADATA_DISABLED=true in the agent's systemd
+// environment so the agent cannot resolve credentials from IMDS at runtime,
+// forcing it to use the provided credentials file. Returns a cleanup func.
+func disableIMDS(t *testing.T) func() {
 	t.Helper()
-	_, err := common.RunCommand(fmt.Sprintf("sudo iptables -A OUTPUT -d %s -j REJECT", imdsEndpoint))
-	require.NoError(t, err, "Failed to block IMDS")
-}
-
-// unblockIMDS removes the iptables rule added by blockIMDS.
-func unblockIMDS(t *testing.T) {
-	t.Helper()
-	_, _ = common.RunCommand(fmt.Sprintf("sudo iptables -D OUTPUT -d %s -j REJECT", imdsEndpoint))
+	require.NoError(t, credutil.SetupSystemdOverride("[Service]\nEnvironment=\"AWS_EC2_METADATA_DISABLED=true\"\n"),
+		"Failed to set systemd override")
+	require.NoError(t, credutil.ReloadSystemd(), "Failed to reload systemd")
+	return func() {
+		_ = credutil.CleanupSystemdOverride()
+		_ = credutil.ReloadSystemd()
+	}
 }
 
 // TestAppSignalsOnPremCredentialsStartup verifies the agent starts up in onPrem
@@ -137,7 +137,7 @@ func TestAppSignalsOnPremCredentialsStartup(t *testing.T) {
 	common.RecreateAgentLogfile(common.AgentLogFile)
 
 	// Write a valid credentials file sourced from the instance role (via IMDSv2)
-	// BEFORE blocking IMDS, so the agent has credentials from the file alone.
+	// so the agent has credentials from the file alone once IMDS is disabled.
 	writeCredsScript := `
 set -e
 mkdir -p ` + onPremCredsDir + `
@@ -160,10 +160,11 @@ printf '[default]\nregion = us-west-2\n' | sudo tee ` + onPremCredsDir + `/confi
 
 	common.CopyFile(logsConfigPath, common.ConfigOutputPath)
 
-	blockIMDS(t)
-	defer unblockIMDS(t)
+	// Disable IMDS for the agent so it must use the credentials file. This only
+	// affects the agent's systemd environment, not the test process, so the e2e
+	// validation's own AWS SDK calls (GetLogEvents, PromQL) still work.
+	defer disableIMDS(t)()
 	defer common.StopAgent()
-	defer common.RunCommand("sudo " + agentCtl + " -a remove-config -c all")
 
 	// Start the agent in onPremise mode. sigv4 credential resolution should use
 	// the provided credentials file rather than the SDK default chain (IMDS).
@@ -177,11 +178,8 @@ printf '[default]\nregion = us-west-2\n' | sudo tee ` + onPremCredsDir + `/confi
 		"sigv4auth should use the provided credentials file instead of requiring IMDS")
 
 	assertAgentStable(t,
-		"agent should start in onPrem mode with a credentials file even when IMDS is unreachable")
+		"agent should start in onPrem mode with a credentials file even when IMDS is disabled")
 
-	// The agent started without IMDS (the behavior under test). Restore IMDS so the
-	// e2e validation's own AWS SDK calls (GetLogEvents, PromQL) can authenticate.
-	unblockIMDS(t)
 	assertServiceEventsE2E(t, "onprem-creds-svc")
 }
 
