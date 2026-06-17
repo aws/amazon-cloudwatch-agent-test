@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package host_insights
+package host_metrics
 
 import (
 	"testing"
@@ -17,27 +17,27 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 )
 
-const hostInsightsRuntime = 3 * time.Minute
+const hostMetricsRuntime = 3 * time.Minute
 
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-type HostInsightsTestRunner struct {
+type HostMetricsTestRunner struct {
 	test_runner.BaseTestRunner
 	env *environment.MetaData
 }
 
-var _ test_runner.ITestRunner = (*HostInsightsTestRunner)(nil)
+var _ test_runner.ITestRunner = (*HostMetricsTestRunner)(nil)
 
-func (t *HostInsightsTestRunner) Validate() status.TestGroupResult {
+func (t *HostMetricsTestRunner) Validate() status.TestGroupResult {
 	return otlpvalidation.ValidateOtlpMetrics(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics())
 }
 
-func (t *HostInsightsTestRunner) GetTestName() string                { return "HostInsights" }
-func (t *HostInsightsTestRunner) GetAgentRunDuration() time.Duration { return hostInsightsRuntime }
-func (t *HostInsightsTestRunner) GetAgentConfigFileName() string     { return "host_insights_config.json" }
-func (t *HostInsightsTestRunner) GetMeasuredMetrics() []string {
+func (t *HostMetricsTestRunner) GetTestName() string                { return "HostMetrics" }
+func (t *HostMetricsTestRunner) GetAgentRunDuration() time.Duration { return hostMetricsRuntime }
+func (t *HostMetricsTestRunner) GetAgentConfigFileName() string     { return "host_metrics_config.json" }
+func (t *HostMetricsTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"system.cpu.utilization",
 		"system.memory.utilization",
@@ -47,10 +47,10 @@ func (t *HostInsightsTestRunner) GetMeasuredMetrics() []string {
 	}
 }
 
-func TestHostInsights(t *testing.T) {
+func TestHostMetrics(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 
-	testRunner := &HostInsightsTestRunner{
+	testRunner := &HostMetricsTestRunner{
 		BaseTestRunner: test_runner.BaseTestRunner{},
 		env:            env,
 	}

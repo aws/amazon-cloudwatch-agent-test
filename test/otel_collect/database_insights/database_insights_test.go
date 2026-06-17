@@ -84,8 +84,6 @@ func (t *DbiTestRunner) Validate() status.TestGroupResult {
 }
 
 func TestDbi(t *testing.T) {
-	environment.GetEnvironmentMetaData()
-
 	testRunner := &DbiTestRunner{
 		BaseTestRunner: test_runner.BaseTestRunner{},
 	}
