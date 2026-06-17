@@ -1,7 +1,7 @@
 {
   "agent": {
     "debug": true,
-    "region": "us-east-1"
+    "region": "us-west-2"
   },
   "traces": {
     "traces_collected": {

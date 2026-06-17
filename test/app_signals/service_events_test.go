@@ -104,7 +104,7 @@ func assertServiceEventsE2E(t *testing.T, serviceName string) {
 
 	// Metrics pipeline: ServiceEvents metric is queryable via the OTLP endpoint.
 	result := otlpvalidation.ValidateOtlpMetrics(
-		"service_events_startup", "us-east-1", []string{"service_events_metric"},
+		"service_events_startup", "us-west-2", []string{"service_events_metric"},
 	)
 	for _, r := range result.TestResults {
 		assert.Equal(t, status.SUCCESSFUL, r.Status,
@@ -154,7 +154,7 @@ SAK=$(echo "$CREDS" | python3 -c 'import sys,json; print(json.load(sys.stdin)["S
 TOK=$(echo "$CREDS" | python3 -c 'import sys,json; print(json.load(sys.stdin)["Token"])')
 printf '[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s\n' "$AKID" "$SAK" "$TOK" | sudo tee ` + onPremCredsFile + `>/dev/null
 # Region for onPrem mode is read from a config file next to the credentials file.
-printf '[default]\nregion = us-east-1\n' | sudo tee ` + onPremCredsDir + `/config>/dev/null`
+printf '[default]\nregion = us-west-2\n' | sudo tee ` + onPremCredsDir + `/config>/dev/null`
 	require.NoError(t, common.RunCommands([]string{writeCredsScript}), "Failed to write credentials file")
 
 	// common-config.toml points the agent at the credentials file.

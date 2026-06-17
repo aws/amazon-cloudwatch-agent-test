@@ -87,14 +87,14 @@ func TestAppSignalsMetricsRouting(t *testing.T) {
 	// OTLP validation: otlphttpexporter debug log shows request to monitoring endpoint
 	t.Run("service_events_sent_to_otlp_monitoring_endpoint", func(t *testing.T) {
 		assert.Contains(t, agentLogStr,
-			`"Preparing to make HTTP request","url":"https://monitoring.us-east-1.amazonaws.com/v1/metrics"`,
+			`"Preparing to make HTTP request","url":"https://monitoring.us-west-2.amazonaws.com/v1/metrics"`,
 			"otlphttpexporter should log HTTP request to monitoring endpoint for ServiceEvents metrics")
 	})
 
 	// OTLP validation: query the PromQL API to confirm the metric was actually ingested
 	t.Run("service_events_metric_queryable_via_promql", func(t *testing.T) {
 		result := otlpvalidation.ValidateOtlpMetrics(
-			"service_events_routing", "us-east-1", []string{"service_events_metric"},
+			"service_events_routing", "us-west-2", []string{"service_events_metric"},
 		)
 		for _, r := range result.TestResults {
 			assert.Equal(t, status.SUCCESSFUL, r.Status,
