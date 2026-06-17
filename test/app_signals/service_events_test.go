@@ -112,14 +112,9 @@ func assertServiceEventsE2E(t *testing.T, serviceName string) {
 	}
 }
 
-// fetchConfig translates the given config and starts the agent, returning the
-// combined command output.
-func fetchConfig(t *testing.T, mode string) string {
-	t.Helper()
-	out, _ := common.RunCommand(fmt.Sprintf(
-		"sudo %s -a fetch-config -m %s -s -c file:%s", agentCtl, mode, common.ConfigOutputPath))
-	return out
-}
+// onPremiseStartCommand starts the agent in onPremise mode via the agent control
+// script (common.StartAgent defaults to ec2 mode).
+const onPremiseStartCommand = "sudo " + agentCtl + " -a fetch-config -m onPremise -s -c "
 
 // blockIMDS adds an iptables rule rejecting traffic to the IMDS endpoint so the
 // AWS SDK default credential chain cannot resolve credentials from IMDS.
@@ -172,13 +167,13 @@ printf '[default]\nregion = us-west-2\n' | sudo tee ` + onPremCredsDir + `/confi
 
 	// Start the agent in onPremise mode. sigv4 credential resolution should use
 	// the provided credentials file rather than the SDK default chain (IMDS).
-	// Validation errors surface in the fetch-config output.
-	out := fetchConfig(t, "onPremise")
+	common.StartAgentWithCommand(common.ConfigOutputPath, false, false, onPremiseStartCommand)
 	time.Sleep(10 * time.Second)
 
-	assert.NotContains(t, out, "could not retrieve credential provider",
+	agentLog := common.ReadAgentLogfile(common.AgentLogFile)
+	assert.NotContains(t, agentLog, "could not retrieve credential provider",
 		"sigv4auth should not eagerly resolve credentials via IMDS when a credentials file is provided")
-	assert.NotContains(t, out, "no EC2 IMDS role found",
+	assert.NotContains(t, agentLog, "no EC2 IMDS role found",
 		"sigv4auth should use the provided credentials file instead of requiring IMDS")
 
 	assertAgentStable(t,
@@ -216,7 +211,7 @@ func TestAppSignalsCustomCABundleStartup(t *testing.T) {
 	defer common.StopAgent()
 	defer common.RunCommand("sudo " + agentCtl + " -a remove-config -c all")
 
-	fetchConfig(t, "ec2")
+	common.StartAgent(common.ConfigOutputPath, false, false)
 	time.Sleep(10 * time.Second)
 
 	// The provisioner extension must not fail to start due to custom root CAs.
