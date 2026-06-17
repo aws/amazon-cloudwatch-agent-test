@@ -99,8 +99,24 @@ func WaitForCommandCompletion(commandId, instanceId string) (*ssm.ListCommandInv
 
 		if len(result.CommandInvocations) > 0 {
 			invocation := result.CommandInvocations[0]
-			if invocation.Status == types.CommandInvocationStatusSuccess {
+			switch invocation.Status {
+			case types.CommandInvocationStatusSuccess:
 				return result, nil
+			case types.CommandInvocationStatusFailed,
+				types.CommandInvocationStatusCancelled,
+				types.CommandInvocationStatusTimedOut:
+				// Fail fast on a terminal non-success status instead of looping
+				// until the time budget expires and returning the generic
+				// "commands did not complete within 1 minute". A fast,
+				// deterministic command failure was previously masked as a 60s
+				// timeout; surfacing the real status and details here makes every
+				// future failure self-diagnosing.
+				details := ""
+				if invocation.StatusDetails != nil {
+					details = *invocation.StatusDetails
+				}
+				return nil, fmt.Errorf("command %s on instance %s reached terminal status %s: %s",
+					commandId, instanceId, invocation.Status, details)
 			}
 		}
 	}
@@ -127,6 +143,42 @@ func GetStringParameter(name string) string {
 	}
 
 	return *parameter.Parameter.Value
+}
+
+// GetParameter fetches a parameter value and returns the underlying error,
+// unlike GetStringParameter which swallows the error and returns a sentinel
+// string. This is needed for read-after-write checks where the caller must
+// distinguish a genuine ParameterNotFound from a real value.
+func GetParameter(name string) (string, error) {
+	parameter, err := SsmClient.GetParameter(ctx, &ssm.GetParameterInput{
+		Name: aws.String(name),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return *parameter.Parameter.Value, nil
+}
+
+// WaitForParameterAvailable polls Parameter Store until the named parameter is
+// readable or the timeout elapses. SSM Parameter Store reads are eventually
+// consistent, so a PutParameter is not guaranteed to be immediately visible to
+// a subsequent read (e.g. an on-instance agent fetching the config). This
+// bounded poll closes that read-after-write window before we issue a command
+// that depends on the parameter, and fails closed (returns an error) if the
+// parameter is still not readable when the budget is exhausted.
+func WaitForParameterAvailable(name string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		if _, err := GetParameter(name); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return fmt.Errorf("parameter %q not readable within %v: %v", name, timeout, lastErr)
 }
 
 func putParameter(name, value string, paramType types.ParameterType) error {

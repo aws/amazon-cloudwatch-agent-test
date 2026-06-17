@@ -108,6 +108,13 @@ func Validate() error {
 	if err := awsservice.PutStringParameter(agentConfigFile1, agentConfig1); err != nil {
 		return err
 	}
+	// Parameter Store reads are eventually consistent: block until the
+	// just-written parameter is readable before issuing the configure command,
+	// otherwise the on-instance agent can fetch it before the write has
+	// propagated and fail with ParameterNotFound (a read-after-write race).
+	if err := awsservice.WaitForParameterAvailable(agentConfigFile1, 10*time.Second); err != nil {
+		return err
+	}
 
 	configureTest := testCase{
 		parameters: map[string][]string{
@@ -126,6 +133,11 @@ func Validate() error {
 	// Test configure (append) action
 	log.Printf("Putting SSM parameter: %s", agentConfigFile2)
 	if err := awsservice.PutStringParameter(agentConfigFile2, agentConfig2); err != nil {
+		return err
+	}
+	// Same eventual-consistency race as agentConfigFile1 above: wait for the
+	// parameter to be readable before the configure-append command depends on it.
+	if err := awsservice.WaitForParameterAvailable(agentConfigFile2, 10*time.Second); err != nil {
 		return err
 	}
 
