@@ -19,11 +19,13 @@
 package app_signals
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -35,12 +37,13 @@ import (
 )
 
 const (
-	onPremCredsDir     = "/tmp/.aws"
-	onPremCredsFile    = onPremCredsDir + "/credentials"
-	caBundlePath       = "/tmp/cwagent-ca-bundle.pem"
-	systemCABundlePath = "/etc/pki/tls/certs/ca-bundle.crt"
-	commonConfigOutput = "/opt/aws/amazon-cloudwatch-agent/etc/common-config.toml"
-	agentCtl           = "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl"
+	onPremCredsDir           = "/tmp/.aws"
+	onPremCredsFile          = onPremCredsDir + "/credentials"
+	caBundlePath             = "/tmp/cwagent-ca-bundle.pem"
+	systemCABundlePath       = "/etc/pki/tls/certs/ca-bundle.crt"
+	agentCtl                 = "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl"
+	credsTemplatePath        = "agent_configs/credentials"
+	commonConfigTemplatePath = "agent_configs/common-config.toml"
 )
 
 // agentStatus is the JSON shape returned by `amazon-cloudwatch-agent-ctl -a status`.
@@ -136,27 +139,27 @@ func disableIMDS(t *testing.T) func() {
 func TestAppSignalsOnPremCredentialsStartup(t *testing.T) {
 	common.RecreateAgentLogfile(common.AgentLogFile)
 
-	// Write a valid credentials file sourced from the instance role (via IMDSv2)
-	// so the agent has credentials from the file alone once IMDS is disabled.
-	writeCredsScript := `
-set -e
-mkdir -p ` + onPremCredsDir + `
-TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 600")
-ROLE=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/)
-CREDS=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/$ROLE)
-AKID=$(echo "$CREDS" | python3 -c 'import sys,json; print(json.load(sys.stdin)["AccessKeyId"])')
-SAK=$(echo "$CREDS" | python3 -c 'import sys,json; print(json.load(sys.stdin)["SecretAccessKey"])')
-TOK=$(echo "$CREDS" | python3 -c 'import sys,json; print(json.load(sys.stdin)["Token"])')
-printf '[default]\naws_access_key_id=%s\naws_secret_access_key=%s\naws_session_token=%s\n' "$AKID" "$SAK" "$TOK" | sudo tee ` + onPremCredsFile + `>/dev/null
-# Region for onPrem mode is read from a config file next to the credentials file.
-printf '[default]\nregion = us-west-2\n' | sudo tee ` + onPremCredsDir + `/config>/dev/null`
-	require.NoError(t, common.RunCommands([]string{writeCredsScript}), "Failed to write credentials file")
+	// Resolve the instance-role credentials (via the SDK default chain → IMDS) and
+	// write them to a shared credentials file so the agent has credentials from
+	// the file alone once IMDS is disabled.
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion("us-west-2"))
+	require.NoError(t, err, "Failed to load AWS config")
+	creds, err := cfg.Credentials.Retrieve(context.Background())
+	require.NoError(t, err, "Failed to resolve instance credentials")
+	require.NoError(t, common.MkdirAll(onPremCredsDir), "Failed to create credentials dir")
+	require.NoError(t, credutil.SetupSharedCredentialsFile(
+		credsTemplatePath, credutil.DefaultProfile,
+		creds.AccessKeyID, creds.SecretAccessKey, creds.SessionToken, onPremCredsFile,
+	), "Failed to write credentials file")
+	// Region for onPrem mode is read from a config file next to the credentials file.
+	require.NoError(t, common.WriteFile(onPremCredsDir+"/config", "[default]\nregion = us-west-2\n"),
+		"Failed to write region config file")
 
 	// common-config.toml points the agent at the credentials file.
-	require.NoError(t, common.RunCommands([]string{
-		"printf '[credentials]\\n  shared_credential_profile = \"default\"\\n  shared_credential_file = \"" +
-			onPremCredsFile + "\"\\n' | sudo tee " + commonConfigOutput + ">/dev/null",
-	}), "Failed to write common-config.toml")
+	require.NoError(t, credutil.SetupCommonConfig(
+		commonConfigTemplatePath, credutil.DefaultProfile, onPremCredsFile),
+		"Failed to write common-config.toml")
+	defer credutil.ResetCommonConfig()
 
 	common.CopyFile(logsConfigPath, common.ConfigOutputPath)
 
@@ -199,15 +202,14 @@ func TestAppSignalsCustomCABundleStartup(t *testing.T) {
 
 	// common-config.toml sets [ssl] ca_bundle_path → ctl emits AWS_CA_BUNDLE into
 	// env-config.json, which the agent service picks up.
-	require.NoError(t, common.RunCommands([]string{
-		"printf '[ssl]\\n  ca_bundle_path = \"" + caBundlePath + "\"\\n' | " +
-			"sudo tee " + commonConfigOutput + ">/dev/null",
-	}), "Failed to write common-config.toml")
+	require.NoError(t, common.WriteFile(common.AgentCommonConfigFile,
+		"[ssl]\n  ca_bundle_path = \""+caBundlePath+"\"\n"),
+		"Failed to write common-config.toml")
+	defer credutil.ResetCommonConfig()
 
 	common.CopyFile(logsConfigPath, common.ConfigOutputPath)
 
 	defer common.StopAgent()
-	defer common.RunCommand("sudo " + agentCtl + " -a remove-config -c all")
 
 	common.StartAgent(common.ConfigOutputPath, false, false)
 	time.Sleep(10 * time.Second)
