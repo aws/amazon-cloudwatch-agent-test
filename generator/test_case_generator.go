@@ -211,6 +211,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/otlp_export/hostmetrics"},
 		{testDir: "./test/otlp_export/statsd"},
 		{testDir: "./test/otlp_export/collectd"},
+		{
+			testDir: "./test/app_signals",
+			targets: map[string]map[string]struct{}{"os": {"al2023": {}}, "arc": {"amd64": {}}},
+		},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
