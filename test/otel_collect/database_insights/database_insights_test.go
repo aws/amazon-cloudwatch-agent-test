@@ -33,6 +33,7 @@ func init() {
 
 type DbiTestRunner struct {
 	test_runner.BaseTestRunner
+	env *environment.MetaData
 }
 
 var _ test_runner.ITestRunner = (*DbiTestRunner)(nil)
@@ -65,24 +66,23 @@ func (t *DbiTestRunner) SetupAfterAgentRun() error {
 func (t *DbiTestRunner) Validate() status.TestGroupResult {
 	var results []status.TestResult
 
-	// Validate metrics via PromQL with resource attribute labels
-	metricsResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName()+" Metrics", "us-west-2", t.GetMeasuredMetrics(), map[string]string{
-		"@resource.db.system.name":  "postgresql",
+	metricsResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName()+" Metrics", t.env.Region, t.GetMeasuredMetrics(), map[string]string{
+		"@resource.db.system.name":   "postgresql",
 		"@resource.db.instance.name": "dbi-integ-test",
+		"@resource.host.id":          t.env.InstanceId,
 	})
 	results = append(results, metricsResult.TestResults...)
 
-	// Validate server logs exist
-	serverLogsResult := validateLogGroupHasEvents(serverLogsGroup, "Server Logs")
+	logStream := fmt.Sprintf("%s/dbi-integ-test", t.env.InstanceId)
+	serverLogsResult := validateLogStream(serverLogsGroup, logStream, "Server Logs")
 	results = append(results, serverLogsResult)
 
-	// Validate raw events (query samples/top queries) exist
-	rawEventsResult := validateLogGroupHasEvents(rawEventsGroup, "Raw Events")
+	rawEventsResult := validateLogStream(rawEventsGroup, logStream, "Raw Events")
 	results = append(results, rawEventsResult)
 
-	// Validate process metrics from the host metrics process scraper (postgres only)
-	processResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName()+" Process Metrics", "us-west-2", processMetrics(), map[string]string{
+	processResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName()+" Process Metrics", t.env.Region, processMetrics(), map[string]string{
 		"@resource.process.executable.name": "postgres",
+		"@resource.host.id":                 t.env.InstanceId,
 	})
 	results = append(results, processResult.TestResults...)
 
@@ -90,8 +90,11 @@ func (t *DbiTestRunner) Validate() status.TestGroupResult {
 }
 
 func TestDbi(t *testing.T) {
+	env := environment.GetEnvironmentMetaData()
+
 	testRunner := &DbiTestRunner{
 		BaseTestRunner: test_runner.BaseTestRunner{},
+		env:            env,
 	}
 	runner := &test_runner.TestRunner{TestRunner: testRunner}
 	result := runner.Run()
@@ -182,9 +185,7 @@ func runWorkload(duration time.Duration) {
 	log.Printf("pgbench output:\n%s", string(out))
 }
 
-// validateLogGroupHasEvents checks that a CloudWatch Logs log group exists and
-// contains at least one log stream with events.
-func validateLogGroupHasEvents(logGroup string, testName string) status.TestResult {
+func validateLogStream(logGroup string, streamName string, testName string) status.TestResult {
 	const maxRetries = 3
 	const retryInterval = 30 * time.Second
 
@@ -193,13 +194,6 @@ func validateLogGroupHasEvents(logGroup string, testName string) status.TestResu
 			time.Sleep(retryInterval)
 		}
 
-		streams := awsservice.GetLogStreams(logGroup)
-		if len(streams) == 0 {
-			log.Printf("[%s] Attempt %d/%d: no log streams found in %s", testName, attempt+1, maxRetries, logGroup)
-			continue
-		}
-
-		streamName := *streams[0].LogStreamName
 		events, err := awsservice.GetLogsSince(logGroup, streamName, nil, nil)
 		if err != nil {
 			log.Printf("[%s] Attempt %d/%d: error getting events from %s/%s: %v", testName, attempt+1, maxRetries, logGroup, streamName, err)
@@ -211,12 +205,12 @@ func validateLogGroupHasEvents(logGroup string, testName string) status.TestResu
 			return status.TestResult{Name: testName, Status: status.SUCCESSFUL}
 		}
 
-		log.Printf("[%s] Attempt %d/%d: stream exists but no events yet in %s/%s", testName, attempt+1, maxRetries, logGroup, streamName)
+		log.Printf("[%s] Attempt %d/%d: no events yet in %s/%s", testName, attempt+1, maxRetries, logGroup, streamName)
 	}
 
 	return status.TestResult{
 		Name:   testName,
 		Status: status.FAILED,
-		Reason: fmt.Errorf("no log events found in %s after %d retries", logGroup, maxRetries),
+		Reason: fmt.Errorf("no log events found in %s/%s after %d retries", logGroup, streamName, maxRetries),
 	}
 }

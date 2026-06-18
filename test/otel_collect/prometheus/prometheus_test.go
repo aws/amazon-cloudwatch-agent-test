@@ -41,7 +41,9 @@ type PrometheusOtelTestRunner struct {
 var _ test_runner.ITestRunner = (*PrometheusOtelTestRunner)(nil)
 
 func (t *PrometheusOtelTestRunner) Validate() status.TestGroupResult {
-	return otlpvalidation.ValidateOtlpMetrics(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics())
+	return otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics(), map[string]string{
+		"@resource.host.id": t.env.InstanceId,
+	})
 }
 
 func (t *PrometheusOtelTestRunner) GetTestName() string                { return "OtelCollectPrometheus" }

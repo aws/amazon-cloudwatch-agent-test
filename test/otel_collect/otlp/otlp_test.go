@@ -37,7 +37,9 @@ type OtlpCollectTestRunner struct {
 var _ test_runner.ITestRunner = (*OtlpCollectTestRunner)(nil)
 
 func (t *OtlpCollectTestRunner) Validate() status.TestGroupResult {
-	return otlpvalidation.ValidateOtlpMetrics(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics())
+	return otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics(), map[string]string{
+		"@resource.host.id": t.env.InstanceId,
+	})
 }
 
 func (t *OtlpCollectTestRunner) GetTestName() string                { return "OtelCollectOTLP" }

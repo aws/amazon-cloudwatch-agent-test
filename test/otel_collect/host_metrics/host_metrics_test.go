@@ -31,7 +31,9 @@ type HostMetricsTestRunner struct {
 var _ test_runner.ITestRunner = (*HostMetricsTestRunner)(nil)
 
 func (t *HostMetricsTestRunner) Validate() status.TestGroupResult {
-	return otlpvalidation.ValidateOtlpMetrics(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics())
+	return otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics(), map[string]string{
+		"@resource.host.id": t.env.InstanceId,
+	})
 }
 
 func (t *HostMetricsTestRunner) GetTestName() string                { return "HostMetrics" }
