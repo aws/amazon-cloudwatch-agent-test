@@ -5,7 +5,7 @@
 
 // Tests for the Application Signals OTLP metrics routing: the routing connector
 // splits metrics between the EMF destination and the OTLP monitoring endpoint.
-package serviceevents
+package app_signals_service_events
 
 import (
 	"os"

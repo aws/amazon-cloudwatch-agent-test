@@ -212,7 +212,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/otlp_export/statsd"},
 		{testDir: "./test/otlp_export/collectd"},
 		{
-			testDir: "./test/app_signals/serviceevents",
+			testDir: "./test/app_signals_service_events",
 			targets: map[string]map[string]struct{}{"os": {"al2023": {}}, "arc": {"amd64": {}}},
 		},
 	},

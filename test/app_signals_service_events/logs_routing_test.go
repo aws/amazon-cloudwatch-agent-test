@@ -13,7 +13,7 @@
 //   - TestAppSignalsLogsNoisyNeighbor: Service B's creation fails, Service A is not blocked
 //   - TestAppSignalsLogsDefaultPlaceholder: Missing attrs default to unknown_service/unknown
 //   - TestAppSignalsLogsRouting: Batch vs no-batch pipeline routing
-package serviceevents
+package app_signals_service_events
 
 import (
 	"fmt"
