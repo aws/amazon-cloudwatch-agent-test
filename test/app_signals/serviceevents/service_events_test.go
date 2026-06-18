@@ -16,7 +16,7 @@
 //   - TestAppSignalsCustomCABundleStartup: the agent starts when AWS_CA_BUNDLE
 //     is set, exercising the awscloudwatchlogsprovisioner extension's SDK client
 //     accepting custom root CAs (required in ISO/ADC/ITAR partitions).
-package app_signals
+package serviceevents
 
 import (
 	"context"

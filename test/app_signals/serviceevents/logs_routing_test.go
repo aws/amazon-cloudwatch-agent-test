@@ -13,7 +13,7 @@
 //   - TestAppSignalsLogsNoisyNeighbor: Service B's creation fails, Service A is not blocked
 //   - TestAppSignalsLogsDefaultPlaceholder: Missing attrs default to unknown_service/unknown
 //   - TestAppSignalsLogsRouting: Batch vs no-batch pipeline routing
-package app_signals
+package serviceevents
 
 import (
 	"fmt"
@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 )
@@ -41,6 +42,10 @@ const (
 	testInstanceID = "instance-001"
 	testStreamName = testHostName + "/" + testInstanceID
 )
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
 
 func startLogsAgent(t *testing.T) {
 	t.Helper()
