@@ -100,15 +100,22 @@ resource "null_resource" "integration_test" {
       "sudo curl https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg",
       "sudo installer -pkg AWSCLIV2.pkg -target /",
 
-      #Install Brew and set path for mac1 and mac2 instances
-      "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
-      "(echo; echo 'eval \"$(/usr/local/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile",
-      "eval \"$(/usr/local/bin/brew shellenv)\"",
-      "(echo; echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile",
-      "eval \"$(/opt/homebrew/bin/brew shellenv)\"",
+      #Install Brew and set path for mac1 and mac2 instances.
+      # HOMEBREW_NO_REQUIRE_TAP_TRUST=1 auto-accepts the tap-trust prompt that
+      # Homebrew >=4.x shows on old (Tier 3) macOS; NONINTERACTIVE alone does not
+      # suppress it, so the install would otherwise hang on "Do you want to
+      # proceed with the installation?" until the 60-minute apply timeout.
+      "export NONINTERACTIVE=1",
+      "export HOMEBREW_NO_REQUIRE_TAP_TRUST=1",
+      "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
+      # Intel Macs install brew under /usr/local, Apple Silicon under /opt/homebrew.
+      # Guard each eval so the path that does not exist on this arch is skipped
+      # instead of erroring with "No such file or directory".
+      "if [ -x /usr/local/bin/brew ]; then (echo; echo 'eval \"$(/usr/local/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile; eval \"$(/usr/local/bin/brew shellenv)\"; fi",
+      "if [ -x /opt/homebrew/bin/brew ]; then (echo; echo 'eval \"$(/opt/homebrew/bin/brew shellenv)\"') >> /Users/ec2-user/.zprofile; eval \"$(/opt/homebrew/bin/brew shellenv)\"; fi",
 
       #Download test repo
-      "NONINTERACTIVE=1 brew install git",
+      "brew install git",
       "echo clone test repo",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
 
