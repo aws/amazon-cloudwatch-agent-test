@@ -82,7 +82,7 @@ func (t *DbiTestRunner) Validate() status.TestGroupResult {
 
 	// Validate process metrics from the host metrics process scraper (postgres only)
 	processResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName()+" Process Metrics", "us-west-2", processMetrics(), map[string]string{
-		"process.executable.name": "postgres",
+		"@resource.process.executable.name": "postgres",
 	})
 	results = append(results, processResult.TestResults...)
 
