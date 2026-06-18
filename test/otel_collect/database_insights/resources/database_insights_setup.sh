@@ -10,7 +10,7 @@ if type -P yum >/dev/null 2>&1; then
         sudo amazon-linux-extras install postgresql14 -y
         sudo yum install -y postgresql-server postgresql-contrib
     else
-        # AL2023 or RHEL 8+
+        # Amazon Linux 2023, RHEL 8/9, Rocky Linux, Alma Linux
         PG_SERVER_PKG=$(sudo yum list available 'postgresql*-server' 2>/dev/null | awk '/postgresql[0-9]+-server/ {print $1}' | sort -V | tail -1)
         if [[ -z "$PG_SERVER_PKG" ]]; then
             PG_SERVER_PKG=$(sudo yum list available 'postgresql-server' 2>/dev/null | awk '/postgresql-server/ {print $1}')
@@ -26,7 +26,7 @@ if type -P yum >/dev/null 2>&1; then
     sudo postgresql-setup --initdb 2>/dev/null || sudo postgresql-setup initdb
     PG_DATA="/var/lib/pgsql/data"
 elif type -P apt-get >/dev/null 2>&1; then
-    # Ubuntu/Debian auto-initialize the cluster on install
+    # Ubuntu, Debian
     sudo apt-get update -y
     sudo apt-get install -y postgresql postgresql-contrib
     PG_DATA=$(find /etc/postgresql -maxdepth 2 -name "main" -type d | sort -V | tail -1)
