@@ -80,6 +80,10 @@ func (t *DbiTestRunner) Validate() status.TestGroupResult {
 	rawEventsResult := validateLogGroupHasEvents(rawEventsGroup, "Raw Events")
 	results = append(results, rawEventsResult)
 
+	// Validate process metrics (no DBI labels — these come from host metrics receiver)
+	processResult := otlpvalidation.ValidateOtlpMetrics(t.GetTestName()+" Process Metrics", "us-west-2", processMetrics())
+	results = append(results, processResult.TestResults...)
+
 	return status.TestGroupResult{Name: t.GetTestName(), TestResults: results}
 }
 
@@ -145,6 +149,13 @@ func topSQLMetrics() []string {
 		"postgresql.total_plan_time",
 		"postgresql.shared_blks_hit",
 		"postgresql.shared_blks_read",
+	}
+}
+
+func processMetrics() []string {
+	return []string{
+		"process.cpu.utilization",
+		"process.memory.utilization",
 	}
 }
 
