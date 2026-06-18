@@ -112,14 +112,22 @@ resource "null_resource" "install_binaries" {
   }
 
   provisioner "remote-exec" {
-    inline = [
-      local.ami_family["wait_cloud_init"],
-      "aws s3 cp --no-progress s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${local.install_package} .",
-      "aws s3 cp --no-progress s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_package} .",
-      "aws s3 cp --no-progress s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_validator} .",
-      local.ami_family["install_command"],
-      "go install github.com/prometheus-community/avalanche/cmd/avalanche@latest",
-    ]
+    inline = concat(
+      [
+        local.ami_family["wait_cloud_init"],
+        "aws s3 cp --no-progress s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/${local.install_package} .",
+        "aws s3 cp --no-progress s3://${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_package} .",
+        "aws s3 cp --no-progress s3://${var.s3_bucket}/integration-test/validator/${var.cwa_github_sha}/${var.family}/${var.arc}/${local.install_validator} .",
+        local.ami_family["install_command"],
+      ],
+      # avalanche is the Prometheus stress load generator. It is only used by the
+      # Linux Prometheus stress test and requires Go on PATH. The Windows stress
+      # AMIs have no Go on PATH and never run the Prometheus stress, so installing
+      # it there fails with "'go' is not recognized". Skip it on Windows.
+      var.family != "windows" ? [
+        "go install github.com/prometheus-community/avalanche/cmd/avalanche@latest",
+      ] : [],
+    )
   }
 }
 
