@@ -71,7 +71,7 @@ func ValidateOtlpMetricsWithLabels(testName string, region string, metrics []str
 			}
 			promql := fmt.Sprintf(`{__name__="%s"`, m)
 			for k, v := range labels {
-				promql += fmt.Sprintf(`, "%s"="%s"`, k, v)
+				promql += fmt.Sprintf(`, "%s"=~"%s"`, k, v)
 			}
 			promql += "}"
 			results, err := client.Query(context.Background(), promql)

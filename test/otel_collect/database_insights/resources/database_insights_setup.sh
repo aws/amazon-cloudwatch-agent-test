@@ -1,16 +1,24 @@
 #!/bin/bash
 set -euo pipefail
 
-# Detect package manager and install PostgreSQL with pg_stat_statements support.
+# Install PostgreSQL (14+) with pg_stat_statements support.
 # Supports RPM-family (yum/dnf), Debian-family (apt-get), and SLES (zypper).
 echo "=== [1/7] Installing PostgreSQL ==="
 if type -P yum >/dev/null 2>&1; then
     if type -P amazon-linux-extras >/dev/null 2>&1; then
-        # AL2: default repo only has 9.2; use extras to get 14
+        # Amazon Linux 2: default repo only has PG 9.2; use extras to get 14
         sudo amazon-linux-extras install postgresql14 -y
         sudo yum install -y postgresql-server postgresql-contrib
     else
         # Amazon Linux 2023, RHEL 8/9, Rocky Linux, Alma Linux
+        # EL8/9 use module streams; enable the latest to ensure PG 14+.
+        # No-op on AL2023 (no modules). || true prevents pipefail exit.
+        PG_STREAM=$(sudo dnf module list postgresql 2>/dev/null | awk '/postgresql/ {print $2}' | sort -V | tail -1) || true
+        if [[ -n "$PG_STREAM" ]]; then
+            sudo dnf module reset postgresql -y 2>/dev/null || true
+            sudo dnf module enable postgresql:"$PG_STREAM" -y 2>/dev/null || true
+            sudo dnf clean metadata 2>/dev/null || true
+        fi
         PG_SERVER_PKG=$(sudo yum list available 'postgresql*-server' 2>/dev/null | awk '/postgresql[0-9]+-server/ {print $1}' | sort -V | tail -1)
         if [[ -z "$PG_SERVER_PKG" ]]; then
             PG_SERVER_PKG=$(sudo yum list available 'postgresql-server' 2>/dev/null | awk '/postgresql-server/ {print $1}')
@@ -49,8 +57,6 @@ fi
 echo "=== [2/7] Starting PostgreSQL service ==="
 sudo systemctl enable postgresql && sudo systemctl start postgresql
 
-# Configure pg_stat_statements and logging. Use a consistent log directory
-# across all distros so the agent config works without per-distro paths.
 echo "=== [3/7] Configuring postgresql.conf for monitoring ==="
 sudo mkdir -p /var/log/postgresql
 sudo chown postgres:postgres /var/log/postgresql
@@ -68,18 +74,15 @@ log_filename = 'postgresql-%Y-%m-%d.log'
 log_min_duration_statement = 50
 EOF
 
-
-# Insert rule at the top of pg_hba.conf (first-match-wins) to allow
-# the monitoring user to connect via password authentication.
+# Insert rules at the top of pg_hba.conf (first-match-wins) for both IPv4 and IPv6
 echo "=== [4/7] Configuring pg_hba.conf for monitoring user ==="
-sudo sed -i '1i host all cw_monitor 127.0.0.1/32 scram-sha-256' "$PG_DATA/pg_hba.conf"
+sudo sed -i '1i host all cw_monitor ::1/128 md5' "$PG_DATA/pg_hba.conf"
+sudo sed -i '1i host all cw_monitor 127.0.0.1/32 md5' "$PG_DATA/pg_hba.conf"
 
 # shared_preload_libraries requires a full restart (not just reload)
-echo "=== [5/7] Restarting PostgreSQL (shared_preload_libraries requires restart) ==="
+echo "=== [5/7] Restarting PostgreSQL ==="
 sudo systemctl restart postgresql
 
-# Create test database, enable pg_stat_statements extension, and create
-# monitoring user with pg_monitor role (read-only access to stats).
 echo "=== [6/7] Creating database, extension, and monitoring user ==="
 sudo -u postgres createdb testdb
 sudo -u postgres psql -d postgres -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
@@ -87,7 +90,6 @@ sudo -u postgres psql -c "CREATE USER cw_monitor WITH PASSWORD 'test_password';"
 sudo -u postgres psql -c "GRANT pg_monitor TO cw_monitor;"
 sudo -u postgres psql -c "GRANT CONNECT ON DATABASE testdb TO cw_monitor;"
 
-# Create pgpass file for passwordless authentication (0600 permissions required)
 echo "=== [7/7] Creating pgpass file ==="
 sudo mkdir -p /opt/databaseinsights
 echo 'localhost:5432:*:cw_monitor:test_password' | sudo tee /opt/databaseinsights/.pgpass

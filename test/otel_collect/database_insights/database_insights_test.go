@@ -81,7 +81,7 @@ func (t *DbiTestRunner) Validate() status.TestGroupResult {
 	results = append(results, rawEventsResult)
 
 	processResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName()+" Process Metrics", t.env.Region, processMetrics(), map[string]string{
-		"@resource.process.executable.name": "postgres",
+		"@resource.process.executable.name": "post(gres|master).*",
 		"@resource.host.id":                 t.env.InstanceId,
 	})
 	results = append(results, processResult.TestResults...)
