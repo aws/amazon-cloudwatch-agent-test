@@ -140,7 +140,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/otel_collect/otlp"},
 		{
 			testDir:    "./test/otel_collect/prometheus",
-			excludedOs: map[string]struct{}{"rhel8": {}, "ol8": {}, "sles15": {}},
+			excludedOs: map[string]struct{}{"rhel8": {}, "ol8": {}, "sles-15": {}},
 		},
 		{
 			testDir: "./test/acceptance",
