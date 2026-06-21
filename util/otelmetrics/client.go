@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -77,14 +77,14 @@ func NewClient(ctx context.Context, config TestConfig) (*OtelMetricsClient, erro
 // Query executes a PromQL instant query and returns parsed results.
 func (c *OtelMetricsClient) Query(ctx context.Context, promql string) ([]MetricResult, error) {
 	params := url.Values{"query": {promql}}
-	slog.Debug("querying", "promql", promql)
+	log.Printf("querying promql=%s", promql)
 
 	raw, err := c.requestWithRetry(ctx, c.queryURL, params)
 	if err != nil {
 		return nil, err
 	}
 	results := c.parseResponse(raw)
-	slog.Debug("query returned", "count", len(results))
+	log.Printf("query returned count=%d", len(results))
 	return results, nil
 }
 
@@ -123,7 +123,7 @@ func (c *OtelMetricsClient) requestRawWithRetry(ctx context.Context, baseURL str
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			lastErr = err
-			slog.Warn("request failed", "attempt", attempt+1, "error", err)
+			log.Printf("request failed attempt=%d error=%v", attempt+1, err)
 			if attempt < c.maxRetries-1 {
 				time.Sleep(time.Duration(1<<attempt) * time.Second)
 			}
@@ -138,7 +138,7 @@ func (c *OtelMetricsClient) requestRawWithRetry(ctx context.Context, baseURL str
 
 		if resp.StatusCode >= 500 {
 			lastErr = fmt.Errorf("server error %d: %s", resp.StatusCode, truncate(string(body), 200))
-			slog.Warn("server error, retrying", "status", resp.StatusCode, "attempt", attempt+1)
+			log.Printf("server error, retrying status=%d attempt=%d", resp.StatusCode, attempt+1)
 			if attempt < c.maxRetries-1 {
 				time.Sleep(time.Duration(1<<attempt) * time.Second)
 			}
