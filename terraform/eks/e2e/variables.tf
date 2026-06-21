@@ -33,7 +33,7 @@ variable "instance_type" {
 
 variable "helm_charts_branch" {
   type    = string
-  default = "main"
+  default = "f6a3940"
 }
 
 variable "cloudwatch_agent_repository" {
