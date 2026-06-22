@@ -27,7 +27,6 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-
 func startAgentAndWaitForInit(t *testing.T) {
 	t.Helper()
 	common.CopyFile("agent_config.json", configOutputPath)

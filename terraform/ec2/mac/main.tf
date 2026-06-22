@@ -108,7 +108,7 @@ resource "null_resource" "integration_test" {
       "eval \"$(/opt/homebrew/bin/brew shellenv)\"",
 
       #Download test repo
-      "NONINTERACTIVE=1 brew install git",
+      "brew install --no-ask git",
       "echo clone test repo",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
 
