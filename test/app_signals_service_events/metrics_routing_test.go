@@ -15,7 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/amazon-cloudwatch-agent-test/test/otlp_export/otlpvalidation"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"

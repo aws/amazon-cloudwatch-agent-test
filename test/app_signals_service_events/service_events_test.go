@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	credutil "github.com/aws/amazon-cloudwatch-agent-test/test/credential_chain/util"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/otlp_export/otlpvalidation"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
