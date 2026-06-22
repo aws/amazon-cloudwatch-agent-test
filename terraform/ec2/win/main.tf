@@ -137,7 +137,7 @@ resource "null_resource" "integration_test_setup_agent" {
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.cwa_github_sha}/amazon-cloudwatch-agent.msi .",
       "powershell.exe -Command \"Write-Output 'Checking for running msiexec processes...'; while (Get-Process msiexec -ErrorAction SilentlyContinue) { Write-Output 'msiexec running; sleeping 10s...'; Start-Sleep -Seconds 10 }; Write-Output 'No msiexec found; starting installer'; Start-Process -FilePath msiexec -ArgumentList '/i amazon-cloudwatch-agent.msi /norestart /qb-' -Wait\"",
       "if %errorlevel% neq 0 (echo MSI install failed with code %errorlevel% & exit 1)",
-      "powershell.exe -Command \"$retries = 0; $maxRetries = 30; $found = $false; while ($retries -lt $maxRetries -and -not $found) { if (Test-Path 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1') { $found = $true; Write-Output 'amazon-cloudwatch-agent-ctl.ps1 found in expected location'; } else { $scriptPath = Get-ChildItem -Path 'C:\\Program Files' -Filter amazon-cloudwatch-agent-ctl.ps1 -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName; if ($scriptPath) { $found = $true; Write-Output 'amazon-cloudwatch-agent-ctl.ps1 found at: ' + $scriptPath; } } if (-not $found) { Start-Sleep -Seconds 10; $retries++ } } if (-not $found) { Write-Output 'amazon-cloudwatch-agent-ctl.ps1 not found after installation and retries'; exit 1 }\""
+      "powershell.exe -Command \"$path = 'C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1'; for ($i = 0; $i -lt 30; $i++) { if (Test-Path $path) { Write-Output 'amazon-cloudwatch-agent-ctl.ps1 found in expected location'; exit 0 } Start-Sleep -Seconds 5 } Write-Output 'amazon-cloudwatch-agent-ctl.ps1 not found at expected path after 150s'; exit 1\""
     ]
   }
 }
@@ -241,6 +241,7 @@ resource "null_resource" "integration_test_run_validator" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
+    timeout  = "15m"
   }
 
   provisioner "file" {

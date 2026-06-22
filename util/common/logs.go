@@ -72,8 +72,10 @@ func StartLogWrite(configFilePath string, duration time.Duration, sendingInterva
 	}
 
 	for _, logPath := range logPaths {
+		log.Printf("StartLogWrite: dispatching writer goroutine for log file %q", logPath)
 		go func(logPath string) {
 			if err := writeToLogs(logPath, duration, sendingInterval, logLinesPerMinute); err != nil {
+				log.Printf("StartLogWrite: writeToLogs for %q returned error: %v", logPath, err)
 				multiErr = multierr.Append(multiErr, err)
 			}
 		}(logPath)
@@ -85,12 +87,20 @@ func StartLogWrite(configFilePath string, duration time.Duration, sendingInterva
 // writeToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
 // for the specified duration
 func writeToLogs(filePath string, duration, sendingInterval time.Duration, logLinesPerMinute int) error {
+	log.Printf("writeToLogs: creating %q (duration=%s, sendingInterval=%s, linesPerMinute=%d)", filePath, duration, sendingInterval, logLinesPerMinute)
 	f, err := os.Create(filePath)
 	if err != nil {
+		log.Printf("writeToLogs: os.Create(%q) failed: %v", filePath, err)
 		return err
 	}
-	defer f.Close()
-	defer os.Remove(filePath)
+	defer func() {
+		if cerr := f.Close(); cerr != nil {
+			log.Printf("writeToLogs: f.Close(%q) failed: %v", filePath, cerr)
+		}
+		if rerr := os.Remove(filePath); rerr != nil {
+			log.Printf("writeToLogs: os.Remove(%q) failed: %v", filePath, rerr)
+		}
+	}()
 
 	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
