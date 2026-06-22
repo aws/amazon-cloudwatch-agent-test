@@ -241,7 +241,7 @@ resource "null_resource" "integration_test_run_validator" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
-    timeout  = "30m"
+    timeout  = "10m"
   }
 
   provisioner "file" {
@@ -267,7 +267,7 @@ resource "null_resource" "integration_test_run_validator" {
       "set AWS_REGION=${var.region}",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
       "cd amazon-cloudwatch-agent-test",
-      "go test ./test/sanity -p 1 -v",
+      "powershell.exe -ExecutionPolicy Bypass -File test\\sanity\\resources\\verifyWindowsCtlScript.ps1",
       "cd ..",
 
       # Retry logic for amazon-cloudwatch-agent-ctl.ps1 with timeout
