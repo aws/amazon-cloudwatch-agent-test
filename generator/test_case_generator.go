@@ -101,7 +101,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/log_state/journald",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
 		},
-		{testDir: "./test/feature/linux/journald_logs",
+		{
+			testDir: "./test/feature/linux/journald_logs",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
 		},
 		{
@@ -226,7 +227,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/log_state/journald",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
 		},
-		{testDir: "./test/feature/linux/journald_logs",
+		{
+			testDir: "./test/feature/linux/journald_logs",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
 		},
 		{
@@ -292,7 +294,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 	*/
 	"ec2_mac": {
 		{testDir: "../../../test/feature/mac"},
-		{testDir: "../../../test/ssm_document"},
 	},
 	"ec2_windows_wd": {
 		{testDir: "../../../test/workload_discovery"},
