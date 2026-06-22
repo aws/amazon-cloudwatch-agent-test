@@ -303,22 +303,24 @@ var testTypeToTestConfig = map[string][]testConfig{
 	},
 	"ec2_windows": {
 		{testDir: "../../../test/feature/windows"},
-		{testDir: "../../../test/restart"},
-		{testDir: "../../../test/acceptance"},
+		// === subset-test: only the test dirs that were failing in run 27803507918 ===
+		// {testDir: "../../../test/restart"},
+		// {testDir: "../../../test/acceptance"},
 		{testDir: "../../../test/feature/windows/event_logs"},
-		{testDir: "../../../test/feature/windows/eventid_logs"},
+		// {testDir: "../../../test/feature/windows/eventid_logs"},
 		{testDir: "../../../test/feature/windows/event_regex_logs"},
-		{testDir: "../../../test/log_state/logfile"},
-		{testDir: "../../../test/log_state/windows_event_log"},
-		{
-			testDir: "../../../test/feature/windows/custom_start/userdata",
-			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
-		},
-		{
-			testDir: "../../../test/feature/windows/custom_start/ssm_start",
-			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
-		},
-		{testDir: "../../../test/ssm_document"},
+		// {testDir: "../../../test/log_state/logfile"},
+		// {testDir: "../../../test/log_state/windows_event_log"},
+		// {
+		//	testDir: "../../../test/feature/windows/custom_start/userdata",
+		//	targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
+		// },
+		// {
+		//	testDir: "../../../test/feature/windows/custom_start/ssm_start",
+		//	targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
+		// },
+		// {testDir: "../../../test/ssm_document"},
+		// === end subset-test ===
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
