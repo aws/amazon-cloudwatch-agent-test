@@ -257,7 +257,7 @@ resource "null_resource" "integration_test_run" {
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "cd ~/amazon-cloudwatch-agent-test",
       "echo Running sanity test...",
-      "go test ./test/sanity -p 1 -v",
+      "go test ./test/sanity -p 1 -v || exit 1",
       "echo Running EFA integration test...",
       "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v",
     ]
