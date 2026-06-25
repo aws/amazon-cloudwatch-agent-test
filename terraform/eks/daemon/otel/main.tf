@@ -13,14 +13,13 @@ module "basic_components" {
 }
 
 locals {
-  aws_eks      = "aws eks --region ${var.region}"
-  cluster_name = "cwagent-eks-integ-${module.common.testing_id}"
+  aws_eks = "aws eks --region ${var.region}"
 }
 
 data "aws_partition" "current" {}
 
 resource "aws_eks_cluster" "this" {
-  name     = local.cluster_name
+  name     = "cwagent-eks-integ-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
   version  = var.k8s_version
   vpc_config {
