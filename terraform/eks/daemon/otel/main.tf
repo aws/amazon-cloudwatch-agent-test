@@ -16,8 +16,6 @@ locals {
   aws_eks = "aws eks --region ${var.region}"
 }
 
-data "aws_partition" "current" {}
-
 resource "aws_eks_cluster" "this" {
   name     = "cwagent-eks-integ-${module.common.testing_id}"
   role_arn = module.basic_components.role_arn
@@ -171,7 +169,7 @@ resource "aws_iam_role_policy" "karpenter_controller" {
         Sid      = "SSMGetParameter"
         Effect   = "Allow"
         Action   = "ssm:GetParameter"
-        Resource = "arn:${data.aws_partition.current.partition}:ssm:${var.region}::parameter/aws/service/*"
+        Resource = "arn:aws:ssm:${var.region}::parameter/aws/service/*"
       },
       {
         Sid      = "PricingPermissions"
