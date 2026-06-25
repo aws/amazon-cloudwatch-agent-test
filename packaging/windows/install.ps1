@@ -14,7 +14,10 @@
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
-Start-Process msiexec.exe -Wait -ArgumentList '/i amazon-cloudwatch-agent.msi'
+$proc = Start-Process msiexec.exe -Wait -PassThru -ArgumentList '/i amazon-cloudwatch-agent.msi /qn /norestart'
+if ($proc.ExitCode -ne 0 -and $proc.ExitCode -ne 3010) {
+    throw "msiexec failed with exit code $($proc.ExitCode)"
+}
 
 $CWADirectory = 'Amazon\AmazonCloudWatchAgent'
 $CWAProgramFiles = "${Env:ProgramFiles}\${CWADirectory}"
