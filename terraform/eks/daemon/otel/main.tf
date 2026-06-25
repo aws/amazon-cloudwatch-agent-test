@@ -130,6 +130,18 @@ data "external" "clone_helm_chart" {
   ]
 }
 
+# Pre-create the events log group and stream — the OTLP HTTP exporter's
+# x-aws-log-group-create header is not yet honored by the backend.
+resource "aws_cloudwatch_log_group" "events" {
+  name              = "/aws/containerinsights/${aws_eks_cluster.this.name}/events"
+  retention_in_days = 1
+}
+
+resource "aws_cloudwatch_log_stream" "events" {
+  name           = "events"
+  log_group_name = aws_cloudwatch_log_group.events.name
+}
+
 resource "helm_release" "aws_observability" {
   name             = "amazon-cloudwatch-observability"
   chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
@@ -139,13 +151,14 @@ resource "helm_release" "aws_observability" {
   set = [
     { name = "clusterName", value = aws_eks_cluster.this.name },
     { name = "region", value = var.region },
-    { name = "otelContainerInsights.enabled", value = "true" },
+    { name = "otelContainerInsights.events.enabled", value = "true" }
   ]
 
   depends_on = [
     aws_eks_addon.pod_identity_agent,
     null_resource.kubectl,
     data.external.clone_helm_chart,
+    aws_cloudwatch_log_stream.events,
   ]
 }
 
@@ -360,8 +373,8 @@ resource "null_resource" "validator" {
       echo "Running OTEL standard cluster integration tests"
       cd ../../../..
 
-      echo "Waiting 3 minutes for metrics to propagate..."
-      sleep 180
+      echo "Waiting 5 minutes for metrics and events to propagate..."
+      sleep 300
 
       go test -tags integration -timeout 1h -v ${var.test_dir} \
         -eksClusterName=${aws_eks_cluster.this.name} \

@@ -102,5 +102,11 @@ func TestMain(m *testing.M) {
 		otelmetrics.WithSourceRegistry(registry),
 	)
 
+	// Initialize events logs client for K8s events pipeline tests.
+	if err := initEventsLogsClient(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "Events logs client error: %v\n", err)
+		os.Exit(1)
+	}
+
 	os.Exit(m.Run())
 }
