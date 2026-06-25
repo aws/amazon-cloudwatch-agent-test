@@ -105,12 +105,12 @@
                   {
                     "startTimeUnixNano": INITIAL_METRIC_TIME,
                     "timeUnixNano": METRIC_TIME,
-                    "count": 2,
-                    "sum": 2,
-                    "bucketCounts": [0,2],
-                    "explicitBounds": [1,2],
+                    "count": 4,
+                    "sum": 6,
+                    "bucketCounts": [1,2,1],
+                    "explicitBounds": [0.5,2],
                     "min": 0,
-                    "max": 2,
+                    "max": 4,
                     "attributes": [
                       {
                         "key": "my.delta.histogram.attr",
@@ -135,10 +135,10 @@
                     "timeUnixNano": METRIC_TIME,
                     "count": CUMULATIVE_HIST_COUNT,
                     "sum": CUMULATIVE_HIST_SUM,
-                    "bucketCounts": [0,CUMULATIVE_HIST_COUNT],
-                    "explicitBounds": [1, 2],
+                    "bucketCounts": [1,CUMULATIVE_HIST_COUNT,1],
+                    "explicitBounds": [0.5,2],
                     "min": 0,
-                    "max": 2,
+                    "max": 3,
                     "attributes": [
                       {
                         "key": "my.cumulative.histogram.attr",
