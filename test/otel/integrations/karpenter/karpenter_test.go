@@ -115,3 +115,26 @@ func TestKarpenterNamespace(t *testing.T) {
 		})
 	}
 }
+
+// TestKarpenterInstrumentationConsistent verifies all data points for a metric
+// report the same instrumentation scope (no mixed sources).
+func TestKarpenterInstrumentationConsistent(t *testing.T) {
+	t.Parallel()
+	for _, metricName := range karpenterMetricNames() {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			results, err := queryCache.Get(ctx, metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			names := make(map[string]struct{})
+			for _, r := range results {
+				if n, ok := r.Labels.Instrumentation["@name"]; ok {
+					names[n] = struct{}{}
+				}
+			}
+			require.Equal(t, 1, len(names), "%s has %d distinct instrumentation names", metricName, len(names))
+		})
+	}
+}
