@@ -34,6 +34,15 @@ variable "helm_chart_branch" {
   default = "main"
 }
 
+# Install from a LOCAL chart checkout instead of git-cloning helm_chart_repo.
+# Useful to test working-tree changes that are not yet committed/pushed. When
+# set (absolute path to .../charts/amazon-cloudwatch-observability), the clone is
+# skipped. Leave empty for CI (clone).
+variable "local_chart_path" {
+  type    = string
+  default = ""
+}
+
 # --- Custom operator image: REQUIRED. The public operator hardcodes
 #     consistent-hashing and ignores the per-node CR field, so the per-node +
 #     CRD-watch (G2) code only runs from a custom build. ---

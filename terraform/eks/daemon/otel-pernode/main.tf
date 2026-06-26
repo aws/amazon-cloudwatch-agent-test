@@ -130,6 +130,7 @@ resource "null_resource" "kubectl" {
 # purpose -- the SM/PM CRDs must come from the chart alone.
 
 data "external" "clone_helm_chart" {
+  count = var.local_chart_path == "" ? 1 : 0
   program = ["bash", "-c", <<-EOT
     rm -rf ./helm-charts
     git clone -b ${var.helm_chart_branch} ${var.helm_chart_repo} ./helm-charts
@@ -138,11 +139,17 @@ data "external" "clone_helm_chart" {
   ]
 }
 
+locals {
+  # Install from the local checkout when provided, else from the freshly cloned repo.
+  chart_path = var.local_chart_path != "" ? var.local_chart_path : "./helm-charts/charts/amazon-cloudwatch-observability"
+}
+
 resource "helm_release" "aws_observability" {
   name             = "amazon-cloudwatch-observability"
-  chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
+  chart            = local.chart_path
   namespace        = "amazon-cloudwatch"
   create_namespace = true
+  timeout          = 900
 
   set = [
     { name = "clusterName", value = aws_eks_cluster.this.name },
