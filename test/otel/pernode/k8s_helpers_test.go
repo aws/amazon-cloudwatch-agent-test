@@ -171,7 +171,7 @@ func targetAllocatorPods(t *testing.T, clientset *kubernetes.Clientset) []corev1
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	list, err := clientset.CoreV1().Pods(agentNamespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "app.kubernetes.io/component=target-allocator",
+		LabelSelector: "app.kubernetes.io/name=" + targetAllocatorDeploymentName,
 	})
 	if err != nil {
 		t.Fatalf("listing Target Allocator pods: %v", err)
