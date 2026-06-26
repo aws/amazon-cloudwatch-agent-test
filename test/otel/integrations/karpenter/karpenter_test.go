@@ -48,8 +48,9 @@ func TestKarpenterInstrumentation(t *testing.T) {
 	}
 }
 
-// TestKarpenterClusterName verifies the cluster name resource attribute is set correctly.
-func TestKarpenterClusterName(t *testing.T) {
+// TestKarpenterInstrumentationConsistent verifies all data points for a metric
+// report the same instrumentation scope (no mixed sources).
+func TestKarpenterInstrumentationConsistent(t *testing.T) {
 	t.Parallel()
 	for _, metricName := range karpenterMetricNames() {
 		metricName := metricName
@@ -59,12 +60,13 @@ func TestKarpenterClusterName(t *testing.T) {
 			results, err := queryCache.Get(ctx, metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
+			names := make(map[string]struct{})
 			for _, r := range results {
-				r := r
-				cluster, ok := r.Labels.Resource["k8s.cluster.name"]
-				require.True(t, ok, "%s missing @resource.k8s.cluster.name", metricName)
-				require.Equal(t, cfg.ClusterName, cluster, "%s cluster name mismatch", metricName)
+				if n, ok := r.Labels.Instrumentation["@name"]; ok {
+					names[n] = struct{}{}
+				}
 			}
+			require.Equal(t, 1, len(names), "%s has %d distinct instrumentation names", metricName, len(names))
 		})
 	}
 }
@@ -95,9 +97,19 @@ func TestKarpenterExpectedLabels(t *testing.T) {
 	}
 }
 
-// TestKarpenterNamespace verifies that Karpenter metrics have a namespace resource attribute.
-func TestKarpenterNamespace(t *testing.T) {
+// TestKarpenterResourceAttributes verifies K8s and cloud resource attributes are enriched
+// correctly, including cluster name value validation.
+func TestKarpenterResourceAttributes(t *testing.T) {
 	t.Parallel()
+	requiredAttrs := []string{
+		"k8s.pod.name",
+		"k8s.deployment.name",
+		"k8s.namespace.name",
+		"k8s.cluster.name",
+		"cloud.provider",
+		"cloud.region",
+		"cloud.platform",
+	}
 	for _, metricName := range karpenterMetricNames() {
 		metricName := metricName
 		t.Run(metricName, func(t *testing.T) {
@@ -108,33 +120,15 @@ func TestKarpenterNamespace(t *testing.T) {
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
 				r := r
-				ns, ok := r.Labels.Resource["k8s.namespace.name"]
-				require.True(t, ok, "%s missing @resource.k8s.namespace.name", metricName)
-				require.NotEmpty(t, ns, "%s empty k8s.namespace.name", metricName)
-			}
-		})
-	}
-}
-
-// TestKarpenterInstrumentationConsistent verifies all data points for a metric
-// report the same instrumentation scope (no mixed sources).
-func TestKarpenterInstrumentationConsistent(t *testing.T) {
-	t.Parallel()
-	for _, metricName := range karpenterMetricNames() {
-		metricName := metricName
-		t.Run(metricName, func(t *testing.T) {
-			t.Parallel()
-			ctx := context.Background()
-			results, err := queryCache.Get(ctx, metricName)
-			require.NoError(t, err, "querying %s", metricName)
-			require.NotEmpty(t, results, "%s not available", metricName)
-			names := make(map[string]struct{})
-			for _, r := range results {
-				if n, ok := r.Labels.Instrumentation["@name"]; ok {
-					names[n] = struct{}{}
+				for _, attr := range requiredAttrs {
+					v, ok := r.Labels.Resource[attr]
+					require.True(t, ok, "%s missing @resource.%s", metricName, attr)
+					require.NotEmpty(t, v, "%s empty @resource.%s", metricName, attr)
 				}
+				// Validate cluster name matches the expected value
+				require.Equal(t, cfg.ClusterName, r.Labels.Resource["k8s.cluster.name"],
+					"%s cluster name mismatch", metricName)
 			}
-			require.Equal(t, 1, len(names), "%s has %d distinct instrumentation names", metricName, len(names))
 		})
 	}
 }
