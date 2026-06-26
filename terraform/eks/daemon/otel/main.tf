@@ -110,9 +110,7 @@ resource "aws_eks_addon" "pod_identity_agent" {
   addon_name   = "eks-pod-identity-agent"
 }
 
-# -----------------------------------------------------------------------------
-# Karpenter Controller IAM Role (Pod Identity)
-# -----------------------------------------------------------------------------
+# --- Karpenter Controller IAM Role (Pod Identity) ---
 
 resource "aws_iam_role" "karpenter_controller" {
   name = "cwagent-otel-karpenter-${module.common.testing_id}"
