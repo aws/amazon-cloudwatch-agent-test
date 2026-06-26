@@ -21,7 +21,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/ssm_document"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/workload_discovery"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/models"
 	"github.com/aws/amazon-cloudwatch-agent-test/validator/validators"
@@ -101,7 +100,9 @@ func main() {
 
 func validate(vConfig models.ValidateConfig) error {
 	var err error
-	for i := 0; i < awsservice.StandardRetries; i++ {
+	// DEBUG SUBSET BRANCH: retries disabled (was awsservice.StandardRetries) so any
+	// first-attempt failure surfaces immediately without being masked by a later retry.
+	for i := 0; i < 1; i++ {
 		err = validators.LaunchValidator(vConfig)
 
 		if err == nil {

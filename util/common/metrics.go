@@ -375,36 +375,83 @@ func SendAppSignalMetrics(duration time.Duration) error {
 
 func SendStatsdMetrics(metricPerInterval int, metricDimension []string, sendingInterval, duration time.Duration) error {
 	// https://github.com/DataDog/datadog-go#metrics
-	client, err := statsd.New("127.0.0.1:8125", statsd.WithMaxMessagesPerPayload(100), statsd.WithNamespace("statsd"), statsd.WithoutTelemetry())
+	const target = "127.0.0.1:8125"
+	log.Printf("SendStatsdMetrics: dialing %s (metricPerInterval=%d, sendingInterval=%s, duration=%s)",
+		target, metricPerInterval, sendingInterval, duration)
 
-	if err != nil {
-		return err
+	// Pre-flight: open a raw UDP connection to the target so we surface any local socket
+	// errors (DataDog client constructor doesn't error on UDP create-only). This does NOT
+	// verify the agent is listening (UDP is connectionless), but does verify the test host
+	// can resolve+bind a UDP socket toward the target.
+	if probe, perr := net.Dial("udp", target); perr != nil {
+		log.Printf("SendStatsdMetrics: UDP pre-flight dial(%s) FAILED: %v", target, perr)
+	} else {
+		log.Printf("SendStatsdMetrics: UDP pre-flight dial(%s) ok local=%s", target, probe.LocalAddr())
+		_ = probe.Close()
 	}
 
-	defer client.Close()
+	client, err := statsd.New(target, statsd.WithMaxMessagesPerPayload(100), statsd.WithNamespace("statsd"), statsd.WithoutTelemetry())
+	if err != nil {
+		log.Printf("SendStatsdMetrics: statsd.New(%s) FAILED: %v", target, err)
+		return err
+	}
+	log.Printf("SendStatsdMetrics: statsd client created (namespace=statsd)")
+
+	defer func() {
+		if cerr := client.Close(); cerr != nil {
+			log.Printf("SendStatsdMetrics: client.Close FAILED: %v", cerr)
+		} else {
+			log.Printf("SendStatsdMetrics: client.Close ok (flushed pending payloads)")
+		}
+	}()
 
 	ticker := time.NewTicker(sendingInterval)
 	defer ticker.Stop()
 	endTimeout := time.After(duration)
 
+	pairs := metricPerInterval / 2
+	burstOk, burstErr := 0, 0
+	log.Printf("SendStatsdMetrics: initial burst sending %d counter+gauge pair(s)", pairs)
 	// Sending the statsd metric within the first minute before the ticker kicks in the next minute
-	for t := 1; t <= metricPerInterval/2; t++ {
-		if err := client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0); err != nil {
-			return err
+	for t := 1; t <= pairs; t++ {
+		cname, gname := fmt.Sprint("counter_", t), fmt.Sprint("gauge_", t)
+		if cerr := client.Count(cname, int64(t), metricDimension, 1.0); cerr != nil {
+			burstErr++
+			log.Printf("SendStatsdMetrics: initial burst Count(%s) FAILED: %v", cname, cerr)
+			return cerr
 		}
-		if err := client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0); err != nil {
-			return err
+		if gerr := client.Gauge(gname, float64(t), metricDimension, 1.0); gerr != nil {
+			burstErr++
+			log.Printf("SendStatsdMetrics: initial burst Gauge(%s) FAILED: %v", gname, gerr)
+			return gerr
 		}
+		burstOk++
+		log.Printf("SendStatsdMetrics: initial burst sent %s/%s (no error)", cname, gname)
 	}
+	log.Printf("SendStatsdMetrics: initial burst complete (ok=%d err=%d)", burstOk, burstErr)
 
+	tickerSends, tickerErrs := 0, 0
 	for {
 		select {
 		case <-ticker.C:
-			for t := 1; t <= metricPerInterval/2; t++ {
-				client.Count(fmt.Sprint("counter_", t), int64(t), metricDimension, 1.0)
-				client.Gauge(fmt.Sprint("gauge_", t), float64(t), metricDimension, 1.0)
+			for t := 1; t <= pairs; t++ {
+				cname, gname := fmt.Sprint("counter_", t), fmt.Sprint("gauge_", t)
+				if cerr := client.Count(cname, int64(t), metricDimension, 1.0); cerr != nil {
+					tickerErrs++
+					log.Printf("SendStatsdMetrics: ticker Count(%s) FAILED: %v", cname, cerr)
+				} else {
+					tickerSends++
+				}
+				if gerr := client.Gauge(gname, float64(t), metricDimension, 1.0); gerr != nil {
+					tickerErrs++
+					log.Printf("SendStatsdMetrics: ticker Gauge(%s) FAILED: %v", gname, gerr)
+				} else {
+					tickerSends++
+				}
 			}
 		case <-endTimeout:
+			log.Printf("SendStatsdMetrics: duration elapsed, returning (initial=%d, ticker_ok=%d, ticker_err=%d)",
+				burstOk*2, tickerSends, tickerErrs)
 			return nil
 		}
 	}
