@@ -347,9 +347,29 @@ resource "null_resource" "ksm_replicaset" {
 
 # --- Test runner ---
 
+# --- Apply test taints to first node in standard node group ---
+
+resource "null_resource" "apply_test_taints" {
+  depends_on = [null_resource.restart_pods, null_resource.kubectl]
+  triggers   = { always_run = timestamp() }
+  provisioner "local-exec" {
+    command = <<-EOT
+      NODE=$(kubectl get nodes -l "node.kubernetes.io/instance-type=${var.instance_type}" -o jsonpath='{.items[0].metadata.name}')
+      kubectl taint nodes "$NODE" \
+        ci-test.example.com/dedicated=gpu:NoSchedule \
+        ci-test.example.com/team=ml:NoSchedule \
+        --overwrite
+      echo "Applied test taints to $NODE"
+    EOT
+  }
+}
+
+# --- Test runner ---
+
 resource "null_resource" "validator" {
   depends_on = [
     null_resource.restart_pods,
+    null_resource.apply_test_taints,
     kubernetes_deployment_v1.nginx_test,
   ]
 
