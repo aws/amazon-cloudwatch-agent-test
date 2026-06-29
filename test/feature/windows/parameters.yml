@@ -202,8 +202,8 @@ metric_validation:
   - metric_name: "Fault"
     metric_sample_count: 12
     metric_dimension:
-      - name: "HostedIn.Environment"
-        value: "Generic"
+      - name: "Environment"
+        value: "ec2:default"
       - name: "Operation"
         value: "operation"
       - name: "Service"
@@ -211,8 +211,8 @@ metric_validation:
   - metric_name: "Latency"
     metric_sample_count: 12
     metric_dimension:
-      - name: "HostedIn.Environment"
-        value: "Generic"
+      - name: "Environment"
+        value: "ec2:default"
       - name: "Operation"
         value: "operation"
       - name: "Service"
@@ -220,8 +220,8 @@ metric_validation:
   - metric_name: "Error"
     metric_sample_count: 12
     metric_dimension:
-      - name: "HostedIn.Environment"
-        value: "Generic"
+      - name: "Environment"
+        value: "ec2:default"
       - name: "Operation"
         value: "operation"
       - name: "Service"
