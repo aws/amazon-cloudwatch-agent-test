@@ -1,0 +1,18 @@
+{
+  "agent": { "region": "us-west-2" },
+  "opentelemetry": {
+    "collect": {
+      "database_insights": {
+        "mysql": [{
+          "endpoint": "localhost:3306",
+          "instance_name": "dbi-mysql-integ-test",
+          "username": "cw_monitor",
+          "password_file": "/opt/databaseinsights/.mysql_credentials",
+          "logs": {
+            "file_path": "/var/log/mysql/mysql-error.log"
+          }
+        }]
+      }
+    }
+  }
+}
