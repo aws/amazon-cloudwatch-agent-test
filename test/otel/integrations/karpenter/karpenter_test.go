@@ -7,12 +7,22 @@ package karpenter
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-// TestKarpenterMetricsExist verifies that each expected Karpenter metric is present.
+// ===========================================================================
+// Metric Existence Tests
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// TestKarpenterMetricsExist — verify each expected metric is present in
+// CloudWatch.
+// ---------------------------------------------------------------------------
+
 func TestKarpenterMetricsExist(t *testing.T) {
 	t.Parallel()
 	for _, metricName := range karpenterMetricNames() {
@@ -27,7 +37,15 @@ func TestKarpenterMetricsExist(t *testing.T) {
 	}
 }
 
-// TestKarpenterInstrumentation verifies instrumentation source for all Karpenter metrics.
+// ===========================================================================
+// Instrumentation Scope Tests
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// TestKarpenterInstrumentation — verify instrumentation scope name for all
+// Karpenter metrics.
+// ---------------------------------------------------------------------------
+
 func TestKarpenterInstrumentation(t *testing.T) {
 	t.Parallel()
 	for _, metricName := range karpenterMetricNames() {
@@ -48,8 +66,11 @@ func TestKarpenterInstrumentation(t *testing.T) {
 	}
 }
 
-// TestKarpenterInstrumentationConsistent verifies all data points for a metric
-// report the same instrumentation scope (no mixed sources).
+// ---------------------------------------------------------------------------
+// TestKarpenterInstrumentationConsistent — verify all data points for a
+// metric report the same instrumentation scope (no mixed sources).
+// ---------------------------------------------------------------------------
+
 func TestKarpenterInstrumentationConsistent(t *testing.T) {
 	t.Parallel()
 	for _, metricName := range karpenterMetricNames() {
@@ -71,7 +92,15 @@ func TestKarpenterInstrumentationConsistent(t *testing.T) {
 	}
 }
 
-// TestKarpenterExpectedLabels verifies that expected datapoint labels are present.
+// ===========================================================================
+// Datapoint Label Tests
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// TestKarpenterExpectedLabels — verify expected datapoint labels are present
+// on metrics that declare them.
+// ---------------------------------------------------------------------------
+
 func TestKarpenterExpectedLabels(t *testing.T) {
 	t.Parallel()
 	for _, md := range karpenterMetrics {
@@ -97,37 +126,219 @@ func TestKarpenterExpectedLabels(t *testing.T) {
 	}
 }
 
-// TestKarpenterResourceAttributes verifies K8s and cloud resource attributes are enriched
-// correctly, including cluster name value validation.
-func TestKarpenterResourceAttributes(t *testing.T) {
+// ===========================================================================
+// K8s Resource Attribute Tests
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// TestKarpenterClusterIdentity — k8s.cluster.name must match the configured
+// cluster.
+// ---------------------------------------------------------------------------
+
+func TestKarpenterClusterIdentity(t *testing.T) {
 	t.Parallel()
-	requiredAttrs := []string{
-		"k8s.pod.name",
-		"k8s.deployment.name",
-		"k8s.namespace.name",
-		"k8s.cluster.name",
-		"cloud.provider",
-		"cloud.region",
-		"cloud.platform",
-	}
 	for _, metricName := range karpenterMetricNames() {
 		metricName := metricName
 		t.Run(metricName, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
-			results, err := queryCache.Get(ctx, metricName)
+			results, err := queryCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
-				r := r
-				for _, attr := range requiredAttrs {
-					v, ok := r.Labels.Resource[attr]
-					require.True(t, ok, "%s missing @resource.%s", metricName, attr)
-					require.NotEmpty(t, v, "%s empty @resource.%s", metricName, attr)
+				clusterName, ok := r.Labels.Resource["k8s.cluster.name"]
+				require.True(t, ok, "%s missing @resource.k8s.cluster.name", metricName)
+				require.Equal(t, cfg.ClusterName, clusterName, "%s k8s.cluster.name", metricName)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestKarpenterNamespace — all Karpenter metrics must originate from the
+// kube-system namespace.
+// ---------------------------------------------------------------------------
+
+func TestKarpenterNamespace(t *testing.T) {
+	t.Parallel()
+	for _, metricName := range karpenterMetricNames() {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				ns, ok := r.Labels.Resource["k8s.namespace.name"]
+				require.True(t, ok, "%s missing @resource.k8s.namespace.name", metricName)
+				require.Equal(t, "kube-system", ns, "%s k8s.namespace.name", metricName)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestKarpenterDeploymentName — k8s.deployment.name must be "karpenter".
+// ---------------------------------------------------------------------------
+
+func TestKarpenterDeploymentName(t *testing.T) {
+	t.Parallel()
+	for _, metricName := range karpenterMetricNames() {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				deploy, ok := r.Labels.Resource["k8s.deployment.name"]
+				require.True(t, ok, "%s missing @resource.k8s.deployment.name", metricName)
+				require.Equal(t, "karpenter", deploy, "%s k8s.deployment.name", metricName)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestKarpenterPodName — k8s.pod.name must start with "karpenter-".
+// ---------------------------------------------------------------------------
+
+func TestKarpenterPodName(t *testing.T) {
+	t.Parallel()
+	for _, metricName := range karpenterMetricNames() {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				podName, ok := r.Labels.Resource["k8s.pod.name"]
+				require.True(t, ok, "%s missing @resource.k8s.pod.name", metricName)
+				require.True(t, strings.HasPrefix(podName, "karpenter-"),
+					"%s k8s.pod.name should start with 'karpenter-', got %q", metricName, podName)
+			}
+		})
+	}
+}
+
+// ===========================================================================
+// Cloud Resource Attribute Tests
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// TestKarpenterCloudProvider — cloud.provider must be "aws".
+// ---------------------------------------------------------------------------
+
+func TestKarpenterCloudProvider(t *testing.T) {
+	t.Parallel()
+	for _, metricName := range karpenterMetricNames() {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				provider, ok := r.Labels.Resource["cloud.provider"]
+				require.True(t, ok, "%s missing @resource.cloud.provider", metricName)
+				require.Equal(t, "aws", provider, "%s cloud.provider", metricName)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestKarpenterCloudPlatform — cloud.platform must be "aws_eks".
+// ---------------------------------------------------------------------------
+
+func TestKarpenterCloudPlatform(t *testing.T) {
+	t.Parallel()
+	for _, metricName := range karpenterMetricNames() {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				platform, ok := r.Labels.Resource["cloud.platform"]
+				require.True(t, ok, "%s missing @resource.cloud.platform", metricName)
+				require.Equal(t, "aws_eks", platform, "%s cloud.platform", metricName)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestKarpenterCloudRegion — cloud.region must match the configured region.
+// ---------------------------------------------------------------------------
+
+func TestKarpenterCloudRegion(t *testing.T) {
+	t.Parallel()
+	for _, metricName := range karpenterMetricNames() {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				region, ok := r.Labels.Resource["cloud.region"]
+				require.True(t, ok, "%s missing @resource.cloud.region", metricName)
+				require.Equal(t, cfg.Region, region, "%s cloud.region", metricName)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestKarpenterCloudAccountID — cloud.account.id must match the test account.
+// ---------------------------------------------------------------------------
+
+func TestKarpenterCloudAccountID(t *testing.T) {
+	t.Parallel()
+	for _, metricName := range karpenterMetricNames() {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				acctID, ok := r.Labels.Resource["cloud.account.id"]
+				if ok {
+					require.Equal(t, cfg.AccountID, acctID, "%s cloud.account.id", metricName)
 				}
-				// Validate cluster name matches the expected value
-				require.Equal(t, cfg.ClusterName, r.Labels.Resource["k8s.cluster.name"],
-					"%s cluster name mismatch", metricName)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestKarpenterCloudResourceID — cloud.resource_id must be a valid EKS
+// cluster ARN.
+// ---------------------------------------------------------------------------
+
+func TestKarpenterCloudResourceID(t *testing.T) {
+	t.Parallel()
+	expectedARNPrefix := fmt.Sprintf("arn:aws:eks:%s:", cfg.Region)
+	expectedARNSuffix := fmt.Sprintf(":cluster/%s", cfg.ClusterName)
+
+	for _, metricName := range karpenterMetricNames() {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				arn, ok := r.Labels.Resource["cloud.resource_id"]
+				if ok {
+					require.True(t, strings.HasPrefix(arn, expectedARNPrefix),
+						"%s cloud.resource_id should start with %q, got %q", metricName, expectedARNPrefix, arn)
+					require.True(t, strings.HasSuffix(arn, expectedARNSuffix),
+						"%s cloud.resource_id should end with %q, got %q", metricName, expectedARNSuffix, arn)
+				}
 			}
 		})
 	}
