@@ -21,7 +21,7 @@ variable "cwagent_image_tag" {
   default = "latest"
 }
 
-variable "helm_chart_branch" {
+variable "karpenter_helm_chart_branch" {
   type    = string
   default = "feature/karpenter-integration"
 }
