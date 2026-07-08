@@ -175,37 +175,7 @@ resource "aws_iam_role_policy" "karpenter_controller" {
         Action   = "pricing:GetProducts"
         Resource = "*"
       },
-      {
-        Sid    = "SQSPermissions"
-        Effect = "Allow"
-        Action = [
-          "sqs:DeleteMessage",
-          "sqs:GetQueueUrl",
-          "sqs:ReceiveMessage",
-        ]
-        Resource = aws_sqs_queue.karpenter_interruption.arn
-      },
     ]
-  })
-}
-
-# Karpenter Interruption Queue (SQS)
-resource "aws_sqs_queue" "karpenter_interruption" {
-  name                      = "cwagent-otel-karpenter-${module.common.testing_id}"
-  message_retention_seconds = 300
-  sqs_managed_sse_enabled   = true
-}
-
-resource "aws_sqs_queue_policy" "karpenter_interruption" {
-  queue_url = aws_sqs_queue.karpenter_interruption.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = ["events.amazonaws.com", "sqs.amazonaws.com"] }
-      Action    = "sqs:SendMessage"
-      Resource  = aws_sqs_queue.karpenter_interruption.arn
-    }]
   })
 }
 
@@ -254,7 +224,6 @@ resource "helm_release" "karpenter" {
   set = [
     { name = "settings.clusterName", value = aws_eks_cluster.this.name },
     { name = "settings.clusterEndpoint", value = aws_eks_cluster.this.endpoint },
-    { name = "settings.interruptionQueue", value = aws_sqs_queue.karpenter_interruption.name },
     { name = "controller.resources.requests.cpu", value = "100m" },
     { name = "controller.resources.requests.memory", value = "256Mi" },
   ]

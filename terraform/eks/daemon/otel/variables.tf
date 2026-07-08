@@ -43,5 +43,5 @@ variable "instance_type" {
 
 variable "karpenter_version" {
   type    = string
-  default = "1.4.0"
+  default = "1.13.0"
 }
