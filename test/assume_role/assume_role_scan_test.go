@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	testAccountID   = "506463145083"
-	testInstanceArn = "arn:aws:ec2:us-west-2:506463145083:instance/i-079ea258c33f3158f"
+	testAccountID   = "111122223333"
+	testInstanceArn = "arn:aws:ec2:us-west-2:111122223333:instance/i-0abcdef1234567890"
 )
 
 // v2Log mirrors the aws-sdk-go-v2 / smithy RequestResponseLogger output, which emits
@@ -30,11 +30,11 @@ Authorization: AWS4-HMAC-SHA256 Credential=AKIA/20260703/us-west-2/sts/aws4_requ
 Content-Type: application/x-www-form-urlencoded; charset=utf-8
 X-Amz-Date: 20260703T180510Z
 X-Amz-Security-Token: token
-X-Amz-Source-Account: 506463145083
-X-Amz-Source-Arn: arn:aws:ec2:us-west-2:506463145083:instance/i-079ea258c33f3158f
+X-Amz-Source-Account: 111122223333
+X-Amz-Source-Arn: arn:aws:ec2:us-west-2:111122223333:instance/i-0abcdef1234567890
 Accept-Encoding: gzip
 
-Action=AssumeRole&DurationSeconds=900&RoleArn=arn%3Aaws%3Aiam%3A%3A506463145083%3Arole%2Fcwa-integ-assume-role-all_context_keys&RoleSessionName=123&Version=2011-06-15
+Action=AssumeRole&DurationSeconds=900&RoleArn=arn%3Aaws%3Aiam%3A%3A111122223333%3Arole%2Fcwa-integ-assume-role-all_context_keys&RoleSessionName=123&Version=2011-06-15
 2026/07/03 18:05:10 D! Response
 HTTP/1.1 200 OK
 `
@@ -43,8 +43,8 @@ HTTP/1.1 200 OK
 const v1Log = `2026/07/03 18:05:10 I! ---[ REQUEST POST-SIGN ]-----------------------------
 POST / HTTP/1.1
 Host: sts.us-west-2.amazonaws.com
-X-Amz-Source-Account: 506463145083
-X-Amz-Source-Arn: arn:aws:ec2:us-west-2:506463145083:instance/i-079ea258c33f3158f
+X-Amz-Source-Account: 111122223333
+X-Amz-Source-Arn: arn:aws:ec2:us-west-2:111122223333:instance/i-0abcdef1234567890
 
 Action=AssumeRole&Version=2011-06-15
 -----------------------------------------------------
@@ -78,8 +78,8 @@ Action=AssumeRole&Version=2011-06-15
 			log: `2026/07/03 18:05:10 D! Request
 POST / HTTP/1.1
 Host: monitoring.us-west-2.amazonaws.com
-X-Amz-Source-Account: 506463145083
-X-Amz-Source-Arn: arn:aws:ec2:us-west-2:506463145083:instance/i-079ea258c33f3158f
+X-Amz-Source-Account: 111122223333
+X-Amz-Source-Arn: arn:aws:ec2:us-west-2:111122223333:instance/i-0abcdef1234567890
 
 Action=PutMetricData&Version=2010-08-01
 `,
@@ -114,5 +114,5 @@ func TestBlockStartDetection(t *testing.T) {
 
 	assert.True(t, isHTTPDebugBlockStart("2026/07/03 18:05:10 D! Response"))
 	assert.True(t, isHTTPDebugBlockStart("2026/07/03 18:05:10 D! Request"))
-	assert.False(t, isHTTPDebugBlockStart("X-Amz-Source-Account: 506463145083"))
+	assert.False(t, isHTTPDebugBlockStart("X-Amz-Source-Account: 111122223333"))
 }
