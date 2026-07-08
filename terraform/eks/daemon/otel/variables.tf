@@ -23,7 +23,7 @@ variable "cwagent_image_tag" {
 
 variable "helm_chart_branch" {
   type    = string
-  default = "main"
+  default = "feature/karpenter-integration"
 }
 
 variable "k8s_version" {
