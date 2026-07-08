@@ -108,7 +108,7 @@ func (t *CommonConfigTestRunner) Validate() status.TestGroupResult {
 	return util.ValidateCredentialTest(t.GetTestName(), util.ExpectedResults{
 		Namespace:              util.SharedTestNamespace,
 		MetricName:             util.MetricNameCpuUsageActive,
-		CredentialProviderName: util.ProviderNameSharedCredentials,
+		CredentialProviderName: util.ProviderNameSharedConfig,
 		AccessKeyID:            t.accessKeyID,
 	}, metadata)
 }

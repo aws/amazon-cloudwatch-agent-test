@@ -8,6 +8,7 @@ package assume_role
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -401,8 +402,34 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) validateAccessDenied() status.TestR
 	return testResult
 }
 
-// validateFoundConfusedDeputyHeaders checks that the agent used confued deputy headers in the STS assume role calls
-// using the agent's logs
+// validateFoundConfusedDeputyHeaders checks that the agent used confused deputy headers in the STS assume role calls using the agent's logs.
+//
+// The check works by isolating the HTTP request debug blocks emitted by the AWS SDK and looking for a block that
+// (a) is an STS AssumeRole request and (b) carries both confused deputy headers. It supports both SDK request-log
+// formats:
+//
+//	aws-sdk-go v1 (marker-delimited):
+//	  ---[ REQUEST POST-SIGN ]-----------------------------
+//	  POST / HTTP/1.1
+//	  ...
+//	  X-Amz-Source-Account: 0123456789012
+//	  X-Amz-Source-Arn: arn:aws:ec2:...:instance/i-...
+//	  ...
+//	  Action=AssumeRole&...&Version=2011-06-15
+//	  -----------------------------------------------------
+//
+//	aws-sdk-go-v2 / smithy (smithyhttp.RequestResponseLogger via httputil.DumpRequestOut):
+//	  <ts> D! Request
+//	  POST / HTTP/1.1
+//	  Host: sts.us-west-2.amazonaws.com
+//	  ...
+//	  X-Amz-Source-Account: 0123456789012
+//	  X-Amz-Source-Arn: arn:aws:ec2:...:instance/i-...
+//	  ...
+//	  Action=AssumeRole&...&Version=2011-06-15
+//
+// The v2 format has no explicit end marker, so request blocks are delimited by the start of the next
+// request/response debug block (or end of file).
 func (t *ConfusedDeputyAssumeRoleTestRunner) validateFoundConfusedDeputyHeaders() status.TestResult {
 
 	testResult := status.TestResult{
@@ -417,73 +444,104 @@ func (t *ConfusedDeputyAssumeRoleTestRunner) validateFoundConfusedDeputyHeaders(
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	if scanForConfusedDeputyHeaders(file) {
+		log.Println("Found confused deputy headers in the HTTP debug log")
+		testResult.Status = status.SUCCESSFUL
+	}
 
-	inHttpDebug := false
-	isStsAssumeRoleRequest := false
+	return testResult
+}
+
+// scanForConfusedDeputyHeaders scans an AWS SDK debug log stream for an STS AssumeRole request block that carries
+// both confused deputy headers.
+func scanForConfusedDeputyHeaders(r io.Reader) bool {
+	scanner := bufio.NewScanner(r)
+
+	inRequestBlock := false
 	httpDebugLog := []string{}
 
-	// Example HTTP debug log
-	//
-	// ---[ REQUEST POST-SIGN ]-----------------------------
-	// POST / HTTP/1.1
-	// Host: sts.us-west-2.amazonaws.com
-	// User-Agent: aws-sdk-go/1.48.6 (go1.22.11; linux; arm64)
-	// Content-Length: 199
-	// Authorization: AWS4-HMAC-SHA256 Credential=<snip>/<snip>/us-west-2/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-amz-security-token;x-amz-source-account;x-amz-source-arn, Signature=<snip>
-	// Content-Type: application/x-www-form-urlencoded; charset=utf-8
-	// X-Amz-Date: 20250129T170140Z
-	// X-Amz-Security-Token: <token>
-	// X-Amz-Source-Account: 0123456789012
-	// X-Amz-Source-Arn: arn:aws:ec2:us-west-2:123456789012:instance/i-1234567890abcdef0
-	// Accept-Encoding: gzip
-	//
-	// Action=AssumeRole&DurationSeconds=900&RoleArn=arn%3Aaws%3Aiam%3A%3A506463145083%3Arole%2Fcwa-integ-assume-role-5be6d1574e9843bb-all_context_keys&RoleSessionName=1738170071781577224&Version=2011-06-15
-	// -----------------------------------------------------
+	// evaluate returns true when the accumulated block is an STS AssumeRole request that carries both
+	// confused deputy headers.
+	evaluate := func(block []string) bool {
+		isStsAssumeRoleRequest := false
+		for _, l := range block {
+			if strings.Contains(l, "Action=AssumeRole") {
+				isStsAssumeRoleRequest = true
+				break
+			}
+		}
+		return isStsAssumeRoleRequest && checkForConfusedDeputyHeaders(block)
+	}
+
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Look for the start of an HTTP request debug log
-		if strings.Contains(line, "---[ REQUEST POST-SIGN ]-----------------------------") {
-			inHttpDebug = true
-			httpDebugLog = []string{}
-			isStsAssumeRoleRequest = false
-			continue
-		}
-
-		// Ignore anything thats not part of an HTTP request debug log
-		if !inHttpDebug {
-			continue
-		}
-
-		httpDebugLog = append(httpDebugLog, line)
-
-		if strings.Contains(line, "Action=AssumeRole") {
-			isStsAssumeRoleRequest = true
-		}
-
-		// Look for the end of an HTTP request debug log
-		if strings.Contains(line, "-----------------------------------------------------") {
-
-			if isStsAssumeRoleRequest && checkForConfusedDeputyHeaders(httpDebugLog) {
-				log.Println("Found confused deputy headers in the HTTP debug log")
-				testResult.Status = status.SUCCESSFUL
-				return testResult
+		// The start of any new HTTP request/response debug block terminates the block currently being
+		// accumulated. Evaluate it before (re)starting.
+		if isHTTPDebugBlockStart(line) {
+			if inRequestBlock && evaluate(httpDebugLog) {
+				return true
 			}
 
-			// Reset the search
-			inHttpDebug = false
-			isStsAssumeRoleRequest = false
-			httpDebugLog = []string{}
+			// Only accumulate request blocks; response blocks are irrelevant here.
+			inRequestBlock = isRequestBlockStart(line)
+			httpDebugLog = httpDebugLog[:0]
+			if inRequestBlock {
+				httpDebugLog = append(httpDebugLog, line)
+			}
+			continue
 		}
 
+		// The v1 format has an explicit end marker; treat it as a block terminator too.
+		if inRequestBlock && strings.Contains(line, "-----------------------------------------------------") {
+			if evaluate(httpDebugLog) {
+				return true
+			}
+			inRequestBlock = false
+			httpDebugLog = httpDebugLog[:0]
+			continue
+		}
+
+		if inRequestBlock {
+			httpDebugLog = append(httpDebugLog, line)
+		}
+	}
+
+	// The v2 format has no end marker, so the final block is only terminated by EOF.
+	if inRequestBlock && evaluate(httpDebugLog) {
+		return true
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Printf("Error reading file: %v\n", err)
 	}
 
-	return testResult
+	return false
+}
+
+// isRequestBlockStart reports whether the log line marks the start of an HTTP request debug block, for either the
+// aws-sdk-go v1 wire log or the aws-sdk-go-v2 / smithy RequestResponseLogger output.
+func isRequestBlockStart(line string) bool {
+	// aws-sdk-go v1
+	if strings.Contains(line, "---[ REQUEST POST-SIGN ]---") {
+		return true
+	}
+	// aws-sdk-go-v2 / smithy: the logger emits "Request\n<dumped request>", so the first line ends with "Request".
+	return strings.HasSuffix(strings.TrimSpace(line), "D! Request")
+}
+
+// isHTTPDebugBlockStart reports whether the log line marks the start of any HTTP request or response debug block. It
+// is used to delimit request blocks in the marker-less aws-sdk-go-v2 format.
+func isHTTPDebugBlockStart(line string) bool {
+	if isRequestBlockStart(line) {
+		return true
+	}
+	// aws-sdk-go v1 response marker
+	if strings.Contains(line, "---[ RESPONSE ]---") {
+		return true
+	}
+	// aws-sdk-go-v2 / smithy response block
+	return strings.HasSuffix(strings.TrimSpace(line), "D! Response")
 }
 
 // checkForConfusedDeputyHeaders checks for the presence of the confused deputy headers in the HTTP debug log
