@@ -21,9 +21,15 @@ variable "cwagent_image_tag" {
   default = "latest"
 }
 
-variable "karpenter_helm_chart_branch" {
+variable "karpenter_chart_ref" {
   type    = string
   default = "feature/karpenter-integration"
+}
+
+variable "helm_chart_branch" {
+  type    = string
+  default = "main"
+  description = "Passed by CI workflow but unused — karpenter_chart_ref is used instead"
 }
 
 variable "k8s_version" {
