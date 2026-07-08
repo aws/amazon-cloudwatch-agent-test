@@ -18,10 +18,6 @@ var karpenterMetrics = []otelmetrics.MetricDefinition{
 	{Name: "karpenter_pods_state", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"phase"}},
 	{Name: "karpenter_pods_bound_duration_seconds", MetricType: "histogram", Scope: otelmetrics.ScopeCluster, Unit: "s"},
 
-	// Scheduler metrics
-	{Name: "karpenter_scheduler_ignored_pods_count", MetricType: "gauge", Scope: otelmetrics.ScopeCluster},
-	{Name: "karpenter_scheduler_scheduling_duration_seconds", MetricType: "histogram", Scope: otelmetrics.ScopeCluster, Unit: "s"},
-
 	// Node resource metrics
 	{Name: "karpenter_nodes_allocatable", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"resource_type"}},
 	{Name: "karpenter_nodes_total_daemon_requests", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"resource_type"}},
