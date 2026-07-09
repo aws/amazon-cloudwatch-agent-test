@@ -86,9 +86,8 @@ func TestAppSignalsMetricsRouting(t *testing.T) {
 
 	// OTLP validation: otlphttpexporter debug log shows request to monitoring endpoint
 	t.Run("service_events_sent_to_otlp_monitoring_endpoint", func(t *testing.T) {
-		assert.Contains(t, agentLogStr,
-			`"Preparing to make HTTP request","url":"https://monitoring.us-west-2.amazonaws.com/v1/metrics"`,
-			"otlphttpexporter should log HTTP request to monitoring endpoint for ServiceEvents metrics")
+		assert.Regexp(t, `"Preparing to make HTTP request".*"url":"https://monitoring\.us-west-2\.amazonaws\.com/v1/metrics"`, agentLogStr,
+			"otlphttpexporter should log an HTTP request to the monitoring endpoint for ServiceEvents metrics")
 	})
 
 	// OTLP validation: query the PromQL API to confirm the metric was actually ingested
