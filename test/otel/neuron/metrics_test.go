@@ -28,14 +28,14 @@ var cadvisorMetrics = []otelmetrics.MetricDefinition{
 }
 
 var kubeletstatsMetrics = []otelmetrics.MetricDefinition{
-	{Name: "k8s.node.cpu.utilization", MetricType: "gauge", Scope: otelmetrics.ScopeNode, Unit: "1"},
+	{Name: "k8s.node.cpu.usage", MetricType: "gauge", Scope: otelmetrics.ScopeNode, Unit: "{cpu}"},
 	{Name: "k8s.node.memory.working_set", MetricType: "gauge", Scope: otelmetrics.ScopeNode, Unit: "By"},
 	{Name: "k8s.node.filesystem.available", MetricType: "gauge", Scope: otelmetrics.ScopeNode, Unit: "By"},
 	{Name: "k8s.node.network.io", MetricType: "counter", Scope: otelmetrics.ScopeNode, ExpectedLabels: []string{"interface", "direction"}, Unit: "By"},
-	{Name: "k8s.pod.cpu.utilization", MetricType: "gauge", Scope: otelmetrics.ScopePod, Unit: "1"},
+	{Name: "k8s.pod.cpu.usage", MetricType: "gauge", Scope: otelmetrics.ScopePod, Unit: "{cpu}"},
 	{Name: "k8s.pod.memory.working_set", MetricType: "gauge", Scope: otelmetrics.ScopePod, Unit: "By"},
 	{Name: "k8s.pod.network.io", MetricType: "counter", Scope: otelmetrics.ScopePod, ExpectedLabels: []string{"interface", "direction"}, Unit: "By"},
-	{Name: "container.cpu.utilization", MetricType: "gauge", Scope: otelmetrics.ScopeContainer, Unit: "1"},
+	{Name: "container.cpu.usage", MetricType: "gauge", Scope: otelmetrics.ScopeContainer, Unit: "{cpu}"},
 	{Name: "container.memory.working_set", MetricType: "gauge", Scope: otelmetrics.ScopeContainer, Unit: "By"},
 	{Name: "container.memory.usage", MetricType: "gauge", Scope: otelmetrics.ScopeContainer, Unit: "By"},
 }
