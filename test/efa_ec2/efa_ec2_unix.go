@@ -28,8 +28,8 @@ const (
 )
 
 var (
-	expectedEfaEC2LinuxMetrics    = []string{"efa_tx_bytes", "efa_rx_bytes", "efa_tx_pkts", "efa_rx_pkts", "efa_rx_dropped", "efa_rdma_read_bytes", "efa_rdma_write_bytes", "efa_send_bytes", "efa_recv_bytes"}
-	expectedEfaDimensionNames     = []string{"device", "port", "eniId"}
+	expectedEfaEC2LinuxMetrics = []string{"efa_tx_bytes", "efa_rx_bytes", "efa_tx_pkts", "efa_rx_pkts", "efa_rx_dropped", "efa_rdma_read_bytes", "efa_rdma_write_bytes", "efa_send_bytes", "efa_recv_bytes"}
+	expectedEfaDimensionNames  = []string{"device", "port", "eniId"}
 )
 
 func Validate() error {

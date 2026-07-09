@@ -254,7 +254,7 @@ resource "null_resource" "integration_test_run" {
         "echo 'Pre-test setup: Replacing {instance_id} and $${aws:InstanceId} placeholders in test resource configs'; find . -path '${var.test_dir}/resources/*.json' -exec sed -i 's/{instance_id}/${module.linux_common.cwagent_id}/g' {} \\; -exec sed -i 's/$${aws:InstanceId}/${module.linux_common.cwagent_id}/g' {} \\; && echo 'Updated all config files in resources directories'"
         ] : [
         "echo Running sanity test...",
-        "go test ./test/sanity -p 1 -v",
+        "go test ./test/sanity -p 1 -v || exit 1",
       ],
 
       [

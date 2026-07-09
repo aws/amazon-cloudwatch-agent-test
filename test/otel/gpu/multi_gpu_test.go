@@ -34,7 +34,7 @@ func TestMultiGPUDeviceCount(t *testing.T) {
 
 	gpus := uniqueDatapointValues(multiGPU, "gpu")
 	require.Equal(t, expectedMultiGPUCount, len(gpus), "Expected %d distinct gpu on %s, got %d: %v",
-			expectedMultiGPUCount, multiGpuInstanceType, len(gpus), gpus)
+		expectedMultiGPUCount, multiGpuInstanceType, len(gpus), gpus)
 }
 
 func TestMultiGPUUniqueUUIDs(t *testing.T) {
@@ -91,7 +91,7 @@ func TestMultiGPUAllMetricsPerDevice(t *testing.T) {
 
 			gpus := uniqueDatapointValues(multiGPU, "gpu")
 			require.Equal(t, expectedMultiGPUCount, len(gpus), "%s: expected %d GPUs, got %d: %v",
-					metricName, expectedMultiGPUCount, len(gpus), gpus)
+				metricName, expectedMultiGPUCount, len(gpus), gpus)
 		})
 	}
 }
