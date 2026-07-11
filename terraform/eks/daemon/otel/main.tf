@@ -140,6 +140,7 @@ resource "helm_release" "aws_observability" {
     { name = "clusterName", value = aws_eks_cluster.this.name },
     { name = "region", value = var.region },
     { name = "otelContainerInsights.enabled", value = "true" },
+    { name = "otelContainerInsights.logs.enabled", value = "true" }
   ]
 
   depends_on = [
@@ -360,8 +361,8 @@ resource "null_resource" "validator" {
       echo "Running OTEL standard cluster integration tests"
       cd ../../../..
 
-      echo "Waiting 3 minutes for metrics to propagate..."
-      sleep 180
+      echo "Waiting 5 minutes for metrics and logs to propagate..."
+      sleep 300
 
       go test -tags integration -timeout 1h -v ${var.test_dir} \
         -eksClusterName=${aws_eks_cluster.this.name} \

@@ -102,5 +102,11 @@ func TestMain(m *testing.M) {
 		otelmetrics.WithSourceRegistry(registry),
 	)
 
+	// Initialize logs client for OTLP log validation tests.
+	if err := initLogsClient(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "Logs client error: %v\n", err)
+		os.Exit(1)
+	}
+
 	os.Exit(m.Run())
 }
