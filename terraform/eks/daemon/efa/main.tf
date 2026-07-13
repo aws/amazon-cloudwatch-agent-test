@@ -14,7 +14,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
 
-  name               = "integ-${module.common.testing_id}"
+  name               = "cwagent-eks-integ-${module.common.testing_id}"
   kubernetes_version = var.k8s_version
 
   vpc_id     = aws_vpc.efa_test_vpc.id
