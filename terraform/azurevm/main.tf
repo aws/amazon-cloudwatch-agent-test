@@ -30,6 +30,30 @@ resource "azurerm_public_ip" "cwagent" {
   allocation_method   = "Static"
 }
 
+# Allow inbound SSH from the runner only (Azure's implicit default denies all inbound).
+resource "azurerm_network_security_group" "cwagent" {
+  name                = "cwa-azurevm-integ-nsg-${module.common.testing_id}"
+  location            = var.azure_location
+  resource_group_name = var.azure_resource_group
+
+  security_rule {
+    name                       = "AllowSSHFromRunner"
+    priority                   = 1000
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = var.runner_ip
+    destination_address_prefix = "*"
+  }
+}
+
+resource "azurerm_network_interface_security_group_association" "cwagent" {
+  network_interface_id      = azurerm_network_interface.cwagent.id
+  network_security_group_id = azurerm_network_security_group.cwagent.id
+}
+
 # Attach to an existing vnet/subnet in the resource group so CI needs no networking-create perms.
 data "azurerm_virtual_network" "selected" {
   resource_group_name = var.azure_resource_group
@@ -117,6 +141,7 @@ resource "null_resource" "integration_test" {
 
   depends_on = [
     azurerm_linux_virtual_machine.cwagent,
+    azurerm_network_interface_security_group_association.cwagent,
     aws_iam_role_policy.cwagent,
   ]
 }

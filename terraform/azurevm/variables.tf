@@ -52,7 +52,7 @@ variable "azure_location" {
 
 variable "azure_vm_size" {
   type    = string
-  default = "Standard_D2s_v5"
+  default = "Standard_D2s_v7"
 }
 
 # Existing resource group the VM is created in (input so CI needs no RG create/delete perms).
@@ -75,6 +75,12 @@ variable "azure_subnet_name" {
 variable "admin_username" {
   type    = string
   default = "cwagent"
+}
+
+# CIDR allowed inbound SSH to the VM (the CI runner's public IP, e.g. "1.2.3.4/32"); no default so it must be set.
+variable "runner_ip" {
+  type    = string
+  default = ""
 }
 
 # Ubuntu image the VM boots; matches the Debian-package install path used below.
