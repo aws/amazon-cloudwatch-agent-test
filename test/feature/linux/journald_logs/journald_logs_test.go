@@ -45,7 +45,21 @@ func waitAndStopAgent() {
 func TestJournaldUnitsLogs(t *testing.T) {
 	startAgentAndWaitForInit(t)
 
-	// Journal entries for cwagent-unit-test.service are created by Terraform provisioner.
+	// The journald receiver follows from the end of the journal (start_at: end,
+	// which the stanza operator maps to `journalctl --lines=0 --follow`), so it
+	// only captures entries written AFTER it initializes. The Terraform
+	// provisioner creates and starts cwagent-unit-test.service during instance
+	// setup, minutes before the agent runs, so those entries predate the
+	// receiver and are not collected. Re-trigger the unit here so that
+	// fresh cwagent-unit-test.service entries are produced while the receiver is
+	// following.
+	for i := 0; i < 3; i++ {
+		if err := exec.Command("bash", "-c", "sudo systemctl start cwagent-unit-test.service").Run(); err != nil {
+			t.Logf("warning: failed to start cwagent-unit-test.service: %v", err)
+		}
+		time.Sleep(2 * time.Second)
+	}
+
 	waitAndStopAgent()
 
 	instanceId := awsservice.GetInstanceId()
