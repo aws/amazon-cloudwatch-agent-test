@@ -40,6 +40,8 @@ func Validate() error {
 	// Generate unique ID to guarantee uniqueness
 	uniqueID := uuid.New().String()[:8]
 	documentName := testManageAgentDocument + uniqueID
+	agentConfig1Name := agentConfigFile1 + "-" + uniqueID
+	agentConfig2Name := agentConfigFile2 + "-" + uniqueID
 	metadata := environment.GetEnvironmentMetaData()
 	instanceIds := []string{metadata.InstanceId}
 
@@ -104,16 +106,17 @@ func Validate() error {
 	}
 
 	// Test configure action
-	log.Printf("Putting SSM parameter: %s", agentConfigFile1)
-	if err := awsservice.PutStringParameter(agentConfigFile1, agentConfig1); err != nil {
+	log.Printf("Putting SSM parameter: %s", agentConfig1Name)
+	if err := awsservice.PutStringParameter(agentConfig1Name, agentConfig1); err != nil {
 		return err
 	}
+	defer cleanupSSMParameter(agentConfig1Name)
 
 	configureTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                        {actionConfigure},
 			paramOptionalConfigurationSource:   {configSourceSSM},
-			paramOptionalConfigurationLocation: {agentConfigFile1},
+			paramOptionalConfigurationLocation: {agentConfig1Name},
 		},
 		actionName:           actionConfigure,
 		expectedAgentStatus:  agentStatusRunning,
@@ -124,26 +127,17 @@ func Validate() error {
 	}
 
 	// Test configure (append) action
-	log.Printf("Putting SSM parameter: %s", agentConfigFile2)
-	if err := awsservice.PutStringParameter(agentConfigFile2, agentConfig2); err != nil {
+	log.Printf("Putting SSM parameter: %s", agentConfig2Name)
+	if err := awsservice.PutStringParameter(agentConfig2Name, agentConfig2); err != nil {
 		return err
 	}
-
-	// Ensure SSM parameters are cleaned up
-	defer func() {
-		for _, paramName := range []string{agentConfigFile1, agentConfigFile2} {
-			log.Printf("Cleaning up SSM parameter: %s", paramName)
-			if deleteErr := awsservice.DeleteParameter(paramName); deleteErr != nil {
-				log.Printf("Warning: Failed to delete SSM parameter %s: %v", paramName, deleteErr)
-			}
-		}
-	}()
+	defer cleanupSSMParameter(agentConfig2Name)
 
 	appendTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                        {actionConfigureAppend},
 			paramOptionalConfigurationSource:   {configSourceSSM},
-			paramOptionalConfigurationLocation: {agentConfigFile2},
+			paramOptionalConfigurationLocation: {agentConfig2Name},
 		},
 		actionName:           actionConfigureAppend,
 		expectedAgentStatus:  agentStatusRunning,

@@ -14,6 +14,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
+// cleanupSSMParameter best-effort deletes an SSM parameter, logging any failure. Defer it
+// immediately after each PutStringParameter so a failure in a later step never leaves a
+// uniquely-named parameter orphaned in the account.
+func cleanupSSMParameter(name string) {
+	log.Printf("Cleaning up SSM parameter: %s", name)
+	if err := awsservice.DeleteParameter(name); err != nil {
+		log.Printf("Warning: Failed to delete SSM parameter %s: %v", name, err)
+	}
+}
+
 func RunAndVerifySSMAction(documentName string, instanceIds []string, tc testCase) error {
 	log.Printf("Testing %s action", tc.actionName)
 
