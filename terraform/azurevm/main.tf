@@ -126,14 +126,14 @@ resource "null_resource" "integration_test" {
     ]
   }
 
-  # -m auto -> IMDS resolves Azure; no JSON config, so USE_DEFAULT_CONFIG=otel selects default:otel, then run the test.
+  # Persist env vars to env-config.json: the agent loads this at startup, making them available to OTel
+  # expandconverter which resolves ${AWS_REGION} and ${CWAGENT_ROLE_ARN} placeholders in the translated YAML.
   provisioner "remote-exec" {
     inline = [
       "export PATH=$PATH:/usr/local/go/bin",
-      "export AWS_REGION=${var.region}",
-      "echo 'CWAGENT_ROLE_ARN=${aws_iam_role.cwagent.arn}' | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/env-config",
-      "echo 'USE_DEFAULT_CONFIG=otel' | sudo tee -a /opt/aws/amazon-cloudwatch-agent/etc/env-config",
-      "sudo CWAGENT_ROLE_ARN='${aws_iam_role.cwagent.arn}' USE_DEFAULT_CONFIG=otel /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m auto -s -c default:otel",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent -setenv 'AWS_REGION=${var.region}' -envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent -setenv 'CWAGENT_ROLE_ARN=${aws_iam_role.cwagent.arn}' -envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json",
+      "sudo USE_DEFAULT_CONFIG=otel /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m auto -s -c default:otel",
       "cd amazon-cloudwatch-agent-test",
       "go test -tags integration ${var.test_dir} -p 1 -timeout 30m -computeType=AZUREVM -region=${var.region} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${azurerm_linux_virtual_machine.cwagent.virtual_machine_id} -assumeRoleArn=${aws_iam_role.cwagent.arn} -v",
     ]
