@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package azurevm
+package vm
 
 import (
 	"fmt"

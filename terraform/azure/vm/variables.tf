@@ -12,7 +12,7 @@ variable "region" {
 
 variable "test_dir" {
   type    = string
-  default = "./test/azurevm"
+  default = "./test/azure/vm"
 }
 
 variable "test_name" {

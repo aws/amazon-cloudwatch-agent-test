@@ -134,6 +134,9 @@ resource "null_resource" "integration_test" {
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent -setenv 'AWS_REGION=${var.region}' -envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent -setenv 'CWAGENT_ROLE_ARN=${aws_iam_role.cwagent.arn}' -envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json",
       "sudo USE_DEFAULT_CONFIG=otel /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m auto -s -c default:otel",
+      # The test binary validates delivery via AWS reads; give it the same web-identity chain the agent uses.
+      "curl -s -H Metadata:true \"http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=${var.azure_token_audience}\" | python3 -c \"import sys,json; print(json.load(sys.stdin)['access_token'])\" > /tmp/azure-identity-token",
+      "export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/azure-identity-token AWS_ROLE_ARN=${aws_iam_role.cwagent.arn} AWS_REGION=${var.region}",
       "cd amazon-cloudwatch-agent-test",
       "go test -tags integration ${var.test_dir} -p 1 -timeout 30m -computeType=AZUREVM -region=${var.region} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${azurerm_linux_virtual_machine.cwagent.virtual_machine_id} -assumeRoleArn=${aws_iam_role.cwagent.arn} -v",
     ]
