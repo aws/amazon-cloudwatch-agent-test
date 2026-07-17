@@ -121,26 +121,34 @@ func validateLogs() status.TestResult {
 	return testResult
 }
 
-// validateTraces confirms OTLP trace segments reached X-Ray. Filters by service name (always indexed by X-Ray)
-// rather than a custom annotation (which requires IndexedAttributes in the exporter config).
-// X-Ray OTLP ingestion + indexing typically takes 3-5 minutes, so we retry generously.
+// validateTraces confirms OTLP trace segments reached X-Ray by fetching them with BatchGetTraces
+// using the exact trace IDs we generated. This bypasses GetTraceSummaries indexing (which can lag
+// 5-10+ minutes for OTLP-ingested traces) and queries the raw trace store directly.
 func validateTraces() status.TestResult {
 	testResult := status.TestResult{Name: "AzureVM_Traces", Status: status.FAILED}
 
-	filter := fmt.Sprintf("service(\"%s\")", serviceName)
+	if len(generatedTraceIDs) == 0 {
+		testResult.Reason = fmt.Errorf("no trace IDs were generated during the load window")
+		return testResult
+	}
+
+	xrayIDs := make([]string, len(generatedTraceIDs))
+	for i, otlpID := range generatedTraceIDs {
+		xrayIDs[i] = otlpToXRayTraceID(otlpID)
+	}
+	log.Printf("[AzureVM_Traces] generated %d trace IDs, querying X-Ray with BatchGetTraces (sample: %s)", len(xrayIDs), xrayIDs[0])
+
 	const maxRetries = 5
-	const retryInterval = 90 * time.Second
+	const retryInterval = 60 * time.Second
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		since := time.Now().Add(-loadWindow - 5*time.Minute)
-		until := time.Now()
-		traceIDs, err := awsservice.GetTraceIDs(since, until, filter)
+		traces, err := awsservice.GetBatchTraces(xrayIDs)
 		if err != nil {
-			testResult.Reason = fmt.Errorf("attempt %d: failed to fetch trace ids: %w", attempt, err)
-		} else if len(traceIDs) == 0 {
-			testResult.Reason = fmt.Errorf("attempt %d: no X-Ray traces with service(%s) in [%s, %s]",
-				attempt, serviceName, since.Format(time.RFC3339), until.Format(time.RFC3339))
+			testResult.Reason = fmt.Errorf("attempt %d: BatchGetTraces error: %w", attempt, err)
+		} else if len(traces) == 0 {
+			testResult.Reason = fmt.Errorf("attempt %d: BatchGetTraces returned 0 traces for %d IDs (sample: %s)",
+				attempt, len(xrayIDs), xrayIDs[0])
 		} else {
-			log.Printf("[AzureVM_Traces] attempt %d: found %d traces", attempt, len(traceIDs))
+			log.Printf("[AzureVM_Traces] attempt %d: BatchGetTraces returned %d/%d traces", attempt, len(traces), len(xrayIDs))
 			testResult.Status = status.SUCCESSFUL
 			return testResult
 		}

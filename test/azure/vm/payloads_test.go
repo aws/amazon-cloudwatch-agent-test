@@ -71,8 +71,12 @@ func buildLogsPayload(instanceID string) []byte {
 }`, serviceName, instanceID, now, body, instanceID))
 }
 
-// traceSeq is an atomically-incremented counter ensuring unique trace/span IDs across calls.
+// traceSeq is an incrementing counter ensuring unique trace/span IDs across calls.
 var traceSeq uint64
+
+// generatedTraceIDs collects the OTLP trace IDs (32 hex chars) emitted during the load window.
+// validateTraces converts these to X-Ray format and uses BatchGetTraces to verify delivery.
+var generatedTraceIDs []string
 
 // buildTracesPayload emits an OTLP span with X-Ray-compatible trace IDs.
 // X-Ray requires the first 4 bytes of the 16-byte trace ID to be a Unix epoch timestamp (seconds);
@@ -85,6 +89,7 @@ func buildTracesPayload(instanceID string) []byte {
 	// First 4 bytes: unix seconds (X-Ray requirement). Remaining 12 bytes: sequence + padding for uniqueness.
 	traceID := fmt.Sprintf("%08x0000000000000000%08x", now.Unix(), traceSeq)
 	spanID := fmt.Sprintf("%016x", nowNano)
+	generatedTraceIDs = append(generatedTraceIDs, traceID)
 	return []byte(fmt.Sprintf(`{
   "resourceSpans": [{
     "resource": {"attributes": [
@@ -105,4 +110,9 @@ func buildTracesPayload(instanceID string) []byte {
     }]
   }]
 }`, serviceName, instanceID, traceID, spanID, startNano, nowNano, instanceID))
+}
+
+// otlpToXRayTraceID converts a 32-hex-char OTLP trace ID to X-Ray's native format: 1-{first8hex}-{remaining24hex}.
+func otlpToXRayTraceID(otlpID string) string {
+	return fmt.Sprintf("1-%s-%s", otlpID[:8], otlpID[8:])
 }
