@@ -58,9 +58,11 @@ data "aws_iam_policy_document" "cwagent_permissions" {
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams",
       "logs:GetLogEvents",
+      "xray:PutSpans",
       "xray:PutTraceSegments",
       "xray:PutTelemetryRecords",
       "xray:GetTraceSummaries",
+      "xray:BatchGetTraces",
     ]
     resources = ["*"]
   }
