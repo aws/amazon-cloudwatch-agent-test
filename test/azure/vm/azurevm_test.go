@@ -88,10 +88,7 @@ func TestAzureVM(t *testing.T) {
 
 	t.Run("Traces", func(t *testing.T) {
 		r := validateTraces()
-		if r.Status != status.SUCCESSFUL {
-			t.Logf("WARN: trace validation did not pass (X-Ray OTLP indexing lag suspected): %v", r.Reason)
-			t.Skip("skipping: X-Ray OTLP trace indexing is unreliable with short windows; metrics+logs prove delivery")
-		}
+		require.Equal(t, status.SUCCESSFUL, r.Status, "trace validation failed: %v", r.Reason)
 	})
 }
 
@@ -126,14 +123,15 @@ func validateLogs() status.TestResult {
 
 // validateTraces confirms OTLP trace segments reached X-Ray. Filters by service name (always indexed by X-Ray)
 // rather than a custom annotation (which requires IndexedAttributes in the exporter config).
-// X-Ray indexing can lag several minutes, so retry with back-off.
+// X-Ray OTLP ingestion + indexing typically takes 3-5 minutes, so we retry generously.
 func validateTraces() status.TestResult {
 	testResult := status.TestResult{Name: "AzureVM_Traces", Status: status.FAILED}
 
 	filter := fmt.Sprintf("service(\"%s\")", serviceName)
-	const maxRetries = 3
+	const maxRetries = 5
+	const retryInterval = 90 * time.Second
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		since := time.Now().Add(-loadWindow - 2*time.Minute)
+		since := time.Now().Add(-loadWindow - 5*time.Minute)
 		until := time.Now()
 		traceIDs, err := awsservice.GetTraceIDs(since, until, filter)
 		if err != nil {
@@ -147,8 +145,8 @@ func validateTraces() status.TestResult {
 			return testResult
 		}
 		if attempt < maxRetries {
-			log.Printf("[AzureVM_Traces] %v — retrying in 60s", testResult.Reason)
-			time.Sleep(60 * time.Second)
+			log.Printf("[AzureVM_Traces] %v — retrying in %v", testResult.Reason, retryInterval)
+			time.Sleep(retryInterval)
 		}
 	}
 	return testResult

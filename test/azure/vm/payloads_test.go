@@ -71,13 +71,20 @@ func buildLogsPayload(instanceID string) []byte {
 }`, serviceName, instanceID, now, body, instanceID))
 }
 
-// buildTracesPayload emits an OTLP span whose instance_id attribute becomes the X-Ray annotation the test filters on.
+// traceSeq is an atomically-incremented counter ensuring unique trace/span IDs across calls.
+var traceSeq uint64
+
+// buildTracesPayload emits an OTLP span with X-Ray-compatible trace IDs.
+// X-Ray requires the first 4 bytes of the 16-byte trace ID to be a Unix epoch timestamp (seconds);
+// IDs that violate this are silently dropped during ingestion.
 func buildTracesPayload(instanceID string) []byte {
-	now := time.Now().UnixNano()
-	start := now - int64(time.Second)
-	// X-Ray requires 16-byte trace / 8-byte span ids; embed a rolling suffix so ids vary across pushes.
-	traceID := fmt.Sprintf("%032x", now)
-	spanID := fmt.Sprintf("%016x", now)
+	traceSeq++
+	now := time.Now()
+	nowNano := now.UnixNano()
+	startNano := nowNano - int64(time.Second)
+	// First 4 bytes: unix seconds (X-Ray requirement). Remaining 12 bytes: sequence + padding for uniqueness.
+	traceID := fmt.Sprintf("%08x0000000000000000%08x", now.Unix(), traceSeq)
+	spanID := fmt.Sprintf("%016x", nowNano)
 	return []byte(fmt.Sprintf(`{
   "resourceSpans": [{
     "resource": {"attributes": [
@@ -97,5 +104,5 @@ func buildTracesPayload(instanceID string) []byte {
       }]
     }]
   }]
-}`, serviceName, instanceID, traceID, spanID, start, now, instanceID))
+}`, serviceName, instanceID, traceID, spanID, startNano, nowNano, instanceID))
 }
