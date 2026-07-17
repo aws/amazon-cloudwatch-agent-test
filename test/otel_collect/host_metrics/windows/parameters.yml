@@ -1,0 +1,23 @@
+# Windows Host Metrics OTLP integration test
+# Tests that OTel host_metrics collects system metrics on Windows
+# and publishes to the OTLP monitoring endpoint with cluster_name
+
+receivers: []
+
+test_case: "win_otlp_host_metrics"
+validate_type: "feature"
+data_type: "metrics"
+
+# Number of seconds the agent should run and collect metrics (3 minutes)
+agent_collection_period: 180
+
+cloudwatch_agent_config: "agent_config.json"
+
+# Validate host metrics are published via OTLP
+metric_namespace: "CWAgent/System"
+metric_validation:
+  - metric_name: "cpu_time"
+    metric_sample_count: 1
+
+  - metric_name: "memory_usage"
+    metric_sample_count: 1

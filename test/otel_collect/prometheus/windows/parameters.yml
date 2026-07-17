@@ -1,0 +1,45 @@
+# Windows Prometheus OTLP integration test
+# Tests that OTel Prometheus receiver scrapes metrics on Windows
+# and publishes to the OTLP monitoring endpoint
+
+receivers: []
+
+test_case: "win_otlp_prometheus"
+validate_type: "feature"
+data_type: "metrics"
+
+# Number of seconds the agent should run and collect metrics (3 minutes)
+agent_collection_period: 180
+
+cloudwatch_agent_config: "agent_config.json"
+
+# Preparation script: writes prometheus scrape config and starts a fake metrics server
+# The validator will run this PowerShell before starting the agent
+preparation_cmd: |
+  Set-Content -Path "C:\prometheus.yml" -Value (Get-Content "C:\prometheus_scrape_config.yaml")
+  $listener = [System.Net.HttpListener]::new()
+  $listener.Prefixes.Add("http://+:9100/")
+  $listener.Start()
+  $job = Start-Job -ScriptBlock {
+    param($metrics)
+    $l = [System.Net.HttpListener]::new()
+    $l.Prefixes.Add("http://+:9100/")
+    $l.Start()
+    while ($l.IsListening) {
+      $ctx = $l.GetContext()
+      $response = $ctx.Response
+      $buffer = [System.Text.Encoding]::UTF8.GetBytes($metrics)
+      $response.ContentLength64 = $buffer.Length
+      $response.OutputStream.Write($buffer, 0, $buffer.Length)
+      $response.Close()
+    }
+  } -ArgumentList (Get-Content "C:\prometheus_metrics" -Raw)
+
+# Validate prometheus metrics are published via OTLP
+metric_namespace: "CWAgent"
+metric_validation:
+  - metric_name: "node_cpu_seconds_total"
+    metric_sample_count: 1
+
+  - metric_name: "node_memory_MemAvailable_bytes"
+    metric_sample_count: 1
