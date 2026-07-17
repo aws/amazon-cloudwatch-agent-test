@@ -15,6 +15,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -87,6 +88,11 @@ func TestAzureVM(t *testing.T) {
 	})
 
 	t.Run("Traces", func(t *testing.T) {
+		// Dump agent log errors/warnings from the load window to diagnose trace export issues.
+		postLoadLog := common.ReadAgentLogfile(agentLogFile)
+		for _, line := range filterLogLines(postLoadLog, "error", "warn", "xray", "traces", "401", "403", "500") {
+			t.Logf("agent: %s", line)
+		}
 		r := validateTraces()
 		require.Equal(t, status.SUCCESSFUL, r.Status, "trace validation failed: %v", r.Reason)
 	})
@@ -187,4 +193,22 @@ func post(path string, payload []byte) {
 	if _, err := http.DefaultClient.Do(req); err != nil {
 		log.Printf("failed to POST OTLP to %s: %v", path, err)
 	}
+}
+
+// filterLogLines returns lines from a multi-line string that contain any of the given substrings (case-insensitive).
+func filterLogLines(text string, substrs ...string) []string {
+	var result []string
+	for _, line := range strings.Split(text, "\n") {
+		lower := strings.ToLower(line)
+		for _, s := range substrs {
+			if strings.Contains(lower, strings.ToLower(s)) {
+				result = append(result, line)
+				break
+			}
+		}
+	}
+	if len(result) > 50 {
+		result = result[len(result)-50:]
+	}
+	return result
 }
