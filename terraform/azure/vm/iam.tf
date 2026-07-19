@@ -58,11 +58,14 @@ data "aws_iam_policy_document" "cwagent_permissions" {
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams",
       "logs:GetLogEvents",
+      # StartQuery/GetQueryResults let the test binary validate OTLP trace delivery via the aws/spans
+      # log group; the X-Ray OTLP endpoint requires account-level Transaction Search (trace segment
+      # destination = CloudWatchLogs), which stores 100% of spans there.
+      "logs:StartQuery",
+      "logs:GetQueryResults",
       "xray:PutSpans",
       "xray:PutTraceSegments",
       "xray:PutTelemetryRecords",
-      "xray:GetTraceSummaries",
-      "xray:BatchGetTraces",
     ]
     resources = ["*"]
   }

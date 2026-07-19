@@ -75,7 +75,7 @@ func buildLogsPayload(instanceID string) []byte {
 var traceSeq uint64
 
 // generatedTraceIDs collects the OTLP trace IDs (32 hex chars) emitted during the load window.
-// validateTraces converts these to X-Ray format and uses BatchGetTraces to verify delivery.
+// validateTraces queries the aws/spans log group (Transaction Search) for these exact IDs.
 var generatedTraceIDs []string
 
 // buildTracesPayload emits an OTLP span with X-Ray-compatible trace IDs.
@@ -110,9 +110,4 @@ func buildTracesPayload(instanceID string) []byte {
     }]
   }]
 }`, serviceName, instanceID, traceID, spanID, startNano, nowNano, instanceID))
-}
-
-// otlpToXRayTraceID converts a 32-hex-char OTLP trace ID to X-Ray's native format: 1-{first8hex}-{remaining24hex}.
-func otlpToXRayTraceID(otlpID string) string {
-	return fmt.Sprintf("1-%s-%s", otlpID[:8], otlpID[8:])
 }

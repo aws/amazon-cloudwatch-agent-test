@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -39,6 +40,8 @@ const (
 	agentLogFile = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	// serviceName tags emitted telemetry so validation can isolate this test's records from other traffic.
 	serviceName = "azurevm-otlp-test-service"
+	// spansLogGroup is where Transaction Search stores 100% of spans ingested via the X-Ray OTLP endpoint.
+	spansLogGroup = "aws/spans"
 )
 
 var env *environment.MetaData
@@ -127,9 +130,11 @@ func validateLogs() status.TestResult {
 	return testResult
 }
 
-// validateTraces confirms OTLP trace segments reached X-Ray by fetching them with BatchGetTraces
-// using the exact trace IDs we generated. This bypasses GetTraceSummaries indexing (which can lag
-// 5-10+ minutes for OTLP-ingested traces) and queries the raw trace store directly.
+// validateTraces confirms every OTLP span emitted during the load window reached AWS through the
+// X-Ray OTLP endpoint. That endpoint requires Transaction Search (trace segment destination =
+// CloudWatchLogs), which stores 100% of ingested spans in the aws/spans log group; the X-Ray query
+// APIs (GetTraceSummaries/BatchGetTraces) only see the indexed subset (1% by default), so aws/spans
+// is the authoritative surface for OTLP trace delivery. Ingestion lags a few minutes, hence retries.
 func validateTraces() status.TestResult {
 	testResult := status.TestResult{Name: "AzureVM_Traces", Status: status.FAILED}
 
@@ -138,25 +143,43 @@ func validateTraces() status.TestResult {
 		return testResult
 	}
 
-	xrayIDs := make([]string, len(generatedTraceIDs))
-	for i, otlpID := range generatedTraceIDs {
-		xrayIDs[i] = otlpToXRayTraceID(otlpID)
+	quoted := make([]string, len(generatedTraceIDs))
+	for i, id := range generatedTraceIDs {
+		quoted[i] = fmt.Sprintf("%q", id)
 	}
-	log.Printf("[AzureVM_Traces] generated %d trace IDs, querying X-Ray with BatchGetTraces (sample: %s)", len(xrayIDs), xrayIDs[0])
+	query := fmt.Sprintf("fields traceId | filter traceId in [%s] | dedup traceId", strings.Join(quoted, ", "))
+	log.Printf("[AzureVM_Traces] expecting %d trace IDs in %s (sample: %s)", len(generatedTraceIDs), spansLogGroup, generatedTraceIDs[0])
 
 	const maxRetries = 5
 	const retryInterval = 60 * time.Second
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		traces, err := awsservice.GetBatchTraces(xrayIDs)
+		since := time.Now().Add(-loadWindow - 10*time.Minute)
+		rows, err := awsservice.GetLogQueryResults(spansLogGroup, since.Unix(), time.Now().Unix(), query)
 		if err != nil {
-			testResult.Reason = fmt.Errorf("attempt %d: BatchGetTraces error: %w", attempt, err)
-		} else if len(traces) == 0 {
-			testResult.Reason = fmt.Errorf("attempt %d: BatchGetTraces returned 0 traces for %d IDs (sample: %s)",
-				attempt, len(xrayIDs), xrayIDs[0])
+			testResult.Reason = fmt.Errorf("attempt %d: %s query failed (is Transaction Search enabled in the account?): %w",
+				attempt, spansLogGroup, err)
 		} else {
-			log.Printf("[AzureVM_Traces] attempt %d: BatchGetTraces returned %d/%d traces", attempt, len(traces), len(xrayIDs))
-			testResult.Status = status.SUCCESSFUL
-			return testResult
+			found := make(map[string]bool, len(rows))
+			for _, row := range rows {
+				for _, field := range row {
+					if aws.ToString(field.Field) == "traceId" {
+						found[aws.ToString(field.Value)] = true
+					}
+				}
+			}
+			var missing []string
+			for _, id := range generatedTraceIDs {
+				if !found[id] {
+					missing = append(missing, id)
+				}
+			}
+			if len(missing) == 0 {
+				log.Printf("[AzureVM_Traces] attempt %d: all %d traces found in %s", attempt, len(generatedTraceIDs), spansLogGroup)
+				testResult.Status = status.SUCCESSFUL
+				return testResult
+			}
+			testResult.Reason = fmt.Errorf("attempt %d: %d/%d traces missing from %s (first missing: %s)",
+				attempt, len(missing), len(generatedTraceIDs), spansLogGroup, missing[0])
 		}
 		if attempt < maxRetries {
 			log.Printf("[AzureVM_Traces] %v — retrying in %v", testResult.Reason, retryInterval)
