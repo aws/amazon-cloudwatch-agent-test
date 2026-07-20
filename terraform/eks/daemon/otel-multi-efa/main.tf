@@ -29,24 +29,22 @@ module "eks" {
 
   eks_managed_node_groups = {
     standard = {
-      iam_role_use_name_prefix = false
-      ami_type                 = "AL2023_x86_64_STANDARD"
-      instance_types           = ["t3.medium"]
-      min_size                 = 1
-      max_size                 = 1
-      desired_size             = 1
-      subnet_ids               = aws_subnet.efa_test_public_subnet[*].id
+      ami_type       = "AL2023_x86_64_STANDARD"
+      instance_types = ["t3.medium"]
+      min_size       = 1
+      max_size       = 1
+      desired_size   = 1
+      subnet_ids     = aws_subnet.efa_test_public_subnet[*].id
     }
 
     multi_efa = {
-      iam_role_use_name_prefix = false
-      enable_efa_support       = true
-      ami_type                 = var.ami_type
-      instance_types           = [var.instance_type]
-      min_size                 = 1
-      max_size                 = 1
-      desired_size             = 1
-      subnet_ids               = aws_subnet.efa_test_private_subnet[*].id
+      enable_efa_support = true
+      ami_type           = var.ami_type
+      instance_types     = [var.instance_type]
+      min_size           = 1
+      max_size           = 1
+      desired_size       = 1
+      subnet_ids         = aws_subnet.efa_test_private_subnet[*].id
 
       labels = {
         "ci-test.example.com/multi-efa-sm" = "true"
