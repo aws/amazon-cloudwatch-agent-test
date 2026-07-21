@@ -1,0 +1,14 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "opentelemetry": {
+    "cluster_name": "cwagent-ecs-integ-test",
+    "collect": {
+      "host_metrics": {
+        "collection_interval": 30
+      }
+    }
+  }
+}

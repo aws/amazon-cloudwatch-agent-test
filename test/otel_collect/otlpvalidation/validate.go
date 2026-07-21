@@ -10,11 +10,29 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
+
+// onPremiseMarker identifies the on-prem agent start command (-m onPremise).
+const onPremiseMarker = "onPremise"
+
+// ResourceHostIDLabels returns the metric label filter keyed on the entity
+// host.id (the EC2 instance id) for EC2 mode.
+//
+// In on-prem mode (agent started with "-m onPremise") the agent does not read
+// EC2 IMDS, so it does not set @resource.host.id to the instance id. Filtering
+// on it there would never match, so we return nil and validate metric presence
+// only. Detection is based on the agent start command from the test matrix.
+func ResourceHostIDLabels(agentStartCommand, instanceID string) map[string]string {
+	if strings.Contains(agentStartCommand, onPremiseMarker) {
+		return nil
+	}
+	return map[string]string{"@resource.host.id": instanceID}
+}
 
 const (
 	defaultMaxRetries    = 3

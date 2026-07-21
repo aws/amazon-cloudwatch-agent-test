@@ -19,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/log_state/windows_event_log"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/nvidia_gpu"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
+	otelcollectotlp "github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/windows/otlp"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/ssm_document"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/workload_discovery"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -67,6 +68,8 @@ func main() {
 			err = windows_event_log.Validate()
 		case "ssm_document":
 			err = ssm_document.Validate()
+		case "otlp":
+			err = otelcollectotlp.Validate()
 		default:
 			err = errors.New("unsupported test name")
 		}
