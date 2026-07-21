@@ -313,7 +313,7 @@ resource "helm_release" "aws_observability" {
     { name = "clusterName", value = aws_eks_cluster.this.name },
     { name = "region", value = var.region },
     { name = "otelContainerInsights.enabled", value = "true" },
-    { name = "otelContainerInsights.integrations.karpenter.enabled", value = "true" },
+    { name = "otelContainerInsights.solutions.karpenter.enabled", value = "true" },
   ]
 
   depends_on = [
@@ -545,8 +545,8 @@ resource "null_resource" "validator" {
         -eksDeploymentStrategy=DAEMON \
         -region=${var.region}
 
-      echo "Running OTEL integrations tests (Karpenter)..."
-      go test -tags integration -timeout 1h -v ./test/otel/integrations/karpenter/... \
+      echo "Running OTEL solutions tests (Karpenter)..."
+      go test -tags integration -timeout 1h -v ./test/otel/solutions/karpenter/... \
         -eksClusterName=${aws_eks_cluster.this.name} \
         -computeType=EKS \
         -eksDeploymentStrategy=DAEMON \
