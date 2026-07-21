@@ -29,6 +29,13 @@ var (
 	agentConfig2 string
 )
 
+// set-env on-disk verification: read the agent's env-config.json through the stock
+// run-command document for this platform.
+const (
+	runCommandDocumentName = "AWS-RunShellScript"
+	envConfigReadCommand   = "cat /opt/aws/amazon-cloudwatch-agent/etc/env-config.json"
+)
+
 func Validate() error {
 	log.Println("Starting SSM Document validation tests")
 
@@ -144,6 +151,60 @@ func Validate() error {
 		expectedConfigStatus: configStatusConfigured,
 	}
 	if err := RunAndVerifySSMAction(documentName, instanceIds, appendTest); err != nil {
+		return err
+	}
+
+	// Test set-env action (happy path): custom (non translator-managed) key with a value
+	// containing spaces. Verifies the ctl's "Set <KEY>" output, that the pair is persisted
+	// to env-config.json on disk, and that agent status/configstatus are unchanged.
+	setEnvTest := testCase{
+		parameters: map[string][]string{
+			paramAction:                      {actionSetEnv},
+			paramOptionalEnvironmentVariable: {setEnvKey1 + "=" + setEnvValue1},
+		},
+		actionName:           actionSetEnv,
+		expectedAgentStatus:  agentStatusRunning,
+		expectedConfigStatus: configStatusConfigured,
+	}
+	if err := RunAndVerifySSMActionWithOutput(documentName, instanceIds, setEnvTest, setEnvOutputPrefix+setEnvKey1); err != nil {
+		return err
+	}
+	if err := VerifyEnvConfigContent(runCommandDocumentName, envConfigReadCommand, metadata.InstanceId, map[string]string{
+		setEnvKey1: setEnvValue1,
+	}); err != nil {
+		return err
+	}
+
+	// Test set-env action (merge): a second key is persisted alongside the first.
+	setEnvMergeTest := testCase{
+		parameters: map[string][]string{
+			paramAction:                      {actionSetEnv},
+			paramOptionalEnvironmentVariable: {setEnvKey2 + "=" + setEnvValue2},
+		},
+		actionName:           actionSetEnvMerge,
+		expectedAgentStatus:  agentStatusRunning,
+		expectedConfigStatus: configStatusConfigured,
+	}
+	if err := RunAndVerifySSMActionWithOutput(documentName, instanceIds, setEnvMergeTest, setEnvOutputPrefix+setEnvKey2); err != nil {
+		return err
+	}
+	if err := VerifyEnvConfigContent(runCommandDocumentName, envConfigReadCommand, metadata.InstanceId, map[string]string{
+		setEnvKey1: setEnvValue1,
+		setEnvKey2: setEnvValue2,
+	}); err != nil {
+		return err
+	}
+
+	// Test set-env action (error path): empty optionalEnvironmentVariable must fail
+	// with the document-level error message.
+	setEnvEmptyTest := testCase{
+		parameters: map[string][]string{
+			paramAction:                      {actionSetEnv},
+			paramOptionalEnvironmentVariable: {""},
+		},
+		actionName: actionSetEnvEmpty,
+	}
+	if err := RunAndVerifySSMActionFailure(documentName, instanceIds, setEnvEmptyTest, setEnvEmptyErrorMessage); err != nil {
 		return err
 	}
 

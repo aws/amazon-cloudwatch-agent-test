@@ -12,12 +12,31 @@ const (
 	actionConfigure       = "configure"
 	actionConfigureAppend = "configure (append)"
 	actionConfigureRemove = "configure (remove)"
+	actionSetEnv          = "set-env"
+	actionSetEnvMerge     = "set-env (merge)"
+	actionSetEnvEmpty     = "set-env (empty)"
 
 	// Parameters
 	paramAction                        = "action"
 	paramOptionalConfigurationSource   = "optionalConfigurationSource"
 	paramOptionalConfigurationLocation = "optionalConfigurationLocation"
 	paramOptionalRestart               = "optionalRestart"
+	paramOptionalEnvironmentVariable   = "optionalEnvironmentVariable"
+
+	// set-env test environment variables. Custom (non translator-managed) key names so
+	// configure actions and agent restarts do not overwrite them. Values include spaces
+	// to exercise quoting through the document -> ctl -> agent binary chain.
+	setEnvKey1   = "CWA_TEST_VAR_ONE"
+	setEnvValue1 = "value with spaces"
+	setEnvKey2   = "CWA_TEST_VAR_TWO"
+	setEnvValue2 = "another value"
+
+	// setEnvOutputPrefix is printed by the ctl on a successful set-env ("Set <KEY>").
+	setEnvOutputPrefix = "Set "
+
+	// setEnvEmptyErrorMessage is printed by the SSM document when optionalEnvironmentVariable
+	// is empty for the set-env action.
+	setEnvEmptyErrorMessage = "optionalEnvironmentVariable must be specified for the set-env action"
 
 	// Parameter Values
 	configSourceSSM = "ssm"
