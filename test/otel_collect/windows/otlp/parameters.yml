@@ -1,8 +1,11 @@
 # FILE ONLY EXISTS SO VALIDATOR WILL RUN THE GO TEST
 # SEE validator/main.go
 
+# Receivers that agent needs to test
 receivers: []
-test_case: "win_otel_prometheus"
+
+# Test case name
+test_case: "win_otlp"
 validate_type: "feature"
 data_type: "metrics"
 number_monitored_logs: 1

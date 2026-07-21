@@ -1,23 +1,14 @@
-# Windows Host Metrics OTLP integration test
-# Tests that OTel host_metrics collects system metrics on Windows
-# and publishes to the OTLP monitoring endpoint with cluster_name
+# FILE ONLY EXISTS SO VALIDATOR WILL RUN THE GO TEST
+# SEE validator/main.go
 
 receivers: []
-
-test_case: "win_otlp_host_metrics"
+test_case: "win_otel_host_metrics"
 validate_type: "feature"
 data_type: "metrics"
-
-# Number of seconds the agent should run and collect metrics (3 minutes)
-agent_collection_period: 180
-
-cloudwatch_agent_config: "agent_config.json"
-
-# Validate host metrics are published via OTLP
-metric_namespace: "CWAgent/System"
+number_monitored_logs: 1
+values_per_minute: "2"
+agent_collection_period: 60
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+metric_namespace: "CloudWatchAgentWinOtel"
 metric_validation:
-  - metric_name: "cpu_time"
-    metric_sample_count: 1
-
-  - metric_name: "memory_usage"
-    metric_sample_count: 1
+log_validation:

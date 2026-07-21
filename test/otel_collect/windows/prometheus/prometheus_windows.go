@@ -3,7 +3,7 @@
 
 //go:build windows
 
-package otlp
+package prometheus
 
 import (
 	"context"
@@ -21,17 +21,33 @@ import (
 //go:embed resources/config.json
 var testConfigJSON string
 
+//go:embed resources/prometheus_scrape.yaml
+var scrapeConfig string
+
+//go:embed resources/prometheus_metrics
+var prometheusMetrics string
+
 const (
 	tmpConfigPath = "C:\\Users\\Administrator\\AppData\\Local\\Temp\\config.json"
-	otlpRuntime   = 3 * time.Minute
-	sendInterval  = 10 * time.Second
+	scrapePath    = "C:\\prometheus_scrape.yaml"
+	exporterPort  = 8101
+	runtime       = 3 * time.Minute
 )
 
 func Validate() error {
 	env := environment.GetEnvironmentMetaData()
 
+	stop, err := common.StartPrometheusFakeServer(exporterPort, prometheusMetrics)
+	if err != nil {
+		return fmt.Errorf("could not start fake prometheus exporter: %w", err)
+	}
+	defer stop()
+
+	if err := os.WriteFile(scrapePath, []byte(scrapeConfig), 0644); err != nil {
+		return fmt.Errorf("could not write scrape config: %w", err)
+	}
 	if err := os.WriteFile(tmpConfigPath, []byte(testConfigJSON), 0644); err != nil {
-		return fmt.Errorf("could not write config: %w", err)
+		return fmt.Errorf("could not write agent config: %w", err)
 	}
 	if err := common.CopyFile(tmpConfigPath, common.ConfigOutputPath); err != nil {
 		return fmt.Errorf("could not copy config: %w", err)
@@ -39,20 +55,14 @@ func Validate() error {
 	if err := common.StartAgent(common.ConfigOutputPath, true, false); err != nil {
 		return fmt.Errorf("could not start agent: %w", err)
 	}
-	// Wait for the OTLP HTTP receiver before sending metrics.
-	if err := common.WaitForOTLPEndpoint(common.DefaultOTLPHTTPEndpoint, 2*time.Minute); err != nil {
-		return fmt.Errorf("OTLP endpoint not ready: %w", err)
-	}
-	if err := common.SendOTLPMetrics(common.DefaultOTLPHTTPEndpoint, env.InstanceId, sendInterval, otlpRuntime); err != nil {
-		return fmt.Errorf("failed to send OTLP metrics: %w", err)
-	}
+	time.Sleep(runtime)
 	_ = common.StopAgent()
 
 	return otelmetrics.AssertMetricsPresent(
 		context.Background(),
 		env.Region,
-		[]string{"otlp_test_counter", "otlp_test_gauge"},
-		otlpvalidation.OtlpMetricLabels(env.AgentStartCommand, env.InstanceId),
+		[]string{"node_cpu_seconds_total", "node_memory_MemAvailable_bytes"},
+		otlpvalidation.ResourceHostIDLabels(env.AgentStartCommand, env.InstanceId),
 		3,
 		30*time.Second,
 	)

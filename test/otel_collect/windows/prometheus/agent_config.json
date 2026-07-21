@@ -1,13 +1,5 @@
 {
-  "agent": {
-    "region": "us-west-2"
-  },
-  "opentelemetry": {
-    "cluster_name": "integ-test-cluster",
-    "collect": {
-      "prometheus": {
-        "config_path": "C:\\prometheus.yml"
-      }
+    "agent": {
+        "debug": true
     }
-  }
 }
