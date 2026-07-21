@@ -147,7 +147,7 @@ func TestScopeNameAndVersionPerSource(t *testing.T) {
 	}{
 		{"node_exporter", "node_cpu_seconds_total", "github.com/prometheus/node_exporter", nodeExporterVersion, "node-exporter"},
 		{"cadvisor", "container_cpu_usage_seconds_total", "github.com/google/cadvisor", agentVersion, "cadvisor"},
-		{"kubeletstats", "k8s.node.cpu.utilization", scopeKubeletstats, agentVersion, "kubeletstats"},
+		{"kubeletstats", "k8s.node.cpu.usage", scopeKubeletstats, agentVersion, "kubeletstats"},
 		{"control_plane", "apiserver_request_total", scopePrometheus, controlPlaneVersion, "apiserver"},
 		{"kube_state_metrics", "kube_deployment_status_replicas_ready", "github.com/kubernetes/kube-state-metrics", ksmVersion, "kube-state-metrics"},
 	}
