@@ -18,6 +18,9 @@ module "eks" {
   name               = "cwagent-eks-integ-${module.common.testing_id}"
   kubernetes_version = var.k8s_version
 
+  # Full role name (<=64); the module's "<name>-cluster-" name_prefix would exceed the 38-char cap.
+  iam_role_use_name_prefix = false
+
   vpc_id     = aws_vpc.efa_test_vpc.id
   subnet_ids = aws_subnet.efa_test_public_subnet[*].id
 
