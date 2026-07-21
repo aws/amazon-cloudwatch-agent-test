@@ -3,7 +3,7 @@
 
 //go:build windows
 
-package otlp
+package host_metrics
 
 import (
 	"context"
@@ -23,8 +23,7 @@ var testConfigJSON string
 
 const (
 	tmpConfigPath = "C:\\Users\\Administrator\\AppData\\Local\\Temp\\config.json"
-	otlpRuntime   = 3 * time.Minute
-	sendInterval  = 10 * time.Second
+	runtime       = 3 * time.Minute
 )
 
 func Validate() error {
@@ -39,20 +38,14 @@ func Validate() error {
 	if err := common.StartAgent(common.ConfigOutputPath, true, false); err != nil {
 		return fmt.Errorf("could not start agent: %w", err)
 	}
-	// Wait for the OTLP HTTP receiver before sending metrics.
-	if err := common.WaitForOTLPEndpoint(common.DefaultOTLPHTTPEndpoint, 2*time.Minute); err != nil {
-		return fmt.Errorf("OTLP endpoint not ready: %w", err)
-	}
-	if err := common.SendOTLPMetrics(common.DefaultOTLPHTTPEndpoint, env.InstanceId, sendInterval, otlpRuntime); err != nil {
-		return fmt.Errorf("failed to send OTLP metrics: %w", err)
-	}
+	time.Sleep(runtime)
 	_ = common.StopAgent()
 
 	return otelmetrics.AssertMetricsPresent(
 		context.Background(),
 		env.Region,
-		[]string{"otlp_test_counter", "otlp_test_gauge"},
-		otlpvalidation.OtlpMetricLabels(env.AgentStartCommand, env.InstanceId),
+		[]string{"system.cpu.utilization", "system.memory.utilization", "system.network.io", "system.disk.operations"},
+		otlpvalidation.ResourceHostIDLabels(env.AgentStartCommand, env.InstanceId),
 		3,
 		30*time.Second,
 	)

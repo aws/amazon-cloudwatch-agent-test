@@ -8,7 +8,6 @@ package prometheus
 import (
 	_ "embed"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -62,7 +61,7 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
-	// Write prometheus scrape config
+	// Write the Prometheus scrape config where the agent config's config_path points.
 	commands := []string{
 		fmt.Sprintf("cat <<'EOF' | sudo tee /opt/aws/prometheus.yml\n%s\nEOF", prometheusScrapeConfig),
 	}
@@ -70,20 +69,13 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
-	// Serve fake metrics on port 9100 (same pattern as test/emf_prometheus)
-	if err := os.WriteFile("/tmp/metrics", []byte(prometheusMetrics), os.ModePerm); err != nil {
-		return fmt.Errorf("unable to write /tmp/metrics: %w", err)
+	// Start the cross-platform fake Prometheus exporter on port 9100.
+	stop, err := common.StartPrometheusFakeServer(9100, prometheusMetrics)
+	if err != nil {
+		return fmt.Errorf("failed to start fake prometheus exporter: %w", err)
 	}
-	commands = []string{
-		"sudo python3 -m http.server 9100 --directory /tmp &> /dev/null &",
-	}
-	if err := common.RunCommands(commands); err != nil {
-		return err
-	}
-	t.RegisterCleanup(func() error {
-		return common.RunCommands([]string{"sudo pkill -f 'python3 -m http.server 9100' || true"})
-	})
-	time.Sleep(2 * time.Second)
+	t.RegisterCleanup(func() error { stop(); return nil })
+
 	return nil
 }
 

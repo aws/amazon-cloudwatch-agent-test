@@ -20,11 +20,8 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-// ECSHostMetricsTestRunner validates that the OpenTelemetry (V2) host_metrics
-// component, running as the CloudWatch Agent ECS daemon, publishes metrics to
-// the OTLP endpoint (CloudWatch). The agent config is applied by terraform via
-// the CW_CONFIG_CONTENT SSM parameter, so GetAgentConfigFileName returns "" and
-// the ECS harness validates the already-running daemon without a restart.
+// ECSHostMetricsTestRunner validates that the V2 host_metrics component, running
+// as an ECS daemon, publishes metrics to CloudWatch via the OTLP endpoint.
 type ECSHostMetricsTestRunner struct {
 	test_runner.BaseTestRunner
 }
@@ -33,8 +30,7 @@ var _ test_runner.ITestRunner = (*ECSHostMetricsTestRunner)(nil)
 
 func (t *ECSHostMetricsTestRunner) GetTestName() string { return "ecs_otlp_host_metrics" }
 
-// GetAgentConfigFileName returns "" so the harness uses the config terraform
-// already loaded from resources/config.json (no daemon restart needed).
+// GetAgentConfigFileName returns "" — config is pre-loaded by Terraform via SSM, no restart needed.
 func (t *ECSHostMetricsTestRunner) GetAgentConfigFileName() string { return "" }
 
 func (t *ECSHostMetricsTestRunner) GetMeasuredMetrics() []string {
@@ -48,8 +44,7 @@ func (t *ECSHostMetricsTestRunner) GetMeasuredMetrics() []string {
 
 func (t *ECSHostMetricsTestRunner) Validate() status.TestGroupResult {
 	env := environment.GetEnvironmentMetaData()
-	// Isolate this run's metrics by the ECS cluster ARN, which the agent's
-	// resourcedetection processor stamps as a resource attribute on ECS.
+	// Filter by ECS cluster ARN stamped by the resourcedetection processor.
 	labels := map[string]string{
 		"@resource.aws.ecs.cluster.arn": env.EcsClusterArn,
 	}

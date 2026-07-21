@@ -18,8 +18,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/log_state/logfile"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/log_state/windows_event_log"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/nvidia_gpu"
-	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
+	otelhostmetrics "github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/windows/host_metrics"
 	otelcollectotlp "github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/windows/otlp"
+	otelprometheus "github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/windows/prometheus"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/restart"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/ssm_document"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/workload_discovery"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -70,6 +72,10 @@ func main() {
 			err = ssm_document.Validate()
 		case "otlp":
 			err = otelcollectotlp.Validate()
+		case "host_metrics":
+			err = otelhostmetrics.Validate()
+		case "prometheus":
+			err = otelprometheus.Validate()
 		default:
 			err = errors.New("unsupported test name")
 		}
