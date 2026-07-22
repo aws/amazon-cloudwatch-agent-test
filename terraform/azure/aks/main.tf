@@ -245,8 +245,20 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
             name  = "AWS_ROLE_ARN"
             value = aws_iam_role.cwagent.arn
           }
+          # The default otel config references ${CWAGENT_ROLE_ARN} for sigv4auth;
+          # expandconverter resolves it from the process env at agent startup.
+          env {
+            name  = "CWAGENT_ROLE_ARN"
+            value = aws_iam_role.cwagent.arn
+          }
           env {
             name  = "RUN_IN_CONTAINER"
+            value = "True"
+          }
+          # Explicit AKS signal so mode detection selects the Azure credential/region
+          # path without depending on an IMDS probe from the pod.
+          env {
+            name  = "RUN_IN_AKS"
             value = "True"
           }
           env {
@@ -375,6 +387,27 @@ EOT
 }
 
 #####################################################################
+# Diagnostics: surface agent pod state and logs in the job output so
+# delivery failures are debuggable after the cluster is destroyed.
+#####################################################################
+resource "local_sensitive_file" "kubeconfig" {
+  content         = azurerm_kubernetes_cluster.cwagent.kube_config_raw
+  filename        = "${path.module}/kubeconfig"
+  file_permission = "0600"
+}
+
+resource "null_resource" "agent_diagnostics" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' get pods -n amazon-cloudwatch -o wide || true
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch -l app=cloudwatch-agent --tail=200 --prefix || true
+    EOT
+  }
+
+  depends_on = [kubernetes_job_v1.otlp_load]
+}
+
+#####################################################################
 # Run Go integration test from the runner (validates CloudWatch)
 #####################################################################
 resource "null_resource" "integration_test" {
@@ -394,5 +427,5 @@ resource "null_resource" "integration_test" {
     }
   }
 
-  depends_on = [kubernetes_job_v1.otlp_load]
+  depends_on = [kubernetes_job_v1.otlp_load, null_resource.agent_diagnostics]
 }
