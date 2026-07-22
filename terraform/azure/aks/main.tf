@@ -174,6 +174,10 @@ resource "kubernetes_cluster_role_binding" "cwagent" {
 }
 
 # ECR pull secret so AKS nodes can pull the CWA image from AWS ECR.
+# The 12h auth token is fetched here with the runner's AWS credentials rather
+# than passed in as a variable, which cannot survive the workflow's shell quoting.
+data "aws_ecr_authorization_token" "ecr" {}
+
 resource "kubernetes_secret" "ecr_pull" {
   metadata {
     name      = "ecr-pull-secret"
@@ -181,7 +185,13 @@ resource "kubernetes_secret" "ecr_pull" {
   }
   type = "kubernetes.io/dockerconfigjson"
   data = {
-    ".dockerconfigjson" = var.ecr_docker_config_json
+    ".dockerconfigjson" = jsonencode({
+      auths = {
+        (split("/", var.cwagent_image_repo)[0]) = {
+          auth = data.aws_ecr_authorization_token.ecr.authorization_token
+        }
+      }
+    })
   }
 }
 
