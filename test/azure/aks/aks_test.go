@@ -75,25 +75,38 @@ func TestAKS(t *testing.T) {
 func validateLogs() status.TestResult {
 	testResult := status.TestResult{Name: "AKS_Logs", Status: status.FAILED}
 
-	streams := awsservice.GetLogStreams(otlpLogGroup)
-	if len(streams) == 0 {
-		testResult.Reason = fmt.Errorf("no log streams found in %s", otlpLogGroup)
-		return testResult
-	}
-
-	since := time.Now().Add(-validationWindow)
-	until := time.Now()
+	// The log group is shared with concurrent jobs (e.g. the AzureVM test), so only
+	// streams named for this cluster or service count, and a stream must be non-empty:
+	// AssertPerLog alone passes vacuously on a stream with no events in the window.
 	marker := fmt.Sprintf("aks_otlp_log_%s", env.InstanceId)
-	for _, stream := range streams {
-		err := awsservice.ValidateLogs(
-			otlpLogGroup, *stream.LogStreamName, &since, &until,
-			awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
-		)
-		if err == nil {
-			testResult.Status = status.SUCCESSFUL
-			return testResult
+	const maxRetries = 4
+	const retryInterval = 30 * time.Second
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		streams := awsservice.GetLogStreams(otlpLogGroup)
+		testResult.Reason = fmt.Errorf("attempt %d: no log streams matching %q or %q in %s", attempt, env.InstanceId, serviceName, otlpLogGroup)
+		since := time.Now().Add(-validationWindow)
+		until := time.Now()
+		for _, stream := range streams {
+			name := aws.ToString(stream.LogStreamName)
+			if !strings.Contains(name, env.InstanceId) && !strings.Contains(name, serviceName) {
+				continue
+			}
+			log.Printf("[AKS_Logs] attempt %d: checking %s/%s", attempt, otlpLogGroup, name)
+			err := awsservice.ValidateLogs(
+				otlpLogGroup, name, &since, &until,
+				awsservice.AssertLogsNotEmpty(),
+				awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
+			)
+			if err == nil {
+				testResult.Status = status.SUCCESSFUL
+				return testResult
+			}
+			testResult.Reason = err
 		}
-		testResult.Reason = err
+		if attempt < maxRetries {
+			log.Printf("[AKS_Logs] %v — retrying in %v", testResult.Reason, retryInterval)
+			time.Sleep(retryInterval)
+		}
 	}
 	return testResult
 }

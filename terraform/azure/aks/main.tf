@@ -55,10 +55,16 @@ resource "aws_iam_openid_connect_provider" "aks" {
   thumbprint_list = [data.tls_certificate.aks_oidc.certificates[0].sha1_fingerprint]
 }
 
+data "aws_caller_identity" "current" {}
+
 locals {
   aks_oidc_issuer_host = replace(azurerm_kubernetes_cluster.cwagent.oidc_issuer_url, "https://", "")
   namespace            = "amazon-cloudwatch"
   service_account_name = "cloudwatch-agent"
+  # Built as strings (not resource references) so the trust and permissions policies
+  # can mention the role without a self-referential cycle.
+  cwagent_role_name = "cwa-aks-integ-role-${module.common.testing_id}"
+  cwagent_role_arn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.cwagent_role_name}"
 }
 
 data "aws_iam_policy_document" "cwagent_assume_role" {
@@ -83,10 +89,30 @@ data "aws_iam_policy_document" "cwagent_assume_role" {
       values   = ["sts.amazonaws.com"]
     }
   }
+
+  # On AKS the agent's sigv4auth chains sts:AssumeRole(${CWAGENT_ROLE_ARN}) on top of
+  # the pod's web-identity session of this same role, and since the 2022 IAM change a
+  # role must explicitly trust itself for that. The principal is the account root with
+  # a PrincipalArn condition because IAM rejects trust principals that don't exist yet.
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+
+    condition {
+      test     = "ArnEquals"
+      variable = "aws:PrincipalArn"
+      values   = [local.cwagent_role_arn]
+    }
+  }
 }
 
 resource "aws_iam_role" "cwagent" {
-  name               = "cwa-aks-integ-role-${module.common.testing_id}"
+  name               = local.cwagent_role_name
   assume_role_policy = data.aws_iam_policy_document.cwagent_assume_role.json
 }
 
@@ -110,6 +136,14 @@ data "aws_iam_policy_document" "cwagent_permissions" {
       "xray:PutTelemetryRecords",
     ]
     resources = ["*"]
+  }
+
+  # Identity-side half of the self-assume: required because the trust statement's
+  # principal is the account root rather than the role itself.
+  statement {
+    effect    = "Allow"
+    actions   = ["sts:AssumeRole"]
+    resources = [local.cwagent_role_arn]
   }
 }
 
