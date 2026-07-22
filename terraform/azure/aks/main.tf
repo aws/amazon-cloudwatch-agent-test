@@ -176,7 +176,15 @@ resource "kubernetes_cluster_role_binding" "cwagent" {
 # ECR pull secret so AKS nodes can pull the CWA image from AWS ECR.
 # The 12h auth token is fetched here with the runner's AWS credentials rather
 # than passed in as a variable, which cannot survive the workflow's shell quoting.
-data "aws_ecr_authorization_token" "ecr" {}
+# The integration-test image is published to us-west-2 only, while the job's
+# CloudWatch region may differ -- pin the registry host to the ECR region.
+locals {
+  cwagent_image_repo = replace(var.cwagent_image_repo, "/\\.ecr\\.[a-z0-9-]+\\./", ".ecr.${var.ecr_region}.")
+}
+
+data "aws_ecr_authorization_token" "ecr" {
+  provider = aws.ecr
+}
 
 resource "kubernetes_secret" "ecr_pull" {
   metadata {
@@ -187,7 +195,7 @@ resource "kubernetes_secret" "ecr_pull" {
   data = {
     ".dockerconfigjson" = jsonencode({
       auths = {
-        (split("/", var.cwagent_image_repo)[0]) = {
+        (split("/", local.cwagent_image_repo)[0]) = {
           auth = data.aws_ecr_authorization_token.ecr.authorization_token
         }
       }
@@ -222,7 +230,7 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
 
         container {
           name              = "cloudwatch-agent"
-          image             = "${var.cwagent_image_repo}:${var.cwagent_image_tag}"
+          image             = "${local.cwagent_image_repo}:${var.cwagent_image_tag}"
           image_pull_policy = "Always"
 
           env {

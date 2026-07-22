@@ -26,6 +26,11 @@ provider "aws" {
   region = var.region
 }
 
+provider "aws" {
+  alias  = "ecr"
+  region = var.ecr_region
+}
+
 provider "azurerm" {
   features {}
 }

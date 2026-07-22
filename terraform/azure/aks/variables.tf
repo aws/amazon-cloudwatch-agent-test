@@ -88,6 +88,12 @@ variable "cwagent_image_repo" {
   description = "ECR repository URI for the pre-built CWA container image."
 }
 
+variable "ecr_region" {
+  type        = string
+  description = "Region of the integration-test ECR repository (the build publishes to us-west-2 only)."
+  default     = "us-west-2"
+}
+
 variable "cwagent_image_tag" {
   type        = string
   description = "Image tag (build_id / commit SHA)."
