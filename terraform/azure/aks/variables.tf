@@ -69,7 +69,7 @@ variable "runner_ip" {
 
 variable "aks_node_vm_size" {
   type    = string
-  default = "Standard_D4s_v5"
+  default = "Standard_D4s_v7"
 }
 
 variable "aks_node_count" {
@@ -78,8 +78,9 @@ variable "aks_node_count" {
 }
 
 variable "kubernetes_version" {
-  type    = string
-  default = "1.30"
+  type        = string
+  description = "AKS Kubernetes version. null lets AKS pick the region's default supported GA version."
+  default     = null
 }
 
 variable "cwagent_image_repo" {
