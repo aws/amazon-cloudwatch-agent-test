@@ -228,6 +228,10 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
             value = aws_iam_role.cwagent.arn
           }
           env {
+            name  = "RUN_IN_CONTAINER"
+            value = "True"
+          }
+          env {
             name  = "USE_DEFAULT_CONFIG"
             value = "otel"
           }
