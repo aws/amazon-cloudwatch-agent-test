@@ -161,6 +161,7 @@ func processMetrics() []string {
 	return []string{
 		"process.cpu.utilization",
 		"process.memory.utilization",
+		"process.threads",
 	}
 }
 
