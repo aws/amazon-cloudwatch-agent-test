@@ -120,12 +120,14 @@ func TestDbiMysql(t *testing.T) {
 	}
 }
 
-// counterMetrics returns MySQL receiver metrics that are enabled by default in
-// the DBI golden YAML and reliably appear on a single-node localhost instance
-// with performance_schema enabled. Metrics that are disabled by default
-// (e.g. mysql.joins, mysql.sessions, mysql.connection.count,
-// mysql.client.network.io) or that require replication
-// (e.g. mysql.replica.*) are intentionally excluded.
+// counterMetrics returns MySQL receiver metrics emitted by the DBI mysql
+// pipeline that reliably appear on a single-node localhost instance with
+// performance_schema enabled. This includes both default-on metrics and the
+// metrics the DBI translator explicitly enables (connections, commands,
+// query count, table size, deadlocks, history list length, active txns).
+// Metrics that are disabled by default (e.g. mysql.joins, mysql.sessions,
+// mysql.client.network.io) or that require replication (mysql.replica.*)
+// are intentionally excluded.
 func counterMetrics() []string {
 	return []string{
 		"mysql.buffer_pool.data_pages",
@@ -153,6 +155,17 @@ func counterMetrics() []string {
 		"mysql.table.io.wait.time",
 		"mysql.tmp_resources",
 		"mysql.uptime",
+		// Enabled by the DBI mysql translator (console-required metrics).
+		"mysql.connection.count",
+		"mysql.connection.errors",
+		"mysql.max_used_connections",
+		"mysql.commands",
+		"mysql.query.count",
+		"mysql.table.size",
+		// InnoDB metrics added to the receiver for DBI.
+		"mysql.deadlocks",
+		"mysql.history_list_length",
+		"mysql.active_transactions",
 	}
 }
 
@@ -189,6 +202,10 @@ func topSQLMetrics() []string {
 		"mysql.sum_sort_scan",
 		"mysql.sum_no_good_index_used",
 		"mysql.sum_select_scan",
+		"mysql.sum_rows_affected",
+		"mysql.sum_select_range_check",
+		"mysql.sum_sort_merge_passes",
+		"mysql.sum_sort_range",
 	}
 }
 
@@ -196,6 +213,7 @@ func processMetrics() []string {
 	return []string{
 		"process.cpu.utilization",
 		"process.memory.utilization",
+		"process.threads",
 	}
 }
 
