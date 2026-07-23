@@ -106,10 +106,13 @@ func (t *CommonConfigTestRunner) SetUpConfig() error {
 func (t *CommonConfigTestRunner) Validate() status.TestGroupResult {
 	t.Cleanup()
 	return util.ValidateCredentialTest(t.GetTestName(), util.ExpectedResults{
-		Namespace:              util.SharedTestNamespace,
-		MetricName:             util.MetricNameCpuUsageActive,
-		CredentialProviderName: util.ProviderNameSharedConfig,
-		AccessKeyID:            t.accessKeyID,
+		Namespace:  util.SharedTestNamespace,
+		MetricName: util.MetricNameCpuUsageActive,
+		// aws-sdk-go v1 agents report SharedCredentialsProvider for common-config shared credentials;
+		// aws-sdk-go-v2 agents report SharedConfigCredentials. Accept both so the same test repo works
+		// against agents on either side of the SDK v2 migration.
+		CredentialProviderNames: []string{util.ProviderNameSharedConfig, util.ProviderNameSharedCredentials},
+		AccessKeyID:             t.accessKeyID,
 	}, metadata)
 }
 
