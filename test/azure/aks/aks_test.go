@@ -78,9 +78,11 @@ func validateLogs() status.TestResult {
 
 	// The agent's k8s logs routing derives the destination from the k8s.cluster.name and
 	// k8s.namespace.name resource attributes the load generator sends, so it is unique to
-	// this cluster. AssertLogsNotEmpty guards against a vacuous pass on an empty window.
+	// this cluster. The stream is {k8s.namespace.name}/{service.namespace}/{service.name},
+	// where the agent's identity transform fills service.namespace from k8s.namespace.name.
+	// AssertLogsNotEmpty guards against a vacuous pass on an empty window.
 	logGroup := fmt.Sprintf("/aws/cwagent/%s/otlp", env.InstanceId)
-	logStream := fmt.Sprintf("amazon-cloudwatch/%s", serviceName)
+	logStream := fmt.Sprintf("amazon-cloudwatch/amazon-cloudwatch/%s", serviceName)
 	marker := fmt.Sprintf("aks_otlp_log_%s", env.InstanceId)
 	const maxRetries = 4
 	const retryInterval = 30 * time.Second
