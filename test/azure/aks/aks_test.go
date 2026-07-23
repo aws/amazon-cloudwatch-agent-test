@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	otlpLogGroup  = "/aws/cwagent/otlp"
 	spansLogGroup = "aws/spans"
 	serviceName   = "aks-otlp-test-service"
 	// The load generator runs for 3 minutes; allow extra ingestion time.
@@ -49,11 +48,13 @@ func TestMain(m *testing.M) {
 
 func TestAKS(t *testing.T) {
 	t.Run("Metrics", func(t *testing.T) {
+		// host.id is overwritten by resourcedetection with the node's VMSS instance ID,
+		// so scope by the cluster-name resource attribute the load generator sends.
 		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
 			"AKSDefaultOtel", env.Region, []string{"aks_otlp_counter"},
 			map[string]string{
-				"@resource.host.id":        env.InstanceId,
-				"@resource.cloud.provider": "azure",
+				"@resource.k8s.cluster.name": env.InstanceId,
+				"@resource.cloud.provider":   "azure",
 			},
 		)
 		for _, r := range group.TestResults {
@@ -75,34 +76,28 @@ func TestAKS(t *testing.T) {
 func validateLogs() status.TestResult {
 	testResult := status.TestResult{Name: "AKS_Logs", Status: status.FAILED}
 
-	// The log group is shared with concurrent jobs (e.g. the AzureVM test), so only
-	// streams named for this cluster or service count, and a stream must be non-empty:
-	// AssertPerLog alone passes vacuously on a stream with no events in the window.
+	// The agent's k8s logs routing derives the destination from the k8s.cluster.name and
+	// k8s.namespace.name resource attributes the load generator sends, so it is unique to
+	// this cluster. AssertLogsNotEmpty guards against a vacuous pass on an empty window.
+	logGroup := fmt.Sprintf("/aws/cwagent/%s/otlp", env.InstanceId)
+	logStream := fmt.Sprintf("amazon-cloudwatch/%s", serviceName)
 	marker := fmt.Sprintf("aks_otlp_log_%s", env.InstanceId)
 	const maxRetries = 4
 	const retryInterval = 30 * time.Second
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		streams := awsservice.GetLogStreams(otlpLogGroup)
-		testResult.Reason = fmt.Errorf("attempt %d: no log streams matching %q or %q in %s", attempt, env.InstanceId, serviceName, otlpLogGroup)
 		since := time.Now().Add(-validationWindow)
 		until := time.Now()
-		for _, stream := range streams {
-			name := aws.ToString(stream.LogStreamName)
-			if !strings.Contains(name, env.InstanceId) && !strings.Contains(name, serviceName) {
-				continue
-			}
-			log.Printf("[AKS_Logs] attempt %d: checking %s/%s", attempt, otlpLogGroup, name)
-			err := awsservice.ValidateLogs(
-				otlpLogGroup, name, &since, &until,
-				awsservice.AssertLogsNotEmpty(),
-				awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
-			)
-			if err == nil {
-				testResult.Status = status.SUCCESSFUL
-				return testResult
-			}
-			testResult.Reason = err
+		log.Printf("[AKS_Logs] attempt %d: checking %s/%s", attempt, logGroup, logStream)
+		err := awsservice.ValidateLogs(
+			logGroup, logStream, &since, &until,
+			awsservice.AssertLogsNotEmpty(),
+			awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
+		)
+		if err == nil {
+			testResult.Status = status.SUCCESSFUL
+			return testResult
 		}
+		testResult.Reason = err
 		if attempt < maxRetries {
 			log.Printf("[AKS_Logs] %v — retrying in %v", testResult.Reason, retryInterval)
 			time.Sleep(retryInterval)
