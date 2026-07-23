@@ -33,6 +33,21 @@ func WaitForOTLPEndpoint(endpoint string, timeout time.Duration) error {
 	return fmt.Errorf("OTLP endpoint %s not ready after %s", endpoint, timeout)
 }
 
+// WaitForTCPPort dials addr until it accepts a connection or timeout elapses.
+// Use before creating an otlptracegrpc exporter, which connects immediately.
+func WaitForTCPPort(addr string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
+		if err == nil {
+			conn.Close()
+			return nil
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return fmt.Errorf("TCP port %s not ready after %s", addr, timeout)
+}
+
 // SendOTLPMetrics pushes OTLP metrics to the agent's HTTP receiver until duration elapses.
 func SendOTLPMetrics(endpoint, instanceID string, sendingInterval, duration time.Duration) error {
 	if endpoint == "" {

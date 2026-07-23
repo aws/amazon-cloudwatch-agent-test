@@ -7,6 +7,7 @@ package ecs
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
@@ -44,6 +45,7 @@ func (t *ECSHostMetricsTestRunner) GetMeasuredMetrics() []string {
 
 func (t *ECSHostMetricsTestRunner) Validate() status.TestGroupResult {
 	env := environment.GetEnvironmentMetaData()
+	time.Sleep(3 * time.Minute)
 	// Filter by ECS cluster ARN stamped by the resourcedetection processor.
 	labels := map[string]string{
 		"@resource.aws.ecs.cluster.arn": env.EcsClusterArn,

@@ -7,12 +7,15 @@ package otlp
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
@@ -20,6 +23,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/base"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/common/traces/otlp"
 )
 
 func init() {
@@ -30,6 +35,10 @@ const (
 	otlpRuntime  = 3 * time.Minute
 	otlpEndpoint = "http://127.0.0.1:4318"
 	otlpLogGroup = "/aws/cwagent"
+	otlpGRPCAddr = "127.0.0.1:4317"
+	traceTestType = "otel_collect_otlp_traces"
+	// spansLogGroup is where V2 OTLP traces land (CloudWatch Logs destination).
+	spansLogGroup = "aws/spans"
 )
 
 type OtlpCollectTestRunner struct {
@@ -48,10 +57,36 @@ func (t *OtlpCollectTestRunner) Validate() status.TestGroupResult {
 		otlpvalidation.OtlpMetricLabels(t.env.AgentStartCommand, t.env.InstanceId))
 	results = append(results, metricResult.TestResults...)
 
+	// Traces
+	results = append(results, t.validateTraces())
+
 	// Logs
 	results = append(results, t.validateLogs())
 
 	return status.TestGroupResult{Name: t.GetTestName(), TestResults: results}
+}
+
+// validateTraces confirms this run's OTLP traces landed in aws/spans, filtered by instance_id.
+func (t *OtlpCollectTestRunner) validateTraces() status.TestResult {
+	query := fmt.Sprintf(`fields @message | filter @message like /%s/ | limit 100`, t.env.InstanceId)
+	start := t.startedAt.Unix()
+	var err error
+	for attempt := 0; attempt < 5; attempt++ {
+		if attempt > 0 {
+			time.Sleep(30 * time.Second)
+		}
+		results, qErr := awsservice.GetLogQueryResults(spansLogGroup, start, time.Now().Unix(), query)
+		if qErr != nil {
+			err = qErr
+			continue
+		}
+		log.Printf("[OTLP_Traces] attempt %d: found %d spans in %s for instance %s", attempt+1, len(results), spansLogGroup, t.env.InstanceId)
+		if len(results) > 0 {
+			return status.TestResult{Name: "OTLP_Traces", Status: status.SUCCESSFUL}
+		}
+		err = fmt.Errorf("no spans found in %s for instance %s", spansLogGroup, t.env.InstanceId)
+	}
+	return status.TestResult{Name: "OTLP_Traces", Status: status.FAILED, Reason: err}
 }
 
 // validateLogs checks that OTLP logs from this run are in CloudWatch Logs.
@@ -92,8 +127,30 @@ func (t *OtlpCollectTestRunner) SetupAfterAgentRun() error {
 	go func() {
 		_ = common.SendOTLPMetrics(otlpEndpoint, t.env.InstanceId, 10*time.Second, otlpRuntime-30*time.Second)
 	}()
+	go t.generateTraces()
 	go t.sendTestLogs()
 	return nil
+}
+
+// generateTraces waits for gRPC port 4317, then streams traces to the agent.
+// The wait is necessary because otlptracegrpc.New connects at construction time.
+func (t *OtlpCollectTestRunner) generateTraces() {
+	if err := common.WaitForTCPPort(otlpGRPCAddr, 2*time.Minute); err != nil {
+		log.Printf("generateTraces: gRPC port not ready, skipping: %v", err)
+		return
+	}
+	generator := otlp.NewLoadGenerator(&base.TraceGeneratorConfig{
+		Interval: 10 * time.Second,
+		Annotations: map[string]interface{}{
+			"test_type":   traceTestType,
+			"instance_id": t.env.InstanceId,
+		},
+		Attributes: []attribute.KeyValue{
+			attribute.String("test_type", traceTestType),
+			attribute.String("instance_id", t.env.InstanceId),
+		},
+	})
+	generator.StartSendingTraces(context.Background())
 }
 
 // sendTestLogs pushes OTLP logs to the agent's OTLP HTTP receiver (/v1/logs).
