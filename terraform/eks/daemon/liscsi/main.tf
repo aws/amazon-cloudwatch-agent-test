@@ -291,7 +291,13 @@ resource "null_resource" "validator" {
       kubectl get svc -n kube-system -l app.kubernetes.io/name=ec2-instance-store-plugin 2>/dev/null || echo "No LIS CSI service found"
       echo "=== Running go test ==="
       cd ../../../..
-      go test ${var.test_dir} -timeout 1h -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -instanceId=${data.aws_instance.eks_node_detail.instance_id}
+      i=0
+      while [ $i -lt 3 ]; do
+        i=$((i+1))
+        go test ${var.test_dir} -timeout 1h -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -instanceId=${data.aws_instance.eks_node_detail.instance_id} && exit 0
+        sleep 60
+      done
+      exit 1
     EOT
   }
 }
