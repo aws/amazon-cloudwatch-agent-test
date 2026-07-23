@@ -73,6 +73,13 @@ func TestAzureVM(t *testing.T) {
 	// Allow final export + CloudWatch ingestion to settle before querying.
 	time.Sleep(30 * time.Second)
 
+	// Snapshot trace IDs now that sendTelemetry has stopped — the mutex makes
+	// this a happens-before with the goroutine's final append.
+	traceMu.Lock()
+	traceIDsCopy := make([]string, len(generatedTraceIDs))
+	copy(traceIDsCopy, generatedTraceIDs)
+	traceMu.Unlock()
+
 	t.Run("Metrics", func(t *testing.T) {
 		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
 			"AzureVMDefaultOtel", env.Region, measuredMetrics(),
@@ -96,7 +103,7 @@ func TestAzureVM(t *testing.T) {
 		for _, line := range filterLogLines(postLoadLog, "error", "warn", "xray", "traces", "401", "403", "500") {
 			t.Logf("agent: %s", line)
 		}
-		r := validateTraces()
+		r := validateTraces(traceIDsCopy)
 		require.Equal(t, status.SUCCESSFUL, r.Status, "trace validation failed: %v", r.Reason)
 	})
 }
@@ -119,6 +126,7 @@ func validateLogs() status.TestResult {
 	for _, stream := range streams {
 		err := awsservice.ValidateLogs(
 			otlpLogGroup, *stream.LogStreamName, &since, &until,
+			awsservice.AssertLogsNotEmpty(),
 			awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
 		)
 		if err == nil {
@@ -135,20 +143,20 @@ func validateLogs() status.TestResult {
 // CloudWatchLogs), which stores 100% of ingested spans in the aws/spans log group; the X-Ray query
 // APIs (GetTraceSummaries/BatchGetTraces) only see the indexed subset (1% by default), so aws/spans
 // is the authoritative surface for OTLP trace delivery. Ingestion lags a few minutes, hence retries.
-func validateTraces() status.TestResult {
+func validateTraces(traceIDs []string) status.TestResult {
 	testResult := status.TestResult{Name: "AzureVM_Traces", Status: status.FAILED}
 
-	if len(generatedTraceIDs) == 0 {
+	if len(traceIDs) == 0 {
 		testResult.Reason = fmt.Errorf("no trace IDs were generated during the load window")
 		return testResult
 	}
 
-	quoted := make([]string, len(generatedTraceIDs))
-	for i, id := range generatedTraceIDs {
+	quoted := make([]string, len(traceIDs))
+	for i, id := range traceIDs {
 		quoted[i] = fmt.Sprintf("%q", id)
 	}
 	query := fmt.Sprintf("fields traceId | filter traceId in [%s] | dedup traceId", strings.Join(quoted, ", "))
-	log.Printf("[AzureVM_Traces] expecting %d trace IDs in %s (sample: %s)", len(generatedTraceIDs), spansLogGroup, generatedTraceIDs[0])
+	log.Printf("[AzureVM_Traces] expecting %d trace IDs in %s (sample: %s)", len(traceIDs), spansLogGroup, traceIDs[0])
 
 	const maxRetries = 5
 	const retryInterval = 60 * time.Second
@@ -168,18 +176,18 @@ func validateTraces() status.TestResult {
 				}
 			}
 			var missing []string
-			for _, id := range generatedTraceIDs {
+			for _, id := range traceIDs {
 				if !found[id] {
 					missing = append(missing, id)
 				}
 			}
 			if len(missing) == 0 {
-				log.Printf("[AzureVM_Traces] attempt %d: all %d traces found in %s", attempt, len(generatedTraceIDs), spansLogGroup)
+				log.Printf("[AzureVM_Traces] attempt %d: all %d traces found in %s", attempt, len(traceIDs), spansLogGroup)
 				testResult.Status = status.SUCCESSFUL
 				return testResult
 			}
 			testResult.Reason = fmt.Errorf("attempt %d: %d/%d traces missing from %s (first missing: %s)",
-				attempt, len(missing), len(generatedTraceIDs), spansLogGroup, missing[0])
+				attempt, len(missing), len(traceIDs), spansLogGroup, missing[0])
 		}
 		if attempt < maxRetries {
 			log.Printf("[AzureVM_Traces] %v — retrying in %v", testResult.Reason, retryInterval)
@@ -213,9 +221,12 @@ func post(path string, payload []byte) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if _, err := http.DefaultClient.Do(req); err != nil {
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
 		log.Printf("failed to POST OTLP to %s: %v", path, err)
+		return
 	}
+	resp.Body.Close()
 }
 
 // filterLogLines returns lines from a multi-line string that contain any of the given substrings (case-insensitive).

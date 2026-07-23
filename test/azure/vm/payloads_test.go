@@ -7,6 +7,7 @@ package vm
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -74,6 +75,10 @@ func buildLogsPayload(instanceID string) []byte {
 // traceSeq is an incrementing counter ensuring unique trace/span IDs across calls.
 var traceSeq uint64
 
+// traceMu protects traceSeq and generatedTraceIDs which are written by the sendTelemetry
+// goroutine and read by the test goroutine after the load window closes.
+var traceMu sync.Mutex
+
 // generatedTraceIDs collects the OTLP trace IDs (32 hex chars) emitted during the load window.
 // validateTraces queries the aws/spans log group (Transaction Search) for these exact IDs.
 var generatedTraceIDs []string
@@ -82,6 +87,7 @@ var generatedTraceIDs []string
 // X-Ray requires the first 4 bytes of the 16-byte trace ID to be a Unix epoch timestamp (seconds);
 // IDs that violate this are silently dropped during ingestion.
 func buildTracesPayload(instanceID string) []byte {
+	traceMu.Lock()
 	traceSeq++
 	now := time.Now()
 	nowNano := now.UnixNano()
@@ -90,6 +96,7 @@ func buildTracesPayload(instanceID string) []byte {
 	traceID := fmt.Sprintf("%08x0000000000000000%08x", now.Unix(), traceSeq)
 	spanID := fmt.Sprintf("%016x", nowNano)
 	generatedTraceIDs = append(generatedTraceIDs, traceID)
+	traceMu.Unlock()
 	return []byte(fmt.Sprintf(`{
   "resourceSpans": [{
     "resource": {"attributes": [
