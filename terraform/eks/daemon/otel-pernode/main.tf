@@ -203,12 +203,19 @@ resource "null_resource" "patch_cr" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
-      sleep 30
+      # Wait for readiness instead of a fixed sleep: the operator must register the
+      # AmazonCloudWatchAgent CRD and create the CR before we can patch it.
+      kubectl wait --for=condition=Established --timeout=180s \
+        crd/amazoncloudwatchagents.cloudwatch.aws.amazon.com
+      for i in $(seq 1 60); do
+        kubectl -n amazon-cloudwatch get AmazonCloudWatchAgent cloudwatch-agent >/dev/null 2>&1 && break
+        [ "$i" = "60" ] && { echo "CR cloudwatch-agent never appeared" >&2; exit 1; }
+        sleep 5
+      done
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' \
         -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type=merge \
         -p='{"spec":{"targetAllocator":{"allocationStrategy":"${var.allocation_strategy}","image":"${var.ta_image}"}}}'
-      sleep 10
     EOT
   }
 }
@@ -235,7 +242,15 @@ resource "null_resource" "workload" {
   depends_on = [helm_release.aws_observability, null_resource.restart_pods]
   triggers   = { timestamp = timestamp() }
   provisioner "local-exec" {
-    command = "kubectl apply -f ${path.module}/../../../../test/otel/pernode/resources/workload.yaml"
+    command = <<-EOT
+      set -e
+      # The SM/PM CRs require the chart's bundled CRDs to be Established first;
+      # wait rather than racing CRD creation with the apply.
+      kubectl wait --for=condition=Established --timeout=180s \
+        crd/servicemonitors.monitoring.coreos.com \
+        crd/podmonitors.monitoring.coreos.com
+      kubectl apply -f ${path.module}/../../../../test/otel/pernode/resources/workload.yaml
+    EOT
   }
 }
 
@@ -254,9 +269,8 @@ resource "null_resource" "validator" {
       echo "Running OTEL per-node integration tests"
       cd ../../../..
 
-      echo "Waiting 3 minutes for metrics to propagate..."
-      sleep 180
-
+      # No fixed propagation sleep: the tests poll CloudWatch with a bounded retry
+      # (queryWorkloadMetric) to absorb ingestion lag.
       go test -tags integration -timeout 1h -v ${var.test_dir} \
         -eksClusterName=${aws_eks_cluster.this.name} \
         -computeType=EKS \
