@@ -110,28 +110,28 @@ func TestNodeExporterNoSchemaUrlLabel(t *testing.T) {
 	}
 }
 
-// TestKubeletstatsNoDuplicateSeries queries k8s.node.cpu.utilization for a single
+// TestKubeletstatsNoDuplicateSeries queries k8s.node.cpu.usage for a single
 // node and asserts exactly 1 series is returned.
 func TestKubeletstatsNoDuplicateSeries(t *testing.T) {
 	ctx := context.Background()
 	escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(cfg.ClusterName)
 
-	results, err := queryCache.Get(ctx, "k8s.node.cpu.utilization")
-	require.NoError(t, err, "querying k8s.node.cpu.utilization")
-	require.NotEmpty(t, results, "k8s.node.cpu.utilization not available")
+	results, err := queryCache.Get(ctx, "k8s.node.cpu.usage")
+	require.NoError(t, err, "querying k8s.node.cpu.usage")
+	require.NotEmpty(t, results, "k8s.node.cpu.usage not available")
 
 	r := results[0]
 	pinNode := r.Labels.Resource["k8s.node.name"]
-	require.True(t, pinNode != "", "Could not find k8s.node.cpu.utilization result with k8s.node.name")
+	require.True(t, pinNode != "", "Could not find k8s.node.cpu.usage result with k8s.node.name")
 
 	promql := fmt.Sprintf(
-		`{"__name__"="k8s.node.cpu.utilization","@resource.k8s.cluster.name"="%s","@resource.k8s.node.name"="%s"}`,
+		`{"__name__"="k8s.node.cpu.usage","@resource.k8s.cluster.name"="%s","@resource.k8s.node.name"="%s"}`,
 		escaped, pinNode,
 	)
 	pinned, err := client.Query(ctx, promql)
-	require.NoError(t, err, "querying pinned k8s.node.cpu.utilization")
-	require.NotEmpty(t, pinned, "pinned k8s.node.cpu.utilization returned 0 results")
+	require.NoError(t, err, "querying pinned k8s.node.cpu.usage")
+	require.NotEmpty(t, pinned, "pinned k8s.node.cpu.usage returned 0 results")
 	require.Equal(t, 1, len(pinned),
-		"Expected exactly 1 series for k8s.node.cpu.utilization{node=%s}, got %d — possible @schema_url duplication",
+		"Expected exactly 1 series for k8s.node.cpu.usage{node=%s}, got %d — possible @schema_url duplication",
 		pinNode, len(pinned))
 }

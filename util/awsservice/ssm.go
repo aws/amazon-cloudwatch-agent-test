@@ -4,8 +4,8 @@
 package awsservice
 
 import (
-	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -85,9 +85,18 @@ func DeleteSSMDocument(name string) error {
 	return err
 }
 
-func WaitForCommandCompletion(commandId, instanceId string) (*ssm.ListCommandInvocationsOutput, error) {
-	for i := 0; i < 12; i++ {
-		time.Sleep(5 * time.Second)
+// WaitForCommandCompletion polls an SSM command invocation until it reaches a terminal
+// state. It returns immediately on Success, and returns an error immediately on the terminal
+// failure states (Failed, Cancelled, TimedOut) surfacing StatusDetails. The optional timeout
+// defaults to 2m; only a genuinely hung command waits that long. The deadline is checked
+// between polls, so the effective wait may exceed the timeout by up to one ~5s poll interval.
+func WaitForCommandCompletion(commandId, instanceId string, timeout ...time.Duration) (*ssm.ListCommandInvocationsOutput, error) {
+	wait := 2 * time.Minute
+	if len(timeout) > 0 && timeout[0] > 0 {
+		wait = timeout[0]
+	}
+	deadline := time.Now().Add(wait)
+	for {
 		result, err := SsmClient.ListCommandInvocations(ctx, &ssm.ListCommandInvocationsInput{
 			CommandId:  aws.String(commandId),
 			InstanceId: aws.String(instanceId),
@@ -99,12 +108,25 @@ func WaitForCommandCompletion(commandId, instanceId string) (*ssm.ListCommandInv
 
 		if len(result.CommandInvocations) > 0 {
 			invocation := result.CommandInvocations[0]
-			if invocation.Status == types.CommandInvocationStatusSuccess {
+			switch invocation.Status {
+			case types.CommandInvocationStatusSuccess:
 				return result, nil
+			case types.CommandInvocationStatusFailed,
+				types.CommandInvocationStatusCancelled,
+				types.CommandInvocationStatusTimedOut:
+				details := ""
+				if invocation.StatusDetails != nil {
+					details = ": " + *invocation.StatusDetails
+				}
+				return nil, fmt.Errorf("command %s on instance %s reached terminal status %s%s", commandId, instanceId, invocation.Status, details)
 			}
 		}
+
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("command %s on instance %s did not complete within %s", commandId, instanceId, wait)
+		}
+		time.Sleep(5*time.Second + time.Duration(rand.Int63n(int64(time.Second))))
 	}
-	return nil, errors.New("commands did not complete within 1 minute")
 }
 
 func PutStringParameter(name, value string) error {

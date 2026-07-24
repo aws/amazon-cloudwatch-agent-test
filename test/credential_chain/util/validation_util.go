@@ -11,6 +11,8 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -35,8 +37,11 @@ type CredentialProviderInfo struct {
 	AccessKeyID  string
 }
 
-// ParseAgentLogsForCredentialProvider extracts credential provider name from logs
-func ParseAgentLogsForCredentialProvider(expectedProvider string) (*CredentialProviderInfo, error) {
+// ParseAgentLogsForCredentialProvider extracts credential provider name from logs. A match is returned as soon as
+// a log line reports one of the expected providers. Multiple expected providers allow the same test to pass against
+// agents built on either aws-sdk-go v1 or aws-sdk-go-v2, which log different provider names for the same credential
+// source (e.g. SharedCredentialsProvider vs SharedConfigCredentials for shared credential files).
+func ParseAgentLogsForCredentialProvider(expectedProviders ...string) (*CredentialProviderInfo, error) {
 	file, err := os.Open(common.AgentLogFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open agent log: %w", err)
@@ -57,7 +62,7 @@ func ParseAgentLogsForCredentialProvider(expectedProvider string) (*CredentialPr
 				AccessKeyID:  matches[1],
 			}
 
-			if lastMatch.ProviderName == expectedProvider {
+			if slices.Contains(expectedProviders, lastMatch.ProviderName) {
 				return lastMatch, nil
 			}
 		}
@@ -68,10 +73,10 @@ func ParseAgentLogsForCredentialProvider(expectedProvider string) (*CredentialPr
 	}
 
 	if lastMatch != nil {
-		return nil, fmt.Errorf("provider mis-match: expected %s, got %s", expectedProvider, lastMatch.ProviderName)
+		return nil, fmt.Errorf("provider mis-match: expected one of %v, got %s", expectedProviders, lastMatch.ProviderName)
 	}
 
-	return nil, fmt.Errorf("no credential provider (%s) not found", expectedProvider)
+	return nil, fmt.Errorf("no credential provider log line found (expected one of %v)", expectedProviders)
 }
 
 // getDimensions returns the dimensions for metric queries
@@ -145,21 +150,16 @@ func ValidateMetric(testName string, namespace string, metricName string, metada
 	return testResult
 }
 
-// ValidateCredentialProvider verifies the expected credential provider was used
-func ValidateCredentialProvider(expectedProvider string, expectedAccessKeyID string) status.TestResult {
+// ValidateCredentialProvider verifies one of the expected credential providers was used
+func ValidateCredentialProvider(expectedProviders []string, expectedAccessKeyID string) status.TestResult {
 	testResult := status.TestResult{
-		Name:   fmt.Sprintf("ValidateCredentialProvider: %s", expectedProvider),
+		Name:   fmt.Sprintf("ValidateCredentialProvider: %s", strings.Join(expectedProviders, "|")),
 		Status: status.FAILED,
 	}
 
-	info, err := ParseAgentLogsForCredentialProvider(expectedProvider)
+	info, err := ParseAgentLogsForCredentialProvider(expectedProviders...)
 	if err != nil {
 		testResult.Reason = fmt.Errorf("failed to parse agent logs: %w", err)
-		return testResult
-	}
-
-	if info.ProviderName != expectedProvider {
-		testResult.Reason = fmt.Errorf("expected provider %s but got %s", expectedProvider, info.ProviderName)
 		return testResult
 	}
 
@@ -179,10 +179,12 @@ func ValidateCredentialProvider(expectedProvider string, expectedAccessKeyID str
 }
 
 type ExpectedResults struct {
-	Namespace              string
-	MetricName             string
-	CredentialProviderName string
-	AccessKeyID            string
+	Namespace  string
+	MetricName string
+	// CredentialProviderNames lists the acceptable credential provider names. Any single match passes,
+	// which keeps the test compatible with both aws-sdk-go v1 and aws-sdk-go-v2 based agents.
+	CredentialProviderNames []string
+	AccessKeyID             string
 }
 
 func ValidateCredentialTest(testName string, expected ExpectedResults, metadata *environment.MetaData) status.TestGroupResult {
@@ -192,7 +194,7 @@ func ValidateCredentialTest(testName string, expected ExpectedResults, metadata 
 			// Validate metric delivery (proves credentials worked)
 			ValidateMetric(testName, expected.Namespace, expected.MetricName, metadata),
 			// Validate credential provider (proves correct credential source was used)
-			ValidateCredentialProvider(expected.CredentialProviderName, expected.AccessKeyID),
+			ValidateCredentialProvider(expected.CredentialProviderNames, expected.AccessKeyID),
 		},
 	}
 }
