@@ -22,7 +22,18 @@ const (
 	// SCRAPING agent (from ${env:K8S_NODE_NAME} via the prometheuscr pipeline).
 	// It is an @resource.* label, so it lands in MetricResult.Labels.Resource.
 	agentNodeResourceKey = "k8s.node.name"
+
+	// workloadAppLabel carries the workload identity (sm-app / pm-app), stamped by
+	// each monitor's `app` relabel in resources/workload.yaml. It is an unprefixed
+	// PromQL label, so it lands in MetricResult.Labels.Datapoint.
+	workloadAppLabel = "app"
 )
+
+// workloadApps are the two workload identities scraped via distinct paths: sm-app
+// via the ServiceMonitor, pm-app via the PodMonitor. They share metric names, so
+// each path must be validated independently — checking only one would let a broken
+// path (e.g. PodMonitor discovery down) pass unnoticed.
+var workloadApps = []string{"sm-app", "pm-app"}
 
 // perNodeMetrics are metrics emitted by the per-node workload and scraped via
 // the ServiceMonitor/PodMonitor path. They carry the target_node relabel, so

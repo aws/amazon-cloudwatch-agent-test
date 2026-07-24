@@ -6,7 +6,9 @@
 package pernode
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -68,16 +70,15 @@ func TestTargetAllocatorHealthyOnBundledInstall(t *testing.T) {
 // Presence of the per-node workload metrics in CloudWatch is the end-to-end
 // signal that discovery -> allocation -> scrape -> export all work.
 func TestTargetAllocatorDiscoversMonitors(t *testing.T) {
-	var found bool
-	for _, m := range perNodeMetrics {
-		if r := queryWorkloadMetric(t, m); len(r) > 0 {
-			found = true
-			break
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
+	defer cancel()
+	// Require BOTH paths: sm-app proves ServiceMonitor discovery, pm-app proves
+	// PodMonitor discovery. Checking only one would hide a broken informer.
+	for _, app := range workloadApps {
+		results, _ := workloadResults(ctx, t, app)
+		require.NotEmptyf(t, results,
+			"no %s-scraped metrics reached CloudWatch; the TA did not discover the %s monitor", app, app)
 	}
-	require.True(t, found,
-		"no ServiceMonitor/PodMonitor-scraped metrics reached CloudWatch; the TA did not discover the monitors "+
-			"after the CRDs became available")
 }
 
 func deploymentAvailable(dep *appsv1.Deployment) bool {
