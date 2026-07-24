@@ -12,9 +12,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +31,8 @@ import (
 // monitor is owned by exactly one agent (no double-scrape, no gap).
 //
 // These assertions are deterministic and checkable out-of-cluster (CR spec + TA Deployment health);
-// the per-monitor claim is exercised by the operator unit test TestAnnotationRoleMatches.
+// the per-monitor routing decision (annotated monitor filtered into the scrape jobs) is exercised by
+// the operator test TestLoadConfigScraperRouting.
 
 const (
 	perNodeAgentName        = "cloudwatch-agent"
@@ -48,19 +49,14 @@ var gvrAmazonCloudWatchAgent = schema.GroupVersionResource{
 }
 
 // scraperRoleOf reads spec.targetAllocator.prometheusCR.scraperRole from an AmazonCloudWatchAgent CR.
-func scraperRoleOf(t *testing.T, agentName string) string {
+func scraperRoleOf(t *testing.T, dyn dynamic.Interface, agentName string) string {
 	t.Helper()
-	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath())
-	require.NoError(t, err, "building kubeconfig")
-	dyn, err := dynamic.NewForConfig(restConfig)
-	require.NoError(t, err, "creating dynamic client")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	cr, err := dyn.Resource(gvrAmazonCloudWatchAgent).Namespace(agentNamespace).Get(ctx, agentName, metav1.GetOptions{})
 	require.NoErrorf(t, err, "getting AmazonCloudWatchAgent %s/%s", agentNamespace, agentName)
 
-	role, found, err := unstructuredNestedString(cr.Object, "spec", "targetAllocator", "prometheusCR", "scraperRole")
+	role, found, err := unstructured.NestedString(cr.Object, "spec", "targetAllocator", "prometheusCR", "scraperRole")
 	require.NoError(t, err, "reading scraperRole")
 	if !found {
 		return ""
@@ -68,37 +64,15 @@ func scraperRoleOf(t *testing.T, agentName string) string {
 	return role
 }
 
-func unstructuredNestedString(obj map[string]interface{}, fields ...string) (string, bool, error) {
-	cur := obj
-	for i, f := range fields {
-		v, ok := cur[f]
-		if !ok {
-			return "", false, nil
-		}
-		if i == len(fields)-1 {
-			s, ok := v.(string)
-			if !ok {
-				return "", false, nil
-			}
-			return s, true, nil
-		}
-		next, ok := v.(map[string]interface{})
-		if !ok {
-			return "", false, nil
-		}
-		cur = next
-	}
-	return "", false, nil
-}
-
 // TestScraperRoleWiring asserts the chart wires annotation-based routing: the cluster-scraper agent
 // carries scraperRole=cluster-scraper (claims only annotated monitors) and the per-node agent
 // carries no scraperRole (default role: claims only unannotated monitors). The two roles are
 // complementary, giving exactly-one ownership.
 func TestScraperRoleWiring(t *testing.T) {
-	assert.Equal(t, clusterScraperRoleValue, scraperRoleOf(t, clusterScraperAgentName),
+	dyn := dynamicClient(t)
+	assert.Equal(t, clusterScraperRoleValue, scraperRoleOf(t, dyn, clusterScraperAgentName),
 		"cluster-scraper agent should have scraperRole=cluster-scraper so it scrapes only annotated monitors")
-	assert.Empty(t, scraperRoleOf(t, perNodeAgentName),
+	assert.Empty(t, scraperRoleOf(t, dyn, perNodeAgentName),
 		"per-node agent should have no scraperRole (default role) so it scrapes only unannotated monitors")
 }
 
@@ -108,9 +82,9 @@ func TestScraperRoleWiring(t *testing.T) {
 func TestClusterScraperTargetAllocatorHealthy(t *testing.T) {
 	clientset := k8sClientset(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	dep, err := clientset.AppsV1().Deployments(agentNamespace).Get(ctx, clusterScraperTADeploymentName, metav1.GetOptions{})
+	depCtx, depCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer depCancel()
+	dep, err := clientset.AppsV1().Deployments(agentNamespace).Get(depCtx, clusterScraperTADeploymentName, metav1.GetOptions{})
 	require.NoErrorf(t, err, "getting cluster-scraper Target Allocator %s/%s", agentNamespace, clusterScraperTADeploymentName)
 
 	desired := int32(1)
@@ -122,7 +96,9 @@ func TestClusterScraperTargetAllocatorHealthy(t *testing.T) {
 		"cluster-scraper Target Allocator not fully ready: ready=%d desired=%d", dep.Status.ReadyReplicas, desired)
 	assert.True(t, deploymentAvailable(dep), "cluster-scraper Target Allocator Deployment Available condition is not True")
 
-	pods, err := clientset.CoreV1().Pods(agentNamespace).List(ctx, metav1.ListOptions{
+	podCtx, podCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer podCancel()
+	pods, err := clientset.CoreV1().Pods(agentNamespace).List(podCtx, metav1.ListOptions{
 		LabelSelector: "app.kubernetes.io/name=" + clusterScraperTADeploymentName,
 	})
 	require.NoError(t, err, "listing cluster-scraper Target Allocator pods")
