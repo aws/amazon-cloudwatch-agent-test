@@ -15,16 +15,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestTargetAllocatorHealthy verifies G2 (resilience to CRD install ordering):
-// the Target Allocator becomes and stays healthy regardless of whether the
-// ServiceMonitor/PodMonitor CRDs existed when it started. The harness installs
-// the chart (which starts the TA) alongside CRD bundling, so the CRDs may become
-// established after the TA process begins; the TA must NOT crashloop or fail
-// readiness in that window.
+// TestTargetAllocatorHealthyOnBundledInstall is a smoke test: with the chart's
+// bundled ServiceMonitor/PodMonitor CRDs installed, the Target Allocator comes up
+// and stays healthy (Available, Ready, not CrashLoopBackOff).
 //
-// We assert the steady state: the TA Deployment is Available and its containers
-// have not restarted (a crashloop on a missing CRD would show up as restarts).
-func TestTargetAllocatorHealthy(t *testing.T) {
+// It does NOT exercise the missing-CRD install-ordering window: the harness
+// bundles the CRDs at install time, so they are present when the TA starts, and a
+// rollout restart would not reopen that window (it would also zero the lifetime
+// restart count). The missing-CRD tolerance itself (G2 resilience) is covered by
+// the operator's Target Allocator unit tests; here we only assert the bundled
+// install is healthy.
+func TestTargetAllocatorHealthyOnBundledInstall(t *testing.T) {
 	clientset := k8sClientset(t)
 
 	dep := targetAllocatorDeployment(t, clientset)
@@ -35,7 +36,7 @@ func TestTargetAllocatorHealthy(t *testing.T) {
 	}
 	require.Positive(t, desired, "Target Allocator has 0 desired replicas")
 	require.Equal(t, desired, dep.Status.ReadyReplicas,
-		"Target Allocator not fully ready: ready=%d desired=%d (a crashloop on a missing CRD looks like this)",
+		"Target Allocator not fully ready: ready=%d desired=%d (a crashloop would look like this)",
 		dep.Status.ReadyReplicas, desired)
 
 	assert.True(t, deploymentAvailable(dep), "Target Allocator Deployment Available condition is not True")
@@ -44,31 +45,28 @@ func TestTargetAllocatorHealthy(t *testing.T) {
 	require.NotEmpty(t, pods, "no Target Allocator pods found with the component label")
 	for _, p := range pods {
 		assert.Equalf(t, corev1.PodRunning, p.Status.Phase, "TA pod %s phase=%s", p.Name, p.Status.Phase)
-		// The strong G2 signal: the TA is currently up and not crashlooping on a
-		// missing CRD. A TA that died on an absent CRD would be Waiting in
-		// CrashLoopBackOff and not Ready. (Lifetime restart count is intentionally
-		// not asserted here: it is only a clean signal on a freshly provisioned
-		// cluster, so the otel-pernode harness additionally logs it below.)
+		// Smoke signal: the TA is up and not crashlooping. (Lifetime restart count
+		// is intentionally not asserted here: it is only a clean signal on a freshly
+		// provisioned cluster, so the harness additionally logs it below.)
 		for _, cs := range p.Status.ContainerStatuses {
 			assert.Truef(t, cs.Ready, "TA pod %s container %s is not Ready", p.Name, cs.Name)
 			assert.NotNilf(t, cs.State.Running, "TA pod %s container %s is not Running (state=%+v)", p.Name, cs.Name, cs.State)
 			if cs.State.Waiting != nil {
 				assert.NotEqualf(t, "CrashLoopBackOff", cs.State.Waiting.Reason,
-					"TA pod %s container %s is in CrashLoopBackOff -- it did not tolerate the CRD state", p.Name, cs.Name)
+					"TA pod %s container %s is in CrashLoopBackOff", p.Name, cs.Name)
 			}
 		}
 	}
 
-	// Informational: on a freshly provisioned cluster (the otel-pernode harness)
-	// this should be 0, evidencing the TA never restarted to pick up the CRDs.
+	// Informational: on a freshly provisioned cluster this should be 0.
 	t.Logf("Target Allocator lifetime container restarts: %d (expected 0 on a fresh harness cluster)", totalRestarts(pods))
 }
 
-// TestTargetAllocatorDiscoversMonitors confirms that once the CRDs are present
-// the TA actually discovers ServiceMonitor/PodMonitor targets, proving the CRD
-// watch started the informers (rather than the TA merely surviving). Presence of
-// the per-node workload metrics in CloudWatch is the end-to-end signal that
-// discovery -> allocation -> scrape -> export all work after the CRDs appeared.
+// TestTargetAllocatorDiscoversMonitors confirms that with the bundled CRDs
+// present the TA actually discovers ServiceMonitor/PodMonitor targets, proving
+// the CRD watch started the informers (rather than the TA merely surviving).
+// Presence of the per-node workload metrics in CloudWatch is the end-to-end
+// signal that discovery -> allocation -> scrape -> export all work.
 func TestTargetAllocatorDiscoversMonitors(t *testing.T) {
 	var found bool
 	for _, m := range perNodeMetrics {
