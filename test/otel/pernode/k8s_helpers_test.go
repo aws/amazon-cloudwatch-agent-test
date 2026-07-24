@@ -31,10 +31,9 @@ const (
 	targetAllocatorDeploymentName = "cloudwatch-agent-target-allocator"
 )
 
-// k8sGroundTruth holds node and pod data fetched from the Kubernetes API.
+// k8sGroundTruth holds node data fetched from the Kubernetes API.
 type k8sGroundTruth struct {
 	nodes map[string]corev1.Node // keyed by metadata.name
-	pods  map[string]corev1.Pod  // keyed by "namespace/name"
 }
 
 var (
@@ -97,33 +96,12 @@ func buildGroundTruth() (*k8sGroundTruth, error) {
 		return nil, fmt.Errorf("K8s API returned 0 nodes")
 	}
 
-	podList, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("listing pods: %w", err)
-	}
-
-	gt := &k8sGroundTruth{
-		nodes: make(map[string]corev1.Node, len(nodeList.Items)),
-		pods:  make(map[string]corev1.Pod, len(podList.Items)),
-	}
+	gt := &k8sGroundTruth{nodes: make(map[string]corev1.Node, len(nodeList.Items))}
 	for _, n := range nodeList.Items {
 		n := n
 		gt.nodes[n.Name] = n
 	}
-	for _, p := range podList.Items {
-		p := p
-		gt.pods[p.Namespace+"/"+p.Name] = p
-	}
 	return gt, nil
-}
-
-// nodeNames returns the set of Kubernetes node names.
-func (gt *k8sGroundTruth) nodeNames() map[string]struct{} {
-	out := make(map[string]struct{}, len(gt.nodes))
-	for name := range gt.nodes {
-		out[name] = struct{}{}
-	}
-	return out
 }
 
 // dynamicClient builds a dynamic client from the ambient kubeconfig, used to read
