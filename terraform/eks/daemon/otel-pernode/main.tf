@@ -129,19 +129,33 @@ resource "null_resource" "kubectl" {
 # NOTE: no prometheus-operator CRD install step exists in this harness on
 # purpose -- the SM/PM CRDs must come from the chart alone.
 
-data "external" "clone_helm_chart" {
+resource "null_resource" "clone_helm_chart" {
   count = var.local_chart_path == "" ? 1 : 0
-  program = ["bash", "-c", <<-EOT
-    rm -rf ./helm-charts
-    git clone -b ${var.helm_chart_branch} ${var.helm_chart_repo} ./helm-charts
-    echo '{"status":"ready"}'
-  EOT
-  ]
+  # Re-clone only when the source ref changes (not on every plan). A data source
+  # must be side-effect free; cloning here (a resource) with an idempotent guard
+  # avoids the previous rm -rf of a directory in the caller's cwd.
+  triggers = {
+    repo   = var.helm_chart_repo
+    branch = var.helm_chart_branch
+  }
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      dest="${path.module}/helm-charts"
+      if [ ! -d "$dest/.git" ]; then
+        git clone --depth 1 -b ${var.helm_chart_branch} ${var.helm_chart_repo} "$dest"
+      else
+        git -C "$dest" fetch --depth 1 origin ${var.helm_chart_branch}
+        git -C "$dest" checkout -B ${var.helm_chart_branch} FETCH_HEAD
+      fi
+    EOT
+  }
 }
 
 locals {
-  # Install from the local checkout when provided, else from the freshly cloned repo.
-  chart_path = var.local_chart_path != "" ? var.local_chart_path : "./helm-charts/charts/amazon-cloudwatch-observability"
+  # Install from the local checkout when provided, else from the cloned repo under
+  # this module's directory (never the caller's cwd).
+  chart_path = var.local_chart_path != "" ? var.local_chart_path : "${path.module}/helm-charts/charts/amazon-cloudwatch-observability"
 }
 
 resource "helm_release" "aws_observability" {
@@ -164,7 +178,7 @@ resource "helm_release" "aws_observability" {
   depends_on = [
     aws_eks_addon.pod_identity_agent,
     null_resource.kubectl,
-    data.external.clone_helm_chart,
+    null_resource.clone_helm_chart,
   ]
 }
 
