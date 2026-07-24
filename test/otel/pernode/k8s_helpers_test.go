@@ -19,6 +19,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -125,32 +126,49 @@ func (gt *k8sGroundTruth) nodeNames() map[string]struct{} {
 	return out
 }
 
-// crdServed reports whether the given groupVersion exposes the named resource,
-// i.e. the CRD is installed and established. Uses discovery so it needs no
-// apiextensions client dependency.
-func crdServed(t *testing.T, clientset *kubernetes.Clientset, groupVersion, resource string) bool {
+// dynamicClient builds a dynamic client from the ambient kubeconfig, used to read
+// CustomResourceDefinition objects (their ownership metadata) without pulling in the
+// typed apiextensions clientset.
+func dynamicClient(t *testing.T) dynamic.Interface {
 	t.Helper()
-	list, err := clientset.Discovery().ServerResourcesForGroupVersion(groupVersion)
+	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath())
+	if err != nil {
+		t.Fatalf("building kubeconfig: %v", err)
+	}
+	dyn, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		t.Fatalf("building dynamic client: %v", err)
+	}
+	return dyn
+}
+
+// crdManagedByHelm fetches a CustomResourceDefinition (named "<resource>.<group>"
+// from the given GVR) and reports whether it exists and, if so, whether it carries
+// app.kubernetes.io/managed-by=Helm plus its meta.helm.sh/release-namespace. This
+// distinguishes a CRD this chart's Helm release installed from one served by a
+// pre-existing prometheus-operator (which discovery alone cannot tell apart).
+func crdManagedByHelm(t *testing.T, dyn dynamic.Interface, gvr schema.GroupVersionResource) (present bool, managedByHelm bool, releaseNamespace string) {
+	t.Helper()
+	crdName := gvr.Resource + "." + gvr.Group
+	obj, err := dyn.Resource(gvrCRD).Get(context.Background(), crdName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return false
+			return false, false, ""
 		}
-		// A missing group surfaces as a discovery error; treat as not served.
-		t.Logf("discovery for %s returned: %v", groupVersion, err)
-		return false
+		t.Fatalf("getting CRD %s: %v", crdName, err)
 	}
-	for _, r := range list.APIResources {
-		if r.Name == resource {
-			return true
-		}
-	}
-	return false
+	return true,
+		obj.GetLabels()["app.kubernetes.io/managed-by"] == "Helm",
+		obj.GetAnnotations()["meta.helm.sh/release-namespace"]
 }
 
 // gvrServiceMonitor / gvrPodMonitor identify the community CRDs we expect bundled.
 var (
 	gvrServiceMonitor = schema.GroupVersionResource{Group: "monitoring.coreos.com", Version: "v1", Resource: "servicemonitors"}
 	gvrPodMonitor     = schema.GroupVersionResource{Group: "monitoring.coreos.com", Version: "v1", Resource: "podmonitors"}
+	// gvrCRD is the apiextensions CustomResourceDefinition resource, used to read a
+	// bundled CRD's object metadata (ownership labels) via the dynamic client.
+	gvrCRD = schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
 )
 
 // targetAllocatorDeployment fetches the Target Allocator Deployment.
