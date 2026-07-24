@@ -267,6 +267,8 @@ resource "null_resource" "workload" {
         crd/servicemonitors.monitoring.coreos.com \
         crd/podmonitors.monitoring.coreos.com
       kubectl apply -f ${path.module}/../../../../test/otel/pernode/resources/workload.yaml
+      # Annotation-routing fixture (routed + default monitors) for the /jobs partition test.
+      kubectl apply -f ${path.module}/../../../../test/otel/pernode/resources/routing-workload.yaml
     EOT
   }
 }

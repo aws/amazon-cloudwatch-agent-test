@@ -7,6 +7,8 @@ package pernode
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -113,4 +116,89 @@ func TestClusterScraperTargetAllocatorHealthy(t *testing.T) {
 			}
 		}
 	}
+}
+
+
+const (
+	perNodeTAService        = "cloudwatch-agent-target-allocator-service"
+	clusterScraperTAService = "cloudwatch-agent-cluster-scraper-target-allocator-service"
+	// Job-name substrings from resources/routing-workload.yaml.
+	routedJobMarker  = "routed-exporter-cluster-scraped"
+	defaultJobMarker = "default-exporter-node-scraped"
+)
+
+// taJobsPartition runs an in-cluster probe pod that curls each Target Allocator's
+// /jobs endpoint (HTTPS, server-cert skipped like the manual runbook -- no client
+// cert required for /jobs) and returns the raw job listing each TA reports. It
+// retries inside the pod to absorb TA discovery lag.
+func taJobsPartition(t *testing.T, clientset *kubernetes.Clientset) (clusterScraperJobs, perNodeJobs string) {
+	t.Helper()
+	csURL := fmt.Sprintf("https://%s.%s.svc:80/jobs", clusterScraperTAService, agentNamespace)
+	pnURL := fmt.Sprintf("https://%s.%s.svc:80/jobs", perNodeTAService, agentNamespace)
+	script := fmt.Sprintf(`
+for i in $(seq 1 12); do
+  cs=$(curl -sk --max-time 10 %q || true)
+  pn=$(curl -sk --max-time 10 %q || true)
+  if echo "$cs" | grep -q %q && echo "$pn" | grep -q %q; then break; fi
+  sleep 15
+done
+echo "===CS==="; echo "$cs"; echo "===PN==="; echo "$pn"; echo "===END==="
+`, csURL, pnURL, routedJobMarker, defaultJobMarker)
+
+	pod, err := clientset.CoreV1().Pods(agentNamespace).Create(context.Background(), &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{GenerateName: "ta-jobs-probe-", Namespace: agentNamespace},
+		Spec: corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			Containers: []corev1.Container{{
+				Name:    "probe",
+				Image:   "curlimages/curl:8.10.1",
+				Command: []string{"sh", "-c", script},
+			}},
+		},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err, "creating /jobs probe pod")
+	defer func() {
+		_ = clientset.CoreV1().Pods(agentNamespace).Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	require.Eventuallyf(t, func() bool {
+		p, err := clientset.CoreV1().Pods(agentNamespace).Get(ctx, pod.Name, metav1.GetOptions{})
+		return err == nil && (p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed)
+	}, 5*time.Minute, 5*time.Second, "/jobs probe pod %s did not complete", pod.Name)
+
+	raw, err := clientset.CoreV1().Pods(agentNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{}).DoRaw(ctx)
+	require.NoError(t, err, "reading /jobs probe logs")
+	logs := string(raw)
+	return between(logs, "===CS===", "===PN==="), between(logs, "===PN===", "===END===")
+}
+
+func between(s, start, end string) string {
+	i := strings.Index(s, start)
+	if i < 0 {
+		return ""
+	}
+	i += len(start)
+	if j := strings.Index(s[i:], end); j >= 0 {
+		return s[i : i+j]
+	}
+	return s[i:]
+}
+
+// TestAnnotationRoutingPartition proves the routing partition at each Target
+// Allocator's /jobs: the annotated monitor's job is owned only by the
+// cluster-scraper TA and the bare monitor's job only by the per-node TA (neither
+// double-scraped nor dropped).
+func TestAnnotationRoutingPartition(t *testing.T) {
+	clientset := k8sClientset(t)
+	csJobs, pnJobs := taJobsPartition(t, clientset)
+
+	require.NotEmpty(t, strings.TrimSpace(csJobs), "cluster-scraper TA /jobs returned nothing (probe could not reach it)")
+	require.NotEmpty(t, strings.TrimSpace(pnJobs), "per-node TA /jobs returned nothing (probe could not reach it)")
+
+	assert.Containsf(t, csJobs, routedJobMarker, "cluster-scraper TA should OWN the routed monitor job %q", routedJobMarker)
+	assert.NotContainsf(t, csJobs, defaultJobMarker, "cluster-scraper TA must NOT own the bare monitor %q", defaultJobMarker)
+	assert.Containsf(t, pnJobs, defaultJobMarker, "per-node TA should OWN the bare monitor job %q", defaultJobMarker)
+	assert.NotContainsf(t, pnJobs, routedJobMarker, "per-node TA must NOT own the routed monitor %q", routedJobMarker)
 }
