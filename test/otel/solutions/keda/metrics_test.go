@@ -18,16 +18,18 @@ var kedaMetrics = []otelmetrics.MetricDefinition{
 	{Name: "keda_scaler_metrics_value", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"scaler", "scaledObject", "metric"}},
 	{Name: "keda_scaler_metrics_latency_seconds", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"scaler", "scaledObject", "metric"}, Unit: "s"},
 	{Name: "keda_scaler_active", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"scaler", "scaledObject", "metric"}},
-	{Name: "keda_scaler_errors_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"scaler", "scaledObject"}, Unit: "1"},
+	{Name: "keda_scaler_detail_errors_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"scaler", "scaledObject"}, Unit: "1"},
 
 	// Scaled object metrics
 	{Name: "keda_scaled_object_paused", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"scaledObject", "namespace"}},
+	{Name: "keda_scaled_object_errors_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"scaledObject", "namespace"}, Unit: "1"},
 
 	// Controller metrics
-	{Name: "keda_internal_scale_loop_latency_seconds", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"type", "resource"}, Unit: "s"},
+	{Name: "keda_internal_scale_loop_latency_seconds", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, Unit: "s"},
 
-	// Resource totals
-	{Name: "keda_resource_totals", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"type", "namespace", "resource"}},
+	// Resource registration totals
+	{Name: "keda_resource_registered_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"type", "namespace", "resource"}, Unit: "1"},
+	{Name: "keda_trigger_registered_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"type"}, Unit: "1"},
 }
 
 func kedaMetricNames() []string {
