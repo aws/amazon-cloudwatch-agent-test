@@ -381,7 +381,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 		{
-			testDir: "./test/otel_collect/ecs/host_metrics",
+			testDir: "./test/otel_collect/ecs/otlp",
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},

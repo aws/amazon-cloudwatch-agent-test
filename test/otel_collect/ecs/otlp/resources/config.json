@@ -5,8 +5,9 @@
   "opentelemetry": {
     "cluster_name": "cwagent-ecs-integ-test",
     "collect": {
-      "host_metrics": {
-        "collection_interval": 30
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:4317",
+        "http_endpoint": "0.0.0.0:4318"
       }
     }
   }
