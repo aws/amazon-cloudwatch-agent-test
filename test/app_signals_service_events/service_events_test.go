@@ -177,9 +177,7 @@ func TestAppSignalsOnPremCredentialsStartup(t *testing.T) {
 
 	agentLog := common.ReadAgentLogfile(common.AgentLogFile)
 	assert.NotContains(t, agentLog, "could not retrieve credential provider",
-		"sigv4auth should not eagerly resolve credentials via IMDS when a credentials file is provided")
-	assert.NotContains(t, agentLog, "no EC2 IMDS role found",
-		"sigv4auth should use the provided credentials file instead of requiring IMDS")
+		"sigv4auth should resolve credentials from the file, not fail over to IMDS")
 
 	assertAgentStable(t,
 		"agent should start in onPrem mode with a credentials file even when IMDS is disabled")

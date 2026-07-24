@@ -7,6 +7,7 @@ package service_discovery
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -22,6 +23,10 @@ import (
 
 const (
 	MaxRetryCount = 15
+	// logEventPropagationTimeout bounds phase 2 (waiting for events once the log group
+	// exists) by wall clock rather than a retry count, since each attempt can block ~90s
+	// internally in GetLogsSince on a not-yet-created stream.
+	logEventPropagationTimeout = 5 * time.Minute
 	// Log group format: https://github.com/aws/amazon-cloudwatch-agent/blob/5ef3dba446cb56a4c2306878592b5d14300ae82f/translator/translate/otel/exporter/awsemf/prometheus.go#L38
 	ECSLogGroupNameFormat = "/aws/ecs/containerinsights/%s/prometheus"
 	// Log stream based on job name in extra_apps.tpl:https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/test/ecs/service_discovery/resources/extra_apps.tpl#L41
@@ -148,26 +153,59 @@ func (t ECSServiceDiscoveryTestRunner) ValidateCloudWatchLogs() status.TestResul
 	return testResult
 }
 
+// ValidateLogGroupFormat waits for the scenario's log group, then validates its events. The
+// returned bool reports whether the log group was located -- i.e. whether the caller should
+// run cleanup -- NOT whether validation passed; inspect the error for pass/fail. It returns
+// (false, err) only when the group never appeared.
 func (t ECSServiceDiscoveryTestRunner) ValidateLogGroupFormat(logGroupName string, config ValidationConfig) (bool, error) {
 	start := time.Now()
 
 	log.Printf("Scenario %s: Sleeping to allow metric collection in CloudWatch Logs.", t.scenarioName)
 	time.Sleep(1 * time.Minute)
 
+	// Phase 1: wait for the log group to be created.
 	log.Printf("Scenario %s: Searching for LogGroup: %s\n", t.scenarioName, logGroupName)
-
+	logGroupFound := false
 	for retries := 0; retries < MaxRetryCount; retries++ {
 		if awsservice.IsLogGroupExists(logGroupName) {
-			end := time.Now()
-			return true, t.ValidateLogsContent(logGroupName, config, start, end)
+			logGroupFound = true
+			break
 		}
+		log.Printf("Scenario %s: Retry %d/%d: log group not found. Waiting 20 seconds...\n", t.scenarioName, retries+1, MaxRetryCount)
+		time.Sleep(20 * time.Second)
+	}
+	if !logGroupFound {
+		return false, fmt.Errorf("scenario %s: log group %s not found after %d retries", t.scenarioName, logGroupName, MaxRetryCount)
+	}
 
-		log.Printf("Scenario %s: Retry %d/%d: Log group not found. Waiting 20 seconds...\n", t.scenarioName, retries+1, MaxRetryCount)
+	// Phase 2: group exists; validate content, retrying while the target stream is still
+	// catching up -- empty (ErrNoLogEvents) or not yet created (ResourceNotFoundException).
+	// Any other error (schema/job/cluster mismatch, or a transient AWS error) fails fast by
+	// design. Bounded by a wall-clock deadline, not a retry count, because each attempt can
+	// itself block ~90s inside GetLogsSince (StandardRetries x 30s) on a missing stream.
+	deadline := time.Now().Add(logEventPropagationTimeout)
+	var lastErr error
+	for {
+		end := time.Now()
+		err := t.ValidateLogsContent(logGroupName, config, start, end)
+		if err == nil {
+			return true, nil
+		}
+		if !errors.Is(err, awsservice.ErrNoLogEvents) && !awsservice.IsResourceNotFoundException(err) {
+			// true = log group located (caller should clean up), not "validation passed".
+			return true, err
+		}
+		lastErr = err
+		if time.Now().After(deadline) {
+			break
+		}
+		log.Printf("Scenario %s: log events not available yet after %s; waiting 20 seconds...\n", t.scenarioName, time.Since(start).Round(time.Second))
 		time.Sleep(20 * time.Second)
 	}
 
-	log.Printf("Scenario %s: ECS ServiceDiscovery Test has exhausted %v retry times", t.scenarioName, MaxRetryCount)
-	return false, fmt.Errorf("scenario %s: test retries exhausted: %d", t.scenarioName, MaxRetryCount)
+	// Group exists but never produced events within the deadline: return true so the caller
+	// still cleans it up and reports the real cause rather than a misleading "not found".
+	return true, fmt.Errorf("scenario %s: no log events within %s: %w", t.scenarioName, logEventPropagationTimeout, lastErr)
 }
 
 func (t ECSServiceDiscoveryTestRunner) ValidateLogsContent(logGroupName string, config ValidationConfig, start time.Time, end time.Time) error {
