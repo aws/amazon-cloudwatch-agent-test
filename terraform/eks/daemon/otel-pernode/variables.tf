@@ -22,8 +22,11 @@ variable "cwagent_image_tag" {
   default = "latest"
 }
 
-# --- Helm chart source. MUST point at a checkout that contains the zero-step CRD
-#     bundling (G1) changes. Defaults to this repo's fork; override for a PR branch. ---
+# --- Helm chart source. MUST resolve to a chart that contains the zero-step CRD
+#     bundling (G1), per-node, and routing changes. Upstream `main` does NOT have
+#     them until this stack merges, so either set helm_chart_branch to the merge
+#     commit/release tag once it lands, or use local_chart_path below to test a
+#     working-tree checkout. Pin to a fixed ref (not a moving branch) for CI. ---
 variable "helm_chart_repo" {
   type    = string
   default = "https://github.com/aws-observability/helm-charts.git"
@@ -54,7 +57,7 @@ variable "operator_image_domain" {
 
 variable "operator_image_repo" {
   type        = string
-  description = "Repository (path) for the custom operator image, e.g. wenepra/cwagent-test/cloudwatch-agent-operator."
+  description = "Repository (path) for the custom operator image, e.g. <org>/cloudwatch-agent-operator."
 }
 
 variable "operator_image_tag" {
@@ -76,8 +79,10 @@ variable "allocation_strategy" {
 }
 
 variable "k8s_version" {
-  type    = string
-  default = "1.35"
+  type = string
+  # Pinned to a broadly-available GA EKS version. Bump only to versions GA in the
+  # target region; a not-yet-offered version makes the default apply fail.
+  default = "1.31"
 }
 
 variable "ami_type" {

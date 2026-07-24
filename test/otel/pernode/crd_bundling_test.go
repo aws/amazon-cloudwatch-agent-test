@@ -14,21 +14,27 @@ import (
 
 // TestServiceMonitorPodMonitorCRDsBundled verifies G1 (zero-step install): after
 // installing the chart with otelContainerInsights enabled, the community
-// ServiceMonitor and PodMonitor CRDs are present and established (served by the
-// API server) with no manual prerequisite. The otel-pernode harness installs the
-// chart onto a cluster that does NOT pre-install these CRDs, so their presence
-// here is attributable to the chart's bundling.
+// ServiceMonitor and PodMonitor CRDs are present AND owned by this chart's Helm
+// release. Checking Helm ownership (app.kubernetes.io/managed-by=Helm) rather than
+// mere presence means a rerun or a pre-existing prometheus-operator can't make the
+// test pass when the chart bundled nothing. CRD absence is treated as a
+// precondition failure (the harness installs onto a cluster without these CRDs).
 func TestServiceMonitorPodMonitorCRDsBundled(t *testing.T) {
-	clientset := k8sClientset(t)
+	dyn := dynamicClient(t)
 
-	smServed := crdServed(t, clientset, gvrServiceMonitor.GroupVersion().String(), gvrServiceMonitor.Resource)
-	pmServed := crdServed(t, clientset, gvrPodMonitor.GroupVersion().String(), gvrPodMonitor.Resource)
+	smPresent, smHelm, smNS := crdManagedByHelm(t, dyn, gvrServiceMonitor)
+	pmPresent, pmHelm, pmNS := crdManagedByHelm(t, dyn, gvrPodMonitor)
 
-	assert.True(t, smServed, "ServiceMonitor CRD (%s/%s) is not established; chart did not bundle it",
-		gvrServiceMonitor.GroupVersion().String(), gvrServiceMonitor.Resource)
-	assert.True(t, pmServed, "PodMonitor CRD (%s/%s) is not established; chart did not bundle it",
-		gvrPodMonitor.GroupVersion().String(), gvrPodMonitor.Resource)
+	// Absence => the chart didn't bundle them: precondition for the ownership check.
+	require.Truef(t, smPresent, "ServiceMonitor CRD absent — chart did not bundle it (zero-step install precondition)")
+	require.Truef(t, pmPresent, "PodMonitor CRD absent — chart did not bundle it (zero-step install precondition)")
 
-	require.True(t, smServed && pmServed,
-		"zero-step CRD bundling failed: ServiceMonitor served=%v, PodMonitor served=%v", smServed, pmServed)
+	// Presence alone is insufficient (a pre-existing prometheus-operator or a stale
+	// prior install would also be present); require THIS Helm release to own them.
+	assert.Truef(t, smHelm,
+		"ServiceMonitor CRD is not managed by Helm (app.kubernetes.io/managed-by != Helm); not installed by this chart (release-namespace=%q)", smNS)
+	assert.Truef(t, pmHelm,
+		"PodMonitor CRD is not managed by Helm (app.kubernetes.io/managed-by != Helm); not installed by this chart (release-namespace=%q)", pmNS)
+	assert.Equalf(t, agentNamespace, smNS, "ServiceMonitor CRD Helm release-namespace=%q, want %q (this release)", smNS, agentNamespace)
+	assert.Equalf(t, agentNamespace, pmNS, "PodMonitor CRD Helm release-namespace=%q, want %q (this release)", pmNS, agentNamespace)
 }
