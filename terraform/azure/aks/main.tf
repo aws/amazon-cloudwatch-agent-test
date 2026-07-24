@@ -383,8 +383,8 @@ resource "kubernetes_job_v1" "otlp_load" {
         restart_policy = "Never"
 
         container {
-          name  = "load-gen"
-          image = "curlimages/curl:8.8.0"
+          name    = "load-gen"
+          image   = "curlimages/curl:8.8.0"
           command = ["/bin/sh", "-c"]
           args = [<<-EOT
 SERVICE_NAME="aks-otlp-test-service"
