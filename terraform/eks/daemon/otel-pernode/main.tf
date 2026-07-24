@@ -216,6 +216,19 @@ resource "null_resource" "patch_cr" {
         -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type=merge \
         -p='{"spec":{"targetAllocator":{"allocationStrategy":"${var.allocation_strategy}","image":"${var.ta_image}"}}}'
+
+      # cluster-scraper agent (the annotation-routing target the chart also renders):
+      # patch the same custom images so its Target Allocator understands scraper_role.
+      # Keep its chart-set consistent-hashing strategy + scraperRole (do NOT force per-node).
+      for i in $(seq 1 60); do
+        kubectl -n amazon-cloudwatch get AmazonCloudWatchAgent cloudwatch-agent-cluster-scraper >/dev/null 2>&1 && break
+        [ "$i" = "60" ] && { echo "CR cloudwatch-agent-cluster-scraper never appeared" >&2; exit 1; }
+        sleep 5
+      done
+      kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent-cluster-scraper --type='json' \
+        -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
+      kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent-cluster-scraper --type=merge \
+        -p='{"spec":{"targetAllocator":{"image":"${var.ta_image}"}}}'
     EOT
   }
 }
@@ -229,8 +242,12 @@ resource "null_resource" "restart_pods" {
     command = <<-EOT
       kubectl -n amazon-cloudwatch rollout restart daemonset/cloudwatch-agent
       kubectl -n amazon-cloudwatch rollout restart deployment/cloudwatch-agent-target-allocator 2>/dev/null || true
+      kubectl -n amazon-cloudwatch rollout restart deployment/cloudwatch-agent-cluster-scraper 2>/dev/null || true
+      kubectl -n amazon-cloudwatch rollout restart deployment/cloudwatch-agent-cluster-scraper-target-allocator 2>/dev/null || true
       kubectl -n amazon-cloudwatch rollout status daemonset/cloudwatch-agent --timeout=180s
       kubectl -n amazon-cloudwatch rollout status deployment/cloudwatch-agent-target-allocator --timeout=180s 2>/dev/null || true
+      kubectl -n amazon-cloudwatch rollout status deployment/cloudwatch-agent-cluster-scraper --timeout=180s 2>/dev/null || true
+      kubectl -n amazon-cloudwatch rollout status deployment/cloudwatch-agent-cluster-scraper-target-allocator --timeout=180s 2>/dev/null || true
     EOT
   }
 }
