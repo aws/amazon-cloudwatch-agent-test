@@ -28,7 +28,7 @@ var kedaMetrics = []otelmetrics.MetricDefinition{
 	{Name: "keda_internal_scale_loop_latency_seconds", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, Unit: "s"},
 
 	// Resource registration totals
-	{Name: "keda_resource_registered_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"type", "namespace", "resource"}, Unit: "1"},
+	{Name: "keda_resource_registered_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"type", "namespace"}, Unit: "1"},
 	{Name: "keda_trigger_registered_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"type"}, Unit: "1"},
 }
 
