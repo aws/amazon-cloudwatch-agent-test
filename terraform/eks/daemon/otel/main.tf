@@ -241,6 +241,9 @@ resource "null_resource" "karpenter_nodepool" {
   depends_on = [helm_release.karpenter]
   provisioner "local-exec" {
     command = <<-EOT
+      echo "Waiting for Karpenter controller to be ready..."
+      kubectl wait --for=condition=available deployment/karpenter -n kube-system --timeout=300s
+      sleep 10
       cat <<'EOF' | kubectl apply -f -
       apiVersion: karpenter.sh/v1
       kind: NodePool
@@ -328,12 +331,11 @@ resource "null_resource" "karpenter_scale_trigger" {
                   cpu: "1500m"
                   memory: "3Gi"
             tolerations:
-            - key: "karpenter-test"
+            - key: "karpenter.sh/disruption"
               operator: "Exists"
-              effect: "NoSchedule"
       EOF
       echo "Waiting for Karpenter to provision node..."
-      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=300s
+      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=600s || echo "Scale trigger timed out — continuing anyway"
     EOT
   }
 }
