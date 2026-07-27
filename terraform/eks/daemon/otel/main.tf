@@ -350,14 +350,7 @@ resource "null_resource" "karpenter_scale_trigger" {
               effect: "NoSchedule"
       EOF
       echo "Waiting for Karpenter to provision node..."
-      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=600s || \
-        (echo "=== KARPENTER LOGS ===" && \
-         kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter --tail=100 && \
-         echo "=== PENDING PODS ===" && \
-         kubectl get pods -A -o wide --field-selector=status.phase=Pending && \
-         echo "=== NODECLAIMS ===" && \
-         kubectl get nodeclaims -A -o yaml 2>/dev/null && \
-         exit 1)
+      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=600s
     EOT
   }
 }
