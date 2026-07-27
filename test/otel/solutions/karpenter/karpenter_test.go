@@ -306,9 +306,8 @@ func TestKarpenterCloudAccountID(t *testing.T) {
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
 				acctID, ok := r.Labels.Resource["cloud.account.id"]
-				if ok {
-					require.Equal(t, cfg.AccountID, acctID, "%s cloud.account.id", metricName)
-				}
+				require.True(t, ok, "%s missing @resource.cloud.account.id", metricName)
+				require.Equal(t, cfg.AccountID, acctID, "%s cloud.account.id", metricName)
 			}
 		})
 	}
