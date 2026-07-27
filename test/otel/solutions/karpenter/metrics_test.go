@@ -48,6 +48,10 @@ var karpenterMetrics = []otelmetrics.MetricDefinition{
 	{Name: "karpenter_voluntary_disruption_eligible_nodes", MetricType: "gauge", Scope: otelmetrics.ScopeCluster, ExpectedLabels: []string{"reason"}},
 	{Name: "karpenter_voluntary_disruption_consolidation_timeouts_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, Unit: "1"},
 	{Name: "karpenter_voluntary_disruption_decision_evaluation_duration_seconds", MetricType: "histogram", Scope: otelmetrics.ScopeCluster, Unit: "s"},
+
+	// Scaling event metrics (emitted when Karpenter provisions nodes)
+	{Name: "karpenter_nodeclaims_created_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, Unit: "1"},
+	{Name: "karpenter_nodes_created_total", MetricType: "counter", Scope: otelmetrics.ScopeCluster, Unit: "1"},
 }
 
 func karpenterMetricNames() []string {

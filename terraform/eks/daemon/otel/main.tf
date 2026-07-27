@@ -292,6 +292,47 @@ resource "null_resource" "karpenter_nodepool" {
   }
 }
 
+# --- Karpenter scale-trigger workload: forces provisioning of a new node ---
+# This pod requests enough resources that it cannot fit on the existing EKS
+# managed node group, causing Karpenter to provision a new node.
+
+resource "null_resource" "karpenter_scale_trigger" {
+  depends_on = [null_resource.karpenter_nodepool]
+  provisioner "local-exec" {
+    command = <<-EOT
+      cat <<'EOF' | kubectl apply -f -
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: karpenter-scale-trigger
+        namespace: default
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: karpenter-scale-trigger
+        template:
+          metadata:
+            labels:
+              app: karpenter-scale-trigger
+          spec:
+            containers:
+            - name: pause
+              image: registry.k8s.io/pause:3.9
+              resources:
+                requests:
+                  cpu: "1500m"
+                  memory: "3Gi"
+            tolerations:
+            - key: "karpenter.sh/disruption"
+              operator: "Exists"
+      EOF
+      echo "Waiting for Karpenter to provision node..."
+      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=300s || true
+    EOT
+  }
+}
+
 # --- Helm chart install ---
 
 data "external" "clone_helm_chart" {
