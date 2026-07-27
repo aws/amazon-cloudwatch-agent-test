@@ -321,6 +321,15 @@ resource "null_resource" "karpenter_scale_trigger" {
   depends_on = [null_resource.karpenter_nodepool]
   provisioner "local-exec" {
     command = <<-EOT
+      echo "Waiting for EC2NodeClass to become ready..."
+      for i in $(seq 1 60); do
+        STATUS=$(kubectl get ec2nodeclass default -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+        if [ "$STATUS" = "True" ]; then
+          echo "EC2NodeClass ready after $${i}0s"
+          break
+        fi
+        sleep 10
+      done
       cat <<'EOF' | kubectl apply -f -
       apiVersion: apps/v1
       kind: Deployment
@@ -350,7 +359,14 @@ resource "null_resource" "karpenter_scale_trigger" {
               effect: "NoSchedule"
       EOF
       echo "Waiting for Karpenter to provision node..."
-      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=600s
+      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=600s || \
+        (echo "=== KARPENTER LOGS ===" && \
+         kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter --tail=50 && \
+         echo "=== EC2NODECLASS STATUS ===" && \
+         kubectl get ec2nodeclass default -o yaml 2>/dev/null && \
+         echo "=== NODECLAIMS ===" && \
+         kubectl get nodeclaims -A 2>/dev/null && \
+         exit 1)
     EOT
   }
 }
