@@ -243,7 +243,10 @@ resource "null_resource" "karpenter_nodepool" {
     command = <<-EOT
       echo "Waiting for Karpenter controller to be ready..."
       kubectl wait --for=condition=available deployment/karpenter -n kube-system --timeout=300s
-      sleep 10
+      echo "Restarting Karpenter to ensure Pod Identity credentials are loaded..."
+      kubectl rollout restart deployment/karpenter -n kube-system
+      kubectl rollout status deployment/karpenter -n kube-system --timeout=120s
+      sleep 30
       cat <<'EOF' | kubectl apply -f -
       apiVersion: karpenter.sh/v1
       kind: NodePool
@@ -300,8 +303,6 @@ resource "null_resource" "karpenter_nodepool" {
 }
 
 # --- Karpenter scale-trigger workload: forces provisioning of a new node ---
-# This pod requests enough resources that it cannot fit on the existing EKS
-# managed node group, causing Karpenter to provision a new node.
 
 resource "null_resource" "karpenter_scale_trigger" {
   depends_on = [null_resource.karpenter_nodepool]
@@ -331,11 +332,19 @@ resource "null_resource" "karpenter_scale_trigger" {
                   cpu: "1500m"
                   memory: "3Gi"
             tolerations:
-            - key: "karpenter.sh/disruption"
+            - key: "karpenter-test"
               operator: "Exists"
+              effect: "NoSchedule"
       EOF
       echo "Waiting for Karpenter to provision node..."
-      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=600s || echo "Scale trigger timed out — continuing anyway"
+      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=600s || \
+        (echo "=== KARPENTER LOGS ===" && \
+         kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter --tail=100 && \
+         echo "=== PENDING PODS ===" && \
+         kubectl get pods -A -o wide --field-selector=status.phase=Pending && \
+         echo "=== NODECLAIMS ===" && \
+         kubectl get nodeclaims -A -o yaml 2>/dev/null && \
+         exit 1)
     EOT
   }
 }
@@ -584,7 +593,7 @@ resource "null_resource" "validator" {
       echo "Running OTEL standard cluster integration tests"
       cd ../../../..
 
-      echo "Waiting 4 minutes for metrics to propagate (includes Karpenter provisioning metrics)..."
+      echo "Waiting 4 minutes for metrics to propagate..."
       sleep 240
 
       go test -tags integration -timeout 1h -v ${var.test_dir} \
