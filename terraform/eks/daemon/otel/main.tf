@@ -249,6 +249,10 @@ resource "null_resource" "karpenter_nodepool" {
       spec:
         template:
           spec:
+            taints:
+              - key: karpenter-test
+                value: "true"
+                effect: NoSchedule
             nodeClassRef:
               group: karpenter.k8s.aws
               kind: EC2NodeClass
@@ -324,11 +328,12 @@ resource "null_resource" "karpenter_scale_trigger" {
                   cpu: "1500m"
                   memory: "3Gi"
             tolerations:
-            - key: "karpenter.sh/disruption"
+            - key: "karpenter-test"
               operator: "Exists"
+              effect: "NoSchedule"
       EOF
       echo "Waiting for Karpenter to provision node..."
-      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=300s || true
+      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=300s
     EOT
   }
 }
