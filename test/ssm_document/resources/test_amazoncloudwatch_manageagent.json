@@ -58,10 +58,10 @@
       "interpolationType": "ENV_VAR"
     },
     "optionalEnvironmentVariable": {
-      "description": "Only for the 'set-env' action. Environment variable to persist for the agent process, in KEY=VALUE format. Requires an agent version whose ctl supports the set-env action. Note: values also produced by agent config translation (proxy, CA bundle, log level, etc.) are overwritten on configure actions and agent restarts.",
+      "description": "Only for the 'set-env' action. Environment variable to persist for the agent process, in KEY=VALUE format. Requires an agent version whose ctl supports the set-env action. The value may not contain double quotes, backticks, dollar signs, backslashes, or control characters.",
       "type": "String",
       "default": "",
-      "allowedPattern": "^([A-Za-z_][A-Za-z0-9_]*=[^\"`$\\\\]*)?$",
+      "allowedPattern": "^([A-Za-z_][A-Za-z0-9_]*=[^\"`$\\\\\\x00-\\x1f\\x7f]*)?$",
       "interpolationType": "ENV_VAR"
     }
   },
@@ -97,7 +97,7 @@
           "         Write-Output 'optionalEnvironmentVariable must be specified for the set-env action'",
           "         exit 1",
           "     }",
-          "     & \"$Cmd\" -a set-env -e $env:SSM_optionalEnvironmentVariable",
+          "     & \"$Cmd\" -a set-env -e \"$env:SSM_optionalEnvironmentVariable\"",
           "     exit $LASTEXITCODE",
           " }",
           " # Handle multi-config merge for configure action",
