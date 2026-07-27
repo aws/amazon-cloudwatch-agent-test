@@ -22,9 +22,6 @@ func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
 }
 
-// clusterNamePrefix matches the ECS cluster naming in terraform/ecs_ec2/daemon.
-const clusterNamePrefix = "cwagent-integ-test-cluster-"
-
 // ECSOtlpTestRunner validates that a workload (sidecar) running on the ECS daemon
 // can publish OTLP metrics to the agent's OTLP receiver and have them reach CloudWatch.
 type ECSOtlpTestRunner struct {
@@ -46,18 +43,17 @@ func (t *ECSOtlpTestRunner) Validate() status.TestGroupResult {
 	env := environment.GetEnvironmentMetaData()
 	// Give the sidecar time to push and the agent to export before querying.
 	time.Sleep(3 * time.Minute)
-	// Isolate by the per-run testing_id, which the sidecar stamps as the TestId
-	// attribute and is embedded in the ECS cluster ARN.
+	// Isolate by cluster name — stamped by the agent's resourcedetection processor.
 	labels := map[string]string{
-		"TestId": testIDFromClusterArn(env.EcsClusterArn),
+		"@resource.aws.ecs.cluster.name": clusterNameFromArn(env.EcsClusterArn),
 	}
 	return otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), env.Region, t.GetMeasuredMetrics(), labels)
 }
 
-// testIDFromClusterArn extracts the testing_id suffix from the ECS cluster ARN.
-func testIDFromClusterArn(clusterArn string) string {
-	if i := strings.LastIndex(clusterArn, clusterNamePrefix); i != -1 {
-		return clusterArn[i+len(clusterNamePrefix):]
+// clusterNameFromArn extracts the cluster name from the ECS cluster ARN.
+func clusterNameFromArn(clusterArn string) string {
+	if i := strings.LastIndex(clusterArn, "/"); i != -1 {
+		return clusterArn[i+1:]
 	}
 	return clusterArn
 }

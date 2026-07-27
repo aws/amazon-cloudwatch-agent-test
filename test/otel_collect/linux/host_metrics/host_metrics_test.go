@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/linux/otelconfig"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
@@ -38,6 +39,10 @@ func (t *HostMetricsTestRunner) Validate() status.TestGroupResult {
 func (t *HostMetricsTestRunner) GetTestName() string                { return "HostMetrics" }
 func (t *HostMetricsTestRunner) GetAgentRunDuration() time.Duration { return hostMetricsRuntime }
 func (t *HostMetricsTestRunner) GetAgentConfigFileName() string     { return "host_metrics_config.json" }
+
+func (t *HostMetricsTestRunner) SetupBeforeAgentRun() error {
+	return otelconfig.Setup(t.GetAgentConfigFileName(), t.env.AgentStartCommand, t.env.InstanceId)
+}
 func (t *HostMetricsTestRunner) GetMeasuredMetrics() []string {
 	return []string{
 		"system.cpu.utilization",

@@ -12,11 +12,9 @@ import (
 const onPremiseMarker = "onPremise"
 
 // ResourceHostIDLabels returns the label filter for host_metrics/prometheus tests.
-// EC2 filters on host.id; on-prem returns nil (no IMDS, validate presence only).
+// Both EC2 and on-prem filter on host.id: EC2 gets it from IMDS, while on-prem
+// injects it via resource_attributes since IMDS is disabled.
 func ResourceHostIDLabels(agentStartCommand, instanceID string) map[string]string {
-	if strings.Contains(agentStartCommand, onPremiseMarker) {
-		return nil
-	}
 	return map[string]string{"@resource.host.id": instanceID}
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/linux/otelconfig"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
@@ -57,7 +58,7 @@ func (t *PrometheusOtelTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
-	if err := t.BaseTestRunner.SetupBeforeAgentRun(); err != nil {
+	if err := otelconfig.Setup(t.GetAgentConfigFileName(), t.env.AgentStartCommand, t.env.InstanceId); err != nil {
 		return err
 	}
 

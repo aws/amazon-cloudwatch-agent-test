@@ -127,10 +127,12 @@ func (t *HomeEnvTestRunner) Validate() status.TestGroupResult {
 	// need to clean up the invalid root credentials before validation runs
 	t.Cleanup()
 	return util.ValidateCredentialTest(t.GetTestName(), util.ExpectedResults{
-		Namespace:              util.SharedTestNamespace,
-		MetricName:             util.MetricNameCpuUsageActive,
-		CredentialProviderName: util.ProviderNameSharedConfig,
-		AccessKeyID:            t.accessKeyID,
+		Namespace:  util.SharedTestNamespace,
+		MetricName: util.MetricNameCpuUsageActive,
+		// The SDK default chain resolves the HOME shared credentials file as SharedConfigCredentials
+		// on both aws-sdk-go v1 (session shared config) and aws-sdk-go-v2 (config.LoadDefaultConfig).
+		CredentialProviderNames: []string{util.ProviderNameSharedConfig},
+		AccessKeyID:             t.accessKeyID,
 	}, metadata)
 }
 

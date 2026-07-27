@@ -30,6 +30,11 @@ const (
 	UserCWAgentHomeDir = "/home/cwagent"
 	AwsCredentialsPath = ".aws/credentials"
 
+	// ProviderNameSharedCredentials is logged by agents built on aws-sdk-go v1, where shared credentials
+	// resolve via credentials.SharedCredentialsProvider.
+	ProviderNameSharedCredentials = "SharedCredentialsProvider"
+	// ProviderNameSharedConfig is logged by agents built on aws-sdk-go-v2, where shared credentials
+	// resolve via config.LoadSharedConfigProfile, and by the SDK default chain's shared config resolution.
 	ProviderNameSharedConfig = "SharedConfigCredentials"
 )
 
