@@ -338,7 +338,7 @@ resource "null_resource" "karpenter_scale_trigger" {
 data "external" "clone_helm_chart" {
   program = ["bash", "-c", <<-EOT
     rm -rf ./helm-charts
-    git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
+    git clone -b ${var.karpenter_chart_ref} https://github.com/vaishnavi-30-beep/helm-charts.git ./helm-charts
     echo '{"status":"ready"}'
   EOT
   ]
