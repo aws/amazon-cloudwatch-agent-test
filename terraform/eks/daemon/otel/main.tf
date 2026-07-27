@@ -572,7 +572,7 @@ resource "null_resource" "validator" {
   depends_on = [
     null_resource.restart_pods,
     kubernetes_deployment_v1.nginx_test,
-    null_resource.karpenter_nodepool,
+    null_resource.karpenter_scale_trigger,
   ]
 
   triggers = { always_run = timestamp() }
@@ -582,8 +582,8 @@ resource "null_resource" "validator" {
       echo "Running OTEL standard cluster integration tests"
       cd ../../../..
 
-      echo "Waiting 3 minutes for metrics to propagate..."
-      sleep 180
+      echo "Waiting 4 minutes for metrics to propagate (includes Karpenter provisioning metrics)..."
+      sleep 240
 
       go test -tags integration -timeout 1h -v ${var.test_dir} \
         -eksClusterName=${aws_eks_cluster.this.name} \
