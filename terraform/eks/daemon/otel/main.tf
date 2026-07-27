@@ -145,6 +145,7 @@ resource "aws_iam_role_policy" "karpenter_controller" {
           "ec2:DescribeInstanceTypes",
           "ec2:DescribeLaunchTemplates",
           "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSpotPriceHistory",
           "ec2:DescribeSubnets",
           "ec2:RunInstances",
           "ec2:TerminateInstances",
@@ -165,6 +166,7 @@ resource "aws_iam_role_policy" "karpenter_controller" {
           "iam:CreateInstanceProfile",
           "iam:DeleteInstanceProfile",
           "iam:GetInstanceProfile",
+          "iam:ListInstanceProfiles",
           "iam:RemoveRoleFromInstanceProfile",
           "iam:TagInstanceProfile",
         ]
@@ -279,10 +281,10 @@ resource "null_resource" "karpenter_nodepool" {
             requirements:
               - key: "karpenter.k8s.aws/instance-category"
                 operator: In
-                values: ["t"]
+                values: ["c", "m", "r", "t"]
               - key: "karpenter.k8s.aws/instance-size"
                 operator: In
-                values: ["medium", "large"]
+                values: ["medium", "large", "xlarge"]
               - key: "kubernetes.io/arch"
                 operator: In
                 values: ["amd64"]
