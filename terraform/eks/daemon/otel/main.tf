@@ -158,6 +158,19 @@ resource "aws_iam_role_policy" "karpenter_controller" {
         Resource = aws_iam_role.node_role.arn
       },
       {
+        Sid    = "IAMInstanceProfile"
+        Effect = "Allow"
+        Action = [
+          "iam:AddRoleToInstanceProfile",
+          "iam:CreateInstanceProfile",
+          "iam:DeleteInstanceProfile",
+          "iam:GetInstanceProfile",
+          "iam:RemoveRoleFromInstanceProfile",
+          "iam:TagInstanceProfile",
+        ]
+        Resource = "*"
+      },
+      {
         Sid      = "EKSPermissions"
         Effect   = "Allow"
         Action   = "eks:DescribeCluster"
