@@ -7,8 +7,6 @@ module "common" {
   source = "../../common"
 }
 
-data "aws_caller_identity" "current" {}
-
 # Referenced by ARN, not created here (created once out-of-band; may be auto-removed if unapproved).
 data "aws_iam_openid_connect_provider" "azure" {
   arn = var.azure_oidc_provider_arn

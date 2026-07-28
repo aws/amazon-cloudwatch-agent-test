@@ -135,11 +135,13 @@ resource "null_resource" "integration_test" {
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a set-env -e 'AWS_REGION=${var.region}'",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a set-env -e 'CWAGENT_ROLE_ARN=${aws_iam_role.cwagent.arn}'",
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m auto -s -c default:otel",
-      # The test binary validates delivery via AWS reads; give it the same web-identity chain the agent uses.
-      "curl -s -H Metadata:true \"http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=${var.azure_token_audience}\" | python3 -c \"import sys,json; print(json.load(sys.stdin)['access_token'])\" > /tmp/azure-identity-token",
+      # The test binary validates delivery via AWS reads; give it the same web-identity chain the agent
+      # uses. The token is a bearer credential, so create it 0600 (umask before redirect, since the
+      # shell creates the file) and remove it once the test finishes.
+      "umask 077 && curl -s -H Metadata:true \"http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=${var.azure_token_audience}\" | python3 -c \"import sys,json; print(json.load(sys.stdin)['access_token'])\" > /tmp/azure-identity-token",
       "export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/azure-identity-token AWS_ROLE_ARN=${aws_iam_role.cwagent.arn} AWS_REGION=${var.region}",
       "cd amazon-cloudwatch-agent-test",
-      "go test -tags integration ${var.test_dir} -p 1 -timeout 30m -computeType=AZUREVM -region=${var.region} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${azurerm_linux_virtual_machine.cwagent.virtual_machine_id} -assumeRoleArn=${aws_iam_role.cwagent.arn} -v",
+      "go test -tags integration ${var.test_dir} -p 1 -timeout 30m -computeType=AZUREVM -region=${var.region} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${azurerm_linux_virtual_machine.cwagent.virtual_machine_id} -assumeRoleArn=${aws_iam_role.cwagent.arn} -v; test_rc=$?; rm -f /tmp/azure-identity-token; exit $test_rc",
     ]
   }
 
@@ -147,5 +149,6 @@ resource "null_resource" "integration_test" {
     azurerm_linux_virtual_machine.cwagent,
     azurerm_network_interface_security_group_association.cwagent,
     aws_iam_role_policy.cwagent,
+    aws_iam_role_policy_attachment.cwagent_server_policy,
   ]
 }

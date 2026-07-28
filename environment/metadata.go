@@ -121,7 +121,7 @@ type MetaDataStrings struct {
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
-	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS")
+	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS/AZUREVM/AKS")
 }
 func registerBucket(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.Bucket), "bucket", "", "s3 bucket ex cloudwatch-agent-integration-bucket")
@@ -193,7 +193,7 @@ func registerProxyUrl(dataString *MetaDataStrings) {
 func fillComputeType(e *MetaData, data *MetaDataStrings) {
 	computeType, ok := computetype.FromString(data.ComputeType)
 	if !ok {
-		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS. Compute Type is a required flag. :" + data.ComputeType)
+		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS/AZUREVM/AKS. Compute Type is a required flag. :" + data.ComputeType)
 	}
 	e.ComputeType = computeType
 }

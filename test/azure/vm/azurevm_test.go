@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -67,14 +68,21 @@ func TestAzureVM(t *testing.T) {
 
 	// Push OTLP for the load window, then validate.
 	stop := make(chan struct{})
-	go sendTelemetry(stop)
+	senderDone := make(chan struct{})
+	go func() {
+		defer close(senderDone)
+		sendTelemetry(stop)
+	}()
 	time.Sleep(loadWindow)
 	close(stop)
+	// Join the sender before reading what it recorded, rather than assuming the settle
+	// sleep is long enough for its final iteration to finish.
+	<-senderDone
 	// Allow final export + CloudWatch ingestion to settle before querying.
 	time.Sleep(30 * time.Second)
 
-	// Snapshot trace IDs now that sendTelemetry has stopped — the mutex makes
-	// this a happens-before with the goroutine's final append.
+	// Snapshot the accepted trace IDs. The sender has exited, and the mutex still gives a
+	// clean happens-before with its last append.
 	traceMu.Lock()
 	traceIDsCopy := make([]string, len(generatedTraceIDs))
 	copy(traceIDsCopy, generatedTraceIDs)
@@ -208,24 +216,40 @@ func sendTelemetry(stop <-chan struct{}) {
 		case <-ticker.C:
 			post("/v1/metrics", buildMetricsPayload(env.InstanceId))
 			post("/v1/logs", buildLogsPayload(env.InstanceId))
-			post("/v1/traces", buildTracesPayload(env.InstanceId))
+			// Only record the trace ID once the collector has accepted the span. Recording it
+			// unconditionally would make a single transient POST failure guarantee a validation
+			// failure for a trace that was never actually sent.
+			payload, traceID := buildTracesPayload(env.InstanceId)
+			if post("/v1/traces", payload) {
+				recordTraceID(traceID)
+			}
 		}
 	}
 }
 
-func post(path string, payload []byte) {
+// post sends an OTLP payload and reports whether the collector accepted it.
+func post(path string, payload []byte) bool {
 	req, err := http.NewRequest("POST", otlpEndpoint+path, bytes.NewReader(payload))
 	if err != nil {
 		log.Printf("failed to build OTLP request for %s: %v", path, err)
-		return
+		return false
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Printf("failed to POST OTLP to %s: %v", path, err)
-		return
+		return false
 	}
-	resp.Body.Close()
+	// Drain before closing so the connection can be reused.
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		log.Printf("OTLP POST to %s returned %s", path, resp.Status)
+		return false
+	}
+	return true
 }
 
 // filterLogLines returns lines from a multi-line string that contain any of the given substrings (case-insensitive).

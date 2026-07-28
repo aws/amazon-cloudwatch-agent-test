@@ -24,10 +24,14 @@ resource "azurerm_kubernetes_cluster" "cwagent" {
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
 
-  # Terraform drives the cluster over the public API server, so restrict it to the runner that
-  # created it. Left unrestricted when runner_ip is empty (local runs without a known egress IP).
-  api_server_access_profile {
-    authorized_ip_ranges = var.runner_ip != "" ? [var.runner_ip] : []
+  # Terraform drives the cluster over the public API server, so restrict it to the runner that created
+  # it. The block is omitted entirely when runner_ip is unset rather than emitted with an empty list --
+  # an empty authorized_ip_ranges means "open to all", which would read as restricted while being open.
+  dynamic "api_server_access_profile" {
+    for_each = var.runner_ip != "" ? [var.runner_ip] : []
+    content {
+      authorized_ip_ranges = [api_server_access_profile.value]
+    }
   }
 
   identity {
@@ -328,6 +332,7 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
   depends_on = [
     kubernetes_cluster_role_binding.cwagent,
     aws_iam_role_policy.cwagent,
+    aws_iam_role_policy_attachment.cwagent_server_policy,
   ]
 }
 

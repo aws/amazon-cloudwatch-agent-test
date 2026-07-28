@@ -79,7 +79,8 @@ var traceSeq uint64
 // goroutine and read by the test goroutine after the load window closes.
 var traceMu sync.Mutex
 
-// generatedTraceIDs collects the OTLP trace IDs (32 hex chars) emitted during the load window.
+// generatedTraceIDs collects the OTLP trace IDs (32 hex chars) the collector ACCEPTED during the
+// load window -- see recordTraceID.
 // validateTraces queries the aws/spans log group (Transaction Search) for these exact IDs.
 var generatedTraceIDs []string
 
@@ -90,7 +91,7 @@ var generatedTraceIDs []string
 //
 // Transaction Search stores spans with W3C trace IDs, so it is possible this prefix is no longer
 // required on the ingest path -- that has not been re-verified. Keeping it is valid either way.
-func buildTracesPayload(instanceID string) []byte {
+func buildTracesPayload(instanceID string) ([]byte, string) {
 	traceMu.Lock()
 	traceSeq++
 	now := time.Now()
@@ -99,7 +100,6 @@ func buildTracesPayload(instanceID string) []byte {
 	// First 4 bytes: unix seconds (X-Ray requirement). Remaining 12 bytes: sequence + padding for uniqueness.
 	traceID := fmt.Sprintf("%08x0000000000000000%08x", now.Unix(), traceSeq)
 	spanID := fmt.Sprintf("%016x", nowNano)
-	generatedTraceIDs = append(generatedTraceIDs, traceID)
 	traceMu.Unlock()
 	return []byte(fmt.Sprintf(`{
   "resourceSpans": [{
@@ -120,5 +120,12 @@ func buildTracesPayload(instanceID string) []byte {
       }]
     }]
   }]
-}`, serviceName, instanceID, traceID, spanID, startNano, nowNano, instanceID))
+}`, serviceName, instanceID, traceID, spanID, startNano, nowNano, instanceID)), traceID
+}
+
+// recordTraceID marks a trace ID as successfully delivered so validateTraces expects to find it.
+func recordTraceID(traceID string) {
+	traceMu.Lock()
+	defer traceMu.Unlock()
+	generatedTraceIDs = append(generatedTraceIDs, traceID)
 }
