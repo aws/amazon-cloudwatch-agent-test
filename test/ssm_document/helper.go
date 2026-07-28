@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -148,41 +149,20 @@ func RunAndVerifySSMActionFailure(documentName string, instanceIds []string, tc 
 	return nil
 }
 
-// VerifyEnvConfigContent reads the agent's env-config.json on the instance by running
-// readCommand through runCommandDocument (AWS-RunShellScript or AWS-RunPowerShellScript)
-// and asserts that the file contains every expected key/value pair. Additional keys in
-// the file are ignored.
-func VerifyEnvConfigContent(runCommandDocument, readCommand, instanceId string, expected map[string]string) error {
-	log.Printf("Verifying env-config.json content via %s", runCommandDocument)
+// VerifyEnvConfigContent reads the agent's env-config.json directly from the local
+// filesystem (the test runs on the instance) and asserts that the file contains every
+// expected key/value pair. Additional keys in the file are ignored.
+func VerifyEnvConfigContent(expected map[string]string) error {
+	log.Printf("Verifying env-config.json content via direct file read: %s", envConfigPath)
 
-	out, err := awsservice.RunSSMDocument(runCommandDocument, []string{instanceId}, map[string][]string{"commands": {readCommand}})
+	data, err := os.ReadFile(envConfigPath)
 	if err != nil {
-		return fmt.Errorf("failed to run env-config read command: %v", err)
-	}
-
-	result, err := awsservice.WaitForCommandCompletion(*out.Command.CommandId, instanceId)
-	if err != nil {
-		commandOutput := awsservice.GetCommandInvocationDetails(*out.Command.CommandId, instanceId)
-		return fmt.Errorf("env-config read command failed: %v\nCommand output:\n%s", err, commandOutput)
-	}
-
-	var content string
-	for _, plugin := range result.CommandInvocations[0].CommandPlugins {
-		if plugin.Output != nil {
-			content += *plugin.Output
-		}
-	}
-
-	// Extract the JSON object from the raw command output (tolerates surrounding whitespace/noise).
-	start := strings.Index(content, "{")
-	end := strings.LastIndex(content, "}")
-	if start == -1 || end < start {
-		return fmt.Errorf("no JSON object found in env-config read output:\n%s", content)
+		return fmt.Errorf("failed to read env-config.json at %s: %v", envConfigPath, err)
 	}
 
 	var envConfig map[string]string
-	if err := json.Unmarshal([]byte(content[start:end+1]), &envConfig); err != nil {
-		return fmt.Errorf("failed to unmarshal env-config.json content: %v\nContent:\n%s", err, content)
+	if err := json.Unmarshal(data, &envConfig); err != nil {
+		return fmt.Errorf("failed to unmarshal env-config.json: %v\nContent:\n%s", err, string(data))
 	}
 
 	for key, want := range expected {
@@ -207,4 +187,24 @@ func commandOutputContains(result *ssm.ListCommandInvocationsOutput, expected st
 		}
 	}
 	return false
+}
+
+// VerifySSMSendCommandRejection runs the document action and expects SendCommand itself
+// to reject the request (e.g. because a parameter value violates an allowedPattern).
+// The AWS SDK returns an InvalidParameters error from SendCommand in this case.
+func VerifySSMSendCommandRejection(documentName string, instanceIds []string, tc testCase) error {
+	log.Printf("Testing %s action (expecting SendCommand rejection)", tc.actionName)
+
+	_, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
+	if err == nil {
+		return fmt.Errorf("%s action was expected to be rejected at SendCommand but succeeded", tc.actionName)
+	}
+
+	// SSM returns an InvalidParameters error when allowedPattern validation fails.
+	if !strings.Contains(err.Error(), "InvalidParameters") {
+		return fmt.Errorf("%s action failed with unexpected error (expected InvalidParameters): %v", tc.actionName, err)
+	}
+
+	log.Printf("%s action rejected at SendCommand as expected: %v", tc.actionName, err)
+	return nil
 }

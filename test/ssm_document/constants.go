@@ -7,14 +7,16 @@ const (
 	testManageAgentDocument = "Test-AmazonCloudWatch-ManageAgent-"
 
 	// Actions
-	actionStart           = "start"
-	actionStop            = "stop"
-	actionConfigure       = "configure"
-	actionConfigureAppend = "configure (append)"
-	actionConfigureRemove = "configure (remove)"
-	actionSetEnv          = "set-env"
-	actionSetEnvMerge     = "set-env (merge)"
-	actionSetEnvEmpty     = "set-env (empty)"
+	actionStart                = "start"
+	actionStop                 = "stop"
+	actionConfigure            = "configure"
+	actionConfigureAppend      = "configure (append)"
+	actionConfigureRemove      = "configure (remove)"
+	actionSetEnv               = "set-env"
+	actionSetEnvMerge          = "set-env (merge)"
+	actionSetEnvOverwrite      = "set-env (overwrite)"
+	actionSetEnvEmpty          = "set-env (empty)"
+	actionSetEnvInvalidPattern = "set-env (invalid pattern)"
 
 	// Parameters
 	paramAction                        = "action"
@@ -30,6 +32,13 @@ const (
 	setEnvValue1 = "value with spaces"
 	setEnvKey2   = "CWA_TEST_VAR_TWO"
 	setEnvValue2 = "another value"
+
+	// setEnvOverwriteValue is used to overwrite setEnvKey1 with a new value.
+	setEnvOverwriteValue = "overwritten value"
+
+	// setEnvInvalidPatternValue contains a '$' which violates the document's
+	// optionalEnvironmentVariable allowedPattern and is rejected by SSM at SendCommand.
+	setEnvInvalidPatternValue = "CWA_TEST_INVALID=$not_allowed"
 
 	// setEnvOutputPrefix is printed by the ctl on a successful set-env ("Set <KEY>").
 	setEnvOutputPrefix = "Set "
