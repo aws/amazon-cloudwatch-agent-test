@@ -5,6 +5,7 @@ package ssm_document
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	"github.com/aws/smithy-go"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
@@ -63,6 +65,10 @@ func VerifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName stri
 	statusResult, err := awsservice.WaitForCommandCompletion(*statusOut.Command.CommandId, instanceId)
 	if err != nil {
 		return fmt.Errorf("failed to get status result: %v", err)
+	}
+
+	if len(statusResult.CommandInvocations) == 0 {
+		return fmt.Errorf("no command invocations returned for status check")
 	}
 
 	for _, plugin := range statusResult.CommandInvocations[0].CommandPlugins {
@@ -138,6 +144,7 @@ func RunAndVerifySSMActionFailure(documentName string, instanceIds []string, tc 
 		return fmt.Errorf("%s action was expected to fail but succeeded\nCommand output:\n%s", tc.actionName, commandOutput)
 	}
 	// WaitForCommandCompletion also errors on Cancelled/TimedOut/deadline; require Failed specifically.
+	// The "terminal status " prefix is produced by awsservice.WaitForCommandCompletion.
 	if !strings.Contains(err.Error(), "terminal status "+string(types.CommandInvocationStatusFailed)) {
 		return fmt.Errorf("%s action reached an unexpected terminal state: %v\nCommand output:\n%s", tc.actionName, err, commandOutput)
 	}
@@ -181,6 +188,9 @@ func VerifyEnvConfigContent(expected map[string]string) error {
 
 // commandOutputContains reports whether any command plugin's output contains expected.
 func commandOutputContains(result *ssm.ListCommandInvocationsOutput, expected string) bool {
+	if len(result.CommandInvocations) == 0 {
+		return false
+	}
 	for _, plugin := range result.CommandInvocations[0].CommandPlugins {
 		if plugin.Output != nil && strings.Contains(*plugin.Output, expected) {
 			return true
@@ -200,9 +210,10 @@ func VerifySSMSendCommandRejection(documentName string, instanceIds []string, tc
 		return fmt.Errorf("%s action was expected to be rejected at SendCommand but succeeded", tc.actionName)
 	}
 
-	// SSM returns an InvalidParameters error when allowedPattern validation fails.
-	if !strings.Contains(err.Error(), "InvalidParameters") {
-		return fmt.Errorf("%s action failed with unexpected error (expected InvalidParameters): %v", tc.actionName, err)
+	// SSM returns an InvalidParameters API error when allowedPattern validation fails.
+	var apiErr smithy.APIError
+	if !errors.As(err, &apiErr) || apiErr.ErrorCode() != "InvalidParameters" {
+		return fmt.Errorf("%s action failed with unexpected error (expected InvalidParameters API error): %v", tc.actionName, err)
 	}
 
 	log.Printf("%s action rejected at SendCommand as expected: %v", tc.actionName, err)

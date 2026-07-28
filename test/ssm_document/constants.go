@@ -18,6 +18,12 @@ const (
 	actionSetEnvEmpty          = "set-env (empty)"
 	actionSetEnvInvalidPattern = "set-env (invalid pattern)"
 
+	// actionSetEnvInvalidBacktick exercises rejection of a value containing a backtick.
+	actionSetEnvInvalidBacktick = "set-env (invalid backtick)"
+
+	// actionSetEnvInvalidKey exercises rejection of a malformed key starting with a digit.
+	actionSetEnvInvalidKey = "set-env (invalid key)"
+
 	// Parameters
 	paramAction                        = "action"
 	paramOptionalConfigurationSource   = "optionalConfigurationSource"
@@ -39,6 +45,14 @@ const (
 	// setEnvInvalidPatternValue contains a '$' which violates the document's
 	// optionalEnvironmentVariable allowedPattern and is rejected by SSM at SendCommand.
 	setEnvInvalidPatternValue = "CWA_TEST_INVALID=$not_allowed"
+
+	// setEnvInvalidBacktickValue contains a backtick which violates the document's
+	// optionalEnvironmentVariable allowedPattern and is rejected by SSM at SendCommand.
+	setEnvInvalidBacktickValue = "CWA_TEST_BACKTICK=val`ue"
+
+	// setEnvInvalidKeyValue has a malformed key starting with a digit, violating the
+	// allowedPattern's key portion ([A-Za-z_][A-Za-z0-9_]*=...) and rejected at SendCommand.
+	setEnvInvalidKeyValue = "1FOO=bar"
 
 	// setEnvOutputPrefix is printed by the ctl on a successful set-env ("Set <KEY>").
 	setEnvOutputPrefix = "Set "

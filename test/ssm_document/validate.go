@@ -16,7 +16,8 @@ import (
 )
 
 // Validate runs the full SSM Document integration test sequence. Platform-specific
-// constants (envConfigPath) are defined in the build-tagged platform files.
+// constants (envConfigPath) and initialization (platformSetup) are defined in the
+// build-tagged platform files (ssm_document_unix.go, ssm_document_windows.go).
 func Validate() error {
 	log.Println("Starting SSM Document validation tests")
 
@@ -207,8 +208,35 @@ func Validate() error {
 		return err
 	}
 
+	// Test set-env action (allowedPattern rejection): a value containing a backtick violates
+	// the allowedPattern and is rejected by SSM at SendCommand time.
+	if err := VerifySSMSendCommandRejection(documentName, instanceIds, testCase{
+		parameters: map[string][]string{
+			paramAction:                      {actionSetEnv},
+			paramOptionalEnvironmentVariable: {setEnvInvalidBacktickValue},
+		},
+		actionName: actionSetEnvInvalidBacktick,
+	}); err != nil {
+		return err
+	}
+
+	// Test set-env action (allowedPattern rejection): a key starting with a digit violates
+	// the [A-Za-z_] prefix requirement and is rejected by SSM at SendCommand time.
+	if err := VerifySSMSendCommandRejection(documentName, instanceIds, testCase{
+		parameters: map[string][]string{
+			paramAction:                      {actionSetEnv},
+			paramOptionalEnvironmentVariable: {setEnvInvalidKeyValue},
+		},
+		actionName: actionSetEnvInvalidKey,
+	}); err != nil {
+		return err
+	}
+
 	// Test set-env action (error path): empty optionalEnvironmentVariable must fail
 	// with the document-level error message.
+	// expectedAgentStatus and expectedConfigStatus are intentionally omitted: the action
+	// fails at the document level (RunAndVerifySSMActionFailure), so VerifyAgentAction
+	// is never called and those fields are unused.
 	setEnvEmptyTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                      {actionSetEnv},
