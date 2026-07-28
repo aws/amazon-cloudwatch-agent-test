@@ -363,12 +363,11 @@ func TestKarpenterCloudResourceID(t *testing.T) {
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
 				arn, ok := r.Labels.Resource["cloud.resource_id"]
-				if ok {
-					require.True(t, strings.HasPrefix(arn, expectedARNPrefix),
-						"%s cloud.resource_id should start with %q, got %q", metricName, expectedARNPrefix, arn)
-					require.True(t, strings.HasSuffix(arn, expectedARNSuffix),
-						"%s cloud.resource_id should end with %q, got %q", metricName, expectedARNSuffix, arn)
-				}
+				require.True(t, ok, "%s missing @resource.cloud.resource_id", metricName)
+				require.True(t, strings.HasPrefix(arn, expectedARNPrefix),
+					"%s cloud.resource_id should start with %q, got %q", metricName, expectedARNPrefix, arn)
+				require.True(t, strings.HasSuffix(arn, expectedARNSuffix),
+					"%s cloud.resource_id should end with %q, got %q", metricName, expectedARNSuffix, arn)
 			}
 		})
 	}
