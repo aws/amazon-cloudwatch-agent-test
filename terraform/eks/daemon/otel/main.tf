@@ -361,14 +361,7 @@ resource "null_resource" "karpenter_scale_trigger" {
               effect: "NoSchedule"
       EOF
       echo "Waiting for Karpenter to provision node..."
-      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=600s || \
-        (echo "=== KARPENTER LOGS ===" && \
-         kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter --tail=50 && \
-         echo "=== EC2NODECLASS STATUS ===" && \
-         kubectl get ec2nodeclass default -o yaml 2>/dev/null && \
-         echo "=== NODECLAIMS ===" && \
-         kubectl get nodeclaims -A 2>/dev/null && \
-         exit 1)
+      kubectl wait --for=condition=available deployment/karpenter-scale-trigger --timeout=600s
     EOT
   }
 }
@@ -378,7 +371,7 @@ resource "null_resource" "karpenter_scale_trigger" {
 data "external" "clone_helm_chart" {
   program = ["bash", "-c", <<-EOT
     rm -rf ./helm-charts
-    git clone -b ${var.karpenter_chart_ref} https://github.com/vaishnavi-30-beep/helm-charts.git ./helm-charts
+    git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
     echo '{"status":"ready"}'
   EOT
   ]
