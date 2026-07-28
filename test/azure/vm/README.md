@@ -1,6 +1,6 @@
 # Azure VM integration test
 
-Validates the CloudWatch Agent on a **real Azure VM** running the default Omni OTel configuration
+Validates the CloudWatch Agent on a **real Azure VM** running the default OTel configuration
 (`USE_DEFAULT_CONFIG=otel` / `default:otel`). It exercises the full generated OTel pipeline
 (Azure IMDS detection → translation → collector startup) and verifies that metrics, logs, and traces
 reach CloudWatch through the Azure → AWS credential chain (`oidctoken` extension → `sigv4auth` web identity).
