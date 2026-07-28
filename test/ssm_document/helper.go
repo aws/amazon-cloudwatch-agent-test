@@ -28,7 +28,7 @@ func cleanupSSMParameter(name string) {
 	}
 }
 
-func RunAndVerifySSMAction(documentName string, instanceIds []string, tc testCase) error {
+func runAndVerifySSMAction(documentName string, instanceIds []string, tc testCase) error {
 	log.Printf("Testing %s action", tc.actionName)
 
 	out, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
@@ -36,7 +36,7 @@ func RunAndVerifySSMAction(documentName string, instanceIds []string, tc testCas
 		return fmt.Errorf("%s action failed: %v", tc.actionName, err)
 	}
 
-	if err := VerifyAgentAction(out, instanceIds[0], documentName, tc); err != nil {
+	if err := verifyAgentAction(out, instanceIds[0], documentName, tc); err != nil {
 		return fmt.Errorf("%s verification failed: %v", tc.actionName, err)
 	}
 
@@ -44,7 +44,7 @@ func RunAndVerifySSMAction(documentName string, instanceIds []string, tc testCas
 	return nil
 }
 
-func VerifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName string, tc testCase) error {
+func verifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName string, tc testCase) error {
 	var status agentStatus
 
 	//Wait for command completion
@@ -97,9 +97,9 @@ func VerifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName stri
 	return nil
 }
 
-// RunAndVerifySSMActionWithOutput behaves like RunAndVerifySSMAction and additionally
+// runAndVerifySSMActionWithOutput behaves like runAndVerifySSMAction and additionally
 // asserts that expectedOutput appears in the command's output.
-func RunAndVerifySSMActionWithOutput(documentName string, instanceIds []string, tc testCase, expectedOutput string) error {
+func runAndVerifySSMActionWithOutput(documentName string, instanceIds []string, tc testCase, expectedOutput string) error {
 	log.Printf("Testing %s action", tc.actionName)
 
 	out, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
@@ -118,7 +118,7 @@ func RunAndVerifySSMActionWithOutput(documentName string, instanceIds []string, 
 		return fmt.Errorf("%s output verification failed: expected output %q not found\nCommand output:\n%s", tc.actionName, expectedOutput, commandOutput)
 	}
 
-	if err := VerifyAgentAction(out, instanceIds[0], documentName, tc); err != nil {
+	if err := verifyAgentAction(out, instanceIds[0], documentName, tc); err != nil {
 		return fmt.Errorf("%s verification failed: %v", tc.actionName, err)
 	}
 
@@ -126,10 +126,10 @@ func RunAndVerifySSMActionWithOutput(documentName string, instanceIds []string, 
 	return nil
 }
 
-// RunAndVerifySSMActionFailure runs the document action and expects the command invocation
+// runAndVerifySSMActionFailure runs the document action and expects the command invocation
 // to reach the terminal Failed state (e.g. document-level parameter validation errors).
 // If expectedOutput is non-empty, it must appear in the failed command's output.
-func RunAndVerifySSMActionFailure(documentName string, instanceIds []string, tc testCase, expectedOutput string) error {
+func runAndVerifySSMActionFailure(documentName string, instanceIds []string, tc testCase, expectedOutput string) error {
 	log.Printf("Testing %s action (expecting failure)", tc.actionName)
 
 	out, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
@@ -143,9 +143,10 @@ func RunAndVerifySSMActionFailure(documentName string, instanceIds []string, tc 
 	if err == nil {
 		return fmt.Errorf("%s action was expected to fail but succeeded\nCommand output:\n%s", tc.actionName, commandOutput)
 	}
-	// WaitForCommandCompletion also errors on Cancelled/TimedOut/deadline; require Failed specifically.
-	// The "terminal status " prefix is produced by awsservice.WaitForCommandCompletion.
-	if !strings.Contains(err.Error(), "terminal status "+string(types.CommandInvocationStatusFailed)) {
+	// WaitForCommandCompletion returns a *CommandTerminalError for Failed/Cancelled/TimedOut;
+	// require specifically the Failed status.
+	var termErr *awsservice.CommandTerminalError
+	if !errors.As(err, &termErr) || termErr.Status != types.CommandInvocationStatusFailed {
 		return fmt.Errorf("%s action reached an unexpected terminal state: %v\nCommand output:\n%s", tc.actionName, err, commandOutput)
 	}
 	if expectedOutput != "" && !strings.Contains(commandOutput, expectedOutput) {
@@ -156,10 +157,10 @@ func RunAndVerifySSMActionFailure(documentName string, instanceIds []string, tc 
 	return nil
 }
 
-// VerifyEnvConfigContent reads the agent's env-config.json directly from the local
+// verifyEnvConfigContent reads the agent's env-config.json directly from the local
 // filesystem (the test runs on the instance) and asserts that the file contains every
 // expected key/value pair. Additional keys in the file are ignored.
-func VerifyEnvConfigContent(expected map[string]string) error {
+func verifyEnvConfigContent(expected map[string]string) error {
 	log.Printf("Verifying env-config.json content via direct file read: %s", envConfigPath)
 
 	data, err := os.ReadFile(envConfigPath)
@@ -199,10 +200,10 @@ func commandOutputContains(result *ssm.ListCommandInvocationsOutput, expected st
 	return false
 }
 
-// VerifySSMSendCommandRejection runs the document action and expects SendCommand itself
+// verifySSMSendCommandRejection runs the document action and expects SendCommand itself
 // to reject the request (e.g. because a parameter value violates an allowedPattern).
 // The AWS SDK returns an InvalidParameters error from SendCommand in this case.
-func VerifySSMSendCommandRejection(documentName string, instanceIds []string, tc testCase) error {
+func verifySSMSendCommandRejection(documentName string, instanceIds []string, tc testCase) error {
 	log.Printf("Testing %s action (expecting SendCommand rejection)", tc.actionName)
 
 	_, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)

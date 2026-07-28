@@ -61,7 +61,7 @@ func Validate() error {
 		expectedAgentStatus:  agentStatusRunning,
 		expectedConfigStatus: configStatusConfigured,
 	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, startTest); err != nil {
+	if err := runAndVerifySSMAction(documentName, instanceIds, startTest); err != nil {
 		return err
 	}
 
@@ -72,7 +72,7 @@ func Validate() error {
 		expectedAgentStatus:  agentStatusStopped,
 		expectedConfigStatus: configStatusConfigured,
 	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, stopTest); err != nil {
+	if err := runAndVerifySSMAction(documentName, instanceIds, stopTest); err != nil {
 		return err
 	}
 
@@ -87,7 +87,7 @@ func Validate() error {
 		expectedAgentStatus:  agentStatusStopped,
 		expectedConfigStatus: configStatusNotConfigured,
 	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, removeTest); err != nil {
+	if err := runAndVerifySSMAction(documentName, instanceIds, removeTest); err != nil {
 		return err
 	}
 
@@ -108,7 +108,7 @@ func Validate() error {
 		expectedAgentStatus:  agentStatusRunning,
 		expectedConfigStatus: configStatusConfigured,
 	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, configureTest); err != nil {
+	if err := runAndVerifySSMAction(documentName, instanceIds, configureTest); err != nil {
 		return err
 	}
 
@@ -129,13 +129,16 @@ func Validate() error {
 		expectedAgentStatus:  agentStatusRunning,
 		expectedConfigStatus: configStatusConfigured,
 	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, appendTest); err != nil {
+	if err := runAndVerifySSMAction(documentName, instanceIds, appendTest); err != nil {
 		return err
 	}
 
 	// Test set-env action (happy path): custom (non translator-managed) key with a value
 	// containing spaces. Verifies the ctl's "Set <KEY>" output, that the pair is persisted
 	// to env-config.json on disk, and that agent status/configstatus are unchanged.
+	//
+	// State dependency: expectedAgentStatus=running and expectedConfigStatus=configured are
+	// inherited from the preceding configure-append test which leaves the agent running.
 	setEnvTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                      {actionSetEnv},
@@ -145,16 +148,18 @@ func Validate() error {
 		expectedAgentStatus:  agentStatusRunning,
 		expectedConfigStatus: configStatusConfigured,
 	}
-	if err := RunAndVerifySSMActionWithOutput(documentName, instanceIds, setEnvTest, setEnvOutputPrefix+setEnvKey1); err != nil {
+	if err := runAndVerifySSMActionWithOutput(documentName, instanceIds, setEnvTest, setEnvOutputPrefix+setEnvKey1); err != nil {
 		return err
 	}
-	if err := VerifyEnvConfigContent(map[string]string{
+	if err := verifyEnvConfigContent(map[string]string{
 		setEnvKey1: setEnvValue1,
 	}); err != nil {
 		return err
 	}
 
 	// Test set-env action (merge): a second key is persisted alongside the first.
+	// State dependency: asserts key1 (set by the happy-path set-env case above) persists
+	// alongside the newly added key2.
 	setEnvMergeTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                      {actionSetEnv},
@@ -164,10 +169,10 @@ func Validate() error {
 		expectedAgentStatus:  agentStatusRunning,
 		expectedConfigStatus: configStatusConfigured,
 	}
-	if err := RunAndVerifySSMActionWithOutput(documentName, instanceIds, setEnvMergeTest, setEnvOutputPrefix+setEnvKey2); err != nil {
+	if err := runAndVerifySSMActionWithOutput(documentName, instanceIds, setEnvMergeTest, setEnvOutputPrefix+setEnvKey2); err != nil {
 		return err
 	}
-	if err := VerifyEnvConfigContent(map[string]string{
+	if err := verifyEnvConfigContent(map[string]string{
 		setEnvKey1: setEnvValue1,
 		setEnvKey2: setEnvValue2,
 	}); err != nil {
@@ -176,6 +181,8 @@ func Validate() error {
 
 	// Test set-env action (overwrite): set an existing key to a new value and verify the
 	// updated value is persisted (exercises the ctl's MergeFile overwrite-same-key path).
+	// State dependency: depends on key1 and key2 already being set by the preceding cases;
+	// overwrites key1 and verifies key2 is still present.
 	setEnvOverwriteTest := testCase{
 		parameters: map[string][]string{
 			paramAction:                      {actionSetEnv},
@@ -185,10 +192,10 @@ func Validate() error {
 		expectedAgentStatus:  agentStatusRunning,
 		expectedConfigStatus: configStatusConfigured,
 	}
-	if err := RunAndVerifySSMActionWithOutput(documentName, instanceIds, setEnvOverwriteTest, setEnvOutputPrefix+setEnvKey1); err != nil {
+	if err := runAndVerifySSMActionWithOutput(documentName, instanceIds, setEnvOverwriteTest, setEnvOutputPrefix+setEnvKey1); err != nil {
 		return err
 	}
-	if err := VerifyEnvConfigContent(map[string]string{
+	if err := verifyEnvConfigContent(map[string]string{
 		setEnvKey1: setEnvOverwriteValue,
 		setEnvKey2: setEnvValue2,
 	}); err != nil {
@@ -198,7 +205,7 @@ func Validate() error {
 	// Test set-env action (allowedPattern rejection): a value containing '$' violates the
 	// document's optionalEnvironmentVariable allowedPattern and is rejected by SSM at
 	// SendCommand time (InvalidParameters error), before the ctl ever runs.
-	if err := VerifySSMSendCommandRejection(documentName, instanceIds, testCase{
+	if err := verifySSMSendCommandRejection(documentName, instanceIds, testCase{
 		parameters: map[string][]string{
 			paramAction:                      {actionSetEnv},
 			paramOptionalEnvironmentVariable: {setEnvInvalidPatternValue},
@@ -210,7 +217,7 @@ func Validate() error {
 
 	// Test set-env action (allowedPattern rejection): a value containing a backtick violates
 	// the allowedPattern and is rejected by SSM at SendCommand time.
-	if err := VerifySSMSendCommandRejection(documentName, instanceIds, testCase{
+	if err := verifySSMSendCommandRejection(documentName, instanceIds, testCase{
 		parameters: map[string][]string{
 			paramAction:                      {actionSetEnv},
 			paramOptionalEnvironmentVariable: {setEnvInvalidBacktickValue},
@@ -222,7 +229,7 @@ func Validate() error {
 
 	// Test set-env action (allowedPattern rejection): a key starting with a digit violates
 	// the [A-Za-z_] prefix requirement and is rejected by SSM at SendCommand time.
-	if err := VerifySSMSendCommandRejection(documentName, instanceIds, testCase{
+	if err := verifySSMSendCommandRejection(documentName, instanceIds, testCase{
 		parameters: map[string][]string{
 			paramAction:                      {actionSetEnv},
 			paramOptionalEnvironmentVariable: {setEnvInvalidKeyValue},
@@ -235,7 +242,7 @@ func Validate() error {
 	// Test set-env action (error path): empty optionalEnvironmentVariable must fail
 	// with the document-level error message.
 	// expectedAgentStatus and expectedConfigStatus are intentionally omitted: the action
-	// fails at the document level (RunAndVerifySSMActionFailure), so VerifyAgentAction
+	// fails at the document level (runAndVerifySSMActionFailure), so verifyAgentAction
 	// is never called and those fields are unused.
 	setEnvEmptyTest := testCase{
 		parameters: map[string][]string{
@@ -244,7 +251,7 @@ func Validate() error {
 		},
 		actionName: actionSetEnvEmpty,
 	}
-	if err := RunAndVerifySSMActionFailure(documentName, instanceIds, setEnvEmptyTest, setEnvEmptyErrorMessage); err != nil {
+	if err := runAndVerifySSMActionFailure(documentName, instanceIds, setEnvEmptyTest, setEnvEmptyErrorMessage); err != nil {
 		return err
 	}
 

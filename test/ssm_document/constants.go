@@ -87,7 +87,10 @@ type agentStatus struct {
 }
 
 type testCase struct {
-	parameters           map[string][]string
+	parameters map[string][]string
+	// actionName is a human-readable test label used only in log messages and error
+	// output. It is NOT the SSM action parameter value (which is carried in
+	// parameters[paramAction]).
 	actionName           string
 	expectedAgentStatus  string
 	expectedConfigStatus string
