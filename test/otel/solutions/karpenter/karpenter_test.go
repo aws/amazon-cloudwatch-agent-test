@@ -37,6 +37,37 @@ func TestKarpenterMetricsExist(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestKarpenterScalingMetricsPositive — verify event-driven scaling metrics
+// have value >= 1, confirming Karpenter actually provisioned.
+// ---------------------------------------------------------------------------
+
+func TestKarpenterScalingMetricsPositive(t *testing.T) {
+	t.Parallel()
+	scalingMetrics := []string{
+		"karpenter_nodeclaims_created_total",
+		"karpenter_nodes_created_total",
+	}
+	for _, metricName := range scalingMetrics {
+		metricName := metricName
+		t.Run(metricName, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			results, err := queryCache.Get(ctx, metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			var maxVal float64
+			for _, r := range results {
+				if r.Value > maxVal {
+					maxVal = r.Value
+				}
+			}
+			require.GreaterOrEqual(t, maxVal, float64(1),
+				"%s should be >= 1 after provisioning, got %v", metricName, maxVal)
+		})
+	}
+}
+
 // ===========================================================================
 // Instrumentation Scope Tests
 // ===========================================================================
