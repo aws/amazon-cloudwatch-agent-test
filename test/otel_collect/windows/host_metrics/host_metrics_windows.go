@@ -45,7 +45,7 @@ func Validate() error {
 		context.Background(),
 		env.Region,
 		[]string{"system.cpu.utilization", "system.memory.utilization", "system.network.io", "system.disk.operations"},
-		otlpvalidation.ResourceHostIDLabels(env.AgentStartCommand, env.InstanceId),
+		otlpvalidation.ResourceHostIDLabels(env.InstanceId),
 		3,
 		30*time.Second,
 	)

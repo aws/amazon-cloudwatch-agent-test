@@ -42,7 +42,7 @@ var _ test_runner.ITestRunner = (*PrometheusOtelTestRunner)(nil)
 
 func (t *PrometheusOtelTestRunner) Validate() status.TestGroupResult {
 	return otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics(),
-		otlpvalidation.ResourceHostIDLabels(t.env.AgentStartCommand, t.env.InstanceId))
+		otlpvalidation.ResourceHostIDLabels(t.env.InstanceId))
 }
 
 func (t *PrometheusOtelTestRunner) GetTestName() string                { return "OtelCollectPrometheus" }

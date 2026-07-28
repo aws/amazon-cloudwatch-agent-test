@@ -33,7 +33,7 @@ var _ test_runner.ITestRunner = (*HostMetricsTestRunner)(nil)
 
 func (t *HostMetricsTestRunner) Validate() status.TestGroupResult {
 	return otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics(),
-		otlpvalidation.ResourceHostIDLabels(t.env.AgentStartCommand, t.env.InstanceId))
+		otlpvalidation.ResourceHostIDLabels(t.env.InstanceId))
 }
 
 func (t *HostMetricsTestRunner) GetTestName() string                { return "HostMetrics" }

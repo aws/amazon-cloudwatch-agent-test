@@ -52,8 +52,15 @@ var _ test_runner.ITestRunner = (*OtlpCollectTestRunner)(nil)
 func (t *OtlpCollectTestRunner) Validate() status.TestGroupResult {
 	var results []status.TestResult
 
+	// Point the shared AWS clients (logs/xray queries) at us-east-2 where the
+	// agent sends data. Metrics use their own region-scoped client below.
+	if err := awsservice.ConfigureAWSClients(otlpvalidation.TestRegion); err != nil {
+		return status.TestGroupResult{Name: t.GetTestName(), TestResults: []status.TestResult{{
+			Name: "ConfigureAWSClients", Status: status.FAILED, Reason: err}}}
+	}
+
 	// Metrics
-	metricResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics(),
+	metricResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), otlpvalidation.TestRegion, t.GetMeasuredMetrics(),
 		otlpvalidation.OtlpMetricLabels(t.env.AgentStartCommand, t.env.InstanceId))
 	results = append(results, metricResult.TestResults...)
 

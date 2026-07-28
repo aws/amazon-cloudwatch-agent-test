@@ -25,7 +25,7 @@ func ValidateOtlpMetrics(testName string, region string, metrics []string) statu
 }
 
 func ValidateOtlpMetricsWithLabels(testName string, region string, metrics []string, labels map[string]string) status.TestGroupResult {
-	region = getRegion(region)
+	region = otelmetrics.ResolveRegion(region)
 
 	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
 		Region:         region,

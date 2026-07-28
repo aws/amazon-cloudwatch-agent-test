@@ -33,24 +33,9 @@ func Setup(configFileName, agentStartCommand, instanceID string) error {
 	if err != nil {
 		return err
 	}
-	var cfg map[string]any
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return err
-	}
-	otel, ok := cfg["opentelemetry"].(map[string]any)
-	if !ok {
-		return fmt.Errorf("opentelemetry block missing in %s", src)
-	}
-	attrs, ok := otel["resource_attributes"].(map[string]any)
-	if !ok {
-		attrs = map[string]any{}
-	}
-	attrs["host.id"] = instanceID
-	otel["resource_attributes"] = attrs
-
-	out, err := json.MarshalIndent(cfg, "", "  ")
+	out, err := injectHostID(data, instanceID)
 	if err != nil {
-		return err
+		return fmt.Errorf("inject host.id into %s: %w", src, err)
 	}
 	tmp := filepath.Join(os.TempDir(), configFileName)
 	if err := os.WriteFile(tmp, out, 0o600); err != nil {
@@ -58,4 +43,24 @@ func Setup(configFileName, agentStartCommand, instanceID string) error {
 	}
 	common.CopyFile(tmp, common.ConfigOutputPath)
 	return nil
+}
+
+// injectHostID sets opentelemetry.resource_attributes["host.id"] = instanceID
+// in the agent-config JSON, preserving any existing resource_attributes.
+func injectHostID(data []byte, instanceID string) ([]byte, error) {
+	var cfg map[string]any
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	otel, ok := cfg["opentelemetry"].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("opentelemetry block missing")
+	}
+	attrs, ok := otel["resource_attributes"].(map[string]any)
+	if !ok {
+		attrs = map[string]any{}
+	}
+	attrs["host.id"] = instanceID
+	otel["resource_attributes"] = attrs
+	return json.MarshalIndent(cfg, "", "  ")
 }

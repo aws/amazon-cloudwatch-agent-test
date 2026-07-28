@@ -69,10 +69,15 @@ func Validate() error {
 	time.Sleep(otlpRuntime)
 	_ = common.StopAgent()
 
+	// Point shared AWS clients (logs/xray) at us-east-2 where the agent sends data.
+	if err := awsservice.ConfigureAWSClients(otlpvalidation.TestRegion); err != nil {
+		return fmt.Errorf("could not configure aws clients: %w", err)
+	}
+
 	// Validate metrics.
 	if err := otelmetrics.AssertMetricsPresent(
 		context.Background(),
-		env.Region,
+		otlpvalidation.TestRegion,
 		[]string{"otlp_test_counter", "otlp_test_gauge"},
 		otlpvalidation.OtlpMetricLabels(env.AgentStartCommand, env.InstanceId),
 		3,

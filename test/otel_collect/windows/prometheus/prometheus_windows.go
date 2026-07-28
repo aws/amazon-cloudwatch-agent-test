@@ -62,7 +62,7 @@ func Validate() error {
 		context.Background(),
 		env.Region,
 		[]string{"node_cpu_seconds_total", "node_memory_MemAvailable_bytes"},
-		otlpvalidation.ResourceHostIDLabels(env.AgentStartCommand, env.InstanceId),
+		otlpvalidation.ResourceHostIDLabels(env.InstanceId),
 		3,
 		30*time.Second,
 	)

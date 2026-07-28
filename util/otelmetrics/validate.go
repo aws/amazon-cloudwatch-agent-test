@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// resolveRegion returns the region, falling back to AWS env vars then us-west-2.
-func resolveRegion(region string) string {
+// ResolveRegion returns the region, falling back to AWS env vars then us-west-2.
+func ResolveRegion(region string) string {
 	if region != "" {
 		return region
 	}
@@ -28,7 +28,7 @@ func resolveRegion(region string) string {
 // AssertMetricsPresent queries the CloudWatch OTLP PromQL endpoint and returns an error if any
 // metric is missing after retries. Cross-platform (returns error, no test/status dependency).
 func AssertMetricsPresent(ctx context.Context, region string, metrics []string, labels map[string]string, maxRetries int, retryInterval time.Duration) error {
-	region = resolveRegion(region)
+	region = ResolveRegion(region)
 	client, err := NewClient(ctx, TestConfig{
 		Region:         region,
 		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", region),
