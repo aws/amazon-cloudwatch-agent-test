@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -39,8 +38,8 @@ func TestMain(m *testing.M) {
 	environment.RegisterEnvironmentMetaDataFlags()
 	flag.Parse()
 	env = environment.GetEnvironmentMetaData()
-	if env.InstanceId == "" {
-		fmt.Fprintln(os.Stderr, "instanceId flag is required (AKS cluster name) to scope telemetry")
+	if env.AKSClusterName == "" {
+		fmt.Fprintln(os.Stderr, "aksClusterName flag is required to scope telemetry to this cluster")
 		os.Exit(1)
 	}
 	os.Exit(m.Run())
@@ -53,7 +52,7 @@ func TestAKS(t *testing.T) {
 		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
 			"AKSDefaultOtel", env.Region, []string{"aks_otlp_counter"},
 			map[string]string{
-				"@resource.k8s.cluster.name": env.InstanceId,
+				"@resource.k8s.cluster.name": env.AKSClusterName,
 				"@resource.cloud.provider":   "azure",
 			},
 		)
@@ -81,9 +80,9 @@ func validateLogs() status.TestResult {
 	// this cluster. The stream is {k8s.namespace.name}/{service.namespace}/{service.name},
 	// where the agent's identity transform fills service.namespace from k8s.namespace.name.
 	// AssertLogsNotEmpty guards against a vacuous pass on an empty window.
-	logGroup := fmt.Sprintf("/aws/cwagent/%s/otlp", env.InstanceId)
+	logGroup := fmt.Sprintf("/aws/cwagent/%s/otlp", env.AKSClusterName)
 	logStream := fmt.Sprintf("amazon-cloudwatch/amazon-cloudwatch/%s", serviceName)
-	marker := fmt.Sprintf("aks_otlp_log_%s", env.InstanceId)
+	marker := fmt.Sprintf("aks_otlp_log_%s", env.AKSClusterName)
 	const maxRetries = 4
 	const retryInterval = 30 * time.Second
 	for attempt := 1; attempt <= maxRetries; attempt++ {
@@ -114,9 +113,9 @@ func validateTraces() status.TestResult {
 
 	query := fmt.Sprintf(
 		`fields traceId | filter @message like "%s" and @message like "%s" | dedup traceId | limit 5`,
-		serviceName, env.InstanceId,
+		serviceName, env.AKSClusterName,
 	)
-	log.Printf("[AKS_Traces] querying %s for spans from service=%s instance=%s", spansLogGroup, serviceName, env.InstanceId)
+	log.Printf("[AKS_Traces] querying %s for spans from service=%s instance=%s", spansLogGroup, serviceName, env.AKSClusterName)
 
 	const maxRetries = 5
 	const retryInterval = 60 * time.Second
@@ -147,22 +146,4 @@ func validateTraces() status.TestResult {
 		}
 	}
 	return testResult
-}
-
-// filterLogLines returns lines containing any of the given substrings (case-insensitive).
-func filterLogLines(text string, substrs ...string) []string {
-	var result []string
-	for _, line := range strings.Split(text, "\n") {
-		lower := strings.ToLower(line)
-		for _, s := range substrs {
-			if strings.Contains(lower, strings.ToLower(s)) {
-				result = append(result, line)
-				break
-			}
-		}
-	}
-	if len(result) > 50 {
-		result = result[len(result)-50:]
-	}
-	return result
 }

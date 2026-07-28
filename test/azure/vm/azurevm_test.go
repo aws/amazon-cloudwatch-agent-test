@@ -197,7 +197,6 @@ func validateTraces(traceIDs []string) status.TestResult {
 	return testResult
 }
 
-
 // sendTelemetry pushes OTLP metrics, logs, and traces to the local collector until stop is closed.
 func sendTelemetry(stop <-chan struct{}) {
 	ticker := time.NewTicker(10 * time.Second)

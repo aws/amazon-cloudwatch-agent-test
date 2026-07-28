@@ -30,7 +30,15 @@ data "aws_iam_policy_document" "cwagent_assume_role" {
       identifiers = [data.aws_iam_openid_connect_provider.azure.arn]
     }
 
-    # Restrict to the requested audience to prevent confused-deputy token reuse.
+    # The audience is a shared Azure resource that any identity in the tenant can request a token for,
+    # so it is not sufficient on its own. Pin :sub to this VM's system-assigned identity principal so
+    # only this VM can assume the role (mirrors the :sub scoping on the AKS service account).
+    condition {
+      test     = "StringEquals"
+      variable = "${local.oidc_condition_key}:sub"
+      values   = [azurerm_linux_virtual_machine.cwagent.identity[0].principal_id]
+    }
+
     condition {
       test     = "StringEquals"
       variable = "${local.oidc_condition_key}:aud"
@@ -59,8 +67,8 @@ data "aws_iam_policy_document" "cwagent_permissions" {
       "logs:DescribeLogStreams",
       "logs:GetLogEvents",
       # StartQuery/GetQueryResults let the test binary validate OTLP trace delivery via the aws/spans
-      # log group; the X-Ray OTLP endpoint requires account-level Transaction Search (trace segment
-      # destination = CloudWatchLogs), which stores 100% of spans there.
+      # log group. That group is only populated where the X-Ray trace segment destination is set to
+      # CloudWatchLogs, which is a per-region setting -- hence the region default in variables.tf.
       "logs:StartQuery",
       "logs:GetQueryResults",
       "xray:PutSpans",

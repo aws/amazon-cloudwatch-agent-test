@@ -8,20 +8,16 @@ terraform {
       version = "!= 6.22.0"
     }
     azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.0"
+      source = "hashicorp/azurerm"
     }
     kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.30"
+      source = "hashicorp/kubernetes"
     }
     tls = {
-      source  = "hashicorp/tls"
-      version = "~> 4.0"
+      source = "hashicorp/tls"
     }
     local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
+      source = "hashicorp/local"
     }
   }
 }

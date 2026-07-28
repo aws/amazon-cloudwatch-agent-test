@@ -39,6 +39,7 @@ type MetaData struct {
 	CwaCommitSha                                string
 	CaCertPath                                  string
 	EKSClusterName                              string
+	AKSClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -86,6 +87,7 @@ type MetaDataStrings struct {
 	CwaCommitSha                                string
 	CaCertPath                                  string
 	EKSClusterName                              string
+	AKSClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -140,6 +142,10 @@ func registerECSData(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.EcsClusterArn), "clusterArn", "", "Used to restart ecs task to apply new agent config")
 	flag.StringVar(&(dataString.CwagentConfigSsmParamName), "cwagentConfigSsmParamName", "", "Used to set new cwa config")
 	flag.StringVar(&(dataString.EcsServiceName), "cwagentECSServiceName", "", "Used to restart ecs task to apply new agent config")
+}
+
+func registerAKSData(d *MetaDataStrings) {
+	flag.StringVar(&(d.AKSClusterName), "aksClusterName", "", "AKS cluster name")
 }
 
 func registerEKSData(d *MetaDataStrings) {
@@ -321,6 +327,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerComputeType(registeredMetaDataStrings)
 	registerECSData(registeredMetaDataStrings)
 	registerEKSData(registeredMetaDataStrings)
+	registerAKSData(registeredMetaDataStrings)
 	registerEKSE2ETestData(registeredMetaDataStrings)
 	registerBucket(registeredMetaDataStrings)
 	registerS3Key(registeredMetaDataStrings)
@@ -359,6 +366,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.AssumeRoleArn = registeredMetaDataStrings.AssumeRoleArn
 	metaDataStorage.InstanceArn = registeredMetaDataStrings.InstanceArn
 	metaDataStorage.InstanceId = registeredMetaDataStrings.InstanceId
+	metaDataStorage.AKSClusterName = registeredMetaDataStrings.AKSClusterName
 	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
 	metaDataStorage.EksGpuType = registeredMetaDataStrings.EksGpuType

@@ -24,6 +24,12 @@ resource "azurerm_kubernetes_cluster" "cwagent" {
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
 
+  # Terraform drives the cluster over the public API server, so restrict it to the runner that
+  # created it. Left unrestricted when runner_ip is empty (local runs without a known egress IP).
+  api_server_access_profile {
+    authorized_ip_ranges = var.runner_ip != "" ? [var.runner_ip] : []
+  }
+
   identity {
     type = "SystemAssigned"
   }
@@ -55,16 +61,16 @@ resource "aws_iam_openid_connect_provider" "aks" {
   thumbprint_list = [data.tls_certificate.aks_oidc.certificates[0].sha1_fingerprint]
 }
 
-data "aws_caller_identity" "current" {}
-
 locals {
   aks_oidc_issuer_host = replace(azurerm_kubernetes_cluster.cwagent.oidc_issuer_url, "https://", "")
   namespace            = "amazon-cloudwatch"
   service_account_name = "cloudwatch-agent"
-  # Built as strings (not resource references) so the trust and permissions policies
-  # can mention the role without a self-referential cycle.
-  cwagent_role_name = "cwa-aks-integ-role-${module.common.testing_id}"
-  cwagent_role_arn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.cwagent_role_name}"
+  cwagent_role_name    = "cwa-aks-integ-role-${module.common.testing_id}"
+
+  # Must match serviceName in test/azure/aks/aks_test.go -- the test derives the expected log stream
+  # and the trace query filter from it.
+  load_gen_service_name     = "aks-otlp-test-service"
+  load_gen_duration_seconds = 180
 }
 
 data "aws_iam_policy_document" "cwagent_assume_role" {
@@ -90,25 +96,6 @@ data "aws_iam_policy_document" "cwagent_assume_role" {
     }
   }
 
-  # On AKS the agent's sigv4auth chains sts:AssumeRole(${CWAGENT_ROLE_ARN}) on top of
-  # the pod's web-identity session of this same role, and since the 2022 IAM change a
-  # role must explicitly trust itself for that. The principal is the account root with
-  # a PrincipalArn condition because IAM rejects trust principals that don't exist yet.
-  statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-
-    condition {
-      test     = "ArnEquals"
-      variable = "aws:PrincipalArn"
-      values   = [local.cwagent_role_arn]
-    }
-  }
 }
 
 resource "aws_iam_role" "cwagent" {
@@ -138,13 +125,6 @@ data "aws_iam_policy_document" "cwagent_permissions" {
     resources = ["*"]
   }
 
-  # Identity-side half of the self-assume: required because the trust statement's
-  # principal is the account root rather than the role itself.
-  statement {
-    effect    = "Allow"
-    actions   = ["sts:AssumeRole"]
-    resources = [local.cwagent_role_arn]
-  }
 }
 
 resource "aws_iam_role_policy" "cwagent" {
@@ -279,12 +259,10 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
             name  = "AWS_ROLE_ARN"
             value = aws_iam_role.cwagent.arn
           }
-          # The default otel config references ${CWAGENT_ROLE_ARN} for sigv4auth;
-          # expandconverter resolves it from the process env at agent startup.
-          env {
-            name  = "CWAGENT_ROLE_ARN"
-            value = aws_iam_role.cwagent.arn
-          }
+          # CWAGENT_ROLE_ARN is deliberately unset. It only feeds sigv4auth's role_arn, and leaving that
+          # empty makes the extension fall through to the default credential chain, which picks up the
+          # projected token via AWS_ROLE_ARN + AWS_WEB_IDENTITY_TOKEN_FILE. Setting it would layer a
+          # redundant sts:AssumeRole of the same role on top of the session we already have.
           env {
             name  = "RUN_IN_CONTAINER"
             value = "True"
@@ -386,31 +364,12 @@ resource "kubernetes_job_v1" "otlp_load" {
           name    = "load-gen"
           image   = "curlimages/curl:8.8.0"
           command = ["/bin/sh", "-c"]
-          args = [<<-EOT
-SERVICE_NAME="aks-otlp-test-service"
-INSTANCE_ID="${azurerm_kubernetes_cluster.cwagent.name}"
-ENDPOINT="http://127.0.0.1:4318"
-SEQ=0
-START=$(date +%s)
-END=$((START + 180))
-while [ $(date +%s) -lt $END ]; do
-  SEQ=$((SEQ + 1))
-  NOW_S=$(date +%s)
-  NOW_NS="$${NOW_S}000000000"
-  START_NS="$((NOW_S - 1))000000000"
-  TRACE_ID=$(printf '%08x0000000000000000%08x' "$NOW_S" "$SEQ")
-  SPAN_ID=$(printf '%016x' "$NOW_S$SEQ")
-  curl -sf -X POST "$ENDPOINT/v1/metrics" -H "Content-Type: application/json" \
-    -d "{\"resourceMetrics\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeMetrics\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"metrics\":[{\"name\":\"aks_otlp_counter\",\"unit\":\"1\",\"sum\":{\"aggregationTemporality\":2,\"isMonotonic\":true,\"dataPoints\":[{\"asInt\":\"$SEQ\",\"startTimeUnixNano\":\"$${START}000000000\",\"timeUnixNano\":\"$NOW_NS\",\"attributes\":[{\"key\":\"ClusterName\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}}]}]}]}" || true
-  curl -sf -X POST "$ENDPOINT/v1/logs" -H "Content-Type: application/json" \
-    -d "{\"resourceLogs\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeLogs\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"logRecords\":[{\"timeUnixNano\":\"$NOW_NS\",\"severityText\":\"INFO\",\"body\":{\"stringValue\":\"aks_otlp_log_$INSTANCE_ID\"},\"attributes\":[{\"key\":\"ClusterName\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}]}]}" || true
-  curl -sf -X POST "$ENDPOINT/v1/traces" -H "Content-Type: application/json" \
-    -d "{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"spans\":[{\"traceId\":\"$TRACE_ID\",\"spanId\":\"$SPAN_ID\",\"name\":\"aks-otlp-test-span\",\"kind\":2,\"startTimeUnixNano\":\"$START_NS\",\"endTimeUnixNano\":\"$NOW_NS\",\"attributes\":[{\"key\":\"cluster_name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}]}]}" || true
-  sleep 10
-done
-echo "Load generation complete: $SEQ iterations"
-EOT
-          ]
+          args = [templatefile("${path.module}/otlp_load_generator.sh", {
+            service_name     = local.load_gen_service_name
+            instance_id      = azurerm_kubernetes_cluster.cwagent.name
+            endpoint         = "http://127.0.0.1:4318"
+            duration_seconds = local.load_gen_duration_seconds
+          })]
         }
       }
     }
@@ -456,7 +415,7 @@ resource "null_resource" "integration_test" {
         -computeType=AKS \
         -region=${var.region} \
         -cwaCommitSha=${var.cwa_github_sha} \
-        -instanceId=${azurerm_kubernetes_cluster.cwagent.name} \
+        -aksClusterName=${azurerm_kubernetes_cluster.cwagent.name} \
         -v
     EOT
 

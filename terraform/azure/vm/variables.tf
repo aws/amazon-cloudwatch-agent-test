@@ -5,19 +5,17 @@
 # AWS side
 #####################################################################
 
+# Trace validation reads the aws/spans log group, which only exists where the X-Ray trace segment
+# destination is CloudWatchLogs. That destination is per-region, and us-west-2 is left on the default
+# XRay destination for other suites, so this must stay on a region where Transaction Search is enabled.
 variable "region" {
   type    = string
-  default = "us-west-2"
+  default = "us-east-2"
 }
 
 variable "test_dir" {
   type    = string
   default = "./test/azure/vm"
-}
-
-variable "test_name" {
-  type    = string
-  default = "azurevm"
 }
 
 variable "cwa_github_sha" {

@@ -15,19 +15,19 @@ and asserts delivery:
 |---------|-----------------------------------------------|-----------|
 | Metrics | CloudWatch OTLP PromQL API (`monitoring`)     | queryable, scoped to `host.id` + `cloud.provider=azure` |
 | Logs    | CloudWatch Logs group `/aws/cwagent/otlp`     | per-host marker present |
-| Traces  | X-Ray                                         | segment with `instance_id` annotation present |
-| Creds   | agent log                                     | no `AccessDenied`; request to native `monitoring.<region>.amazonaws.com` endpoint |
+| Traces  | `aws/spans` log group (Transaction Search)     | every emitted trace ID found via Logs Insights |
 
-The `cloud.provider=azure` label and the credential-chain check together prove the telemetry traversed
-the Azure web-identity path rather than stray AWS credentials.
+Delivery of all three signals is itself the credential-chain assertion: nothing reaches CloudWatch unless
+the Azure web-identity exchange succeeded. The `cloud.provider=azure` resource label additionally proves the
+telemetry traversed the Azure detection path rather than being attributed to stray AWS credentials.
 
 ## Agent prerequisites
 
 - `#2179` Add default OTel config — **merged** (`USE_DEFAULT_CONFIG=otel`)
 - `#2183` Azure platform detection — **merged** (IMDS detection → translation)
 - `#2010` OIDC auth (`oidctoken`) — **merged**
-- `#2197` web-identity for `awscloudwatchlogsprovisioner` — **required for the logs assertion**; until it
-  merges, the agent cannot create log groups on Azure VM and `AzureVM_Logs` will fail.
+- `#2197` web-identity for `awscloudwatchlogsprovisioner` — **merged** (log-group creation on Azure VM)
+- `#2211` `set-env` ctl action — **merged** (used to persist `AWS_REGION` / `CWAGENT_ROLE_ARN`)
 
 ## Prerequisites that MUST be satisfied before a live run
 
@@ -39,7 +39,8 @@ These were verified against a real Azure VM and the merged agent translator. Wit
    allowlist and, on some accounts, may be auto-removed within ~2 hours. The module therefore does
    **not** create the provider — `iam.tf` references one by ARN via `azure_oidc_provider_arn`. Create it
    once out-of-band (`aws iam create-open-id-connect-provider` for `https://sts.windows.net/<tenant-id>/`
-   with the token audience as client ID), confirm it persists, then pass its ARN.
+   with the token audience as client ID), confirm it persists, then pass its ARN. The role trust policy
+   pins both `:aud` and `:sub` (the VM's system-assigned identity principal), so only this VM can assume it.
    Note: a plain Azure VM managed identity issues tokens under `https://sts.windows.net/<tenant-id>/`, a
    different issuer than the AKS workload-identity provider — a separate provider is required for the VM path.
 
@@ -56,11 +57,14 @@ These were verified against a real Azure VM and the merged agent translator. Wit
    resourcedetection detector sets `host.id = compute.VMID`, so the test's `-instanceId=<virtual_machine_id>`
    correctly matches the `@resource.host.id` metric label.
 
-5. **Logs path depends on agent PR #2197 (OPEN).** Until it merges, `awscloudwatchlogsprovisioner` cannot
-   create log groups via web-identity and `AzureVM_Logs` will fail. Metrics + traces work on merged code.
+5. **The X-Ray trace segment destination must be `CloudWatchLogs` in the test region.** Trace validation
+   queries the `aws/spans` log group, which is only populated under Transaction Search. This is a
+   **per-region** setting, so the region default is `us-east-2` rather than `us-west-2` (which other
+   suites leave on the default `XRay` destination).
 
-6. **The `azurerm` provider needs an existing vnet/subnet.** `main.tf` references a vnet named `cwa-integ-vnet`
-   with a `default` subnet in the resource group — create it (or edit the data sources) before applying.
+6. **The `azurerm` provider needs an existing vnet/subnet.** `main.tf` reads the vnet and subnet named by
+   `azure_vnet_name` / `azure_subnet_name` in `azure_resource_group` — create them (or point the variables
+   at existing ones) before applying.
 
 ## How it runs in CI
 
@@ -68,7 +72,7 @@ Like every CWA integ test, this is driven by the **agent repo** (`aws/amazon-clo
 test repo. `integration-test.yml` → `test-artifacts.yml` (matrix from `generator/`) → a per-type reusable job
 (mirror `ec2-integration-test.yml`) that runs `aws-actions/configure-aws-credentials` with
 `vars.TERRAFORM_AWS_ASSUME_ROLE` (already federated into the CWA integ account), clones this repo, and runs
-`terraform apply` in `terraform/azurevm`. So the **AWS assume-role is already wired** — the Azure VM test needs
+`terraform apply` in `terraform/azure/vm`. So the **AWS assume-role is already wired** — the Azure VM test needs
 only Azure credentials plus the Azure OIDC provider added (see prerequisite 1 above). The
 `azure-integration-test.yml` workflow (manual `workflow_dispatch`) lives in the agent repo; it builds the
 `.deb` from the dispatched ref and terraform uploads it to the VM over SSH.
@@ -79,7 +83,7 @@ Local run (any account with the OIDC provider + Azure creds); build the .deb fir
 make amazon-cloudwatch-agent-linux package-deb
 
 # in this repo
-cd terraform/azurevm
+cd terraform/azure/vm
 terraform init
 terraform apply \
   -var="cwa_github_sha=$(git -C <agent-repo> rev-parse HEAD)" \
@@ -91,7 +95,7 @@ terraform apply \
 
 Terraform provisions the Azure VM (system-assigned managed identity), creates the `CWAGENT_ROLE` federated to
 the referenced Azure OIDC provider, then SSHes in to upload the `.deb`, install the agent, start it with
-`default:otel`, and run `go test -tags integration ./test/azurevm -computeType=AZUREVM`.
+`default:otel`, and run `go test -tags integration ./test/azure/vm -computeType=AZUREVM`.
 
 ## Required configuration (set on the AGENT repo `aws/amazon-cloudwatch-agent`)
 
@@ -107,4 +111,5 @@ The AWS assume-role is already provided by `vars.TERRAFORM_AWS_ASSUME_ROLE`; the
 | `AZURE_TOKEN_AUDIENCE` | variable | Audience the managed identity mints (e.g. `https://management.azure.com/`); matches the role `aud` condition |
 
 The `azure_token_audience` must match both the managed-identity token audience requested by the `oidctoken`
-extension and the `aud` condition on the AWS role trust policy.
+extension and the `aud` condition on the AWS role trust policy. Because that audience is a shared Azure
+resource, the trust policy also pins `:sub` to the VM's managed-identity principal.

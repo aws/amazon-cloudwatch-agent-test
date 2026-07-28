@@ -83,9 +83,11 @@ var traceMu sync.Mutex
 // validateTraces queries the aws/spans log group (Transaction Search) for these exact IDs.
 var generatedTraceIDs []string
 
-// buildTracesPayload emits an OTLP span with X-Ray-compatible trace IDs.
-// X-Ray requires the first 4 bytes of the 16-byte trace ID to be a Unix epoch timestamp (seconds);
-// IDs that violate this are silently dropped during ingestion.
+// buildTracesPayload emits an OTLP span with X-Ray-compatible trace IDs: the first 4 bytes of the
+// 16-byte ID encode the Unix epoch in seconds. This was observed to be required during bring-up --
+// randomly generated IDs were silently dropped rather than rejected. Whether the constraint still
+// applies now that the trace segment destination is CloudWatchLogs has not been re-verified, so the
+// timestamp prefix is kept; it satisfies the format either way.
 func buildTracesPayload(instanceID string) []byte {
 	traceMu.Lock()
 	traceSeq++

@@ -126,14 +126,15 @@ resource "null_resource" "integration_test" {
     ]
   }
 
-  # Persist env vars to env-config.json: the agent loads this at startup, making them available to OTel
-  # expandconverter which resolves ${AWS_REGION} and ${CWAGENT_ROLE_ARN} placeholders in the translated YAML.
+  # Persist env vars with the ctl set-env action: the agent loads env-config.json at startup, making them
+  # available to OTel expandconverter which resolves ${AWS_REGION} and ${CWAGENT_ROLE_ARN} in the
+  # translated YAML. set-env runs before fetch-config so both are set on the first agent start.
   provisioner "remote-exec" {
     inline = [
       "export PATH=$PATH:/usr/local/go/bin",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent -setenv 'AWS_REGION=${var.region}' -envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent -setenv 'CWAGENT_ROLE_ARN=${aws_iam_role.cwagent.arn}' -envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json",
-      "sudo USE_DEFAULT_CONFIG=otel /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m auto -s -c default:otel",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a set-env -e 'AWS_REGION=${var.region}'",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a set-env -e 'CWAGENT_ROLE_ARN=${aws_iam_role.cwagent.arn}'",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m auto -s -c default:otel",
       # The test binary validates delivery via AWS reads; give it the same web-identity chain the agent uses.
       "curl -s -H Metadata:true \"http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=${var.azure_token_audience}\" | python3 -c \"import sys,json; print(json.load(sys.stdin)['access_token'])\" > /tmp/azure-identity-token",
       "export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/azure-identity-token AWS_ROLE_ARN=${aws_iam_role.cwagent.arn} AWS_REGION=${var.region}",
