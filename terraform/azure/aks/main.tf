@@ -103,28 +103,25 @@ resource "aws_iam_role" "cwagent" {
   assume_role_policy = data.aws_iam_policy_document.cwagent_assume_role.json
 }
 
+# The agent's own writes come from the same AWS-managed policy customers are told to use, so a green run
+# also proves that documented policy is sufficient over the AKS workload-identity path.
+resource "aws_iam_role_policy_attachment" "cwagent_server_policy" {
+  role       = aws_iam_role.cwagent.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+# Unlike the VM test, the AKS test binary runs on the runner under the runner's own credentials, so this
+# role needs agent writes only -- no validation reads.
 data "aws_iam_policy_document" "cwagent_permissions" {
   statement {
     effect = "Allow"
     actions = [
-      "cloudwatch:PutMetricData",
-      "cloudwatch:ListMetrics",
-      "cloudwatch:GetMetricData",
-      "logs:PutLogEvents",
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:DescribeLogGroups",
-      "logs:DescribeLogStreams",
-      "logs:GetLogEvents",
-      "logs:StartQuery",
-      "logs:GetQueryResults",
+      # Agent write omitted from CloudWatchAgentServerPolicy: the X-Ray OTLP endpoint needs PutSpans,
+      # which is a different action from PutTraceSegments.
       "xray:PutSpans",
-      "xray:PutTraceSegments",
-      "xray:PutTelemetryRecords",
     ]
     resources = ["*"]
   }
-
 }
 
 resource "aws_iam_role_policy" "cwagent" {

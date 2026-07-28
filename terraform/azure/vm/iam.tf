@@ -52,28 +52,31 @@ resource "aws_iam_role" "cwagent" {
   assume_role_policy = data.aws_iam_policy_document.cwagent_assume_role.json
 }
 
-# Agent writes (default:otel) plus the reads the on-VM test binary needs to validate delivery.
+# The agent's own writes come from the same AWS-managed policy customers are told to use, so a green run
+# also proves that documented policy is sufficient over the Azure web-identity path.
+resource "aws_iam_role_policy_attachment" "cwagent_server_policy" {
+  role       = aws_iam_role.cwagent.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+# Everything CloudWatchAgentServerPolicy does not cover. The test binary runs on the VM under this same
+# role, so the validation reads have to live here too.
 data "aws_iam_policy_document" "cwagent_permissions" {
   statement {
     effect = "Allow"
     actions = [
-      "cloudwatch:PutMetricData",
+      # Agent write omitted from CloudWatchAgentServerPolicy: the X-Ray OTLP endpoint needs PutSpans,
+      # which is a different action from PutTraceSegments.
+      "xray:PutSpans",
+      # Reads used to assert delivery.
       "cloudwatch:ListMetrics",
       "cloudwatch:GetMetricData",
-      "logs:PutLogEvents",
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:DescribeLogGroups",
-      "logs:DescribeLogStreams",
       "logs:GetLogEvents",
-      # StartQuery/GetQueryResults let the test binary validate OTLP trace delivery via the aws/spans
-      # log group. That group is only populated where the X-Ray trace segment destination is set to
-      # CloudWatchLogs, which is a per-region setting -- hence the region default in variables.tf.
+      # StartQuery/GetQueryResults validate OTLP trace delivery via the aws/spans log group. That group
+      # is only populated where the X-Ray trace segment destination is set to CloudWatchLogs, which is a
+      # per-region setting -- hence the region default in variables.tf.
       "logs:StartQuery",
       "logs:GetQueryResults",
-      "xray:PutSpans",
-      "xray:PutTraceSegments",
-      "xray:PutTelemetryRecords",
     ]
     resources = ["*"]
   }
