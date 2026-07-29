@@ -1,0 +1,22 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/cwagent_multiline_test.log",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "{instance_id}Multiline",
+            "timezone": "UTC",
+            "multi_line_start_pattern": "^\\d{4}-\\d{2}-\\d{2}",
+            "retention_in_days": 7
+          }
+        ]
+      }
+    }
+  }
+}

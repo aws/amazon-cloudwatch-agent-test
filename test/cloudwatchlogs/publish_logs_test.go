@@ -292,6 +292,86 @@ func TestLogGroupClass(t *testing.T) {
 	}
 }
 
+// TestMultiLineLogEvents validates the multi_line_start_pattern feature: several physical
+// lines that belong to one logical entry (a header line matching the start pattern followed
+// by indented continuation lines that do not) must be published as a SINGLE CloudWatch Logs
+// event, not split into one event per line.
+func TestMultiLineLogEvents(t *testing.T) {
+	env := environment.GetEnvironmentMetaData()
+	instanceId := env.InstanceId
+	if instanceId == "" {
+		// Fallback to IMDS if not provided via command line (for backward compatibility)
+		instanceId = awsservice.GetInstanceId()
+	}
+	log.Printf("Found instance id %s", instanceId)
+
+	const multilineLogFilePath = "/tmp/cwagent_multiline_test.log"
+	cfgFilePath := "resources/config_log_multiline.json"
+	logGroup := instanceId
+	logStream := instanceId + "Multiline"
+
+	// Each element is a single logical (multi-line) event: a header line that matches the
+	// multi_line_start_pattern ("^\d{4}-\d{2}-\d{2}") followed by indented continuation
+	// lines that do not match it. The agent should merge each block into one event, joining
+	// the physical lines with "\n".
+	expectedEvents := []string{
+		"2026-07-28 10:00:00 ERROR NullPointerException\n\tat com.example.Foo(Foo.java:42)\n\tat com.example.Bar(Bar.java:13)",
+		"2026-07-28 10:00:01 INFO recovered successfully\n\tat com.example.Baz(Baz.java:99)\n\tat com.example.Qux(Qux.java:7)",
+	}
+
+	defer awsservice.DeleteLogGroupAndStream(logGroup, logStream)
+
+	f, err := os.Create(multilineLogFilePath)
+	if err != nil {
+		t.Fatalf("Error occurred creating log file for writing: %v", err)
+	}
+	defer f.Close()
+	defer os.Remove(multilineLogFilePath)
+
+	start := time.Now()
+	common.CopyFile(cfgFilePath, configOutputPath)
+
+	if err = common.StartAgent(configOutputPath, true, false); err != nil {
+		t.Fatalf("Agent failed to start: %v", err)
+	}
+
+	// Give the agent time to discover the file before writing.
+	time.Sleep(sleepForFlush)
+
+	// Write each logical event as its header line + continuation lines (each block already
+	// contains embedded newlines, so this produces header + 2 continuation physical lines).
+	for _, event := range expectedEvents {
+		if _, err = f.WriteString(event + "\n"); err != nil {
+			t.Logf("Error occurred writing log line: %v", err)
+		}
+	}
+
+	// Wait for the flush interval (default 5s) plus the agent's 1s multiline idle-flush so
+	// the final buffered event is emitted even without a trailing start line.
+	time.Sleep(sleepForFlush)
+	common.StopAgent()
+	end := time.Now()
+
+	err = awsservice.ValidateLogs(
+		logGroup,
+		logStream,
+		&start,
+		&end,
+		// If multiline merging regressed, each physical line would become its own event
+		// (6 events) and this count assertion would fail.
+		awsservice.AssertLogsCount(len(expectedEvents)),
+		func(events []types.OutputLogEvent) error {
+			for i := 0; i < len(events); i++ {
+				if *events[i].Message != expectedEvents[i] {
+					return fmt.Errorf("multi-line event %d = %q, expected %q", i, *events[i].Message, expectedEvents[i])
+				}
+			}
+			return nil
+		},
+	)
+	assert.NoError(t, err)
+}
+
 func writeLogLines(t *testing.T, f *os.File, iterations int) {
 	log.Printf("Writing %d lines to %s", iterations*len(logLineIds), f.Name())
 
