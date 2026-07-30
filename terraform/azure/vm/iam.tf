@@ -1,7 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-# CWAGENT_ROLE: assumed via web identity (Azure managed-identity JWT), scoped to default:otel CloudWatch writes.
+# CWAGENT_ROLE: assumed via web identity (Azure managed-identity JWT). Carries the agent's default:otel
+# CloudWatch writes plus the reads the on-VM test needs to assert delivery.
 
 module "common" {
   source = "../../common"

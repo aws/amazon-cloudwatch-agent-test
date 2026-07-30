@@ -83,7 +83,7 @@ variable "runner_ip" {
   type = string
 }
 
-# Ubuntu image the VM boots; matches the Debian-package install path used below.
+# Ubuntu image the VM boots; matches the Debian-package install path main.tf uses.
 variable "azure_image" {
   type = object({
     publisher = string
@@ -99,7 +99,8 @@ variable "azure_image" {
   }
 }
 
-# ARN of a pre-created IAM OIDC provider for the Azure AD issuer (https://sts.windows.net/<tenant-id>/); see the README.
+# ARN of a pre-created IAM OIDC provider for the Azure AD issuer (https://sts.windows.net/<tenant-id>/).
+# Created out-of-band because a newly-created provider for an Azure issuer may be auto-removed if unapproved.
 variable "azure_oidc_provider_arn" {
   type    = string
   default = ""

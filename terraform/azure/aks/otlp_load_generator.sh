@@ -11,8 +11,8 @@
 # produces a deterministic per-cluster destination (/aws/cwagent/<cluster>/otlp, stream
 # amazon-cloudwatch/<service>); resourcedetection only overrides keys it detects, so these pass through.
 #
-# Metric datapoints carry test_id (value = per-run cluster name) for the Go test to scope on:
-# datapoint attributes are the one surface no resource processor rewrites.
+# Every signal also carries a test_id attribute (value = per-run cluster name) for the Go test to scope on.
+# It sits below the resource level, the one surface no resource processor rewrites.
 
 SERVICE_NAME="${service_name}"
 INSTANCE_ID="${instance_id}"
@@ -34,10 +34,10 @@ while [ $(date +%s) -lt $END ]; do
     -d "{\"resourceMetrics\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeMetrics\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"metrics\":[{\"name\":\"aks_otlp_counter\",\"unit\":\"1\",\"sum\":{\"aggregationTemporality\":2,\"isMonotonic\":true,\"dataPoints\":[{\"asInt\":\"$SEQ\",\"startTimeUnixNano\":\"$${START}000000000\",\"timeUnixNano\":\"$NOW_NS\",\"attributes\":[{\"key\":\"test_id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}}]}]}]}" || true
 
   curl -sf -X POST "$ENDPOINT/v1/logs" -H "Content-Type: application/json" \
-    -d "{\"resourceLogs\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeLogs\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"logRecords\":[{\"timeUnixNano\":\"$NOW_NS\",\"severityText\":\"INFO\",\"body\":{\"stringValue\":\"aks_otlp_log_$INSTANCE_ID\"},\"attributes\":[{\"key\":\"ClusterName\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}]}]}" || true
+    -d "{\"resourceLogs\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeLogs\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"logRecords\":[{\"timeUnixNano\":\"$NOW_NS\",\"severityText\":\"INFO\",\"body\":{\"stringValue\":\"aks_otlp_log_$INSTANCE_ID\"},\"attributes\":[{\"key\":\"test_id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}]}]}" || true
 
   curl -sf -X POST "$ENDPOINT/v1/traces" -H "Content-Type: application/json" \
-    -d "{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"spans\":[{\"traceId\":\"$TRACE_ID\",\"spanId\":\"$SPAN_ID\",\"name\":\"aks-otlp-test-span\",\"kind\":2,\"startTimeUnixNano\":\"$START_NS\",\"endTimeUnixNano\":\"$NOW_NS\",\"attributes\":[{\"key\":\"cluster_name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}]}]}" || true
+    -d "{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"spans\":[{\"traceId\":\"$TRACE_ID\",\"spanId\":\"$SPAN_ID\",\"name\":\"aks-otlp-test-span\",\"kind\":2,\"startTimeUnixNano\":\"$START_NS\",\"endTimeUnixNano\":\"$NOW_NS\",\"attributes\":[{\"key\":\"test_id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}]}]}" || true
 
   sleep 10
 done
