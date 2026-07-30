@@ -82,6 +82,13 @@ func validateLogs() status.TestResult {
 	// where the agent's identity transform fills service.namespace from k8s.namespace.name.
 	// AssertLogsNotEmpty guards against a vacuous pass on an empty window.
 	logGroup := fmt.Sprintf("/aws/cwagent/%s/otlp", env.AKSClusterName)
+	// Clean up only on success: the group name carries this run's cluster so the whole group is
+	// disposable, but on failure it is left in place as evidence for whoever debugs the run.
+	defer func() {
+		if testResult.Status == status.SUCCESSFUL {
+			awsservice.DeleteLogGroup(logGroup)
+		}
+	}()
 	logStream := fmt.Sprintf("amazon-cloudwatch/amazon-cloudwatch/%s", serviceName)
 	marker := fmt.Sprintf("aks_otlp_log_%s", env.AKSClusterName)
 	const maxRetries = 4

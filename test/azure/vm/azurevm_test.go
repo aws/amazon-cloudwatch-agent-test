@@ -118,36 +118,39 @@ func TestAzureVM(t *testing.T) {
 
 func measuredMetrics() []string { return []string{"azurevm_otlp_counter", "azurevm_otlp_gauge"} }
 
-// validateLogs confirms the OTLP log record landed in the default:otel log group for this host.
+// validateLogs confirms the OTLP log record landed in the default:otel log group on the stream the
+// agent's log routing is expected to derive for this host.
 func validateLogs() status.TestResult {
 	testResult := status.TestResult{Name: "AzureVM_Logs", Status: status.FAILED}
 
-	// Retry on the same schedule as the AKS log path: the stream and its events can both lag the
-	// load window, so a single attempt fails on ingestion delay rather than on delivery.
+	// The agent routes OTLP logs to {host.id}/{service.name}, so assert that exact stream: it makes the
+	// check prove log routing rather than just delivery, and keeps cost flat as the shared group
+	// accumulates a stream per VM. Retries match the AKS path, since the stream and events both lag.
+	logStream := fmt.Sprintf("%s/%s", env.InstanceId, serviceName)
+	// Clean up only on success: the group is shared by every VM run, so drop this run's stream but never
+	// the group. On failure the stream is left in place as evidence for whoever debugs the run.
+	defer func() {
+		if testResult.Status == status.SUCCESSFUL {
+			awsservice.DeleteLogStream(otlpLogGroup, logStream)
+		}
+	}()
 	marker := fmt.Sprintf("azurevm_otlp_log_%s", env.InstanceId)
 	const maxRetries = 4
 	const retryInterval = 30 * time.Second
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		since := time.Now().Add(-loadWindow - time.Minute)
 		until := time.Now()
-
-		streams := awsservice.GetLogStreams(otlpLogGroup)
-		if len(streams) == 0 {
-			testResult.Reason = fmt.Errorf("attempt %d: no log streams found in %s", attempt, otlpLogGroup)
+		log.Printf("[AzureVM_Logs] attempt %d: checking %s/%s", attempt, otlpLogGroup, logStream)
+		err := awsservice.ValidateLogs(
+			otlpLogGroup, logStream, &since, &until,
+			awsservice.AssertLogsNotEmpty(),
+			awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
+		)
+		if err == nil {
+			testResult.Status = status.SUCCESSFUL
+			return testResult
 		}
-		for _, stream := range streams {
-			log.Printf("[AzureVM_Logs] attempt %d: checking %s/%s", attempt, otlpLogGroup, *stream.LogStreamName)
-			err := awsservice.ValidateLogs(
-				otlpLogGroup, *stream.LogStreamName, &since, &until,
-				awsservice.AssertLogsNotEmpty(),
-				awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
-			)
-			if err == nil {
-				testResult.Status = status.SUCCESSFUL
-				return testResult
-			}
-			testResult.Reason = err
-		}
+		testResult.Reason = err
 		if attempt < maxRetries {
 			log.Printf("[AzureVM_Logs] %v — retrying in %v", testResult.Reason, retryInterval)
 			time.Sleep(retryInterval)

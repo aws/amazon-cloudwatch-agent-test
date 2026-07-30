@@ -67,6 +67,8 @@ data "aws_iam_policy_document" "cwagent_permissions" {
       "cloudwatch:ListMetrics",
       "cloudwatch:GetMetricData",
       "logs:GetLogEvents",
+      # Cleanup: the test deletes its own stream from the shared /aws/cwagent/otlp group when it finishes.
+      "logs:DeleteLogStream",
       # StartQuery/GetQueryResults validate OTLP trace delivery via the aws/spans log group. That group
       # is only populated where the X-Ray trace segment destination is set to CloudWatchLogs, which is a
       # per-region setting -- hence the region default in variables.tf.
