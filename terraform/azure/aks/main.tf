@@ -163,7 +163,7 @@ resource "kubernetes_cluster_role_binding" "cwagent" {
   subject {
     kind      = "ServiceAccount"
     name      = kubernetes_service_account.cwagent.metadata[0].name
-    namespace = local.namespace
+    namespace = kubernetes_namespace.cwagent.metadata[0].name
   }
 }
 
@@ -183,7 +183,7 @@ data "aws_ecr_authorization_token" "ecr" {
 resource "kubernetes_secret" "ecr_pull" {
   metadata {
     name      = "ecr-pull-secret"
-    namespace = local.namespace
+    namespace = kubernetes_namespace.cwagent.metadata[0].name
   }
   type = "kubernetes.io/dockerconfigjson"
   data = {
@@ -200,7 +200,7 @@ resource "kubernetes_secret" "ecr_pull" {
 resource "kubernetes_daemon_set_v1" "cwagent" {
   metadata {
     name      = "cloudwatch-agent"
-    namespace = local.namespace
+    namespace = kubernetes_namespace.cwagent.metadata[0].name
   }
 
   spec {
@@ -321,7 +321,7 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
 resource "kubernetes_job_v1" "otlp_load" {
   metadata {
     name      = "otlp-load-generator"
-    namespace = local.namespace
+    namespace = kubernetes_namespace.cwagent.metadata[0].name
   }
 
   spec {
