@@ -34,10 +34,10 @@ variable "azure_subnet_name" {
   default = "default"
 }
 
+# Required, not defaulted: the API server is public and this is the only thing scoping it to the runner.
 variable "runner_ip" {
   type        = string
-  description = "Runner public IP, used to scope API server access to the runner. Empty leaves the API server open to all IPs."
-  default     = ""
+  description = "Runner public IP CIDR (e.g. \"1.2.3.4/32\") allowed to reach the AKS API server."
 }
 
 variable "aks_node_vm_size" {

@@ -1,15 +1,15 @@
 # Azure VM integration test
 
 Validates the CloudWatch Agent on a **real Azure VM** running the default OTel configuration
-(`USE_DEFAULT_CONFIG=otel` / `default:otel`). It exercises the full generated OTel pipeline
+(`default:otel`). It exercises the full generated OTel pipeline
 (Azure IMDS detection → translation → collector startup) and verifies that metrics, logs, and traces
 reach CloudWatch through the Azure → AWS credential chain (`oidctoken` extension → `sigv4auth` web identity).
 
 ## What it checks
 
-The agent is started with no JSON config and `USE_DEFAULT_CONFIG=otel`, so it emits the default OTel
-pipeline (OTLP receivers on `127.0.0.1:4317/4318` → native CloudWatch OTLP exporters). The test pushes OTLP
-and asserts delivery:
+The agent is started with no JSON config, via `amazon-cloudwatch-agent-ctl -a fetch-config -m auto -s -c
+default:otel`, so it emits the default OTel pipeline (OTLP receivers on `127.0.0.1:4317/4318` → native
+CloudWatch OTLP exporters). The test pushes OTLP and asserts delivery:
 
 | Signal  | Destination                                   | Assertion |
 |---------|-----------------------------------------------|-----------|
@@ -20,14 +20,6 @@ and asserts delivery:
 Delivery of all three signals is itself the credential-chain assertion: nothing reaches CloudWatch unless
 the Azure web-identity exchange succeeded. The `cloud.provider=azure` resource label additionally proves the
 telemetry traversed the Azure detection path rather than being attributed to stray AWS credentials.
-
-## Agent prerequisites
-
-- `#2179` Add default OTel config — **merged** (`USE_DEFAULT_CONFIG=otel`)
-- `#2183` Azure platform detection — **merged** (IMDS detection → translation)
-- `#2010` OIDC auth (`oidctoken`) — **merged**
-- `#2197` web-identity for `awscloudwatchlogsprovisioner` — **merged** (log-group creation on Azure VM)
-- `#2211` `set-env` ctl action — **merged** (used to persist `AWS_REGION` / `CWAGENT_ROLE_ARN`)
 
 ## Prerequisites that MUST be satisfied before a live run
 

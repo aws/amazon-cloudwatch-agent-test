@@ -77,10 +77,10 @@ variable "admin_username" {
   default = "cwagent"
 }
 
-# CIDR allowed inbound SSH to the VM (the CI runner's public IP, e.g. "1.2.3.4/32"); no default so it must be set.
+# CIDR allowed inbound SSH to the VM (the CI runner's public IP, e.g. "1.2.3.4/32").
+# Required, not defaulted: this is the only thing scoping the NSG's Allow-22 rule.
 variable "runner_ip" {
-  type    = string
-  default = ""
+  type = string
 }
 
 # Ubuntu image the VM boots; matches the Debian-package install path used below.

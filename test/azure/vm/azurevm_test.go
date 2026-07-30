@@ -122,26 +122,36 @@ func measuredMetrics() []string { return []string{"azurevm_otlp_counter", "azure
 func validateLogs() status.TestResult {
 	testResult := status.TestResult{Name: "AzureVM_Logs", Status: status.FAILED}
 
-	streams := awsservice.GetLogStreams(otlpLogGroup)
-	if len(streams) == 0 {
-		testResult.Reason = fmt.Errorf("no log streams found in %s", otlpLogGroup)
-		return testResult
-	}
-
-	since := time.Now().Add(-loadWindow - time.Minute)
-	until := time.Now()
+	// Retry on the same schedule as the AKS log path: the stream and its events can both lag the
+	// load window, so a single attempt fails on ingestion delay rather than on delivery.
 	marker := fmt.Sprintf("azurevm_otlp_log_%s", env.InstanceId)
-	for _, stream := range streams {
-		err := awsservice.ValidateLogs(
-			otlpLogGroup, *stream.LogStreamName, &since, &until,
-			awsservice.AssertLogsNotEmpty(),
-			awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
-		)
-		if err == nil {
-			testResult.Status = status.SUCCESSFUL
-			return testResult
+	const maxRetries = 4
+	const retryInterval = 30 * time.Second
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		since := time.Now().Add(-loadWindow - time.Minute)
+		until := time.Now()
+
+		streams := awsservice.GetLogStreams(otlpLogGroup)
+		if len(streams) == 0 {
+			testResult.Reason = fmt.Errorf("attempt %d: no log streams found in %s", attempt, otlpLogGroup)
 		}
-		testResult.Reason = err
+		for _, stream := range streams {
+			log.Printf("[AzureVM_Logs] attempt %d: checking %s/%s", attempt, otlpLogGroup, *stream.LogStreamName)
+			err := awsservice.ValidateLogs(
+				otlpLogGroup, *stream.LogStreamName, &since, &until,
+				awsservice.AssertLogsNotEmpty(),
+				awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
+			)
+			if err == nil {
+				testResult.Status = status.SUCCESSFUL
+				return testResult
+			}
+			testResult.Reason = err
+		}
+		if attempt < maxRetries {
+			log.Printf("[AzureVM_Logs] %v — retrying in %v", testResult.Reason, retryInterval)
+			time.Sleep(retryInterval)
+		}
 	}
 	return testResult
 }

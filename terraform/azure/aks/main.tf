@@ -24,14 +24,10 @@ resource "azurerm_kubernetes_cluster" "cwagent" {
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
 
-  # Terraform drives the cluster over the public API server, so restrict it to the runner that created
-  # it. The block is omitted entirely when runner_ip is unset rather than emitted with an empty list --
-  # an empty authorized_ip_ranges means "open to all", which would read as restricted while being open.
-  dynamic "api_server_access_profile" {
-    for_each = var.runner_ip != "" ? [var.runner_ip] : []
-    content {
-      authorized_ip_ranges = [api_server_access_profile.value]
-    }
+  # Terraform drives the cluster over the public API server, so restrict it to the runner that created it.
+  # runner_ip is required, so there is no path where this silently ends up open to all.
+  api_server_access_profile {
+    authorized_ip_ranges = [var.runner_ip]
   }
 
   identity {
@@ -114,25 +110,8 @@ resource "aws_iam_role_policy_attachment" "cwagent_server_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
-# Unlike the VM test, the AKS test binary runs on the runner under the runner's own credentials, so this
-# role needs agent writes only -- no validation reads.
-data "aws_iam_policy_document" "cwagent_permissions" {
-  statement {
-    effect = "Allow"
-    actions = [
-      # Agent write omitted from CloudWatchAgentServerPolicy: the X-Ray OTLP endpoint needs PutSpans,
-      # which is a different action from PutTraceSegments.
-      "xray:PutSpans",
-    ]
-    resources = ["*"]
-  }
-}
-
-resource "aws_iam_role_policy" "cwagent" {
-  name   = "cwa-aks-integ-policy-${module.common.testing_id}"
-  role   = aws_iam_role.cwagent.id
-  policy = data.aws_iam_policy_document.cwagent_permissions.json
-}
+# No inline policy: the AKS test binary runs on the runner under its own credentials, so this role needs
+# agent writes only -- and CloudWatchAgentServerPolicy alone covers them, OTLP traces included.
 
 #####################################################################
 # Kubernetes resources: deploy CWA DaemonSet from ECR image
@@ -331,7 +310,6 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
 
   depends_on = [
     kubernetes_cluster_role_binding.cwagent,
-    aws_iam_role_policy.cwagent,
     aws_iam_role_policy_attachment.cwagent_server_policy,
   ]
 }
@@ -339,10 +317,7 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
 #####################################################################
 # Load generator: pushes OTLP to localhost:4318 for 3 min via hostNetwork
 #####################################################################
-# The payloads carry k8s.cluster.name and k8s.namespace.name resource attributes so the
-# agent's k8s logs-routing template produces a deterministic per-cluster destination
-# (/aws/cwagent/<cluster>/otlp, stream amazon-cloudwatch/<service>); resourcedetection
-# only overrides keys it detects (e.g. host.id), so these pass through intact.
+# See otlp_load_generator.sh for what the payloads carry and why.
 resource "kubernetes_job_v1" "otlp_load" {
   metadata {
     name      = "otlp-load-generator"

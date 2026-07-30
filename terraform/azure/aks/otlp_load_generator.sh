@@ -7,9 +7,12 @@
 #
 # Rendered by terraform via templatefile(), so a single-dollar brace expansion is a template
 # variable and a double-dollar brace expansion is passed through as a literal shell expansion.
-# Every payload carries k8s.cluster.name and k8s.namespace.name so the agent's k8s logs-routing
-# template produces a deterministic per-cluster destination, and resourcedetection (which only
-# overrides keys it detects, e.g. host.id) leaves them intact.
+# Every payload carries k8s.cluster.name and k8s.namespace.name so the agent's k8s logs-routing template
+# produces a deterministic per-cluster destination (/aws/cwagent/<cluster>/otlp, stream
+# amazon-cloudwatch/<service>); resourcedetection only overrides keys it detects, so these pass through.
+#
+# Metric datapoints carry test_id (value = per-run cluster name) for the Go test to scope on:
+# datapoint attributes are the one surface no resource processor rewrites.
 
 SERVICE_NAME="${service_name}"
 INSTANCE_ID="${instance_id}"
@@ -28,7 +31,7 @@ while [ $(date +%s) -lt $END ]; do
   SPAN_ID=$(printf '%016x' "$NOW_S$SEQ")
 
   curl -sf -X POST "$ENDPOINT/v1/metrics" -H "Content-Type: application/json" \
-    -d "{\"resourceMetrics\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeMetrics\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"metrics\":[{\"name\":\"aks_otlp_counter\",\"unit\":\"1\",\"sum\":{\"aggregationTemporality\":2,\"isMonotonic\":true,\"dataPoints\":[{\"asInt\":\"$SEQ\",\"startTimeUnixNano\":\"$${START}000000000\",\"timeUnixNano\":\"$NOW_NS\",\"attributes\":[{\"key\":\"ClusterName\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}}]}]}]}" || true
+    -d "{\"resourceMetrics\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeMetrics\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"metrics\":[{\"name\":\"aks_otlp_counter\",\"unit\":\"1\",\"sum\":{\"aggregationTemporality\":2,\"isMonotonic\":true,\"dataPoints\":[{\"asInt\":\"$SEQ\",\"startTimeUnixNano\":\"$${START}000000000\",\"timeUnixNano\":\"$NOW_NS\",\"attributes\":[{\"key\":\"test_id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}}]}]}]}" || true
 
   curl -sf -X POST "$ENDPOINT/v1/logs" -H "Content-Type: application/json" \
     -d "{\"resourceLogs\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"$SERVICE_NAME\"}},{\"key\":\"host.id\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.cluster.name\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}},{\"key\":\"k8s.namespace.name\",\"value\":{\"stringValue\":\"amazon-cloudwatch\"}}]},\"scopeLogs\":[{\"scope\":{\"name\":\"aks-otlp-test\"},\"logRecords\":[{\"timeUnixNano\":\"$NOW_NS\",\"severityText\":\"INFO\",\"body\":{\"stringValue\":\"aks_otlp_log_$INSTANCE_ID\"},\"attributes\":[{\"key\":\"ClusterName\",\"value\":{\"stringValue\":\"$INSTANCE_ID\"}}]}]}]}]}" || true

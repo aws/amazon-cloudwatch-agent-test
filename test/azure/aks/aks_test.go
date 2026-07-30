@@ -47,13 +47,14 @@ func TestMain(m *testing.M) {
 
 func TestAKS(t *testing.T) {
 	t.Run("Metrics", func(t *testing.T) {
-		// host.id is overwritten by resourcedetection with the node's VMSS instance ID,
-		// so scope by the cluster-name resource attribute the load generator sends.
+		// test_id is a datapoint attribute, the one surface no resource processor rewrites, so it
+		// isolates this run. cloud.platform=azure_aks comes only from the aks detector: proves detection ran.
 		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
 			"AKSDefaultOtel", env.Region, []string{"aks_otlp_counter"},
 			map[string]string{
-				"@resource.k8s.cluster.name": env.AKSClusterName,
-				"@resource.cloud.provider":   "azure",
+				"test_id":                  env.AKSClusterName,
+				"@resource.cloud.platform": "azure_aks",
+				"@resource.cloud.provider": "azure",
 			},
 		)
 		for _, r := range group.TestResults {

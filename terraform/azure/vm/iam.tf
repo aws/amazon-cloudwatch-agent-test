@@ -57,16 +57,12 @@ resource "aws_iam_role_policy_attachment" "cwagent_server_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
-# Everything CloudWatchAgentServerPolicy does not cover. The test binary runs on the VM under this same
-# role, so the validation reads have to live here too.
+# Validation reads only -- the agent's own writes are fully covered by CloudWatchAgentServerPolicy. The
+# test binary runs on the VM under this same role, so these have to live here.
 data "aws_iam_policy_document" "cwagent_permissions" {
   statement {
     effect = "Allow"
     actions = [
-      # Agent write omitted from CloudWatchAgentServerPolicy: the X-Ray OTLP endpoint needs PutSpans,
-      # which is a different action from PutTraceSegments.
-      "xray:PutSpans",
-      # Reads used to assert delivery.
       "cloudwatch:ListMetrics",
       "cloudwatch:GetMetricData",
       "logs:GetLogEvents",

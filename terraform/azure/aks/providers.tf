@@ -1,11 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-# aws is constrained the same way the rest of the repo constrains it. azurerm and kubernetes are
-# major-version pinned because they are new to this repo and both have breaking schema changes past
-# the majors this module targets: unpinning azurerm resolved 5.0.0, which fails with
-# "At least 1 node_provisioning_profile blocks are required" on azurerm_kubernetes_cluster, and
-# kubernetes resolved 3.2.1 across its own 2.x -> 3.x break.
+# aws and kubernetes match terraform/eks/daemon/efa. azurerm has no precedent in this repo and is
+# pinned to 4.x because 5.0.0 requires a node_provisioning_profile block on azurerm_kubernetes_cluster.
 terraform {
   required_providers {
     aws = {
@@ -18,7 +15,7 @@ terraform {
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.30"
+      version = "~> 2.0"
     }
     tls = {
       source  = "hashicorp/tls"
