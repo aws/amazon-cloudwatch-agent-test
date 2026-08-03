@@ -1,0 +1,18 @@
+{
+  "agent": { "region": "us-west-2" },
+  "opentelemetry": {
+    "collect": {
+      "database_insights": {
+        "sqlserver": [{
+          "endpoint": "localhost:1433",
+          "instance_name": "dbi-sqlserver-integ-test",
+          "username": "sa",
+          "password_file": "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\.sqlserver_credentials",
+          "logs": {
+            "file_path": "C:\\Program Files\\Microsoft SQL Server\\MSSQL16.MSSQLSERVER\\MSSQL\\Log\\ERRORLOG"
+          }
+        }]
+      }
+    }
+  }
+}
