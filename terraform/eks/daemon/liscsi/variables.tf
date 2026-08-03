@@ -28,7 +28,7 @@ variable "helm_chart_branch" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.31"
+  default = "1.35"
 }
 
 variable "ami_type" {
@@ -38,5 +38,5 @@ variable "ami_type" {
 
 variable "instance_type" {
   type    = string
-  default = "t3a.medium"
+  default = "i7i.xlarge"
 }

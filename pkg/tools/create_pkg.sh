@@ -6,7 +6,7 @@ AGENT_VERSION=$(</tmp/CWAGENT_VERSION)
 #create a .pkg file
 rm -rf /tmp/AmazonCWAgentPackage
 mkdir /tmp/AmazonCWAgentPackage
-gunzip -c /tmp/amazon-cloudwatch-agent.tar.gz | tar -C /tmp/AmazonCWAgentPackage -xvf -
+gunzip -c ./amazon-cloudwatch-agent.tar.gz | tar -C /tmp/AmazonCWAgentPackage -xvf -
 COMMON_CONFIG_PATH=/tmp/AmazonCWAgentPackage/opt/aws/amazon-cloudwatch-agent/etc/common-config.toml
 SAMPLE_SUFFIX=SAMPLE_DO_NOT_MODIFY
 mv ${COMMON_CONFIG_PATH} ${COMMON_CONFIG_PATH}.${SAMPLE_SUFFIX}

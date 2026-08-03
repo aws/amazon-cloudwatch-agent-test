@@ -1,6 +1,6 @@
 [
   {
-    "k8sVersion": "1.31",
+    "k8sVersion": "1.32",
     "ami": "AL2_x86_64_GPU",
     "terraform_dir": "terraform/eks/addon/gpu",
     "test_dir": "./test/gpu",

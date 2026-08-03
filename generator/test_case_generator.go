@@ -50,6 +50,7 @@ type testConfig struct {
 	terraformDir  string
 	instanceType  string
 	ami           string
+	k8sVersion    string
 	runMockServer bool
 	selinuxBranch string
 	// define target matrix field as set(s)
@@ -77,6 +78,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_gpu": {
 		{testDir: "./test/nvidia_gpu"},
 	},
+	"ec2_efa": {
+		{testDir: "./test/efa_ec2", terraformDir: "terraform/ec2/efa"},
+	},
 	"ec2_linux_wd": {
 		{testDir: "./test/workload_discovery"},
 	},
@@ -92,6 +96,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/log_state/logfile",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
+		},
+		{
+			testDir: "./test/log_state/journald",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
+		},
+		{
+			testDir: "./test/feature/linux/journald_logs",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
 		},
 		{
 			testDir: "./test/metrics_number_dimension",
@@ -121,6 +133,16 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/restart"},
 		{testDir: "./test/xray"},
 		{testDir: "./test/otlp"},
+		{
+			testDir:    "./test/otel_collect/database_insights",
+			excludedOs: map[string]struct{}{"ol8": {}, "ubuntu-25": {}},
+		},
+		{testDir: "./test/otel_collect/host_metrics"},
+		{testDir: "./test/otel_collect/otlp"},
+		{
+			testDir:    "./test/otel_collect/prometheus",
+			excludedOs: map[string]struct{}{"rhel8": {}, "ol8": {}, "sles-15": {}},
+		},
 		{
 			testDir: "./test/acceptance",
 			targets: map[string]map[string]struct{}{"os": {"ubuntu-20.04": {}}},
@@ -191,18 +213,28 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{
 			testDir: "./test/system_metrics/enabled",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+			wip:     true,
 		},
 		{
 			testDir: "./test/system_metrics/disabled",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
-		{testDir: "./test/otlp_export/hostmetrics"},
-		{testDir: "./test/otlp_export/statsd"},
-		{testDir: "./test/otlp_export/collectd"},
+		{
+			testDir: "./test/app_signals_service_events",
+			targets: map[string]map[string]struct{}{"os": {"al2023": {}}, "arc": {"amd64": {}}},
+		},
 	},
 	testTypeKeyEc2SELinux: {
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
+		{
+			testDir: "./test/log_state/journald",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
+		},
+		{
+			testDir: "./test/feature/linux/journald_logs",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}, "al2023": {}}},
+		},
 		{
 			testDir: "./test/metrics_number_dimension",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
@@ -266,7 +298,6 @@ var testTypeToTestConfig = map[string][]testConfig{
 	*/
 	"ec2_mac": {
 		{testDir: "../../../test/feature/mac"},
-		{testDir: "../../../test/ssm_document"},
 	},
 	"ec2_windows_wd": {
 		{testDir: "../../../test/workload_discovery"},
@@ -420,7 +451,70 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/liscsi",
 			terraformDir: "terraform/eks/daemon/liscsi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
-			wip:          true,
+			instanceType: "i7i.xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/standard",
+			terraformDir: "terraform/eks/daemon/otel",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/attr_limit",
+			terraformDir: "terraform/eks/daemon/otel-attr-limit",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/ebs_csi",
+			terraformDir: "terraform/eks/daemon/otel-ebs-csi",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/efa",
+			terraformDir: "terraform/eks/daemon/otel-efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c5n.9xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/gpu",
+			terraformDir: "terraform/eks/daemon/otel-gpu",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+			ami:          "AL2023_x86_64_NVIDIA",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/lis_csi",
+			terraformDir: "terraform/eks/daemon/otel-lis-csi",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "i7i.xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/multi_efa",
+			terraformDir: "terraform/eks/daemon/otel-multi-efa",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/neuron",
+			terraformDir: "terraform/eks/daemon/otel-neuron",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "inf2.xlarge",
+			ami:          "AL2023_x86_64_NEURON",
+			k8sVersion:   "1.35",
 		},
 	},
 	"eks_deployment": {
@@ -459,9 +553,10 @@ var partitionTests = map[string]partition{
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		excludedTestDirs: map[string]struct{}{
-			"./test/otlp_export/hostmetrics": {},
-			"./test/otlp_export/statsd":      {},
-			"./test/otlp_export/collectd":    {},
+			"./test/otel_collect/database_insights": {},
+			"./test/otel_collect/host_metrics":      {},
+			"./test/otel_collect/otlp":              {},
+			"./test/otel_collect/prometheus":        {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
@@ -479,9 +574,10 @@ var partitionTests = map[string]partition{
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		excludedTestDirs: map[string]struct{}{
-			"./test/otlp_export/hostmetrics": {},
-			"./test/otlp_export/statsd":      {},
-			"./test/otlp_export/collectd":    {},
+			"./test/otel_collect/database_insights": {},
+			"./test/otel_collect/host_metrics":      {},
+			"./test/otel_collect/otlp":              {},
+			"./test/otel_collect/prometheus":        {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
@@ -612,6 +708,9 @@ func genMatrix(testType string, testConfigs []testConfig, ami []string, override
 			}
 			if testConfig.ami != "" {
 				row.Ami = testConfig.ami
+			}
+			if testConfig.k8sVersion != "" {
+				row.K8sVersion = testConfig.k8sVersion
 			}
 			// Apply architecture-specific instance type if configured
 			if testConfig.instanceTypeByArch != nil {

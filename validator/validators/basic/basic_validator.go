@@ -23,7 +23,7 @@ import (
 )
 
 const metricErrorBound = 0.1
-const AppSignalNamespace = "AppSignals"
+const AppSignalNamespace = "ApplicationSignals"
 
 type BasicValidator struct {
 	vConfig models.ValidateConfig
@@ -106,7 +106,7 @@ func (s *BasicValidator) CheckData(startTime, endTime time.Time) error {
 		} else {
 			err := s.ValidateMetric(metric.MetricName, metricNamespace, metricDimensions, metric.MetricValue, metric.MetricSampleCount, startTime, endTime)
 			if err != nil {
-				return err
+				multiErr = multierr.Append(multiErr, err)
 			}
 		}
 
@@ -154,9 +154,8 @@ func (s *BasicValidator) ValidateAppSignalMetrics(metric models.MetricValidation
 		if err != nil {
 			return err
 		}
-		if !AppSignalMetrics.IsAllValuesGreaterThanOrEqualToExpectedValue(metric.MetricName, values, 0) {
-			fmt.Printf("Error values are not the epected values%v", err)
-			return err
+		if err := AppSignalMetrics.IsAllValuesGreaterThanOrEqualToExpectedValueWithError(metric.MetricName, values, 0); err != nil {
+			return fmt.Errorf("App Signals metric %s validation failed: %w", metric.MetricName, err)
 		}
 	}
 

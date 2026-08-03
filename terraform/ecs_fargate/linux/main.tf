@@ -147,16 +147,22 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating metrics/logs"
       cd ../../..
-      go test ${var.test_dir} \
+      go test "$TF_TEST_DIR" \
       -timeout 1h \
       -computeType=ECS \
       -ecsLaunchType=FARGATE \
       -ecsDeploymentStrategy=DAEMON \
-      -clusterArn=${aws_ecs_cluster.cluster.arn} \
-      -cwagentECSServiceName=${aws_ecs_service.cwagent_service.name} \
-      -cwagentConfigSsmParamName=${aws_ssm_parameter.cwagent_config.name} \
+      -clusterArn="$TF_CLUSTER_ARN" \
+      -cwagentECSServiceName="$TF_SERVICE_NAME" \
+      -cwagentConfigSsmParamName="$TF_SSM_PARAM" \
       -v
     EOT
+    environment = {
+      TF_TEST_DIR     = var.test_dir
+      TF_CLUSTER_ARN  = aws_ecs_cluster.cluster.arn
+      TF_SERVICE_NAME = aws_ecs_service.cwagent_service.name
+      TF_SSM_PARAM    = aws_ssm_parameter.cwagent_config.name
+    }
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service]
 }

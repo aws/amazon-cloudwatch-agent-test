@@ -17,7 +17,6 @@ data "aws_eks_cluster_auth" "this" {
 
 locals {
   role_arn = format("%s%s", module.basic_components.role_arn, var.beta ? "-eks-beta" : "")
-  aws_eks  = format("%s%s", "aws eks --region ${var.region}", var.beta ? " --endpoint ${var.beta_endpoint}" : "")
 }
 
 resource "aws_eks_cluster" "this" {
@@ -110,10 +109,20 @@ resource "null_resource" "kubectl" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
-      ${local.aws_eks} update-kubeconfig --name ${aws_eks_cluster.this.name}
-      ${local.aws_eks} list-clusters --output text
-      ${local.aws_eks} describe-cluster --name ${aws_eks_cluster.this.name} --output text
+      AWS_EKS_CMD="aws eks --region $TF_REGION"
+      if [ "$TF_BETA" = "true" ]; then
+        AWS_EKS_CMD="$AWS_EKS_CMD --endpoint $TF_BETA_ENDPOINT"
+      fi
+      $AWS_EKS_CMD update-kubeconfig --name "$TF_CLUSTER_NAME"
+      $AWS_EKS_CMD list-clusters --output text
+      $AWS_EKS_CMD describe-cluster --name "$TF_CLUSTER_NAME" --output text
     EOT
+    environment = {
+      TF_REGION        = var.region
+      TF_CLUSTER_NAME  = aws_eks_cluster.this.name
+      TF_BETA          = tostring(var.beta)
+      TF_BETA_ENDPOINT = var.beta_endpoint
+    }
   }
 }
 
@@ -308,17 +317,21 @@ resource "null_resource" "patch_agent_image" {
     command = <<-EOT
       echo "Waiting for CloudWatch Agent DaemonSet to be ready before patching..."
       kubectl rollout status daemonset/cloudwatch-agent -n amazon-cloudwatch --timeout=300s
-      
-      echo "Patching CloudWatch Agent image to ${var.cwagent_image_repo}:${var.cwagent_image_tag}..."
+
+      echo "Patching CloudWatch Agent image to $TF_IMAGE_REPO:$TF_IMAGE_TAG..."
       kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent \
         --type='json' \
-        -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
-      
+        -p="[{\"op\": \"replace\", \"path\": \"/spec/image\", \"value\": \"$TF_IMAGE_REPO:$TF_IMAGE_TAG\"}]"
+
       echo "Waiting for CloudWatch Agent DaemonSet rollout after patching..."
       kubectl rollout status daemonset/cloudwatch-agent -n amazon-cloudwatch --timeout=300s
-      
+
       echo "CloudWatch Agent image patched and rolled out successfully"
     EOT
+    environment = {
+      TF_IMAGE_REPO = var.cwagent_image_repo
+      TF_IMAGE_TAG  = var.cwagent_image_tag
+    }
   }
 
   # Re-run if image changes
@@ -346,11 +359,15 @@ resource "null_resource" "validator" {
       i=0
       while [ $i -lt 10 ]; do
         i=$((i+1))
-        go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia && exit 0
+        go test "$TF_TEST_DIR" -eksClusterName="$TF_CLUSTER_NAME" -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia && exit 0
         sleep 60
       done
       exit 1
     EOT
+    environment = {
+      TF_TEST_DIR     = var.test_dir
+      TF_CLUSTER_NAME = aws_eks_cluster.this.name
+    }
   }
 }
 

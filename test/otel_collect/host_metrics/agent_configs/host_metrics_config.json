@@ -1,0 +1,10 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "opentelemetry": {
+    "collect": {
+      "host_metrics": {}
+    }
+  }
+}
