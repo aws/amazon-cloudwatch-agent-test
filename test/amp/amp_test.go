@@ -38,6 +38,13 @@ const (
 	// template prometheus query for getting average of 3 min
 	ampQueryTemplate          = "avg_over_time(%s%s[3m])"
 	ampHistogramQueryTemplate = "quantile_over_time(0.5, %s_bucket%s[3m])"
+
+	// queryRetryAttempts is the maximum number of times to issue the AMP
+	// query when it returns an empty result set (metric not yet queryable
+	// because of remote-write propagation delay).
+	queryRetryAttempts = 3
+	// queryRetryDelay is how long to wait between AMP query attempts.
+	queryRetryDelay = 30 * time.Second
 )
 
 type Source int
@@ -243,7 +250,7 @@ func (t *AmpTestRunner) validateMetric(queryTemplate string, metricName string, 
 	query := buildPrometheusQuery(queryTemplate, metricName, dims)
 	log.Printf("querying metrics for %s using the following query\n%s\n", metricName, query)
 
-	responseJSON, err := queryAMPMetrics(metadata.AmpWorkspaceId, query)
+	responseJSON, err := queryAMPMetricsWithRetry(metadata.AmpWorkspaceId, query)
 	if err != nil {
 		log.Printf("failed to fetch metric values from AMP for %s: %s\n", metricName, err)
 		return testResult
@@ -421,6 +428,40 @@ func buildPrometheusQuery(template string, metricName string, dims []types.Dimen
 		dimsStr = dimsStr[:len(dimsStr)-1]
 	}
 	return fmt.Sprintf(template, metricName, "{"+dimsStr+"}")
+}
+
+// queryAMPMetricsWithRetry issues the AMP query up to queryRetryAttempts times,
+// retrying on both request errors and empty result sets. The failure mode it
+// guards against is metric remote-write propagation delay: the datapoint may not
+// be queryable on the first attempt but lands moments later. Each attempt is a
+// fresh instant query evaluated at the AMP server's current time, so the 3m
+// avg_over_time window advances on its own; there is no explicit window to
+// recompute (unlike the CloudWatch GetMetricData harness, which recomputes its
+// StartTime/EndTime, and unlike the entity log-query fix, which deliberately
+// holds its window constant because the events already exist and are only
+// unindexed). When all attempts are exhausted the last response (or error) is
+// returned unchanged, so the caller's existing empty-result check still fails
+// the test genuinely.
+func queryAMPMetricsWithRetry(wsID string, q string) (AMPResponse, error) {
+	var responseJSON AMPResponse
+	var err error
+	for attempt := 1; attempt <= queryRetryAttempts; attempt++ {
+		responseJSON, err = queryAMPMetrics(wsID, q)
+		if err != nil {
+			log.Printf("AMP query attempt %d/%d returned error: %s", attempt, queryRetryAttempts, err)
+		} else if len(responseJSON.Data.Result) == 0 {
+			log.Printf("AMP query attempt %d/%d returned empty result", attempt, queryRetryAttempts)
+		} else {
+			log.Printf("AMP query attempt %d/%d succeeded with %d series", attempt, queryRetryAttempts, len(responseJSON.Data.Result))
+			return responseJSON, nil
+		}
+
+		if attempt < queryRetryAttempts {
+			log.Printf("waiting %s before AMP query retry", queryRetryDelay)
+			time.Sleep(queryRetryDelay)
+		}
+	}
+	return responseJSON, err
 }
 
 func queryAMPMetrics(wsID string, q string) (AMPResponse, error) {
