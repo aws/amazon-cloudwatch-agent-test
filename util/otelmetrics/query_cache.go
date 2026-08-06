@@ -90,8 +90,12 @@ func (qc *QueryCache) Get(ctx context.Context, metricName string) ([]MetricResul
 		qc.mu.RUnlock()
 		<-ch // wait for the fetch to complete
 		qc.mu.RLock()
-		entry := qc.filtered[metricName]
+		entry, ok := qc.filtered[metricName]
 		qc.mu.RUnlock()
+		if !ok {
+			// Empty result was not cached; caller should retry.
+			return nil, nil
+		}
 		return entry.results, entry.err
 	}
 	qc.mu.RUnlock()
@@ -107,8 +111,12 @@ func (qc *QueryCache) Get(ctx context.Context, metricName string) ([]MetricResul
 		qc.mu.Unlock()
 		<-ch
 		qc.mu.RLock()
-		entry := qc.filtered[metricName]
+		entry, ok := qc.filtered[metricName]
 		qc.mu.RUnlock()
+		if !ok {
+			// Empty result was not cached; caller should retry.
+			return nil, nil
+		}
 		return entry.results, entry.err
 	}
 	ch := make(chan struct{})
