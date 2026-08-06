@@ -25,6 +25,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.26.2
 	github.com/aws/aws-sdk-go-v2/service/xray v1.23.2
 	github.com/aws/aws-xray-sdk-go v1.8.3
+	github.com/aws/smithy-go v1.18.1
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/google/uuid v1.4.0
 	github.com/mitchellh/mapstructure v1.5.0
@@ -64,7 +65,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.16.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.18.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.2 // indirect
-	github.com/aws/smithy-go v1.18.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

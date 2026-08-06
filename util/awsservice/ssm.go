@@ -85,6 +85,20 @@ func DeleteSSMDocument(name string) error {
 	return err
 }
 
+// CommandTerminalError is returned by WaitForCommandCompletion when the command invocation
+// reaches a terminal failure state (Failed, Cancelled, or TimedOut). Callers can use
+// errors.As to inspect the terminal Status without parsing the error string.
+type CommandTerminalError struct {
+	CommandId  string
+	InstanceId string
+	Status     types.CommandInvocationStatus
+	Details    string // includes leading ": " when present, matching current format
+}
+
+func (e *CommandTerminalError) Error() string {
+	return fmt.Sprintf("command %s on instance %s reached terminal status %s%s", e.CommandId, e.InstanceId, e.Status, e.Details)
+}
+
 // WaitForCommandCompletion polls an SSM command invocation until it reaches a terminal
 // state. It returns immediately on Success, and returns an error immediately on the terminal
 // failure states (Failed, Cancelled, TimedOut) surfacing StatusDetails. The optional timeout
@@ -118,7 +132,7 @@ func WaitForCommandCompletion(commandId, instanceId string, timeout ...time.Dura
 				if invocation.StatusDetails != nil {
 					details = ": " + *invocation.StatusDetails
 				}
-				return nil, fmt.Errorf("command %s on instance %s reached terminal status %s%s", commandId, instanceId, invocation.Status, details)
+				return nil, &CommandTerminalError{CommandId: commandId, InstanceId: instanceId, Status: invocation.Status, Details: details}
 			}
 		}
 
