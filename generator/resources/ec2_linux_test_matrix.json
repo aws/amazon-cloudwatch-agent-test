@@ -284,5 +284,16 @@
     "arc": "arm64",
     "binaryName": "amazon-cloudwatch-agent.rpm",
     "family": "linux"
+  },
+  {
+    "os": "sles-16",
+    "username": "ec2-user",
+    "instanceType": "t3a.medium",
+    "installAgentCommand": "go run ./install/install_agent.go rpm",
+    "ami": "cloudwatch-agent-integration-test-sles-16 20*",
+    "caCertPath": "/var/lib/ca-certificates/ca-bundle.pem",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.rpm",
+    "family": "linux"
   }
 ]
