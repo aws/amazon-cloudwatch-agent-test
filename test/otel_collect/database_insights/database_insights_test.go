@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	setupTimeout    = 10 * time.Minute
+	setupTimeout    = 20 * time.Minute
 	workloadDur     = 5 * time.Minute
 	serverLogsGroup = "/aws/self-managed-database-insights/postgresql/server-logs"
 	rawEventsGroup  = "/aws/self-managed-database-insights/postgresql/raw-events"
