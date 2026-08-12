@@ -35,8 +35,10 @@ if type -P yum >/dev/null 2>&1; then
     PG_DATA="/var/lib/pgsql/data"
 elif type -P apt-get >/dev/null 2>&1; then
     # Ubuntu, Debian
-    sudo apt-get update -y
-    sudo apt-get install -y postgresql postgresql-contrib
+    # DPkg::Lock::Timeout makes apt wait (up to 300s) for the dpkg lock instead of
+    # exiting 100 immediately when unattended-upgrades holds it on freshly booted instances.
+    sudo apt-get -o DPkg::Lock::Timeout=300 update -y
+    sudo apt-get -o DPkg::Lock::Timeout=300 install -y postgresql postgresql-contrib
     PG_DATA=$(find /etc/postgresql -maxdepth 2 -name "main" -type d | sort -V | tail -1)
     if [[ -z "$PG_DATA" ]]; then
         echo "ERROR: Could not find PostgreSQL config directory"
