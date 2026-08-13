@@ -366,6 +366,131 @@ resource "null_resource" "karpenter_scale_trigger" {
   }
 }
 
+# --- KEDA Helm install ---
+
+resource "helm_release" "keda" {
+  name             = "keda"
+  repository       = "https://kedacore.github.io/charts"
+  chart            = "keda"
+  version          = var.keda_version
+  namespace        = "keda"
+  create_namespace = true
+
+  set = [
+    { name = "resources.operator.requests.cpu", value = "100m" },
+    { name = "resources.operator.requests.memory", value = "128Mi" },
+    { name = "prometheus.metricServer.enabled", value = "true" },
+    { name = "prometheus.operator.enabled", value = "true" },
+  ]
+
+  depends_on = [
+    aws_eks_node_group.this,
+    null_resource.kubectl,
+  ]
+}
+
+# --- KEDA test workload: nginx-keda with cron ScaledObject ---
+
+resource "kubernetes_deployment_v1" "nginx_keda" {
+  depends_on = [aws_eks_node_group.this]
+  metadata {
+    name      = "nginx-keda"
+    namespace = "default"
+  }
+  spec {
+    replicas = 1
+    selector { match_labels = { app = "nginx-keda" } }
+    template {
+      metadata { labels = { app = "nginx-keda" } }
+      spec {
+        node_selector = { "ci-test.example.com/node-color" = "blue" }
+        container {
+          name  = "nginx"
+          image = "public.ecr.aws/nginx/nginx:latest"
+          port { container_port = 80 }
+          resources { requests = { cpu = "10m", memory = "32Mi" } }
+        }
+      }
+    }
+  }
+}
+
+resource "null_resource" "keda_scaled_object" {
+  depends_on = [helm_release.keda, kubernetes_deployment_v1.nginx_keda]
+  provisioner "local-exec" {
+    command = <<-EOT
+      cat <<'EOF' | kubectl apply -f -
+      apiVersion: keda.sh/v1alpha1
+      kind: ScaledObject
+      metadata:
+        name: nginx-keda-scaledobject
+        namespace: default
+      spec:
+        scaleTargetRef:
+          name: nginx-keda
+        minReplicaCount: 1
+        maxReplicaCount: 3
+        pollingInterval: 15
+        triggers:
+          - type: cron
+            metadata:
+              timezone: "UTC"
+              start: "0 0 * * *"
+              end: "59 23 * * *"
+              desiredReplicas: "1"
+      EOF
+    EOT
+  }
+  provisioner "local-exec" {
+    when    = destroy
+    command = "kubectl delete scaledobject nginx-keda-scaledobject -n default --timeout=60s 2>/dev/null || true"
+  }
+}
+
+resource "null_resource" "keda_scaled_job" {
+  depends_on = [helm_release.keda, null_resource.kubectl]
+  provisioner "local-exec" {
+    command = <<-EOT
+      cat <<'EOF' | kubectl apply -f -
+      apiVersion: keda.sh/v1alpha1
+      kind: ScaledJob
+      metadata:
+        name: keda-test-scaledjob
+        namespace: default
+      spec:
+        jobTargetRef:
+          template:
+            spec:
+              nodeSelector:
+                ci-test.example.com/node-color: blue
+              containers:
+                - name: echo
+                  image: busybox:1.36
+                  command: ["echo", "keda-scaled-job-test"]
+                  resources:
+                    requests:
+                      cpu: 10m
+                      memory: 16Mi
+              restartPolicy: Never
+          backoffLimit: 1
+        pollingInterval: 30
+        maxReplicaCount: 1
+        triggers:
+          - type: cron
+            metadata:
+              timezone: "UTC"
+              start: "0 0 * * *"
+              end: "59 23 * * *"
+              desiredReplicas: "1"
+      EOF
+    EOT
+  }
+  provisioner "local-exec" {
+    when    = destroy
+    command = "kubectl delete scaledjob keda-test-scaledjob -n default --timeout=60s 2>/dev/null || true"
+  }
+}
+
 # --- Helm chart install ---
 
 data "external" "clone_helm_chart" {
@@ -388,6 +513,7 @@ resource "helm_release" "aws_observability" {
     { name = "region", value = var.region },
     { name = "otelContainerInsights.enabled", value = "true" },
     { name = "otelContainerInsights.solutions.karpenter.enabled", value = "true" },
+    { name = "otelContainerInsights.solutions.keda.enabled", value = "true" },
   ]
 
   depends_on = [
@@ -395,6 +521,7 @@ resource "helm_release" "aws_observability" {
     null_resource.kubectl,
     data.external.clone_helm_chart,
     helm_release.karpenter,
+    helm_release.keda,
   ]
 }
 
@@ -601,6 +728,8 @@ resource "null_resource" "validator" {
     null_resource.restart_pods,
     kubernetes_deployment_v1.nginx_test,
     null_resource.karpenter_scale_trigger,
+    null_resource.keda_scaled_object,
+    null_resource.keda_scaled_job,
   ]
 
   triggers = { always_run = timestamp() }
@@ -621,6 +750,15 @@ resource "null_resource" "validator" {
 
       echo "Running OTEL solutions tests (Karpenter)..."
       go test -tags integration -timeout 1h -v ./test/otel/solutions/karpenter/... \
+        -eksClusterName=${aws_eks_cluster.this.name} \
+        -computeType=EKS \
+        -eksDeploymentStrategy=DAEMON \
+        -region=${var.region}
+
+      echo "Running OTEL solutions tests (KEDA)..."
+      echo "Waiting 2 additional minutes for KEDA metrics to propagate..."
+      sleep 120
+      go test -tags integration -timeout 1h -v ./test/otel/solutions/keda/... \
         -eksClusterName=${aws_eks_cluster.this.name} \
         -computeType=EKS \
         -eksDeploymentStrategy=DAEMON \
