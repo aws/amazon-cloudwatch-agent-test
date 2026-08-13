@@ -75,15 +75,9 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 	if err := os.WriteFile("/tmp/metrics", []byte(prometheusMetrics), os.ModePerm); err != nil {
 		return fmt.Errorf("unable to write /tmp/metrics: %w", err)
 	}
-	// Serve from /tmp via an inner shell cd rather than --directory: the
-	// --directory flag needs Python 3.7+, and EL8 distros can default to
-	// Python 3.6 (observed on the rocky-linux-8 AMI rotated in on 2026-08-11),
-	// where the flag makes the server exit immediately and the scrape target
-	// is never up.
-	// The backgrounded command must stay a SIMPLE command: backgrounding an
-	// and-list like `cd /tmp && python3 ... &` forks a subshell that keeps the
-	// stdout pipe open, and RunCommand (exec.Command().Output()) blocks on
-	// pipe EOF until the server exits — hanging setup until the job timeout.
+	// cd in an inner shell: --directory needs Python 3.7+, some AMIs ship 3.6.
+	// Keep the backgrounded command simple: an and-list forks a subshell that
+	// holds the stdout pipe open and blocks RunCommand until the server exits.
 	commands = []string{
 		"sudo bash -c 'cd /tmp && exec python3 -m http.server 9100' &> /dev/null &",
 	}
@@ -93,9 +87,8 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 	t.RegisterCleanup(func() error {
 		return common.RunCommands([]string{"sudo pkill -f 'python3 -m http.server 9100' || true"})
 	})
-	// Fail setup loudly if the fake exporter is not actually serving metrics,
-	// instead of letting the agent scrape a dead port for the whole run and
-	// fail minutes later with an unrelated-looking "metric not found" error.
+	// Fail setup fast if the exporter is not serving, instead of letting the
+	// agent scrape a dead port for the whole run.
 	healthCheck := []string{
 		"for i in $(seq 1 15); do curl -sf http://localhost:9100/metrics > /dev/null && exit 0; sleep 1; done; echo 'fake node exporter is not serving /metrics on :9100'; exit 1",
 	}
