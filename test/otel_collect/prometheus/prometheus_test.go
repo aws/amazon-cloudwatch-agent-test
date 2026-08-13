@@ -75,8 +75,12 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 	if err := os.WriteFile("/tmp/metrics", []byte(prometheusMetrics), os.ModePerm); err != nil {
 		return fmt.Errorf("unable to write /tmp/metrics: %w", err)
 	}
+	// Serve from /tmp via cd rather than --directory: the --directory flag needs
+	// Python 3.7+, and EL8 distros can default to Python 3.6 (observed on the
+	// rocky-linux-8 AMI rotated in on 2026-08-11), where the flag makes the
+	// server exit immediately and the scrape target is never up.
 	commands = []string{
-		"sudo python3 -m http.server 9100 --directory /tmp &> /dev/null &",
+		"cd /tmp && sudo python3 -m http.server 9100 &> /dev/null &",
 	}
 	if err := common.RunCommands(commands); err != nil {
 		return err
@@ -84,7 +88,15 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 	t.RegisterCleanup(func() error {
 		return common.RunCommands([]string{"sudo pkill -f 'python3 -m http.server 9100' || true"})
 	})
-	time.Sleep(2 * time.Second)
+	// Fail setup loudly if the fake exporter is not actually serving metrics,
+	// instead of letting the agent scrape a dead port for the whole run and
+	// fail minutes later with an unrelated-looking "metric not found" error.
+	healthCheck := []string{
+		"for i in $(seq 1 15); do curl -sf http://localhost:9100/metrics > /dev/null && exit 0; sleep 1; done; echo 'fake node exporter is not serving /metrics on :9100'; exit 1",
+	}
+	if err := common.RunCommands(healthCheck); err != nil {
+		return fmt.Errorf("fake node exporter failed to start: %w", err)
+	}
 	return nil
 }
 
