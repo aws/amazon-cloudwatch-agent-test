@@ -75,12 +75,17 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 	if err := os.WriteFile("/tmp/metrics", []byte(prometheusMetrics), os.ModePerm); err != nil {
 		return fmt.Errorf("unable to write /tmp/metrics: %w", err)
 	}
-	// Serve from /tmp via cd rather than --directory: the --directory flag needs
-	// Python 3.7+, and EL8 distros can default to Python 3.6 (observed on the
-	// rocky-linux-8 AMI rotated in on 2026-08-11), where the flag makes the
-	// server exit immediately and the scrape target is never up.
+	// Serve from /tmp via an inner shell cd rather than --directory: the
+	// --directory flag needs Python 3.7+, and EL8 distros can default to
+	// Python 3.6 (observed on the rocky-linux-8 AMI rotated in on 2026-08-11),
+	// where the flag makes the server exit immediately and the scrape target
+	// is never up.
+	// The backgrounded command must stay a SIMPLE command: backgrounding an
+	// and-list like `cd /tmp && python3 ... &` forks a subshell that keeps the
+	// stdout pipe open, and RunCommand (exec.Command().Output()) blocks on
+	// pipe EOF until the server exits — hanging setup until the job timeout.
 	commands = []string{
-		"cd /tmp && sudo python3 -m http.server 9100 &> /dev/null &",
+		"sudo bash -c 'cd /tmp && exec python3 -m http.server 9100' &> /dev/null &",
 	}
 	if err := common.RunCommands(commands); err != nil {
 		return err
