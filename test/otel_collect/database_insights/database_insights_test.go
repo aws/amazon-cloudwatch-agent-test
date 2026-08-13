@@ -6,6 +6,7 @@
 package database_insights
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os/exec"
@@ -22,6 +23,7 @@ import (
 )
 
 const (
+	setupTimeout    = 20 * time.Minute
 	workloadDur     = 5 * time.Minute
 	serverLogsGroup = "/aws/self-managed-database-insights/postgresql/server-logs"
 	rawEventsGroup  = "/aws/self-managed-database-insights/postgresql/raw-events"
@@ -47,8 +49,20 @@ func (t *DbiTestRunner) GetMeasuredMetrics() []string {
 
 func (t *DbiTestRunner) SetupBeforeAgentRun() error {
 	log.Println("=== Running PostgreSQL setup ===")
-	out, err := exec.Command("bash", "resources/database_insights_setup.sh").CombinedOutput()
+	// Bound the setup script so a hang fails fast with its partial output instead
+	// of stalling silently until the job-level 60-minute timeout: CombinedOutput
+	// buffers all output, so nothing is visible in CI until the script exits.
+	ctx, cancel := context.WithTimeout(context.Background(), setupTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "bash", "resources/database_insights_setup.sh")
+	// Ensure Wait returns shortly after the kill even if orphaned sudo children
+	// keep the output pipe open.
+	cmd.WaitDelay = 10 * time.Second
+	out, err := cmd.CombinedOutput()
 	log.Printf("setup.sh output:\n%s", string(out))
+	if ctx.Err() == context.DeadlineExceeded {
+		return fmt.Errorf("setup.sh timed out after %v; output above shows the last step reached", setupTimeout)
+	}
 	if err != nil {
 		return fmt.Errorf("setup.sh failed: %w", err)
 	}

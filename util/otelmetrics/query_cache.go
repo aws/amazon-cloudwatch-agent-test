@@ -90,8 +90,12 @@ func (qc *QueryCache) Get(ctx context.Context, metricName string) ([]MetricResul
 		qc.mu.RUnlock()
 		<-ch // wait for the fetch to complete
 		qc.mu.RLock()
-		entry := qc.filtered[metricName]
+		entry, ok := qc.filtered[metricName]
 		qc.mu.RUnlock()
+		if !ok {
+			// Empty result was not cached; caller should retry.
+			return nil, nil
+		}
 		return entry.results, entry.err
 	}
 	qc.mu.RUnlock()
@@ -107,8 +111,12 @@ func (qc *QueryCache) Get(ctx context.Context, metricName string) ([]MetricResul
 		qc.mu.Unlock()
 		<-ch
 		qc.mu.RLock()
-		entry := qc.filtered[metricName]
+		entry, ok := qc.filtered[metricName]
 		qc.mu.RUnlock()
+		if !ok {
+			// Empty result was not cached; caller should retry.
+			return nil, nil
+		}
 		return entry.results, entry.err
 	}
 	ch := make(chan struct{})
@@ -118,9 +126,13 @@ func (qc *QueryCache) Get(ctx context.Context, metricName string) ([]MetricResul
 	// Fetch without holding any lock
 	entry := qc.fetchFiltered(ctx, metricName)
 
-	// Store and signal waiters
+	// Store and signal waiters.
+	// Do not cache empty successful results; a transient miss would poison
+	// all later lookups for this metric within the same test binary run.
 	qc.mu.Lock()
-	qc.filtered[metricName] = entry
+	if len(entry.results) > 0 || entry.err != nil {
+		qc.filtered[metricName] = entry
+	}
 	delete(qc.inflight, metricName)
 	qc.mu.Unlock()
 	close(ch)
@@ -249,8 +261,12 @@ func (qc *QueryCache) GetUnfiltered(ctx context.Context, metricName string) ([]M
 	results, queryErr := qc.client.Query(ctx, metricName)
 	entry := cacheEntry{results: results, err: queryErr}
 
+	// Do not cache empty successful results; a transient miss would poison
+	// all later lookups for this metric within the same test binary run.
 	qc.mu.Lock()
-	qc.unfiltered[metricName] = entry
+	if len(entry.results) > 0 || entry.err != nil {
+		qc.unfiltered[metricName] = entry
+	}
 	qc.mu.Unlock()
 
 	return entry.results, entry.err
