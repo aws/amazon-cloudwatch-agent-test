@@ -75,8 +75,11 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 	if err := os.WriteFile("/tmp/metrics", []byte(prometheusMetrics), os.ModePerm); err != nil {
 		return fmt.Errorf("unable to write /tmp/metrics: %w", err)
 	}
+	// cd in an inner shell: --directory needs Python 3.7+, some AMIs ship 3.6.
+	// Keep the backgrounded command simple: an and-list forks a subshell that
+	// holds the stdout pipe open and blocks RunCommand until the server exits.
 	commands = []string{
-		"sudo python3 -m http.server 9100 --directory /tmp &> /dev/null &",
+		"sudo bash -c 'cd /tmp && exec python3 -m http.server 9100' &> /dev/null &",
 	}
 	if err := common.RunCommands(commands); err != nil {
 		return err
@@ -84,7 +87,14 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 	t.RegisterCleanup(func() error {
 		return common.RunCommands([]string{"sudo pkill -f 'python3 -m http.server 9100' || true"})
 	})
-	time.Sleep(2 * time.Second)
+	// Fail setup fast if the exporter is not serving, instead of letting the
+	// agent scrape a dead port for the whole run.
+	healthCheck := []string{
+		"for i in $(seq 1 15); do curl -sf http://localhost:9100/metrics > /dev/null && exit 0; sleep 1; done; echo 'fake node exporter is not serving /metrics on :9100'; exit 1",
+	}
+	if err := common.RunCommands(healthCheck); err != nil {
+		return fmt.Errorf("fake node exporter failed to start: %w", err)
+	}
 	return nil
 }
 
