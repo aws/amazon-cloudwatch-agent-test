@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	expectedNeuronResolution      = 30 * time.Second
-	neuronResolutionInstanceType  = "inf2.xlarge"
+	expectedNeuronResolution     = 30 * time.Second
+	neuronResolutionInstanceType = "inf2.xlarge"
 )
 
 // TestNeuronResolution validates neuroncore_utilization_ratio is scraped at

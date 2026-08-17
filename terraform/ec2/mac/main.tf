@@ -108,7 +108,7 @@ resource "null_resource" "integration_test" {
       "eval \"$(/opt/homebrew/bin/brew shellenv)\"",
 
       #Download test repo
-      "NONINTERACTIVE=1 brew install git",
+      "brew install --no-ask git",
       "echo clone test repo",
       "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
 
@@ -133,12 +133,12 @@ resource "null_resource" "integration_test" {
       "echo Execute integration tests",
       "export AWS_REGION=${var.region}",
       "sudo chmod +x ./validator",
-      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true",
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config}",
-      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false",
-      "cd ~/amazon-cloudwatch-agent-test",
-      "echo run sanity test && sudo /usr/local/go/bin/go test ./test/sanity -p 1 -v",
-      "sudo /usr/local/go/bin/go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v",
+      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=true || exit 1",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${module.validator.instance_agent_config} || exit 1",
+      "./validator --validator-config=${module.validator.instance_validator_config} --preparation-mode=false || exit 1",
+      "cd ~/amazon-cloudwatch-agent-test || exit 1",
+      "echo run sanity test && sudo /usr/local/go/bin/go test ./test/sanity -p 1 -v || exit 1",
+      "sudo /usr/local/go/bin/go test ./test/run_as_user -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${aws_instance.cwagent.id} -v || exit 1",
     ]
   }
 

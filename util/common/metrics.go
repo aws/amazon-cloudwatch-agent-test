@@ -84,7 +84,7 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 }
 
 func SendAppSignalsTraceMetrics(duration time.Duration) error {
-	baseDir := getBaseDir()
+	baseDir := getAppSignalsResourceDir("traces")
 
 	for i := 0; i < int(duration/(5*time.Second)); i++ {
 		startTime := time.Now().UnixNano()
@@ -182,11 +182,11 @@ func SendPrometheusMetrics(config PrometheusConfig, agentCollectionDuration time
 	return nil
 }
 
-func getBaseDir() string {
+func getAppSignalsResourceDir(subdir string) string {
 	if runtime.GOOS == "windows" {
-		return "C:\\Users\\Administrator\\amazon-cloudwatch-agent-test\\test\\app_signals\\resources\\traces"
+		return filepath.Join("C:\\", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", subdir)
 	}
-	return "/Users/ec2-user/amazon-cloudwatch-agent-test/test/app_signals/resources/traces"
+	return filepath.Join("/", "Users", "ec2-user", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", subdir)
 }
 
 func generateTraceID() [16]byte {
@@ -344,13 +344,7 @@ func SendAppSignalMetrics(duration time.Duration) error {
 	}
 	fmt.Println("Current Directory:", dir)
 
-	// Determine the base directory for the files based on the OS
-	var baseDir string
-	if runtime.GOOS == "windows" {
-		baseDir = filepath.Join("C:", "Users", "Administrator", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
-	} else { // assuming macOS or Unix-like system
-		baseDir = filepath.Join("/", "Users", "ec2-user", "amazon-cloudwatch-agent-test", "test", "app_signals", "resources", "metrics")
-	}
+	baseDir := getAppSignalsResourceDir("metrics")
 
 	fmt.Println("Base directory:", baseDir)
 

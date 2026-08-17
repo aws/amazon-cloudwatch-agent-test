@@ -2,19 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 //go:build windows
-// +build windows
 
 package ssm_document
 
 import (
 	_ "embed"
-	"log"
-
-	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
-	"github.com/google/uuid"
-
-	"github.com/aws/amazon-cloudwatch-agent-test/environment"
-	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
 var (
@@ -26,118 +18,8 @@ var (
 	agentConfig2 string
 )
 
-func Validate() error {
-	log.Println("Starting SSM Document validation tests")
+// envConfigPath is the on-disk path to the agent's env-config.json on Windows.
+const envConfigPath = `C:\ProgramData\Amazon\AmazonCloudWatchAgent\env-config.json`
 
-	// Generate unique ID to guarantee uniqueness
-	uniqueID := uuid.New().String()[:8]
-	documentName := testManageAgentDocument + uniqueID
-	metadata := environment.GetEnvironmentMetaData()
-	instanceIds := []string{metadata.InstanceId}
-
-	log.Printf("Creating SSM document: %s", documentName)
-	err := awsservice.CreateSSMDocument(documentName, manageAgentDoc, types.DocumentTypeCommand)
-	if err != nil {
-		return err
-	}
-
-	// Ensure SSM document is cleaned up regardless of test outcome
-	defer func() {
-		log.Printf("Cleaning up SSM document: %s", documentName)
-		if deleteErr := awsservice.DeleteSSMDocument(documentName); deleteErr != nil {
-			log.Printf("Warning: Failed to delete SSM document %s: %v", documentName, deleteErr)
-		} else {
-			log.Printf("Successfully deleted SSM document: %s", documentName)
-		}
-	}()
-
-	// Test start action
-	startTest := testCase{
-		parameters:           map[string][]string{paramAction: {actionStart}},
-		actionName:           actionStart,
-		expectedAgentStatus:  agentStatusRunning,
-		expectedConfigStatus: configStatusConfigured,
-	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, startTest); err != nil {
-		return err
-	}
-
-	// Test stop action
-	stopTest := testCase{
-		parameters:           map[string][]string{paramAction: {actionStop}},
-		actionName:           actionStop,
-		expectedAgentStatus:  agentStatusStopped,
-		expectedConfigStatus: configStatusConfigured,
-	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, stopTest); err != nil {
-		return err
-	}
-
-	// Test configure (remove) action
-	removeTest := testCase{
-		parameters: map[string][]string{
-			paramAction:                      {actionConfigureRemove},
-			paramOptionalConfigurationSource: {configSourceAll},
-			paramOptionalRestart:             {restartNo},
-		},
-		actionName:           actionConfigureRemove,
-		expectedAgentStatus:  agentStatusStopped,
-		expectedConfigStatus: configStatusNotConfigured,
-	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, removeTest); err != nil {
-		return err
-	}
-
-	// Test configure action
-	log.Printf("Putting SSM parameter: %s", agentConfigFile1)
-	if err := awsservice.PutStringParameter(agentConfigFile1, agentConfig1); err != nil {
-		return err
-	}
-
-	configureTest := testCase{
-		parameters: map[string][]string{
-			paramAction:                        {actionConfigure},
-			paramOptionalConfigurationSource:   {configSourceSSM},
-			paramOptionalConfigurationLocation: {agentConfigFile1},
-		},
-		actionName:           actionConfigure,
-		expectedAgentStatus:  agentStatusRunning,
-		expectedConfigStatus: configStatusConfigured,
-	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, configureTest); err != nil {
-		return err
-	}
-
-	// Test configure (append) action
-	log.Printf("Putting SSM parameter: %s", agentConfigFile2)
-	if err := awsservice.PutStringParameter(agentConfigFile2, agentConfig2); err != nil {
-		return err
-	}
-
-	// Ensure SSM parameters are cleaned up
-	defer func() {
-		for _, paramName := range []string{agentConfigFile1, agentConfigFile2} {
-			log.Printf("Cleaning up SSM parameter: %s", paramName)
-			if deleteErr := awsservice.DeleteParameter(paramName); deleteErr != nil {
-				log.Printf("Warning: Failed to delete SSM parameter %s: %v", paramName, deleteErr)
-			}
-		}
-	}()
-
-	appendTest := testCase{
-		parameters: map[string][]string{
-			paramAction:                        {actionConfigureAppend},
-			paramOptionalConfigurationSource:   {configSourceSSM},
-			paramOptionalConfigurationLocation: {agentConfigFile2},
-		},
-		actionName:           actionConfigureAppend,
-		expectedAgentStatus:  agentStatusRunning,
-		expectedConfigStatus: configStatusConfigured,
-	}
-	if err := RunAndVerifySSMAction(documentName, instanceIds, appendTest); err != nil {
-		return err
-	}
-
-	log.Println("All SSM Document validation tests completed successfully")
-	return nil
-}
+// platformSetup performs platform-specific initialization (no-op on Windows).
+func platformSetup() {}

@@ -73,7 +73,6 @@ func buildGroundTruth() (*k8sGroundTruth, error) {
 	return gt, nil
 }
 
-
 // imageTagFromPod returns the image tag of the first container of the first
 // pod matching the given label selector in the given namespace.
 // Returns empty string (and logs via t.Logf) if no matching pod is found.

@@ -24,10 +24,6 @@ const (
 	NoLogTypeFound = "NoLogTypeFound"
 )
 
-// catch ResourceNotFoundException when deleting the log group and log stream, as these
-// are not useful exceptions to log errors on during cleanup
-var rnf *types.ResourceNotFoundException
-
 // DeleteLogGroupAndStream cleans up a log group and stream by name. This gracefully handles
 // ResourceNotFoundException errors from calling the APIs
 func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
@@ -41,7 +37,7 @@ func DeleteLogStream(logGroupName, logStreamName string) {
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
 	})
-	if err != nil && !errors.As(err, &rnf) {
+	if err != nil && !IsResourceNotFoundException(err) {
 		log.Printf("Error occurred while deleting log stream %s: %v", logStreamName, err)
 	}
 }
@@ -51,7 +47,7 @@ func DeleteLogGroup(logGroupName string) {
 	_, err := CwlClient.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
-	if err != nil && !errors.As(err, &rnf) {
+	if err != nil && !IsResourceNotFoundException(err) {
 		log.Printf("Error occurred while deleting log group %s: %v", logGroupName, err)
 	}
 }
@@ -108,7 +104,7 @@ func GetLogsSince(logGroup, logStream string, since, until *time.Time) ([]types.
 		attempts += 1
 
 		if err != nil {
-			if errors.As(err, &rnf) && attempts <= StandardRetries {
+			if IsResourceNotFoundException(err) && attempts <= StandardRetries {
 				// The log group/stream hasn't been created yet, so wait and retry
 				time.Sleep(30 * time.Second)
 				continue
@@ -325,10 +321,22 @@ func AssertPerLog(validators ...LogEventValidator) LogEventsValidator {
 	}
 }
 
+// ErrNoLogEvents is returned by AssertLogsNotEmpty when no log events are found in the
+// queried time window. Callers may use errors.Is to retry on propagation delays, but should
+// treat it as a hard failure where events are expected unconditionally.
+var ErrNoLogEvents = errors.New("no log events")
+
+// IsResourceNotFoundException reports whether err is a CloudWatch Logs
+// ResourceNotFoundException -- e.g. the log group or stream does not exist yet.
+func IsResourceNotFoundException(err error) bool {
+	var rnfErr *types.ResourceNotFoundException
+	return errors.As(err, &rnfErr)
+}
+
 func AssertLogsNotEmpty() LogEventsValidator {
 	return func(events []types.OutputLogEvent) error {
 		if len(events) == 0 {
-			return errors.New("no log events")
+			return ErrNoLogEvents
 		}
 		return nil
 	}
