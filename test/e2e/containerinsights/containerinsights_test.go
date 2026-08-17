@@ -1,6 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build !windows
+
 package main
 
 import (
@@ -52,6 +54,7 @@ const (
 	agentNamespace        = "amazon-cloudwatch"
 	clusterScraperCRName  = "cloudwatch-agent-cluster-scraper"
 	clusterConfigFileName = "ci_cluster.json"
+	kedaKarpenterManifest = "resources/keda_karpenter.yaml"
 	testRunIDAttribute    = "test.run.id"
 )
 
@@ -120,6 +123,9 @@ func TestMain(m *testing.M) {
 
 	// terraform destroy path: tear resources down and exit.
 	if env.Destroy {
+		if err := deleteKedaKarpenterStubs(env); err != nil {
+			fmt.Printf("Failed to delete keda/karpenter stubs: %v\n", err)
+		}
 		if err := e2e.DestroyResources(env); err != nil {
 			fmt.Printf("Failed to delete kubernetes resources: %v\n", err)
 		}
@@ -148,6 +154,13 @@ func TestMain(m *testing.M) {
 	// Apply the cluster config (role=cluster) to the cluster-scraper CR.
 	if err := applyClusterConfig(env); err != nil {
 		fmt.Printf("Failed to apply cluster-scraper config: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Deploy the KEDA/Karpenter stub emitters so the solutions pipelines have
+	// pods to scrape.
+	if err := applyKedaKarpenterStubs(env); err != nil {
+		fmt.Printf("Failed to apply keda/karpenter stubs: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -219,6 +232,33 @@ func applyClusterConfig(env *environment.MetaData) error {
 		utils.PatchTypeMerge,
 		string(patchJSON),
 	)
+}
+
+// applyKedaKarpenterStubs deploys the KEDA/Karpenter stub emitters
+// so the cluster-scraper's solutions pipelines have pods to discover and scrape.
+func applyKedaKarpenterStubs(env *environment.MetaData) error {
+	name := env.EKSClusterName
+	if name == "" {
+		name = os.Getenv("CLUSTER_NAME")
+	}
+	k8ctl := utils.NewK8CtlManager(env)
+	if err := k8ctl.UpdateKubeConfig(name); err != nil {
+		return err
+	}
+	return k8ctl.ApplyResource(kedaKarpenterManifest)
+}
+
+// deleteKedaKarpenterStubs removes the stub emitters.
+func deleteKedaKarpenterStubs(env *environment.MetaData) error {
+	name := env.EKSClusterName
+	if name == "" {
+		name = os.Getenv("CLUSTER_NAME")
+	}
+	k8ctl := utils.NewK8CtlManager(env)
+	if err := k8ctl.UpdateKubeConfig(name); err != nil {
+		return err
+	}
+	return k8ctl.DeleteResource(kedaKarpenterManifest)
 }
 
 // injectTestID adds opentelemetry.resource_attributes[test.run.id]=runID to the
