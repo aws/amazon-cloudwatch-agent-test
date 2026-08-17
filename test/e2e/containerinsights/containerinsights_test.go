@@ -1,0 +1,345 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e/utils"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
+)
+
+//------------------------------------------------------------------------------
+// Overview
+//------------------------------------------------------------------------------
+//
+// End-to-end test for the OpenTelemetry Container Insights pipeline driven
+// directly by the CloudWatch Agent JSON config (opentelemetry.collect.
+// container_insights). Two agent configs run concurrently in the cluster,
+// each on its own workload / AmazonCloudWatchAgent CR:
+//
+//   role=node    -> DaemonSet  "cloudwatch-agent"                 (per-node
+//                   metrics from cadvisor/kubeletstats/node_exporter + node
+//                   and application logs)
+//   role=cluster -> Deployment "cloudwatch-agent-cluster-scraper" (cluster-wide
+//                   metrics from the apiserver and kube-state-metrics)
+//
+// The agent translator builds the OTEL pipelines from the JSON config. Metrics
+// are exported to the CloudWatch OTLP metrics endpoint
+// (monitoring.<region>.amazonaws.com/v1/metrics) and validated via the PromQL
+// query client. Node/application logs are exported to CloudWatch Logs and
+// validated via the CloudWatch Logs API.
+
+const (
+	agentNamespace        = "amazon-cloudwatch"
+	clusterScraperCRName  = "cloudwatch-agent-cluster-scraper"
+	clusterConfigFileName = "ci_cluster.json"
+	testRunIDAttribute    = "test.run.id"
+)
+
+var (
+	env         *environment.MetaData
+	clusterName string
+	// testRunID is a per-invocation identifier stamped onto every metric/log via
+	// opentelemetry.resource_attributes.
+	testRunID string
+)
+
+var nodeMetrics = []string{
+	// cadvisor
+	"container_cpu_usage_seconds_total",
+	"container_memory_working_set_bytes",
+	// kubeletstats
+	"k8s.node.cpu.usage",
+	"k8s.node.memory.working_set",
+	"k8s.pod.cpu.usage",
+	// node_exporter
+	"node_cpu_seconds_total",
+	"node_memory_MemAvailable_bytes",
+}
+
+var clusterMetrics = []string{
+	// apiserver / control plane
+	"apiserver_request_total",
+	// kube-state-metrics
+	"kube_node_info",
+	"kube_pod_info",
+}
+
+// kedaMetrics are emitted by the role=cluster KEDA solution pipeline
+// (solutions.keda.enabled), scraped from the keda-operator in the keda namespace.
+var kedaMetrics = []string{
+	"keda_scaler_active",
+	"keda_scaledobject_paused",
+}
+
+// karpenterMetrics are emitted by the role=cluster Karpenter solution pipeline
+// (solutions.karpenter.enabled), scraped from karpenter in the karpenter namespace.
+var karpenterMetrics = []string{
+	"karpenter_nodes_total",
+	"karpenter_pods_state",
+}
+
+// ciLogGroups are the CloudWatch Logs groups produced by the role=node logs
+// pipelines when logs.enabled.
+var ciLogGroups = []string{
+	"/aws/otel/containerinsights/%s/application",
+}
+
+func init() {
+	environment.RegisterEnvironmentMetaDataFlags()
+}
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+
+	// Skip when invoked with the sentinel run filter.
+	if flag.Lookup("test.run") != nil && flag.Lookup("test.run").Value.String() == "NO_MATCH" {
+		os.Exit(0)
+	}
+
+	env = environment.GetEnvironmentMetaData()
+
+	// terraform destroy path: tear resources down and exit.
+	if env.Destroy {
+		if err := e2e.DestroyResources(env); err != nil {
+			fmt.Printf("Failed to delete kubernetes resources: %v\n", err)
+		}
+		os.Exit(0)
+	}
+
+	// Per-run identifier stamped onto every metric/log via opentelemetry.resource_attributes
+	testRunID = "test-run-" + uuid.NewString()[:8]
+	if env.AgentConfig != "" {
+		injected, err := injectTestID(env.AgentConfig, testRunID)
+		if err != nil {
+			fmt.Printf("Failed to inject test.run.id into node config: %v\n", err)
+			os.Exit(1)
+		}
+		env.AgentConfig = injected
+	}
+	fmt.Printf("test.run.id=%s\n", testRunID)
+
+	// Applies the node config (env.AgentConfig, role=node) to the primary
+	// cloudwatch-agent CR via helm/addon and waits for the operator.
+	if err := e2e.InitializeEnvironment(env); err != nil {
+		fmt.Printf("Failed to initialize environment: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Apply the cluster config (role=cluster) to the cluster-scraper CR.
+	if err := applyClusterConfig(env); err != nil {
+		fmt.Printf("Failed to apply cluster-scraper config: %v\n", err)
+		os.Exit(1)
+	}
+
+	region := env.Region
+	if region == "" {
+		region = os.Getenv("AWS_REGION")
+	}
+	clusterName = env.EKSClusterName
+	if clusterName == "" {
+		clusterName = os.Getenv("CLUSTER_NAME")
+	}
+	if region == "" || clusterName == "" {
+		fmt.Fprintf(os.Stderr, "region and cluster name must be set\n")
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
+}
+
+// applyClusterConfig patches the cluster-scraper AmazonCloudWatchAgent CR with a
+// role=cluster container_insights config. This is the second agent config: the
+// node config is applied by InitializeEnvironment, the cluster config here.
+func applyClusterConfig(env *environment.MetaData) error {
+	name := env.EKSClusterName
+	if name == "" {
+		name = os.Getenv("CLUSTER_NAME")
+	}
+
+	agentConfig := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"cluster_name":        name,
+			"resource_attributes": map[string]interface{}{testRunIDAttribute: testRunID},
+			"collect": map[string]interface{}{
+				"container_insights": map[string]interface{}{
+					"collection_interval": 30,
+					"role":                "cluster",
+					"solutions": map[string]interface{}{
+						"keda":      map[string]interface{}{"enabled": true, "namespace": "keda"},
+						"karpenter": map[string]interface{}{"enabled": true, "namespace": "karpenter"},
+					},
+				},
+			},
+		},
+	}
+	agentConfigJSON, err := json.Marshal(agentConfig)
+	if err != nil {
+		return fmt.Errorf("marshaling cluster agent config: %w", err)
+	}
+
+	// spec.config on the CR is a JSON string containing the agent config.
+	patch := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"config": string(agentConfigJSON),
+		},
+	}
+	patchJSON, err := json.Marshal(patch)
+	if err != nil {
+		return fmt.Errorf("marshaling CR patch: %w", err)
+	}
+
+	k8ctl := utils.NewK8CtlManager(env)
+	if err := k8ctl.UpdateKubeConfig(name); err != nil {
+		return err
+	}
+	return k8ctl.PatchResource(
+		"amazoncloudwatchagent",
+		clusterScraperCRName,
+		agentNamespace,
+		utils.PatchTypeMerge,
+		string(patchJSON),
+	)
+}
+
+// injectTestID adds opentelemetry.resource_attributes[test.run.id]=runID to the
+// agent config file (preserving existing attributes) and writes it to a temp file,
+// returning that path. The agent's resource processor stamps it onto every export
+// pipeline, giving a per-run identifier independent of cluster_name.
+func injectTestID(configPath, runID string) (string, error) {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return "", err
+	}
+	var cfg map[string]interface{}
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return "", err
+	}
+
+	// Locate the opentelemetry object (top-level, or nested under agent.config).
+	otel, _ := cfg["opentelemetry"].(map[string]interface{})
+	if otel == nil {
+		if agent, ok := cfg["agent"].(map[string]interface{}); ok {
+			if inner, ok := agent["config"].(map[string]interface{}); ok {
+				otel, _ = inner["opentelemetry"].(map[string]interface{})
+			}
+		}
+	}
+	if otel == nil {
+		return "", fmt.Errorf("opentelemetry block not found in %s", configPath)
+	}
+
+	attrs, _ := otel["resource_attributes"].(map[string]interface{})
+	if attrs == nil {
+		attrs = map[string]interface{}{}
+	}
+	attrs[testRunIDAttribute] = runID
+	otel["resource_attributes"] = attrs
+
+	out, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	tmp := filepath.Join(os.TempDir(), "ci_node_"+runID+".json")
+	if err := os.WriteFile(tmp, out, 0o600); err != nil {
+		return "", err
+	}
+	return tmp, nil
+}
+
+func TestContainerInsights(t *testing.T) {
+	t.Run("Resources", testResources)
+
+	if t.Failed() {
+		return
+	}
+
+	fmt.Println("waiting for telemetry to propagate...")
+	time.Sleep(e2e.Wait)
+
+	t.Run("NodeMetrics", func(t *testing.T) {
+		validateMetrics(t, nodeMetrics)
+	})
+	t.Run("ClusterMetrics", func(t *testing.T) {
+		validateMetrics(t, clusterMetrics)
+	})
+	t.Run("KedaMetrics", func(t *testing.T) {
+		validateMetrics(t, kedaMetrics)
+	})
+	t.Run("KarpenterMetrics", func(t *testing.T) {
+		validateMetrics(t, karpenterMetrics)
+	})
+	t.Run("NodeLogs", testNodeLogs)
+}
+
+// testResources verifies that both the node DaemonSet and the cluster-scraper
+// Deployment were created by the operator from the applied configs.
+func testResources(t *testing.T) {
+	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
+	require.NoError(t, err, "building kubeconfig")
+	clientset, err := kubernetes.NewForConfig(config)
+	require.NoError(t, err, "creating clientset")
+
+	time.Sleep(e2e.WaitForResourceCreation)
+
+	t.Run("node_daemonset", func(t *testing.T) {
+		e2e.VerifyAgentResources(t, clientset, "container_insights")
+	})
+
+	t.Run("cluster_scraper_deployment", func(t *testing.T) {
+		ctx := context.Background()
+		dep, err := clientset.AppsV1().Deployments(agentNamespace).Get(ctx, clusterScraperCRName, metav1.GetOptions{})
+		require.NoError(t, err, "getting cluster-scraper Deployment")
+		require.NotNil(t, dep, "cluster-scraper Deployment not found")
+	})
+}
+
+// validateMetrics asserts every metric name is present in CloudWatch for THIS run,
+// isolated by the test.run.id resource attribute, using the shared otlp validator.
+func validateMetrics(t *testing.T, metrics []string) {
+	labels := map[string]string{"@resource." + testRunIDAttribute: testRunID}
+	res := otlpvalidation.ValidateOtlpMetricsWithLabels(t.Name(), env.Region, metrics, labels)
+	for _, r := range res.TestResults {
+		r := r
+		t.Run(r.Name, func(t *testing.T) {
+			require.Equal(t, status.SUCCESSFUL, r.Status, "metric validation %s failed (test.run.id=%s): %v", r.Name, testRunID, r.Reason)
+		})
+	}
+}
+
+// testNodeLogs asserts the node and application log groups exist, have streams,
+// and contain events.
+func testNodeLogs(t *testing.T) {
+	since := time.Now().Add(-e2e.Wait)
+	until := time.Now()
+
+	for _, groupTmpl := range ciLogGroups {
+		logGroup := fmt.Sprintf(groupTmpl, clusterName)
+		t.Run(logGroup, func(t *testing.T) {
+			streams := awsservice.GetLogStreamNames(logGroup)
+			require.NotEmpty(t, streams, "no log streams in %s", logGroup)
+
+			err := awsservice.ValidateLogs(logGroup, streams[0], &since, &until, awsservice.AssertLogsNotEmpty())
+			require.NoError(t, err, "validating logs in %s/%s", logGroup, streams[0])
+		})
+	}
+}
