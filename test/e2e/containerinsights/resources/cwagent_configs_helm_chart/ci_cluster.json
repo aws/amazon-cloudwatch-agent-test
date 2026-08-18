@@ -4,7 +4,17 @@
     "collect": {
       "container_insights": {
         "collection_interval": 30,
-        "role": "cluster"
+        "role": "cluster",
+        "solutions": {
+          "keda": {
+            "enabled": true,
+            "namespace": "keda"
+          },
+          "karpenter": {
+            "enabled": true,
+            "namespace": "karpenter"
+          }
+        }
       }
     }
   }

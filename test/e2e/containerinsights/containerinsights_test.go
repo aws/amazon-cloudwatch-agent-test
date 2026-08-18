@@ -53,7 +53,7 @@ import (
 const (
 	agentNamespace        = "amazon-cloudwatch"
 	clusterScraperCRName  = "cloudwatch-agent-cluster-scraper"
-	clusterConfigFileName = "ci_cluster.json"
+	clusterConfigPath     = "resources/cwagent_configs_helm_chart/ci_cluster.json"
 	kedaKarpenterManifest = "resources/keda_karpenter.yaml"
 	testRunIDAttribute    = "test.run.id"
 )
@@ -189,22 +189,22 @@ func applyClusterConfig(env *environment.MetaData) error {
 		name = os.Getenv("CLUSTER_NAME")
 	}
 
-	agentConfig := map[string]interface{}{
-		"opentelemetry": map[string]interface{}{
-			"cluster_name":        name,
-			"resource_attributes": map[string]interface{}{testRunIDAttribute: testRunID},
-			"collect": map[string]interface{}{
-				"container_insights": map[string]interface{}{
-					"collection_interval": 30,
-					"role":                "cluster",
-					"solutions": map[string]interface{}{
-						"keda":      map[string]interface{}{"enabled": true, "namespace": "keda"},
-						"karpenter": map[string]interface{}{"enabled": true, "namespace": "karpenter"},
-					},
-				},
-			},
-		},
+	// Read the cluster config from file then set the runtime cluster name and stamp the per-run test.run.id.
+	data, err := os.ReadFile(clusterConfigPath)
+	if err != nil {
+		return fmt.Errorf("reading cluster config %s: %w", clusterConfigPath, err)
 	}
+	var agentConfig map[string]interface{}
+	if err := json.Unmarshal(data, &agentConfig); err != nil {
+		return fmt.Errorf("parsing cluster config: %w", err)
+	}
+	otel, ok := agentConfig["opentelemetry"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("cluster config %s missing opentelemetry block", clusterConfigPath)
+	}
+	otel["cluster_name"] = name
+	otel["resource_attributes"] = map[string]interface{}{testRunIDAttribute: testRunID}
+
 	agentConfigJSON, err := json.Marshal(agentConfig)
 	if err != nil {
 		return fmt.Errorf("marshaling cluster agent config: %w", err)

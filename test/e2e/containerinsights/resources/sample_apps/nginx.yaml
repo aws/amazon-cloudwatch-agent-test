@@ -1,0 +1,31 @@
+# Minimal placeholder workload for the e2e framework's mandatory sample-app step.
+# InitializeEnvironment applies this and waits for deployment/<filename> in the
+# "test" namespace. Container Insights validates node/cluster metrics + logs and
+# doesn't need a workload, so this is just a tiny nginx to satisfy the framework.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: test
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
