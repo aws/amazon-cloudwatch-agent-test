@@ -75,13 +75,17 @@ func applyHelmResources(k8ctl *utils.K8CtlManager, helmManager *utils.HelmManage
 	}
 
 	if env.AgentConfig != "" {
-		if agentConfigContent, err := os.ReadFile(env.AgentConfig); err == nil {
-			values["agent.config"] = utils.HelmValue{
-				Value: string(agentConfigContent),
-				Type:  utils.HelmValueJSON,
-			}
-		} else {
+		agentConfigContent, err := os.ReadFile(env.AgentConfig)
+		if err != nil {
 			return fmt.Errorf("failed to read agent config file: %w", err)
+		}
+		values["agent.config"] = utils.HelmValue{
+			Value: string(agentConfigContent),
+			Type:  utils.HelmValueJSON,
+		}
+		// Container Insights needs the cluster-scraper CR
+		if strings.Contains(string(agentConfigContent), "container_insights") {
+			values["otelContainerInsights.enabled"] = utils.NewHelmValue("true")
 		}
 	}
 
