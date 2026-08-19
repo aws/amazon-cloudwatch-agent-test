@@ -161,6 +161,8 @@ func counterMetrics() []string {
 		"mysql.max_used_connections",
 		"mysql.commands",
 		"mysql.query.count",
+		"mysql.query.client.count",
+		"mysql.query.slow.count",
 		"mysql.table.size",
 		// InnoDB metrics added to the receiver for DBI.
 		"mysql.deadlocks",
