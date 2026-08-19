@@ -1,0 +1,14 @@
+# FILE ONLY EXISTS SO VALIDATOR WILL RUN THE GO TEST
+# SEE validator/main.go
+
+receivers: []
+test_case: "win_otel_prometheus"
+validate_type: "feature"
+data_type: "metrics"
+number_monitored_logs: 1
+values_per_minute: "2"
+agent_collection_period: 60
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+metric_namespace: "CloudWatchAgentWinOtel"
+metric_validation:
+log_validation:

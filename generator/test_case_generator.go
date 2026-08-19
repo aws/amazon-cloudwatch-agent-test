@@ -326,6 +326,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"os": {"win-2019": {}}},
 		},
 		{testDir: "../../../test/ssm_document"},
+		{testDir: "../../../test/otel_collect/windows/otlp"},
+		{testDir: "../../../test/otel_collect/windows/host_metrics"},
+		{testDir: "../../../test/otel_collect/windows/prometheus"},
 		// assume role test doesn't add much value, and it already being tested with linux
 		//{testDir: "../../../test/assume_role"},
 	},
