@@ -33,7 +33,27 @@ type EKSDaemonTestRunner struct {
 func (e *EKSDaemonTestRunner) Validate() status.TestGroupResult {
 	var testResults []status.TestResult
 	if e.env.EksDeploymentStrategy != eksdeploymenttype.PODIDENTITY {
-		testResults = append(testResults, metric.ValidateMetrics(e.env, "", eks_resources.GetExpectedDimsToMetrics(e.env))...)
+		// Re-validate metric dimensions with bounded retries to accommodate
+		// CloudWatch per-dimension-set propagation lateness. Some (metric,
+		// dimension-set) pairs arrive after the initial query, causing
+		// all-or-nothing validation to fail despite the agent publishing
+		// correctly.
+		var metricsResults []status.TestResult
+		metric.RetryValidation(metric.RevalidateMaxAttempts, metric.RevalidateInterval, func() bool {
+			metricsResults = metric.ValidateMetrics(e.env, "", eks_resources.GetExpectedDimsToMetrics(e.env))
+			failCount := 0
+			for _, r := range metricsResults {
+				if r.Status == status.FAILED {
+					failCount++
+				}
+			}
+			if failCount > 0 {
+				log.Printf("Re-validation attempt: found %d failure(s)", failCount)
+				return false
+			}
+			return true
+		})
+		testResults = append(testResults, metricsResults...)
 	}
 	metrics := e.GetMeasuredMetrics()
 	for _, name := range metrics {
