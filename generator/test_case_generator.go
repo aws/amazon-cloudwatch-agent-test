@@ -137,6 +137,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:    "./test/otel_collect/database_insights",
 			excludedOs: map[string]struct{}{"ol8": {}, "ubuntu-25": {}},
 		},
+		{
+			testDir:    "./test/otel_collect/database_insights_mysql",
+			excludedOs: map[string]struct{}{"ol8": {}, "ubuntu-25": {}},
+		},
 		{testDir: "./test/otel_collect/host_metrics"},
 		{testDir: "./test/otel_collect/otlp"},
 		{
@@ -554,10 +558,11 @@ var partitionTests = map[string]partition{
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		excludedTestDirs: map[string]struct{}{
-			"./test/otel_collect/database_insights": {},
-			"./test/otel_collect/host_metrics":      {},
-			"./test/otel_collect/otlp":              {},
-			"./test/otel_collect/prometheus":        {},
+			"./test/otel_collect/database_insights":       {},
+			"./test/otel_collect/database_insights_mysql": {},
+			"./test/otel_collect/host_metrics":            {},
+			"./test/otel_collect/otlp":                    {},
+			"./test/otel_collect/prometheus":              {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
@@ -575,10 +580,11 @@ var partitionTests = map[string]partition{
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		excludedTestDirs: map[string]struct{}{
-			"./test/otel_collect/database_insights": {},
-			"./test/otel_collect/host_metrics":      {},
-			"./test/otel_collect/otlp":              {},
-			"./test/otel_collect/prometheus":        {},
+			"./test/otel_collect/database_insights":       {},
+			"./test/otel_collect/database_insights_mysql": {},
+			"./test/otel_collect/host_metrics":            {},
+			"./test/otel_collect/otlp":                    {},
+			"./test/otel_collect/prometheus":              {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
