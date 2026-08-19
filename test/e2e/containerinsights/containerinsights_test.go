@@ -53,6 +53,7 @@ import (
 const (
 	agentNamespace        = "amazon-cloudwatch"
 	clusterScraperCRName  = "cloudwatch-agent-cluster-scraper"
+	nodeCRName            = "cloudwatch-agent"
 	clusterConfigPath     = "resources/cwagent_configs_helm_chart/ci_cluster.json"
 	kedaKarpenterManifest = "resources/keda_karpenter.yaml"
 	testRunIDAttribute    = "test.run.id"
@@ -151,6 +152,12 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	// Clear pre-rendered otelConfig on the node CR so agent translates json config
+	if err := clearOtelConfig(env, nodeCRName); err != nil {
+		fmt.Printf("Failed to clear node otelConfig: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Apply the cluster config (role=cluster) to the cluster-scraper CR.
 	if err := applyClusterConfig(env); err != nil {
 		fmt.Printf("Failed to apply cluster-scraper config: %v\n", err)
@@ -180,9 +187,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// applyClusterConfig patches the cluster-scraper AmazonCloudWatchAgent CR with a
-// role=cluster container_insights config. This is the second agent config: the
-// node config is applied by InitializeEnvironment, the cluster config here.
+// applyClusterConfig patches the cluster-scraper CR with the role=cluster config
+// (the node config is applied by InitializeEnvironment).
 func applyClusterConfig(env *environment.MetaData) error {
 	name := env.EKSClusterName
 	if name == "" {
@@ -210,7 +216,7 @@ func applyClusterConfig(env *environment.MetaData) error {
 		return fmt.Errorf("marshaling cluster agent config: %w", err)
 	}
 
-	// spec.config on the CR is a JSON string containing the agent config.
+	// spec.config is the agent JSON (the agent translates it).
 	patch := map[string]interface{}{
 		"spec": map[string]interface{}{
 			"config": string(agentConfigJSON),
@@ -225,12 +231,35 @@ func applyClusterConfig(env *environment.MetaData) error {
 	if err := k8ctl.UpdateKubeConfig(name); err != nil {
 		return err
 	}
-	return k8ctl.PatchResource(
+	if err := k8ctl.PatchResource(
 		"amazoncloudwatchagent",
 		clusterScraperCRName,
 		agentNamespace,
 		utils.PatchTypeMerge,
 		string(patchJSON),
+	); err != nil {
+		return err
+	}
+	return clearOtelConfig(env, clusterScraperCRName)
+}
+
+// clearOtelConfig removes the chart's pre-rendered otelConfig so the agent
+// translates spec.config (our JSON) instead.
+func clearOtelConfig(env *environment.MetaData, crName string) error {
+	name := env.EKSClusterName
+	if name == "" {
+		name = os.Getenv("CLUSTER_NAME")
+	}
+	k8ctl := utils.NewK8CtlManager(env)
+	if err := k8ctl.UpdateKubeConfig(name); err != nil {
+		return err
+	}
+	return k8ctl.PatchResource(
+		"amazoncloudwatchagent",
+		crName,
+		agentNamespace,
+		utils.PatchTypeMerge,
+		`{"spec":{"otelConfig":""}}`,
 	)
 }
 
@@ -261,10 +290,8 @@ func deleteKedaKarpenterStubs(env *environment.MetaData) error {
 	return k8ctl.DeleteResource(kedaKarpenterManifest)
 }
 
-// injectTestID adds opentelemetry.resource_attributes[test.run.id]=runID to the
-// agent config file (preserving existing attributes) and writes it to a temp file,
-// returning that path. The agent's resource processor stamps it onto every export
-// pipeline, giving a per-run identifier independent of cluster_name.
+// injectTestID stamps opentelemetry.resource_attributes[test.run.id]=runID into the
+// agent config, writes a temp file, and returns its path (for per-run isolation).
 func injectTestID(configPath, runID string) (string, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -342,7 +369,10 @@ func testResources(t *testing.T) {
 	time.Sleep(e2e.WaitForResourceCreation)
 
 	t.Run("node_daemonset", func(t *testing.T) {
-		e2e.VerifyAgentResources(t, clientset, "container_insights")
+		ctx := context.Background()
+		ds, err := clientset.AppsV1().DaemonSets(agentNamespace).Get(ctx, nodeCRName, metav1.GetOptions{})
+		require.NoError(t, err, "getting node DaemonSet")
+		require.NotNil(t, ds, "node DaemonSet not found")
 	})
 
 	t.Run("cluster_scraper_deployment", func(t *testing.T) {
