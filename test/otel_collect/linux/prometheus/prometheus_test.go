@@ -8,13 +8,13 @@ package prometheus
 import (
 	_ "embed"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/linux/otelconfig"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/test_runner"
@@ -41,9 +41,8 @@ type PrometheusOtelTestRunner struct {
 var _ test_runner.ITestRunner = (*PrometheusOtelTestRunner)(nil)
 
 func (t *PrometheusOtelTestRunner) Validate() status.TestGroupResult {
-	return otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics(), map[string]string{
-		"@resource.host.id": t.env.InstanceId,
-	})
+	return otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName(), t.env.Region, t.GetMeasuredMetrics(),
+		otlpvalidation.ResourceHostIDLabels(t.env.InstanceId))
 }
 
 func (t *PrometheusOtelTestRunner) GetTestName() string                { return "OtelCollectPrometheus" }
@@ -59,11 +58,11 @@ func (t *PrometheusOtelTestRunner) GetMeasuredMetrics() []string {
 }
 
 func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
-	if err := t.BaseTestRunner.SetupBeforeAgentRun(); err != nil {
+	if err := otelconfig.Setup(t.GetAgentConfigFileName(), t.env.AgentStartCommand, t.env.InstanceId); err != nil {
 		return err
 	}
 
-	// Write prometheus scrape config
+	// Write the Prometheus scrape config where the agent config's config_path points.
 	commands := []string{
 		fmt.Sprintf("cat <<'EOF' | sudo tee /opt/aws/prometheus.yml\n%s\nEOF", prometheusScrapeConfig),
 	}
@@ -71,30 +70,13 @@ func (t *PrometheusOtelTestRunner) SetupBeforeAgentRun() error {
 		return err
 	}
 
-	// Serve fake metrics on port 9100 (same pattern as test/emf_prometheus)
-	if err := os.WriteFile("/tmp/metrics", []byte(prometheusMetrics), os.ModePerm); err != nil {
-		return fmt.Errorf("unable to write /tmp/metrics: %w", err)
+	// Start the cross-platform fake Prometheus exporter on port 9100.
+	stop, err := common.StartPrometheusFakeServer(9100, prometheusMetrics)
+	if err != nil {
+		return fmt.Errorf("failed to start fake prometheus exporter: %w", err)
 	}
-	// cd in an inner shell: --directory needs Python 3.7+, some AMIs ship 3.6.
-	// Keep the backgrounded command simple: an and-list forks a subshell that
-	// holds the stdout pipe open and blocks RunCommand until the server exits.
-	commands = []string{
-		"sudo bash -c 'cd /tmp && exec python3 -m http.server 9100' &> /dev/null &",
-	}
-	if err := common.RunCommands(commands); err != nil {
-		return err
-	}
-	t.RegisterCleanup(func() error {
-		return common.RunCommands([]string{"sudo pkill -f 'python3 -m http.server 9100' || true"})
-	})
-	// Fail setup fast if the exporter is not serving, instead of letting the
-	// agent scrape a dead port for the whole run.
-	healthCheck := []string{
-		"for i in $(seq 1 15); do curl -sf http://localhost:9100/metrics > /dev/null && exit 0; sleep 1; done; echo 'fake node exporter is not serving /metrics on :9100'; exit 1",
-	}
-	if err := common.RunCommands(healthCheck); err != nil {
-		return fmt.Errorf("fake node exporter failed to start: %w", err)
-	}
+	t.RegisterCleanup(func() error { stop(); return nil })
+
 	return nil
 }
 
