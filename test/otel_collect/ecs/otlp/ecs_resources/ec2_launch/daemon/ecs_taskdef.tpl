@@ -26,7 +26,7 @@
   },
   {
     "name": "otlp_pusher",
-    "image": "curlimages/curl:8.10.1",
+    "image": "public.ecr.aws/amazonlinux/amazonlinux:2023",
     "essential": false,
     "links": [
       "cloudwatch_agent"
@@ -42,7 +42,7 @@
       "-c"
     ],
     "command": [
-      "while true; do S=$(date +%s); NOW=$${S}000000000; START=$(expr $${S} - 10)000000000; printf '{\"resourceMetrics\":[{\"resource\":{\"attributes\":[{\"key\":\"TestId\",\"value\":{\"stringValue\":\"%s\"}}]},\"scopeMetrics\":[{\"metrics\":[{\"name\":\"otlp_test_counter\",\"sum\":{\"dataPoints\":[{\"asInt\":\"1\",\"startTimeUnixNano\":\"%s\",\"timeUnixNano\":\"%s\",\"attributes\":[{\"key\":\"TestId\",\"value\":{\"stringValue\":\"%s\"}}]}],\"aggregationTemporality\":1,\"isMonotonic\":true}},{\"name\":\"otlp_test_gauge\",\"gauge\":{\"dataPoints\":[{\"asDouble\":42.0,\"timeUnixNano\":\"%s\",\"attributes\":[{\"key\":\"TestId\",\"value\":{\"stringValue\":\"%s\"}}]}]}}]}]}]}' \"$${TEST_ID}\" \"$${START}\" \"$${NOW}\" \"$${TEST_ID}\" \"$${NOW}\" \"$${TEST_ID}\" > /tmp/p.json; curl -s -X POST http://cloudwatch_agent:4318/v1/metrics -H 'Content-Type: application/json' -d @/tmp/p.json; sleep 10; done"
+      "command -v curl >/dev/null 2>&1 || dnf install -y curl-minimal >/dev/null 2>&1; while true; do S=$(date +%s); NOW=$${S}000000000; START=$(expr $${S} - 10)000000000; printf '{\"resourceMetrics\":[{\"resource\":{\"attributes\":[{\"key\":\"TestId\",\"value\":{\"stringValue\":\"%s\"}}]},\"scopeMetrics\":[{\"metrics\":[{\"name\":\"otlp_test_counter\",\"sum\":{\"dataPoints\":[{\"asInt\":\"1\",\"startTimeUnixNano\":\"%s\",\"timeUnixNano\":\"%s\",\"attributes\":[{\"key\":\"TestId\",\"value\":{\"stringValue\":\"%s\"}}]}],\"aggregationTemporality\":1,\"isMonotonic\":true}},{\"name\":\"otlp_test_gauge\",\"gauge\":{\"dataPoints\":[{\"asDouble\":42.0,\"timeUnixNano\":\"%s\",\"attributes\":[{\"key\":\"TestId\",\"value\":{\"stringValue\":\"%s\"}}]}]}}]}]}]}' \"$${TEST_ID}\" \"$${START}\" \"$${NOW}\" \"$${TEST_ID}\" \"$${NOW}\" \"$${TEST_ID}\" > /tmp/p.json; curl -s -X POST http://cloudwatch_agent:4318/v1/metrics -H 'Content-Type: application/json' -d @/tmp/p.json; sleep 10; done"
     ],
     "logConfiguration": {
       "logDriver": "awslogs",
