@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
 
@@ -28,27 +29,26 @@ const (
 	agentNSFilter     = `"@resource.k8s.namespace.name"="amazon-cloudwatch"`
 	queryRangeMinutes = 5
 )
+
 var (
 	cfg    otelmetrics.TestConfig
 	client *otelmetrics.OtelMetricsClient
 )
 
-
-// struct to hold the  pre-fetched query results shared by both tests.
+// podMetricData holds the pre-fetched query results shared by both tests.
 type podMetricData struct {
 	CPUResults []otelmetrics.RangeResult
 	MemResults []otelmetrics.RangeResult
-	QueryStart time.Time
-	QueryEnd   time.Time
 }
+
 var (
 	sharedMetrics     *podMetricData
 	sharedMetricsOnce sync.Once
 	sharedMetricsErr  error
 )
 
-
-// Query CPU and memory metrics and return cached results on subsequent calls.
+// fetchSharedMetrics queries CPU and memory metrics once and returns cached
+// results on subsequent calls.
 func fetchSharedMetrics(t *testing.T) *podMetricData {
 	t.Helper()
 	sharedMetricsOnce.Do(func() {
@@ -57,13 +57,18 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 		start := end.Add(-queryRangeMinutes * time.Minute)
 		step := 30 * time.Second
 
-		cpuQuery := fmt.Sprintf(`{"__name__"="k8s.pod.cpu.utilization", %s, %s}`, agentPodFilter, agentNSFilter)
+		// Escape the cluster name before interpolating, matching the shared
+		// helper used by the other otel suites (kubeletstats/cadvisor/gpu).
+		escapedCluster := otelmetrics.EscapePromQLValue(cfg.ClusterName)
+		clusterFilter := fmt.Sprintf(`"@resource.k8s.cluster.name"="%s"`, escapedCluster)
+
+		cpuQuery := fmt.Sprintf(`{"__name__"="k8s.pod.cpu.utilization", %s, %s, %s}`, agentPodFilter, agentNSFilter, clusterFilter)
 		cpuResults, err := client.QueryRange(ctx, cpuQuery, start, end, step)
 		if err != nil {
 			sharedMetricsErr = fmt.Errorf("CPU QueryRange failed: %w", err)
 			return
 		}
-		memQuery := fmt.Sprintf(`{"__name__"="k8s.pod.memory.working_set", %s, %s}`, agentPodFilter, agentNSFilter)
+		memQuery := fmt.Sprintf(`{"__name__"="k8s.pod.memory.working_set", %s, %s, %s}`, agentPodFilter, agentNSFilter, clusterFilter)
 		memResults, err := client.QueryRange(ctx, memQuery, start, end, step)
 		if err != nil {
 			sharedMetricsErr = fmt.Errorf("Memory QueryRange failed: %w", err)
@@ -72,8 +77,6 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 		sharedMetrics = &podMetricData{
 			CPUResults: cpuResults,
 			MemResults: memResults,
-			QueryStart: start,
-			QueryEnd:   end,
 		}
 	})
 	require.NoError(t, sharedMetricsErr, "failed to fetch shared pod metrics")
@@ -81,25 +84,25 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 	return sharedMetrics
 }
 
-
-// Compute the average and maximum from a series of data points. performance_test.go uses avg and regression_test.go uses max 
-func calcStats(values []float64) (avg, max float64) {
+// calcStats computes the average and maximum from a series of data points.
+// performance_test.go uses the average and regression_test.go uses the max.
+func calcStats(values []float64) (float64, float64) {
 	if len(values) == 0 {
 		return 0, 0
 	}
-	var sum float64
+	var sum, max float64
 	for _, v := range values {
 		sum += v
 		if v > max {
 			max = v
 		}
 	}
-	avg = sum / float64(len(values))
+	avg := sum / float64(len(values))
 	return avg, max
 }
 
-
-// Test setup. Get the region, cluster name, account ID etc and build them into a config. Setup the client
+// TestMain resolves the region, cluster name, and account ID into a config and
+// sets up the shared metrics client before running the suite.
 func TestMain(m *testing.M) {
 	environment.RegisterEnvironmentMetaDataFlags()
 	flag.Parse()
@@ -119,6 +122,17 @@ func TestMain(m *testing.M) {
 	if clusterName == "" {
 		fmt.Fprintf(os.Stderr, "Cluster name not set\n")
 		os.Exit(1)
+	}
+	// The awsservice clients (including DynamodbClient used for the regression
+	// baseline) are built in the package init() from AWS_REGION, defaulting to
+	// us-west-2. Reconfigure them for the resolved region so the baseline is
+	// read/written in the same region the metrics client queries. Mirrors the
+	// pattern in test/e2e/envutils.go.
+	if region != "us-west-2" {
+		if err := awsservice.ConfigureAWSClients(region); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to reconfigure AWS clients for region %s: %v\n", region, err)
+			os.Exit(1)
+		}
 	}
 	ctx := context.Background()
 	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(region))

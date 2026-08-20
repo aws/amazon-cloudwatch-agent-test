@@ -37,7 +37,7 @@
     }
   ],
   "node_allocatable_queries": {
-    "cpu": "kube_node_status_allocatable{resource=\"cpu\"}",
-    "memory": "kube_node_status_allocatable{resource=\"memory\"}"
+    "cpu": "kube_node_status_allocatable",
+    "memory": "kube_node_status_allocatable"
   }
 }

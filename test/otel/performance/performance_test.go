@@ -18,26 +18,27 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
 
-// structs for defining the structure for storing threshold settings 
+// performanceThresholds defines the structure for the stored threshold settings.
 type performanceThresholds struct {
 	ErrorBound             float64           `json:"error_bound"`
 	Metrics                []metricThreshold `json:"metrics"`
 	NodeAllocatableQueries map[string]string `json:"node_allocatable_queries"`
 }
+
 type metricThreshold struct {
 	Name          string         `json:"name"`
 	Unit          string         `json:"unit"`
 	Stat          string         `json:"stat"`
 	PodThresholds []podThreshold `json:"pod_thresholds"`
 }
+
 type podThreshold struct {
 	PodFilter   string  `json:"pod_filter"`
 	Threshold   float64 `json:"threshold"`
 	Description string  `json:"description"`
 }
 
-
-// Read JSON config and convert it into struct defined earlier 
+// loadThresholds reads the JSON config and unmarshals it into performanceThresholds.
 func loadThresholds(t *testing.T) performanceThresholds {
 	t.Helper()
 	configPath := filepath.Join("resources", "performance_thresholds.json")
@@ -50,11 +51,17 @@ func loadThresholds(t *testing.T) performanceThresholds {
 	return thresholds
 }
 
-
-// Query kube_node_status_allocatable for a CPU/mem. Add all the values for all nodes and then find an average. 
-func getNodeAllocatable(t *testing.T, ctx context.Context, query string, resource string) (float64, int) {
+// getNodeAllocatable queries the node-allocatable metric for a CPU/mem resource,
+// sums the values across all nodes, and returns the average and node count.
+func getNodeAllocatable(t *testing.T, metricName string, resource string) (float64, int) {
 	t.Helper()
-	results, err := client.Query(ctx, query)
+	// Build the query scoped to this cluster, mirroring how the pod queries are
+	// constructed. The monitoring endpoint is account/region-wide, so without the
+	// cluster predicate we'd average node allocatable across other clusters' nodes
+	// and skew the percent-of-node denominator the thresholds are calibrated to.
+	query := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s", resource="%s"}`,
+		metricName, otelmetrics.EscapePromQLValue(cfg.ClusterName), resource)
+	results, err := client.Query(context.Background(), query)
 	require.NoError(t, err, "failed to query node allocatable for resource=%s", resource)
 	require.NotEmpty(t, results, "no kube_node_status_allocatable data for resource=%s — are KSM metrics being collected?", resource)
 	var sum float64
@@ -67,8 +74,7 @@ func getNodeAllocatable(t *testing.T, ctx context.Context, query string, resourc
 	return avg, len(results)
 }
 
-
-// Take a metric name and find the resuts from the data
+// getResultsForMetric returns the fetched series for the given metric name.
 func getResultsForMetric(metrics *podMetricData, metricName string) []otelmetrics.RangeResult {
 	switch metricName {
 	case "k8s.pod.cpu.utilization":
@@ -80,8 +86,7 @@ func getResultsForMetric(metrics *podMetricData, metricName string) []otelmetric
 	}
 }
 
-
-// Return the threshold set for a given pod type
+// getThresholdForPod returns the threshold and pod-class label for a given pod.
 func getThresholdForPod(podName string, podThresholds []podThreshold) (float64, string) {
 	for _, pt := range podThresholds {
 		switch pt.PodFilter {
@@ -98,8 +103,7 @@ func getThresholdForPod(podName string, podThresholds []podThreshold) (float64, 
 	return 0, ""
 }
 
-
-// Return a display label based on the pod type
+// podTypeLabel returns a display label for the given pod type.
 func podTypeLabel(podType string) string {
 	switch podType {
 	case "daemonset":
@@ -111,10 +115,9 @@ func podTypeLabel(podType string) string {
 	}
 }
 
-
-//  1. Check if the values array is non-empty... if empty FAIL
-//  2. Check that all values are >= 0 ...... if not FAIL 
-//  3. Check that the average of all values is within [threshold*0.85, threshold*1.15], i.e. 15% above or below threshold %..... if not FAIL
+// isAllValuesWithinBound returns the average of values and an error if the set
+// is empty, contains a negative value, or the average falls outside the
+// threshold band [threshold*(1-errorBound), threshold*(1+errorBound)].
 func isAllValuesWithinBound(values []float64, threshold float64, errorBound float64) (float64, error) {
 	if len(values) == 0 {
 		return 0, fmt.Errorf("no values found")
@@ -135,19 +138,18 @@ func isAllValuesWithinBound(values []float64, threshold float64, errorBound floa
 	return avg, nil
 }
 
-
-// Run threshold performance test and print output
+// TestPerformanceThresholds checks each agent pod's resource usage against the
+// calibrated per-node thresholds and reports pass/fail per pod class.
 func TestPerformanceThresholds(t *testing.T) {
-	// set up initial variables needed
-	ctx := context.Background()
+	// Set up initial variables.
 	thresholds := loadThresholds(t)
 	metrics := fetchSharedMetrics(t)
 	nodeAllocatable := make(map[string]float64)
 	nodeCounts := make(map[string]int)
 
-	// get the average node allocatable resource value
-	for resource, query := range thresholds.NodeAllocatableQueries {
-		val, count := getNodeAllocatable(t, ctx, query, resource)
+	// Get the average node allocatable resource value.
+	for resource, metricName := range thresholds.NodeAllocatableQueries {
+		val, count := getNodeAllocatable(t, metricName, resource)
 		require.Greater(t, val, 0.0, "node allocatable %s must be > 0", resource)
 		nodeAllocatable[resource] = val
 		nodeCounts[resource] = count
@@ -157,7 +159,7 @@ func TestPerformanceThresholds(t *testing.T) {
 	t.Log("==================================================== RUNNING TestPerformanceThresholds ====================================================")
 	t.Log("")
 
-	// print node allocatable memory and CPU values and safe range
+	// Print node allocatable memory and CPU values and the safe range.
 	for _, pt := range thresholds.Metrics[0].PodThresholds {
 		label := podTypeLabel(pt.PodFilter)
 		t.Logf("  (%s): Node allocatable CPU: %.4f cores (avg across %d nodes)",
@@ -184,13 +186,21 @@ func TestPerformanceThresholds(t *testing.T) {
 	}
 
 	var failures []string
-	
-	// check each pod's resource usage against the expected threshold and report which pass or fail
+
+	// Check each pod's resource usage against the expected threshold and report which pass or fail.
 	for _, metric := range thresholds.Metrics {
 		results := getResultsForMetric(metrics, metric.Name)
 		require.NotEmpty(t, results, "no data returned for %s — is the agent running and reporting metrics?", metric.Name)
-		
-		// print section header
+
+		// Track which pod classes the config expects vs. which we actually
+		// observe, so a whole class going missing fails instead of silently
+		// covering only half the thresholds.
+		expectedClasses := make(map[string]bool)
+		for _, pt := range metric.PodThresholds {
+			expectedClasses[pt.PodFilter] = false
+		}
+
+		// Print section header.
 		switch metric.Name {
 		case "k8s.pod.cpu.utilization":
 			t.Log("------------------------------ CPU Utilization (% of node) ------------------------------")
@@ -202,12 +212,14 @@ func TestPerformanceThresholds(t *testing.T) {
 
 		for _, series := range results {
 			podName := series.Labels.Resource["k8s.pod.name"]
+			require.NotEmpty(t, podName, "series is missing the k8s.pod.name resource label")
 
 			// Get the threshold for this specific pod type
 			threshold, podType := getThresholdForPod(podName, metric.PodThresholds)
 			if podType == "" {
 				continue
 			}
+			expectedClasses[podType] = true
 
 			var denominator float64
 			var resourceLabel string
@@ -228,7 +240,7 @@ func TestPerformanceThresholds(t *testing.T) {
 				pctValues[i] = (val / denominator) * 100
 			}
 
-			// check if values are within bounds and log all the results
+			// Check if values are within bounds and log all the results.
 			label := podTypeLabel(podType)
 			avg, err := isAllValuesWithinBound(pctValues, threshold, thresholds.ErrorBound)
 
@@ -255,13 +267,17 @@ func TestPerformanceThresholds(t *testing.T) {
 			}
 			t.Log("")
 		}
+
+		for class, seen := range expectedClasses {
+			require.True(t, seen, "no %s pod series observed for %s — expected both pod classes to be present", class, metric.Name)
+		}
 	}
 
 	t.Log("")
 	t.Log("DONE!")
 	t.Log("")
 
-	// Report all test failures 
+	// Report all test failures
 	for _, msg := range failures {
 		t.Errorf("  %s", msg)
 	}
