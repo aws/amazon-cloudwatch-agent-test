@@ -380,6 +380,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/ecs/service_discovery",
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
+		{
+			testDir: "./test/otel_collect/ecs/otlp",
+			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
+		},
 	},
 	"eks_addon": {
 		{
