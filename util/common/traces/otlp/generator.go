@@ -125,7 +125,8 @@ func setupClient(ctx context.Context) (*sdktrace.TracerProvider, func(context.Co
 }
 
 func setupTraceProvider(ctx context.Context, res *resource.Resource) (*sdktrace.TracerProvider, error) {
-	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+	// Use 127.0.0.1 (not "localhost", which can resolve to IPv6 [::1]) since the agent binds IPv4.
+	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpoint("127.0.0.1:4317"))
 	if err != nil {
 		return nil, err
 	}
