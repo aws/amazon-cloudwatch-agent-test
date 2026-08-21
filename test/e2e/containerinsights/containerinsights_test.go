@@ -136,11 +136,8 @@ func TestMain(m *testing.M) {
 	// Per-run identifier stamped onto every metric/log via opentelemetry.resource_attributes
 	testRunID = "test-run-" + uuid.NewString()[:8]
 	if env.AgentConfig != "" {
-		clusterName := env.EKSClusterName
-		if clusterName == "" {
-			clusterName = os.Getenv("CLUSTER_NAME")
-		}
-		injected, err := injectTestID(env.AgentConfig, testRunID, clusterName)
+		name := resolveClusterName(env)
+		injected, err := injectTestID(env.AgentConfig, testRunID, name)
 		if err != nil {
 			fmt.Printf("Failed to inject test.run.id into node config: %v\n", err)
 			os.Exit(1)
@@ -179,10 +176,7 @@ func TestMain(m *testing.M) {
 	if region == "" {
 		region = os.Getenv("AWS_REGION")
 	}
-	clusterName = env.EKSClusterName
-	if clusterName == "" {
-		clusterName = os.Getenv("CLUSTER_NAME")
-	}
+	clusterName = resolveClusterName(env)
 	if region == "" || clusterName == "" {
 		fmt.Fprintf(os.Stderr, "region and cluster name must be set\n")
 		os.Exit(1)
@@ -191,13 +185,18 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// resolveClusterName returns the EKS cluster name, falling back to CLUSTER_NAME.
+func resolveClusterName(env *environment.MetaData) string {
+	if env.EKSClusterName != "" {
+		return env.EKSClusterName
+	}
+	return os.Getenv("CLUSTER_NAME")
+}
+
 // applyClusterConfig patches the cluster-scraper CR with the role=cluster config
 // (the node config is applied by InitializeEnvironment).
 func applyClusterConfig(env *environment.MetaData) error {
-	name := env.EKSClusterName
-	if name == "" {
-		name = os.Getenv("CLUSTER_NAME")
-	}
+	name := resolveClusterName(env)
 
 	// Read the cluster config from file then set the runtime cluster name and stamp the per-run test.run.id.
 	data, err := os.ReadFile(clusterConfigPath)
@@ -250,10 +249,7 @@ func applyClusterConfig(env *environment.MetaData) error {
 // clearOtelConfig removes the chart's pre-rendered otelConfig so the agent
 // translates spec.config (our JSON) instead.
 func clearOtelConfig(env *environment.MetaData, crName string) error {
-	name := env.EKSClusterName
-	if name == "" {
-		name = os.Getenv("CLUSTER_NAME")
-	}
+	name := resolveClusterName(env)
 	k8ctl := utils.NewK8CtlManager(env)
 	if err := k8ctl.UpdateKubeConfig(name); err != nil {
 		return err
@@ -270,10 +266,7 @@ func clearOtelConfig(env *environment.MetaData, crName string) error {
 // applyKedaKarpenterStubs deploys the KEDA/Karpenter stub emitters
 // so the cluster-scraper's solutions pipelines have pods to discover and scrape.
 func applyKedaKarpenterStubs(env *environment.MetaData) error {
-	name := env.EKSClusterName
-	if name == "" {
-		name = os.Getenv("CLUSTER_NAME")
-	}
+	name := resolveClusterName(env)
 	k8ctl := utils.NewK8CtlManager(env)
 	if err := k8ctl.UpdateKubeConfig(name); err != nil {
 		return err
@@ -283,10 +276,7 @@ func applyKedaKarpenterStubs(env *environment.MetaData) error {
 
 // deleteKedaKarpenterStubs removes the stub emitters.
 func deleteKedaKarpenterStubs(env *environment.MetaData) error {
-	name := env.EKSClusterName
-	if name == "" {
-		name = os.Getenv("CLUSTER_NAME")
-	}
+	name := resolveClusterName(env)
 	k8ctl := utils.NewK8CtlManager(env)
 	if err := k8ctl.UpdateKubeConfig(name); err != nil {
 		return err
@@ -418,8 +408,10 @@ func testNodeLogs(t *testing.T) {
 			streams := awsservice.GetLogStreamNames(logGroup)
 			require.NotEmpty(t, streams, "no log streams in %s", logGroup)
 
-			err := awsservice.ValidateLogs(logGroup, streams[0], &since, &until, awsservice.AssertLogsNotEmpty())
-			require.NoError(t, err, "validating logs in %s/%s", logGroup, streams[0])
+			// Validate the events in our time window actually carry this run's test.run.id 
+			err := awsservice.ValidateLogs(logGroup, streams[0], &since, &until,
+				awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(testRunID)))
+			require.NoError(t, err, "validating logs in %s/%s carry %s", logGroup, streams[0], testRunID)
 		})
 	}
 }

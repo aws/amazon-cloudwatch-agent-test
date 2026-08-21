@@ -4,6 +4,7 @@
 package e2e
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -83,8 +84,9 @@ func applyHelmResources(k8ctl *utils.K8CtlManager, helmManager *utils.HelmManage
 			Value: string(agentConfigContent),
 			Type:  utils.HelmValueJSON,
 		}
-		// Container Insights needs the cluster-scraper CR
-		if strings.Contains(string(agentConfigContent), "container_insights") {
+		// Container Insights (cluster role) needs the cluster-scraper CR. Detect it
+		// by parsing the config for opentelemetry.collect.container_insights
+		if isContainerInsightsConfig(agentConfigContent) {
 			values["otelContainerInsights.enabled"] = utils.NewHelmValue("true")
 		}
 	}
@@ -205,4 +207,23 @@ func DestroyResources(env *environment.MetaData) error {
 	}
 
 	return k8ctl.DeleteSpecificResource("namespace", "test", "default")
+}
+
+// isContainerInsightsConfig reports whether the agent config enables Container Insights
+func isContainerInsightsConfig(agentConfigContent []byte) bool {
+	var cfg map[string]interface{}
+	if err := json.Unmarshal(agentConfigContent, &cfg); err != nil {
+		return false
+	}
+	otel, _ := cfg["opentelemetry"].(map[string]interface{})
+	if otel == nil {
+		if agent, ok := cfg["agent"].(map[string]interface{}); ok {
+			if inner, ok := agent["config"].(map[string]interface{}); ok {
+				otel, _ = inner["opentelemetry"].(map[string]interface{})
+			}
+		}
+	}
+	collect, _ := otel["collect"].(map[string]interface{})
+	_, ok := collect["container_insights"]
+	return ok
 }

@@ -542,8 +542,7 @@ var testTypeToTestConfigE2E = map[string][]testConfig{
 	},
 	"eks_e2e_containerinsights": {
 		{
-			testDir:      "../../../test/e2e/containerinsights",
-			terraformDir: "../../../terraform/e2e/containerinsights",
+			testDir: "../../../test/e2e/containerinsights",
 		},
 	},
 }
