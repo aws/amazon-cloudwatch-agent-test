@@ -136,7 +136,11 @@ func TestMain(m *testing.M) {
 	// Per-run identifier stamped onto every metric/log via opentelemetry.resource_attributes
 	testRunID = "test-run-" + uuid.NewString()[:8]
 	if env.AgentConfig != "" {
-		injected, err := injectTestID(env.AgentConfig, testRunID)
+		clusterName := env.EKSClusterName
+		if clusterName == "" {
+			clusterName = os.Getenv("CLUSTER_NAME")
+		}
+		injected, err := injectTestID(env.AgentConfig, testRunID, clusterName)
 		if err != nil {
 			fmt.Printf("Failed to inject test.run.id into node config: %v\n", err)
 			os.Exit(1)
@@ -292,7 +296,7 @@ func deleteKedaKarpenterStubs(env *environment.MetaData) error {
 
 // injectTestID stamps opentelemetry.resource_attributes[test.run.id]=runID into the
 // agent config, writes a temp file, and returns its path (for per-run isolation).
-func injectTestID(configPath, runID string) (string, error) {
+func injectTestID(configPath, runID, clusterName string) (string, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return "", err
@@ -313,6 +317,12 @@ func injectTestID(configPath, runID string) (string, error) {
 	}
 	if otel == nil {
 		return "", fmt.Errorf("opentelemetry block not found in %s", configPath)
+	}
+
+	// Stamp the real cluster name so node metrics/logs land under the run's
+	// cluster instead of the config's placeholder.
+	if clusterName != "" {
+		otel["cluster_name"] = clusterName
 	}
 
 	attrs, _ := otel["resource_attributes"].(map[string]interface{})
