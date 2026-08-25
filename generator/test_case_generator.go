@@ -540,6 +540,11 @@ var testTypeToTestConfigE2E = map[string][]testConfig{
 			terraformDir: "../../../terraform/e2e/jmx",
 		},
 	},
+	"eks_e2e_containerinsights": {
+		{
+			testDir: "../../../test/e2e/containerinsights",
+		},
+	},
 }
 
 type partition struct {
