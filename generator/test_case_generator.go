@@ -212,7 +212,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir: "./test/dualstack_endpoint",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
 		},
-		{testDir: "./test/ssm_document"},
+		{
+			testDir: "./test/ssm_document",
+			excludedOs: map[string]struct{}{
+				"rocky-linux-8-withoutSSM": {},
+				"debian-12-withoutSSM":     {},
+				"debian-13-withoutSSM":     {},
+			},
+		},
 		{
 			testDir: "./test/system_metrics/enabled",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
