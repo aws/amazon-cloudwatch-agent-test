@@ -7,7 +7,7 @@ fi
 echo "Starting with INSTANCE_ID: $INSTANCE_ID"
 
 INITIAL_METRIC_TIME=$(date +%s%N)
-COUNT=0
+COUNT=2
 
 # Initialize the file
 cat ./resources/otlp_emf_metrics.json | sed -e "s/INITIAL_METRIC_TIME/$INITIAL_METRIC_TIME/" \
@@ -15,8 +15,10 @@ cat ./resources/otlp_emf_metrics.json | sed -e "s/INITIAL_METRIC_TIME/$INITIAL_M
 
 while true; do
     METRIC_TIME=$(date +%s%N)
+
+    # Simulating a histogram with datapoints 0 and 4, and then adding 2 counts of value 1 for each iteration
     COUNT=$((COUNT + 2))
-    SUM=$((COUNT))
+    SUM=$((COUNT+4))
 
     cat ./resources/otlp_emf_metrics_initial.json | \
         sed -e "s/METRIC_TIME/$METRIC_TIME/" \

@@ -151,29 +151,29 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 			},
 			{
 				stat:  types.StatisticMaximum,
-				value: 2,
+				value: 4,
 			},
 			{
 				stat:  types.StatisticSum,
-				value: 24,
+				value: 36,
 			},
 			{
 				stat:  types.StatisticAverage,
-				value: 2,
+				value: 1.5,
 			},
 			{
 				stat:  types.StatisticSampleCount,
-				value: 12,
+				value: 24,
 			},
 			{
 				stat:  "p90",
-				value: 2.0,
+				value: 3.9,
 			},
 		},
 		"my.cumulative.histogram": {
 			{
 				stat:  types.StatisticMinimum,
-				value: 0,
+				value: 0.5,
 			},
 			{
 				stat:  types.StatisticMaximum,
@@ -181,11 +181,11 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 			},
 			{
 				stat:  types.StatisticSum,
-				value: 24,
+				value: 12,
 			},
 			{
 				stat:  types.StatisticAverage,
-				value: 2,
+				value: 1,
 			},
 			{
 				stat:  types.StatisticSampleCount,
@@ -193,7 +193,7 @@ func (t *OtlpHistogramTestRunner) validateHistogramMetric(metricName string) []s
 			},
 			{
 				stat:  "p90",
-				value: 2.0,
+				value: 1.3,
 			},
 		},
 		"my.delta.exponential.histogram": {
