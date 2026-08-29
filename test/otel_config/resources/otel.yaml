@@ -1,0 +1,21 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  awsemf:
+    namespace: "OtelConfigTest"
+    log_group_name: "OtelConfigTest/$INSTANCE_ID"
+    log_retention: 1
+    dimension_rollup_option: "NoDimensionRollup"
+    log_stream_name: "fetch_json_append_yaml"
+    resource_to_telemetry_conversion:
+      enabled: true
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      exporters: [awsemf]
