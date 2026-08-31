@@ -147,8 +147,8 @@ func tagSummary(byNode map[string]map[string]struct{}) map[string][]string {
 // The message names BOTH causes deliberately. Verified against a reverted agent:
 // the collapse also loses the runtime tag itself, so only one tag survives per node
 // and this guard fires before any specific assertion. A single tag is structurally
-// indistinguishable from a genuine single-runtime node (zeus-poc-cluster looks
-// identical), so the surface cannot tell them apart — the reader has to.
+// indistinguishable from a genuine single-runtime node, so the surface cannot tell
+// them apart — the reader has to.
 func multiRuntimeResults(t *testing.T, metricName string) ([]otelmetrics.MetricResult, []string) {
 	t.Helper()
 	results, err := queryCache.Get(context.Background(), metricName)
@@ -212,7 +212,7 @@ func TestMultiRuntimeDistinctWorkloadsOwnDistinctCores(t *testing.T) {
 				metricName, node, len(busyCores), detail, fixtureRequirement)
 
 			// Deliberately no assertion on distinct POD count. Two runtimes need not be
-			// two pods -- solstice-gpu-test runs both from one pod -- so requiring it
+			// two pods -- one pod can hold both cores -- so requiring it
 			// encodes the terraform fixture's shape rather than the invariant.
 			require.GreaterOrEqual(t, len(busyTags), 2,
 				"%s on %s: %d busy cores attributed to only %d runtime tag(s) %v — the "+
