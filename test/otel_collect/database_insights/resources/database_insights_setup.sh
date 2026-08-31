@@ -37,8 +37,15 @@ elif type -P apt-get >/dev/null 2>&1; then
     # Ubuntu, Debian
     # DPkg::Lock::Timeout makes apt wait (up to 300s) for the dpkg lock instead of
     # exiting 100 immediately when unattended-upgrades holds it on freshly booted instances.
-    sudo apt-get -o DPkg::Lock::Timeout=300 update -y
-    sudo apt-get -o DPkg::Lock::Timeout=300 install -y postgresql postgresql-contrib
+    #
+    # DEBIAN_FRONTEND=noninteractive and NEEDRESTART_MODE=a keep the install from opening
+    # an interactive prompt. When the AMI's running kernel is older than the installed one,
+    # needrestart's post-install trigger otherwise renders a "Pending kernel upgrade" dialog
+    # and waits for input forever, which hangs setup.sh until the harness timeout kills it.
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a \
+        apt-get -o DPkg::Lock::Timeout=300 update -y
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a \
+        apt-get -o DPkg::Lock::Timeout=300 install -y postgresql postgresql-contrib
     PG_DATA=$(find /etc/postgresql -maxdepth 2 -name "main" -type d | sort -V | tail -1)
     if [[ -z "$PG_DATA" ]]; then
         echo "ERROR: Could not find PostgreSQL config directory"
