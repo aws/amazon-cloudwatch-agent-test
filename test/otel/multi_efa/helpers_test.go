@@ -31,6 +31,26 @@ func filterByNodeLabel(results []otelmetrics.MetricResult, labelKey, labelValue 
 	return out
 }
 
+// deviceKeys returns the sorted device names of a device->pods map (for messages).
+func deviceKeys(m map[string]map[string]struct{}) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// setKeys returns the sorted keys of a string set (for messages).
+func setKeys(m map[string]struct{}) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
 // uniqueAnyValues returns the sorted unique non-empty values of an attribute
 // found in either resource or datapoint scope across all results.
 func uniqueAnyValues(results []otelmetrics.MetricResult, attr string) []string {
