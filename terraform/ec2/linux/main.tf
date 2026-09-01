@@ -234,6 +234,23 @@ resource "null_resource" "integration_test_run" {
         "cd ~/amazon-cloudwatch-agent-test",
       ],
 
+      # Verify the Go toolchain is self-consistent before building any test.
+      # A partial `golang` package upgrade on the running instance can leave the
+      # `go` driver and $GOROOT's compile binary on different releases, which makes
+      # every package - including the standard library - fail to build with
+      # "compile: version X does not match go tool version Y". The echo runs
+      # unconditionally so the toolchain in use is always visible in the job log;
+      # the repair only runs when a mismatch is actually detected.
+      [
+        "echo Go toolchain: $(go version) GOROOT=$(go env GOROOT) candidates=$(which -a go | tr '\\n' ' ')",
+        "GO_DRIVER=$(go version | awk '{print $3}'); GO_COMPILER=$(go tool compile -V | awk '{print $3}')",
+        "if [ \"$GO_DRIVER\" != \"$GO_COMPILER\" ]; then",
+        "  echo \"Go toolchain mismatch: driver $GO_DRIVER, compiler $GO_COMPILER - attempting repair\"",
+        "  (sudo dnf -y distro-sync golang golang-bin golang-src || sudo yum -y distro-sync golang golang-bin golang-src) || echo 'Could not repair the Go toolchain automatically'",
+        "  echo Go toolchain after repair: $(go version) / $(go tool compile -V)",
+        "fi",
+      ],
+
       # On-premises specific environment variables
       local.is_onprem ? [
         "export RUN_IN_AWS=false",
