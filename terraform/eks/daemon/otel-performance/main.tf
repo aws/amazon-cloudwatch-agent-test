@@ -170,7 +170,7 @@ resource "null_resource" "update_image" {
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent --type='json' \
         -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
       kubectl -n amazon-cloudwatch patch AmazonCloudWatchAgent cloudwatch-agent-cluster-scraper --type='json' \
-        -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]' 2>/dev/null || true
+        -p='[{"op": "replace", "path": "/spec/image", "value": "${var.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
       sleep 10
     EOT
   }
@@ -184,9 +184,9 @@ resource "null_resource" "restart_pods" {
   provisioner "local-exec" {
     command = <<-EOT
       kubectl -n amazon-cloudwatch rollout restart daemonset/cloudwatch-agent
-      kubectl -n amazon-cloudwatch rollout restart deployment/cloudwatch-agent-cluster-scraper 2>/dev/null || true
+      kubectl -n amazon-cloudwatch rollout restart deployment/cloudwatch-agent-cluster-scraper
       kubectl -n amazon-cloudwatch rollout status daemonset/cloudwatch-agent --timeout=120s
-      kubectl -n amazon-cloudwatch rollout status deployment/cloudwatch-agent-cluster-scraper --timeout=120s 2>/dev/null || true
+      kubectl -n amazon-cloudwatch rollout status deployment/cloudwatch-agent-cluster-scraper --timeout=120s
     EOT
   }
 }
@@ -360,12 +360,9 @@ resource "null_resource" "validator" {
       echo "Running OTEL performance integration tests"
       cd ../../../..
 
-      echo "Waiting 3 minutes for metrics to propagate..."
-      sleep 180
+      echo "Waiting 6.5 minutes for the agent to settle and metrics to propagate (covers the 5-min query window)..."
+      sleep 390
 
-      # cwagent_image_tag is set from CI's build_id (github.sha on PR runs) — the
-      # same value EC2 roots pass as cwa_github_sha — so it doubles as the
-      # regression baseline key here without needing a change to the shared workflow.
       go test -tags integration -timeout 1h -v ${var.test_dir} \
         -eksClusterName=${aws_eks_cluster.this.name} \
         -computeType=EKS \

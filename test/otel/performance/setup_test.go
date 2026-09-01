@@ -123,16 +123,9 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "Cluster name not set\n")
 		os.Exit(1)
 	}
-	// The awsservice clients (including DynamodbClient used for the regression
-	// baseline) are built in the package init() from AWS_REGION, defaulting to
-	// us-west-2. Reconfigure them for the resolved region so the baseline is
-	// read/written in the same region the metrics client queries. Mirrors the
-	// pattern in test/e2e/envutils.go.
-	if region != "us-west-2" {
-		if err := awsservice.ConfigureAWSClients(region); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to reconfigure AWS clients for region %s: %v\n", region, err)
-			os.Exit(1)
-		}
+	if err := awsservice.ConfigureAWSClients(region); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to reconfigure AWS clients for region %s: %v\n", region, err)
+		os.Exit(1)
 	}
 	ctx := context.Background()
 	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(region))

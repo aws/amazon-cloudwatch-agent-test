@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -124,6 +125,9 @@ func isAllValuesWithinBound(values []float64, threshold float64, errorBound floa
 	}
 	totalSum := 0.0
 	for _, value := range values {
+		if math.IsNaN(value) {
+			return 0, fmt.Errorf("values contain NaN")
+		}
 		if value < 0 && threshold >= 0 {
 			return 0, fmt.Errorf("values are not all greater than or equal to zero")
 		}

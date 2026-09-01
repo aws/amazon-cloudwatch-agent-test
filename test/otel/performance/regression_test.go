@@ -8,6 +8,7 @@ package performance
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -163,18 +164,21 @@ func collectCurrentResults(t *testing.T) PerfResult {
 	require.NotEmpty(t, metrics.CPUResults, "no CPU data")
 	require.NotEmpty(t, metrics.MemResults, "no memory data")
 	var result PerfResult
-	var sawDaemonSet, sawScraper bool
+	var sawDaemonSetCPU, sawScraperCPU, sawDaemonSetMem, sawScraperMem bool
 	for _, series := range metrics.CPUResults {
 		podName := series.Labels.Resource["k8s.pod.name"]
 		require.NotEmpty(t, podName, "series is missing the k8s.pod.name resource label")
+		for _, v := range series.Values {
+			require.False(t, math.IsNaN(v), "CPU series for %s contains a NaN sample", podName)
+		}
 		_, max := calcStats(series.Values)
 		if isDaemonSetPod(podName) {
-			sawDaemonSet = true
+			sawDaemonSetCPU = true
 			if max > result.DaemonSetCPUMax {
 				result.DaemonSetCPUMax = max
 			}
 		} else {
-			sawScraper = true
+			sawScraperCPU = true
 			if max > result.ScraperCPUMax {
 				result.ScraperCPUMax = max
 			}
@@ -183,25 +187,28 @@ func collectCurrentResults(t *testing.T) PerfResult {
 	for _, series := range metrics.MemResults {
 		podName := series.Labels.Resource["k8s.pod.name"]
 		require.NotEmpty(t, podName, "series is missing the k8s.pod.name resource label")
+		for _, v := range series.Values {
+			require.False(t, math.IsNaN(v), "memory series for %s contains a NaN sample", podName)
+		}
 		_, max := calcStats(series.Values)
 		maxMB := max / (1024 * 1024)
 		if isDaemonSetPod(podName) {
-			sawDaemonSet = true
+			sawDaemonSetMem = true
 			if maxMB > result.DaemonSetMemMaxMB {
 				result.DaemonSetMemMaxMB = maxMB
 			}
 		} else {
-			sawScraper = true
+			sawScraperMem = true
 			if maxMB > result.ScraperMemMaxMB {
 				result.ScraperMemMaxMB = maxMB
 			}
 		}
 	}
 
-	// A missing class would otherwise stay at zero and read as "reduced usage"
-	// against a positive baseline — require both classes to be present.
-	require.True(t, sawDaemonSet, "no DaemonSet pod series observed — expected both pod classes to be present")
-	require.True(t, sawScraper, "no cluster-scraper pod series observed — expected both pod classes to be present")
+	require.True(t, sawDaemonSetCPU, "no DaemonSet CPU series observed — expected both pod classes to be present")
+	require.True(t, sawScraperCPU, "no cluster-scraper CPU series observed — expected both pod classes to be present")
+	require.True(t, sawDaemonSetMem, "no DaemonSet memory series observed — expected both pod classes to be present")
+	require.True(t, sawScraperMem, "no cluster-scraper memory series observed — expected both pod classes to be present")
 	return result
 }
 
