@@ -1,0 +1,26 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "syslog": {
+        "listeners": [
+          {
+            "listen_address": "tcp://127.0.0.1:5514",
+            "protocol": "rfc5424"
+          }
+        ],
+        "log_group_name": "{log_group}",
+        "log_stream_name": "filter-stream",
+        "filters": [
+          {
+            "type": "exclude",
+            "expression": "healthcheck"
+          }
+        ]
+      }
+    }
+  }
+}

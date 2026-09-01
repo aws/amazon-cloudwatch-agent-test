@@ -97,6 +97,15 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/ca_bundle"},
 		{testDir: "./test/cloudwatchlogs"},
 		{
+			// Syslog receiver tests bind loopback TCP/UDP/TLS listeners and
+			// exercise mTLS client-auth, so they are scoped to a single Linux
+			// target. Marked WIP so failures do not block CI while the syslog
+			// feature stabilizes.
+			testDir: "./test/syslog",
+			targets: map[string]map[string]struct{}{"os": {"al2": {}}, "arc": {"amd64": {}}},
+			wip:     true,
+		},
+		{
 			testDir: "./test/log_state/logfile",
 			targets: map[string]map[string]struct{}{"os": {"al2": {}}},
 		},
