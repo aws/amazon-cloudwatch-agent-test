@@ -1,0 +1,20 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "syslog": {
+        "listeners": [
+          {
+            "listen_address": "tcp://127.0.0.1:5514",
+            "protocol": "rfc3164"
+          }
+        ],
+        "log_group_name": "{log_group}",
+        "log_stream_name": "rfc3164-stream"
+      }
+    }
+  }
+}

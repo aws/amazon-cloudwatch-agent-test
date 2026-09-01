@@ -1,0 +1,36 @@
+{
+  "agent": {
+    "run_as_user": "root",
+    "debug": true
+  },
+  "logs": {
+    "logs_collected": {
+      "syslog": {
+        "listeners": [
+          {
+            "listen_address": "tcp://127.0.0.1:5514",
+            "protocol": "rfc5424"
+          }
+        ],
+        "log_group_name": "{log_group_default}",
+        "log_stream_name": "default-stream",
+        "routing": [
+          {
+            "match": {
+              "hostname": "web-*"
+            },
+            "log_group_name": "{log_group_web}",
+            "log_stream_name": "web-stream"
+          },
+          {
+            "match": {
+              "facility": 4
+            },
+            "log_group_name": "{log_group_auth}",
+            "log_stream_name": "auth-stream"
+          }
+        ]
+      }
+    }
+  }
+}
