@@ -4,14 +4,33 @@
 package awsservice
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	"github.com/aws/smithy-go"
 )
+
+// isThrottlingError reports whether err is a rate-limit response rather than a
+// real failure. Throttling is retryable at the call site; the SDK's own retryer
+// gives up after 3 attempts, which is not enough when the full test matrix polls
+// the same API concurrently.
+func isThrottlingError(err error) bool {
+	var apiErr smithy.APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	switch apiErr.ErrorCode() {
+	case "ThrottlingException", "Throttling", "RequestLimitExceeded", "TooManyUpdates":
+		return true
+	}
+	return false
+}
 
 func CreateSSMDocument(name string, content string, documentType types.DocumentType) error {
 	_, err := SsmClient.CreateDocument(ctx, &ssm.CreateDocumentInput{
@@ -117,6 +136,19 @@ func WaitForCommandCompletion(commandId, instanceId string, timeout ...time.Dura
 			Details:    true, // This gets the CommandPlugins details
 		})
 		if err != nil {
+			// A throttled poll says nothing about the command itself, which is very
+			// likely still running. The SSM client uses the SDK default of 3 attempts
+			// with ~1.5s of total backoff, which is not enough when the whole test
+			// matrix polls this API concurrently. Keep polling until the deadline
+			// instead of failing the test on a transient rate limit.
+			if isThrottlingError(err) {
+				log.Printf("ListCommandInvocations throttled for command %s on instance %s; retrying", commandId, instanceId)
+				if time.Now().After(deadline) {
+					return nil, fmt.Errorf("command %s on instance %s: still throttled at deadline %s: %w", commandId, instanceId, wait, err)
+				}
+				time.Sleep(5*time.Second + time.Duration(rand.Int63n(int64(time.Second))))
+				continue
+			}
 			return nil, err
 		}
 

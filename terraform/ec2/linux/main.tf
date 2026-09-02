@@ -259,7 +259,7 @@ resource "null_resource" "integration_test_run" {
       # the repair only runs when a mismatch is actually detected.
       [
         "echo Go toolchain: $(go version) GOROOT=$(go env GOROOT) candidates=$(which -a go | tr '\\n' ' ')",
-        "GO_DRIVER=$(go version | awk '{print $3}'); GO_COMPILER=$(go tool compile -V | awk '{print $3}')",
+        "GO_DRIVER=$(go version | awk '{print $3}' | sed 's/-X:.*//'); GO_COMPILER=$(go tool compile -V | awk '{print $3}' | sed 's/-X:.*//')",
         "if [ \"$GO_DRIVER\" != \"$GO_COMPILER\" ]; then",
         "  echo \"Go toolchain mismatch: driver $GO_DRIVER, compiler $GO_COMPILER - attempting repair\"",
         "  (sudo dnf -y distro-sync golang golang-bin golang-src || sudo yum -y distro-sync golang golang-bin golang-src) || echo 'Could not repair the Go toolchain automatically'",
