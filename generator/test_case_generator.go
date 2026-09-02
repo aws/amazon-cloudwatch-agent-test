@@ -615,6 +615,25 @@ var partitionTests = map[string]partition{
 	},
 }
 
+// filterByTestDir returns a copy of configMap keeping only testConfigs whose testDir
+// contains substr. Every test type key is preserved (with a possibly empty slice) so that
+// main still writes a valid — if empty — matrix file for each, avoiding missing-file
+// failures downstream. TEMPORARY(cloudwatchlogs-flaky): scopes CI to a single suite while
+// iterating; remove with its call site in main().
+func filterByTestDir(configMap map[string][]testConfig, substr string) map[string][]testConfig {
+	filtered := make(map[string][]testConfig, len(configMap))
+	for testType, testConfigs := range configMap {
+		kept := make([]testConfig, 0, len(testConfigs))
+		for _, tc := range testConfigs {
+			if strings.Contains(tc.testDir, substr) {
+				kept = append(kept, tc)
+			}
+		}
+		filtered[testType] = kept
+	}
+	return filtered
+}
+
 func main() {
 	useE2E := flag.Bool("e2e", false, "Use e2e test matrix generation")
 	flag.Parse()
@@ -623,6 +642,12 @@ func main() {
 	if *useE2E {
 		configMap = testTypeToTestConfigE2E
 	}
+
+	// TEMPORARY(cloudwatchlogs-flaky): scope every generated matrix to the
+	// cloudwatchlogs suite so CI runs only those tests while the flaky-test fix
+	// is validated. Delete this line (and filterByTestDir below) to restore the
+	// full matrix before merging.
+	configMap = filterByTestDir(configMap, "cloudwatchlogs")
 
 	for testType, testConfigs := range configMap {
 		for _, partition := range partitionTests {
