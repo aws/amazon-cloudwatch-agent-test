@@ -534,6 +534,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			ami:          "AL2023_x86_64_NEURON",
 			k8sVersion:   "1.35",
 		},
+		{
+			testDir:      "./test/otel/performance",
+			terraformDir: "terraform/eks/daemon/otel-performance",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
 	},
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
