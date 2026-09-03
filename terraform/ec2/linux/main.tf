@@ -63,6 +63,22 @@ resource "null_resource" "integration_test_setup" {
       [
         "echo sha ${var.cwa_github_sha}",
         "sudo cloud-init status --wait",
+
+        # Pin the Go toolchain for the lifetime of this job, and record how it got
+        # here. Something on these hosts upgrades the golang packages mid-run: in
+        # ITAR runs the toolchain was self-consistent when the tests started and
+        # reported 1.26.7-vs-1.25.12 by the time the compiler ran ~4 minutes later,
+        # preceded each time by a root-issued `shutdown -r +1`. AL2023 AMIs are
+        # normally locked to one repository version, so this is not stock
+        # behaviour. The lock keeps `go` and its compile tool on a single release;
+        # the diagnostics identify the trigger so it can be fixed in the image.
+        # RPM-only, so each command degrades to a warning on deb/zypper hosts.
+        "echo Go packages: $(rpm -q --last golang golang-bin golang-src 2>/dev/null | head -3 | tr '\\n' ' ')",
+        "echo dnf releasever: $(cat /etc/dnf/vars/releasever 2>/dev/null || echo 'not pinned')",
+        "systemctl list-timers --all 2>/dev/null | grep -iE 'dnf|yum|patch|update' || echo 'No package-update timers found'",
+        "sudo dnf --setopt=lock_timeout=60 install -y 'dnf-command(versionlock)' 2>/dev/null || true",
+        "sudo dnf --setopt=lock_timeout=60 versionlock add golang golang-bin golang-src 2>/dev/null || sudo yum versionlock add golang golang-bin golang-src 2>/dev/null || echo 'Could not version-lock Go; toolchain may still change mid-run'",
+
         "echo clone ${var.github_test_repo} branch ${var.github_test_repo_branch} and install agent",
         # check for vendor directory specifically instead of overall test repo to avoid issues with SELinux
         "if [ ! -d amazon-cloudwatch-agent-test/vendor ]; then",
@@ -232,6 +248,23 @@ resource "null_resource" "integration_test_run" {
       [
         "echo Running integration test...",
         "cd ~/amazon-cloudwatch-agent-test",
+      ],
+
+      # Verify the Go toolchain is self-consistent before building any test.
+      # A partial `golang` package upgrade on the running instance can leave the
+      # `go` driver and $GOROOT's compile binary on different releases, which makes
+      # every package - including the standard library - fail to build with
+      # "compile: version X does not match go tool version Y". The echo runs
+      # unconditionally so the toolchain in use is always visible in the job log;
+      # the repair only runs when a mismatch is actually detected.
+      [
+        "echo Go toolchain: $(go version) GOROOT=$(go env GOROOT) candidates=$(which -a go | tr '\\n' ' ')",
+        "GO_DRIVER=$(go version | awk '{print $3}' | sed 's/-X:.*//'); GO_COMPILER=$(go tool compile -V | awk '{print $3}' | sed 's/-X:.*//')",
+        "if [ \"$GO_DRIVER\" != \"$GO_COMPILER\" ]; then",
+        "  echo \"Go toolchain mismatch: driver $GO_DRIVER, compiler $GO_COMPILER - attempting repair\"",
+        "  (sudo dnf -y distro-sync golang golang-bin golang-src || sudo yum -y distro-sync golang golang-bin golang-src) || echo 'Could not repair the Go toolchain automatically'",
+        "  echo Go toolchain after repair: $(go version) / $(go tool compile -V)",
+        "fi",
       ],
 
       # On-premises specific environment variables

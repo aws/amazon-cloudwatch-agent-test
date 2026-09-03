@@ -102,5 +102,57 @@ func TestMain(m *testing.M) {
 		otelmetrics.WithSourceRegistry(registry),
 	)
 
+	// Gate the suite on the agent's Lease-based node-metadata enrichment being
+	// warm before any cached KSM node query is issued. See waitForKSMNodeEnrichment.
+	waitForKSMNodeEnrichment(ctx, queryCache, 5*time.Minute, 30*time.Second)
+
 	os.Exit(m.Run())
+}
+
+// waitForKSMNodeEnrichment polls kube_node_info until the agent's Lease-based
+// node-metadata enrichment (host.id / host.image.id / cloud.availability_zone
+// onto kube_node_* metrics) is warm on every node, or the timeout elapses.
+//
+// The enrichment is EVENTUALLY consistent: for the first few minutes after agent
+// start, kube_node_* datapoints exist without the host attributes, then become
+// enriched. The suite's QueryCache queries each metric name exactly once and
+// caches the result, so a single early (cold) query for kube_node_info would
+// poison every KSM node-bucket host-attribute assertion for the whole run.
+//
+// This gate runs BEFORE any cache population (all KSM tests are t.Parallel() and
+// share the global queryCache, so the first cache-populating Get could come from
+// any of them) and it uses GetWithFilter, which is NOT cached. Once this returns
+// warm, the subsequent cached queryCache.Get("kube_node_info") fetches enriched
+// data. Enrichment is monotonic (once warm, stays warm), so gating here is
+// sufficient. On timeout we log and proceed rather than aborting the whole suite;
+// the host-attribute assertions then surface a genuine (non-flaky) failure.
+func waitForKSMNodeEnrichment(ctx context.Context, qc *otelmetrics.QueryCache, timeout, interval time.Duration) {
+	deadline := time.Now().Add(timeout)
+	for attempt := 1; ; attempt++ {
+		results, err := qc.GetWithFilter(ctx, "kube_node_info", nil)
+		warm := err == nil && len(results) > 0
+		if warm {
+			for _, r := range results {
+				if r.Labels.Resource["host.id"] == "" || r.Labels.Resource["host.image.id"] == "" {
+					warm = false
+					break
+				}
+			}
+		}
+		if warm {
+			fmt.Fprintf(os.Stderr, "KSM node enrichment warm after %d attempt(s): %d node(s) have non-empty host.id and host.image.id\n", attempt, len(results))
+			return
+		}
+		if time.Now().After(deadline) {
+			fmt.Fprintf(os.Stderr, "WARNING: KSM node enrichment not warm after %s (attempt %d, err=%v, results=%d); proceeding anyway — host-attribute assertions may fail\n", timeout, attempt, err, len(results))
+			return
+		}
+		fmt.Fprintf(os.Stderr, "KSM node enrichment not warm yet (attempt %d, err=%v, results=%d); retrying in %s\n", attempt, err, len(results), interval)
+		select {
+		case <-time.After(interval):
+		case <-ctx.Done():
+			fmt.Fprintf(os.Stderr, "WARNING: context done while waiting for KSM node enrichment: %v\n", ctx.Err())
+			return
+		}
+	}
 }
