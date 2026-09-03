@@ -176,6 +176,18 @@ func IsLogGroupExists(logGroupName string, logGroupClassArg ...types.LogGroupCla
 	return len(describeLogGroupOutput.LogGroups) > 0
 }
 
+func IsLogGroupExistsWithRetry(logGroupName string, attempts int, interval time.Duration, logGroupClassArg ...types.LogGroupClass) bool {
+	for i := 0; i < attempts; i++ {
+		if IsLogGroupExists(logGroupName, logGroupClassArg...) {
+			return true
+		}
+		if i < attempts-1 {
+			time.Sleep(interval)
+		}
+	}
+	return false
+}
+
 // GetLogQueryStats for the log group between start/end (in epoch seconds) for the
 // query string.
 func GetLogQueryStats(logGroupName string, startTime, endTime int64, queryString string) (*types.QueryStatistics, error) {
