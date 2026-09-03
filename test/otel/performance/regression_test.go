@@ -168,6 +168,9 @@ func collectCurrentResults(t *testing.T) PerfResult {
 	for _, series := range metrics.CPUResults {
 		podName := series.Labels.Resource["k8s.pod.name"]
 		require.NotEmpty(t, podName, "series is missing the k8s.pod.name resource label")
+		if len(series.Values) == 0 {
+			continue
+		}
 		for _, v := range series.Values {
 			require.False(t, math.IsNaN(v), "CPU series for %s contains a NaN sample", podName)
 		}
@@ -187,6 +190,9 @@ func collectCurrentResults(t *testing.T) PerfResult {
 	for _, series := range metrics.MemResults {
 		podName := series.Labels.Resource["k8s.pod.name"]
 		require.NotEmpty(t, podName, "series is missing the k8s.pod.name resource label")
+		if len(series.Values) == 0 {
+			continue
+		}
 		for _, v := range series.Values {
 			require.False(t, math.IsNaN(v), "memory series for %s contains a NaN sample", podName)
 		}
@@ -216,33 +222,42 @@ func collectCurrentResults(t *testing.T) PerfResult {
 // on the same instance type, its commit hash, and whether one was found.
 func fetchPreviousResult(t *testing.T, currentCommitHash, instanceType string) (PerfResult, string, bool) {
 	t.Helper()
-	data, err := awsservice.DynamodbClient.Query(context.Background(), &dynamodb.QueryInput{
-		TableName:              aws.String(tableName),
-		IndexName:              aws.String("UseCaseDate"),
-		KeyConditionExpression: aws.String("#uc = :uc"),
-		FilterExpression:       aws.String("#ch <> :ch AND #it = :it"),
-		ExpressionAttributeNames: map[string]string{
-			"#uc": "UseCase",
-			"#ch": "CommitHash",
-			"#it": "InstanceType",
-		},
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":uc": &types.AttributeValueMemberS{Value: useCase},
-			":ch": &types.AttributeValueMemberS{Value: currentCommitHash},
-			":it": &types.AttributeValueMemberS{Value: instanceType},
-		},
-		ScanIndexForward: aws.Bool(false),
-	})
-	// A query error (missing table, permissions, throttling) is an
-	// infrastructure failure, not a "first run" — fail loudly rather than
-	// silently passing the regression check.
-	require.NoError(t, err, "querying previous results from DynamoDB table %s", tableName)
 
-	if len(data.Items) == 0 {
-		return PerfResult{}, "", false
+	var firstItem map[string]types.AttributeValue
+	var lastEvaluatedKey map[string]types.AttributeValue
+	for {
+		data, err := awsservice.DynamodbClient.Query(context.Background(), &dynamodb.QueryInput{
+			TableName:              aws.String(tableName),
+			IndexName:              aws.String("UseCaseDate"),
+			KeyConditionExpression: aws.String("#uc = :uc"),
+			FilterExpression:       aws.String("#ch <> :ch AND #it = :it"),
+			ExpressionAttributeNames: map[string]string{
+				"#uc": "UseCase",
+				"#ch": "CommitHash",
+				"#it": "InstanceType",
+			},
+			ExpressionAttributeValues: map[string]types.AttributeValue{
+				":uc": &types.AttributeValueMemberS{Value: useCase},
+				":ch": &types.AttributeValueMemberS{Value: currentCommitHash},
+				":it": &types.AttributeValueMemberS{Value: instanceType},
+			},
+			ScanIndexForward:  aws.Bool(false),
+			ExclusiveStartKey: lastEvaluatedKey,
+		})
+		require.NoError(t, err, "querying previous results from DynamoDB table %s", tableName)
+
+		if len(data.Items) > 0 {
+			firstItem = data.Items[0]
+			break
+		}
+		if data.LastEvaluatedKey == nil {
+			return PerfResult{}, "", false
+		}
+		lastEvaluatedKey = data.LastEvaluatedKey
 	}
+
 	var record map[string]interface{}
-	err = attributevalue.UnmarshalMap(data.Items[0], &record)
+	err := attributevalue.UnmarshalMap(firstItem, &record)
 	require.NoError(t, err, "unmarshalling previous result row")
 
 	results, ok := record["Results"].(map[string]interface{})
