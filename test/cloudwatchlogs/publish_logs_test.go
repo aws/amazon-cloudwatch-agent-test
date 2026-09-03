@@ -29,6 +29,8 @@ const (
 	logLineId2                    = "bar"
 	logFilePath                   = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
 	sleepForFlush                 = 20 * time.Second            // default flush interval is 5 seconds
+	logGroupExistsAttempts        = 6
+	logGroupExistsInterval        = 15 * time.Second
 	configPathAutoRemoval         = "resources/config_auto_removal.json"
 	standardLogGroupClass         = "STANDARD"
 	infrequentAccessLogGroupClass = "INFREQUENT_ACCESS"
@@ -287,7 +289,7 @@ func TestLogGroupClass(t *testing.T) {
 			}
 			t.Logf("Agent logs %s", string(agentLog))
 
-			assert.True(t, awsservice.IsLogGroupExists(logGroupName, param.logGroupClass))
+			assert.True(t, awsservice.IsLogGroupExistsWithRetry(logGroupName, logGroupExistsAttempts, logGroupExistsInterval, param.logGroupClass))
 		})
 	}
 }
