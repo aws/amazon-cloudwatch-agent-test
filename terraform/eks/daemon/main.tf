@@ -512,7 +512,11 @@ resource "null_resource" "validator" {
     command = <<-EOT
       echo "Validating EKS metrics/logs"
       cd ../../..
-      go test ${var.test_dir} -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
+      # Explicit timeout: Go defaults to 10m, which the GPU variant exceeds. It
+      # validates hundreds of (metric, dimension-set) pairs serially, each with
+      # bounded CloudWatch re-validation, so 10m is not enough to distinguish a
+      # slow suite from a hung one.
+      go test ${var.test_dir} -timeout 30m -eksClusterName=${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON
     EOT
   }
 }
