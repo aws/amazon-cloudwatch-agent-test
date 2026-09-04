@@ -1,0 +1,102 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+variable "region" {
+  type    = string
+  default = "us-west-2"
+}
+
+variable "test_dir" {
+  type    = string
+  default = "./test/otel/pernode"
+}
+
+# --- Agent image (DaemonSet). Public by default; per-node needs no agent change. ---
+variable "cwagent_image_repo" {
+  type    = string
+  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
+}
+
+variable "cwagent_image_tag" {
+  type    = string
+  default = "latest"
+}
+
+# --- Helm chart source. MUST resolve to a chart that contains the zero-step CRD
+#     bundling (G1), per-node, and routing changes. Upstream `main` does NOT have
+#     them until this stack merges, so either set helm_chart_branch to the merge
+#     commit/release tag once it lands, or use local_chart_path below to test a
+#     working-tree checkout. Pin to a fixed ref (not a moving branch) for CI. ---
+variable "helm_chart_repo" {
+  type    = string
+  default = "https://github.com/aws-observability/helm-charts.git"
+}
+
+variable "helm_chart_branch" {
+  type    = string
+  default = "main"
+}
+
+# Install from a LOCAL chart checkout instead of git-cloning helm_chart_repo.
+# Useful to test working-tree changes that are not yet committed/pushed. When
+# set (absolute path to .../charts/amazon-cloudwatch-observability), the clone is
+# skipped. Leave empty for CI (clone).
+variable "local_chart_path" {
+  type    = string
+  default = ""
+}
+
+# --- Custom operator image: REQUIRED. The public operator hardcodes
+#     consistent-hashing and ignores the per-node CR field, so the per-node +
+#     CRD-watch (G2) code only runs from a custom build. ---
+variable "operator_image_domain" {
+  type        = string
+  description = "Registry domain for the custom operator image (maps manager.image.repositoryDomainMap.public)."
+  # e.g. <account>.dkr.ecr.us-west-2.amazonaws.com
+}
+
+variable "operator_image_repo" {
+  type        = string
+  description = "Repository (path) for the custom operator image, e.g. <org>/cloudwatch-agent-operator."
+}
+
+variable "operator_image_tag" {
+  type = string
+}
+
+# --- Custom Target Allocator image: REQUIRED. Patched onto the
+#     AmazonCloudWatchAgent CR after install (the chart does not expose it as a
+#     first-class value), mirroring scripts/deploy-all.sh CUSTOM_TA. ---
+variable "ta_image" {
+  type        = string
+  description = "Full Target Allocator image ref, e.g. <ecr>/cloudwatch-agent-target-allocator:pernodeN."
+}
+
+# --- Allocation strategy under test. ---
+variable "allocation_strategy" {
+  type    = string
+  default = "per-node"
+}
+
+variable "k8s_version" {
+  type = string
+  # Pinned to a broadly-available GA EKS version. Bump only to versions GA in the
+  # target region; a not-yet-offered version makes the default apply fail.
+  default = "1.31"
+}
+
+variable "ami_type" {
+  type    = string
+  default = "AL2023_x86_64_STANDARD"
+}
+
+variable "instance_type" {
+  type    = string
+  default = "t3.medium"
+}
+
+# Number of worker nodes. >=2 so per-node spread is meaningful.
+variable "node_count" {
+  type    = number
+  default = 2
+}
