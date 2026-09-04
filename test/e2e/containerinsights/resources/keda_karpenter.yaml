@@ -53,7 +53,7 @@ spec:
             - |
               command -v python3 >/dev/null 2>&1 || dnf install -y python3 >/dev/null 2>&1
               exec python3 -c '
-              import http.server, socketserver
+              import http.server, socketserver, socket
               body = open("/etc/metrics/metrics", "rb").read()
               class H(http.server.BaseHTTPRequestHandler):
                   def do_GET(self):
@@ -64,7 +64,12 @@ spec:
                       self.wfile.write(body)
                   def log_message(self, *a):
                       pass
-              socketserver.TCPServer(("", 80), H).serve_forever()
+              class Server(socketserver.TCPServer):
+                  address_family = socket.AF_INET6
+                  def server_bind(self):
+                      self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+                      super().server_bind()
+              Server(("::", 80), H).serve_forever()
               '
           ports:
             - name: metrics
@@ -114,7 +119,7 @@ spec:
             - |
               command -v python3 >/dev/null 2>&1 || dnf install -y python3 >/dev/null 2>&1
               exec python3 -c '
-              import http.server, socketserver
+              import http.server, socketserver, socket
               body = open("/etc/metrics/metrics", "rb").read()
               class H(http.server.BaseHTTPRequestHandler):
                   def do_GET(self):
@@ -125,7 +130,12 @@ spec:
                       self.wfile.write(body)
                   def log_message(self, *a):
                       pass
-              socketserver.TCPServer(("", 80), H).serve_forever()
+              class Server(socketserver.TCPServer):
+                  address_family = socket.AF_INET6
+                  def server_bind(self):
+                      self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+                      super().server_bind()
+              Server(("::", 80), H).serve_forever()
               '
           ports:
             - name: http-metrics
