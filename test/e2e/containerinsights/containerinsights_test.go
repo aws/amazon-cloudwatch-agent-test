@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/environment/eksinstallationtype"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/e2e/utils"
 	"github.com/aws/amazon-cloudwatch-agent-test/test/otel_collect/otlpvalidation"
@@ -153,6 +154,21 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	// EKS add-on installs the agent via Terraform before the per-run test.run.id
+	// exists, and its image patching only covers the node CR. The Helm path delivers
+	// the stamped node config and the build image through chart values, so mirror
+	// that here by patching the add-on-managed CRs directly.
+	if env.EKSInstallationType == eksinstallationtype.EKS_ADDON {
+		if err := applyNodeConfig(env); err != nil {
+			fmt.Printf("Failed to apply node config: %v\n", err)
+			os.Exit(1)
+		}
+		if err := patchClusterScraperImage(env); err != nil {
+			fmt.Printf("Failed to patch cluster-scraper image: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
 	// Clear pre-rendered otelConfig on the node CR so agent translates json config
 	if err := clearOtelConfig(env, nodeCRName); err != nil {
 		fmt.Printf("Failed to clear node otelConfig: %v\n", err)
@@ -191,6 +207,72 @@ func resolveClusterName(env *environment.MetaData) string {
 		return env.EKSClusterName
 	}
 	return os.Getenv("CLUSTER_NAME")
+}
+
+// applyNodeConfig patches the node cloudwatch-agent CR with the (test.run.id-stamped)
+// node config. On the EKS add-on path the add-on is installed by Terraform before the
+// run ID exists, so we patch the CR directly to mirror the Helm chart's agent.config
+// delivery. The add-on config file uses the configuration_values shape (agent.config),
+// which we unwrap down to the raw agent JSON that spec.config expects.
+func applyNodeConfig(env *environment.MetaData) error {
+	data, err := os.ReadFile(env.AgentConfig)
+	if err != nil {
+		return fmt.Errorf("reading node config %s: %w", env.AgentConfig, err)
+	}
+	var cfg map[string]interface{}
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("parsing node config: %w", err)
+	}
+	agentJSON := cfg
+	if agent, ok := cfg["agent"].(map[string]interface{}); ok {
+		if inner, ok := agent["config"].(map[string]interface{}); ok {
+			agentJSON = inner
+		}
+	}
+	agentConfigJSON, err := json.Marshal(agentJSON)
+	if err != nil {
+		return fmt.Errorf("marshaling node agent config: %w", err)
+	}
+	patch, err := json.Marshal(map[string]interface{}{
+		"spec": map[string]interface{}{"config": string(agentConfigJSON)},
+	})
+	if err != nil {
+		return fmt.Errorf("marshaling node CR patch: %w", err)
+	}
+
+	k8ctl := utils.NewK8CtlManager(env)
+	if err := k8ctl.UpdateKubeConfig(resolveClusterName(env)); err != nil {
+		return err
+	}
+	return k8ctl.PatchResource(
+		"amazoncloudwatchagent",
+		nodeCRName,
+		agentNamespace,
+		utils.PatchTypeMerge,
+		string(patch),
+	)
+}
+
+// patchClusterScraperImage sets the cluster-scraper CR image to the build under test.
+// The Helm chart wires this through agent.image values; the add-on image patching only
+// covers the node CR, so we patch the cluster-scraper here for parity.
+func patchClusterScraperImage(env *environment.MetaData) error {
+	image := fmt.Sprintf("%s/%s:%s",
+		env.CloudwatchAgentRepositoryURL,
+		env.CloudwatchAgentRepository,
+		env.CloudwatchAgentTag)
+
+	k8ctl := utils.NewK8CtlManager(env)
+	if err := k8ctl.UpdateKubeConfig(resolveClusterName(env)); err != nil {
+		return err
+	}
+	return k8ctl.PatchResource(
+		"amazoncloudwatchagent",
+		clusterScraperCRName,
+		agentNamespace,
+		utils.PatchTypeMerge,
+		fmt.Sprintf(`{"spec":{"image":"%s"}}`, image),
+	)
 }
 
 // applyClusterConfig patches the cluster-scraper CR with the role=cluster config
@@ -408,7 +490,7 @@ func testNodeLogs(t *testing.T) {
 			streams := awsservice.GetLogStreamNames(logGroup)
 			require.NotEmpty(t, streams, "no log streams in %s", logGroup)
 
-			// Validate the events in our time window actually carry this run's test.run.id 
+			// Validate the events in our time window actually carry this run's test.run.id
 			err := awsservice.ValidateLogs(logGroup, streams[0], &since, &until,
 				awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(testRunID)))
 			require.NoError(t, err, "validating logs in %s/%s carry %s", logGroup, streams[0], testRunID)
