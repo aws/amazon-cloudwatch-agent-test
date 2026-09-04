@@ -220,7 +220,11 @@ resource "null_resource" "integration_test_run" {
     inline = concat(
       [
         "echo Preparing environment...",
-        "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
+        # Cancel any scheduled shutdown (mandatory patching can issue 'shutdown -r +1'
+        # after launch); when one was actually scheduled, also restart the SSM agent,
+        # which stops polling for work once it expects a reboot. See the same watchdog
+        # in terraform/ec2/linux/main.tf for the full explanation.
+        "nohup bash -c 'while true; do if [ -e /run/systemd/shutdown/scheduled ]; then sudo shutdown -c; sudo touch /run/ssm_restart_pending; fi; if [ -e /run/ssm_restart_pending ]; then sudo systemctl restart amazon-ssm-agent >/dev/null 2>&1; sudo systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service >/dev/null 2>&1; sleep 5; if (sudo systemctl is-active --quiet amazon-ssm-agent || sudo systemctl is-active --quiet snap.amazon-ssm-agent.amazon-ssm-agent.service) && pgrep -f ssm-agent-worker >/dev/null; then sudo rm -f /run/ssm_restart_pending; echo \"$(date) cancelled scheduled shutdown, SSM agent restarted, worker running\" | sudo tee -a /var/log/shutdown_watchdog.log >/dev/null; fi; fi; sleep 30; done' >/dev/null 2>&1 &",
       ],
 
       # SELinux test setup (if enabled)

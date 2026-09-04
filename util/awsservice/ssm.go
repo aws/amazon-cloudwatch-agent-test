@@ -48,10 +48,11 @@ func CreateSSMDocument(name string, content string, documentType types.DocumentT
 
 // commandDeliveryTimeout bounds how long SSM itself will keep trying to hand a command
 // to the agent. Without it SendCommand defaults to 3600s, so an undeliverable command sits
-// in Pending/Delayed far longer than any test waits and the client-side deadline fires
-// first — reporting "did not complete" and hiding SSM's own verdict. At 90s SSM flips the
-// invocation to TimedOut/DeliveryTimedOut before WaitForCommandCompletion's 2m default,
-// so the failure names the real cause. Healthy commands complete in ~11s.
+// in Pending far longer than any test waits. Note what this does NOT do: observed
+// invocations stayed "Pending (Delayed)" well past this timeout without SSM ever flipping
+// them to DeliveryTimedOut, so do not rely on it to produce a terminal status — the
+// client-side deadline in WaitForCommandCompletion is what actually ends the wait, and
+// CommandUndeliveredError carries the diagnosis. Healthy commands complete in ~11s.
 const commandDeliveryTimeout int32 = 90
 
 func RunSSMDocument(name string, instanceIds []string, parameters map[string][]string) (*ssm.SendCommandOutput, error) {
@@ -65,35 +66,89 @@ func RunSSMDocument(name string, instanceIds []string, parameters map[string][]s
 	return out, err
 }
 
-// RunSSMDocumentAwaitDelivery sends a document and waits for it to complete, resending once
-// if SSM never managed to deliver the first attempt. A Pending/Delayed invocation means the
-// command never reached the agent ("the system attempted to send the command to the managed
-// node but wasn't successful"), which is a transport failure rather than a test failure and
-// is worth one retry. Only one resend, and only for undelivered commands, so a genuinely
-// failing command still fails on the first attempt.
+// RunSSMDocumentAwaitDelivery sends a document and waits for it to complete. A
+// Pending/Delayed invocation means the command never reached the agent ("the system
+// attempted to send the command to the managed node but wasn't successful") and comes
+// back as CommandUndeliveredError. One resend, but only after the agent has produced
+// a health ping NEWER than the failed send — the shutdown watchdog restarts a wedged
+// agent and the restarted worker pings immediately, so a post-send ping is proof of
+// recovery, whereas any merely "recent" ping could predate the wedge. Against an
+// agent that stays wedged the recovery wait times out and we surface the delivery
+// error without doubling time-to-failure.
 func RunSSMDocumentAwaitDelivery(name string, instanceIds []string, parameters map[string][]string) (*ssm.SendCommandOutput, *ssm.ListCommandInvocationsOutput, error) {
-	var lastErr error
-	for attempt := 1; attempt <= 2; attempt++ {
-		out, err := RunSSMDocument(name, instanceIds, parameters)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		result, err := WaitForCommandCompletion(*out.Command.CommandId, instanceIds[0])
-		if err == nil {
-			return out, result, nil
-		}
-		lastErr = err
-
-		var undelivered *CommandUndeliveredError
-		if !errors.As(err, &undelivered) || attempt == 2 {
-			return out, nil, err
-		}
-		log.Printf("Command %s was never delivered to %s (%s); resending once",
-			*out.Command.CommandId, instanceIds[0], undelivered.Details)
+	sentAt := time.Now()
+	out, err := RunSSMDocument(name, instanceIds, parameters)
+	if err != nil {
+		return nil, nil, err
 	}
-	return nil, nil, lastErr
+
+	result, err := WaitForCommandCompletion(*out.Command.CommandId, instanceIds[0])
+	if err == nil {
+		return out, result, nil
+	}
+
+	var undelivered *CommandUndeliveredError
+	if !errors.As(err, &undelivered) {
+		return out, nil, err
+	}
+	if readyErr := waitForSSMPingAfter(instanceIds[0], sentAt, 90*time.Second); readyErr != nil {
+		return out, nil, fmt.Errorf("%w (agent did not recover: %v)", err, readyErr)
+	}
+	log.Printf("Command %s was never delivered to %s (%s); agent pinged after the send, resending once",
+		*out.Command.CommandId, instanceIds[0], undelivered.Details)
+
+	retryOut, err := RunSSMDocument(name, instanceIds, parameters)
+	if err != nil {
+		// Return the first attempt's output so callers still see the original command id.
+		return out, nil, fmt.Errorf("resend after undelivered command %s failed: %w", *out.Command.CommandId, err)
+	}
+	result, err = WaitForCommandCompletion(*retryOut.Command.CommandId, instanceIds[0])
+	if err != nil {
+		return retryOut, nil, err
+	}
+	return retryOut, result, nil
 }
+
+// waitForSSMPingAfter waits until the instance's LastPingDateTime is strictly newer
+// than the given time. A ping that merely falls inside the staleness window is not
+// proof of anything: it can predate the failure being recovered from.
+func waitForSSMPingAfter(instanceId string, after time.Time, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		result, err := SsmClient.DescribeInstanceInformation(ctx, &ssm.DescribeInstanceInformationInput{
+			Filters: []types.InstanceInformationStringFilter{
+				{
+					Key:    aws.String("InstanceIds"),
+					Values: []string{instanceId},
+				},
+			},
+		})
+		if err != nil {
+			log.Printf("DescribeInstanceInformation for %s failed: %v", instanceId, err)
+		} else if len(result.InstanceInformationList) > 0 {
+			info := result.InstanceInformationList[0]
+			if info.PingStatus == types.PingStatusOnline && info.LastPingDateTime != nil && info.LastPingDateTime.After(after) {
+				return nil
+			}
+		}
+		time.Sleep(10 * time.Second)
+	}
+	return fmt.Errorf("instance %s produced no SSM health ping after %s within %v",
+		instanceId, after.Format(time.RFC3339), timeout)
+}
+
+// The SSM agent sends a health ping every five minutes (HealthFrequencyMinutes,
+// default and floor 5), so a healthy agent's LastPingDateTime is never more than
+// ~300s old; seven minutes is one interval plus margin for ping jitter. Older than
+// that means the agent has stopped checking in even though PingStatus still reports
+// Online — observed on hosts where mandatory patching scheduled a reboot: the agent
+// stops polling for work in anticipation of the reboot, the shutdown watchdog
+// cancels the reboot, and every subsequent SendCommand sits Pending/Delayed. This
+// gate is a best-effort detector, not the primary remediation (that is the watchdog
+// in terraform/ec2/linux/main.tf): the health ping runs on a timer that can survive
+// the wedge, in which case staleness never fires and the delivery failure is caught
+// by RunSSMDocumentAwaitDelivery instead.
+const maxSSMPingStaleness = 7 * time.Minute
 
 // WaitForSSMReady waits for instances to be registered and online with SSM.
 // This is necessary because there's a delay between EC2 instance launch and SSM agent registration.
@@ -112,6 +167,10 @@ func WaitForSSMReady(instanceIds []string, timeout time.Duration) error {
 				},
 			})
 			if err != nil {
+				// Log rather than silently retry: an IAM denial, wrong-region client,
+				// or sustained throttling would otherwise present as an unexplained
+				// stall ending in a generic timeout.
+				log.Printf("DescribeInstanceInformation for %s failed: %v", instanceId, err)
 				allReady = false
 				break
 			}
@@ -136,6 +195,19 @@ func WaitForSSMReady(instanceIds []string, timeout time.Duration) error {
 			if info.LastPingDateTime != nil {
 				lastPing = info.LastPingDateTime.Format(time.RFC3339)
 			}
+
+			// Require a fresh ping, not just Online: a wedged agent keeps its Online
+			// status while no longer polling for work, and dispatching a command to it
+			// produces an undeliverable Pending/Delayed invocation. A healthy agent
+			// pings within the staleness window, so this loop either observes a fresh
+			// ping on a later poll or times out with a truthful diagnostic.
+			if info.LastPingDateTime == nil || time.Since(*info.LastPingDateTime) > maxSSMPingStaleness {
+				log.Printf("SSM agent on %s reports Online but last ping was %s (older than %v); waiting for a fresh ping",
+					instanceId, lastPing, maxSSMPingStaleness)
+				allReady = false
+				break
+			}
+
 			log.Printf("SSM agent on %s: version %s, platform %s, last ping %s",
 				instanceId, agentVersion, info.PlatformType, lastPing)
 		}

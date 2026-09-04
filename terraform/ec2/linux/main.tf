@@ -210,7 +210,22 @@ resource "null_resource" "integration_test_run" {
     inline = concat(
       [
         "echo Preparing environment...",
-        "nohup bash -c 'while true; do sudo shutdown -c; sleep 30; done' >/dev/null 2>&1 &",
+        # Cancel any scheduled shutdown: mandatory host patching (AWS-RunPatchBaseline
+        # via State Manager) issues 'shutdown -r +1' minutes after launch. The SSM agent
+        # stops its message-polling modules BEFORE scheduling the reboot and nothing
+        # re-arms them, so cancelling the OS shutdown alone leaves a wedged agent:
+        # PingStatus stays Online while every SendCommand sits Pending/Delayed forever.
+        # systemd's marker file persists until the reboot or a cancel, so even a
+        # late-starting watchdog sees it. On detection: cancel, then restart the agent -
+        # 'restart' rather than 'try-restart' because restart works from active,
+        # inactive, or failed unit states while try-restart is a no-op unless active.
+        # Both the native and snap unit names are tried; a missing unit fails harmlessly.
+        # A pending flag retries every 30s until a unit is active AND ssm-agent-worker
+        # (the child process that actually polls for commands and sends health pings -
+        # systemd only supervises its parent) is running, because the cancel removes the
+        # marker and a single failed restart would otherwise never be retried. Hosts
+        # without any SSM agent simply never clear the flag and log nothing.
+        "nohup bash -c 'while true; do if [ -e /run/systemd/shutdown/scheduled ]; then sudo shutdown -c; sudo touch /run/ssm_restart_pending; fi; if [ -e /run/ssm_restart_pending ]; then sudo systemctl restart amazon-ssm-agent >/dev/null 2>&1; sudo systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service >/dev/null 2>&1; sleep 5; if (sudo systemctl is-active --quiet amazon-ssm-agent || sudo systemctl is-active --quiet snap.amazon-ssm-agent.amazon-ssm-agent.service) && pgrep -f ssm-agent-worker >/dev/null; then sudo rm -f /run/ssm_restart_pending; echo \"$(date) cancelled scheduled shutdown, SSM agent restarted, worker running\" | sudo tee -a /var/log/shutdown_watchdog.log >/dev/null; fi; fi; sleep 30; done' >/dev/null 2>&1 &",
       ],
 
       # SELinux test setup (if enabled)
@@ -292,8 +307,12 @@ resource "null_resource" "integration_test_run" {
 
       [
         var.pre_test_setup,
-        # Integration test execution with conditional agent start command
-        "go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v"
+        # Integration test execution with conditional agent start command. The exit code
+        # is captured so the shutdown-watchdog log (see the Preparing environment step)
+        # reaches CI output on pass and fail alike - it is the only artifact that
+        # distinguishes "watchdog remediated a scheduled shutdown" from "no shutdown was
+        # ever scheduled this boot", and the host is destroyed at teardown.
+        "RC=0; go test ${var.test_dir} -p 1 -timeout 1h -computeType=EC2 -bucket=${var.s3_bucket} -plugins='${var.plugin_tests}' -excludedTests='${var.excluded_tests}' -cwaCommitSha=${var.cwa_github_sha} -caCertPath=${var.ca_cert_path} -proxyUrl=${module.linux_common.proxy_instance_proxy_ip} -instanceId=${module.linux_common.cwagent_id} ${local.is_onprem ? "-agentStartCommand='${var.agent_start}'" : ""} ${length(regexall("/amp", var.test_dir)) > 0 ? "-ampWorkspaceId=${module.amp[0].workspace_id} " : ""}-v || RC=$?; echo '=== shutdown watchdog log ==='; sudo cat /var/log/shutdown_watchdog.log 2>/dev/null || echo '(no watchdog events this boot)'; exit $RC"
       ],
     )
   }

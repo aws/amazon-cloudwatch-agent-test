@@ -31,9 +31,12 @@ func Validate() error {
 	metadata := environment.GetEnvironmentMetaData()
 	instanceIds := []string{metadata.InstanceId}
 
-	// Wait for SSM agent to be ready before running tests
+	// Wait for SSM agent to be ready before running tests. The readiness gate
+	// requires a health ping fresher than the agent's ~5-minute ping cadence, so
+	// the timeout must cover at least one full interval — plus margin for the
+	// shutdown watchdog to restart a wedged agent and for it to re-register.
 	log.Printf("Waiting for instance %s to be SSM-ready...", metadata.InstanceId)
-	if err := awsservice.WaitForSSMReady(instanceIds, 5*time.Minute); err != nil {
+	if err := awsservice.WaitForSSMReady(instanceIds, 12*time.Minute); err != nil {
 		return fmt.Errorf("instance not SSM-ready: %v", err)
 	}
 	log.Println("Instance is SSM-ready")
