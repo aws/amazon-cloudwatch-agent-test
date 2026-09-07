@@ -70,6 +70,15 @@ func applyHelmResources(k8ctl *utils.K8CtlManager, helmManager *utils.HelmManage
 		"manager.image.repositoryDomainMap.public": utils.NewHelmValue(env.CloudwatchAgentOperatorRepositoryURL),
 	}
 
+	// Pod-level values: verify the chart plumbs these through to the workloads
+	// without validation errors or scheduling impact. Deliberately inert
+	// choices (ScheduleAnyway, opt-in PDB with the chart's default
+	// maxUnavailable) so they cannot disturb the feature assertions the suite
+	// makes. Verified by VerifyPodLevelValues in the e2e test suites.
+	for k, v := range PodLevelValuesHelmValues() {
+		values[k] = v
+	}
+
 	// Enable dualstack endpoints for IPv6 clusters
 	if env.IPFamily == "ipv6" {
 		values["useDualstackEndpoint"] = utils.NewHelmValue("true")
