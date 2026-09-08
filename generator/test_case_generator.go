@@ -527,12 +527,48 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/multi_efa_dra",
+			terraformDir: "terraform/eks/daemon/otel-multi-efa-dra",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			// Pinned to 1.34 (not 1.35 like the others): the awsdevicepodcorrelation
+			// processor watches the DRA API at resource.k8s.io/v1beta1, which 1.34
+			// still serves alongside the GA v1. Move to 1.35 once the processor's DRA
+			// client is bumped to v1.
+			k8sVersion: "1.34",
+		},
+		{
 			testDir:      "./test/otel/neuron",
 			terraformDir: "terraform/eks/daemon/otel-neuron",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "inf2.xlarge",
 			ami:          "AL2023_x86_64_NEURON",
 			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/neuron_dra",
+			terraformDir: "terraform/eks/daemon/otel-neuron-dra",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "trn1.2xlarge",
+			ami:          "AL2023_x86_64_NEURON",
+			// Pinned to 1.34 (not 1.35 like otel-neuron): the awsdevicepodcorrelation
+			// processor watches the DRA API at resource.k8s.io/v1beta1, which 1.34
+			// still serves alongside the GA v1. Move to 1.35 once the processor's DRA
+			// client is bumped to v1.
+			k8sVersion: "1.34",
+		},
+		{
+			testDir:      "./test/otel/gpu_dra",
+			terraformDir: "terraform/eks/daemon/otel-gpu-dra",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.12xlarge",
+			ami:          "AL2023_x86_64_NVIDIA",
+			// Pinned to 1.34 (not 1.35 like otel-gpu): the awsdevicepodcorrelation
+			// processor watches the DRA API at resource.k8s.io/v1beta1, which 1.34
+			// still serves alongside the GA v1. Move to 1.35 once the processor's DRA
+			// client is bumped to v1.
+			k8sVersion: "1.34",
 		},
 		{
 			testDir:      "./test/otel/performance",
