@@ -69,7 +69,11 @@ spec:
                   def server_bind(self):
                       self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
                       super().server_bind()
-              Server(("::", 80), H).serve_forever()
+              try:
+                  httpd = Server(("::", 80), H)
+              except OSError:
+                  httpd = socketserver.TCPServer(("", 80), H)
+              httpd.serve_forever()
               '
           ports:
             - name: metrics
@@ -135,7 +139,11 @@ spec:
                   def server_bind(self):
                       self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
                       super().server_bind()
-              Server(("::", 80), H).serve_forever()
+              try:
+                  httpd = Server(("::", 80), H)
+              except OSError:
+                  httpd = socketserver.TCPServer(("", 80), H)
+              httpd.serve_forever()
               '
           ports:
             - name: http-metrics

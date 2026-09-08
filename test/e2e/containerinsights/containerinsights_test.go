@@ -209,6 +209,30 @@ func resolveClusterName(env *environment.MetaData) string {
 	return os.Getenv("CLUSTER_NAME")
 }
 
+// patchResourceWithRetry wraps K8CtlManager.PatchResource with a bounded retry so the
+// add-on path tolerates add-on-activation timing: the target CRs may not exist yet when
+// this first runs, and a single-shot patch would fail with "not found" and abort the suite.
+func patchResourceWithRetry(k8ctl *utils.K8CtlManager, resourceType, resourceName, namespace string, patchType utils.PatchType, patchData string) error {
+	const (
+		patchRetryTimeout  = 2 * time.Minute
+		patchRetryInterval = 5 * time.Second
+	)
+	deadline := time.Now().Add(patchRetryTimeout)
+	for attempt := 1; ; attempt++ {
+		err := k8ctl.PatchResource(resourceType, resourceName, namespace, patchType, patchData)
+		if err == nil {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("patching %s/%s failed after %s (%d attempts): %w",
+				resourceType, resourceName, patchRetryTimeout, attempt, err)
+		}
+		fmt.Printf("Patch %s/%s attempt %d failed, retrying in %s: %v\n",
+			resourceType, resourceName, attempt, patchRetryInterval, err)
+		time.Sleep(patchRetryInterval)
+	}
+}
+
 // applyNodeConfig patches the node cloudwatch-agent CR with the (test.run.id-stamped)
 // node config. On the EKS add-on path the add-on is installed by Terraform before the
 // run ID exists, so we patch the CR directly to mirror the Helm chart's agent.config
@@ -244,7 +268,8 @@ func applyNodeConfig(env *environment.MetaData) error {
 	if err := k8ctl.UpdateKubeConfig(resolveClusterName(env)); err != nil {
 		return err
 	}
-	return k8ctl.PatchResource(
+	return patchResourceWithRetry(
+		k8ctl,
 		"amazoncloudwatchagent",
 		nodeCRName,
 		agentNamespace,
@@ -262,16 +287,24 @@ func patchClusterScraperImage(env *environment.MetaData) error {
 		env.CloudwatchAgentRepository,
 		env.CloudwatchAgentTag)
 
+	patch, err := json.Marshal(map[string]interface{}{
+		"spec": map[string]interface{}{"image": image},
+	})
+	if err != nil {
+		return fmt.Errorf("marshaling cluster-scraper image patch: %w", err)
+	}
+
 	k8ctl := utils.NewK8CtlManager(env)
 	if err := k8ctl.UpdateKubeConfig(resolveClusterName(env)); err != nil {
 		return err
 	}
-	return k8ctl.PatchResource(
+	return patchResourceWithRetry(
+		k8ctl,
 		"amazoncloudwatchagent",
 		clusterScraperCRName,
 		agentNamespace,
 		utils.PatchTypeMerge,
-		fmt.Sprintf(`{"spec":{"image":"%s"}}`, image),
+		string(patch),
 	)
 }
 
