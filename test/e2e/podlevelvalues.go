@@ -133,9 +133,19 @@ func VerifyPodLevelValues(t *testing.T, clientset *kubernetes.Clientset, env *en
 		"fluent-bit component priorityClassName default should not be overridden by the root value")
 
 	// ── CloudWatch Agent DaemonSet — podAnnotations via the
-	//    AmazonCloudWatchAgent CR (podLabels is not supported by the operator
-	//    CRD yet; topologySpreadConstraints on DaemonSet mode requires a newer
-	//    operator — both tracked as follow-ups) ──
+	//    AmazonCloudWatchAgent CR.
+	//
+	//    Deliberately NOT asserted here:
+	//      - podLabels: requires operator v3.8.0+ (CRD field) plus chart-side
+	//        wiring — add once released (follow-up).
+	//      - topologySpreadConstraints: schema-accepted today but silently
+	//        dropped by the operator for daemonset-mode agents until
+	//        operator v3.8.0+ — add once released (follow-up).
+	//      - podDisruptionBudget: the operator NEVER emits a PDB for
+	//        daemonset-mode agents, by design (its defaulting webhook
+	//        populates the field on every CR, so daemonset emission would
+	//        create surprise PDBs on upgrade). Do not add a CWA PDB
+	//        assertion — it can never pass for the default daemonset agent. ──
 	agentPods, err := clientset.CoreV1().Pods(amazonCloudWatchNamespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "app.kubernetes.io/component=amazon-cloudwatch-agent",
 	})
