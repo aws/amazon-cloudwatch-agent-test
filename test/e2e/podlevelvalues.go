@@ -53,10 +53,13 @@ const (
 	// fluent-bit, which default to system-node-critical).
 	PodLevelTestPriorityClass = "system-cluster-critical"
 
-	// operatorPDBName / fluentBitPDBName are the PodDisruptionBudget object
-	// names the chart creates when podDisruptionBudget.enabled is set.
-	operatorPDBName  = "amazon-cloudwatch-observability-controller-manager-pdb"
-	fluentBitPDBName = "fluent-bit-pdb"
+	// operatorPDBName is the PodDisruptionBudget the chart creates when
+	// podDisruptionBudget.enabled is set. Only Deployment-backed workloads
+	// get chart-owned PDBs; DaemonSet-backed workloads (fluent-bit,
+	// node-exporter) deliberately get none — a maxUnavailable PDB targeting
+	// pods of a controller without the scale subresource is permanently
+	// SyncFailed with disruptionsAllowed=0, blocking eviction-API evictions.
+	operatorPDBName = "amazon-cloudwatch-observability-controller-manager-pdb"
 
 	amazonCloudWatchNamespace = "amazon-cloudwatch"
 )
@@ -156,13 +159,23 @@ func VerifyPodLevelValues(t *testing.T, clientset *kubernetes.Clientset, env *en
 	require.Equal(t, PodLevelTestAnnotationValue, agentPod.Annotations[PodLevelTestAnnotationKey],
 		"podAnnotations not plumbed through the AmazonCloudWatchAgent CR to agent pod")
 
-	// ── PodDisruptionBudgets — created by the chart when
-	//    podDisruptionBudget.enabled=true ──
-	for _, pdbName := range []string{operatorPDBName, fluentBitPDBName} {
-		pdb, pdbErr := clientset.PolicyV1().PodDisruptionBudgets(amazonCloudWatchNamespace).Get(ctx, pdbName, metav1.GetOptions{})
-		require.NoError(t, pdbErr, "getting PodDisruptionBudget %s", pdbName)
-		require.NotNil(t, pdb.Spec.MaxUnavailable, "PodDisruptionBudget %s missing maxUnavailable", pdbName)
-		require.Equal(t, 1, pdb.Spec.MaxUnavailable.IntValue(),
-			"PodDisruptionBudget %s should carry the chart default maxUnavailable", pdbName)
+	// ── PodDisruptionBudget — created by the chart when
+	//    podDisruptionBudget.enabled=true (Deployment-backed workloads only;
+	//    the chart deliberately emits no PDBs for DaemonSet workloads) ──
+	pdb, pdbErr := clientset.PolicyV1().PodDisruptionBudgets(amazonCloudWatchNamespace).Get(ctx, operatorPDBName, metav1.GetOptions{})
+	require.NoError(t, pdbErr, "getting PodDisruptionBudget %s", operatorPDBName)
+	require.NotNil(t, pdb.Spec.MaxUnavailable, "PodDisruptionBudget %s missing maxUnavailable", operatorPDBName)
+	require.Equal(t, 1, pdb.Spec.MaxUnavailable.IntValue(),
+		"PodDisruptionBudget %s should carry the chart default maxUnavailable", operatorPDBName)
+	// The PDB must actually sync and select pods — a PDB that exists but is
+	// SyncFailed (e.g. maxUnavailable against a scale-less controller) has
+	// disruptionsAllowed=0 and blocks evictions.
+	require.Greater(t, pdb.Status.ExpectedPods, int32(0),
+		"PodDisruptionBudget %s did not sync (expectedPods=0)", operatorPDBName)
+
+	// No chart-owned PDBs for DaemonSet workloads.
+	for _, name := range []string{"fluent-bit-pdb", "node-exporter-pdb"} {
+		_, dsPdbErr := clientset.PolicyV1().PodDisruptionBudgets(amazonCloudWatchNamespace).Get(ctx, name, metav1.GetOptions{})
+		require.Error(t, dsPdbErr, "unexpected PodDisruptionBudget %s for a DaemonSet workload", name)
 	}
 }
