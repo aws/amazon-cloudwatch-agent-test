@@ -5,71 +5,67 @@ module "common" {
   source = "../../common"
 }
 
-data "azurerm_subnet" "selected" {
-  name                 = var.azure_subnet_name
-  virtual_network_name = var.azure_vnet_name
-  resource_group_name  = var.azure_resource_group
-}
-
 #####################################################################
-# AKS cluster with OIDC issuer (for AWS cross-cloud web-identity)
+# GKE cluster (its OIDC issuer is what AWS trusts for cross-cloud web-identity)
 #####################################################################
-resource "azurerm_kubernetes_cluster" "cwagent" {
-  name                = "cwa-aks-integ-${module.common.testing_id}"
-  location            = var.azure_location
-  resource_group_name = var.azure_resource_group
-  dns_prefix          = "cwa-aks-${module.common.testing_id}"
-  kubernetes_version  = var.kubernetes_version
+# GKE always serves the cluster's OIDC discovery document and projects service-account
+# tokens; there is no issuer opt-in flag to set.
+resource "google_container_cluster" "cwagent" {
+  name               = "cwa-gke-integ-${module.common.testing_id}"
+  location           = var.gcp_zone
+  min_master_version = var.kubernetes_version
+  network            = var.gcp_network_name
+  subnetwork         = var.gcp_subnetwork_name
 
-  oidc_issuer_enabled       = true
-  workload_identity_enabled = true
+  initial_node_count = var.gke_node_count
+
+  # The google provider defaults this to true, which would make terraform destroy fail.
+  deletion_protection = false
 
   # Terraform drives the cluster over the public API server, so restrict it to the runner that created it.
   # runner_ip is required, so there is no path where this silently ends up open to all.
-  api_server_access_profile {
-    authorized_ip_ranges = [var.runner_ip]
+  master_authorized_networks_config {
+    cidr_blocks {
+      cidr_block = var.runner_ip
+    }
   }
 
-  identity {
-    type = "SystemAssigned"
-  }
-
-  default_node_pool {
-    name                        = "default"
-    node_count                  = var.aks_node_count
-    vm_size                     = var.aks_node_vm_size
-    os_disk_size_gb             = 50
-    temporary_name_for_rotation = "tmpdefault"
-    vnet_subnet_id              = data.azurerm_subnet.selected.id
-  }
-
-  network_profile {
-    network_plugin = "azure"
+  node_config {
+    machine_type = var.gke_node_machine_type
+    disk_size_gb = 50
+    oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
 }
 
 #####################################################################
-# AWS IAM: trust AKS OIDC issuer for cross-cloud federation
+# AWS IAM: trust GKE OIDC issuer for cross-cloud federation
 #####################################################################
-data "tls_certificate" "aks_oidc" {
-  url = azurerm_kubernetes_cluster.cwagent.oidc_issuer_url
+locals {
+  # GKE serves the issuer at this deterministic URL; the cluster resource does not export it
+  # as an attribute. Referencing the resource's name/location makes everything derived from
+  # this URL wait for the cluster, so the discovery endpoint is live before it is read.
+  gke_oidc_issuer_url = "https://container.googleapis.com/v1/projects/${var.gcp_project}/locations/${google_container_cluster.cwagent.location}/clusters/${google_container_cluster.cwagent.name}"
 }
 
-resource "aws_iam_openid_connect_provider" "aks" {
-  url             = azurerm_kubernetes_cluster.cwagent.oidc_issuer_url
+data "tls_certificate" "gke_oidc" {
+  url = local.gke_oidc_issuer_url
+}
+
+resource "aws_iam_openid_connect_provider" "gke" {
+  url             = local.gke_oidc_issuer_url
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.aks_oidc.certificates[0].sha1_fingerprint]
+  thumbprint_list = [data.tls_certificate.gke_oidc.certificates[0].sha1_fingerprint]
 }
 
 locals {
-  aks_oidc_issuer_host = replace(azurerm_kubernetes_cluster.cwagent.oidc_issuer_url, "https://", "")
+  gke_oidc_issuer_host = replace(local.gke_oidc_issuer_url, "https://", "")
   namespace            = "amazon-cloudwatch"
   service_account_name = "cloudwatch-agent"
-  cwagent_role_name    = "cwa-aks-integ-role-${module.common.testing_id}"
+  cwagent_role_name    = "cwa-gke-integ-role-${module.common.testing_id}"
 
-  # Must match serviceName in test/azure/aks/aks_test.go -- the test derives the expected log stream
+  # Must match serviceName in test/gcp/gke/gke_test.go -- the test derives the expected log stream
   # and the trace query filter from it.
-  load_gen_service_name     = "aks-otlp-test-service"
+  load_gen_service_name     = "gke-otlp-test-service"
   load_gen_duration_seconds = 180
 }
 
@@ -80,18 +76,18 @@ data "aws_iam_policy_document" "cwagent_assume_role" {
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.aks.arn]
+      identifiers = [aws_iam_openid_connect_provider.gke.arn]
     }
 
     condition {
       test     = "StringEquals"
-      variable = "${local.aks_oidc_issuer_host}:sub"
+      variable = "${local.gke_oidc_issuer_host}:sub"
       values   = ["system:serviceaccount:${local.namespace}:${local.service_account_name}"]
     }
 
     condition {
       test     = "StringEquals"
-      variable = "${local.aks_oidc_issuer_host}:aud"
+      variable = "${local.gke_oidc_issuer_host}:aud"
       values   = ["sts.amazonaws.com"]
     }
   }
@@ -104,13 +100,13 @@ resource "aws_iam_role" "cwagent" {
 }
 
 # The agent's own writes come from the same AWS-managed policy customers are told to use, so a green run
-# also proves that documented policy is sufficient over the AKS workload-identity path.
+# also proves that documented policy is sufficient over the GKE projected-token path.
 resource "aws_iam_role_policy_attachment" "cwagent_server_policy" {
   role       = aws_iam_role.cwagent.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
-# No inline policy: the AKS test binary runs on the runner under its own credentials, so this role needs
+# No inline policy: the GKE test binary runs on the runner under its own credentials, so this role needs
 # agent writes only -- and CloudWatchAgentServerPolicy alone covers them, OTLP traces included.
 
 #####################################################################
@@ -131,7 +127,7 @@ resource "kubernetes_service_account" "cwagent" {
 
 resource "kubernetes_cluster_role" "cwagent" {
   metadata {
-    name = "cwa-aks-integ-${module.common.testing_id}"
+    name = "cwa-gke-integ-${module.common.testing_id}"
   }
 
   rule {
@@ -153,7 +149,7 @@ resource "kubernetes_cluster_role" "cwagent" {
 
 resource "kubernetes_cluster_role_binding" "cwagent" {
   metadata {
-    name = "cwa-aks-integ-${module.common.testing_id}"
+    name = "cwa-gke-integ-${module.common.testing_id}"
   }
   role_ref {
     api_group = "rbac.authorization.k8s.io"
@@ -167,7 +163,7 @@ resource "kubernetes_cluster_role_binding" "cwagent" {
   }
 }
 
-# ECR pull secret so AKS nodes can pull the CWA image from AWS ECR.
+# ECR pull secret so GKE nodes can pull the CWA image from AWS ECR.
 # The 12h auth token is fetched here with the runner's AWS credentials rather
 # than passed in as a variable, which cannot survive the workflow's shell quoting.
 # The integration-test image is published to us-west-2 only, while the job's
@@ -247,10 +243,10 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
             name  = "RUN_IN_CONTAINER"
             value = "True"
           }
-          # Explicit AKS signal so mode detection selects the Azure credential/region
-          # path without depending on an IMDS probe from the pod.
+          # Explicit GKE signal so mode detection selects the GCP credential/region
+          # path without depending on a metadata-server probe from the pod.
           env {
-            name  = "RUN_IN_AKS"
+            name  = "RUN_IN_GKE"
             value = "True"
           }
           env {
@@ -342,9 +338,9 @@ resource "kubernetes_job_v1" "otlp_load" {
           image   = "curlimages/curl:8.8.0"
           command = ["/bin/sh", "-c"]
           args = [templatefile("${path.module}/../../otlp_load_generator.sh", {
-            prefix           = "aks"
+            prefix           = "gke"
             service_name     = local.load_gen_service_name
-            instance_id      = azurerm_kubernetes_cluster.cwagent.name
+            instance_id      = google_container_cluster.cwagent.name
             endpoint         = "http://127.0.0.1:4318"
             duration_seconds = local.load_gen_duration_seconds
           })]
@@ -365,8 +361,35 @@ resource "kubernetes_job_v1" "otlp_load" {
 # Diagnostics: surface agent pod state and logs in the job output so
 # delivery failures are debuggable after the cluster is destroyed.
 #####################################################################
+# GKE has no ready-made kubeconfig attribute, so build a static one from the cluster
+# endpoint and the caller's ADC bearer token (valid ~1h, longer than a run) -- kubectl
+# then needs no gcloud auth plugin on the machine running terraform.
 resource "local_sensitive_file" "kubeconfig" {
-  content         = azurerm_kubernetes_cluster.cwagent.kube_config_raw
+  content = yamlencode({
+    apiVersion = "v1"
+    kind       = "Config"
+    clusters = [{
+      name = google_container_cluster.cwagent.name
+      cluster = {
+        server                       = "https://${google_container_cluster.cwagent.endpoint}"
+        "certificate-authority-data" = google_container_cluster.cwagent.master_auth[0].cluster_ca_certificate
+      }
+    }]
+    users = [{
+      name = "terraform"
+      user = {
+        token = data.google_client_config.current.access_token
+      }
+    }]
+    contexts = [{
+      name = google_container_cluster.cwagent.name
+      context = {
+        cluster = google_container_cluster.cwagent.name
+        user    = "terraform"
+      }
+    }]
+    "current-context" = google_container_cluster.cwagent.name
+  })
   filename        = "${path.module}/kubeconfig"
   file_permission = "0600"
 }
@@ -390,10 +413,10 @@ resource "null_resource" "integration_test" {
     working_dir = "${path.module}/../../../"
     command     = <<-EOT
       go test -tags integration ${var.test_dir} -p 1 -timeout 30m \
-        -computeType=AKS \
+        -computeType=GKE \
         -region=${var.region} \
         -cwaCommitSha=${var.cwa_github_sha} \
-        -aksClusterName=${azurerm_kubernetes_cluster.cwagent.name} \
+        -gkeClusterName=${google_container_cluster.cwagent.name} \
         -v
     EOT
 
