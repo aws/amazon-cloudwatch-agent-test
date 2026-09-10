@@ -363,7 +363,7 @@ resource "null_resource" "validator" {
       echo "Waiting 6.5 minutes for the agent to settle and metrics to propagate (covers the 5-min query window)..."
       sleep 390
 
-      go test -tags integration -timeout 1h -v ${var.test_dir} \
+      go test -tags integration -timeout 10m -v ${var.test_dir} \
         -eksClusterName=${aws_eks_cluster.this.name} \
         -computeType=EKS \
         -eksDeploymentStrategy=DAEMON \

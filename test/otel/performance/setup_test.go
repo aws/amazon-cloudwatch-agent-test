@@ -74,6 +74,12 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 			sharedMetricsErr = fmt.Errorf("Memory QueryRange failed: %w", err)
 			return
 		}
+		if live, lerr := liveAgentPods(ctx); lerr != nil {
+			t.Logf("WARNING: could not list live agent pods (%v) — proceeding without stale-pod filtering", lerr)
+		} else {
+			cpuResults = filterToLivePods(t, cpuResults, live, "k8s.pod.cpu.utilization")
+			memResults = filterToLivePods(t, memResults, live, "k8s.pod.memory.working_set")
+		}
 		sharedMetrics = &podMetricData{
 			CPUResults: cpuResults,
 			MemResults: memResults,
