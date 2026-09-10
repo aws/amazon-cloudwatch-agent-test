@@ -9,7 +9,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
 	"os"
+	"sort"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -55,7 +58,7 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 		ctx := context.Background()
 		end := time.Now()
 		start := end.Add(-queryRangeMinutes * time.Minute)
-		step := 30 * time.Second
+		step := 1 * time.Second
 
 		// Escape the cluster name before interpolating, matching the shared
 		// helper used by the other otel suites (kubeletstats/cadvisor/gpu).
@@ -99,6 +102,87 @@ func calcStats(values []float64) (float64, float64) {
 	}
 	avg := sum / float64(len(values))
 	return avg, max
+}
+
+// summaryStat reduces a series to a single value using the named statistic
+// (max, p90, p95, p99, es90, es95, or average). Driven by the "stat" field in the config.
+func summaryStat(values []float64, stat string) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	switch strings.ToLower(strings.TrimSpace(stat)) {
+	case "max":
+		_, max := calcStats(values)
+		return max
+	case "p90":
+		return percentile(values, 90)
+	case "p95":
+		return percentile(values, 95)
+	case "p99":
+		return percentile(values, 99)
+	case "es90":
+		return expectedShortfall(values, 90)
+	case "es95":
+		return expectedShortfall(values, 95)
+	case "average", "avg", "mean", "":
+		avg, _ := calcStats(values)
+		return avg
+	default:
+		avg, _ := calcStats(values)
+		return avg
+	}
+}
+
+// allStatsString formats avg/max/p95/p99/es95 for one series, for side-by-side
+// comparison while deciding which statistic to gate on. Remove once chosen.
+func allStatsString(values []float64) string {
+	avg, max := calcStats(values)
+	return fmt.Sprintf("avg=%.4f max=%.4f p95=%.4f p99=%.4f es95=%.4f",
+		avg, max, percentile(values, 95), percentile(values, 99), expectedShortfall(values, 95))
+}
+
+// expectedShortfall returns the mean of the samples at or above the p-th
+// percentile (CVaR / tail-conditional mean) — a smoothed view of the worst tail
+// that is steadier than p95 but still moves when the tail genuinely shifts.
+func expectedShortfall(values []float64, p float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	sorted := append([]float64(nil), values...)
+	sort.Float64s(sorted)
+	cutoff := percentile(values, p)
+	var sum float64
+	var count int
+	for _, v := range sorted {
+		if v >= cutoff {
+			sum += v
+			count++
+		}
+	}
+	if count == 0 {
+		return cutoff
+	}
+	return sum / float64(count)
+}
+
+// percentile returns the linearly-interpolated p-th percentile (0-100) of values.
+func percentile(values []float64, p float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	sorted := append([]float64(nil), values...)
+	sort.Float64s(sorted)
+	if len(sorted) == 1 {
+		return sorted[0]
+	}
+	rank := (p / 100) * float64(len(sorted)-1)
+	lo := int(math.Floor(rank))
+	hi := int(math.Ceil(rank))
+	if lo == hi {
+		return sorted[lo]
+	}
+	frac := rank - float64(lo)
+	return sorted[lo]*(1-frac) + sorted[hi]*frac
 }
 
 // TestMain resolves the region, cluster name, and account ID into a config and

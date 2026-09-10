@@ -538,8 +538,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:      "./test/otel/performance",
 			terraformDir: "terraform/eks/daemon/otel-performance",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "t3.medium",
 			ami:          "AL2023_x86_64_STANDARD",
 			k8sVersion:   "1.35",
+			wip:          true,
 		},
 	},
 	"eks_deployment": {
