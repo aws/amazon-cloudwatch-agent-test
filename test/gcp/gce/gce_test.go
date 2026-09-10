@@ -3,10 +3,10 @@
 
 //go:build integration
 
-// Package vm validates the agent on a real Azure VM running default:otel: it pushes OTLP to the
-// pre-provisioned collector and verifies metrics/logs/traces reach CloudWatch via the Azure web-identity chain.
+// Package gce validates the agent on a real GCE VM running default:otel: it pushes OTLP to the
+// pre-provisioned collector and verifies metrics/logs/traces reach CloudWatch via the GCP web-identity chain.
 // Uses the TestMain/pre-provisioned pattern (not test_runner.TestRunner, which would restart the agent).
-package vm
+package gce
 
 import (
 	"flag"
@@ -34,10 +34,10 @@ const (
 	otlpEndpoint = "http://127.0.0.1:4318"
 	// otlpLogGroup is where default:otel routes OTLP logs: "/aws/cwagent" + "/" + aws.log.source ("otlp").
 	otlpLogGroup = "/aws/cwagent/otlp"
-	// agentLogFile lets us confirm the collector booted the Azure web-identity pipeline before asserting delivery.
+	// agentLogFile lets us confirm the collector booted the GCP web-identity pipeline before asserting delivery.
 	agentLogFile = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	// serviceName tags emitted telemetry so validation can isolate this test's records from other traffic.
-	serviceName = "azurevm-otlp-test-service"
+	serviceName = "gce-otlp-test-service"
 	// spansLogGroup is where Transaction Search stores 100% of spans ingested via the X-Ray OTLP endpoint.
 	spansLogGroup = "aws/spans"
 )
@@ -56,7 +56,7 @@ func TestMain(m *testing.M) {
 	flag.Parse()
 	env = environment.GetEnvironmentMetaData()
 	if env.InstanceId == "" {
-		fmt.Fprintln(os.Stderr, "instanceId flag is required (Azure VM ID / IMDS vmId) to scope telemetry")
+		fmt.Fprintln(os.Stderr, "instanceId flag is required (GCE numeric instance ID) to scope telemetry")
 		os.Exit(1)
 	}
 	payloadPrefix = strings.ToLower(string(env.ComputeType))
@@ -68,13 +68,13 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// TestAzureVM confirms the pre-provisioned default:otel agent detected Azure, then pushes OTLP and validates
-// that all three signals reach CloudWatch via the Azure web-identity chain.
-func TestAzureVM(t *testing.T) {
-	// The agent must already be running default:otel and have detected Azure before we generate load.
+// TestGCE confirms the pre-provisioned default:otel agent detected GCE, then pushes OTLP and validates
+// that all three signals reach CloudWatch via the GCP web-identity chain.
+func TestGCE(t *testing.T) {
+	// The agent must already be running default:otel and have detected GCE before we generate load.
 	agentLog := common.ReadAgentLogfile(agentLogFile)
-	require.Contains(t, agentLog, "azure",
-		"agent log has no \"azure\" marker; the default:otel Azure detection path was not exercised")
+	require.Contains(t, agentLog, "gcp",
+		"agent log has no \"gcp\" marker; the default:otel GCE detection path was not exercised")
 
 	// Push OTLP for the load window, then validate.
 	stop := make(chan struct{})
@@ -97,10 +97,10 @@ func TestAzureVM(t *testing.T) {
 
 	t.Run("Metrics", func(t *testing.T) {
 		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
-			"AzureVMDefaultOtel", env.Region, otlpvalidation.MeasuredMetricNames(payloadPrefix),
+			"GCEDefaultOtel", env.Region, otlpvalidation.MeasuredMetricNames(payloadPrefix),
 			map[string]string{
 				"@resource.host.id":        env.InstanceId,
-				"@resource.cloud.provider": "azure",
+				"@resource.cloud.provider": "gcp",
 			},
 		)
 		for _, r := range group.TestResults {
@@ -126,11 +126,11 @@ func TestAzureVM(t *testing.T) {
 // validateLogs confirms the OTLP log record landed in the default:otel log group on the stream the
 // agent's log routing is expected to derive for this host.
 func validateLogs() status.TestResult {
-	testResult := status.TestResult{Name: "AzureVM_Logs", Status: status.FAILED}
+	testResult := status.TestResult{Name: "GCE_Logs", Status: status.FAILED}
 
 	// The agent routes OTLP logs to {host.id}/{service.name}, so assert that exact stream: it makes the
 	// check prove log routing rather than just delivery, and keeps cost flat as the shared group
-	// accumulates a stream per VM. Retries match the AKS path, since the stream and events both lag.
+	// accumulates a stream per VM. Retries because the stream and events both lag.
 	logStream := fmt.Sprintf("%s/%s", env.InstanceId, serviceName)
 	// Clean up only on success: the group is shared by every VM run, so drop this run's stream but never
 	// the group. On failure the stream is left in place as evidence for whoever debugs the run.
@@ -145,7 +145,7 @@ func validateLogs() status.TestResult {
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		since := time.Now().Add(-loadWindow - time.Minute)
 		until := time.Now()
-		log.Printf("[AzureVM_Logs] attempt %d: checking %s/%s", attempt, otlpLogGroup, logStream)
+		log.Printf("[GCE_Logs] attempt %d: checking %s/%s", attempt, otlpLogGroup, logStream)
 		err := awsservice.ValidateLogs(
 			otlpLogGroup, logStream, &since, &until,
 			awsservice.AssertLogsNotEmpty(),
@@ -157,7 +157,7 @@ func validateLogs() status.TestResult {
 		}
 		testResult.Reason = err
 		if attempt < maxRetries {
-			log.Printf("[AzureVM_Logs] %v — retrying in %v", testResult.Reason, retryInterval)
+			log.Printf("[GCE_Logs] %v — retrying in %v", testResult.Reason, retryInterval)
 			time.Sleep(retryInterval)
 		}
 	}
@@ -170,7 +170,7 @@ func validateLogs() status.TestResult {
 // APIs (GetTraceSummaries/BatchGetTraces) only see the indexed subset (1% by default), so aws/spans
 // is the authoritative surface for OTLP trace delivery. Ingestion lags a few minutes, hence retries.
 func validateTraces(traceIDs []string) status.TestResult {
-	testResult := status.TestResult{Name: "AzureVM_Traces", Status: status.FAILED}
+	testResult := status.TestResult{Name: "GCE_Traces", Status: status.FAILED}
 
 	if len(traceIDs) == 0 {
 		testResult.Reason = fmt.Errorf("no trace IDs were generated during the load window")
@@ -182,7 +182,7 @@ func validateTraces(traceIDs []string) status.TestResult {
 		quoted[i] = fmt.Sprintf("%q", id)
 	}
 	query := fmt.Sprintf("fields traceId | filter traceId in [%s] | dedup traceId", strings.Join(quoted, ", "))
-	log.Printf("[AzureVM_Traces] expecting %d trace IDs in %s (sample: %s)", len(traceIDs), spansLogGroup, traceIDs[0])
+	log.Printf("[GCE_Traces] expecting %d trace IDs in %s (sample: %s)", len(traceIDs), spansLogGroup, traceIDs[0])
 
 	const maxRetries = 5
 	const retryInterval = 60 * time.Second
@@ -208,7 +208,7 @@ func validateTraces(traceIDs []string) status.TestResult {
 				}
 			}
 			if len(missing) == 0 {
-				log.Printf("[AzureVM_Traces] attempt %d: all %d traces found in %s", attempt, len(traceIDs), spansLogGroup)
+				log.Printf("[GCE_Traces] attempt %d: all %d traces found in %s", attempt, len(traceIDs), spansLogGroup)
 				testResult.Status = status.SUCCESSFUL
 				return testResult
 			}
@@ -216,7 +216,7 @@ func validateTraces(traceIDs []string) status.TestResult {
 				attempt, len(missing), len(traceIDs), spansLogGroup, missing[0])
 		}
 		if attempt < maxRetries {
-			log.Printf("[AzureVM_Traces] %v — retrying in %v", testResult.Reason, retryInterval)
+			log.Printf("[GCE_Traces] %v — retrying in %v", testResult.Reason, retryInterval)
 			time.Sleep(retryInterval)
 		}
 	}
