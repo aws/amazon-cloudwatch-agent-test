@@ -5,15 +5,16 @@
       "name": "k8s.pod.cpu.utilization",
       "unit": "percent_of_node",
       "stat": "Average",
+      "error_bound": 0.45,
       "pod_thresholds": [
         {
           "pod_filter": "daemonset",
-          "threshold": 1.3,
+          "threshold": 1.21,
           "description": "DaemonSet agent pod CPU as a percentage of node allocatable CPU"
         },
         {
           "pod_filter": "scraper",
-          "threshold": 0.9,
+          "threshold": 0.05,
           "description": "Cluster scraper pod CPU as a percentage of node allocatable CPU"
         }
       ]
@@ -25,12 +26,12 @@
       "pod_thresholds": [
         {
           "pod_filter": "daemonset",
-          "threshold": 4.7,
+          "threshold": 3.05,
           "description": "DaemonSet agent pod memory as a percentage of node allocatable memory"
         },
         {
           "pod_filter": "scraper",
-          "threshold": 4.9,
+          "threshold": 4.54,
           "description": "Cluster scraper pod memory as a percentage of node allocatable memory"
         }
       ]

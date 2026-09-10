@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -168,7 +169,7 @@ func collectCurrentResults(t *testing.T) PerfResult {
 	for _, series := range metrics.CPUResults {
 		podName := series.Labels.Resource["k8s.pod.name"]
 		require.NotEmpty(t, podName, "series is missing the k8s.pod.name resource label")
-		if len(series.Values) == 0 {
+		if !slices.ContainsFunc(series.Values, func(v float64) bool { return v != 0 }) {
 			continue
 		}
 		for _, v := range series.Values {
@@ -190,7 +191,7 @@ func collectCurrentResults(t *testing.T) PerfResult {
 	for _, series := range metrics.MemResults {
 		podName := series.Labels.Resource["k8s.pod.name"]
 		require.NotEmpty(t, podName, "series is missing the k8s.pod.name resource label")
-		if len(series.Values) == 0 {
+		if !slices.ContainsFunc(series.Values, func(v float64) bool { return v != 0 }) {
 			continue
 		}
 		for _, v := range series.Values {
