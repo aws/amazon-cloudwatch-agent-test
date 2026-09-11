@@ -116,14 +116,13 @@ func podTypeLabel(podType string) string {
 	}
 }
 
-// isAllValuesWithinBound returns the average of values and an error if the set
-// is empty, contains a negative value, or the average falls outside the
-// threshold band [threshold*(1-errorBound), threshold*(1+errorBound)].
-func isAllValuesWithinBound(values []float64, threshold float64, errorBound float64) (float64, error) {
+// checkAgainstUpperBound returns the configured statistic and errors if the set
+// is empty, contains NaN or a negative value, or the statistic exceeds the upper
+// bound. No lower bound: a healthy pod can idle near zero over the window.
+func checkAgainstUpperBound(values []float64, threshold float64, errorBound float64, stat string) (float64, error) {
 	if len(values) == 0 {
 		return 0, fmt.Errorf("no values found")
 	}
-	totalSum := 0.0
 	for _, value := range values {
 		if math.IsNaN(value) {
 			return 0, fmt.Errorf("values contain NaN")
@@ -131,15 +130,18 @@ func isAllValuesWithinBound(values []float64, threshold float64, errorBound floa
 		if value < 0 && threshold >= 0 {
 			return 0, fmt.Errorf("values are not all greater than or equal to zero")
 		}
-		totalSum += value
 	}
-	avg := totalSum / float64(len(values))
+	value := summaryStat(values, stat)
+	// A resulting statistic of 0 means no data was collected for this pod —
+	// that is a broken run, not a low-but-healthy reading, so fail.
+	if value == 0 {
+		return 0, fmt.Errorf("%s value is 0 — no data collected for this pod", stat)
+	}
 	upperBound := threshold * (1 + errorBound)
-	lowerBound := threshold * (1 - errorBound)
-	if threshold > 0 && (avg > upperBound || avg < lowerBound) {
-		return avg, fmt.Errorf("average value %f is not within bound [%f, %f]", avg, lowerBound, upperBound)
+	if threshold > 0 && value > upperBound {
+		return value, fmt.Errorf("%s value %f exceeds upper bound %f", stat, value, upperBound)
 	}
-	return avg, nil
+	return value, nil
 }
 
 // TestPerformanceThresholds checks each agent pod's resource usage against the
@@ -173,15 +175,14 @@ func TestPerformanceThresholds(t *testing.T) {
 		for _, m := range thresholds.Metrics {
 			for _, mpt := range m.PodThresholds {
 				if mpt.PodFilter == pt.PodFilter {
-					lower := mpt.Threshold * (1 - thresholds.ErrorBound)
 					upper := mpt.Threshold * (1 + thresholds.ErrorBound)
 					switch m.Name {
 					case "k8s.pod.cpu.utilization":
-						t.Logf("  (%s): Node CPU safe range: ±%.0f%% of %.2f%% of Node allocatable CPU [%.4f%%, %.4f%%]",
-							label, thresholds.ErrorBound*100, mpt.Threshold, lower, upper)
+						t.Logf("  (%s): Node CPU upper bound: %.2f%% +%.0f%% of Node allocatable CPU (%.4f%%)",
+							label, mpt.Threshold, thresholds.ErrorBound*100, upper)
 					case "k8s.pod.memory.working_set":
-						t.Logf("  (%s): Node memory safe range: ±%.0f%% of %.2f%% of Node allocatable memory [%.4f%%, %.4f%%]",
-							label, thresholds.ErrorBound*100, mpt.Threshold, lower, upper)
+						t.Logf("  (%s): Node memory upper bound: %.2f%% +%.0f%% of Node allocatable memory (%.4f%%)",
+							label, mpt.Threshold, thresholds.ErrorBound*100, upper)
 					}
 				}
 			}
@@ -223,6 +224,13 @@ func TestPerformanceThresholds(t *testing.T) {
 			if podType == "" {
 				continue
 			}
+
+			// An all-zero series means no data was collected for this pod in the
+			// window; skip it so it doesn't count as a (failing) observation. A
+			// whole pod class going missing is still caught by the presence check.
+			if isAllZero(series.Values) {
+				continue
+			}
 			expectedClasses[podType] = true
 
 			var denominator float64
@@ -244,30 +252,28 @@ func TestPerformanceThresholds(t *testing.T) {
 				pctValues[i] = (val / denominator) * 100
 			}
 
-			// Check if values are within bounds and log all the results.
+			// Log all stats side by side for comparison, then gate on the
+			// configured one (metric.Stat). Drop the all-stats line once chosen.
 			label := podTypeLabel(podType)
-			avg, err := isAllValuesWithinBound(pctValues, threshold, thresholds.ErrorBound)
+			t.Logf("  %s (%s) [%% of %s]: %s", label, podName, resourceLabel, allStatsString(pctValues))
+			value, err := checkAgainstUpperBound(pctValues, threshold, thresholds.ErrorBound, metric.Stat)
 
-			lowerBound := threshold * (1 - thresholds.ErrorBound)
 			upperBound := threshold * (1 + thresholds.ErrorBound)
 
-			t.Logf("  %s (%s): Using %.4f%% of %s", label, podName, avg, resourceLabel)
+			t.Logf("  %s (%s): Gating on %s = %.4f%% of %s", label, podName, metric.Stat, value, resourceLabel)
 
 			if err != nil {
-				if avg < lowerBound {
-					t.Logf("    %.4f%% %sBELOW%s range [%.4f%%, %.4f%%], Threshold Test: %sFAIL%s",
-						avg, colorRed, colorReset, lowerBound, upperBound, colorRed, colorReset)
-				} else if avg > upperBound {
-					t.Logf("    %.4f%% %sABOVE%s range [%.4f%%, %.4f%%], Threshold Test: %sFAIL%s",
-						avg, colorRed, colorReset, lowerBound, upperBound, colorRed, colorReset)
+				if value > upperBound {
+					t.Logf("    %.4f%% %sABOVE%s upper bound %.4f%%, Threshold Test: %sFAIL%s",
+						value, colorRed, colorReset, upperBound, colorRed, colorReset)
 				} else {
 					t.Logf("    %s%s%s", colorRed, err.Error(), colorReset)
 				}
 				failures = append(failures, fmt.Sprintf(
 					"%s (%s) [%s]: %s", label, podName, metric.Name, err.Error()))
 			} else {
-				t.Logf("    %.4f%% %sWITHIN%s range [%.4f%%, %.4f%%], Threshold Test: %sPASS%s",
-					avg, colorGreen, colorReset, lowerBound, upperBound, colorGreen, colorReset)
+				t.Logf("    %.4f%% %sWITHIN%s upper bound %.4f%%, Threshold Test: %sPASS%s",
+					value, colorGreen, colorReset, upperBound, colorGreen, colorReset)
 			}
 			t.Log("")
 		}
