@@ -40,6 +40,7 @@ type MetaData struct {
 	CaCertPath                                  string
 	EKSClusterName                              string
 	AKSClusterName                              string
+	GKEClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -88,6 +89,7 @@ type MetaDataStrings struct {
 	CaCertPath                                  string
 	EKSClusterName                              string
 	AKSClusterName                              string
+	GKEClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -121,7 +123,7 @@ type MetaDataStrings struct {
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
-	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS/AZUREVM/AKS")
+	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS/AZUREVM/AKS/GCE/GKE")
 }
 func registerBucket(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.Bucket), "bucket", "", "s3 bucket ex cloudwatch-agent-integration-bucket")
@@ -146,6 +148,10 @@ func registerECSData(dataString *MetaDataStrings) {
 
 func registerAKSData(d *MetaDataStrings) {
 	flag.StringVar(&(d.AKSClusterName), "aksClusterName", "", "AKS cluster name")
+}
+
+func registerGKEData(d *MetaDataStrings) {
+	flag.StringVar(&(d.GKEClusterName), "gkeClusterName", "", "GKE cluster name")
 }
 
 func registerEKSData(d *MetaDataStrings) {
@@ -193,7 +199,7 @@ func registerProxyUrl(dataString *MetaDataStrings) {
 func fillComputeType(e *MetaData, data *MetaDataStrings) {
 	computeType, ok := computetype.FromString(data.ComputeType)
 	if !ok {
-		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS/AZUREVM/AKS. Compute Type is a required flag. :" + data.ComputeType)
+		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS/AZUREVM/AKS/GCE/GKE. Compute Type is a required flag. :" + data.ComputeType)
 	}
 	e.ComputeType = computeType
 }
@@ -328,6 +334,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerECSData(registeredMetaDataStrings)
 	registerEKSData(registeredMetaDataStrings)
 	registerAKSData(registeredMetaDataStrings)
+	registerGKEData(registeredMetaDataStrings)
 	registerEKSE2ETestData(registeredMetaDataStrings)
 	registerBucket(registeredMetaDataStrings)
 	registerS3Key(registeredMetaDataStrings)
@@ -367,6 +374,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.InstanceArn = registeredMetaDataStrings.InstanceArn
 	metaDataStorage.InstanceId = registeredMetaDataStrings.InstanceId
 	metaDataStorage.AKSClusterName = registeredMetaDataStrings.AKSClusterName
+	metaDataStorage.GKEClusterName = registeredMetaDataStrings.GKEClusterName
 	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
 	metaDataStorage.EksGpuType = registeredMetaDataStrings.EksGpuType
