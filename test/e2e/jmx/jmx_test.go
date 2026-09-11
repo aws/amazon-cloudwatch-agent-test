@@ -49,6 +49,7 @@ var testMetricsRegistry = map[string][]func(*testing.T){
 var testResourcesRegistry = []func(*testing.T, *kubernetes.Clientset){
 	testAgentResources,
 	testJMXResources,
+	testPodLevelValues,
 }
 
 //------------------------------------------------------------------------------
@@ -136,6 +137,13 @@ func testAgentResources(t *testing.T, clientset *kubernetes.Clientset) {
 	t.Run("verify_agent_resources", func(t *testing.T) {
 		time.Sleep(e2e.WaitForResourceCreation)
 		e2e.VerifyAgentResources(t, clientset, "jmx")
+	})
+}
+
+func testPodLevelValues(t *testing.T, clientset *kubernetes.Clientset) {
+	t.Run("verify_pod_level_values", func(t *testing.T) {
+		time.Sleep(e2e.WaitForResourceCreation)
+		e2e.VerifyPodLevelValues(t, clientset, env)
 	})
 }
 
