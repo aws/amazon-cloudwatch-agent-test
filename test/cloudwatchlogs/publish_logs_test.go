@@ -24,11 +24,13 @@ import (
 )
 
 const (
-	configOutputPath              = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	logLineId1                    = "foo"
-	logLineId2                    = "bar"
-	logFilePath                   = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
-	sleepForFlush                 = 20 * time.Second            // default flush interval is 5 seconds
+	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	logLineId1       = "foo"
+	logLineId2       = "bar"
+	logFilePath      = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
+	sleepForFlush    = 20 * time.Second            // default flush interval is 5 seconds
+	cwPropagationAttempts         = 6
+	cwPropagationInterval         = 15 * time.Second
 	configPathAutoRemoval         = "resources/config_auto_removal.json"
 	standardLogGroupClass         = "STANDARD"
 	infrequentAccessLogGroupClass = "INFREQUENT_ACCESS"
@@ -130,12 +132,15 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			common.StopAgent()
 			end := time.Now()
 
-			// check CWL to ensure we got the expected number of logs in the log stream
-			err = awsservice.ValidateLogs(
+			// Retry to absorb CloudWatch Logs propagation lag: events can take a few
+			// seconds to become queryable after the agent flushes.
+			err = awsservice.ValidateLogsWithRetry(
 				instanceId,
 				instanceId,
 				&start,
 				&end,
+				cwPropagationAttempts,
+				cwPropagationInterval,
 				awsservice.AssertLogsCount(param.numExpectedLogs),
 				awsservice.AssertNoDuplicateLogs(),
 			)
@@ -287,7 +292,7 @@ func TestLogGroupClass(t *testing.T) {
 			}
 			t.Logf("Agent logs %s", string(agentLog))
 
-			assert.True(t, awsservice.IsLogGroupExists(logGroupName, param.logGroupClass))
+			assert.True(t, awsservice.IsLogGroupExistsWithRetry(logGroupName, cwPropagationAttempts, cwPropagationInterval, param.logGroupClass))
 		})
 	}
 }

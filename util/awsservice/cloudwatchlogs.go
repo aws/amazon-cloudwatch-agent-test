@@ -70,6 +70,30 @@ func ValidateLogs(logGroup, logStream string, since, until *time.Time, validator
 	return nil
 }
 
+// ValidateLogsWithRetry is ValidateLogs with bounded re-validation. GetLogsSince does not
+// retry a stream that exists but whose events CloudWatch has not surfaced yet, so a single
+// query right after the agent stops is racy; should re-query.
+func ValidateLogsWithRetry(logGroup, logStream string, since, until *time.Time, attempts int, interval time.Duration, validators ...LogEventsValidator) error {
+	if attempts < 1 {
+		attempts = 1
+	}
+	var err error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		err = ValidateLogs(logGroup, logStream, since, until, validators...)
+		if err == nil {
+			if attempt > 1 {
+				log.Printf("Log validation for %s/%s passed on attempt %d/%d", logGroup, logStream, attempt, attempts)
+			}
+			return nil
+		}
+		if attempt < attempts {
+			log.Printf("Log validation for %s/%s failed on attempt %d/%d: %v; retrying in %s", logGroup, logStream, attempt, attempts, err, interval)
+			time.Sleep(interval)
+		}
+	}
+	return fmt.Errorf("log validation for %s/%s failed after %d attempts over %s: %w", logGroup, logStream, attempts, time.Duration(attempts-1)*interval, err)
+}
+
 // GetLogsSince makes GetLogEvents API calls, paginates through the results for the given time frame, and returns
 // the raw log strings
 func GetLogsSince(logGroup, logStream string, since, until *time.Time) ([]types.OutputLogEvent, error) {
@@ -150,6 +174,18 @@ func IsLogGroupExists(logGroupName string, logGroupClassArg ...types.LogGroupCla
 	}
 
 	return len(describeLogGroupOutput.LogGroups) > 0
+}
+
+func IsLogGroupExistsWithRetry(logGroupName string, attempts int, interval time.Duration, logGroupClassArg ...types.LogGroupClass) bool {
+	for i := 0; i < attempts; i++ {
+		if IsLogGroupExists(logGroupName, logGroupClassArg...) {
+			return true
+		}
+		if i < attempts-1 {
+			time.Sleep(interval)
+		}
+	}
+	return false
 }
 
 // GetLogQueryStats for the log group between start/end (in epoch seconds) for the
