@@ -87,6 +87,18 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 	return sharedMetrics
 }
 
+// isAllZero reports whether every value in the series is zero. An all-zero
+// series means no data was collected for that pod in the window; scoring it
+// would drag the stats artificially low, so callers skip these series.
+func isAllZero(values []float64) bool {
+	for _, v := range values {
+		if v != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // calcStats computes the average and maximum from a series of data points.
 // performance_test.go uses the average and regression_test.go uses the max.
 func calcStats(values []float64) (float64, float64) {

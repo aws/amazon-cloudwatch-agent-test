@@ -166,6 +166,9 @@ func collectCurrentResults(t *testing.T) PerfResult {
 		for _, v := range series.Values {
 			require.False(t, math.IsNaN(v), "CPU series for %s contains a NaN sample", podName)
 		}
+		if isAllZero(series.Values) {
+			continue
+		}
 		stat := summaryStat(series.Values, regressionStat)
 		if isDaemonSetPod(podName) {
 			sawDaemonSetCPU = true
@@ -187,6 +190,9 @@ func collectCurrentResults(t *testing.T) PerfResult {
 		}
 		for _, v := range series.Values {
 			require.False(t, math.IsNaN(v), "memory series for %s contains a NaN sample", podName)
+		}
+		if isAllZero(series.Values) {
+			continue
 		}
 		statMB := summaryStat(series.Values, regressionStat) / (1024 * 1024)
 		if isDaemonSetPod(podName) {

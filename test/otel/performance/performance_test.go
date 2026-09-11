@@ -132,6 +132,11 @@ func checkAgainstUpperBound(values []float64, threshold float64, errorBound floa
 		}
 	}
 	value := summaryStat(values, stat)
+	// A resulting statistic of 0 means no data was collected for this pod —
+	// that is a broken run, not a low-but-healthy reading, so fail.
+	if value == 0 {
+		return 0, fmt.Errorf("%s value is 0 — no data collected for this pod", stat)
+	}
 	upperBound := threshold * (1 + errorBound)
 	if threshold > 0 && value > upperBound {
 		return value, fmt.Errorf("%s value %f exceeds upper bound %f", stat, value, upperBound)
@@ -217,6 +222,13 @@ func TestPerformanceThresholds(t *testing.T) {
 			// Get the threshold for this specific pod type
 			threshold, podType := getThresholdForPod(podName, metric.PodThresholds)
 			if podType == "" {
+				continue
+			}
+
+			// An all-zero series means no data was collected for this pod in the
+			// window; skip it so it doesn't count as a (failing) observation. A
+			// whole pod class going missing is still caught by the presence check.
+			if isAllZero(series.Values) {
 				continue
 			}
 			expectedClasses[podType] = true
