@@ -1,0 +1,14 @@
+{
+  "opentelemetry": {
+    "cluster_name": "AKS_CLUSTER_NAME",
+    "collect": {
+      "container_insights": {
+        "collection_interval": 30,
+        "role": "node",
+        "logs": {
+          "enabled": true
+        }
+      }
+    }
+  }
+}
