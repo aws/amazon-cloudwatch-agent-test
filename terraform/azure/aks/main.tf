@@ -487,14 +487,14 @@ resource "kubernetes_config_map" "ci_cluster" {
 # node-exporter serve the leaf via exporter-toolkit web-config.
 #####################################################################
 resource "tls_private_key" "ci_ca" {
-  count       = local.is_ci ? 1 : 0
-  algorithm   = "RSA"
-  rsa_bits    = 2048
+  count     = local.is_ci ? 1 : 0
+  algorithm = "RSA"
+  rsa_bits  = 2048
 }
 
 resource "tls_self_signed_cert" "ci_ca" {
-  count           = local.is_ci ? 1 : 0
-  private_key_pem = tls_private_key.ci_ca[0].private_key_pem
+  count             = local.is_ci ? 1 : 0
+  private_key_pem   = tls_private_key.ci_ca[0].private_key_pem
   is_ca_certificate = true
   subject {
     common_name = "cwa-aks-ci-ca"
