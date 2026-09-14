@@ -4,7 +4,7 @@
     {
       "name": "k8s.pod.cpu.utilization",
       "unit": "percent_of_node",
-      "stat": "Average",
+      "stat": "p95",
       "pod_thresholds": [
         {
           "pod_filter": "daemonset",
@@ -21,7 +21,7 @@
     {
       "name": "k8s.pod.memory.working_set",
       "unit": "percent_of_node",
-      "stat": "Average",
+      "stat": "p95",
       "pod_thresholds": [
         {
           "pod_filter": "daemonset",
