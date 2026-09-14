@@ -347,6 +347,103 @@ resource "null_resource" "neuron_burn_core" {
   }
 }
 
+# --- neuron-burn-peer Deployment: the SECOND runtime on the workload node ---
+#
+# Gives the node two Neuron runtimes burning different cores, the only shape in
+# which the per-core data-loss defect appears (test/otel/neuron/multi_runtime_test.go).
+# inf2.xlarge has 1 device x 2 cores; burn-core takes one, this takes the other.
+#
+# Three constraints, each of which breaks an existing test if changed:
+#   - NOT named neuron-burn-core-*: TestNeuronBurnWorkloadLabels and
+#     TestNeuronBurnCorePodColor match HasPrefix(pod, "neuron-burn-core").
+#   - no `neuron-test: "true"` label: burn-core's podAntiAffinity targets it, which
+#     would make the two mutually exclusive on a host and push burn-core onto the
+#     idle node, breaking the idle-node tests.
+#   - podAffinity, not just nodeSelector: both node groups use var.instance_type, so
+#     a nodeSelector alone could land this on the idle node.
+#
+# Sits Pending on first apply until burn-core is scheduled; the scheduler retries.
+
+resource "null_resource" "neuron_burn_peer" {
+  depends_on = [
+    helm_release.neuron_device_plugin,
+    null_resource.kubectl,
+    null_resource.neuron_burn_core,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      cat <<'EOF' | kubectl apply -f -
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: neuron-burn-peer
+        namespace: default
+      spec:
+        replicas: 1
+        revisionHistoryLimit: 2
+        progressDeadlineSeconds: 300
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxSurge: 0
+            maxUnavailable: 1
+        selector:
+          matchLabels:
+            app: neuron-burn-peer
+        template:
+          metadata:
+            labels:
+              app: neuron-burn-peer
+              ci-test.example.com/pod-color: green
+          spec:
+            tolerations:
+            - key: aws.amazon.com/neuron
+              operator: Exists
+              effect: NoSchedule
+            affinity:
+              podAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["neuron-burn-core"]
+                  topologyKey: kubernetes.io/hostname
+            nodeSelector:
+              node.kubernetes.io/instance-type: ${var.instance_type}
+            containers:
+            - name: neuron-burn
+              image: public.ecr.aws/neuron/pytorch-inference-neuronx:2.1.2-neuronx-py310-sdk2.20.2-ubuntu20.04
+              command: ["python3", "-c"]
+              args:
+              - |
+                import torch
+                import torch_neuronx
+                import time
+                print("Compiling neuron trace (this takes a minute)...")
+                x = torch.randn(256, 256)
+                model = torch.nn.Linear(256, 256, bias=False)
+                traced = torch_neuronx.trace(model, x)
+                print("Trace compiled. Starting burn loop...")
+                iteration = 0
+                while True:
+                    start = time.time()
+                    for _ in range(1000):
+                        _ = traced(x)
+                    elapsed = time.time() - start
+                    iteration += 1
+                    print(f"Iteration {iteration}: 1000 inferences in {elapsed:.2f}s")
+              resources:
+                limits:
+                  aws.amazon.com/neuroncore: "1"
+                requests:
+                  cpu: "1"
+                  memory: 4Gi
+      EOF
+    EOT
+  }
+}
+
 # --- neuron-burn-multi-device Deployment (inf2.24xlarge, uses multiple devices) ---
 
 resource "null_resource" "neuron_burn_multi_device" {
@@ -501,10 +598,39 @@ resource "null_resource" "restart_pods" {
 # --- Wait for neuron-monitor pods to be ready ---
 
 resource "null_resource" "wait_neuron_monitor" {
-  depends_on = [null_resource.restart_pods, null_resource.neuron_burn_core, null_resource.neuron_burn_multi_device]
-  triggers   = { timestamp = timestamp() }
+  depends_on = [
+    null_resource.restart_pods,
+    null_resource.neuron_burn_core,
+    null_resource.neuron_burn_peer,
+    null_resource.neuron_burn_multi_device,
+  ]
+  triggers = { timestamp = timestamp() }
   provisioner "local-exec" {
     command = <<-EOT
+      # A runtime_tag only exists once the runtime is up, and the trace compile takes
+      # ~a minute, so without this the tests race the fixture and see one runtime.
+      echo "Waiting for burn deployments to become Available..."
+      for d in neuron-burn-core neuron-burn-peer; do
+        kubectl -n default rollout status deployment/$d --timeout=600s || {
+          echo "ERROR: deployment/$d did not become Available"
+          kubectl -n default describe deployment/$d || true
+          kubectl -n default get pods -l app=$d -o wide || true
+          exit 1
+        }
+      done
+
+      # A silent split across nodes would make every multi-runtime test vacuous.
+      NODES=$(kubectl -n default get pods -l 'app in (neuron-burn-core,neuron-burn-peer)' \
+        -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | grep -c . || true)
+      if [ "$NODES" != "1" ]; then
+        echo "ERROR: neuron-burn-core and neuron-burn-peer are on $NODES nodes, expected 1."
+        echo "The multi-runtime per-core regression cannot be exercised unless both"
+        echo "runtimes share a node. Check the podAffinity on neuron-burn-peer."
+        kubectl -n default get pods -l 'app in (neuron-burn-core,neuron-burn-peer)' -o wide || true
+        exit 1
+      fi
+      echo "Both burn runtimes are co-located on one node."
+
       echo "Waiting for neuron-monitor pods to be ready..."
       READY=0
       for i in $(seq 1 30); do
