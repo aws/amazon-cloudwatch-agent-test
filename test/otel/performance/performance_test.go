@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
@@ -30,7 +31,15 @@ type metricThreshold struct {
 	Name          string         `json:"name"`
 	Unit          string         `json:"unit"`
 	Stat          string         `json:"stat"`
+	ErrorBound    *float64       `json:"error_bound,omitempty"`
 	PodThresholds []podThreshold `json:"pod_thresholds"`
+}
+
+func (m metricThreshold) errorBound(global float64) float64 {
+	if m.ErrorBound != nil {
+		return *m.ErrorBound
+	}
+	return global
 }
 
 type podThreshold struct {
@@ -173,15 +182,16 @@ func TestPerformanceThresholds(t *testing.T) {
 		for _, m := range thresholds.Metrics {
 			for _, mpt := range m.PodThresholds {
 				if mpt.PodFilter == pt.PodFilter {
-					lower := mpt.Threshold * (1 - thresholds.ErrorBound)
-					upper := mpt.Threshold * (1 + thresholds.ErrorBound)
+					eb := m.errorBound(thresholds.ErrorBound)
+					lower := mpt.Threshold * (1 - eb)
+					upper := mpt.Threshold * (1 + eb)
 					switch m.Name {
 					case "k8s.pod.cpu.utilization":
 						t.Logf("  (%s): Node CPU safe range: ±%.0f%% of %.2f%% of Node allocatable CPU [%.4f%%, %.4f%%]",
-							label, thresholds.ErrorBound*100, mpt.Threshold, lower, upper)
+							label, eb*100, mpt.Threshold, lower, upper)
 					case "k8s.pod.memory.working_set":
 						t.Logf("  (%s): Node memory safe range: ±%.0f%% of %.2f%% of Node allocatable memory [%.4f%%, %.4f%%]",
-							label, thresholds.ErrorBound*100, mpt.Threshold, lower, upper)
+							label, eb*100, mpt.Threshold, lower, upper)
 					}
 				}
 			}
@@ -190,6 +200,7 @@ func TestPerformanceThresholds(t *testing.T) {
 	}
 
 	var failures []string
+	calibration := make(map[string][]float64)
 
 	// Check each pod's resource usage against the expected threshold and report which pass or fail.
 	for _, metric := range thresholds.Metrics {
@@ -223,6 +234,11 @@ func TestPerformanceThresholds(t *testing.T) {
 			if podType == "" {
 				continue
 			}
+			if !slices.ContainsFunc(series.Values, func(v float64) bool { return v != 0 }) {
+				t.Logf("  %s (%s): no %s data in window — skipping",
+					podTypeLabel(podType), podName, metric.Name)
+				continue
+			}
 			expectedClasses[podType] = true
 
 			var denominator float64
@@ -246,10 +262,12 @@ func TestPerformanceThresholds(t *testing.T) {
 
 			// Check if values are within bounds and log all the results.
 			label := podTypeLabel(podType)
-			avg, err := isAllValuesWithinBound(pctValues, threshold, thresholds.ErrorBound)
+			eb := metric.errorBound(thresholds.ErrorBound)
+			avg, err := isAllValuesWithinBound(pctValues, threshold, eb)
+			calibration[metric.Name+"|"+podType] = append(calibration[metric.Name+"|"+podType], avg)
 
-			lowerBound := threshold * (1 - thresholds.ErrorBound)
-			upperBound := threshold * (1 + thresholds.ErrorBound)
+			lowerBound := threshold * (1 - eb)
+			upperBound := threshold * (1 + eb)
 
 			t.Logf("  %s (%s): Using %.4f%% of %s", label, podName, avg, resourceLabel)
 
@@ -274,6 +292,24 @@ func TestPerformanceThresholds(t *testing.T) {
 
 		for class, seen := range expectedClasses {
 			require.True(t, seen, "no %s pod series observed for %s — expected both pod classes to be present", class, metric.Name)
+		}
+	}
+
+	t.Log("")
+	t.Log("------------------------------ CALIBRATION (observed percent-of-node; set 'threshold' to these) ------------------------------")
+	for _, metric := range thresholds.Metrics {
+		for _, pt := range metric.PodThresholds {
+			vals := calibration[metric.Name+"|"+pt.PodFilter]
+			if len(vals) == 0 {
+				t.Logf("  %s %s: no live-pod data", pt.PodFilter, metric.Name)
+				continue
+			}
+			sum := 0.0
+			for _, v := range vals {
+				sum += v
+			}
+			t.Logf("  %s %s: mean=%.4f%% (min=%.4f%% max=%.4f%% n=%d)",
+				pt.PodFilter, metric.Name, sum/float64(len(vals)), slices.Min(vals), slices.Max(vals), len(vals))
 		}
 	}
 
