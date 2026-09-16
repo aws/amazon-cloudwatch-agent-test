@@ -17,8 +17,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 )
 
-const logStreamRetry = 10
-
 // fluent log group with expected log message fields
 var logGroupToKey = map[string][][]string{
 	"dataplane": {
@@ -65,22 +63,23 @@ func TestFluentLogs(t *testing.T) {
 	for group, fieldsArr := range logGroupToKey {
 		group = fmt.Sprintf("/aws/containerinsights/%s/%s", env.EKSClusterName, group)
 
-		currRetries := 0
-		for currRetries < logStreamRetry {
-			if awsservice.IsLogGroupExists(group) {
-				break
-			}
-			currRetries++
-			time.Sleep(time.Duration(currRetries) * time.Second)
-		}
-		if currRetries >= logStreamRetry {
-			t.Fatalf("fluent log group doesn't exist: %s", group)
-		}
-
+		// Unified poll loop: log-group creation, log-stream availability, and
+		// content validation all share a single budget. This avoids a short
+		// group-existence gate expiring before a slow producer has had a chance to create the group.
 		maxRetries := 30
+		validated := false
+		var lastErr error
 		for retry := 0; retry < maxRetries; retry++ {
+			if !awsservice.IsLogGroupExists(group) {
+				lastErr = fmt.Errorf("log group %s not created yet", group)
+				t.Logf("Log group %s not created yet, waiting... (attempt %d/%d)", group, retry+1, maxRetries)
+				time.Sleep(10 * time.Second)
+				continue
+			}
+
 			streams := awsservice.GetLogStreams(group)
 			if len(streams) == 0 {
+				lastErr = fmt.Errorf("no log streams found for %s", group)
 				t.Logf("No log streams found for %s, waiting... (attempt %d/%d)", group, retry+1, maxRetries)
 				time.Sleep(10 * time.Second)
 				continue
@@ -118,15 +117,17 @@ func TestFluentLogs(t *testing.T) {
 			)
 
 			if err == nil {
+				validated = true
 				break
 			}
 
-			if retry == maxRetries-1 {
-				t.Fatalf("failed validation for log group %s: %v", group, err)
-			}
-
-			t.Logf("Waiting for logs to appear in %s... (attempt %d/%d)", group, retry+1, maxRetries)
+			lastErr = err
+			t.Logf("Waiting for valid logs to appear in %s... (attempt %d/%d): %v", group, retry+1, maxRetries, err)
 			time.Sleep(10 * time.Second)
+		}
+
+		if !validated {
+			t.Fatalf("failed validation for log group %s within %d retries: %v", group, maxRetries, lastErr)
 		}
 	}
 
