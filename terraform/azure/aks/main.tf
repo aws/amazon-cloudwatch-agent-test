@@ -455,6 +455,7 @@ resource "null_resource" "agent_diagnostics" {
     command = <<-EOT
       kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' get pods -n amazon-cloudwatch -o wide || true
       kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch -l app=cloudwatch-agent --tail=200 --prefix || true
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch -l app=cloudwatch-agent-cluster-scraper --tail=200 --prefix || true
     EOT
   }
 

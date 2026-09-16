@@ -65,25 +65,48 @@ var clusterMetrics = []string{
 var kedaMetrics = []string{"keda_scaler_active", "keda_scaledobject_paused"}
 var karpenterMetrics = []string{"karpenter_nodes_total", "karpenter_pods_state"}
 
-func TestAKSContainerInsights(t *testing.T) {
-	fmt.Println("waiting for telemetry to propagate...")
-	time.Sleep(validationWindow)
+func TestAKSContainerInsights(t *testing.T) {.
+	deadline := time.Now().Add(validationWindow)
 
-	t.Run("NodeMetrics", func(t *testing.T) { validateMetrics(t, nodeMetrics) })
-	t.Run("ClusterMetrics", func(t *testing.T) { validateMetrics(t, clusterMetrics) })
-	t.Run("KedaMetrics", func(t *testing.T) { validateMetrics(t, kedaMetrics) })
-	t.Run("KarpenterMetrics", func(t *testing.T) { validateMetrics(t, karpenterMetrics) })
+	t.Run("NodeMetrics", func(t *testing.T) { validateMetrics(t, nodeMetrics, deadline) })
+	t.Run("ClusterMetrics", func(t *testing.T) { validateMetrics(t, clusterMetrics, deadline) })
+	t.Run("KedaMetrics", func(t *testing.T) { validateMetrics(t, kedaMetrics, deadline) })
+	t.Run("KarpenterMetrics", func(t *testing.T) { validateMetrics(t, karpenterMetrics, deadline) })
 	t.Run("NodeLogs", testNodeApplicationLogs)
 }
 
 // validateMetrics asserts each metric is present for this cluster. cloud.platform=azure_aks
 // proves the agent ran the RUN_IN_AKS translation path, not a hardcoded EKS/EC2 one.
-func validateMetrics(t *testing.T, metrics []string) {
+func validateMetrics(t *testing.T, metrics []string, deadline time.Time) {
 	labels := map[string]string{
 		"@resource.k8s.cluster.name": env.AKSClusterName,
 		"@resource.cloud.platform":   "azure_aks",
 	}
-	group := otlpvalidation.ValidateOtlpMetricsWithLabels(t.Name(), env.Region, metrics, labels)
+
+	// ValidateOtlpMetricsWithLabels retries internally (~90s); wrap it in a bounded poll so a
+	// slow-to-propagate category keeps checking until the shared deadline instead of failing early.
+	const pollInterval = 15 * time.Second
+	allSuccessful := func(g status.TestGroupResult) bool {
+		if len(g.TestResults) == 0 {
+			return false
+		}
+		for _, r := range g.TestResults {
+			if r.Status != status.SUCCESSFUL {
+				return false
+			}
+		}
+		return true
+	}
+
+	var group status.TestGroupResult
+	for {
+		group = otlpvalidation.ValidateOtlpMetricsWithLabels(t.Name(), env.Region, metrics, labels)
+		if allSuccessful(group) || !time.Now().Before(deadline) {
+			break
+		}
+		time.Sleep(pollInterval)
+	}
+
 	for _, r := range group.TestResults {
 		r := r
 		t.Run(r.Name, func(t *testing.T) {
