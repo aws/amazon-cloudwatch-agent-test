@@ -152,6 +152,24 @@ resource "kubernetes_cluster_role" "cwagent" {
     resources  = ["jobs"]
     verbs      = ["list", "watch", "get"]
   }
+
+  # Container Insights only: kubelet-scrape RBAC so the AKS kubelet authorizer allows
+  # kubeletstats (/stats/summary) and cadvisor (/metrics/cadvisor), plus node /metrics.
+  dynamic "rule" {
+    for_each = local.is_ci ? [1] : []
+    content {
+      api_groups = [""]
+      resources  = ["nodes/proxy", "nodes/stats", "nodes/metrics"]
+      verbs      = ["get", "list", "watch"]
+    }
+  }
+  dynamic "rule" {
+    for_each = local.is_ci ? [1] : []
+    content {
+      non_resource_urls = ["/metrics"]
+      verbs             = ["get", "list", "watch"]
+    }
+  }
 }
 
 resource "kubernetes_cluster_role_binding" "cwagent" {
@@ -308,6 +326,16 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
               read_only  = true
             }
           }
+          # Container Insights only: host container logs for the filelog receiver
+          # (/var/log/containers/*.log -> /var/log/pods).
+          dynamic "volume_mount" {
+            for_each = local.is_ci ? [1] : []
+            content {
+              name       = "varlog"
+              mount_path = "/var/log"
+              read_only  = true
+            }
+          }
         }
 
         volume {
@@ -334,6 +362,15 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
             name = "cwagentconfig"
             config_map {
               name = kubernetes_config_map.ci_node[0].metadata[0].name
+            }
+          }
+        }
+        dynamic "volume" {
+          for_each = local.is_ci ? [1] : []
+          content {
+            name = "varlog"
+            host_path {
+              path = "/var/log"
             }
           }
         }
@@ -631,7 +668,7 @@ resource "kubernetes_deployment_v1" "ksm" {
           image = "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.13.0"
           args = [
             "--port=8443",
-            "--web.config.file=/web/web-config.yaml",
+            "--tls-config=/web/web-config.yaml",
           ]
           port {
             name           = "https"
