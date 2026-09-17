@@ -26,9 +26,11 @@ import (
 // Shared constants and variables used across performance and regression tests.
 const (
 	agentPodFilter    = `"@resource.k8s.pod.name"=~"cloudwatch-agent.*"`
-	agentNSFilter     = `"@resource.k8s.namespace.name"="amazon-cloudwatch"`
 	queryRangeMinutes = 5
 )
+
+// agentNSFilter is derived from agentNamespace (k8s_pods_test.go) to avoid duplicating the literal.
+var agentNSFilter = fmt.Sprintf(`"@resource.k8s.namespace.name"=%q`, agentNamespace)
 
 var (
 	cfg    otelmetrics.TestConfig

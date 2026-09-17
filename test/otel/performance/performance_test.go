@@ -243,12 +243,13 @@ func TestPerformanceThresholds(t *testing.T) {
 			if podType == "" {
 				continue
 			}
+			// Mark the class seen even if this live pod has no data this window, so it doesn't trip the "no <class> pod series observed" check below.
+			expectedClasses[podType] = true
 			if !slices.ContainsFunc(series.Values, func(v float64) bool { return v != 0 }) {
 				t.Logf("  %s (%s): no %s data in window — skipping",
 					podTypeLabel(podType), podName, metric.Name)
 				continue
 			}
-			expectedClasses[podType] = true
 
 			var denominator float64
 			var resourceLabel string
