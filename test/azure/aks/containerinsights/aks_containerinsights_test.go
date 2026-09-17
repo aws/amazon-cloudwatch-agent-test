@@ -65,7 +65,7 @@ var clusterMetrics = []string{
 var kedaMetrics = []string{"keda_scaler_active", "keda_scaledobject_paused"}
 var karpenterMetrics = []string{"karpenter_nodes_total", "karpenter_pods_state"}
 
-func TestAKSContainerInsights(t *testing.T) {.
+func TestAKSContainerInsights(t *testing.T) {
 	deadline := time.Now().Add(validationWindow)
 
 	t.Run("NodeMetrics", func(t *testing.T) { validateMetrics(t, nodeMetrics, deadline) })

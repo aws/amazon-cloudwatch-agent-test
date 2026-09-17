@@ -1,11 +1,11 @@
-# Lightweight KEDA/Karpenter stubs for Container Insights e2e.
+# Lightweight KEDA/Karpenter stubs for the Container Insights integ tests.
 #
-# These are NOT the real operators. Each is an nginx pod serving a static
-# Prometheus /metrics endpoint (from a ConfigMap) that emits the metric names the
+# These are NOT the real operators. Each is a pod serving a static Prometheus
+# /metrics endpoint (from a ConfigMap) that emits the metric names the
 # cluster-scraper's solutions pipelines expect, in the keda/karpenter namespaces
 # with the app.kubernetes.io/name labels the solutions config selects on. This
-# validates the scrape -> OTEL pipeline -> CloudWatch path (metric presence),
-# without provisioning real KEDA/Karpenter infrastructure (IAM, provisioners, etc).
+# validates the scrape, that is agent-translated OTEL pipeline to CloudWatch path
+# (metric presence), without provisioning real KEDA/Karpenter infrastructure.
 apiVersion: v1
 kind: Namespace
 metadata:
