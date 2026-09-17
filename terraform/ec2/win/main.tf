@@ -88,6 +88,19 @@ module "validator" {
 # Generate EC2 Instance and execute test commands
 #####################################################################
 
+# First-boot WinRM bootstrap for win-11: client SKUs boot with the NIC in the Public
+# firewall profile where 5985 is blocked. Open firewall briefly for 5985.
+locals {
+  winrm_bootstrap_userdata = <<EOT
+<powershell>
+New-NetFirewallRule -DisplayName "WinRM 5985 Any Profile" -Direction Inbound -Protocol TCP -LocalPort 5985 -Action Allow -Profile Any -ErrorAction SilentlyContinue
+Enable-NetFirewallRule -DisplayGroup "Windows Remote Management" -ErrorAction SilentlyContinue
+Set-NetFirewallRule -Name WINRM-HTTP-In-TCP-PUBLIC -RemoteAddress Any -Enabled True -ErrorAction SilentlyContinue
+Set-Service -Name WinRM -StartupType Automatic
+</powershell>
+EOT
+}
+
 resource "aws_instance" "cwagent" {
   ami                                  = data.aws_ami.latest.id
   instance_type                        = var.ec2_instance_type
@@ -96,7 +109,7 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids               = [module.basic_components.security_group, aws_security_group.winrm_runner.id]
   associate_public_ip_address          = true
   instance_initiated_shutdown_behavior = "terminate"
-  user_data                            = length(regexall("/feature/windows/custom_start/userdata", var.test_dir)) > 0 ? data.template_file.user_data.rendered : ""
+  user_data                            = length(regexall("/feature/windows/custom_start/userdata", var.test_dir)) > 0 ? data.template_file.user_data.rendered : (length(regexall("win-11", var.ami)) > 0 ? local.winrm_bootstrap_userdata : "")
   get_password_data                    = true
 
   metadata_options {
