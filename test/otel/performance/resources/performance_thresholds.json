@@ -8,14 +8,12 @@
       "pod_thresholds": [
         {
           "pod_filter": "daemonset",
-          "threshold": 1.5,
-          "error_bound": 1.0,
+          "max": 3.0,
           "description": "DaemonSet agent pod CPU as percent of node allocatable CPU; ceiling [0%, 3%] since per-pod CPU is variable run-to-run."
         },
         {
           "pod_filter": "scraper",
-          "threshold": 1.0,
-          "error_bound": 1.0,
+          "max": 2.0,
           "description": "Cluster scraper pod CPU as percent of node allocatable CPU; ceiling [0%, 2%] since scraper CPU is highly variable at low values."
         }
       ]

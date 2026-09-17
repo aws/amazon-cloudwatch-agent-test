@@ -46,6 +46,7 @@ type podThreshold struct {
 	PodFilter   string   `json:"pod_filter"`
 	Threshold   float64  `json:"threshold"`
 	ErrorBound  *float64 `json:"error_bound,omitempty"`
+	Max         *float64 `json:"max,omitempty"`
 	Description string   `json:"description"`
 }
 
@@ -54,6 +55,17 @@ func (p podThreshold) errorBound(m metricThreshold, global float64) float64 {
 		return *p.ErrorBound
 	}
 	return m.errorBound(global)
+}
+
+// bounds returns the [lower, upper] pass band for this pod. When Max is set the
+// pod is checked as a ceiling [0, Max] and Threshold/ErrorBound are ignored;
+// otherwise the band is Threshold*(1±errorBound).
+func (p podThreshold) bounds(m metricThreshold, global float64) (float64, float64) {
+	if p.Max != nil {
+		return 0, *p.Max
+	}
+	eb := p.errorBound(m, global)
+	return p.Threshold * (1 - eb), p.Threshold * (1 + eb)
 }
 
 // loadThresholds reads the JSON config and unmarshals it into performanceThresholds.
@@ -104,22 +116,21 @@ func getResultsForMetric(metrics *podMetricData, metricName string) []otelmetric
 	}
 }
 
-// getThresholdForPod returns the threshold, effective error bound, and pod-class
-// label for a given pod.
-func getThresholdForPod(podName string, metric metricThreshold, global float64) (float64, float64, string) {
+// getThresholdForPod returns the matching pod threshold and its pod-class label.
+func getThresholdForPod(podName string, metric metricThreshold) (podThreshold, string) {
 	for _, pt := range metric.PodThresholds {
 		switch pt.PodFilter {
 		case "daemonset":
 			if isDaemonSetPod(podName) {
-				return pt.Threshold, pt.errorBound(metric, global), pt.PodFilter
+				return pt, pt.PodFilter
 			}
 		case "scraper":
 			if !isDaemonSetPod(podName) {
-				return pt.Threshold, pt.errorBound(metric, global), pt.PodFilter
+				return pt, pt.PodFilter
 			}
 		}
 	}
-	return 0, 0, ""
+	return podThreshold{}, ""
 }
 
 // podTypeLabel returns a display label for the given pod type.
@@ -135,9 +146,8 @@ func podTypeLabel(podType string) string {
 }
 
 // isAllValuesWithinBound returns the average of values and an error if the set
-// is empty, contains a negative value, or the average falls outside the
-// threshold band [threshold*(1-errorBound), threshold*(1+errorBound)].
-func isAllValuesWithinBound(values []float64, threshold float64, errorBound float64) (float64, error) {
+// is empty, contains a negative value, or the average falls outside [lower, upper].
+func isAllValuesWithinBound(values []float64, lower float64, upper float64) (float64, error) {
 	if len(values) == 0 {
 		return 0, fmt.Errorf("no values found")
 	}
@@ -146,16 +156,14 @@ func isAllValuesWithinBound(values []float64, threshold float64, errorBound floa
 		if math.IsNaN(value) {
 			return 0, fmt.Errorf("values contain NaN")
 		}
-		if value < 0 && threshold >= 0 {
+		if value < 0 {
 			return 0, fmt.Errorf("values are not all greater than or equal to zero")
 		}
 		totalSum += value
 	}
 	avg := totalSum / float64(len(values))
-	upperBound := threshold * (1 + errorBound)
-	lowerBound := threshold * (1 - errorBound)
-	if threshold > 0 && (avg > upperBound || avg < lowerBound) {
-		return avg, fmt.Errorf("average value %f is not within bound [%f, %f]", avg, lowerBound, upperBound)
+	if upper > 0 && (avg > upper || avg < lower) {
+		return avg, fmt.Errorf("average value %f is not within bound [%f, %f]", avg, lower, upper)
 	}
 	return avg, nil
 }
@@ -191,16 +199,23 @@ func TestPerformanceThresholds(t *testing.T) {
 		for _, m := range thresholds.Metrics {
 			for _, mpt := range m.PodThresholds {
 				if mpt.PodFilter == pt.PodFilter {
-					eb := mpt.errorBound(m, thresholds.ErrorBound)
-					lower := mpt.Threshold * (1 - eb)
-					upper := mpt.Threshold * (1 + eb)
+					lower, upper := mpt.bounds(m, thresholds.ErrorBound)
+					var resourceWord string
 					switch m.Name {
 					case "k8s.pod.cpu.utilization":
-						t.Logf("  (%s): Node CPU safe range: ±%.0f%% of %.2f%% of Node allocatable CPU [%.4f%%, %.4f%%]",
-							label, eb*100, mpt.Threshold, lower, upper)
+						resourceWord = "CPU"
 					case "k8s.pod.memory.working_set":
-						t.Logf("  (%s): Node memory safe range: ±%.0f%% of %.2f%% of Node allocatable memory [%.4f%%, %.4f%%]",
-							label, eb*100, mpt.Threshold, lower, upper)
+						resourceWord = "memory"
+					default:
+						continue
+					}
+					if mpt.Max != nil {
+						t.Logf("  (%s): Node %s ceiling of Node allocatable %s [%.4f%%, %.4f%%]",
+							label, resourceWord, resourceWord, lower, upper)
+					} else {
+						eb := mpt.errorBound(m, thresholds.ErrorBound)
+						t.Logf("  (%s): Node %s safe range: ±%.0f%% of %.2f%% of Node allocatable %s [%.4f%%, %.4f%%]",
+							label, resourceWord, eb*100, mpt.Threshold, resourceWord, lower, upper)
 					}
 				}
 			}
@@ -238,8 +253,8 @@ func TestPerformanceThresholds(t *testing.T) {
 			podName := series.Labels.Resource["k8s.pod.name"]
 			require.NotEmpty(t, podName, "series is missing the k8s.pod.name resource label")
 
-			// Get the threshold and effective error bound for this pod type
-			threshold, eb, podType := getThresholdForPod(podName, metric, thresholds.ErrorBound)
+			// Get the threshold for this pod type
+			pt, podType := getThresholdForPod(podName, metric)
 			if podType == "" {
 				continue
 			}
@@ -272,11 +287,9 @@ func TestPerformanceThresholds(t *testing.T) {
 
 			// Check if values are within bounds and log all the results.
 			label := podTypeLabel(podType)
-			avg, err := isAllValuesWithinBound(pctValues, threshold, eb)
+			lowerBound, upperBound := pt.bounds(metric, thresholds.ErrorBound)
+			avg, err := isAllValuesWithinBound(pctValues, lowerBound, upperBound)
 			calibration[metric.Name+"|"+podType] = append(calibration[metric.Name+"|"+podType], avg)
-
-			lowerBound := threshold * (1 - eb)
-			upperBound := threshold * (1 + eb)
 
 			t.Logf("  %s (%s): Using %.4f%% of %s", label, podName, avg, resourceLabel)
 
