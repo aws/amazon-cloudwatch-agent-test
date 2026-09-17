@@ -1,4 +1,7 @@
 {
+  "otelContainerInsights": {
+    "enabled": true
+  },
   "agent": {
     "config": {
       "opentelemetry": {
