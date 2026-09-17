@@ -76,6 +76,20 @@ locals {
   load_gen_duration_seconds = 180
 }
 
+# Couple test_mode and test_dir so a caller can't run one suite against the other's topology
+# (e.g. test_mode=containerinsights with the default:otel test_dir). Fails the plan on a mismatch.
+resource "terraform_data" "validate_test_mode_dir" {
+  lifecycle {
+    precondition {
+      condition = (
+        (var.test_mode == "otlp" && var.test_dir == "./test/azure/aks") ||
+        (var.test_mode == "containerinsights" && var.test_dir == "./test/azure/aks/containerinsights")
+      )
+      error_message = "test_dir must match test_mode: \"otlp\" -> \"./test/azure/aks\", \"containerinsights\" -> \"./test/azure/aks/containerinsights\"."
+    }
+  }
+}
+
 data "aws_iam_policy_document" "cwagent_assume_role" {
   statement {
     effect  = "Allow"
