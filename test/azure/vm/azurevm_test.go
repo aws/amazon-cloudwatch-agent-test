@@ -38,7 +38,9 @@ const (
 	// otlpLogGroup is where default:otel routes OTLP logs: "/aws/cwagent" + "/" + aws.log.source ("otlp").
 	otlpLogGroup = "/aws/cwagent/otlp"
 	// agentLogFile lets us confirm the collector booted the Azure web-identity pipeline before asserting delivery.
-	agentLogFile = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+	// common.AgentLogFile is build-tagged per-OS (agent_util_unix.go / agent_util_windows.go), so it
+	// resolves to the correct path whether the suite runs on the linux or the windows Azure VM.
+	agentLogFile = common.AgentLogFile
 	// serviceName tags emitted telemetry so validation can isolate this test's records from other traffic.
 	serviceName = "azurevm-otlp-test-service"
 	// spansLogGroup is where Transaction Search stores 100% of spans ingested via the X-Ray OTLP endpoint.
