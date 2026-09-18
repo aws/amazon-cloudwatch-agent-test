@@ -99,10 +99,13 @@ New-NetFirewallRule -DisplayName "WinRM 5985 Any Profile" -Direction Inbound -Pr
 Enable-NetFirewallRule -DisplayGroup "Windows Remote Management" -ErrorAction SilentlyContinue
 Set-NetFirewallRule -Name WINRM-HTTP-In-TCP-PUBLIC -RemoteAddress Any -Enabled True -ErrorAction SilentlyContinue
 Set-Service -Name WinRM -StartupType Automatic
-Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private -ErrorAction SilentlyContinue
-$act = New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -WindowStyle Hidden -Command "Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private"'
+Get-NetConnectionProfile | Where-Object { $_.NetworkCategory -ne 'Private' } | Set-NetConnectionProfile -NetworkCategory Private -ErrorAction SilentlyContinue
+$act = New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -WindowStyle Hidden -Command "Get-NetConnectionProfile | Where-Object { $_.NetworkCategory -ne ''Private'' } | Set-NetConnectionProfile -NetworkCategory Private"'
 $t1  = New-ScheduledTaskTrigger -AtStartup
 $t2  = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Hours 2)
+if (Get-ScheduledTask -TaskName "PinPrivateNetworkProfile" -ErrorAction SilentlyContinue) {
+  Unregister-ScheduledTask -TaskName "PinPrivateNetworkProfile" -Confirm:$false -ErrorAction SilentlyContinue
+}
 Register-ScheduledTask -TaskName "PinPrivateNetworkProfile" -Action $act -Trigger $t1,$t2 -User "SYSTEM" -RunLevel Highest -Force -ErrorAction SilentlyContinue
 </powershell>
 EOT
@@ -231,6 +234,7 @@ resource "null_resource" "integration_test_run" {
     user     = "Administrator"
     password = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
     host     = aws_instance.cwagent.public_dns
+    timeout  = "15m"
   }
 
   provisioner "file" {
