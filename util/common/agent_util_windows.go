@@ -8,7 +8,6 @@ package common
 import (
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -89,16 +88,6 @@ func StopAgent() error {
 
 	log.Printf("Agent is stopped")
 	return nil
-}
-
-// ReadAgentLogfile mirrors the unix twin in agent_util_unix.go: os.ReadFile is OS-neutral, but the
-// function lives only under the !windows build tag there, so windows callers need this copy to compile.
-func ReadAgentLogfile(logfile string) string {
-	out, err := os.ReadFile(logfile)
-	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
-	}
-	return string(out)
 }
 
 func RunShellScript(path string, args ...string) (string, error) {

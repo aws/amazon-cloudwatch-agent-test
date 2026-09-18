@@ -9,7 +9,7 @@
 # destination is CloudWatchLogs. That destination is a per-region setting, so this suite cannot use the
 # repo-wide us-west-2 default: us-west-2 is deliberately left on the legacy XRay destination because the
 # App Signals trace suite there validates through the X-Ray query APIs, which Transaction Search would
-# break. Matches terraform/azure/vm (linux), the sibling suite that posts to the X-Ray OTLP endpoint.
+# break. Matches terraform/azure/vm/linux, the sibling suite that posts to the X-Ray OTLP endpoint.
 variable "region" {
   type    = string
   default = "us-east-2"

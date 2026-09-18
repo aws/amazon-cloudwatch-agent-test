@@ -80,7 +80,7 @@ locals {
     # -m auto / -c default:otel exercise exactly the ctl.ps1 code paths that the stale-script bug broke.
     & $ctl -a set-env -e AWS_REGION=${var.region}
     if ($LASTEXITCODE -ne 0) { throw "amazon-cloudwatch-agent-ctl.ps1 -a set-env failed ($LASTEXITCODE)" }
-    & $ctl -a set-env -e CWAGENT_ROLE_ARN=${aws_iam_role.cwagent.arn}
+    & $ctl -a set-env -e CWAGENT_ROLE_ARN=${module.iam.role_arn}
     if ($LASTEXITCODE -ne 0) { throw "amazon-cloudwatch-agent-ctl.ps1 -a set-env failed ($LASTEXITCODE)" }
     & $ctl -a fetch-config -m auto -s -c default:otel
     if ($LASTEXITCODE -ne 0) { throw "amazon-cloudwatch-agent-ctl.ps1 -a fetch-config failed ($LASTEXITCODE)" }
@@ -94,10 +94,10 @@ locals {
     icacls $tokenFile /inheritance:r | Out-Null
     icacls $tokenFile /grant:r "$($env:USERNAME):(M)" | Out-Null
     $env:AWS_WEB_IDENTITY_TOKEN_FILE = $tokenFile
-    $env:AWS_ROLE_ARN = "${aws_iam_role.cwagent.arn}"
+    $env:AWS_ROLE_ARN = "${module.iam.role_arn}"
     $env:AWS_REGION = "${var.region}"
 
-    go test -tags integration ${var.test_dir} -p 1 -timeout 30m -computeType=AZUREVM -instancePlatform=windows -region=${var.region} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${azurerm_windows_virtual_machine.cwagent.virtual_machine_id} -assumeRoleArn=${aws_iam_role.cwagent.arn} -v
+    go test -tags integration ${var.test_dir} -p 1 -timeout 30m -computeType=AZUREVM -instancePlatform=windows -region=${var.region} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${azurerm_windows_virtual_machine.cwagent.virtual_machine_id} -assumeRoleArn=${module.iam.role_arn} -v
     $rc = $LASTEXITCODE
     Remove-Item -Force $tokenFile -ErrorAction SilentlyContinue
     exit $rc
@@ -240,7 +240,6 @@ resource "null_resource" "integration_test" {
     azurerm_windows_virtual_machine.cwagent,
     azurerm_virtual_machine_extension.winrm_setup,
     azurerm_network_interface_security_group_association.cwagent,
-    aws_iam_role_policy.cwagent,
-    aws_iam_role_policy_attachment.cwagent_server_policy,
+    module.iam,
   ]
 }

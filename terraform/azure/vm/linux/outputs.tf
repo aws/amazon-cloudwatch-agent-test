@@ -6,15 +6,15 @@ output "cwagent_public_ip" {
 }
 
 output "cwagent_vm_id" {
-  value = azurerm_windows_virtual_machine.cwagent.virtual_machine_id
+  value = azurerm_linux_virtual_machine.cwagent.virtual_machine_id
 }
 
 output "cwagent_role_arn" {
-  value = aws_iam_role.cwagent.arn
+  value = module.iam.role_arn
 }
 
 output "cwagent_principal_id" {
-  value = azurerm_windows_virtual_machine.cwagent.identity[0].principal_id
+  value = azurerm_linux_virtual_machine.cwagent.identity[0].principal_id
 }
 
 output "testing_id" {
