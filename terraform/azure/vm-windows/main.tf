@@ -79,8 +79,11 @@ locals {
     # resolves ${var.region} / the role ARN in the translated YAML), then start on default:otel.
     # -m auto / -c default:otel exercise exactly the ctl.ps1 code paths that the stale-script bug broke.
     & $ctl -a set-env -e AWS_REGION=${var.region}
+    if ($LASTEXITCODE -ne 0) { throw "amazon-cloudwatch-agent-ctl.ps1 -a set-env failed ($LASTEXITCODE)" }
     & $ctl -a set-env -e CWAGENT_ROLE_ARN=${aws_iam_role.cwagent.arn}
+    if ($LASTEXITCODE -ne 0) { throw "amazon-cloudwatch-agent-ctl.ps1 -a set-env failed ($LASTEXITCODE)" }
     & $ctl -a fetch-config -m auto -s -c default:otel
+    if ($LASTEXITCODE -ne 0) { throw "amazon-cloudwatch-agent-ctl.ps1 -a fetch-config failed ($LASTEXITCODE)" }
 
     # Mint the web-identity token from Azure IMDS (PowerShell equivalent of the linux curl). The token
     # is a bearer credential, so write it to a file whose ACL grants only this user, and remove it once
