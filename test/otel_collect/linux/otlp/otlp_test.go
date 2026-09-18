@@ -32,10 +32,10 @@ func init() {
 }
 
 const (
-	otlpRuntime  = 3 * time.Minute
-	otlpEndpoint = "http://127.0.0.1:4318"
-	otlpLogGroup = "/aws/cwagent"
-	otlpGRPCAddr = "127.0.0.1:4317"
+	otlpRuntime   = 3 * time.Minute
+	otlpEndpoint  = "http://127.0.0.1:4318"
+	otlpLogGroup  = "/aws/cwagent"
+	otlpGRPCAddr  = "127.0.0.1:4317"
 	traceTestType = "otel_collect_otlp_traces"
 	// spansLogGroup is where V2 OTLP traces land (CloudWatch Logs destination).
 	spansLogGroup = "aws/spans"
@@ -172,7 +172,7 @@ func (t *OtlpCollectTestRunner) sendTestLogs() {
 			return
 		case <-ticker.C:
 			payload := buildOtlpLogsPayload(t.env.InstanceId)
-			req, _ := http.NewRequest("POST", otlpEndpoint+"/v1/logs", bytes.NewReader(payload)) //nolint:errcheck 
+			req, _ := http.NewRequest("POST", otlpEndpoint+"/v1/logs", bytes.NewReader(payload)) //nolint:errcheck
 			req.Header.Set("Content-Type", "application/json")
 			http.DefaultClient.Do(req) //nolint:errcheck
 		}
