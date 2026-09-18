@@ -20,9 +20,9 @@ import (
 // Uses static credentials and a real signer; the test server ignores signatures.
 func newTestClient(url string) *OtelMetricsClient {
 	return &OtelMetricsClient{
-		httpClient:     &http.Client{},
-		signer:         v4.NewSigner(),
-		creds:          aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+		httpClient: &http.Client{},
+		signer:     v4.NewSigner(),
+		creds: aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
 			return aws.Credentials{AccessKeyID: "AKID", SecretAccessKey: "SECRET", SessionToken: "TOKEN"}, nil
 		}),
 		queryURL:       url + "/api/v1/query",
