@@ -27,5 +27,5 @@ func OtlpMetricLabels(agentStartCommand, instanceID string) map[string]string {
 	if strings.Contains(agentStartCommand, onPremiseMarker) {
 		return map[string]string{"InstanceId": instanceID}
 	}
-	return map[string]string{"@resource.host.id": instanceID}
+	return ResourceHostIDLabels(instanceID)
 }
