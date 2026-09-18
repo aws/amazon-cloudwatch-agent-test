@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
@@ -41,11 +40,38 @@ const (
 	agentLogFile = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	// serviceName tags emitted telemetry so validation can isolate this test's records from other traffic.
 	serviceName = "azurevm-otlp-test-service"
+	// spanName is the emitted span's name, asserted verbatim in trace-content validation.
+	spanName = "azurevm-otlp-test-span"
 	// spansLogGroup is where Transaction Search stores 100% of spans ingested via the X-Ray OTLP endpoint.
 	spansLogGroup = "aws/spans"
 )
 
 var env *environment.MetaData
+
+// azureResourceExpectations is the shared source of truth for the Azure resourcedetection attributes
+// asserted on every signal: an exact value, or PresenceOnly for present-and-non-empty. cloud.account.id
+// and cloud.resource_id stay presence-only so the subscription id they carry never reaches the CI logs.
+func azureResourceExpectations() map[string]string {
+	deploymentEnv := otlpvalidation.PresenceOnly // "azure_vm:<resource group>" once the group is known
+	if env.AzureResourceGroup != "" {
+		deploymentEnv = "azure_vm:" + env.AzureResourceGroup
+	}
+	return map[string]string{
+		"cloud.provider":              "azure",
+		"cloud.platform":              "azure_vm",
+		"cloud.account.id":            otlpvalidation.PresenceOnly,
+		"cloud.resource_id":           otlpvalidation.PresenceOnly,
+		"cloud.region":                env.AzureLocation,
+		"azure.vm.name":               env.AzureVMName,
+		"azure.vm.size":               env.AzureVMSize,
+		"azure.resourcegroup.name":    env.AzureResourceGroup,
+		"deployment.environment.name": deploymentEnv,
+		// Presence only: this test's payloads set it, but the run's host metrics carry an unknown_service* value.
+		"service.name": otlpvalidation.PresenceOnly,
+		"host.name":    env.AzureVMName,
+		"host.id":      env.InstanceId,
+	}
+}
 
 func TestMain(m *testing.M) {
 	environment.RegisterEnvironmentMetaDataFlags()
@@ -61,10 +87,11 @@ func TestMain(m *testing.M) {
 // TestAzureVM confirms the pre-provisioned default:otel agent detected Azure, then pushes OTLP and validates
 // that all three signals reach CloudWatch via the Azure web-identity chain.
 func TestAzureVM(t *testing.T) {
-	// The agent must already be running default:otel and have detected Azure before we generate load.
+	// The agent must already be running default:otel and have detected Azure. "azure_vm" (the cloud.platform
+	// value) appears only when auto mode-detection resolved the Azure VM path.
 	agentLog := common.ReadAgentLogfile(agentLogFile)
-	require.Contains(t, agentLog, "azure",
-		"agent log has no \"azure\" marker; the default:otel Azure detection path was not exercised")
+	require.Contains(t, agentLog, "azure_vm",
+		"agent log has no \"azure_vm\" marker; the default:otel Azure VM detection path was not exercised")
 
 	// Push OTLP for the load window, then validate.
 	stop := make(chan struct{})
@@ -89,13 +116,17 @@ func TestAzureVM(t *testing.T) {
 	traceMu.Unlock()
 
 	t.Run("Metrics", func(t *testing.T) {
+		// The payload carries only service.name + host.id, so every cloud.*/azure.* label here proves the
+		// agent's resourcedetection enrichment.
+		labels := map[string]string{}
+		for attr, want := range azureResourceExpectations() {
+			labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
+		}
+		for attr, want := range otlpvalidation.ScopeExpectations() {
+			labels["@instrumentation."+attr] = otlpvalidation.ExpectedValue(want)
+		}
 		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
-			"AzureVMDefaultOtel", env.Region, measuredMetrics(),
-			map[string]string{
-				"@resource.host.id":        env.InstanceId,
-				"@resource.cloud.provider": "azure",
-			},
-		)
+			"AzureVMDefaultOtel", env.Region, measuredMetrics(), labels)
 		for _, r := range group.TestResults {
 			require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
 		}
@@ -116,7 +147,17 @@ func TestAzureVM(t *testing.T) {
 	})
 }
 
-func measuredMetrics() []string { return []string{"azurevm_otlp_counter", "azurevm_otlp_gauge"} }
+func measuredMetrics() []string {
+	return []string{
+		// Synthetic OTLP metrics this test pushes.
+		"azurevm_otlp_counter",
+		"azurevm_otlp_gauge",
+		// Host metrics from default:otel's host_metrics.
+		"system.cpu.utilization",
+		"system.memory.utilization",
+		"system.filesystem.utilization",
+	}
+}
 
 // validateLogs confirms the OTLP log record landed in the default:otel log group on the stream the
 // agent's log routing is expected to derive for this host.
@@ -134,6 +175,7 @@ func validateLogs() status.TestResult {
 			awsservice.DeleteLogStream(otlpLogGroup, logStream)
 		}
 	}()
+	// The stored log event is the full OTLP record as JSON, so parse and assert its content.
 	marker := fmt.Sprintf("azurevm_otlp_log_%s", env.InstanceId)
 	const maxRetries = 4
 	const retryInterval = 30 * time.Second
@@ -144,7 +186,9 @@ func validateLogs() status.TestResult {
 		err := awsservice.ValidateLogs(
 			otlpLogGroup, logStream, &since, &until,
 			awsservice.AssertLogsNotEmpty(),
-			awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
+			awsservice.AssertPerLog(otlpvalidation.AssertLogRecord(func(rec otlpvalidation.LogRecord) error {
+				return otlpvalidation.AssertLogContent(rec, marker, "INFO", azureResourceExpectations())
+			})),
 		)
 		if err == nil {
 			testResult.Status = status.SUCCESSFUL
@@ -159,63 +203,14 @@ func validateLogs() status.TestResult {
 	return testResult
 }
 
-// validateTraces confirms every OTLP span emitted during the load window reached AWS through the
-// X-Ray OTLP endpoint. That endpoint requires Transaction Search (trace segment destination =
-// CloudWatchLogs), which stores 100% of ingested spans in the aws/spans log group; the X-Ray query
-// APIs (GetTraceSummaries/BatchGetTraces) only see the indexed subset (1% by default), so aws/spans
-// is the authoritative surface for OTLP trace delivery. Ingestion lags a few minutes, hence retries.
+// validateTraces confirms every emitted span reached Transaction Search (aws/spans) with the expected
+// content. The generic query/retry/parse loop lives in otlpvalidation.ValidateOtlpTraces.
 func validateTraces(traceIDs []string) status.TestResult {
-	testResult := status.TestResult{Name: "AzureVM_Traces", Status: status.FAILED}
-
-	if len(traceIDs) == 0 {
-		testResult.Reason = fmt.Errorf("no trace IDs were generated during the load window")
-		return testResult
-	}
-
-	quoted := make([]string, len(traceIDs))
-	for i, id := range traceIDs {
-		quoted[i] = fmt.Sprintf("%q", id)
-	}
-	query := fmt.Sprintf("fields traceId | filter traceId in [%s] | dedup traceId", strings.Join(quoted, ", "))
-	log.Printf("[AzureVM_Traces] expecting %d trace IDs in %s (sample: %s)", len(traceIDs), spansLogGroup, traceIDs[0])
-
-	const maxRetries = 5
-	const retryInterval = 60 * time.Second
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		since := time.Now().Add(-loadWindow - 10*time.Minute)
-		rows, err := awsservice.GetLogQueryResults(spansLogGroup, since.Unix(), time.Now().Unix(), query)
-		if err != nil {
-			testResult.Reason = fmt.Errorf("attempt %d: %s query failed (is Transaction Search enabled in the account?): %w",
-				attempt, spansLogGroup, err)
-		} else {
-			found := make(map[string]bool, len(rows))
-			for _, row := range rows {
-				for _, field := range row {
-					if aws.ToString(field.Field) == "traceId" {
-						found[aws.ToString(field.Value)] = true
-					}
-				}
-			}
-			var missing []string
-			for _, id := range traceIDs {
-				if !found[id] {
-					missing = append(missing, id)
-				}
-			}
-			if len(missing) == 0 {
-				log.Printf("[AzureVM_Traces] attempt %d: all %d traces found in %s", attempt, len(traceIDs), spansLogGroup)
-				testResult.Status = status.SUCCESSFUL
-				return testResult
-			}
-			testResult.Reason = fmt.Errorf("attempt %d: %d/%d traces missing from %s (first missing: %s)",
-				attempt, len(missing), len(traceIDs), spansLogGroup, missing[0])
-		}
-		if attempt < maxRetries {
-			log.Printf("[AzureVM_Traces] %v — retrying in %v", testResult.Reason, retryInterval)
-			time.Sleep(retryInterval)
-		}
-	}
-	return testResult
+	// The payload sends kind 2, which Transaction Search records as "SERVER".
+	return otlpvalidation.ValidateOtlpTraces("AzureVM_Traces", spansLogGroup, traceIDs, func(s otlpvalidation.SpanRecord) error {
+		return otlpvalidation.AssertSpanContent(s, spanName, "SERVER",
+			map[string]string{"instance_id": env.InstanceId}, azureResourceExpectations())
+	})
 }
 
 // sendTelemetry pushes OTLP metrics, logs, and traces to the local collector until stop is closed.
