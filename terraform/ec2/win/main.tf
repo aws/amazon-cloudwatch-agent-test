@@ -89,7 +89,9 @@ module "validator" {
 #####################################################################
 
 # First-boot WinRM bootstrap for win-11: client SKUs boot with the NIC in the Public
-# firewall profile where 5985 is blocked. Open firewall briefly for 5985.
+# firewall profile where 5985 is blocked. Open the firewall (no WinRM restart), and pin
+# the NIC to Private via a periodic task so NLA can't flip it to Public mid-session
+# (a profile change reloads the firewall and resets live WinRM sessions).
 locals {
   winrm_bootstrap_userdata = <<EOT
 <powershell>
@@ -97,6 +99,11 @@ New-NetFirewallRule -DisplayName "WinRM 5985 Any Profile" -Direction Inbound -Pr
 Enable-NetFirewallRule -DisplayGroup "Windows Remote Management" -ErrorAction SilentlyContinue
 Set-NetFirewallRule -Name WINRM-HTTP-In-TCP-PUBLIC -RemoteAddress Any -Enabled True -ErrorAction SilentlyContinue
 Set-Service -Name WinRM -StartupType Automatic
+Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private -ErrorAction SilentlyContinue
+$act = New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -WindowStyle Hidden -Command "Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private"'
+$t1  = New-ScheduledTaskTrigger -AtStartup
+$t2  = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Hours 2)
+Register-ScheduledTask -TaskName "PinPrivateNetworkProfile" -Action $act -Trigger $t1,$t2 -User "SYSTEM" -RunLevel Highest -Force -ErrorAction SilentlyContinue
 </powershell>
 EOT
 }
