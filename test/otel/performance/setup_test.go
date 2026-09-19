@@ -26,9 +26,11 @@ import (
 // Shared constants and variables used across performance and regression tests.
 const (
 	agentPodFilter    = `"@resource.k8s.pod.name"=~"cloudwatch-agent.*"`
-	agentNSFilter     = `"@resource.k8s.namespace.name"="amazon-cloudwatch"`
 	queryRangeMinutes = 5
 )
+
+// agentNSFilter is derived from agentNamespace (k8s_pods_test.go) to avoid duplicating the literal.
+var agentNSFilter = fmt.Sprintf(`"@resource.k8s.namespace.name"=%q`, agentNamespace)
 
 var (
 	cfg    otelmetrics.TestConfig
@@ -73,6 +75,12 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 		if err != nil {
 			sharedMetricsErr = fmt.Errorf("Memory QueryRange failed: %w", err)
 			return
+		}
+		if live, lerr := liveAgentPods(ctx); lerr != nil {
+			t.Logf("WARNING: could not list live agent pods (%v) — proceeding without stale-pod filtering", lerr)
+		} else {
+			cpuResults = filterToLivePods(t, cpuResults, live, "k8s.pod.cpu.utilization")
+			memResults = filterToLivePods(t, memResults, live, "k8s.pod.memory.working_set")
 		}
 		sharedMetrics = &podMetricData{
 			CPUResults: cpuResults,
