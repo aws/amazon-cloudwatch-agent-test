@@ -52,9 +52,19 @@ locals {
     $ProgressPreference = 'SilentlyContinue'
     Write-Host "sha ${var.cwa_github_sha}"
 
-    # Install the agent from the runner-uploaded MSI (file-provisioned below): the Azure VM has no AWS
-    # instance profile, so unlike the EC2 Windows suite it cannot 'aws s3 cp' the MSI itself.
+    # Install the agent from the MSI. The Azure VM has no AWS instance profile, so unlike the EC2 Windows
+    # suite it cannot 'aws s3 cp' the MSI itself; the workflow presigns the S3 object and the VM downloads
+    # it here over HTTPS. This replaced a WinRM file transfer of the MSI, which was too slow (~41 min
+    # observed) and blew the apply-step timeout. The presigned URL arrives in a tiny txt file
+    # (file-provisioned above) so it stays out of this script's EncodedCommand, which the Actions log echoes.
     $msi = "C:\Users\${var.admin_username}\amazon-cloudwatch-agent.msi"
+    $urlFile = "C:\Users\${var.admin_username}\agent_msi_url.txt"
+    $url = (Get-Content -Path $urlFile -Raw).Trim()
+    # The Windows Server 2022 image ships curl.exe; -fsSL fails on HTTP errors and follows redirects.
+    curl.exe -fsSL --retry 3 -o $msi $url
+    if (-not (Test-Path $msi) -or (Get-Item $msi).Length -eq 0) { throw "agent MSI download failed or empty: $msi" }
+    Write-Host "downloaded MSI bytes: $((Get-Item $msi).Length)"
+    Remove-Item -Force $urlFile -ErrorAction SilentlyContinue
     Start-Process msiexec.exe -ArgumentList '/i', $msi, '/norestart', '/qn' -Wait
     $ctl = 'C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1'
     for ($i = 0; $i -lt 30 -and -not (Test-Path $ctl); $i++) { Start-Sleep -Seconds 5 }
@@ -223,10 +233,13 @@ resource "null_resource" "integration_test" {
     timeout  = "10m"
   }
 
-  # Upload the runner-downloaded .msi straight over WinRM (no S3/instance-profile needed on the VM).
+  # Write only the presigned URL over WinRM (a tiny file transfers in seconds); the VM downloads the MSI
+  # itself in the script above. Streaming the large MSI over the WinRM file provisioner was too slow
+  # (~41 min observed) and blew the apply-step timeout. Keeping the URL in a file rather than in the
+  # remote-exec command line also keeps it out of the public Actions log, which echoes the EncodedCommand.
   provisioner "file" {
-    source      = var.agent_msi_path
-    destination = "C:\\Users\\${var.admin_username}\\amazon-cloudwatch-agent.msi"
+    content     = var.agent_msi_url
+    destination = "C:\\Users\\${var.admin_username}\\agent_msi_url.txt"
   }
 
   # Whole install+start+test flow in one PowerShell process (see local.integration_test_script).
