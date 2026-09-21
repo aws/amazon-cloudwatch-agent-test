@@ -37,8 +37,6 @@ const (
 	otlpEndpoint = "http://127.0.0.1:4318"
 	// otlpLogGroup is where default:otel routes OTLP logs: "/aws/cwagent" + "/" + aws.log.source ("otlp").
 	otlpLogGroup = "/aws/cwagent/otlp"
-	// agentLogFile lets us confirm the collector booted the Azure web-identity pipeline before asserting delivery.
-	agentLogFile = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	// serviceName tags emitted telemetry so validation can isolate this test's records from other traffic.
 	serviceName = "azurevm-otlp-test-service"
 	// spansLogGroup is where Transaction Search stores 100% of spans ingested via the X-Ray OTLP endpoint.
@@ -62,7 +60,7 @@ func TestMain(m *testing.M) {
 // that all three signals reach CloudWatch via the Azure web-identity chain.
 func TestAzureVM(t *testing.T) {
 	// The agent must already be running default:otel and have detected Azure before we generate load.
-	agentLog := common.ReadAgentLogfile(agentLogFile)
+	agentLog := common.ReadAgentLogfile(common.AgentLogFile)
 	require.Contains(t, agentLog, "azure",
 		"agent log has no \"azure\" marker; the default:otel Azure detection path was not exercised")
 
@@ -107,7 +105,7 @@ func TestAzureVM(t *testing.T) {
 
 	t.Run("Traces", func(t *testing.T) {
 		// Dump agent log errors/warnings from the load window to diagnose trace export issues.
-		postLoadLog := common.ReadAgentLogfile(agentLogFile)
+		postLoadLog := common.ReadAgentLogfile(common.AgentLogFile)
 		for _, line := range filterLogLines(postLoadLog, "error", "warn", "xray", "traces", "401", "403", "500") {
 			t.Logf("agent: %s", line)
 		}

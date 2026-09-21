@@ -10,7 +10,7 @@ output "cwagent_vm_id" {
 }
 
 output "cwagent_role_arn" {
-  value = aws_iam_role.cwagent.arn
+  value = module.iam.role_arn
 }
 
 output "cwagent_principal_id" {

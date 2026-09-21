@@ -215,14 +215,6 @@ func StopAgent() {
 	log.Printf("Agent is stopped")
 }
 
-func ReadAgentLogfile(logfile string) string {
-	out, err := os.ReadFile(logfile)
-	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
-	}
-	return string(out)
-}
-
 func RecreateAgentLogfile(logfile string) {
 	if _, err := os.Stat(logfile); os.IsNotExist(err) {
 		return
