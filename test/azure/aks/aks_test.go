@@ -48,12 +48,12 @@ func TestMain(m *testing.M) {
 func TestAKS(t *testing.T) {
 	t.Run("Metrics", func(t *testing.T) {
 		// test_id is a datapoint attribute, the one surface no resource processor rewrites, so it
-		// isolates this run. cloud.platform=azure_aks comes only from the aks detector: proves detection ran.
+		// isolates this run. cloud.platform=azure.aks comes only from the aks detector: proves detection ran.
 		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
 			"AKSDefaultOtel", env.Region, []string{"aks_otlp_counter"},
 			map[string]string{
 				"test_id":                  env.AKSClusterName,
-				"@resource.cloud.platform": "azure_aks",
+				"@resource.cloud.platform": "azure.aks",
 				"@resource.cloud.provider": "azure",
 			},
 		)
