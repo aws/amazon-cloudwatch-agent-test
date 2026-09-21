@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 # CWAGENT_ROLE: assumed via web identity (Azure managed-identity JWT). Carries the agent's default:otel
-# CloudWatch writes plus the reads the on-VM test needs to assert delivery.
-
-module "common" {
-  source = "../../common"
-}
+# CloudWatch writes plus the reads the on-VM test needs to assert delivery. Shared by the linux and win
+# roots, which differ only in the VM principal_id they pin the trust policy to and the name prefix.
 
 # Referenced by ARN, not created here (created once out-of-band; may be auto-removed if unapproved).
 data "aws_iam_openid_connect_provider" "azure" {
@@ -35,7 +32,7 @@ data "aws_iam_policy_document" "cwagent_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "${local.oidc_condition_key}:sub"
-      values   = [azurerm_linux_virtual_machine.cwagent.identity[0].principal_id]
+      values   = [var.principal_id]
     }
 
     condition {
@@ -47,7 +44,7 @@ data "aws_iam_policy_document" "cwagent_assume_role" {
 }
 
 resource "aws_iam_role" "cwagent" {
-  name               = "cwa-azurevm-integ-role-${module.common.testing_id}"
+  name               = "${var.name_prefix}-role-${var.testing_id}"
   assume_role_policy = data.aws_iam_policy_document.cwagent_assume_role.json
 }
 
@@ -80,7 +77,7 @@ data "aws_iam_policy_document" "cwagent_permissions" {
 }
 
 resource "aws_iam_role_policy" "cwagent" {
-  name   = "cwa-azurevm-integ-policy-${module.common.testing_id}"
+  name   = "${var.name_prefix}-policy-${var.testing_id}"
   role   = aws_iam_role.cwagent.id
   policy = data.aws_iam_policy_document.cwagent_permissions.json
 }
