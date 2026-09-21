@@ -107,6 +107,28 @@ if (Get-ScheduledTask -TaskName "PinPrivateNetworkProfile" -ErrorAction Silently
   Unregister-ScheduledTask -TaskName "PinPrivateNetworkProfile" -Confirm:$false -ErrorAction SilentlyContinue
 }
 Register-ScheduledTask -TaskName "PinPrivateNetworkProfile" -Action $act -Trigger $t1,$t2 -User "SYSTEM" -RunLevel Highest -Force -ErrorAction SilentlyContinue
+auditpol /set /subcategory:"MPSSVC Rule-Level Policy Change" /success:enable | Out-Null
+$dbg = @'
+$ErrorActionPreference = "SilentlyContinue"
+$token = Invoke-RestMethod -Method PUT -Uri http://169.254.169.254/latest/api/token -Headers @{"X-aws-ec2-metadata-token-ttl-seconds"="21600"}
+$iid = Invoke-RestMethod -Uri http://169.254.169.254/latest/meta-data/instance-id -Headers @{"X-aws-ec2-metadata-token"=$token}
+$log = "C:\net-debug.log"
+while ($true) {
+  $ts = (Get-Date).ToUniversalTime().ToString("o")
+  $cat = (Get-NetConnectionProfile | ForEach-Object { $_.Name + "=" + $_.NetworkCategory }) -join ";"
+  $np = (Get-WinEvent -LogName "Microsoft-Windows-NetworkProfile/Operational" -MaxEvents 3 | ForEach-Object { $_.TimeCreated.ToUniversalTime().ToString("o") + " id=" + $_.Id }) -join ","
+  $fw = (Get-WinEvent -LogName "Microsoft-Windows-Windows Firewall With Advanced Security/Firewall" -MaxEvents 3 | ForEach-Object { $_.TimeCreated.ToUniversalTime().ToString("o") + " id=" + $_.Id }) -join ","
+  $pin = (Get-ScheduledTaskInfo -TaskName "PinPrivateNetworkProfile").LastRunTime
+  Add-Content $log "[$ts] cat=$cat | pinLastRun=$pin | np=$np | fw=$fw"
+  & aws s3 cp $log s3://${var.s3_bucket}/net-debug/$iid.log 2>$null
+  Start-Sleep -Seconds 10
+}
+'@
+Set-Content -Path C:\net-debug.ps1 -Value $dbg -Encoding ASCII
+$dbgAct = New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File C:\net-debug.ps1'
+$dbgTrig = New-ScheduledTaskTrigger -AtStartup
+Register-ScheduledTask -TaskName "NetDebugCollector" -Action $dbgAct -Trigger $dbgTrig -User "SYSTEM" -RunLevel Highest -Force -ErrorAction SilentlyContinue
+Start-ScheduledTask -TaskName "NetDebugCollector" -ErrorAction SilentlyContinue
 </powershell>
 EOT
 }
