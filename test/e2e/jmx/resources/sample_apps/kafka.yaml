@@ -86,18 +86,15 @@ spec:
           args: ["-c", "until nc -z zookeeper-service 2181; do echo waiting for zookeeper; sleep 2; done"]
       containers:
         - name: kafka
-          image: public.ecr.aws/l9b8e0i6/kafka:latest
+          image: public.ecr.aws/ubuntu/kafka:3.9.1-22.04_edge
+          command: ["/opt/kafka/bin/kafka-server-start.sh"]
+          args: ["/etc/kafka/server.properties",
+                 "--override","zookeeper.connect=zookeeper-service:2181",
+                 "--override","listeners=PLAINTEXT://:9092",
+                 "--override","advertised.listeners=PLAINTEXT://kafka-service:9092",
+                 "--override","offsets.topic.replication.factor=1"]
           ports:
             - containerPort: 9092
-          env:
-            - name: KAFKA_ZOOKEEPER_CONNECT
-              value: "zookeeper-service:2181"
-            - name: KAFKA_LISTENERS
-              value: "PLAINTEXT://:9092"
-            - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://kafka-service:9092"
-            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
-              value: "1"
           readinessProbe:
             tcpSocket:
               port: 9092
@@ -134,9 +131,9 @@ spec:
           args: ["-c", "until nc -z kafka-service 9092; do echo waiting for kafka; sleep 2; done"]
       containers:
         - name: kafka-producer
-          image: public.ecr.aws/l9b8e0i6/kafka:latest
+          image: public.ecr.aws/ubuntu/kafka:3.9.1-22.04_edge
           command: ["/bin/sh"]
-          args: ["-c", "yes | nohup kafka-console-producer.sh --topic quickstart-events --bootstrap-server kafka-service:9092"]
+          args: ["-c", "yes | nohup /opt/kafka/bin/kafka-console-producer.sh --topic quickstart-events --bootstrap-server kafka-service:9092"]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -163,6 +160,6 @@ spec:
           args: ["-c", "until nc -z kafka-service 9092; do echo waiting for kafka; sleep 2; done"]
       containers:
         - name: kafka-consumer
-          image: public.ecr.aws/l9b8e0i6/kafka:latest
+          image: public.ecr.aws/ubuntu/kafka:3.9.1-22.04_edge
           command: ["/bin/sh"]
-          args: ["-c", "kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server kafka-service:9092"]
+          args: ["-c", "/opt/kafka/bin/kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server kafka-service:9092"]
