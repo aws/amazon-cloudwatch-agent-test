@@ -38,18 +38,18 @@ const (
 
 var env *environment.MetaData
 
-// aksResourceExpectations is the shared source of truth for the azure_aks resourcedetection attributes
+// aksResourceExpectations is the shared source of truth for the azure.aks resourcedetection attributes
 // asserted on every signal: an exact value, or PresenceOnly for present-and-non-empty. Node-level and
 // subscription-bearing attributes stay presence-only (their values are per-node/dynamic, or must be kept
 // out of the CI logs).
 func aksResourceExpectations() map[string]string {
 	return map[string]string{
 		"cloud.provider":              "azure",
-		"cloud.platform":              "azure_aks",
+		"cloud.platform":              "azure.aks",
 		"k8s.cluster.name":            env.AKSClusterName,
 		"k8s.namespace.name":          agentNamespace,
 		"service.namespace":           agentNamespace,
-		"deployment.environment.name": "azure_aks:" + env.AKSClusterName + "/" + agentNamespace,
+		"deployment.environment.name": "azure.aks:" + env.AKSClusterName + "/" + agentNamespace,
 		"cloud.region":                env.AzureLocation,
 		"azure.vm.size":               env.AzureVMSize,        // AKS node pool VM size
 		"azure.resourcegroup.name":    env.AzureResourceGroup, // AKS node resource group (MC_...)
@@ -78,7 +78,7 @@ func TestMain(m *testing.M) {
 func TestAKS(t *testing.T) {
 	t.Run("Metrics", func(t *testing.T) {
 		// test_id (a datapoint attribute no resource processor rewrites) isolates this run. The @resource.*
-		// labels prove the azure_aks resourcedetection enrichment.
+		// labels prove the azure.aks resourcedetection enrichment.
 		labels := map[string]string{"test_id": env.AKSClusterName}
 		for attr, want := range aksResourceExpectations() {
 			labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
@@ -150,7 +150,7 @@ func validateLogs() status.TestResult {
 
 // validateTraces queries aws/spans (Transaction Search) for this run's spans. The load generator is an
 // external k8s Job, so we cannot enumerate trace IDs. Match spans by service name + cluster instead, then
-// assert the azure_aks resource enrichment on each matched span (not just that some arrived).
+// assert the azure.aks resource enrichment on each matched span (not just that some arrived).
 func validateTraces() status.TestResult {
 	testResult := status.TestResult{Name: "AKS_Traces", Status: status.FAILED}
 

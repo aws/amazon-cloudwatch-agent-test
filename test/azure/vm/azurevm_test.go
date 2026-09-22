@@ -50,24 +50,22 @@ var env *environment.MetaData
 // asserted on every signal: an exact value, or PresenceOnly for present-and-non-empty. cloud.account.id
 // and cloud.resource_id stay presence-only so the subscription id they carry never reaches the CI logs.
 func azureResourceExpectations() map[string]string {
-	deploymentEnv := otlpvalidation.PresenceOnly // "azure_vm:<resource group>" once the group is known
-	if env.AzureResourceGroup != "" {
-		deploymentEnv = "azure_vm:" + env.AzureResourceGroup
-	}
 	return map[string]string{
 		"cloud.provider":              "azure",
-		"cloud.platform":              "azure_vm",
+		"cloud.platform":              "azure.vm",
 		"cloud.account.id":            otlpvalidation.PresenceOnly,
 		"cloud.resource_id":           otlpvalidation.PresenceOnly,
 		"cloud.region":                env.AzureLocation,
 		"azure.vm.name":               env.AzureVMName,
 		"azure.vm.size":               env.AzureVMSize,
 		"azure.resourcegroup.name":    env.AzureResourceGroup,
-		"deployment.environment.name": deploymentEnv,
+		"deployment.environment.name": "azure.vm:" + env.AzureResourceGroup,
 		// Presence only: this test's payloads set it, but the run's host metrics carry an unknown_service* value.
 		"service.name": otlpvalidation.PresenceOnly,
-		"host.name":    env.AzureVMName,
-		"host.id":      env.InstanceId,
+		// host.name is the OS hostname, which Windows truncates to 15 chars, so it cannot equal the full
+		// Azure VM name. VM identity is asserted exactly via azure.vm.name (IMDS) and host.id (vmId) instead.
+		"host.name": otlpvalidation.PresenceOnly,
+		"host.id":   env.InstanceId,
 	}
 }
 
@@ -85,11 +83,11 @@ func TestMain(m *testing.M) {
 // TestAzureVM confirms the pre-provisioned default:otel agent detected Azure, then pushes OTLP and validates
 // that all three signals reach CloudWatch via the Azure web-identity chain.
 func TestAzureVM(t *testing.T) {
-	// The agent must already be running default:otel and have detected Azure. "azure_vm" (the cloud.platform
-	// value) appears only when auto mode-detection resolved the Azure VM path.
+	// The agent must already be running default:otel with the Azure VM resource detected. The
+	// resourcedetection processor logs the detected resource, cloud.platform included, to the agent log.
 	agentLog := common.ReadAgentLogfile(common.AgentLogFile)
-	require.Contains(t, agentLog, "azure_vm",
-		"agent log has no \"azure_vm\" marker; the default:otel Azure VM detection path was not exercised")
+	require.Contains(t, agentLog, `"cloud.platform":"azure.vm"`,
+		"agent log has no azure.vm resource detection, so the default:otel Azure VM path was not exercised")
 
 	// Push OTLP for the load window, then validate.
 	stop := make(chan struct{})
