@@ -215,6 +215,147 @@ resource "kubernetes_deployment_v1" "nginx_test" {
   }
 }
 
+# --- Solution scraper stub targets (karpenter + keda) ---
+# Synthetic targets that match the cluster scraper's built-in karpenter/keda
+# scrape selectors (pod label app.kubernetes.io/name + named container port),
+# so the performance test actually exercises solution-scraping memory instead of
+# leaving those scrape jobs target-less. Cardinality is tunable below.
+
+locals {
+  solution_stub_series = 1000
+  stub_nginx_conf      = <<-EOT
+    events {}
+    http {
+      server {
+        listen 8080;
+        location = /metrics {
+          default_type "text/plain; version=0.0.4";
+          alias /etc/metrics/metrics;
+        }
+      }
+    }
+  EOT
+  karpenter_exposition = join("\n", [for i in range(local.solution_stub_series) : "karpenter_stub_metric{series=\"${i}\"} ${i}"])
+  keda_exposition      = join("\n", [for i in range(local.solution_stub_series) : "keda_stub_metric{series=\"${i}\"} ${i}"])
+}
+
+resource "kubernetes_namespace_v1" "keda" {
+  depends_on = [aws_eks_node_group.this]
+  metadata { name = "keda" }
+}
+
+resource "kubernetes_config_map_v1" "karpenter_stub" {
+  depends_on = [aws_eks_node_group.this]
+  metadata {
+    name      = "karpenter-stub-metrics"
+    namespace = "kube-system"
+  }
+  data = {
+    "nginx.conf" = local.stub_nginx_conf
+    "metrics"    = local.karpenter_exposition
+  }
+}
+
+resource "kubernetes_config_map_v1" "keda_stub" {
+  depends_on = [kubernetes_namespace_v1.keda]
+  metadata {
+    name      = "keda-stub-metrics"
+    namespace = "keda"
+  }
+  data = {
+    "nginx.conf" = local.stub_nginx_conf
+    "metrics"    = local.keda_exposition
+  }
+}
+
+resource "kubernetes_deployment_v1" "karpenter_stub" {
+  depends_on = [kubernetes_config_map_v1.karpenter_stub]
+  metadata {
+    name      = "karpenter"
+    namespace = "kube-system"
+    labels    = { "app.kubernetes.io/name" = "karpenter" }
+  }
+  spec {
+    replicas = 1
+    selector { match_labels = { "app.kubernetes.io/name" = "karpenter" } }
+    template {
+      metadata { labels = { "app.kubernetes.io/name" = "karpenter" } }
+      spec {
+        container {
+          name  = "metrics"
+          image = "public.ecr.aws/nginx/nginx:latest"
+          port {
+            name           = "http-metrics"
+            container_port = 8080
+          }
+          volume_mount {
+            name       = "conf"
+            mount_path = "/etc/nginx/nginx.conf"
+            sub_path   = "nginx.conf"
+          }
+          volume_mount {
+            name       = "data"
+            mount_path = "/etc/metrics/metrics"
+            sub_path   = "metrics"
+          }
+        }
+        volume {
+          name = "conf"
+          config_map { name = kubernetes_config_map_v1.karpenter_stub.metadata[0].name }
+        }
+        volume {
+          name = "data"
+          config_map { name = kubernetes_config_map_v1.karpenter_stub.metadata[0].name }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_deployment_v1" "keda_stub" {
+  depends_on = [kubernetes_config_map_v1.keda_stub]
+  metadata {
+    name      = "keda-operator"
+    namespace = "keda"
+    labels    = { "app.kubernetes.io/name" = "keda-operator" }
+  }
+  spec {
+    replicas = 1
+    selector { match_labels = { "app.kubernetes.io/name" = "keda-operator" } }
+    template {
+      metadata { labels = { "app.kubernetes.io/name" = "keda-operator" } }
+      spec {
+        container {
+          name  = "metrics"
+          image = "public.ecr.aws/nginx/nginx:latest"
+          port {
+            name           = "metrics"
+            container_port = 8080
+          }
+          volume_mount {
+            name       = "conf"
+            mount_path = "/etc/nginx/nginx.conf"
+            sub_path   = "nginx.conf"
+          }
+          volume_mount {
+            name       = "data"
+            mount_path = "/etc/metrics/metrics"
+            sub_path   = "metrics"
+          }
+        }
+        volume {
+          name = "conf"
+          config_map { name = kubernetes_config_map_v1.keda_stub.metadata[0].name }
+        }
+        volume {
+          name = "data"
+          config_map { name = kubernetes_config_map_v1.keda_stub.metadata[0].name }
+        }
+      }
+    }
+  }
+}
+
 # --- KSM test workloads ---
 
 resource "kubernetes_stateful_set_v1" "ksm_statefulset" {
