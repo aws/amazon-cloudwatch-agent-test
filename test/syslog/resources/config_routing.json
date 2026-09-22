@@ -28,6 +28,13 @@
             },
             "log_group_name": "{log_group_auth}",
             "log_stream_name": "auth-stream"
+          },
+          {
+            "match": {
+              "app_name": "myapp-*"
+            },
+            "log_group_name": "{log_group_app}",
+            "log_stream_name": "app-stream"
           }
         ]
       }

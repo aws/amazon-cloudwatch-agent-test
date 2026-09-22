@@ -334,20 +334,29 @@ func TestSyslogContentFilter(t *testing.T) {
 	assert.Equal(t, 2, kept, "expected only non-healthcheck messages")
 }
 
-// TestSyslogRouting verifies hostname- and facility-based routing rules deliver
-// to their own log groups, with unmatched traffic falling through to the default.
+// TestSyslogRouting verifies hostname-, facility-, and app_name-based routing
+// rules each deliver to their own log group, with unmatched traffic falling
+// through to the default.
+//
+// The app_name case is a regression guard: the config key is "app_name" but the
+// syslog parser emits the attribute as "appname", so a naming mismatch in the
+// routing translator would silently route app_name traffic to the default group
+// instead of its intended destination.
 func TestSyslogRouting(t *testing.T) {
 	id := instanceID()
 	webGroup := fmt.Sprintf("/aws/cwagent/syslog-test/%s/routing-web", id)
 	authGroup := fmt.Sprintf("/aws/cwagent/syslog-test/%s/routing-auth", id)
+	appGroup := fmt.Sprintf("/aws/cwagent/syslog-test/%s/routing-app", id)
 	defaultGroup := fmt.Sprintf("/aws/cwagent/syslog-test/%s/routing-default", id)
 	defer awsservice.DeleteLogGroupAndStream(webGroup, "web-stream")
 	defer awsservice.DeleteLogGroupAndStream(authGroup, "auth-stream")
+	defer awsservice.DeleteLogGroupAndStream(appGroup, "app-stream")
 	defer awsservice.DeleteLogGroupAndStream(defaultGroup, "default-stream")
 
 	startAgentWithConfig(t, "resources/config_routing.json", map[string]string{
 		"{log_group_web}":     webGroup,
 		"{log_group_auth}":    authGroup,
+		"{log_group_app}":     appGroup,
 		"{log_group_default}": defaultGroup,
 	})
 
@@ -358,7 +367,9 @@ func TestSyslogRouting(t *testing.T) {
 		rfc5424Msg(1, 6, "web-01", "nginx", marker+" web request"),
 		// facility 4 (auth) -> auth group
 		rfc5424Msg(4, 6, "db-01", "sshd", marker+" auth event"),
-		// neither -> default group
+		// app_name matches myapp-* -> app group
+		rfc5424Msg(1, 6, "db-01", "myapp-worker", marker+" app event"),
+		// none match -> default group
 		rfc5424Msg(1, 6, "db-01", "postgres", marker+" default msg"),
 	})
 	time.Sleep(sleepForFlush)
@@ -367,12 +378,27 @@ func TestSyslogRouting(t *testing.T) {
 	assert.NoError(t, awsservice.ValidateLogs(
 		webGroup, "web-stream", &start, &end,
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker+" web request")),
-	), "web routing")
+	), "hostname routing")
 
 	assert.NoError(t, awsservice.ValidateLogs(
 		authGroup, "auth-stream", &start, &end,
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker+" auth event")),
 	), "facility routing")
+
+	assert.NoError(t, awsservice.ValidateLogs(
+		appGroup, "app-stream", &start, &end,
+		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker+" app event")),
+	), "app_name routing")
+
+	// Regression guard: the app_name-routed message must NOT have leaked into
+	// the default group. If the routing translator emits the wrong attribute
+	// name, the app event silently lands here instead of the app group.
+	defaultEvents, err := awsservice.GetLogsSince(defaultGroup, "default-stream", &start, &end)
+	require.NoError(t, err)
+	for _, e := range defaultEvents {
+		assert.NotContains(t, *e.Message, marker+" app event",
+			"app_name-matched message leaked to default route (attribute name mismatch)")
+	}
 
 	assert.NoError(t, awsservice.ValidateLogs(
 		defaultGroup, "default-stream", &start, &end,
