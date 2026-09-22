@@ -207,7 +207,7 @@ func TestNeuronRuntimeTagInResourceScope(t *testing.T) {
 				"No correlated %s results to check runtime tag", md.Name)
 			for _, r := range correlated {
 				r := r
-				tag, hasTag := r.Labels.Resource["aws.neuron.runtime.tag"]
+				tag, hasTag := r.Labels.Resource[runtimeTagResourceKey]
 				require.True(t, hasTag,
 					"%s correlated result missing @resource.aws.neuron.runtime.tag (pod: %s)",
 					md.Name, r.Labels.Resource["k8s.pod.name"])
