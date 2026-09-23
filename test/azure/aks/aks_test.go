@@ -32,11 +32,19 @@ const (
 	// agentNamespace is the k8s namespace the agent runs in. The resource k8s.namespace.name and the
 	// derived service.namespace both carry it.
 	agentNamespace = "amazon-cloudwatch"
-	// The load generator runs for 3 minutes; allow extra ingestion time.
+	// The load generator runs for 3 minutes, so allow extra ingestion time.
 	validationWindow = 10 * time.Minute
 )
 
 var env *environment.MetaData
+
+// measuredMetrics are the default:otel metrics this test validates: the load generator's OTLP counter and
+// the spanmetrics connector's span metrics (both carry the same @resource.* enrichment). Sorted.
+var measuredMetrics = []string{
+	"aks_otlp_counter",
+	"traces.span.metrics.calls",
+	"traces.span.metrics.duration",
+}
 
 // aksResourceExpectations is the shared source of truth for the azure.aks resourcedetection attributes
 // asserted on every signal: an exact value, or PresenceOnly for present-and-non-empty. Node-level and
@@ -77,17 +85,17 @@ func TestMain(m *testing.M) {
 
 func TestAKS(t *testing.T) {
 	t.Run("Metrics", func(t *testing.T) {
-		// test_id (a datapoint attribute no resource processor rewrites) isolates this run. The @resource.*
-		// labels prove the azure.aks resourcedetection enrichment.
-		labels := map[string]string{"test_id": env.AKSClusterName}
+		// Isolated by @resource.k8s.cluster.name, which is unique per run and never reused. measuredMetrics
+		// spans the OTLP counter and the spanmetrics connector's output, all carrying the same @resource.*
+		// enrichment, so they validate under these labels.
+		labels := map[string]string{}
 		for attr, want := range aksResourceExpectations() {
 			labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
 		}
 		for attr, want := range otlpvalidation.ScopeExpectations() {
 			labels["@instrumentation."+attr] = otlpvalidation.ExpectedValue(want)
 		}
-		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
-			"AKSDefaultOtel", env.Region, []string{"aks_otlp_counter"}, labels)
+		group := otlpvalidation.ValidateOtlpMetricsWithLabels("AKSDefaultOtel", env.Region, measuredMetrics, labels)
 		for _, r := range group.TestResults {
 			require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
 		}

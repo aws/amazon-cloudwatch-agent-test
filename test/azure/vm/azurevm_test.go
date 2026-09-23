@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	// loadWindow is how long OTLP telemetry is pushed before validation; delivery + CloudWatch ingestion
+	// loadWindow is how long OTLP telemetry is pushed before validation. Delivery + CloudWatch ingestion
 	// need headroom beyond the push window.
 	loadWindow   = 3 * time.Minute
 	otlpEndpoint = "http://127.0.0.1:4318"
@@ -144,15 +144,35 @@ func TestAzureVM(t *testing.T) {
 }
 
 func measuredMetrics() []string {
-	return []string{
-		// Synthetic OTLP metrics this test pushes.
+	// Synthetic OTLP metrics this test pushes plus the default:otel host metrics emitted on both Linux and Windows.
+	m := []string{
 		"azurevm_otlp_counter",
 		"azurevm_otlp_gauge",
-		// Host metrics from default:otel's host_metrics.
+		"system.cpu.load_average.15m",
+		"system.cpu.load_average.1m",
+		"system.cpu.load_average.5m",
+		"system.cpu.logical.count",
+		"system.cpu.physical.count",
+		"system.cpu.time",
 		"system.cpu.utilization",
-		"system.memory.utilization",
+		"system.disk.io",
+		"system.disk.io_time",
+		"system.disk.operation_time",
+		"system.disk.operations",
+		"system.disk.pending_operations",
+		"system.filesystem.usage",
 		"system.filesystem.utilization",
+		"system.memory.limit",
+		"system.memory.page_size",
+		"system.memory.usage",
+		"system.memory.utilization",
+		"system.network.connections",
+		"system.network.dropped",
+		"system.network.errors",
+		"system.network.io",
+		"system.network.packets",
 	}
+	return append(m, platformMetrics...)
 }
 
 // validateLogs confirms the OTLP log record landed in the default:otel log group on the stream the
