@@ -103,7 +103,10 @@ func runJVM(p platform) error {
 }
 
 func runTomcat(p platform) error {
-	for _, version := range []string{"apache-tomcat-9.0.110", "apache-tomcat-10.1.47", "apache-tomcat-11.0.12"} {
+	// PR #766 A/B diagnostic: run 10.1.47 FIRST to isolate whether its WinRM 5985 reset is
+	// intrinsic to the 10.1.47 setup leg or a cumulative after-effect of the prior 9.0.110 leg.
+	// Revert to 9.0.110-first ordering after root-causing.
+	for _, version := range []string{"apache-tomcat-10.1.47", "apache-tomcat-9.0.110", "apache-tomcat-11.0.12"} {
 		// Create directory for Tomcat
 		tomcatDir := filepath.Join(p.tmpDir(), "tomcat", version)
 		defer os.RemoveAll(filepath.Join(p.tmpDir(), "tomcat"))

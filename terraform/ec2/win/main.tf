@@ -96,9 +96,18 @@ locals {
   winrm_bootstrap_userdata = <<EOT
 <powershell>
 New-NetFirewallRule -DisplayName "WinRM 5985 Any Profile" -Direction Inbound -Protocol TCP -LocalPort 5985 -Action Allow -Profile Any -ErrorAction SilentlyContinue
+# PR #766 (option B): pre-create allow rules for the workload listener ports BEFORE any workload
+# starts - Tomcat HTTP 8080 + shutdown 8005, JMX/RMI 1080, JVM 2030, Kafka 9999. Tomcat/Java open
+# these sockets on startup; if the rule already exists, Windows has no reason to add a rule or
+# re-evaluate the network profile mid-test, which is what resets the live WinRM 5985 session.
+# Created here (like the 5985 rule) while local rules still apply, before AllowLocalFirewallRules.
+New-NetFirewallRule -DisplayName "WD Workload Ports Inbound" -Direction Inbound -Protocol TCP -LocalPort 8080,8005,1080,2030,9999 -Action Allow -Profile Any -ErrorAction SilentlyContinue
 Enable-NetFirewallRule -DisplayGroup "Windows Remote Management" -ErrorAction SilentlyContinue
 Set-NetFirewallRule -Name WINRM-HTTP-In-TCP-PUBLIC -RemoteAddress Any -Enabled True -ErrorAction SilentlyContinue
 Set-Service -Name WinRM -StartupType Automatic
+# Stop Java/Tomcat from changing firewall rules mid-test, which resets the live WinRM
+# session. JMX scraping is loopback, so ignoring app-created rules loses nothing.
+Set-NetFirewallProfile -All -NotifyOnListen $false -AllowLocalFirewallRules $false -ErrorAction SilentlyContinue
 Get-NetConnectionProfile | Where-Object { $_.NetworkCategory -ne 'Private' } | Set-NetConnectionProfile -NetworkCategory Private -ErrorAction SilentlyContinue
 $act = New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -WindowStyle Hidden -Command "Get-NetConnectionProfile | Where-Object { $_.NetworkCategory -ne ''Private'' } | Set-NetConnectionProfile -NetworkCategory Private"'
 $t1  = New-ScheduledTaskTrigger -AtStartup
@@ -107,28 +116,86 @@ if (Get-ScheduledTask -TaskName "PinPrivateNetworkProfile" -ErrorAction Silently
   Unregister-ScheduledTask -TaskName "PinPrivateNetworkProfile" -Confirm:$false -ErrorAction SilentlyContinue
 }
 Register-ScheduledTask -TaskName "PinPrivateNetworkProfile" -Action $act -Trigger $t1,$t2 -User "SYSTEM" -RunLevel Highest -Force -ErrorAction SilentlyContinue
-auditpol /set /subcategory:"MPSSVC Rule-Level Policy Change" /success:enable | Out-Null
-$dbg = @'
+# =====================================================================================
+# WinRM 5985 RST capture (instrumentation ONLY — remove after root-causing PR #766).
+# Runs from userdata at BOOT under SYSTEM, independent of the remote-exec that dies at
+# ~340s (measured from TEST START, not boot), and self-uploads FLUSHED segments to S3
+# so evidence survives `terraform destroy`. Modeled on the removed 810267c collector.
+# =====================================================================================
+New-Item -ItemType Directory -Path C:\winrm-debug -Force -ErrorAction SilentlyContinue | Out-Null
+# Collector script: rotating pktmon capture on TCP 5985 + per-loop WinRM event/config export.
+$col = @'
 $ErrorActionPreference = "SilentlyContinue"
+$dir    = "C:\winrm-debug"
+$active = "$dir\5985-active.etl"
+# IMDSv2 token flow (http_tokens=required): fetch token + instance-id once, reuse below.
 $token = Invoke-RestMethod -Method PUT -Uri http://169.254.169.254/latest/api/token -Headers @{"X-aws-ec2-metadata-token-ttl-seconds"="21600"}
-$iid = Invoke-RestMethod -Uri http://169.254.169.254/latest/meta-data/instance-id -Headers @{"X-aws-ec2-metadata-token"=$token}
-$log = "C:\net-debug.log"
+$iid   = Invoke-RestMethod -Uri http://169.254.169.254/latest/meta-data/instance-id -Headers @{"X-aws-ec2-metadata-token"=$token}
+$base  = "s3://${var.s3_bucket}/winrm-debug/$iid"
+# Start a fresh filtered capture. --pkt-size 128 truncates each packet to 128 bytes = headers
+# only (TCP flags/RST + TTL + SEQ, enough to tell an instance-side RST from a NAT-injected one).
+# IMPORTANT: in pktmon --pkt-size 0 = FULL packet (no truncation), so do NOT use 0.
+# -s 512 caps each SEGMENT file at 512 MB. -t TCP -p 5985 filters to the WinRM HTTP port.
+function Start-Cap {
+  pktmon filter remove | Out-Null
+  pktmon filter add WinRM5985 -p 5985 -t TCP | Out-Null
+  pktmon start --capture --pkt-size 128 -s 512 -f $active | Out-Null
+}
+# Last-ditch flush+upload if the task is stopped or errors: rotation already ships segments,
+# this just closes+uploads the in-flight one so nothing is lost.
+trap {
+  pktmon stop | Out-Null
+  if (Test-Path $active) {
+    $ff = "$dir\5985-$(Get-Date -Format yyyyMMdd-HHmmss)-final.etl"
+    Move-Item $active $ff -Force
+    & aws s3 cp $ff "$base/$(Split-Path $ff -Leaf)" | Out-Null
+  }
+  continue
+}
+Start-Cap
+# (c) one-time-at-boot dump of live WSMan/WinRS quotas (runtime-only defaults, not in repo config).
+winrm get winrm/config      > $dir\winrm-config.txt 2>&1
+winrm get winrm/config/winrs > $dir\winrs-config.txt 2>&1
+& aws s3 cp $dir\winrm-config.txt "$base/winrm-config.txt" | Out-Null
+& aws s3 cp $dir\winrs-config.txt "$base/winrs-config.txt" | Out-Null
+# ROTATING loop (~15s). ETW flushes an .etl ONLY on `pktmon stop`, so a live/growing .etl is
+# unparseable and copying it mid-write risks a sharing violation / truncation. Each cycle we:
+#   1) stop (flush) -> 2) rename the closed segment to a timestamp -> 3) start a fresh capture
+#   -> 4) upload ONLY that completed segment. This guarantees every uploaded .etl is flushed and
+# parseable, ships the RST within ~15s regardless of WHEN in the (test-start-relative) run it
+# occurs, and removes any dependence on a single well-timed final stop.
+# NOTE: on a failing run, `terraform destroy` terminates this instance within seconds of the RST,
+# and a hard EC2 terminate kills this task WITHOUT running the trap above, so the in-flight
+# segment can still be lost. The 15s interval shrinks that loss window; the RACE-FREE capture of
+# the RST is the runner-side tcpdump in wd-integration-test.yml, which is not torn down by destroy.
 while ($true) {
-  $ts = (Get-Date).ToUniversalTime().ToString("o")
-  $cat = (Get-NetConnectionProfile | ForEach-Object { $_.Name + "=" + $_.NetworkCategory }) -join ";"
-  $np = (Get-WinEvent -LogName "Microsoft-Windows-NetworkProfile/Operational" -MaxEvents 3 | ForEach-Object { $_.TimeCreated.ToUniversalTime().ToString("o") + " id=" + $_.Id }) -join ","
-  $fw = (Get-WinEvent -LogName "Microsoft-Windows-Windows Firewall With Advanced Security/Firewall" -MaxEvents 3 | ForEach-Object { $_.TimeCreated.ToUniversalTime().ToString("o") + " id=" + $_.Id }) -join ","
-  $pin = (Get-ScheduledTaskInfo -TaskName "PinPrivateNetworkProfile").LastRunTime
-  Add-Content $log "[$ts] cat=$cat | pinLastRun=$pin | np=$np | fw=$fw"
-  & aws s3 cp $log s3://${var.s3_bucket}/net-debug/$iid.log 2>$null
-  Start-Sleep -Seconds 10
+  Start-Sleep -Seconds 15
+  pktmon stop | Out-Null                              # 1) flush current segment to $active
+  $seg = "$dir\5985-$(Get-Date -Format yyyyMMdd-HHmmss).etl"
+  if (Test-Path $active) { Move-Item $active $seg -Force }  # 2) rename closed segment
+  Start-Cap                                           # 3) restart immediately (min. blind gap)
+  # 4) upload ONLY the just-rotated segment (NOT `aws s3 cp --recursive` of the whole dir) to
+  #    limit observer effect: extra 5985/S3 traffic must not contend with the channel under test.
+  if (Test-Path $seg) { & aws s3 cp $seg "$base/$(Split-Path $seg -Leaf)" | Out-Null }
+  # 5) export recent WinRM Operational events (shell-terminate / quota events); upload just these.
+  wevtutil epl "Microsoft-Windows-WinRM/Operational" $dir\winrm-operational.evtx /ow:true 2>$null
+  Get-WinEvent -LogName "Microsoft-Windows-WinRM/Operational" -MaxEvents 200 |
+    Select-Object TimeCreated,Id,LevelDisplayName,Message | Format-List |
+    Out-File -Encoding utf8 $dir\winrm-operational.txt 2>$null
+  & aws s3 cp $dir\winrm-operational.evtx "$base/winrm-operational.evtx" | Out-Null
+  & aws s3 cp $dir\winrm-operational.txt  "$base/winrm-operational.txt"  | Out-Null
 }
 '@
-Set-Content -Path C:\net-debug.ps1 -Value $dbg -Encoding ASCII
-$dbgAct = New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File C:\net-debug.ps1'
-$dbgTrig = New-ScheduledTaskTrigger -AtStartup
-Register-ScheduledTask -TaskName "NetDebugCollector" -Action $dbgAct -Trigger $dbgTrig -User "SYSTEM" -RunLevel Highest -Force -ErrorAction SilentlyContinue
-Start-ScheduledTask -TaskName "NetDebugCollector" -ErrorAction SilentlyContinue
+Set-Content -Path C:\winrm-capture.ps1 -Value $col -Encoding ASCII
+# Idempotent register (Unregister-before-Register, matching the PinPrivateNetworkProfile fix).
+# No separate Finalize task: rotation + the trap flush make a single boot+Nmin stop unnecessary.
+$colAct  = New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File C:\winrm-capture.ps1'
+$colTrig = New-ScheduledTaskTrigger -AtStartup
+if (Get-ScheduledTask -TaskName "WinRMDebugCollector" -ErrorAction SilentlyContinue) {
+  Unregister-ScheduledTask -TaskName "WinRMDebugCollector" -Confirm:$false -ErrorAction SilentlyContinue
+}
+Register-ScheduledTask -TaskName "WinRMDebugCollector" -Action $colAct -Trigger $colTrig -User "SYSTEM" -RunLevel Highest -Force -ErrorAction SilentlyContinue
+Start-ScheduledTask -TaskName "WinRMDebugCollector" -ErrorAction SilentlyContinue
 </powershell>
 EOT
 }

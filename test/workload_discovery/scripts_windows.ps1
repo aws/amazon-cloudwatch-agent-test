@@ -67,12 +67,48 @@ public class Main {
     }
 }
 
+function Dump-WorkloadDiag {
+    # PR #766 diagnostics (remove after root-cause): snapshot firewall / network-profile / port
+    # state at each workload leg's setup. The failure is positional (the 2nd Tomcat leg always
+    # resets WinRM 5985), so comparing the leg-1 vs leg-2 snapshots reveals what the first leg
+    # leaves behind - a lingering listener, an added firewall rule, or a flipped network profile -
+    # that tears down the live WinRM session. Uploads via the instance profile (independent of the
+    # WinRM channel) so the snapshot survives even if the session is reset. Best-effort; never fails.
+    param([string]$Bucket, [string]$Label)
+    try {
+        New-Item -ItemType Directory -Path C:\winrm-debug -Force -ErrorAction SilentlyContinue | Out-Null
+        $ts  = Get-Date -Format yyyyMMdd-HHmmss
+        $tok = Invoke-RestMethod -Method PUT -Uri http://169.254.169.254/latest/api/token -Headers @{"X-aws-ec2-metadata-token-ttl-seconds"="120"} -ErrorAction SilentlyContinue
+        $iid = Invoke-RestMethod -Uri http://169.254.169.254/latest/meta-data/instance-id -Headers @{"X-aws-ec2-metadata-token"=$tok} -ErrorAction SilentlyContinue
+        $out = "C:\winrm-debug\setup-diag-$Label-$ts.txt"
+        "==== $Label @ $ts ===="                                                          | Out-File -Encoding utf8 $out
+        "-- Network profiles (Public vs Private matters for the 5985 rule) --"            | Out-File -Append -Encoding utf8 $out
+        Get-NetConnectionProfile | Format-List Name,NetworkCategory,IPv4Connectivity      | Out-File -Append -Encoding utf8 $out
+        "-- WinRM / 5985 firewall rules --"                                               | Out-File -Append -Encoding utf8 $out
+        Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'WinRM|5985' } | Format-Table -Auto DisplayName,Enabled,Profile,Direction,Action | Out-String | Out-File -Append -Encoding utf8 $out
+        "-- Firewall rules mentioning java/tomcat/1080 --"                                | Out-File -Append -Encoding utf8 $out
+        (netsh advfirewall firewall show rule name=all | Select-String -Pattern 'java','tomcat','1080' -Context 1,3) | Out-File -Append -Encoding utf8 $out
+        "-- Listeners on Tomcat/JMX ports (1080/8080/8005) --"                            | Out-File -Append -Encoding utf8 $out
+        (netstat -ano | Select-String -Pattern ':1080',':8080',':8005') | Out-File -Append -Encoding utf8 $out
+        "-- Java processes still running --"                                              | Out-File -Append -Encoding utf8 $out
+        Get-Process java -ErrorAction SilentlyContinue | Format-Table -Auto Id,StartTime,Path | Out-String | Out-File -Append -Encoding utf8 $out
+        "-- Recent Windows Firewall rule add/change/delete events --"                     | Out-File -Append -Encoding utf8 $out
+        Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Firewall With Advanced Security/Firewall'; Id=2004,2005,2006,2033} -MaxEvents 40 -ErrorAction SilentlyContinue | Select-Object TimeCreated,Id,Message | Format-List | Out-File -Append -Encoding utf8 $out
+        if ($iid -and $Bucket) { Write-S3Object -BucketName $Bucket -Key "winrm-debug/$iid/setup-diag/$(Split-Path $out -Leaf)" -File $out -ErrorAction SilentlyContinue }
+    } catch { }
+}
+
 function Setup-Tomcat {
     param(
         [string]$Version = "apache-tomcat-9.0.110",
         [string]$Bucket
     )
-    
+
+    # PR #766 diagnostics: capture inherited firewall/profile/port state at the START of each
+    # Tomcat leg's setup (before this leg changes anything), so the leg-1 vs leg-2 comparison
+    # reveals the cumulative cause of the 2nd-leg WinRM reset. Remove after root-cause.
+    Dump-WorkloadDiag -Bucket $Bucket -Label "tomcat-$Version-setupstart"
+
     $isWin2016 = (Get-WmiObject -Class Win32_OperatingSystem).Caption -match "2016"
     
     Copy-S3Object -BucketName $Bucket -Key "tomcat/$Version.tar.gz" -LocalFile "C:\tmp\tomcat\$Version.tar.gz"
@@ -166,7 +202,7 @@ function Start-Tomcat {
     $env:CATALINA_BASE = $TomcatDir
 
     if ($Port) {
-        $env:CATALINA_OPTS = "-Dcom.sun.management.jmxremote.port=$Port -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+        $env:CATALINA_OPTS = "-Dcom.sun.management.jmxremote.port=$Port -Dcom.sun.management.jmxremote.rmi.port=$Port -Dcom.sun.management.jmxremote.host=localhost -Djava.rmi.server.hostname=localhost -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
     }
     
     Start-Process -FilePath "$TomcatDir\bin\startup.bat" -WindowStyle Hidden -ErrorAction SilentlyContinue
