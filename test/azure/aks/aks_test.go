@@ -38,8 +38,8 @@ const (
 
 var env *environment.MetaData
 
-// measuredMetrics are the default:otel metrics this test validates.
-var measuredMetrics = []string{
+// otlpMetrics are the metrics the load generator pushes over OTLP.
+var otlpMetrics = []string{
 	"aks_otlp_counter",
 }
 
@@ -89,31 +89,41 @@ func TestMain(m *testing.M) {
 
 func TestAKS(t *testing.T) {
 	t.Run("Metrics", func(t *testing.T) {
-		// Isolated by @resource.k8s.cluster.name, which is unique per run and never reused.
-		labels := map[string]string{}
+		// Isolated by @resource.k8s.cluster.name, which is unique per run and never reused. Agent-produced
+		// metrics carry the cloudwatch instrumentation scope. Spanmetrics carry only the @resource.*
+		// enrichment, so they match on resource labels alone.
+		resourceLabels := map[string]string{}
 		for attr, want := range aksResourceExpectations() {
-			labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
+			resourceLabels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
+		}
+		fullLabels := map[string]string{}
+		for k, v := range resourceLabels {
+			fullLabels[k] = v
 		}
 		for attr, want := range otlpvalidation.ScopeExpectations() {
-			labels["@instrumentation."+attr] = otlpvalidation.ExpectedValue(want)
+			fullLabels["@instrumentation."+attr] = otlpvalidation.ExpectedValue(want)
 		}
-		group := otlpvalidation.ValidateOtlpMetricsWithLabels("AKSDefaultOtel", env.Region, measuredMetrics, labels)
-		for _, r := range group.TestResults {
-			require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
+		assertFound := func(t *testing.T, group status.TestGroupResult) {
+			for _, r := range group.TestResults {
+				require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
+			}
 		}
-	})
 
-	t.Run("SpanMetrics", func(t *testing.T) {
-		// The spanmetrics connector carries the @resource.* enrichment but no cloudwatch.source/solution
-		// scope attributes, so match on resource labels only. ScopeExpectations would exclude every series.
-		labels := map[string]string{}
-		for attr, want := range aksResourceExpectations() {
-			labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
-		}
-		group := otlpvalidation.ValidateOtlpMetricsWithLabels("AKSSpanMetrics", env.Region, spanMetrics, labels)
-		for _, r := range group.TestResults {
-			require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
-		}
+		t.Run("OTLP", func(t *testing.T) {
+			assertFound(t, otlpvalidation.ValidateOtlpMetricsWithLabels("AKSOTLP", env.Region, otlpMetrics, fullLabels))
+		})
+		t.Run("SpanMetrics", func(t *testing.T) {
+			assertFound(t, otlpvalidation.ValidateOtlpMetricsWithLabels("AKSSpanMetrics", env.Region, spanMetrics, resourceLabels))
+		})
+		t.Run("Names", func(t *testing.T) {
+			// Enumerate every metric name produced for this cluster and assert it matches exactly the set
+			// the subtests above cover. Catches drift: a new default:otel metric or one that stopped emitting.
+			matcher := fmt.Sprintf(`{__name__=~".+", "@resource.k8s.cluster.name"=%q}`, env.AKSClusterName)
+			got, err := otlpvalidation.MetricNamesForMatcher(env.Region, matcher, time.Now().Add(-time.Hour), time.Now())
+			require.NoError(t, err)
+			want := append(append([]string{}, otlpMetrics...), spanMetrics...)
+			require.ElementsMatch(t, want, got)
+		})
 	})
 
 	t.Run("Logs", func(t *testing.T) {

@@ -112,36 +112,47 @@ func TestAzureVM(t *testing.T) {
 	traceMu.Unlock()
 
 	t.Run("Metrics", func(t *testing.T) {
-		// The payload carries only service.name + host.id, so every cloud.*/azure.* label here proves the
-		// agent's resourcedetection enrichment.
-		labels := map[string]string{}
+		// Agent-produced metrics carry the resourcedetection @resource.* enrichment and the cloudwatch
+		// instrumentation scope. Spanmetrics carry the resource enrichment but not that scope, so they
+		// match on resource labels only.
+		resourceLabels := map[string]string{}
 		for attr, want := range azureResourceExpectations() {
-			labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
+			resourceLabels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
+		}
+		fullLabels := map[string]string{}
+		for k, v := range resourceLabels {
+			fullLabels[k] = v
 		}
 		for attr, want := range otlpvalidation.ScopeExpectations() {
-			labels["@instrumentation."+attr] = otlpvalidation.ExpectedValue(want)
+			fullLabels["@instrumentation."+attr] = otlpvalidation.ExpectedValue(want)
 		}
-		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
-			"AzureVMDefaultOtel", env.Region, measuredMetrics(), labels)
-		for _, r := range group.TestResults {
-			require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
-		}
-	})
-
-	if len(spanMetrics) > 0 {
-		t.Run("SpanMetrics", func(t *testing.T) {
-			// The spanmetrics connector carries the @resource.* enrichment but no cloudwatch.source/solution
-			// scope attributes, so match on resource labels only. ScopeExpectations would exclude every series.
-			labels := map[string]string{}
-			for attr, want := range azureResourceExpectations() {
-				labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
-			}
-			group := otlpvalidation.ValidateOtlpMetricsWithLabels("AzureVMSpanMetrics", env.Region, spanMetrics, labels)
+		assertFound := func(t *testing.T, group status.TestGroupResult) {
 			for _, r := range group.TestResults {
 				require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
 			}
+		}
+
+		t.Run("OTLP", func(t *testing.T) {
+			assertFound(t, otlpvalidation.ValidateOtlpMetricsWithLabels("AzureVMOTLP", env.Region, otlpMetrics, fullLabels))
 		})
-	}
+		t.Run("HostMetrics", func(t *testing.T) {
+			assertFound(t, otlpvalidation.ValidateOtlpMetricsWithLabels("AzureVMHost", env.Region, hostMetrics(), fullLabels))
+		})
+		if len(spanMetrics) > 0 {
+			t.Run("SpanMetrics", func(t *testing.T) {
+				assertFound(t, otlpvalidation.ValidateOtlpMetricsWithLabels("AzureVMSpanMetrics", env.Region, spanMetrics, resourceLabels))
+			})
+		}
+		t.Run("Names", func(t *testing.T) {
+			// Enumerate every metric name produced for this VM and assert it matches exactly the set the
+			// subtests above cover. Catches drift: a new default:otel metric or one that stopped emitting.
+			matcher := fmt.Sprintf(`{__name__=~".+", "@resource.azure.vm.name"=%q}`, env.AzureVMName)
+			got, err := otlpvalidation.MetricNamesForMatcher(env.Region, matcher, time.Now().Add(-time.Hour), time.Now())
+			require.NoError(t, err)
+			want := append(append(append([]string{}, otlpMetrics...), hostMetrics()...), spanMetrics...)
+			require.ElementsMatch(t, want, got)
+		})
+	})
 
 	t.Run("Logs", func(t *testing.T) {
 		require.Equal(t, status.SUCCESSFUL, validateLogs().Status)
@@ -158,11 +169,16 @@ func TestAzureVM(t *testing.T) {
 	})
 }
 
-func measuredMetrics() []string {
-	// Synthetic OTLP metrics this test pushes plus the default:otel host metrics emitted on both Linux and Windows.
+// otlpMetrics are the synthetic metrics this test pushes over OTLP.
+var otlpMetrics = []string{
+	"azurevm_otlp_counter",
+	"azurevm_otlp_gauge",
+}
+
+// hostMetrics are the default:otel host metrics: the cross-platform set emitted on both Linux and Windows
+// plus platformMetrics, the OS-specific ones (empty on Windows).
+func hostMetrics() []string {
 	m := []string{
-		"azurevm_otlp_counter",
-		"azurevm_otlp_gauge",
 		"system.cpu.load_average.15m",
 		"system.cpu.load_average.1m",
 		"system.cpu.load_average.5m",

@@ -88,6 +88,29 @@ func (c *OtelMetricsClient) Query(ctx context.Context, promql string) ([]MetricR
 	return results, nil
 }
 
+// MetricNames returns the distinct metric names present for the given PromQL matcher over [start, end].
+// It uses the label-values endpoint, which (unlike the query and series endpoints) accepts a matcher
+// without a concrete __name__, so a resource-scoped matcher enumerates every metric a run produced.
+func (c *OtelMetricsClient) MetricNames(ctx context.Context, matcher string, start, end time.Time) ([]string, error) {
+	namesURL := c.queryURL[:len(c.queryURL)-len("/query")] + "/label/__name__/values"
+	params := url.Values{
+		"match[]": {matcher},
+		"start":   {fmt.Sprintf("%d", start.Unix())},
+		"end":     {fmt.Sprintf("%d", end.Unix())},
+	}
+	raw, err := c.requestRawWithRetry(ctx, namesURL, params)
+	if err != nil {
+		return nil, err
+	}
+	var resp struct {
+		Data []string `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("parsing label values response: %w", err)
+	}
+	return resp.Data, nil
+}
+
 func (c *OtelMetricsClient) requestWithRetry(ctx context.Context, baseURL string, params url.Values) (*promqlResponse, error) {
 	body, err := c.requestRawWithRetry(ctx, baseURL, params)
 	if err != nil {

@@ -92,3 +92,21 @@ func ValidateOtlpMetricsWithLabels(testName string, region string, metrics []str
 	}
 	return status.TestGroupResult{Name: testName, TestResults: results}
 }
+
+// MetricNamesForMatcher returns the distinct metric names present for the resource-scoped PromQL matcher
+// over [start, end]. Callers use it to assert the full set of metrics a run produced matches the set the
+// test validates, catching drift in the default:otel metric list.
+func MetricNamesForMatcher(region string, matcher string, start, end time.Time) ([]string, error) {
+	region = otelmetrics.ResolveRegion(region)
+	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
+		Region:         region,
+		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", region),
+		Timeout:        30 * time.Second,
+		MaxRetries:     3,
+		SigningService: "monitoring",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return client.MetricNames(context.Background(), matcher, start, end)
+}
