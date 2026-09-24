@@ -114,7 +114,10 @@ resource "aws_iam_role_policy_attachment" "cwagent_server_policy" {
 # agent writes only -- and CloudWatchAgentServerPolicy alone covers them, OTLP traces included.
 
 #####################################################################
-# Kubernetes resources: deploy CWA DaemonSet from ECR image
+# Install the agent via the amazon-cloudwatch-observability Helm chart,
+# the same path the scripts/azure/setup.sh onboarding flow uses. The
+# operator the chart installs reconciles an AmazonCloudWatchAgent CR into
+# the DaemonSet (default:otel) and a cluster-scraper Deployment (default).
 #####################################################################
 resource "kubernetes_namespace" "cwagent" {
   metadata {
@@ -122,58 +125,21 @@ resource "kubernetes_namespace" "cwagent" {
   }
 }
 
-resource "kubernetes_service_account" "cwagent" {
-  metadata {
-    name      = local.service_account_name
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
+# Kubeconfig for the kubectl steps below (helm/kubernetes providers auth in-memory from kube_config).
+resource "local_sensitive_file" "kubeconfig" {
+  content         = azurerm_kubernetes_cluster.cwagent.kube_config_raw
+  filename        = "${path.module}/kubeconfig"
+  file_permission = "0600"
 }
 
-resource "kubernetes_cluster_role" "cwagent" {
-  metadata {
-    name = "cwa-aks-integ-${module.common.testing_id}"
-  }
-
-  rule {
-    api_groups = [""]
-    resources  = ["pods", "nodes", "endpoints", "services", "namespaces"]
-    verbs      = ["list", "watch", "get"]
-  }
-  rule {
-    api_groups = ["apps"]
-    resources  = ["replicasets", "daemonsets", "deployments"]
-    verbs      = ["list", "watch", "get"]
-  }
-  rule {
-    api_groups = ["batch"]
-    resources  = ["jobs"]
-    verbs      = ["list", "watch", "get"]
-  }
-}
-
-resource "kubernetes_cluster_role_binding" "cwagent" {
-  metadata {
-    name = "cwa-aks-integ-${module.common.testing_id}"
-  }
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.cwagent.metadata[0].name
-  }
-  subject {
-    kind      = "ServiceAccount"
-    name      = kubernetes_service_account.cwagent.metadata[0].name
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
-}
-
-# ECR pull secret so AKS nodes can pull the CWA image from AWS ECR.
-# The 12h auth token is fetched here with the runner's AWS credentials rather
-# than passed in as a variable, which cannot survive the workflow's shell quoting.
-# The integration-test image is published to us-west-2 only, while the job's
-# CloudWatch region may differ -- pin the registry host to the ECR region.
+# ECR pull secret so AKS nodes can pull the CWA image from AWS ECR. AKS nodes have no AWS identity of
+# their own (unlike EKS node IAM), so the agent DaemonSet/scraper pods need this secret on their service
+# account. The 12h auth token is fetched here with the runner's AWS credentials rather than passed in as
+# a variable, which cannot survive the workflow's shell quoting. The integration-test image is published
+# to us-west-2 only, while the job's CloudWatch region may differ -- pin the registry host to the ECR region.
 locals {
   cwagent_image_repo = replace(var.cwagent_image_repo, "/\\.ecr\\.[a-z0-9-]+\\./", ".ecr.${var.ecr_region}.")
+  cwagent_image      = "${local.cwagent_image_repo}:${var.cwagent_image_tag}"
 }
 
 data "aws_ecr_authorization_token" "ecr" {
@@ -197,121 +163,73 @@ resource "kubernetes_secret" "ecr_pull" {
   }
 }
 
-resource "kubernetes_daemon_set_v1" "cwagent" {
-  metadata {
-    name      = "cloudwatch-agent"
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
+# Install from a git checkout of the chart (matching the EKS suites) so a specific chart branch can be
+# pinned in CI, rather than the published repo the onboarding script uses.
+data "external" "clone_helm_chart" {
+  program = ["bash", "-c", <<-EOT
+    rm -rf ${path.module}/helm-charts
+    git clone -q -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ${path.module}/helm-charts
+    echo '{"status":"ready"}'
+  EOT
+  ]
+}
 
-  spec {
-    selector {
-      match_labels = { app = "cloudwatch-agent" }
-    }
+# Values mirror scripts/azure/setup.sh: k8sMode=AKS + roleArn wire the projected-token web-identity path,
+# container insights runs over the OTLP pipeline, and both agents are listed in full (--set replaces a
+# whole list element, so omitting agents[1] would drop the cluster scraper).
+resource "helm_release" "aws_observability" {
+  name             = "amazon-cloudwatch-observability"
+  chart            = "${path.module}/helm-charts/charts/amazon-cloudwatch-observability"
+  namespace        = kubernetes_namespace.cwagent.metadata[0].name
+  create_namespace = false
 
-    template {
-      metadata {
-        labels = { app = "cloudwatch-agent" }
-      }
-
-      spec {
-        service_account_name = kubernetes_service_account.cwagent.metadata[0].name
-        host_network         = true
-        dns_policy           = "ClusterFirstWithHostNet"
-
-        image_pull_secrets {
-          name = kubernetes_secret.ecr_pull.metadata[0].name
-        }
-
-        container {
-          name              = "cloudwatch-agent"
-          image             = "${local.cwagent_image_repo}:${var.cwagent_image_tag}"
-          image_pull_policy = "Always"
-
-          env {
-            name  = "AWS_REGION"
-            value = var.region
-          }
-          env {
-            name  = "AWS_WEB_IDENTITY_TOKEN_FILE"
-            value = "/var/run/secrets/aws/token"
-          }
-          env {
-            name  = "AWS_ROLE_ARN"
-            value = aws_iam_role.cwagent.arn
-          }
-          # CWAGENT_ROLE_ARN is deliberately unset. It only feeds sigv4auth's role_arn, and leaving that
-          # empty makes the extension fall through to the default credential chain, which picks up the
-          # projected token via AWS_ROLE_ARN + AWS_WEB_IDENTITY_TOKEN_FILE. Setting it would layer a
-          # redundant sts:AssumeRole of the same role on top of the session we already have.
-          env {
-            name  = "RUN_IN_CONTAINER"
-            value = "True"
-          }
-          # Explicit AKS signal so mode detection selects the Azure credential/region
-          # path without depending on an IMDS probe from the pod.
-          env {
-            name  = "RUN_IN_AKS"
-            value = "True"
-          }
-          env {
-            name  = "USE_DEFAULT_CONFIG"
-            value = "otel"
-          }
-          env {
-            name = "K8S_NODE_NAME"
-            value_from {
-              field_ref {
-                field_path = "spec.nodeName"
-              }
-            }
-          }
-          env {
-            name = "HOST_IP"
-            value_from {
-              field_ref {
-                field_path = "status.hostIP"
-              }
-            }
-          }
-
-          volume_mount {
-            name       = "aws-token"
-            mount_path = "/var/run/secrets/aws"
-            read_only  = true
-          }
-          volume_mount {
-            name       = "rootfs"
-            mount_path = "/rootfs"
-            read_only  = true
-          }
-        }
-
-        volume {
-          name = "aws-token"
-          projected {
-            sources {
-              service_account_token {
-                audience           = "sts.amazonaws.com"
-                expiration_seconds = 86400
-                path               = "token"
-              }
-            }
-          }
-        }
-        volume {
-          name = "rootfs"
-          host_path {
-            path = "/"
-          }
-        }
-      }
-    }
-  }
+  set = [
+    { name = "clusterName", value = azurerm_kubernetes_cluster.cwagent.name },
+    { name = "region", value = var.region },
+    { name = "k8sMode", value = "AKS" },
+    { name = "roleArn", value = aws_iam_role.cwagent.arn },
+    { name = "containerInsights.enabled", value = "false" },
+    { name = "containerLogs.enabled", value = "false" },
+    { name = "otelContainerInsights.enabled", value = "true" },
+    { name = "otelContainerInsights.logs.enabled", value = "true" },
+    { name = "agents[0].name", value = "cloudwatch-agent", type = "string" },
+    { name = "agents[0].config", value = "default:otel", type = "string" },
+    { name = "agents[1].name", value = "cloudwatch-agent-cluster-scraper", type = "string" },
+    { name = "agents[1].mode", value = "deployment", type = "string" },
+    { name = "agents[1].config", value = "default", type = "string" },
+  ]
 
   depends_on = [
-    kubernetes_cluster_role_binding.cwagent,
+    data.external.clone_helm_chart,
+    kubernetes_namespace.cwagent,
     aws_iam_role_policy_attachment.cwagent_server_policy,
   ]
+}
+
+# Attach the ECR pull secret to the chart-created agent service account (both the DaemonSet and the
+# cluster-scraper run under it), then point both AmazonCloudWatchAgent CRs at the runner-built image.
+# The chart exposes no value for either, so this is done with kubectl after install, as the EKS suites do
+# for the image. Restarting after the patches lets the recreated pods pull the private image with the secret.
+resource "null_resource" "configure_agent" {
+  depends_on = [helm_release.aws_observability, kubernetes_secret.ecr_pull]
+  triggers   = { image = local.cwagent_image }
+
+  provisioner "local-exec" {
+    environment = { KUBECONFIG = local_sensitive_file.kubeconfig.filename }
+    command     = <<-EOT
+      set -euo pipefail
+      kubectl -n ${local.namespace} patch serviceaccount ${local.service_account_name} \
+        -p '{"imagePullSecrets":[{"name":"${kubernetes_secret.ecr_pull.metadata[0].name}"}]}'
+      for cr in cloudwatch-agent cloudwatch-agent-cluster-scraper; do
+        kubectl -n ${local.namespace} patch AmazonCloudWatchAgent "$cr" --type=json \
+          -p="[{\"op\":\"replace\",\"path\":\"/spec/image\",\"value\":\"${local.cwagent_image}\"}]"
+      done
+      kubectl -n ${local.namespace} rollout restart daemonset/cloudwatch-agent
+      kubectl -n ${local.namespace} rollout restart deployment/cloudwatch-agent-cluster-scraper
+      kubectl -n ${local.namespace} rollout status daemonset/cloudwatch-agent --timeout=180s
+      kubectl -n ${local.namespace} rollout status deployment/cloudwatch-agent-cluster-scraper --timeout=180s
+    EOT
+  }
 }
 
 #####################################################################
@@ -357,24 +275,18 @@ resource "kubernetes_job_v1" "otlp_load" {
     create = "10m"
   }
 
-  depends_on = [kubernetes_daemon_set_v1.cwagent]
+  depends_on = [null_resource.configure_agent]
 }
 
 #####################################################################
 # Diagnostics: surface agent pod state and logs in the job output so
 # delivery failures are debuggable after the cluster is destroyed.
 #####################################################################
-resource "local_sensitive_file" "kubeconfig" {
-  content         = azurerm_kubernetes_cluster.cwagent.kube_config_raw
-  filename        = "${path.module}/kubeconfig"
-  file_permission = "0600"
-}
-
 resource "null_resource" "agent_diagnostics" {
   provisioner "local-exec" {
     command = <<-EOT
       kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' get pods -n amazon-cloudwatch -o wide || true
-      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch -l app=cloudwatch-agent --tail=200 --prefix || true
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent --tail=200 --prefix || true
     EOT
   }
 

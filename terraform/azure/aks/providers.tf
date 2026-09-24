@@ -17,6 +17,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 3.0"
+    }
     tls = {
       source  = "hashicorp/tls"
       version = "~> 4.0"
@@ -46,4 +50,13 @@ provider "kubernetes" {
   client_certificate     = base64decode(azurerm_kubernetes_cluster.cwagent.kube_config[0].client_certificate)
   client_key             = base64decode(azurerm_kubernetes_cluster.cwagent.kube_config[0].client_key)
   cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.cwagent.kube_config[0].cluster_ca_certificate)
+}
+
+provider "helm" {
+  kubernetes = {
+    host                   = azurerm_kubernetes_cluster.cwagent.kube_config[0].host
+    client_certificate     = base64decode(azurerm_kubernetes_cluster.cwagent.kube_config[0].client_certificate)
+    client_key             = base64decode(azurerm_kubernetes_cluster.cwagent.kube_config[0].client_key)
+    cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.cwagent.kube_config[0].cluster_ca_certificate)
+  }
 }

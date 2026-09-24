@@ -3,9 +3,11 @@
 
 //go:build integration
 
-// Package aks validates the agent on a real AKS cluster running default:otel: a load-generator Job
-// pushes OTLP to the DaemonSet agent via hostNetwork, and this test validates metrics/logs/traces
-// reach CloudWatch via the AKS projected-token → AWS STS web-identity federation chain.
+// Package aks validates the agent on a real AKS cluster installed via the amazon-cloudwatch-observability
+// Helm chart (the scripts/azure/setup.sh onboarding path): a DaemonSet agent running default:otel plus a
+// cluster-scraper Deployment, with Container Insights on. A load-generator Job pushes OTLP to the DaemonSet
+// agent via hostNetwork, and this test validates OTLP, spanmetrics, Container Insights metrics, logs, and
+// traces reach CloudWatch via the AKS projected-token → AWS STS web-identity federation chain.
 package aks
 
 import (
@@ -14,6 +16,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -48,6 +52,40 @@ var otlpMetrics = []string{
 var spanMetrics = []string{
 	"traces.span.metrics.calls",
 	"traces.span.metrics.duration",
+}
+
+// containerInsightsMetrics are Container Insights metrics the helm chart's otelContainerInsights pipeline
+// emits: kubeletstats and cadvisor from the DaemonSet agent, kube-state-metrics from the cluster scraper.
+// They carry the kubeletstats/prometheus instrumentation scope rather than the cloudwatch OTLP scope, so
+// they are validated on @resource.k8s.cluster.name alone, like spanMetrics. This is the high-confidence
+// subset shared with the EKS suite (test/otel/standard); EKS control-plane metrics (apiserver_*) are
+// omitted because AKS runs a managed control plane the agent does not scrape.
+var containerInsightsMetrics = []string{
+	// kubeletstats: node, pod, and container scoped.
+	"k8s.node.cpu.usage",
+	"k8s.node.memory.working_set",
+	"k8s.node.filesystem.available",
+	"k8s.pod.cpu.usage",
+	"k8s.pod.memory.working_set",
+	"k8s.pod.network.io",
+	"container.cpu.usage",
+	"container.memory.working_set",
+	"container.memory.usage",
+	// cadvisor.
+	"container_cpu_usage_seconds_total",
+	"container_memory_working_set_bytes",
+	"container_memory_usage_bytes",
+	"container_network_receive_bytes_total",
+	// kube-state-metrics, from the cluster scraper deployment.
+	"kube_node_status_condition",
+	"kube_node_status_allocatable",
+	"kube_node_status_capacity",
+	"kube_pod_status_phase",
+	"kube_pod_container_status_running",
+	"kube_deployment_status_replicas",
+	"kube_deployment_status_replicas_ready",
+	"kube_daemonset_status_desired_number_scheduled",
+	"kube_namespace_status_phase",
 }
 
 // aksResourceExpectations is the shared source of truth for the azure.aks resourcedetection attributes
@@ -103,6 +141,9 @@ func TestAKS(t *testing.T) {
 		for attr, want := range otlpvalidation.ScopeExpectations() {
 			fullLabels["@instrumentation."+attr] = otlpvalidation.ExpectedValue(want)
 		}
+		// Container Insights and spanmetrics span multiple nodes and carry their own instrumentation
+		// scopes, so they are matched on the cluster attribute alone.
+		clusterLabels := map[string]string{"@resource.k8s.cluster.name": env.AKSClusterName}
 		assertFound := func(t *testing.T, group status.TestGroupResult) {
 			for _, r := range group.TestResults {
 				require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
@@ -115,14 +156,37 @@ func TestAKS(t *testing.T) {
 		t.Run("SpanMetrics", func(t *testing.T) {
 			assertFound(t, otlpvalidation.ValidateOtlpMetricsWithLabels("AKSSpanMetrics", env.Region, spanMetrics, resourceLabels))
 		})
+		t.Run("ContainerInsights", func(t *testing.T) {
+			assertFound(t, otlpvalidation.ValidateOtlpMetricsWithLabels("AKSContainerInsights", env.Region, containerInsightsMetrics, clusterLabels))
+		})
 		t.Run("Names", func(t *testing.T) {
-			// Enumerate every metric name produced for this cluster and assert it matches exactly the set
-			// the subtests above cover. Catches drift: a new default:otel metric or one that stopped emitting.
+			// Enumerate every metric name produced for this cluster and assert the set the subtests above
+			// cover is present. Catches drift where an expected metric stops emitting. This is a subset
+			// rather than an exact match: the Container Insights pipeline emits a broad, environment-
+			// dependent set (per-container cadvisor series, per-object kube-state-metrics), so pinning the
+			// full list exactly would be brittle.
 			matcher := fmt.Sprintf(`{__name__=~".+", "@resource.k8s.cluster.name"=%q}`, env.AKSClusterName)
 			got, err := otlpvalidation.MetricNamesForMatcher(env.Region, matcher, time.Now().Add(-time.Hour), time.Now())
 			require.NoError(t, err)
-			want := append(append([]string{}, otlpMetrics...), spanMetrics...)
-			require.ElementsMatch(t, want, got)
+			want := append(append(append([]string{}, otlpMetrics...), spanMetrics...), containerInsightsMetrics...)
+
+			// Log the metrics produced but not yet in our expected set, so we can see what Container
+			// Insights emits on AKS and grow containerInsightsMetrics toward an eventual exact match.
+			wantSet := make(map[string]bool, len(want))
+			for _, m := range want {
+				wantSet[m] = true
+			}
+			var extra []string
+			for _, m := range got {
+				if !wantSet[m] {
+					extra = append(extra, m)
+				}
+			}
+			sort.Strings(extra)
+			t.Logf("%d metric names produced for cluster; %d not in expected set:\n%s",
+				len(got), len(extra), strings.Join(extra, "\n"))
+
+			require.Subset(t, got, want)
 		})
 	})
 

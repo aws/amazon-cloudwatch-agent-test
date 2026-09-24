@@ -71,3 +71,9 @@ variable "cwagent_image_tag" {
   type        = string
   description = "Image tag (build_id / commit SHA)."
 }
+
+variable "helm_chart_branch" {
+  type        = string
+  description = "Branch of aws-observability/helm-charts to install the amazon-cloudwatch-observability chart from."
+  default     = "main"
+}
