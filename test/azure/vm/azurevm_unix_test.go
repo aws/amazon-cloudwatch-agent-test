@@ -14,6 +14,12 @@ var platformMetrics = []string{
 	"system.linux.memory.dirty",
 	"system.processes.count",
 	"system.processes.created",
+}
+
+// spanMetrics are the spanmetrics connector's metrics, derived from the pushed spans. Emitted on Linux
+// only (the Windows runs produce none), and validated on @resource.* labels alone because the connector
+// scope carries no cloudwatch.source/solution.
+var spanMetrics = []string{
 	"traces.span.metrics.calls",
 	"traces.span.metrics.duration",
 }

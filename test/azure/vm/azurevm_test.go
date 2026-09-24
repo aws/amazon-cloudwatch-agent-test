@@ -128,6 +128,21 @@ func TestAzureVM(t *testing.T) {
 		}
 	})
 
+	if len(spanMetrics) > 0 {
+		t.Run("SpanMetrics", func(t *testing.T) {
+			// The spanmetrics connector carries the @resource.* enrichment but no cloudwatch.source/solution
+			// scope attributes, so match on resource labels only. ScopeExpectations would exclude every series.
+			labels := map[string]string{}
+			for attr, want := range azureResourceExpectations() {
+				labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
+			}
+			group := otlpvalidation.ValidateOtlpMetricsWithLabels("AzureVMSpanMetrics", env.Region, spanMetrics, labels)
+			for _, r := range group.TestResults {
+				require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
+			}
+		})
+	}
+
 	t.Run("Logs", func(t *testing.T) {
 		require.Equal(t, status.SUCCESSFUL, validateLogs().Status)
 	})

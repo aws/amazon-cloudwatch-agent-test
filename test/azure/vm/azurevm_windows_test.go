@@ -6,3 +6,6 @@
 package vm
 
 var platformMetrics = []string{}
+
+// spanMetrics are Linux-only (the Windows runs produce no spanmetrics), so none are validated here.
+var spanMetrics = []string{}

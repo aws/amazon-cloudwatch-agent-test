@@ -38,10 +38,14 @@ const (
 
 var env *environment.MetaData
 
-// measuredMetrics are the default:otel metrics this test validates: the load generator's OTLP counter and
-// the spanmetrics connector's span metrics (both carry the same @resource.* enrichment). Sorted.
+// measuredMetrics are the default:otel metrics this test validates.
 var measuredMetrics = []string{
 	"aks_otlp_counter",
+}
+
+// spanMetrics are the spanmetrics connector's metrics, derived from the pushed spans. Validated on
+// @resource.* labels alone because the connector scope carries no cloudwatch.source/solution.
+var spanMetrics = []string{
 	"traces.span.metrics.calls",
 	"traces.span.metrics.duration",
 }
@@ -85,9 +89,7 @@ func TestMain(m *testing.M) {
 
 func TestAKS(t *testing.T) {
 	t.Run("Metrics", func(t *testing.T) {
-		// Isolated by @resource.k8s.cluster.name, which is unique per run and never reused. measuredMetrics
-		// spans the OTLP counter and the spanmetrics connector's output, all carrying the same @resource.*
-		// enrichment, so they validate under these labels.
+		// Isolated by @resource.k8s.cluster.name, which is unique per run and never reused.
 		labels := map[string]string{}
 		for attr, want := range aksResourceExpectations() {
 			labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
@@ -96,6 +98,19 @@ func TestAKS(t *testing.T) {
 			labels["@instrumentation."+attr] = otlpvalidation.ExpectedValue(want)
 		}
 		group := otlpvalidation.ValidateOtlpMetricsWithLabels("AKSDefaultOtel", env.Region, measuredMetrics, labels)
+		for _, r := range group.TestResults {
+			require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
+		}
+	})
+
+	t.Run("SpanMetrics", func(t *testing.T) {
+		// The spanmetrics connector carries the @resource.* enrichment but no cloudwatch.source/solution
+		// scope attributes, so match on resource labels only. ScopeExpectations would exclude every series.
+		labels := map[string]string{}
+		for attr, want := range aksResourceExpectations() {
+			labels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
+		}
+		group := otlpvalidation.ValidateOtlpMetricsWithLabels("AKSSpanMetrics", env.Region, spanMetrics, labels)
 		for _, r := range group.TestResults {
 			require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
 		}
