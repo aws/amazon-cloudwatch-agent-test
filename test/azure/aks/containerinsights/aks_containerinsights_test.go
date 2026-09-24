@@ -75,12 +75,12 @@ func TestAKSContainerInsights(t *testing.T) {
 	t.Run("NodeLogs", testNodeApplicationLogs)
 }
 
-// validateMetrics asserts each metric is present for this cluster. cloud.platform=azure_aks
+// validateMetrics asserts each metric is present for this cluster. cloud.platform=azure.aks
 // proves the agent ran the RUN_IN_AKS translation path, not a hardcoded EKS/EC2 one.
 func validateMetrics(t *testing.T, metrics []string, deadline time.Time) {
 	labels := map[string]string{
 		"@resource.k8s.cluster.name": env.AKSClusterName,
-		"@resource.cloud.platform":   "azure_aks",
+		"@resource.cloud.platform":   "azure.aks",
 	}
 
 	// ValidateOtlpMetricsWithLabels retries internally (~90s); wrap it in a bounded poll so a
