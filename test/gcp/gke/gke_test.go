@@ -3,10 +3,10 @@
 
 //go:build integration
 
-// Package aks validates the agent on a real AKS cluster running default:otel: a load-generator Job
+// Package gke validates the agent on a real GKE cluster running default:otel: a load-generator Job
 // pushes OTLP to the DaemonSet agent via hostNetwork, and this test validates metrics/logs/traces
-// reach CloudWatch via the AKS projected-token → AWS STS web-identity federation chain.
-package aks
+// reach CloudWatch via the GKE projected-token → AWS STS web-identity federation chain.
+package gke
 
 import (
 	"flag"
@@ -28,7 +28,7 @@ import (
 
 const (
 	spansLogGroup = "aws/spans"
-	serviceName   = "aks-otlp-test-service"
+	serviceName   = "gke-otlp-test-service"
 	// The load generator runs for 3 minutes; allow extra ingestion time.
 	validationWindow = 10 * time.Minute
 )
@@ -44,24 +44,25 @@ func TestMain(m *testing.M) {
 	environment.RegisterEnvironmentMetaDataFlags()
 	flag.Parse()
 	env = environment.GetEnvironmentMetaData()
-	if env.AKSClusterName == "" {
-		fmt.Fprintln(os.Stderr, "aksClusterName flag is required to scope telemetry to this cluster")
+	if env.GKEClusterName == "" {
+		fmt.Fprintln(os.Stderr, "gkeClusterName flag is required to scope telemetry to this cluster")
 		os.Exit(1)
 	}
 	payloadPrefix = strings.ToLower(string(env.ComputeType))
 	os.Exit(m.Run())
 }
 
-func TestAKS(t *testing.T) {
+func TestGKE(t *testing.T) {
 	t.Run("Metrics", func(t *testing.T) {
 		// test_id is a datapoint attribute, the one surface no resource processor rewrites, so it
-		// isolates this run. cloud.platform=azure_aks comes only from the aks detector: proves detection ran.
+		// isolates this run. cloud.platform=gcp_kubernetes_engine comes only from the gcp detector:
+		// proves detection ran.
 		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
-			"AKSDefaultOtel", env.Region, []string{payloadPrefix + "_otlp_counter"},
+			"GKEDefaultOtel", env.Region, []string{payloadPrefix + "_otlp_counter"},
 			map[string]string{
-				"test_id":                  env.AKSClusterName,
-				"@resource.cloud.platform": "azure_aks",
-				"@resource.cloud.provider": "azure",
+				"test_id":                  env.GKEClusterName,
+				"@resource.cloud.platform": "gcp_kubernetes_engine",
+				"@resource.cloud.provider": "gcp",
 			},
 		)
 		for _, r := range group.TestResults {
@@ -81,14 +82,14 @@ func TestAKS(t *testing.T) {
 }
 
 func validateLogs() status.TestResult {
-	testResult := status.TestResult{Name: "AKS_Logs", Status: status.FAILED}
+	testResult := status.TestResult{Name: "GKE_Logs", Status: status.FAILED}
 
 	// The agent's k8s logs routing derives the destination from the k8s.cluster.name and
 	// k8s.namespace.name resource attributes the load generator sends, so it is unique to
 	// this cluster. The stream is {k8s.namespace.name}/{service.namespace}/{service.name},
 	// where the agent's identity transform fills service.namespace from k8s.namespace.name.
 	// AssertLogsNotEmpty guards against a vacuous pass on an empty window.
-	logGroup := fmt.Sprintf("/aws/cwagent/%s/otlp", env.AKSClusterName)
+	logGroup := fmt.Sprintf("/aws/cwagent/%s/otlp", env.GKEClusterName)
 	// Clean up only on success: the group name carries this run's cluster so the whole group is
 	// disposable, but on failure it is left in place as evidence for whoever debugs the run.
 	defer func() {
@@ -97,13 +98,13 @@ func validateLogs() status.TestResult {
 		}
 	}()
 	logStream := fmt.Sprintf("amazon-cloudwatch/amazon-cloudwatch/%s", serviceName)
-	marker := otlpvalidation.LogMarker(payloadPrefix, env.AKSClusterName)
+	marker := otlpvalidation.LogMarker(payloadPrefix, env.GKEClusterName)
 	const maxRetries = 4
 	const retryInterval = 30 * time.Second
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		since := time.Now().Add(-validationWindow)
 		until := time.Now()
-		log.Printf("[AKS_Logs] attempt %d: checking %s/%s", attempt, logGroup, logStream)
+		log.Printf("[GKE_Logs] attempt %d: checking %s/%s", attempt, logGroup, logStream)
 		err := awsservice.ValidateLogs(
 			logGroup, logStream, &since, &until,
 			awsservice.AssertLogsNotEmpty(),
@@ -115,7 +116,7 @@ func validateLogs() status.TestResult {
 		}
 		testResult.Reason = err
 		if attempt < maxRetries {
-			log.Printf("[AKS_Logs] %v — retrying in %v", testResult.Reason, retryInterval)
+			log.Printf("[GKE_Logs] %v — retrying in %v", testResult.Reason, retryInterval)
 			time.Sleep(retryInterval)
 		}
 	}
@@ -124,13 +125,13 @@ func validateLogs() status.TestResult {
 
 // validateTraces queries aws/spans (Transaction Search) for spans with our cluster's service name.
 func validateTraces() status.TestResult {
-	testResult := status.TestResult{Name: "AKS_Traces", Status: status.FAILED}
+	testResult := status.TestResult{Name: "GKE_Traces", Status: status.FAILED}
 
 	query := fmt.Sprintf(
 		`fields traceId | filter @message like "%s" and @message like "%s" | dedup traceId | limit 5`,
-		serviceName, env.AKSClusterName,
+		serviceName, env.GKEClusterName,
 	)
-	log.Printf("[AKS_Traces] querying %s for spans from service=%s instance=%s", spansLogGroup, serviceName, env.AKSClusterName)
+	log.Printf("[GKE_Traces] querying %s for spans from service=%s instance=%s", spansLogGroup, serviceName, env.GKEClusterName)
 
 	const maxRetries = 5
 	const retryInterval = 60 * time.Second
@@ -149,14 +150,14 @@ func validateTraces() status.TestResult {
 				}
 			}
 			if found > 0 {
-				log.Printf("[AKS_Traces] attempt %d: found %d traces in %s", attempt, found, spansLogGroup)
+				log.Printf("[GKE_Traces] attempt %d: found %d traces in %s", attempt, found, spansLogGroup)
 				testResult.Status = status.SUCCESSFUL
 				return testResult
 			}
 			testResult.Reason = fmt.Errorf("attempt %d: 0 traces found in %s for service=%s", attempt, spansLogGroup, serviceName)
 		}
 		if attempt < maxRetries {
-			log.Printf("[AKS_Traces] %v — retrying in %v", testResult.Reason, retryInterval)
+			log.Printf("[GKE_Traces] %v — retrying in %v", testResult.Reason, retryInterval)
 			time.Sleep(retryInterval)
 		}
 	}
