@@ -393,6 +393,9 @@ resource "null_resource" "integration_test" {
         -region=${var.region} \
         -cwaCommitSha=${var.cwa_github_sha} \
         -aksClusterName=${azurerm_kubernetes_cluster.cwagent.name} \
+        -azureLocation=${var.azure_location} \
+        -azureVMSize=${var.aks_node_vm_size} \
+        -azureResourceGroup=${azurerm_kubernetes_cluster.cwagent.node_resource_group} \
         -v
     EOT
 

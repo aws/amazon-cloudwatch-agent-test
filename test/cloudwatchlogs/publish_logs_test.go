@@ -24,11 +24,11 @@ import (
 )
 
 const (
-	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	logLineId1       = "foo"
-	logLineId2       = "bar"
-	logFilePath      = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
-	sleepForFlush    = 20 * time.Second            // default flush interval is 5 seconds
+	configOutputPath              = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	logLineId1                    = "foo"
+	logLineId2                    = "bar"
+	logFilePath                   = "/tmp/cwagent_log_test.log" // TODO: not sure how well this will work on Windows
+	sleepForFlush                 = 20 * time.Second            // default flush interval is 5 seconds
 	cwPropagationAttempts         = 6
 	cwPropagationInterval         = 15 * time.Second
 	configPathAutoRemoval         = "resources/config_auto_removal.json"

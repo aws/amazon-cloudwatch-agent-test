@@ -40,6 +40,10 @@ type MetaData struct {
 	CaCertPath                                  string
 	EKSClusterName                              string
 	AKSClusterName                              string
+	AzureVMName                                 string
+	AzureVMSize                                 string
+	AzureResourceGroup                          string
+	AzureLocation                               string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -88,6 +92,10 @@ type MetaDataStrings struct {
 	CaCertPath                                  string
 	EKSClusterName                              string
 	AKSClusterName                              string
+	AzureVMName                                 string
+	AzureVMSize                                 string
+	AzureResourceGroup                          string
+	AzureLocation                               string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -146,6 +154,13 @@ func registerECSData(dataString *MetaDataStrings) {
 
 func registerAKSData(d *MetaDataStrings) {
 	flag.StringVar(&(d.AKSClusterName), "aksClusterName", "", "AKS cluster name")
+}
+
+func registerAzureVMData(d *MetaDataStrings) {
+	flag.StringVar(&(d.AzureVMName), "azureVMName", "", "expected azure.vm.name resource attribute")
+	flag.StringVar(&(d.AzureVMSize), "azureVMSize", "", "expected azure.vm.size resource attribute")
+	flag.StringVar(&(d.AzureResourceGroup), "azureResourceGroup", "", "expected azure.resourcegroup.name resource attribute")
+	flag.StringVar(&(d.AzureLocation), "azureLocation", "", "expected cloud.region resource attribute (Azure location, e.g. eastus)")
 }
 
 func registerEKSData(d *MetaDataStrings) {
@@ -328,6 +343,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerECSData(registeredMetaDataStrings)
 	registerEKSData(registeredMetaDataStrings)
 	registerAKSData(registeredMetaDataStrings)
+	registerAzureVMData(registeredMetaDataStrings)
 	registerEKSE2ETestData(registeredMetaDataStrings)
 	registerBucket(registeredMetaDataStrings)
 	registerS3Key(registeredMetaDataStrings)
@@ -367,6 +383,10 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.InstanceArn = registeredMetaDataStrings.InstanceArn
 	metaDataStorage.InstanceId = registeredMetaDataStrings.InstanceId
 	metaDataStorage.AKSClusterName = registeredMetaDataStrings.AKSClusterName
+	metaDataStorage.AzureVMName = registeredMetaDataStrings.AzureVMName
+	metaDataStorage.AzureVMSize = registeredMetaDataStrings.AzureVMSize
+	metaDataStorage.AzureResourceGroup = registeredMetaDataStrings.AzureResourceGroup
+	metaDataStorage.AzureLocation = registeredMetaDataStrings.AzureLocation
 	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
 	metaDataStorage.EksGpuType = registeredMetaDataStrings.EksGpuType
