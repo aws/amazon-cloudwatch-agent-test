@@ -2,13 +2,13 @@
   "error_bound": 0.15,
   "metrics": [
     {
-      "name": "k8s.pod.cpu.utilization",
+      "name": "k8s.pod.cpu.usage",
       "unit": "percent_of_node",
       "stat": "Average",
       "pod_thresholds": [
         {
           "pod_filter": "daemonset",
-          "threshold": 1.3,
+          "threshold": 1.5,
           "description": "DaemonSet agent pod CPU as a percentage of node allocatable CPU"
         },
         {
