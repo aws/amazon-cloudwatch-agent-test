@@ -2,7 +2,7 @@
   "error_bound": 0.15,
   "metrics": [
     {
-      "name": "k8s.pod.cpu.utilization",
+      "name": "k8s.pod.cpu.usage",
       "unit": "percent_of_node",
       "stat": "Average",
       "pod_thresholds": [
