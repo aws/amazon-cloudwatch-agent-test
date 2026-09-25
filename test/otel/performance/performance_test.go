@@ -78,7 +78,7 @@ func getNodeAllocatable(t *testing.T, metricName string, resource string) (float
 // getResultsForMetric returns the fetched series for the given metric name.
 func getResultsForMetric(metrics *podMetricData, metricName string) []otelmetrics.RangeResult {
 	switch metricName {
-	case "k8s.pod.cpu.utilization":
+	case "k8s.pod.cpu.usage":
 		return metrics.CPUResults
 	case "k8s.pod.memory.working_set":
 		return metrics.MemResults
@@ -176,7 +176,7 @@ func TestPerformanceThresholds(t *testing.T) {
 					lower := mpt.Threshold * (1 - thresholds.ErrorBound)
 					upper := mpt.Threshold * (1 + thresholds.ErrorBound)
 					switch m.Name {
-					case "k8s.pod.cpu.utilization":
+					case "k8s.pod.cpu.usage":
 						t.Logf("  (%s): Node CPU safe range: ±%.0f%% of %.2f%% of Node allocatable CPU [%.4f%%, %.4f%%]",
 							label, thresholds.ErrorBound*100, mpt.Threshold, lower, upper)
 					case "k8s.pod.memory.working_set":
@@ -206,7 +206,7 @@ func TestPerformanceThresholds(t *testing.T) {
 
 		// Print section header.
 		switch metric.Name {
-		case "k8s.pod.cpu.utilization":
+		case "k8s.pod.cpu.usage":
 			t.Log("------------------------------ CPU Utilization (% of node) ------------------------------")
 			t.Log("")
 		case "k8s.pod.memory.working_set":
@@ -228,7 +228,7 @@ func TestPerformanceThresholds(t *testing.T) {
 			var denominator float64
 			var resourceLabel string
 			switch metric.Name {
-			case "k8s.pod.cpu.utilization":
+			case "k8s.pod.cpu.usage":
 				denominator = nodeAllocatable["cpu"]
 				resourceLabel = "node CPU"
 			case "k8s.pod.memory.working_set":

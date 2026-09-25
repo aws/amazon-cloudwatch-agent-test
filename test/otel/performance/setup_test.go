@@ -62,7 +62,7 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 		escapedCluster := otelmetrics.EscapePromQLValue(cfg.ClusterName)
 		clusterFilter := fmt.Sprintf(`"@resource.k8s.cluster.name"="%s"`, escapedCluster)
 
-		cpuQuery := fmt.Sprintf(`{"__name__"="k8s.pod.cpu.utilization", %s, %s, %s}`, agentPodFilter, agentNSFilter, clusterFilter)
+		cpuQuery := fmt.Sprintf(`{"__name__"="k8s.pod.cpu.usage", %s, %s, %s}`, agentPodFilter, agentNSFilter, clusterFilter)
 		cpuResults, err := client.QueryRange(ctx, cpuQuery, start, end, step)
 		if err != nil {
 			sharedMetricsErr = fmt.Errorf("CPU QueryRange failed: %w", err)
