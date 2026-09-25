@@ -95,6 +95,7 @@ $exporterConfigPath = Join-Path $WORKLOAD_DIR "exporter_config.yaml"
 $sampleAppPath = Join-Path $WORKLOAD_DIR $SAMPLE_APP_JAR
 
 $javaArgs = @(
+    "-Xms32m", "-Xmx32m", "-XX:+UseSerialGC",
     "-javaagent:${jmxAgentPath}=${JMX_PORT}:${exporterConfigPath}",
     "-cp", $sampleAppPath,
     "com.gubupt.sample.app.App"

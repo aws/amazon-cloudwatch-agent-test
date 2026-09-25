@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
@@ -31,7 +33,7 @@ func cleanupSSMParameter(name string) {
 func runAndVerifySSMAction(documentName string, instanceIds []string, tc testCase) error {
 	log.Printf("Testing %s action", tc.actionName)
 
-	out, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
+	out, _, err := awsservice.RunSSMDocumentAwaitDelivery(documentName, instanceIds, tc.parameters)
 	if err != nil {
 		return fmt.Errorf("%s action failed: %v", tc.actionName, err)
 	}
@@ -57,12 +59,7 @@ func verifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName stri
 
 	// Verify agent status
 	statusParams := map[string][]string{"action": {"status"}}
-	statusOut, err := awsservice.RunSSMDocument(documentName, []string{instanceId}, statusParams)
-	if err != nil {
-		return fmt.Errorf("failed to check agent status: %v", err)
-	}
-
-	statusResult, err := awsservice.WaitForCommandCompletion(*statusOut.Command.CommandId, instanceId)
+	statusOut, statusResult, err := awsservice.RunSSMDocumentAwaitDelivery(documentName, []string{instanceId}, statusParams)
 	if err != nil {
 		return fmt.Errorf("failed to get status result: %v", err)
 	}
@@ -71,22 +68,63 @@ func verifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName stri
 		return fmt.Errorf("no command invocations returned for status check")
 	}
 
-	for _, plugin := range statusResult.CommandInvocations[0].CommandPlugins {
-		if plugin.Status == types.CommandPluginStatusFailed {
-			return fmt.Errorf("command plugin failed: %s", *plugin.Name)
+	// Same populate-after-Success race as the output assertions: an empty plugin Output
+	// yields a zero-value agentStatus and a misleading "Expected: running, Output: "
+	// mismatch. Re-read until a plugin emits parseable JSON.
+	statusCommandId := *statusOut.Command.CommandId
+	for attempt := 0; attempt <= outputPollAttempts; attempt++ {
+		if attempt > 0 {
+			time.Sleep(outputPollInterval)
+			refreshed, refreshErr := awsservice.GetCommandInvocationResult(statusCommandId, instanceId)
+			if refreshErr != nil {
+				log.Printf("Re-reading status command %s failed (attempt %d/%d): %v", statusCommandId, attempt, outputPollAttempts, refreshErr)
+				continue
+			}
+			if len(refreshed.CommandInvocations) == 0 {
+				continue
+			}
+			statusResult = refreshed
 		}
-		if plugin.Status == types.CommandPluginStatusTimedOut {
-			return fmt.Errorf("command plugin timed out: %s", *plugin.Name)
-		}
-		outputAsByte := []byte(*plugin.Output)
-		if json.Valid(outputAsByte) {
-			err := json.Unmarshal([]byte(*plugin.Output), &status)
-			if err != nil {
+
+		parsed := false
+		for _, plugin := range statusResult.CommandInvocations[0].CommandPlugins {
+			if plugin.Status == types.CommandPluginStatusFailed {
+				return fmt.Errorf("command plugin failed: %s", *plugin.Name)
+			}
+			if plugin.Status == types.CommandPluginStatusTimedOut {
+				return fmt.Errorf("command plugin timed out: %s", *plugin.Name)
+			}
+			if plugin.Output == nil || strings.TrimSpace(*plugin.Output) == "" {
+				continue
+			}
+			outputAsByte := []byte(*plugin.Output)
+			if !json.Valid(outputAsByte) {
+				continue
+			}
+			// Unmarshal into a fresh value: json.Unmarshal merges into a non-zero
+			// destination, so reusing `status` would let one plugin (or an earlier
+			// attempt) contribute fields to a struct that never existed as a whole.
+			var candidate agentStatus
+			if err := json.Unmarshal(outputAsByte, &candidate); err != nil {
 				return fmt.Errorf("failed to unmarshal status output: %v", err)
 			}
+			status = candidate
+			parsed = true
+			break
+		}
+		if parsed && status.Status != "" {
+			if attempt > 0 {
+				log.Printf("Agent status for command %s parsed on re-read attempt %d/%d", statusCommandId, attempt, outputPollAttempts)
+			}
+			break
 		}
 	}
 
+	if status.Status == "" {
+		return fmt.Errorf("agent status output for command %s never populated after %d re-reads over %s\nCommand output:\n%s",
+			statusCommandId, outputPollAttempts, time.Duration(outputPollAttempts)*outputPollInterval,
+			awsservice.GetCommandInvocationDetails(statusCommandId, instanceId))
+	}
 	if status.Status != tc.expectedAgentStatus {
 		return fmt.Errorf("agent status verification failed. Expected: %s, Output: %s", tc.expectedAgentStatus, status.Status)
 	}
@@ -102,20 +140,17 @@ func verifyAgentAction(out *ssm.SendCommandOutput, instanceId, documentName stri
 func runAndVerifySSMActionWithOutput(documentName string, instanceIds []string, tc testCase, expectedOutput string) error {
 	log.Printf("Testing %s action", tc.actionName)
 
-	out, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
+	out, result, err := awsservice.RunSSMDocumentAwaitDelivery(documentName, instanceIds, tc.parameters)
 	if err != nil {
-		return fmt.Errorf("%s action failed: %v", tc.actionName, err)
-	}
-
-	result, err := awsservice.WaitForCommandCompletion(*out.Command.CommandId, instanceIds[0])
-	if err != nil {
-		commandOutput := awsservice.GetCommandInvocationDetails(*out.Command.CommandId, instanceIds[0])
+		commandOutput := "no command was sent"
+		if out != nil {
+			commandOutput = awsservice.GetCommandInvocationDetails(*out.Command.CommandId, instanceIds[0])
+		}
 		return fmt.Errorf("%s action failed to complete: %v\nCommand output:\n%s", tc.actionName, err, commandOutput)
 	}
 
-	if !commandOutputContains(result, expectedOutput) {
-		commandOutput := awsservice.GetCommandInvocationDetails(*out.Command.CommandId, instanceIds[0])
-		return fmt.Errorf("%s output verification failed: expected output %q not found\nCommand output:\n%s", tc.actionName, expectedOutput, commandOutput)
+	if ok, inspected := commandOutputContainsWithRetry(result, *out.Command.CommandId, instanceIds[0], expectedOutput); !ok {
+		return fmt.Errorf("%s output verification failed: expected output %q not found\nCommand output:\n%s", tc.actionName, expectedOutput, inspected)
 	}
 
 	if err := verifyAgentAction(out, instanceIds[0], documentName, tc); err != nil {
@@ -132,13 +167,12 @@ func runAndVerifySSMActionWithOutput(documentName string, instanceIds []string, 
 func runAndVerifySSMActionFailure(documentName string, instanceIds []string, tc testCase, expectedOutput string) error {
 	log.Printf("Testing %s action (expecting failure)", tc.actionName)
 
-	out, err := awsservice.RunSSMDocument(documentName, instanceIds, tc.parameters)
-	if err != nil {
+	out, _, err := awsservice.RunSSMDocumentAwaitDelivery(documentName, instanceIds, tc.parameters)
+	if out == nil {
 		return fmt.Errorf("%s action failed to send: %v", tc.actionName, err)
 	}
 
 	commandId := *out.Command.CommandId
-	_, err = awsservice.WaitForCommandCompletion(commandId, instanceIds[0])
 	commandOutput := awsservice.GetCommandInvocationDetails(commandId, instanceIds[0])
 	if err == nil {
 		return fmt.Errorf("%s action was expected to fail but succeeded\nCommand output:\n%s", tc.actionName, commandOutput)
@@ -149,8 +183,11 @@ func runAndVerifySSMActionFailure(documentName string, instanceIds []string, tc 
 	if !errors.As(err, &termErr) || termErr.Status != types.CommandInvocationStatusFailed {
 		return fmt.Errorf("%s action reached an unexpected terminal state: %v\nCommand output:\n%s", tc.actionName, err, commandOutput)
 	}
-	if expectedOutput != "" && !strings.Contains(commandOutput, expectedOutput) {
-		return fmt.Errorf("%s failure output verification failed: expected output %q not found\nCommand output:\n%s", tc.actionName, expectedOutput, commandOutput)
+	if expectedOutput != "" {
+		refreshed, ok := commandDetailsContainWithRetry(commandId, instanceIds[0], expectedOutput, commandOutput)
+		if !ok {
+			return fmt.Errorf("%s failure output verification failed: expected output %q not found\nCommand output:\n%s", tc.actionName, expectedOutput, refreshed)
+		}
 	}
 
 	log.Printf("%s action failed as expected", tc.actionName)
@@ -188,6 +225,82 @@ func verifyEnvConfigContent(expected map[string]string) error {
 }
 
 // commandOutputContains reports whether any command plugin's output contains expected.
+// SSM makes a command invocation's terminal Status visible before it populates
+// CommandPlugins[].Output, so an assertion made on the result WaitForCommandCompletion
+// returned can see Status=Success with an empty Output and wrongly conclude the expected
+// text is absent. The helpers below re-read a bounded number of times, but ONLY while the
+// output is still unpopulated: once any plugin has emitted output, a missing expected
+// string is a real failure and is reported immediately. That keeps the retry from masking
+// a genuinely wrong output, and keeps genuine failures fast.
+const (
+	outputPollAttempts = 6
+	outputPollInterval = 5 * time.Second
+)
+
+func outputPollBackoff() time.Duration {
+	return outputPollInterval + time.Duration(rand.Int63n(int64(time.Second)))
+}
+
+// commandOutputPopulated reports whether any plugin has emitted non-empty output yet.
+func commandOutputPopulated(result *ssm.ListCommandInvocationsOutput) bool {
+	if len(result.CommandInvocations) == 0 {
+		return false
+	}
+	for _, plugin := range result.CommandInvocations[0].CommandPlugins {
+		if plugin.Output != nil && strings.TrimSpace(*plugin.Output) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// commandOutputContainsWithRetry checks the already-fetched result first, then re-reads
+// while the output is unpopulated. It returns the rendering of whatever it last inspected
+// so the caller reports the same snapshot the decision was made on.
+func commandOutputContainsWithRetry(result *ssm.ListCommandInvocationsOutput, commandId, instanceId, expected string) (bool, string) {
+	if commandOutputContains(result, expected) {
+		return true, ""
+	}
+	if commandOutputPopulated(result) {
+		return false, awsservice.GetCommandInvocationDetails(commandId, instanceId)
+	}
+	for attempt := 1; attempt <= outputPollAttempts; attempt++ {
+		time.Sleep(outputPollBackoff())
+		refreshed, err := awsservice.GetCommandInvocationResult(commandId, instanceId)
+		if err != nil {
+			log.Printf("Re-reading command %s output failed (attempt %d/%d): %v", commandId, attempt, outputPollAttempts, err)
+			continue
+		}
+		if commandOutputContains(refreshed, expected) {
+			log.Printf("Expected output for command %s appeared on re-read attempt %d/%d", commandId, attempt, outputPollAttempts)
+			return true, ""
+		}
+		if commandOutputPopulated(refreshed) {
+			return false, awsservice.GetCommandInvocationDetails(commandId, instanceId)
+		}
+	}
+	return false, fmt.Sprintf("output never populated after %d re-reads over %s\n%s",
+		outputPollAttempts, time.Duration(outputPollAttempts)*outputPollInterval,
+		awsservice.GetCommandInvocationDetails(commandId, instanceId))
+}
+
+// commandDetailsContainWithRetry is the string-rendered equivalent for failure paths.
+// It returns the most recent rendering so the caller can report what was actually seen.
+func commandDetailsContainWithRetry(commandId, instanceId, expected, details string) (string, bool) {
+	if strings.Contains(details, expected) {
+		return details, true
+	}
+	for attempt := 1; attempt <= outputPollAttempts; attempt++ {
+		time.Sleep(outputPollBackoff())
+		details = awsservice.GetCommandInvocationDetails(commandId, instanceId)
+		if strings.Contains(details, expected) {
+			log.Printf("Expected failure output for command %s appeared on re-read attempt %d/%d", commandId, attempt, outputPollAttempts)
+			return details, true
+		}
+	}
+	return details, false
+}
+
 func commandOutputContains(result *ssm.ListCommandInvocationsOutput, expected string) bool {
 	if len(result.CommandInvocations) == 0 {
 		return false

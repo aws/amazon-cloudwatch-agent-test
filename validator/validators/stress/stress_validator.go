@@ -6,6 +6,7 @@ package stress
 import (
 	"fmt"
 	"log"
+	"math"
 	"strings"
 	"time"
 
@@ -401,6 +402,13 @@ func (s *StressValidator) CheckData(startTime, endTime time.Time) error {
 	return multiErr
 }
 
+// isDiscreteCountMetric reports whether a metric's values are whole numbers, so that its
+// upper bound must be rounded up rather than compared as a fraction. Covers both the Linux
+// ("procstat_num_fds") and Windows ("procstat num_fds") spellings.
+func isDiscreteCountMetric(metricName string) bool {
+	return strings.HasSuffix(metricName, "num_fds")
+}
+
 func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace string, metricDimensions []types.Dimension, metricSampleCount int, startTime, endTime time.Time) error {
 	var (
 		dataRate       = fmt.Sprint(s.vConfig.GetDataRate())
@@ -434,6 +442,15 @@ func (s *StressValidator) ValidateStressMetric(metricName, metricNamespace strin
 	// Validate if the corresponding metrics are within the acceptable range [acceptable value +- 30%]
 	metricValue := metrics.MetricDataResults[0].Values[0]
 	upperBoundValue := metricPluginBoundValue[dataRate][receiver][metricName] * (1 + metricErrorBound)
+	// File-descriptor counts are whole numbers, so a fractional ceiling is effectively
+	// floored and silently narrows the intended tolerance: a bound of 12 becomes 15.6,
+	// which rejects 16 while accepting 15 - a real tolerance of +25%, not the +30% the
+	// error bound specifies. Worse, no attainable value sits between 15.6 and 16, so a
+	// process holding 16 descriptors can never pass however many times it is retried.
+	// Round bounds for discrete-count metrics up to the next whole number.
+	if isDiscreteCountMetric(metricName) {
+		upperBoundValue = math.Ceil(upperBoundValue)
+	}
 	log.Printf("Metric %s within the namespace %s has value of %f and the upper bound is %f \n", metricName, metricNamespace, metricValue, upperBoundValue)
 
 	if metricValue < 0 || metricValue > upperBoundValue {

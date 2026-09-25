@@ -1,0 +1,14 @@
+scrape_configs:
+  - job_name: node
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['localhost:8101']
+    relabel_configs:
+      - source_labels: [job]
+        regex: (.*)
+        target_label: renamed_job
+        replacement: $1
+      - source_labels: [instance]
+        regex: (.*)
+        target_label: host
+        replacement: ${1}

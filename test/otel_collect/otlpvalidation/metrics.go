@@ -1,0 +1,112 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package otlpvalidation
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/test/status"
+	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
+)
+
+const (
+	defaultMaxRetries    = 3
+	defaultRetryInterval = 30 * time.Second
+)
+
+func ValidateOtlpMetrics(testName string, region string, metrics []string) status.TestGroupResult {
+	return ValidateOtlpMetricsWithLabels(testName, region, metrics, nil)
+}
+
+func ValidateOtlpMetricsWithLabels(testName string, region string, metrics []string, labels map[string]string) status.TestGroupResult {
+	region = otelmetrics.ResolveRegion(region)
+
+	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
+		Region:         region,
+		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", region),
+		Timeout:        30 * time.Second,
+		MaxRetries:     3,
+		SigningService: "monitoring",
+	})
+	if err != nil {
+		return status.TestGroupResult{
+			Name: testName,
+			TestResults: []status.TestResult{{
+				Name:   "ClientInit",
+				Status: status.FAILED,
+				Reason: fmt.Errorf("failed to create otelmetrics client: %w", err),
+			}},
+		}
+	}
+
+	validated := make(map[string]bool, len(metrics))
+
+	for attempt := 0; attempt < defaultMaxRetries; attempt++ {
+		if attempt > 0 {
+			time.Sleep(defaultRetryInterval)
+		}
+		for _, m := range metrics {
+			if validated[m] {
+				continue
+			}
+			promql := fmt.Sprintf(`{__name__="%s"`, m)
+			for k, v := range labels {
+				promql += fmt.Sprintf(`, "%s"=~"%s"`, k, otelmetrics.EscapePromQLValue(v))
+			}
+			promql += "}"
+			results, err := client.Query(context.Background(), promql)
+			if err != nil {
+				log.Printf("[%s] attempt %d: error querying %s: %v", testName, attempt+1, m, err)
+				continue
+			}
+			if len(results) == 0 {
+				continue
+			}
+			validated[m] = true
+		}
+		if len(validated) == len(metrics) {
+			break
+		}
+		log.Printf("[%s] attempt %d/%d: validated %d/%d metrics", testName, attempt+1, defaultMaxRetries, len(validated), len(metrics))
+	}
+
+	results := make([]status.TestResult, 0, len(metrics)+1)
+	for _, m := range metrics {
+		if validated[m] {
+			results = append(results, status.TestResult{Name: m, Status: status.SUCCESSFUL})
+		} else {
+			results = append(results, status.TestResult{Name: m, Status: status.FAILED, Reason: fmt.Errorf("metric %s not found after %d retries", m, defaultMaxRetries)})
+		}
+	}
+	successCount := len(validated)
+	if successCount != len(metrics) {
+		results = append(results, status.TestResult{
+			Name:   "MetricCountCheck",
+			Status: status.FAILED,
+			Reason: fmt.Errorf("expected %d metrics, but only %d were successfully validated", len(metrics), successCount),
+		})
+	}
+	return status.TestGroupResult{Name: testName, TestResults: results}
+}
+
+// MetricNamesForMatcher returns the distinct metric names present for the resource-scoped PromQL matcher
+// over [start, end]. Callers use it to assert the full set of metrics a run produced matches the set the
+// test validates, catching drift in the default:otel metric list.
+func MetricNamesForMatcher(region string, matcher string, start, end time.Time) ([]string, error) {
+	region = otelmetrics.ResolveRegion(region)
+	client, err := otelmetrics.NewClient(context.Background(), otelmetrics.TestConfig{
+		Region:         region,
+		Endpoint:       fmt.Sprintf("https://monitoring.%s.amazonaws.com", region),
+		Timeout:        30 * time.Second,
+		MaxRetries:     3,
+		SigningService: "monitoring",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return client.MetricNames(context.Background(), matcher, start, end)
+}

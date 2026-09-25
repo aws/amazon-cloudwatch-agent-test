@@ -1,0 +1,43 @@
+{
+  "error_bound": 0.15,
+  "metrics": [
+    {
+      "name": "k8s.pod.cpu.utilization",
+      "unit": "percent_of_node",
+      "stat": "Average",
+      "pod_thresholds": [
+        {
+          "pod_filter": "daemonset",
+          "threshold": 1.3,
+          "description": "DaemonSet agent pod CPU as a percentage of node allocatable CPU"
+        },
+        {
+          "pod_filter": "scraper",
+          "threshold": 0.9,
+          "description": "Cluster scraper pod CPU as a percentage of node allocatable CPU"
+        }
+      ]
+    },
+    {
+      "name": "k8s.pod.memory.working_set",
+      "unit": "percent_of_node",
+      "stat": "Average",
+      "pod_thresholds": [
+        {
+          "pod_filter": "daemonset",
+          "threshold": 4.7,
+          "description": "DaemonSet agent pod memory as a percentage of node allocatable memory"
+        },
+        {
+          "pod_filter": "scraper",
+          "threshold": 4.9,
+          "description": "Cluster scraper pod memory as a percentage of node allocatable memory"
+        }
+      ]
+    }
+  ],
+  "node_allocatable_queries": {
+    "cpu": "kube_node_status_allocatable",
+    "memory": "kube_node_status_allocatable"
+  }
+}

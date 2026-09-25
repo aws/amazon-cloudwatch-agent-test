@@ -5,8 +5,16 @@ package awsservice
 
 import (
 	"log"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+)
+
+const (
+	// imdsMaxAttempts bounds retries of the instance identity document lookup.
+	imdsMaxAttempts = 5
+	// imdsRetryInterval is the pause between attempts.
+	imdsRetryInterval = 2 * time.Second
 )
 
 var identityDoc *imds.GetInstanceIdentityDocumentOutput
@@ -30,10 +38,20 @@ func GetImdsMetadata() *imds.GetInstanceIdentityDocumentOutput {
 	}
 	var err error
 
+	// Retry before giving up. A single slow IMDS response used to abort the whole
+	// job via log.Fatalf before any assertion ran, because callers reach this from
+	// the middle of a test rather than from setup.
 	// TODO: this only works for EC2 based testing
-	identityDoc, err = ImdsClient.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
-	if err != nil {
-		log.Fatalf("Error occurred while retrieving imds identityDoc: %v", err)
+	for attempt := 1; attempt <= imdsMaxAttempts; attempt++ {
+		identityDoc, err = ImdsClient.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
+		if err == nil {
+			return identityDoc
+		}
+		log.Printf("Attempt %d/%d: could not retrieve imds identityDoc: %v", attempt, imdsMaxAttempts, err)
+		if attempt < imdsMaxAttempts {
+			time.Sleep(imdsRetryInterval)
+		}
 	}
-	return identityDoc
+	log.Fatalf("Error occurred while retrieving imds identityDoc after %d attempts: %v", imdsMaxAttempts, err)
+	return nil
 }

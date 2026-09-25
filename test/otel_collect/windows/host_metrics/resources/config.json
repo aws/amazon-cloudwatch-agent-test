@@ -1,0 +1,13 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "opentelemetry": {
+    "cluster_name": "cwagent-windows-integ-test",
+    "collect": {
+      "host_metrics": {
+        "collection_interval": 30
+      }
+    }
+  }
+}

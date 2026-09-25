@@ -1,0 +1,14 @@
+{
+  "agent": {
+    "run_as_user": "root"
+  },
+  "opentelemetry": {
+    "cluster_name": "cwagent-ecs-integ-test",
+    "collect": {
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:4317",
+        "http_endpoint": "0.0.0.0:4318"
+      }
+    }
+  }
+}

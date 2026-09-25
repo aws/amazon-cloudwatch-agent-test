@@ -75,6 +75,9 @@ func StartSendingMetrics(receiver string, duration, sendingInterval time.Duratio
 			err = SendPrometheusMetrics(cfg, duration)
 		case "traces":
 			err = SendAppSignalsTraceMetrics(duration) //does app signals have dimension for metric?
+		case "otlp":
+			// metricLogGroup is the instance id (set by the feature validator's GenerateLoad).
+			err = SendOTLPMetrics(DefaultOTLPHTTPEndpoint, metricLogGroup, sendingInterval, duration)
 
 		default:
 		}
