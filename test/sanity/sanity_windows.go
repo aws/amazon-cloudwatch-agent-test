@@ -16,6 +16,7 @@ import "testing"
 //
 // It has been replaced by invoking the PowerShell script directly from
 // terraform/ec2/win/main.tf:
+//
 //	powershell.exe -ExecutionPolicy Bypass -File test\sanity\resources\verifyWindowsCtlScript.ps1
 func SanityCheck(t *testing.T) {
 	t.Skip("Windows sanity check runs via verifyWindowsCtlScript.ps1 directly from terraform; see note above")

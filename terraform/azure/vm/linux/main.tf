@@ -141,7 +141,7 @@ resource "null_resource" "integration_test" {
       "umask 077 && curl -s -H Metadata:true \"http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=${var.azure_token_audience}\" | python3 -c \"import sys,json; print(json.load(sys.stdin)['access_token'])\" > /tmp/azure-identity-token",
       "export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/azure-identity-token AWS_ROLE_ARN=${module.iam.role_arn} AWS_REGION=${var.region}",
       "cd amazon-cloudwatch-agent-test",
-      "go test -tags integration ${var.test_dir} -p 1 -timeout 30m -computeType=AZUREVM -region=${var.region} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${azurerm_linux_virtual_machine.cwagent.virtual_machine_id} -assumeRoleArn=${module.iam.role_arn} -v; test_rc=$?; rm -f /tmp/azure-identity-token; exit $test_rc",
+      "go test -tags integration ${var.test_dir} -p 1 -timeout 30m -computeType=AZUREVM -region=${var.region} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${azurerm_linux_virtual_machine.cwagent.virtual_machine_id} -assumeRoleArn=${module.iam.role_arn} -azureVMName=${azurerm_linux_virtual_machine.cwagent.name} -azureVMSize=${var.azure_vm_size} -azureResourceGroup=${var.azure_resource_group} -azureLocation=${var.azure_location} -v; test_rc=$?; rm -f /tmp/azure-identity-token; exit $test_rc",
     ]
   }
 

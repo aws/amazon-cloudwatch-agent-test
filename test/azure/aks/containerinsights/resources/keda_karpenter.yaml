@@ -4,7 +4,7 @@
 # /metrics endpoint (from a ConfigMap) that emits the metric names the
 # cluster-scraper's solutions pipelines expect, in the keda/karpenter namespaces
 # with the app.kubernetes.io/name labels the solutions config selects on. This
-# validates the scrape, that is agent-translated OTEL pipeline to CloudWatch path
+# validates the scrape that is agent-translated OTEL pipeline to CloudWatch path
 # (metric presence), without provisioning real KEDA/Karpenter infrastructure.
 apiVersion: v1
 kind: Namespace

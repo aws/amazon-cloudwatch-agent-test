@@ -540,6 +540,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			ami:          "AL2023_x86_64_STANDARD",
 			k8sVersion:   "1.35",
+			wip:          true,
 		},
 	},
 	"eks_deployment": {

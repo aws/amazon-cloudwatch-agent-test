@@ -33,8 +33,11 @@ module "reboot_common" {
 }
 
 locals {
-  // Canary downloads latest binary. Integration test downloads binary connect to git hash.
-  binary_uri = var.is_canary ? "${var.s3_bucket}/release/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
+  // Canary downloads the latest publicly released binary from the public download bucket.
+  // Integration test downloads a binary tied to the git hash.
+  binary_uri = var.is_canary ? "amazoncloudwatch-agent/amazon_linux/${var.arc}/latest/${var.binary_name}" : "${var.s3_bucket}/integration-test/binary/${var.cwa_github_sha}/linux/${var.arc}/${var.binary_name}"
+  // The canary binary lives in the public download bucket, so fetch it anonymously.
+  binary_download_flags = var.is_canary ? "--no-sign-request " : ""
   // list of test that require instance reboot
   reboot_required_tests = tolist(["./test/restart"])
 
@@ -90,7 +93,7 @@ resource "null_resource" "integration_test_setup" {
         "fi",
         "cd amazon-cloudwatch-agent-test",
         "git rev-parse --short HEAD",
-        "aws s3 cp --no-progress s3://${local.binary_uri} .",
+        "aws s3 cp --no-progress ${local.binary_download_flags}s3://${local.binary_uri} .",
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       ],
 

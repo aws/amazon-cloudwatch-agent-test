@@ -9,6 +9,7 @@
 package aks
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -28,11 +29,52 @@ import (
 const (
 	spansLogGroup = "aws/spans"
 	serviceName   = "aks-otlp-test-service"
-	// The load generator runs for 3 minutes; allow extra ingestion time.
+	// agentNamespace is the k8s namespace the agent runs in. The resource k8s.namespace.name and the
+	// derived service.namespace both carry it.
+	agentNamespace = "amazon-cloudwatch"
+	// The load generator runs for 3 minutes, so allow extra ingestion time.
 	validationWindow = 10 * time.Minute
 )
 
 var env *environment.MetaData
+
+// otlpMetrics are the metrics the load generator pushes over OTLP.
+var otlpMetrics = []string{
+	"aks_otlp_counter",
+}
+
+// spanMetrics are the spanmetrics connector's metrics, derived from the pushed spans. Validated on
+// @resource.* labels alone because the connector scope carries no cloudwatch.source/solution.
+var spanMetrics = []string{
+	"traces.span.metrics.calls",
+	"traces.span.metrics.duration",
+}
+
+// aksResourceExpectations is the shared source of truth for the azure.aks resourcedetection attributes
+// asserted on every signal: an exact value, or PresenceOnly for present-and-non-empty. Node-level and
+// subscription-bearing attributes stay presence-only (their values are per-node/dynamic, or must be kept
+// out of the CI logs).
+func aksResourceExpectations() map[string]string {
+	return map[string]string{
+		"cloud.provider":              "azure",
+		"cloud.platform":              "azure.aks",
+		"k8s.cluster.name":            env.AKSClusterName,
+		"k8s.namespace.name":          agentNamespace,
+		"service.namespace":           agentNamespace,
+		"deployment.environment.name": "azure.aks:" + env.AKSClusterName + "/" + agentNamespace,
+		"cloud.region":                env.AzureLocation,
+		"azure.vm.size":               env.AzureVMSize,        // AKS node pool VM size
+		"azure.resourcegroup.name":    env.AzureResourceGroup, // AKS node resource group (MC_...)
+		"cloud.account.id":            otlpvalidation.PresenceOnly,
+		"cloud.resource_id":           otlpvalidation.PresenceOnly,
+		// Per-node VMSS-generated names / machine id: not knowable at plan time.
+		"host.id":                otlpvalidation.PresenceOnly,
+		"host.name":              otlpvalidation.PresenceOnly,
+		"azure.vm.name":          otlpvalidation.PresenceOnly,
+		"azure.vm.scaleset.name": otlpvalidation.PresenceOnly,
+		"service.name":           otlpvalidation.PresenceOnly,
+	}
+}
 
 func TestMain(m *testing.M) {
 	environment.RegisterEnvironmentMetaDataFlags()
@@ -47,19 +89,41 @@ func TestMain(m *testing.M) {
 
 func TestAKS(t *testing.T) {
 	t.Run("Metrics", func(t *testing.T) {
-		// test_id is a datapoint attribute, the one surface no resource processor rewrites, so it
-		// isolates this run. cloud.platform=azure_aks comes only from the aks detector: proves detection ran.
-		group := otlpvalidation.ValidateOtlpMetricsWithLabels(
-			"AKSDefaultOtel", env.Region, []string{"aks_otlp_counter"},
-			map[string]string{
-				"test_id":                  env.AKSClusterName,
-				"@resource.cloud.platform": "azure_aks",
-				"@resource.cloud.provider": "azure",
-			},
-		)
-		for _, r := range group.TestResults {
-			require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
+		// Isolated by @resource.k8s.cluster.name, which is unique per run and never reused. Agent-produced
+		// metrics carry the cloudwatch instrumentation scope. Spanmetrics carry only the @resource.*
+		// enrichment, so they match on resource labels alone.
+		resourceLabels := map[string]string{}
+		for attr, want := range aksResourceExpectations() {
+			resourceLabels["@resource."+attr] = otlpvalidation.ExpectedValue(want)
 		}
+		fullLabels := map[string]string{}
+		for k, v := range resourceLabels {
+			fullLabels[k] = v
+		}
+		for attr, want := range otlpvalidation.ScopeExpectations() {
+			fullLabels["@instrumentation."+attr] = otlpvalidation.ExpectedValue(want)
+		}
+		assertFound := func(t *testing.T, group status.TestGroupResult) {
+			for _, r := range group.TestResults {
+				require.Equal(t, status.SUCCESSFUL, r.Status, "metric %s: %v", r.Name, r.Reason)
+			}
+		}
+
+		t.Run("OTLP", func(t *testing.T) {
+			assertFound(t, otlpvalidation.ValidateOtlpMetricsWithLabels("AKSOTLP", env.Region, otlpMetrics, fullLabels))
+		})
+		t.Run("SpanMetrics", func(t *testing.T) {
+			assertFound(t, otlpvalidation.ValidateOtlpMetricsWithLabels("AKSSpanMetrics", env.Region, spanMetrics, resourceLabels))
+		})
+		t.Run("Names", func(t *testing.T) {
+			// Enumerate every metric name produced for this cluster and assert it matches exactly the set
+			// the subtests above cover. Catches drift: a new default:otel metric or one that stopped emitting.
+			matcher := fmt.Sprintf(`{__name__=~".+", "@resource.k8s.cluster.name"=%q}`, env.AKSClusterName)
+			got, err := otlpvalidation.MetricNamesForMatcher(env.Region, matcher, time.Now().Add(-time.Hour), time.Now())
+			require.NoError(t, err)
+			want := append(append([]string{}, otlpMetrics...), spanMetrics...)
+			require.ElementsMatch(t, want, got)
+		})
 	})
 
 	t.Run("Logs", func(t *testing.T) {
@@ -100,7 +164,9 @@ func validateLogs() status.TestResult {
 		err := awsservice.ValidateLogs(
 			logGroup, logStream, &since, &until,
 			awsservice.AssertLogsNotEmpty(),
-			awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
+			awsservice.AssertPerLog(otlpvalidation.AssertLogRecord(func(rec otlpvalidation.LogRecord) error {
+				return otlpvalidation.AssertLogContent(rec, marker, "INFO", aksResourceExpectations())
+			})),
 		)
 		if err == nil {
 			testResult.Status = status.SUCCESSFUL
@@ -115,15 +181,17 @@ func validateLogs() status.TestResult {
 	return testResult
 }
 
-// validateTraces queries aws/spans (Transaction Search) for spans with our cluster's service name.
+// validateTraces queries aws/spans (Transaction Search) for this run's spans. The load generator is an
+// external k8s Job, so we cannot enumerate trace IDs. Match spans by service name + cluster instead, then
+// assert the azure.aks resource enrichment on each matched span (not just that some arrived).
 func validateTraces() status.TestResult {
 	testResult := status.TestResult{Name: "AKS_Traces", Status: status.FAILED}
 
 	query := fmt.Sprintf(
-		`fields traceId | filter @message like "%s" and @message like "%s" | dedup traceId | limit 5`,
+		`fields @message | filter @message like "%s" and @message like "%s" | limit 100`,
 		serviceName, env.AKSClusterName,
 	)
-	log.Printf("[AKS_Traces] querying %s for spans from service=%s instance=%s", spansLogGroup, serviceName, env.AKSClusterName)
+	log.Printf("[AKS_Traces] querying %s for spans from service=%s cluster=%s", spansLogGroup, serviceName, env.AKSClusterName)
 
 	const maxRetries = 5
 	const retryInterval = 60 * time.Second
@@ -136,17 +204,27 @@ func validateTraces() status.TestResult {
 			found := 0
 			for _, row := range rows {
 				for _, field := range row {
-					if aws.ToString(field.Field) == "traceId" && aws.ToString(field.Value) != "" {
-						found++
+					if aws.ToString(field.Field) != "@message" {
+						continue
 					}
+					var s otlpvalidation.SpanRecord
+					if json.Unmarshal([]byte(aws.ToString(field.Value)), &s) != nil {
+						continue
+					}
+					// Content is stable, so a mismatch is final. Fail immediately.
+					if cerr := otlpvalidation.AssertAttributes("span "+s.TraceID, aksResourceExpectations(), s.Resource.Attributes); cerr != nil {
+						testResult.Reason = cerr
+						return testResult
+					}
+					found++
 				}
 			}
 			if found > 0 {
-				log.Printf("[AKS_Traces] attempt %d: found %d traces in %s", attempt, found, spansLogGroup)
+				log.Printf("[AKS_Traces] attempt %d: %d spans found with expected content in %s", attempt, found, spansLogGroup)
 				testResult.Status = status.SUCCESSFUL
 				return testResult
 			}
-			testResult.Reason = fmt.Errorf("attempt %d: 0 traces found in %s for service=%s", attempt, spansLogGroup, serviceName)
+			testResult.Reason = fmt.Errorf("attempt %d: 0 spans found in %s for service=%s", attempt, spansLogGroup, serviceName)
 		}
 		if attempt < maxRetries {
 			log.Printf("[AKS_Traces] %v — retrying in %v", testResult.Reason, retryInterval)

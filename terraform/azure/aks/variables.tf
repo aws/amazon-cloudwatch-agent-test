@@ -11,6 +11,19 @@ variable "test_dir" {
   default = "./test/azure/aks"
 }
 
+# Selects which suite this apply deploys:
+#   "otlp"              -> default:otel DaemonSet + OTLP load generator (existing behavior)
+#   "containerinsights" -> node DaemonSet + cluster-scraper Deployment translating CI configs
+# Defaults to otlp so existing OTLP runs are unchanged.
+variable "test_mode" {
+  type    = string
+  default = "otlp"
+  validation {
+    condition     = contains(["otlp", "containerinsights"], var.test_mode)
+    error_message = "test_mode must be \"otlp\" or \"containerinsights\"."
+  }
+}
+
 variable "cwa_github_sha" {
   type    = string
   default = ""
