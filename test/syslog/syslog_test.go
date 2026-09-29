@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -42,10 +43,48 @@ const (
 
 	// agentStartupDelay gives the listener time to bind before sending.
 	agentStartupDelay = 10 * time.Second
+
+	// CloudWatch Logs has a PutLogEvents-to-GetLogEvents propagation delay
+	// (typically up to ~1 minute), so a single query after the flush can miss
+	// events that were delivered. Retry the read side to absorb that lag.
+	cwPropagationAttempts = 6
+	cwPropagationInterval = 15 * time.Second
 )
 
 func init() {
 	environment.RegisterEnvironmentMetaDataFlags()
+}
+
+// validateDelivery asserts that logs satisfying the validators appear in the
+// given group/stream, retrying to absorb CloudWatch's PutLogEvents-to-
+// GetLogEvents propagation delay.
+func validateDelivery(t *testing.T, logGroup, logStream string, start, end *time.Time, validators ...awsservice.LogEventsValidator) {
+	t.Helper()
+	assert.NoError(t, awsservice.ValidateLogsWithRetry(
+		logGroup, logStream, start, end,
+		cwPropagationAttempts, cwPropagationInterval,
+		validators...,
+	))
+}
+
+// getLogsWithRetry fetches events for a stream, retrying to absorb CloudWatch's
+// PutLogEvents-to-GetLogEvents propagation delay. Returns as soon as at least
+// one event is present, or the last (possibly empty) result after all attempts.
+func getLogsWithRetry(t *testing.T, logGroup, logStream string, start, end *time.Time) []types.OutputLogEvent {
+	t.Helper()
+	var events []types.OutputLogEvent
+	for attempt := 1; attempt <= cwPropagationAttempts; attempt++ {
+		var err error
+		events, err = awsservice.GetLogsSince(logGroup, logStream, start, end)
+		require.NoError(t, err)
+		if len(events) > 0 {
+			return events
+		}
+		if attempt < cwPropagationAttempts {
+			time.Sleep(cwPropagationInterval)
+		}
+	}
+	return events
 }
 
 // instanceID resolves the host's instance ID, preferring the value supplied by
@@ -74,7 +113,10 @@ func rfc5424Msg(facility, severity int, hostname, appName, msg string) string {
 // rfc3164Msg builds an RFC 3164 (BSD) syslog message.
 func rfc3164Msg(facility, severity int, hostname, appName, msg string) string {
 	pri := facility*8 + severity
-	ts := time.Now().UTC().Format("Jan  2 15:04:05")
+	// RFC 3164 uses the BSD "Stamp" timestamp: "Jan _2 15:04:05", where the day
+	// is space-padded to width 2 via Go's "_2". A literal double space produces
+	// "Sep  29" for two-digit days, which the parser rejects.
+	ts := time.Now().UTC().Format("Jan _2 15:04:05")
 	return fmt.Sprintf("<%d>%s %s %s[1234]: %s", pri, ts, hostname, appName, msg)
 }
 
@@ -191,12 +233,11 @@ func TestSyslogTCP(t *testing.T) {
 	time.Sleep(sleepForFlush)
 	end := time.Now()
 
-	assert.NoError(t, awsservice.ValidateLogs(
-		logGroup, "tcp-stream", &start, &end,
+	validateDelivery(t, logGroup, "tcp-stream", &start, &end,
 		awsservice.AssertLogsCount(want),
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
 		awsservice.AssertNoDuplicateLogs(),
-	))
+	)
 }
 
 // TestSyslogUDP covers the basic happy path over UDP.
@@ -223,11 +264,10 @@ func TestSyslogUDP(t *testing.T) {
 	// UDP is lossless over loopback in practice, but it offers no delivery
 	// guarantee. Assert every delivered record is well-formed and that the
 	// receiver is working, without making the test flaky on an exact count.
-	assert.NoError(t, awsservice.ValidateLogs(
-		logGroup, "udp-stream", &start, &end,
+	validateDelivery(t, logGroup, "udp-stream", &start, &end,
 		awsservice.AssertLogsNotEmpty(),
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
-	))
+	)
 }
 
 // TestSyslogRFC3164 verifies the legacy BSD format is parsed and forwarded.
@@ -251,11 +291,10 @@ func TestSyslogRFC3164(t *testing.T) {
 	time.Sleep(sleepForFlush)
 	end := time.Now()
 
-	assert.NoError(t, awsservice.ValidateLogs(
-		logGroup, "rfc3164-stream", &start, &end,
+	validateDelivery(t, logGroup, "rfc3164-stream", &start, &end,
 		awsservice.AssertLogsCount(want),
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
-	))
+	)
 }
 
 // TestSyslogMultipleListeners verifies a single syslog section can serve TCP
@@ -281,8 +320,7 @@ func TestSyslogMultipleListeners(t *testing.T) {
 	time.Sleep(sleepForFlush)
 	end := time.Now()
 
-	events, err := awsservice.GetLogsSince(logGroup, "multi-stream", &start, &end)
-	require.NoError(t, err)
+	events := getLogsWithRetry(t, logGroup, "multi-stream", &start, &end)
 
 	var viaTCP, viaUDP int
 	for _, e := range events {
@@ -319,8 +357,7 @@ func TestSyslogContentFilter(t *testing.T) {
 	time.Sleep(sleepForFlush)
 	end := time.Now()
 
-	events, err := awsservice.GetLogsSince(logGroup, "filter-stream", &start, &end)
-	require.NoError(t, err)
+	events := getLogsWithRetry(t, logGroup, "filter-stream", &start, &end)
 
 	var kept int
 	for _, e := range events {
@@ -375,35 +412,37 @@ func TestSyslogRouting(t *testing.T) {
 	time.Sleep(sleepForFlush)
 	end := time.Now()
 
-	assert.NoError(t, awsservice.ValidateLogs(
-		webGroup, "web-stream", &start, &end,
+	validateDelivery(t, webGroup, "web-stream", &start, &end,
+		awsservice.AssertLogsNotEmpty(),
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker+" web request")),
-	), "hostname routing")
+	)
 
-	assert.NoError(t, awsservice.ValidateLogs(
-		authGroup, "auth-stream", &start, &end,
+	validateDelivery(t, authGroup, "auth-stream", &start, &end,
+		awsservice.AssertLogsNotEmpty(),
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker+" auth event")),
-	), "facility routing")
+	)
 
-	assert.NoError(t, awsservice.ValidateLogs(
-		appGroup, "app-stream", &start, &end,
+	validateDelivery(t, appGroup, "app-stream", &start, &end,
+		awsservice.AssertLogsNotEmpty(),
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker+" app event")),
-	), "app_name routing")
+	)
+
+	validateDelivery(t, defaultGroup, "default-stream", &start, &end,
+		awsservice.AssertLogsNotEmpty(),
+		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker+" default msg")),
+	)
 
 	// Regression guard: the app_name-routed message must NOT have leaked into
 	// the default group. If the routing translator emits the wrong attribute
-	// name, the app event silently lands here instead of the app group.
+	// name, the app event silently lands here instead of the app group. Checked
+	// after the default group is confirmed populated above, so events have
+	// propagated by now.
 	defaultEvents, err := awsservice.GetLogsSince(defaultGroup, "default-stream", &start, &end)
 	require.NoError(t, err)
 	for _, e := range defaultEvents {
 		assert.NotContains(t, *e.Message, marker+" app event",
 			"app_name-matched message leaked to default route (attribute name mismatch)")
 	}
-
-	assert.NoError(t, awsservice.ValidateLogs(
-		defaultGroup, "default-stream", &start, &end,
-		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker+" default msg")),
-	), "default routing")
 }
 
 // TestSyslogTLS verifies messages are accepted over a TLS-encrypted listener.
@@ -428,11 +467,10 @@ func TestSyslogTLS(t *testing.T) {
 	time.Sleep(sleepForFlush)
 	end := time.Now()
 
-	assert.NoError(t, awsservice.ValidateLogs(
-		logGroup, "tls-stream", &start, &end,
+	validateDelivery(t, logGroup, "tls-stream", &start, &end,
 		awsservice.AssertLogsCount(want),
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
-	))
+	)
 }
 
 // TestSyslogTLSRejectsPlaintext verifies a TLS listener does not accept
@@ -502,11 +540,10 @@ func TestSyslogMTLSAcceptsValidClientCert(t *testing.T) {
 	time.Sleep(sleepForFlush)
 	end := time.Now()
 
-	assert.NoError(t, awsservice.ValidateLogs(
-		logGroup, "mtls-stream", &start, &end,
+	validateDelivery(t, logGroup, "mtls-stream", &start, &end,
 		awsservice.AssertLogsCount(want),
 		awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(marker)),
-	))
+	)
 }
 
 // TestSyslogMTLSRejectsMissingClientCert verifies the mTLS security constraint:
