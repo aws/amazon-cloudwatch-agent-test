@@ -195,6 +195,23 @@ func startAgentWithConfig(t *testing.T, configPath string, placeholders map[stri
 		require.NoError(t, common.ReplacePlaceholders(common.ConfigOutputPath, placeholders))
 	}
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
+	// Cleanups run LIFO: this is registered before StopAgent so it executes
+	// AFTER the agent is stopped and its log fully flushed.
+	// TEMPORARY(syslog-debug): dump the agent log to CI output on failure so the
+	// export/delivery error is visible. Remove before merge.
+	t.Cleanup(func() {
+		if t.Failed() {
+			// os.ReadFile directly (not common.ReadAgentLogfile, which log.Fatals
+			// on a missing file and would abort the test binary during cleanup).
+			content, err := os.ReadFile(common.AgentLogFile)
+			if err != nil {
+				t.Logf("could not read agent log %s: %v", common.AgentLogFile, err)
+				return
+			}
+			t.Logf("=== BEGIN amazon-cloudwatch-agent.log (%s) ===\n%s\n=== END agent log ===",
+				t.Name(), string(content))
+		}
+	})
 	t.Cleanup(common.StopAgent)
 	time.Sleep(agentStartupDelay)
 }
