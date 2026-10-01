@@ -107,7 +107,10 @@ locals {
     $env:AWS_ROLE_ARN = "${module.iam.role_arn}"
     $env:AWS_REGION = "${var.region}"
 
-    go test -tags integration ${var.test_dir} -p 1 -timeout 30m -computeType=AZUREVM -instancePlatform=windows -region=${var.region} -cwaCommitSha=${var.cwa_github_sha} -instanceId=${azurerm_windows_virtual_machine.cwagent.virtual_machine_id} -assumeRoleArn=${module.iam.role_arn} -azureVMName=${azurerm_windows_virtual_machine.cwagent.name} -azureVMSize=${var.azure_vm_size} -azureResourceGroup=${var.azure_resource_group} -azureLocation=${var.azure_location} -v
+    # Single-quote each -flag=value arg: PowerShell splits an unquoted '-'-prefixed arg at its first '.'
+    # (PowerShell/PowerShell#6291), so -cwaCommitSha=1.300074.0b1920 reached go as '-cwaCommitSha=1' plus
+    # '.300074.0b1920', which ended go's flag parsing and dropped -instanceId and every flag after it.
+    go test -tags integration '${var.test_dir}' -p 1 -timeout 30m '-computeType=AZUREVM' '-instancePlatform=windows' '-region=${var.region}' '-cwaCommitSha=${var.cwa_github_sha}' '-instanceId=${azurerm_windows_virtual_machine.cwagent.virtual_machine_id}' '-assumeRoleArn=${module.iam.role_arn}' '-azureVMName=${azurerm_windows_virtual_machine.cwagent.name}' '-azureVMSize=${var.azure_vm_size}' '-azureResourceGroup=${var.azure_resource_group}' '-azureLocation=${var.azure_location}' -v
     $rc = $LASTEXITCODE
     Remove-Item -Force $tokenFile -ErrorAction SilentlyContinue
     exit $rc
