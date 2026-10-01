@@ -45,6 +45,9 @@ var expectedDimsToMetrics = map[string][]string{
 	},
 	"ClusterName-InstanceId-NeuronDevice-NodeName": {
 		NodeNeuronDeviceHwEccEvents,
+		NodeNeuronCoreLimit, NodeNeuronCoreUsageTotalAlloc, NodeNeuronCoreRequest,
+		NodeNeuronCoreReservedCapacity, NodeNeuronCoreUnreservedCapacity, NodeNeuronCoreAvailableCapacity,
+		PodNeuronCoreLimit, PodNeuronCoreUsageTotalAlloc, PodNeuronCoreRequest, PodNeuronCoreReservedCapacity,
 	},
 }
 

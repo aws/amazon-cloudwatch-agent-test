@@ -29,7 +29,11 @@
     "pod_neuroncore_memory_usage_runtime_memory": {},
     "pod_neuroncore_memory_usage_tensors": {},
     "pod_neuroncore_memory_usage_total": {},
-    "pod_neuroncore_utilization": {}
+    "pod_neuroncore_utilization": {},
+    "pod_neuroncore_limit": {},
+    "pod_neuroncore_usage_total": {},
+    "pod_neuroncore_request": {},
+    "pod_neuroncore_reserved_capacity": {}
   },
   "required": [
     "ClusterName",
