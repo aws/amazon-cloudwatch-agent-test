@@ -149,3 +149,70 @@ func TestMultiEFACorrelatedPodLabels(t *testing.T) {
 	}
 	t.Fatal("No efa_rx_bytes result correlated to efaburn pod")
 }
+
+// expectedClaimedEFACount is how many of the node's EFA devices are claimed by a
+// pod. efaburn (replicas: 1) requests 1 EFA, so exactly one device is claimed and
+// the remaining device(s) must stay unclaimed.
+const expectedClaimedEFACount = 1
+
+// TestMultiEFAClaimedVsUnclaimedCorrelation validates per-device pod correlation
+// on a multi-EFA node: the device claimed by efaburn is correlated to that pod,
+// and every remaining (unclaimed) device carries NO pod attributes.
+//
+// Regression guard for the EFA multi-device correlation collapse. Without the
+// groupbyattrs/efa split before the resource-level promote, ALL of the node's EFA
+// devices — including unclaimed ones — are attributed to a single pod. This test
+// fails in that case because (a) more than expectedClaimedEFACount devices carry a
+// pod, and (b) no device is left unclaimed. It also catches a single device being
+// attributed to multiple pods.
+func TestMultiEFAClaimedVsUnclaimedCorrelation(t *testing.T) {
+	t.Parallel()
+	results, err := queryCache.Get(context.Background(), "efa_rx_bytes")
+	require.NoError(t, err, "querying efa_rx_bytes")
+	multi := filterByNodeLabel(results, multiEfaSmNodeLabel, "true")
+	require.NotEmpty(t, multi,
+		"No efa_rx_bytes results from multi-EFA node (label %s)", multiEfaSmNodeLabel)
+
+	// For each device, collect the distinct pods it is attributed to (empty = unclaimed).
+	devicePods := make(map[string]map[string]struct{})
+	for _, r := range multi {
+		dev := getAnyValue(r, "aws.efa.device")
+		if dev == "" {
+			continue
+		}
+		if devicePods[dev] == nil {
+			devicePods[dev] = make(map[string]struct{})
+		}
+		if pod := r.Labels.Resource["k8s.pod.name"]; pod != "" {
+			devicePods[dev][pod] = struct{}{}
+		}
+	}
+	require.Len(t, devicePods, expectedMultiEFACount,
+		"expected %d EFA devices on the node, got %d: %v",
+		expectedMultiEFACount, len(devicePods), deviceKeys(devicePods))
+
+	var claimed, unclaimed []string
+	for dev, pods := range devicePods {
+		switch len(pods) {
+		case 0:
+			unclaimed = append(unclaimed, dev)
+		case 1:
+			claimed = append(claimed, dev)
+		default:
+			// A single device correlated to multiple pods is itself a collapse symptom.
+			t.Errorf("EFA device %s correlated to multiple pods %v", dev, setKeys(pods))
+		}
+	}
+
+	// Claimed side: exactly the number of EFAs efaburn requested map to a pod.
+	require.Len(t, claimed, expectedClaimedEFACount,
+		"expected %d correlated (claimed) EFA device(s), got %d: %v "+
+			"(collapse over-correlates unclaimed devices onto a pod)",
+		expectedClaimedEFACount, len(claimed), claimed)
+
+	// Unclaimed side: the remaining devices must carry no pod — this is the
+	// coverage that distinguishes correct correlation from the collapse.
+	require.Len(t, unclaimed, expectedMultiEFACount-expectedClaimedEFACount,
+		"expected %d unclaimed EFA device(s) with no pod, got %d: %v",
+		expectedMultiEFACount-expectedClaimedEFACount, len(unclaimed), unclaimed)
+}
