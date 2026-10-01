@@ -60,11 +60,20 @@ func init() {
 // GetLogEvents propagation delay.
 func validateDelivery(t *testing.T, logGroup, logStream string, start, end *time.Time, validators ...awsservice.LogEventsValidator) {
 	t.Helper()
-	assert.NoError(t, awsservice.ValidateLogsWithRetry(
+	err := awsservice.ValidateLogsWithRetry(
 		logGroup, logStream, start, end,
 		cwPropagationAttempts, cwPropagationInterval,
 		validators...,
-	))
+	)
+	if err != nil {
+		// TEMPORARY(syslog-debug): on failure, list the streams that actually
+		// exist in the group so we can tell "nothing delivered" apart from
+		// "delivered to a different stream name than queried". Remove before merge.
+		streams := awsservice.GetLogStreamNames(logGroup)
+		t.Logf("DEBUG validateDelivery FAILED: group=%q queried-stream=%q actual-streams=%v",
+			logGroup, logStream, streams)
+	}
+	assert.NoError(t, err)
 }
 
 // getLogsWithRetry fetches events for a stream, retrying to absorb CloudWatch's
@@ -126,10 +135,25 @@ func sendTCP(t *testing.T, addr string, messages []string) {
 	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
 	require.NoError(t, err, "dial tcp %s", addr)
 	defer conn.Close()
+	// TEMPORARY(syslog-debug): prove the send actually reaches a live receiver.
+	// Log the real connection endpoints (confirms we connected to the agent's
+	// listener, not a stale/other socket), the bytes written, and whether the
+	// peer closed the connection on us (which would mean the receiver rejected
+	// the data). Remove before merge.
+	t.Logf("DEBUG sendTCP: connected local=%s remote=%s", conn.LocalAddr(), conn.RemoteAddr())
+	total := 0
 	for _, msg := range messages {
-		_, err := fmt.Fprintf(conn, "%s\n", msg)
-		require.NoError(t, err, "write tcp message")
+		n, werr := fmt.Fprintf(conn, "%s\n", msg)
+		require.NoError(t, werr, "write tcp message")
+		total += n
 	}
+	// Give the receiver a moment, then probe whether the peer is still connected.
+	// If the receiver closed/reset, a read returns an error (not a timeout).
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	buf := make([]byte, 1)
+	_, rerr := conn.Read(buf)
+	t.Logf("DEBUG sendTCP: wrote %d messages (%d bytes) to %s; post-write read result: %v",
+		len(messages), total, addr, rerr)
 }
 
 // sendUDP writes one syslog message per datagram.
