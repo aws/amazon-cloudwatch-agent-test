@@ -74,20 +74,11 @@ func validateDelivery(t *testing.T, logGroup, logStream string, start, end *time
 	// absorb that truncation and any host/CloudWatch clock skew.
 	qs := start.Add(-queryWindowMargin)
 	qe := end.Add(queryWindowMargin)
-	err := awsservice.ValidateLogsWithRetry(
+	assert.NoError(t, awsservice.ValidateLogsWithRetry(
 		logGroup, logStream, &qs, &qe,
 		cwPropagationAttempts, cwPropagationInterval,
 		validators...,
-	)
-	if err != nil {
-		// TEMPORARY(syslog-debug): on failure, list the streams that actually
-		// exist in the group so we can tell "nothing delivered" apart from
-		// "delivered to a different stream name than queried". Remove before merge.
-		streams := awsservice.GetLogStreamNames(logGroup)
-		t.Logf("DEBUG validateDelivery FAILED: group=%q queried-stream=%q actual-streams=%v",
-			logGroup, logStream, streams)
-	}
-	assert.NoError(t, err)
+	))
 }
 
 // getLogsWithRetry fetches events for a stream, retrying to absorb CloudWatch's
@@ -153,25 +144,10 @@ func sendTCP(t *testing.T, addr string, messages []string) {
 	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
 	require.NoError(t, err, "dial tcp %s", addr)
 	defer conn.Close()
-	// TEMPORARY(syslog-debug): prove the send actually reaches a live receiver.
-	// Log the real connection endpoints (confirms we connected to the agent's
-	// listener, not a stale/other socket), the bytes written, and whether the
-	// peer closed the connection on us (which would mean the receiver rejected
-	// the data). Remove before merge.
-	t.Logf("DEBUG sendTCP: connected local=%s remote=%s", conn.LocalAddr(), conn.RemoteAddr())
-	total := 0
 	for _, msg := range messages {
-		n, werr := fmt.Fprintf(conn, "%s\n", msg)
-		require.NoError(t, werr, "write tcp message")
-		total += n
+		_, err := fmt.Fprintf(conn, "%s\n", msg)
+		require.NoError(t, err, "write tcp message")
 	}
-	// Give the receiver a moment, then probe whether the peer is still connected.
-	// If the receiver closed/reset, a read returns an error (not a timeout).
-	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-	buf := make([]byte, 1)
-	_, rerr := conn.Read(buf)
-	t.Logf("DEBUG sendTCP: wrote %d messages (%d bytes) to %s; post-write read result: %v",
-		len(messages), total, addr, rerr)
 }
 
 // sendUDP writes one syslog message per datagram.
@@ -237,23 +213,6 @@ func startAgentWithConfig(t *testing.T, configPath string, placeholders map[stri
 		require.NoError(t, common.ReplacePlaceholders(common.ConfigOutputPath, placeholders))
 	}
 	require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
-	// Cleanups run LIFO: this is registered before StopAgent so it executes
-	// AFTER the agent is stopped and its log fully flushed.
-	// TEMPORARY(syslog-debug): dump the agent log to CI output on failure so the
-	// export/delivery error is visible. Remove before merge.
-	t.Cleanup(func() {
-		if t.Failed() {
-			// os.ReadFile directly (not common.ReadAgentLogfile, which log.Fatals
-			// on a missing file and would abort the test binary during cleanup).
-			content, err := os.ReadFile(common.AgentLogFile)
-			if err != nil {
-				t.Logf("could not read agent log %s: %v", common.AgentLogFile, err)
-				return
-			}
-			t.Logf("=== BEGIN amazon-cloudwatch-agent.log (%s) ===\n%s\n=== END agent log ===",
-				t.Name(), string(content))
-		}
-	})
 	t.Cleanup(common.StopAgent)
 	time.Sleep(agentStartupDelay)
 }
