@@ -49,6 +49,13 @@ const (
 	// events that were delivered. Retry the read side to absorb that lag.
 	cwPropagationAttempts = 6
 	cwPropagationInterval = 15 * time.Second
+
+	// queryWindowMargin widens the GetLogEvents time window on both sides.
+	// Syslog events are stamped with the (second-precision) timestamp embedded
+	// in the message rather than ingestion time, so their CloudWatch event time
+	// can land just outside a tight [start,end] window. 5 minutes comfortably
+	// absorbs the truncation and any host/CloudWatch clock skew.
+	queryWindowMargin = 5 * time.Minute
 )
 
 func init() {
@@ -60,8 +67,15 @@ func init() {
 // GetLogEvents propagation delay.
 func validateDelivery(t *testing.T, logGroup, logStream string, start, end *time.Time, validators ...awsservice.LogEventsValidator) {
 	t.Helper()
+	// Widen the query window. Syslog events carry the timestamp embedded in the
+	// message (second-precision via RFC3339/RFC3164), not ingestion time, so an
+	// event's CloudWatch timestamp can fall slightly before the test's `start`
+	// (built before the messages) and outside a tight window. Pad both ends to
+	// absorb that truncation and any host/CloudWatch clock skew.
+	qs := start.Add(-queryWindowMargin)
+	qe := end.Add(queryWindowMargin)
 	err := awsservice.ValidateLogsWithRetry(
-		logGroup, logStream, start, end,
+		logGroup, logStream, &qs, &qe,
 		cwPropagationAttempts, cwPropagationInterval,
 		validators...,
 	)
@@ -81,10 +95,14 @@ func validateDelivery(t *testing.T, logGroup, logStream string, start, end *time
 // one event is present, or the last (possibly empty) result after all attempts.
 func getLogsWithRetry(t *testing.T, logGroup, logStream string, start, end *time.Time) []types.OutputLogEvent {
 	t.Helper()
+	// See validateDelivery: widen the window to tolerate embedded-timestamp
+	// truncation and clock skew.
+	qs := start.Add(-queryWindowMargin)
+	qe := end.Add(queryWindowMargin)
 	var events []types.OutputLogEvent
 	for attempt := 1; attempt <= cwPropagationAttempts; attempt++ {
 		var err error
-		events, err = awsservice.GetLogsSince(logGroup, logStream, start, end)
+		events, err = awsservice.GetLogsSince(logGroup, logStream, &qs, &qe)
 		require.NoError(t, err)
 		if len(events) > 0 {
 			return events
