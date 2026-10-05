@@ -672,3 +672,85 @@ func TestScrapeMetadataFiltered(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestDeprecatedSemconvAttributesRemoved — the deprecated semconv attributes go,
+// their current-spelling twins stay. url.scheme is asserted present on purpose:
+// karpenter/keda used to delete it and keep http.scheme, which was backwards.
+// ---------------------------------------------------------------------------
+
+func TestDeprecatedSemconvAttributesRemoved(t *testing.T) {
+	deprecated := []string{"net.host.name", "net.host.port", "http.scheme"}
+
+	names := prometheusScrapedNames()
+	names = append(names, metricNames(allKSMMetricDefs)...)
+
+	for _, metricName := range names {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			sawURLScheme := false
+			for _, r := range results {
+				for _, key := range deprecated {
+					_, present := r.Labels.Resource[key]
+					require.False(t, present,
+						"%s still carries deprecated resource attribute %q", metricName, key)
+				}
+				if r.Labels.Resource["url.scheme"] != "" {
+					sawURLScheme = true
+				}
+			}
+			require.True(t, sawURLScheme,
+				"%s has no url.scheme on any series — the current-spelling attribute must survive", metricName)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRawLabelsNotBilledTwice — the raw Prometheus labels must exist only at
+// datapoint scope, not at resource scope too. The datapoint side is covered by
+// TestCadvisorHasRawPromotedKeys and the TestKSM_*_HasRaw*Label family.
+// ---------------------------------------------------------------------------
+
+func TestRawLabelsNotBilledTwice(t *testing.T) {
+	cases := []struct {
+		pipeline string
+		names    []string
+		rawKeys  []string
+	}{
+		{
+			pipeline: "cadvisor",
+			names:    cadvisorMetricNamesList,
+			rawKeys:  []string{"pod", "namespace", "container"},
+		},
+		{
+			pipeline: "kube-state-metrics",
+			names:    metricNames(allKSMMetricDefs),
+			rawKeys: []string{
+				"pod", "namespace", "node", "uid", "container",
+				"owner_name", "owner_kind", "deployment", "daemonset",
+				"statefulset", "replicaset", "job_name", "cronjob",
+			},
+		},
+	}
+
+	for _, c := range cases {
+		c := c
+		for _, metricName := range c.names {
+			t.Run(c.pipeline+"/"+metricName, func(t *testing.T) {
+				results, err := queryCache.Get(context.Background(), metricName)
+				require.NoError(t, err, "querying %s", metricName)
+				require.NotEmpty(t, results, "%s not available", metricName)
+				for _, r := range results {
+					for _, key := range c.rawKeys {
+						_, present := r.Labels.Resource[key]
+						require.False(t, present,
+							"%s carries raw label %q at resource scope as well as datapoint scope",
+							metricName, key)
+					}
+				}
+			})
+		}
+	}
+}
