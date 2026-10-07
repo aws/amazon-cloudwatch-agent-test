@@ -708,12 +708,12 @@ func TestDeprecatedSemconvAttributesRemoved(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// TestRawLabelsNotBilledTwice — the raw Prometheus labels must exist only at
+// TestRawLabelsOnlyAtDatapointScope — the raw Prometheus labels must exist only at
 // datapoint scope, not at resource scope too. The datapoint side is covered by
 // TestCadvisorHasRawPromotedKeys and the TestKSM_*_HasRaw*Label family.
 // ---------------------------------------------------------------------------
 
-func TestRawLabelsNotBilledTwice(t *testing.T) {
+func TestRawLabelsOnlyAtDatapointScope(t *testing.T) {
 	cases := []struct {
 		pipeline string
 		names    []string
