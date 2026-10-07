@@ -800,3 +800,63 @@ func TestKarpenterGroupingLabelsRetained(t *testing.T) {
 		})
 	}
 }
+
+// deniedCounterpartNodeAndPodLabels are the pod-side counterparts of node labels the
+// denylist already removed, plus two keys of the same families. All are resource-level.
+var deniedCounterpartNodeAndPodLabels = []string{
+	"k8s.pod.label.topology.kubernetes.io/region",
+	"k8s.pod.label.topology.kubernetes.io/zone",
+	"k8s.pod.label.helm.sh/chart",
+	"k8s.pod.label.release",
+	"k8s.pod.label.pod-template-generation",
+	"k8s.node.label.topology.k8s.aws/zone-id",
+}
+
+// TestPodLabelCounterpartsRemoved asserts none of the six counterpart keys reach resource
+// scope. The node forms of four of them were already denied, so a datapoint carrying the
+// pod form is the duplicate this change removes.
+func TestPodLabelCounterpartsRemoved(t *testing.T) {
+	for _, metricName := range nodeLabelEnrichedNames() {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				for _, key := range deniedCounterpartNodeAndPodLabels {
+					_, present := r.Labels.Resource[key]
+					require.False(t, present,
+						"%s still carries denied label @resource.%s on node %s",
+						metricName, key, r.Labels.Resource["k8s.node.name"])
+				}
+			}
+		})
+	}
+}
+
+// TestPodLabelsStillEnriched guards against the denylist being widened to the
+// k8s.pod.label. prefix, which would strip every pod label rather than these six. It
+// requires at least one pod label to survive somewhere in the result set, so a prefix
+// regression fails here instead of passing both this file's removal assertions.
+func TestPodLabelsStillEnriched(t *testing.T) {
+	for _, metricName := range nodeLabelEnrichedNames() {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+
+			denied := map[string]bool{}
+			for _, k := range deniedCounterpartNodeAndPodLabels {
+				denied[k] = true
+			}
+			for _, r := range results {
+				for k := range r.Labels.Resource {
+					if strings.HasPrefix(k, "k8s.pod.label.") && !denied[k] {
+						return // a pod label other than the denied ones survived
+					}
+				}
+			}
+			t.Fatalf("%s carries no k8s.pod.label.* attribute other than the denied keys; "+
+				"the denylist may have been widened to the k8s.pod.label. prefix", metricName)
+		})
+	}
+}
