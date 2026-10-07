@@ -349,8 +349,8 @@ resource "null_resource" "neuron_burn_core" {
 
 # --- neuron-burn-peer Deployment: the SECOND runtime on the workload node ---
 #
-# Gives the node two Neuron runtimes burning different cores, the only shape in
-# which the per-core data-loss defect appears (test/otel/neuron/multi_runtime_test.go).
+# Gives the node two Neuron runtimes burning different cores, the shape the
+# multi-runtime tests need (test/otel/neuron/multi_runtime_test.go).
 # inf2.xlarge has 1 device x 2 cores; burn-core takes one, this takes the other.
 #
 # Three constraints, each of which breaks an existing test if changed:
@@ -624,7 +624,7 @@ resource "null_resource" "wait_neuron_monitor" {
         -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | grep -c . || true)
       if [ "$NODES" != "1" ]; then
         echo "ERROR: neuron-burn-core and neuron-burn-peer are on $NODES nodes, expected 1."
-        echo "The multi-runtime per-core regression cannot be exercised unless both"
+        echo "The multi-runtime tests cannot run unless both"
         echo "runtimes share a node. Check the podAffinity on neuron-burn-peer."
         kubectl -n default get pods -l 'app in (neuron-burn-core,neuron-burn-peer)' -o wide || true
         exit 1

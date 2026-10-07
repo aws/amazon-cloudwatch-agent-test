@@ -5,16 +5,12 @@
 
 // Multi-runtime Neuron tests.
 //
-// On a node with >1 Neuron runtime, the pre-fix agent replaced half of every
-// per-core metric with zero: the promote ran in `context: datapoint` but wrote
-// resource attributes (per-ResourceMetrics, so last write won) and deleted
-// runtime_tag, collapsing two datapoints onto one identity. Option A adds
-// runtime_tag to the groupbyattrs keys instead.
-//
-// The existing tests miss it. TestNeuronRuntimeTagInResourceScope passes on the
-// broken code (the collapsed resource still carries one tag), and
-// TestNeuronNoDuplicateSeries passes because the collision happens in-agent, so
-// the surface shows too FEW series rather than duplicates.
+// On a node with more than one Neuron runtime, neuron-monitor reports every core
+// from every runtime: the runtime that owns a core reports its real value and the
+// others report 0 for it. The runtime tag (@resource.aws.neuron.runtime.tag) is the
+// only attribute that separates those readings. These tests verify that per-core
+// metrics keep one series per (core, runtime tag), so a busy core is never
+// reported as idle and per-runtime attribution is preserved.
 //
 // Fixture: terraform/eks/daemon/otel-neuron/main.tf co-locates neuron-burn-core
 // and neuron-burn-peer on one inf2.xlarge (1 device x 2 cores), each holding
@@ -41,7 +37,7 @@ import (
 
 const runtimeTagResourceKey = "aws.neuron.runtime.tag"
 
-// What the in-agent aggregation alternatives stamp instead of a real tag.
+// Runtime tag value that indicates the runtime dimension was aggregated away.
 const runtimeTagFlattenedSentinel = "DEFAULT"
 
 const (
@@ -141,14 +137,11 @@ func tagSummary(byNode map[string]map[string]struct{}) map[string][]string {
 	return out
 }
 
-// Hard-fails rather than skipping: the fixture is part of the cluster definition,
-// and a skip would silently void the whole regression.
-//
-// The message names BOTH causes deliberately. Verified against a reverted agent:
-// the collapse also loses the runtime tag itself, so only one tag survives per node
-// and this guard fires before any specific assertion. A single tag is structurally
-// indistinguishable from a genuine single-runtime node, so the surface cannot tell
-// them apart — the reader has to.
+// multiRuntimeResults returns the results for metricName and the nodes that report
+// at least two runtime tags. It fails rather than skips when there are none: the
+// fixture is part of the cluster definition, so a skip would silently disable
+// every test in this file. A collapsed runtime dimension and a single-runtime
+// fixture look the same here (one tag per node), so the message names both.
 func multiRuntimeResults(t *testing.T, metricName string) ([]otelmetrics.MetricResult, []string) {
 	t.Helper()
 	results, err := queryCache.Get(context.Background(), metricName)
@@ -159,7 +152,7 @@ func multiRuntimeResults(t *testing.T, metricName string) ([]otelmetrics.MetricR
 	require.NotEmpty(t, nodes,
 		"%s: no node reports >= 2 distinct @resource.%s. Observed tags per node: %v.\n"+
 			"TWO causes look identical here, check both:\n"+
-			"  1. THE DEFECT — the agent collapsed the runtime dimension, so one tag "+
+			"  1. RUNTIME DIMENSION COLLAPSED — the agent merged runtimes, so one tag "+
 			"overwrote the others and half the per-core values were replaced by zero. "+
 			"Confirm with `kubectl -n amazon-cloudwatch get cm cloudwatch-agent -o yaml`: "+
 			"groupbyattrs/cw_k8s_ci_v0_neuron must include the runtime_tag key, and "+
@@ -170,9 +163,8 @@ func multiRuntimeResults(t *testing.T, metricName string) ([]otelmetrics.MetricR
 	return results, nodes
 }
 
-// TestMultiRuntimeDistinctWorkloadsOwnDistinctCores is the value-level detector:
-// two workloads burning two cores must yield two non-zero readings. Pre-fix there
-// was one, the other having been overwritten by a second runtime's zero.
+// TestMultiRuntimeDistinctWorkloadsOwnDistinctCores verifies values: two workloads
+// burning two cores yield two non-zero core readings, attributed to two runtime tags.
 func TestMultiRuntimeDistinctWorkloadsOwnDistinctCores(t *testing.T) {
 	t.Parallel()
 	const metricName = "neuroncore_utilization_ratio"
@@ -207,13 +199,12 @@ func TestMultiRuntimeDistinctWorkloadsOwnDistinctCores(t *testing.T) {
 
 			require.GreaterOrEqual(t, len(busyCores), 2,
 				"%s on %s: expected >= 2 cores with non-zero utilization, got %d. Exactly "+
-					"one busy core is the signature of the per-core data-loss defect. "+
+					"one busy core means another runtime's 0 is shadowing a real reading. "+
 					"Non-zero series: %v. %s",
 				metricName, node, len(busyCores), detail, fixtureRequirement)
 
-			// Deliberately no assertion on distinct POD count. Two runtimes need not be
-			// two pods -- one pod can hold both cores -- so requiring it
-			// encodes the terraform fixture's shape rather than the invariant.
+			// No assertion on distinct pod count: one pod can hold both cores, so two
+			// runtimes need not be two pods.
 			require.GreaterOrEqual(t, len(busyTags), 2,
 				"%s on %s: %d busy cores attributed to only %d runtime tag(s) %v — the "+
 					"runtime dimension collapsed. Non-zero series: %v",
@@ -222,8 +213,9 @@ func TestMultiRuntimeDistinctWorkloadsOwnDistinctCores(t *testing.T) {
 	}
 }
 
-// TestMultiRuntimeFixtureIsBothBurnWorkloads fails loudly if neuron-burn-peer is
-// removed, rather than letting the tests above become vacuous.
+// TestMultiRuntimeFixtureIsBothBurnWorkloads verifies that both burn workloads are
+// present on the multi-runtime node, so the other tests in this file exercise two
+// runtimes.
 func TestMultiRuntimeFixtureIsBothBurnWorkloads(t *testing.T) {
 	t.Parallel()
 	const metricName = "neuroncore_utilization_ratio"
@@ -259,9 +251,9 @@ func TestMultiRuntimeFixtureIsBothBurnWorkloads(t *testing.T) {
 	}
 }
 
-// TestMultiRuntimeCoreCrossProductPreserved is the structural detector: every core
-// is reported by every runtime, so series must equal cores x tags. Catches the
-// collapse even on an idle node, where values cannot distinguish it.
+// TestMultiRuntimeCoreCrossProductPreserved verifies structure: every runtime
+// reports every core, so the series count equals cores x runtime tags. This holds
+// regardless of load, including on an idle node.
 func TestMultiRuntimeCoreCrossProductPreserved(t *testing.T) {
 	t.Parallel()
 	for _, md := range neuronCoreLevelMetrics {
@@ -299,9 +291,10 @@ func TestMultiRuntimeCoreCrossProductPreserved(t *testing.T) {
 	}
 }
 
-// TestMultiRuntimeCoreIdentityIsUnique narrows TestNeuronNoDuplicateSeries to the
-// tuple that must be unique, so dropping one of these attributes cannot pass
-// because some unrelated label still differed.
+// TestMultiRuntimeCoreIdentityIsUnique verifies that (node, device, core, runtime
+// tag) identifies exactly one series. It is narrower than
+// TestNeuronNoDuplicateSeries, so an unrelated label cannot make two series look
+// distinct.
 func TestMultiRuntimeCoreIdentityIsUnique(t *testing.T) {
 	t.Parallel()
 	for _, md := range neuronCoreLevelMetrics {
@@ -330,8 +323,8 @@ func TestMultiRuntimeCoreIdentityIsUnique(t *testing.T) {
 	}
 }
 
-// TestMultiRuntimeOneRuntimeOwnsEachCore is the mirror image: one runtime holds a
-// core, so two non-zero readings for one core means shared core identity.
+// TestMultiRuntimeOneRuntimeOwnsEachCore verifies that at most one runtime reports a
+// non-zero value for each core, since one runtime holds a core.
 func TestMultiRuntimeOneRuntimeOwnsEachCore(t *testing.T) {
 	t.Parallel()
 	const metricName = "neuroncore_utilization_ratio"
@@ -364,9 +357,8 @@ func TestMultiRuntimeOneRuntimeOwnsEachCore(t *testing.T) {
 	}
 }
 
-// TestMultiRuntimeCoreToPodIsOneToOne is an invariant guard, not a regression
-// detector — core -> pod stayed 1:1 pre-fix. It is here because the tempting
-// version (tag -> pod is 1:1) fails on correct code; see the header.
+// TestMultiRuntimeCoreToPodIsOneToOne verifies that each core is attributed to
+// exactly one pod. Runtime tag -> pod is not 1:1; see the label semantics above.
 func TestMultiRuntimeCoreToPodIsOneToOne(t *testing.T) {
 	t.Parallel()
 	for _, md := range neuronCoreLevelMetrics {
@@ -403,9 +395,9 @@ func TestMultiRuntimeCoreToPodIsOneToOne(t *testing.T) {
 	}
 }
 
-// TestMultiRuntimeTagNotFlattened is a tripwire: the in-agent aggregation
-// alternatives fix the zeros but stamp "DEFAULT", losing per-runtime attribution.
-// Changing that trade-off should mean changing this test.
+// TestMultiRuntimeTagNotFlattened verifies that the runtime tag carries a real
+// runtime value rather than the aggregation sentinel, so per-runtime attribution
+// is preserved.
 func TestMultiRuntimeTagNotFlattened(t *testing.T) {
 	t.Parallel()
 	for _, metricName := range neuronMetricNamesList {
@@ -431,8 +423,8 @@ func TestMultiRuntimeTagNotFlattened(t *testing.T) {
 	}
 }
 
-// TestMultiRuntimeTagAbsentFromDatapoint catches the groupbyattrs key being
-// removed, which undoes the fix even while values still look right under light load.
+// TestMultiRuntimeTagAbsentFromDatapoint verifies that the runtime tag is a
+// non-empty resource attribute and not a datapoint attribute.
 func TestMultiRuntimeTagAbsentFromDatapoint(t *testing.T) {
 	t.Parallel()
 	for _, md := range neuronCoreLevelMetrics {
