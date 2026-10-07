@@ -336,6 +336,12 @@ resource "null_resource" "neuron_burn_core" {
                     elapsed = time.time() - start
                     iteration += 1
                     print(f"Iteration {iteration}: 1000 inferences in {elapsed:.2f}s")
+              env:
+              # The runtime tag defaults to the PID, which is 1 in every container.
+              - name: NEURON_PROCESS_TAG
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
               resources:
                 limits:
                   aws.amazon.com/neuroncore: "1"
@@ -433,6 +439,12 @@ resource "null_resource" "neuron_burn_peer" {
                     elapsed = time.time() - start
                     iteration += 1
                     print(f"Iteration {iteration}: 1000 inferences in {elapsed:.2f}s")
+              env:
+              # The runtime tag defaults to the PID, which is 1 in every container.
+              - name: NEURON_PROCESS_TAG
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
               resources:
                 limits:
                   aws.amazon.com/neuroncore: "1"

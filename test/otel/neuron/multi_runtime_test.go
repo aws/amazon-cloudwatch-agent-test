@@ -47,7 +47,8 @@ const (
 
 const fixtureRequirement = "the otel-neuron terraform fixture must have " +
 	"neuron-burn-core AND neuron-burn-peer Running and co-located on one " +
-	"inf2.xlarge node, each holding aws.amazon.com/neuroncore: \"1\""
+	"inf2.xlarge node, each holding aws.amazon.com/neuroncore: \"1\" and with a " +
+	"distinct NEURON_PROCESS_TAG"
 
 type coreIdentity struct {
 	node   string
