@@ -621,11 +621,13 @@ resource "null_resource" "wait_neuron_monitor" {
     command = <<-EOT
       # A runtime_tag only exists once the runtime is up, and the trace compile takes
       # ~a minute, so without this the tests race the fixture and see one runtime.
-      echo "Waiting for burn deployments to become Available..."
+      # Waits on the pods, not `rollout status`: a cold pull of the PyTorch-Neuron image
+      # can outlast the deployments' 300s progressDeadlineSeconds.
+      echo "Waiting for burn pods to become Ready..."
       for d in neuron-burn-core neuron-burn-peer; do
-        kubectl -n default rollout status deployment/$d --timeout=600s || {
-          echo "ERROR: deployment/$d did not become Available"
-          kubectl -n default describe deployment/$d || true
+        kubectl -n default wait --for=condition=Ready pod -l app=$d --timeout=900s || {
+          echo "ERROR: pods for deployment/$d did not become Ready"
+          kubectl -n default describe pod -l app=$d | tail -40 || true
           kubectl -n default get pods -l app=$d -o wide || true
           exit 1
         }
