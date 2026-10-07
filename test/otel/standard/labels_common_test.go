@@ -754,3 +754,44 @@ func TestRawLabelsNotBilledTwice(t *testing.T) {
 		}
 	}
 }
+
+// TestCadvisorIdLabelDropped asserts the cgroup path is gone from cAdvisor datapoints. It is
+// a datapoint attribute, not a resource one, so the attribute-limit denylist cannot remove it
+// and a transform at context: datapoint does the work instead.
+func TestCadvisorIdLabelDropped(t *testing.T) {
+	for _, metricName := range cadvisorMetricNamesList {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				_, present := r.Labels.Datapoint["id"]
+				require.False(t, present,
+					"%s still carries the cgroup path id at datapoint scope on node %s",
+					metricName, r.Labels.Resource["k8s.node.name"])
+			}
+		})
+	}
+}
+
+// TestCadvisorNameLabelRetained guards the deliberate decision to keep name. It is the only
+// remaining carrier of the container ID once id is dropped, so widening the removal to cover
+// both would take the container ID out of the payload entirely. Requires at least one
+// datapoint to still carry it rather than all of them, since node-scope cAdvisor series have
+// no container and therefore no name.
+func TestCadvisorNameLabelRetained(t *testing.T) {
+	for _, metricName := range cadvisorMetricNamesList {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				if _, present := r.Labels.Datapoint["name"]; present {
+					return
+				}
+			}
+			t.Fatalf("%s carries name on no datapoint; dropping it alongside id would remove "+
+				"the container ID from the payload entirely", metricName)
+		})
+	}
+}
