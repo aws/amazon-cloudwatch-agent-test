@@ -802,17 +802,17 @@ func TestKarpenterGroupingLabelsRetained(t *testing.T) {
 }
 
 // deniedCounterpartNodeAndPodLabels are the pod-side counterparts of node labels the
-// denylist already removed, plus two keys of the same families. All are resource-level.
+// denylist already removed, plus pod-template-generation from the same family. All are
+// resource-level.
 var deniedCounterpartNodeAndPodLabels = []string{
 	"k8s.pod.label.topology.kubernetes.io/region",
 	"k8s.pod.label.topology.kubernetes.io/zone",
 	"k8s.pod.label.helm.sh/chart",
 	"k8s.pod.label.release",
 	"k8s.pod.label.pod-template-generation",
-	"k8s.node.label.topology.k8s.aws/zone-id",
 }
 
-// TestPodLabelCounterpartsRemoved asserts none of the six counterpart keys reach resource
+// TestPodLabelCounterpartsRemoved asserts none of the five counterpart keys reach resource
 // scope. The node forms of four of them were already denied, so a datapoint carrying the
 // pod form is the duplicate this change removes.
 func TestPodLabelCounterpartsRemoved(t *testing.T) {
@@ -834,7 +834,7 @@ func TestPodLabelCounterpartsRemoved(t *testing.T) {
 }
 
 // TestPodLabelsStillEnriched guards against the denylist being widened to the
-// k8s.pod.label. prefix, which would strip every pod label rather than these six. It
+// k8s.pod.label. prefix, which would strip every pod label rather than these five. It
 // requires at least one pod label to survive somewhere in the result set, so a prefix
 // regression fails here instead of passing both this file's removal assertions.
 func TestPodLabelsStillEnriched(t *testing.T) {
