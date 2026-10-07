@@ -67,7 +67,9 @@ locals {
   service_account_name = "cloudwatch-agent"
   cwagent_role_name    = "cwa-aks-integ-role-${module.common.testing_id}"
 
-  # test_mode == "containerinsights" swaps the OTLP load-gen topology for the CI node+cluster topology.
+  # test_mode == "containerinsights" swaps the raw default:otel DaemonSet + OTLP load generator for a
+  # Helm chart install with OTel Container Insights, the way AKS customers deploy it. The chart owns the
+  # agent ServiceAccount (named cloudwatch-agent, matching the IAM trust above), RBAC and workloads.
   is_ci = var.test_mode == "containerinsights"
 
   # Must match serviceName in test/azure/aks/aks_test.go -- the test derives the expected log stream
@@ -131,7 +133,9 @@ resource "aws_iam_role_policy_attachment" "cwagent_server_policy" {
 # agent writes only -- and CloudWatchAgentServerPolicy alone covers them, OTLP traces included.
 
 #####################################################################
-# Kubernetes resources: deploy CWA DaemonSet from ECR image
+# Kubernetes resources. The namespace and ECR pull secret are shared by
+# both modes; the ServiceAccount, RBAC and DaemonSet below are OTLP-mode
+# only (in containerinsights mode the Helm chart creates them).
 #####################################################################
 resource "kubernetes_namespace" "cwagent" {
   metadata {
@@ -140,6 +144,7 @@ resource "kubernetes_namespace" "cwagent" {
 }
 
 resource "kubernetes_service_account" "cwagent" {
+  count = local.is_ci ? 0 : 1
   metadata {
     name      = local.service_account_name
     namespace = kubernetes_namespace.cwagent.metadata[0].name
@@ -147,6 +152,7 @@ resource "kubernetes_service_account" "cwagent" {
 }
 
 resource "kubernetes_cluster_role" "cwagent" {
+  count = local.is_ci ? 0 : 1
   metadata {
     name = "cwa-aks-integ-${module.common.testing_id}"
   }
@@ -166,38 +172,21 @@ resource "kubernetes_cluster_role" "cwagent" {
     resources  = ["jobs"]
     verbs      = ["list", "watch", "get"]
   }
-
-  # Container Insights only: kubelet-scrape RBAC so the AKS kubelet authorizer allows
-  # kubeletstats (/stats/summary) and cadvisor (/metrics/cadvisor), plus node /metrics.
-  dynamic "rule" {
-    for_each = local.is_ci ? [1] : []
-    content {
-      api_groups = [""]
-      resources  = ["nodes/proxy", "nodes/stats", "nodes/metrics"]
-      verbs      = ["get", "list", "watch"]
-    }
-  }
-  dynamic "rule" {
-    for_each = local.is_ci ? [1] : []
-    content {
-      non_resource_urls = ["/metrics"]
-      verbs             = ["get", "list", "watch"]
-    }
-  }
 }
 
 resource "kubernetes_cluster_role_binding" "cwagent" {
+  count = local.is_ci ? 0 : 1
   metadata {
     name = "cwa-aks-integ-${module.common.testing_id}"
   }
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.cwagent.metadata[0].name
+    name      = kubernetes_cluster_role.cwagent[0].metadata[0].name
   }
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.cwagent.metadata[0].name
+    name      = kubernetes_service_account.cwagent[0].metadata[0].name
     namespace = kubernetes_namespace.cwagent.metadata[0].name
   }
 }
@@ -233,6 +222,7 @@ resource "kubernetes_secret" "ecr_pull" {
 }
 
 resource "kubernetes_daemon_set_v1" "cwagent" {
+  count = local.is_ci ? 0 : 1
   metadata {
     name      = "cloudwatch-agent"
     namespace = kubernetes_namespace.cwagent.metadata[0].name
@@ -249,7 +239,7 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
       }
 
       spec {
-        service_account_name = kubernetes_service_account.cwagent.metadata[0].name
+        service_account_name = kubernetes_service_account.cwagent[0].metadata[0].name
         host_network         = true
         dns_policy           = "ClusterFirstWithHostNet"
 
@@ -288,14 +278,10 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
             name  = "RUN_IN_AKS"
             value = "True"
           }
-          # OTLP mode uses the built-in default:otel config. CI mode drops it so the agent
-          # translates the JSON mounted at /etc/cwagentconfig below.
-          dynamic "env" {
-            for_each = local.is_ci ? [] : [1]
-            content {
-              name  = "USE_DEFAULT_CONFIG"
-              value = "otel"
-            }
+          # Uses the agent's built-in default:otel config.
+          env {
+            name  = "USE_DEFAULT_CONFIG"
+            value = "otel"
           }
           env {
             name = "K8S_NODE_NAME"
@@ -324,32 +310,6 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
             mount_path = "/rootfs"
             read_only  = true
           }
-          dynamic "volume_mount" {
-            for_each = local.is_ci ? [1] : []
-            content {
-              name       = "cwagentconfig"
-              mount_path = "/etc/cwagentconfig"
-              read_only  = true
-            }
-          }
-          dynamic "volume_mount" {
-            for_each = local.is_ci ? [1] : []
-            content {
-              name       = "agent-client-cert"
-              mount_path = "/etc/amazon-cloudwatch-observability-agent-client-cert"
-              read_only  = true
-            }
-          }
-          # Container Insights only: host container logs for the filelog receiver
-          # (/var/log/containers/*.log -> /var/log/pods).
-          dynamic "volume_mount" {
-            for_each = local.is_ci ? [1] : []
-            content {
-              name       = "varlog"
-              mount_path = "/var/log"
-              read_only  = true
-            }
-          }
         }
 
         volume {
@@ -368,33 +328,6 @@ resource "kubernetes_daemon_set_v1" "cwagent" {
           name = "rootfs"
           host_path {
             path = "/"
-          }
-        }
-        dynamic "volume" {
-          for_each = local.is_ci ? [1] : []
-          content {
-            name = "cwagentconfig"
-            config_map {
-              name = kubernetes_config_map.ci_node[0].metadata[0].name
-            }
-          }
-        }
-        dynamic "volume" {
-          for_each = local.is_ci ? [1] : []
-          content {
-            name = "varlog"
-            host_path {
-              path = "/var/log"
-            }
-          }
-        }
-        dynamic "volume" {
-          for_each = local.is_ci ? [1] : []
-          content {
-            name = "agent-client-cert"
-            secret {
-              secret_name = kubernetes_secret.ci_scrape_ca[0].metadata[0].name
-            }
           }
         }
       }
@@ -468,12 +401,12 @@ resource "null_resource" "agent_diagnostics" {
   provisioner "local-exec" {
     command = <<-EOT
       kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' get pods -n amazon-cloudwatch -o wide || true
-      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch -l app=cloudwatch-agent --tail=200 --prefix || true
-      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch -l app=cloudwatch-agent-cluster-scraper --tail=200 --prefix || true
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch ds/cloudwatch-agent --tail=200 --prefix || true
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch deploy/cloudwatch-agent-cluster-scraper --tail=200 --prefix || true
     EOT
   }
 
-  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load]
+  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart]
 }
 
 #####################################################################
@@ -499,449 +432,82 @@ resource "null_resource" "integration_test" {
     }
   }
 
-  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, kubernetes_deployment_v1.cluster_scraper, null_resource.ci_extra_manifests, null_resource.agent_diagnostics]
+  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart, null_resource.ci_extra_manifests, null_resource.agent_diagnostics]
 }
 
 #####################################################################
-# Container Insights topology (test_mode == "containerinsights").
-# All resources below are count-gated so OTLP-mode applies are unchanged.
+# Container Insights topology (test_mode == "containerinsights"): the
+# amazon-cloudwatch-observability Helm chart with OTel Container Insights,
+# installed with the same values scripts/azure/setup.sh uses for AKS
+# customers, plus the agent image under test. The chart deploys the node
+# DaemonSet, the cluster-scraper Deployment, node-exporter and
+# kube-state-metrics, and renders their collector config itself.
 #####################################################################
+locals {
+  cwagent_image_domain     = split("/", local.cwagent_image_repo)[0]
+  cwagent_image_repository = join("/", slice(split("/", local.cwagent_image_repo), 1, length(split("/", local.cwagent_image_repo))))
+  helm_charts_dir          = "${path.module}/helm-charts"
+}
 
-# Agent JSON configs, cluster_name placeholder replaced with the real cluster name.
-resource "kubernetes_config_map" "ci_node" {
+resource "null_resource" "ci_helm_chart" {
   count = local.is_ci ? 1 : 0
-  metadata {
-    name      = "cwagentconfig"
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
-  data = {
-    "cwagentconfig.json" = replace(
-      file("${path.module}/../../../${var.test_dir}/resources/ci_node.json"),
-      "AKS_CLUSTER_NAME", azurerm_kubernetes_cluster.cwagent.name,
-    )
-  }
-}
 
-resource "kubernetes_config_map" "ci_cluster" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name      = "cwagentconfig-cluster-scraper"
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
+  triggers = {
+    kubeconfig = local_sensitive_file.kubeconfig.filename
+    namespace  = local.namespace
   }
-  data = {
-    "cwagentconfig.json" = replace(
-      file("${path.module}/../../../${var.test_dir}/resources/ci_cluster.json"),
-      "AKS_CLUSTER_NAME", azurerm_kubernetes_cluster.cwagent.name,
-    )
-  }
-}
 
-#####################################################################
-# Self-signed CA + server cert for the KSM / node-exporter TLS scrapes.
-# The agent trusts the CA (mounted at the two agent cert paths); KSM and
-# node-exporter serve the leaf via exporter-toolkit web-config.
-#####################################################################
-resource "tls_private_key" "ci_ca" {
-  count     = local.is_ci ? 1 : 0
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
-
-resource "tls_self_signed_cert" "ci_ca" {
-  count             = local.is_ci ? 1 : 0
-  private_key_pem   = tls_private_key.ci_ca[0].private_key_pem
-  is_ca_certificate = true
-  subject {
-    common_name = "cwa-aks-ci-ca"
-  }
-  validity_period_hours = 24
-  allowed_uses          = ["cert_signing", "crl_signing"]
-}
-
-resource "tls_private_key" "ci_server" {
-  count     = local.is_ci ? 1 : 0
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
-
-resource "tls_cert_request" "ci_server" {
-  count           = local.is_ci ? 1 : 0
-  private_key_pem = tls_private_key.ci_server[0].private_key_pem
-  subject {
-    common_name = "kube-state-metrics.${local.namespace}.svc"
-  }
-  dns_names = [
-    "kube-state-metrics",
-    "kube-state-metrics.${local.namespace}.svc",
-    "node-exporter-service",
-    "node-exporter-service.${local.namespace}.svc",
-  ]
-}
-
-resource "tls_locally_signed_cert" "ci_server" {
-  count                 = local.is_ci ? 1 : 0
-  cert_request_pem      = tls_cert_request.ci_server[0].cert_request_pem
-  ca_private_key_pem    = tls_private_key.ci_ca[0].private_key_pem
-  ca_cert_pem           = tls_self_signed_cert.ci_ca[0].cert_pem
-  validity_period_hours = 24
-  allowed_uses          = ["server_auth"]
-}
-
-# CA the agent trusts. Mounted at BOTH agent cert paths (node uses the
-# -client-cert path for node-exporter; cluster-scraper uses -cert for KSM).
-resource "kubernetes_secret" "ci_scrape_ca" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name      = "ci-scrape-ca"
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
-  data = {
-    "tls-ca.crt" = tls_self_signed_cert.ci_ca[0].cert_pem
-  }
-}
-
-# Server leaf + exporter-toolkit web-config shared by KSM and node-exporter.
-resource "kubernetes_secret" "ci_server_cert" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name      = "ci-server-cert"
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
-  data = {
-    "server.crt"      = tls_locally_signed_cert.ci_server[0].cert_pem
-    "server.key"      = tls_private_key.ci_server[0].private_key_pem
-    "web-config.yaml" = <<-EOT
-      tls_server_config:
-        cert_file: /tls/server.crt
-        key_file: /tls/server.key
+  # The chart's agent ServiceAccount has no image pull secret setting, and the image under test is in a
+  # private ECR, so attach the ECR pull secret to the ServiceAccount after install and restart the agent
+  # workloads the operator created so their pods pick it up.
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      rm -rf '${local.helm_charts_dir}'
+      git clone https://github.com/aws-observability/helm-charts.git '${local.helm_charts_dir}'
+      git -C '${local.helm_charts_dir}' checkout '${var.helm_charts_branch}'
+      helm --kubeconfig "$KC" upgrade --install amazon-cloudwatch-observability \
+        '${local.helm_charts_dir}/charts/amazon-cloudwatch-observability' \
+        --namespace '${local.namespace}' \
+        --set k8sMode=AKS \
+        --set roleArn='${aws_iam_role.cwagent.arn}' \
+        --set region='${var.region}' \
+        --set clusterName='${azurerm_kubernetes_cluster.cwagent.name}' \
+        --set containerInsights.enabled=false \
+        --set containerLogs.enabled=false \
+        --set otelContainerInsights.enabled=true \
+        --set otelContainerInsights.logs.enabled=true \
+        --set-string 'agents[0].name=cloudwatch-agent' \
+        --set-string 'agents[0].config=default:otel' \
+        --set-string 'agents[1].name=cloudwatch-agent-cluster-scraper' \
+        --set-string 'agents[1].mode=deployment' \
+        --set-string 'agents[1].config=default' \
+        --set-string agent.image.repositoryDomainMap.public='${local.cwagent_image_domain}' \
+        --set-string agent.image.repository='${local.cwagent_image_repository}' \
+        --set-string agent.image.tag='${var.cwagent_image_tag}'
+      kubectl --kubeconfig "$KC" -n '${local.namespace}' patch serviceaccount cloudwatch-agent \
+        -p '{"imagePullSecrets":[{"name":"${kubernetes_secret.ecr_pull.metadata[0].name}"}]}'
+      for w in ds/cloudwatch-agent deploy/cloudwatch-agent-cluster-scraper; do
+        for i in $(seq 1 60); do
+          kubectl --kubeconfig "$KC" -n '${local.namespace}' get "$w" >/dev/null 2>&1 && break
+          sleep 5
+        done
+        kubectl --kubeconfig "$KC" -n '${local.namespace}' rollout restart "$w"
+        kubectl --kubeconfig "$KC" -n '${local.namespace}' rollout status "$w" --timeout=10m
+      done
     EOT
+    interpreter = ["/bin/bash", "-c"]
   }
-}
 
-#####################################################################
-# kube-state-metrics (cluster metrics: kube_node_info / kube_pod_info)
-#####################################################################
-resource "kubernetes_cluster_role" "ksm" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name = "cwa-aks-ci-ksm-${module.common.testing_id}"
-  }
-  rule {
-    api_groups = [""]
-    resources  = ["pods", "nodes", "namespaces", "services", "endpoints"]
-    verbs      = ["list", "watch"]
-  }
-  rule {
-    api_groups = ["apps"]
-    resources  = ["deployments", "replicasets", "daemonsets", "statefulsets"]
-    verbs      = ["list", "watch"]
-  }
-  rule {
-    api_groups = ["batch"]
-    resources  = ["jobs", "cronjobs"]
-    verbs      = ["list", "watch"]
-  }
-}
-
-resource "kubernetes_cluster_role_binding" "ksm" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name = "cwa-aks-ci-ksm-${module.common.testing_id}"
-  }
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.ksm[0].metadata[0].name
-  }
-  subject {
-    kind      = "ServiceAccount"
-    name      = kubernetes_service_account.cwagent.metadata[0].name
-    namespace = local.namespace
-  }
-}
-
-resource "kubernetes_deployment_v1" "ksm" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name      = "kube-state-metrics"
-    namespace = local.namespace
-    labels    = { app = "kube-state-metrics" }
-  }
-  spec {
-    replicas = 1
-    selector {
-      match_labels = { app = "kube-state-metrics" }
-    }
-    template {
-      metadata {
-        labels = { app = "kube-state-metrics" }
-      }
-      spec {
-        service_account_name = kubernetes_service_account.cwagent.metadata[0].name
-        image_pull_secrets {
-          name = kubernetes_secret.ecr_pull.metadata[0].name
-        }
-        container {
-          name  = "kube-state-metrics"
-          image = "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.13.0"
-          args = [
-            "--port=8443",
-            "--tls-config=/web/web-config.yaml",
-          ]
-          port {
-            name           = "https"
-            container_port = 8443
-          }
-          volume_mount {
-            name       = "tls"
-            mount_path = "/tls"
-            read_only  = true
-          }
-          volume_mount {
-            name       = "web"
-            mount_path = "/web"
-            read_only  = true
-          }
-        }
-        volume {
-          name = "tls"
-          secret {
-            secret_name = kubernetes_secret.ci_server_cert[0].metadata[0].name
-          }
-        }
-        volume {
-          name = "web"
-          secret {
-            secret_name = kubernetes_secret.ci_server_cert[0].metadata[0].name
-            items {
-              key  = "web-config.yaml"
-              path = "web-config.yaml"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-resource "kubernetes_service" "ksm" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name      = "kube-state-metrics"
-    namespace = local.namespace
-  }
-  spec {
-    selector = { app = "kube-state-metrics" }
-    port {
-      name        = "https"
-      port        = 8443
-      target_port = 8443
-    }
-  }
-}
-
-#####################################################################
-# node-exporter (node metrics: node_cpu_seconds_total, node_memory_*)
-#####################################################################
-resource "kubernetes_daemon_set_v1" "node_exporter" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name      = "node-exporter"
-    namespace = local.namespace
-    labels    = { app = "node-exporter" }
-  }
-  spec {
-    selector {
-      match_labels = { app = "node-exporter" }
-    }
-    template {
-      metadata {
-        labels = { app = "node-exporter" }
-      }
-      spec {
-        host_network = true
-        host_pid     = true
-        image_pull_secrets {
-          name = kubernetes_secret.ecr_pull.metadata[0].name
-        }
-        container {
-          name  = "node-exporter"
-          image = "quay.io/prometheus/node-exporter:v1.8.2"
-          args = [
-            "--web.listen-address=:9487",
-            "--web.config.file=/web/web-config.yaml",
-            "--path.rootfs=/host/root",
-          ]
-          port {
-            name           = "https"
-            container_port = 9487
-          }
-          volume_mount {
-            name       = "tls"
-            mount_path = "/tls"
-            read_only  = true
-          }
-          volume_mount {
-            name       = "web"
-            mount_path = "/web"
-            read_only  = true
-          }
-          volume_mount {
-            name              = "root"
-            mount_path        = "/host/root"
-            read_only         = true
-            mount_propagation = "HostToContainer"
-          }
-        }
-        volume {
-          name = "tls"
-          secret {
-            secret_name = kubernetes_secret.ci_server_cert[0].metadata[0].name
-          }
-        }
-        volume {
-          name = "web"
-          secret {
-            secret_name = kubernetes_secret.ci_server_cert[0].metadata[0].name
-            items {
-              key  = "web-config.yaml"
-              path = "web-config.yaml"
-            }
-          }
-        }
-        volume {
-          name = "root"
-          host_path {
-            path = "/"
-          }
-        }
-      }
-    }
-  }
-}
-
-resource "kubernetes_service" "node_exporter" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name      = "node-exporter-service"
-    namespace = local.namespace
-  }
-  spec {
-    selector = { app = "node-exporter" }
-    port {
-      name        = "https"
-      port        = 9487
-      target_port = 9487
-    }
-  }
-}
-
-#####################################################################
-# Cluster-scraper agent Deployment: translates ci_cluster.json (apiserver,
-# KSM, keda/karpenter). Mounts the CA at the KSM scrape path.
-#####################################################################
-resource "kubernetes_deployment_v1" "cluster_scraper" {
-  count = local.is_ci ? 1 : 0
-  metadata {
-    name      = "cloudwatch-agent-cluster-scraper"
-    namespace = local.namespace
-    labels    = { app = "cloudwatch-agent-cluster-scraper" }
-  }
-  spec {
-    replicas = 1
-    selector {
-      match_labels = { app = "cloudwatch-agent-cluster-scraper" }
-    }
-    template {
-      metadata {
-        labels = { app = "cloudwatch-agent-cluster-scraper" }
-      }
-      spec {
-        service_account_name = kubernetes_service_account.cwagent.metadata[0].name
-        image_pull_secrets {
-          name = kubernetes_secret.ecr_pull.metadata[0].name
-        }
-        container {
-          name              = "cloudwatch-agent"
-          image             = "${local.cwagent_image_repo}:${var.cwagent_image_tag}"
-          image_pull_policy = "Always"
-
-          env {
-            name  = "AWS_REGION"
-            value = var.region
-          }
-          env {
-            name  = "AWS_WEB_IDENTITY_TOKEN_FILE"
-            value = "/var/run/secrets/aws/token"
-          }
-          env {
-            name  = "AWS_ROLE_ARN"
-            value = aws_iam_role.cwagent.arn
-          }
-          env {
-            name  = "RUN_IN_CONTAINER"
-            value = "True"
-          }
-          env {
-            name  = "RUN_IN_AKS"
-            value = "True"
-          }
-          env {
-            name = "K8S_NODE_NAME"
-            value_from {
-              field_ref {
-                field_path = "spec.nodeName"
-              }
-            }
-          }
-
-          volume_mount {
-            name       = "aws-token"
-            mount_path = "/var/run/secrets/aws"
-            read_only  = true
-          }
-          volume_mount {
-            name       = "cwagentconfig"
-            mount_path = "/etc/cwagentconfig"
-            read_only  = true
-          }
-          volume_mount {
-            name       = "agent-cert"
-            mount_path = "/etc/amazon-cloudwatch-observability-agent-cert"
-            read_only  = true
-          }
-        }
-
-        volume {
-          name = "aws-token"
-          projected {
-            sources {
-              service_account_token {
-                audience           = "sts.amazonaws.com"
-                expiration_seconds = 86400
-                path               = "token"
-              }
-            }
-          }
-        }
-        volume {
-          name = "cwagentconfig"
-          config_map {
-            name = kubernetes_config_map.ci_cluster[0].metadata[0].name
-          }
-        }
-        volume {
-          name = "agent-cert"
-          secret {
-            secret_name = kubernetes_secret.ci_scrape_ca[0].metadata[0].name
-          }
-        }
-      }
-    }
+  # Uninstall while the operator still runs, so it can clear its CR finalizers before the namespace is deleted.
+  provisioner "local-exec" {
+    when    = destroy
+    command = "helm --kubeconfig '${self.triggers.kubeconfig}' uninstall amazon-cloudwatch-observability --namespace '${self.triggers.namespace}' --wait || true"
   }
 
   depends_on = [
-    kubernetes_cluster_role_binding.cwagent,
+    kubernetes_secret.ecr_pull,
     aws_iam_role_policy_attachment.cwagent_server_policy,
   ]
 }
