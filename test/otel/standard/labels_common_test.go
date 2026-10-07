@@ -838,7 +838,9 @@ func TestPodLabelCounterpartsRemoved(t *testing.T) {
 // requires at least one pod label to survive somewhere in the result set, so a prefix
 // regression fails here instead of passing both this file's removal assertions.
 func TestPodLabelsStillEnriched(t *testing.T) {
-	for _, metricName := range nodeLabelEnrichedNames() {
+	// Pod-scoped names only: node-scoped metrics have no pod, so they never carry
+	// k8s.pod.label.* at all — see TestNodeExporterNoPodLabels.
+	for _, metricName := range podMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
 			results, err := queryCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
