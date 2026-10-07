@@ -435,7 +435,8 @@ resource "kubernetes_job_v1" "otlp_load" {
           name    = "load-gen"
           image   = "curlimages/curl:8.8.0"
           command = ["/bin/sh", "-c"]
-          args = [templatefile("${path.module}/otlp_load_generator.sh", {
+          args = [templatefile("${path.module}/../../otlp_load_generator.sh", {
+            prefix           = "aks"
             service_name     = local.load_gen_service_name
             instance_id      = azurerm_kubernetes_cluster.cwagent.name
             endpoint         = "http://127.0.0.1:4318"

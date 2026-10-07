@@ -16,6 +16,11 @@ const (
 	// AKS is an Azure Kubernetes Service cluster authenticating to AWS via the projected
 	// service-account web-identity credential chain.
 	AKS ComputeType = "AKS"
+	// GCE is a non-AWS host authenticating to AWS via the GCP web-identity credential chain.
+	GCE ComputeType = "GCE"
+	// GKE is a Google Kubernetes Engine cluster authenticating to AWS via the projected
+	// service-account web-identity credential chain.
+	GKE ComputeType = "GKE"
 )
 
 var (
@@ -25,6 +30,8 @@ var (
 		"EKS":     EKS,
 		"AZUREVM": AzureVM,
 		"AKS":     AKS,
+		"GCE":     GCE,
+		"GKE":     GKE,
 	}
 )
 
