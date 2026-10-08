@@ -535,6 +535,16 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			// Runs ./test/otel/solutions/kserve and knative after vllm, on the same cluster.
+			testDir:      "./test/otel/solutions/vllm",
+			terraformDir: "terraform/eks/daemon/otel-llm-serving",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "m5.2xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+			wip:          true,
+		},
+		{
 			testDir:      "./test/otel/performance",
 			terraformDir: "terraform/eks/daemon/otel-performance",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
