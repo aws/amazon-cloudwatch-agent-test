@@ -13,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
 
 // ---------------------------------------------------------------------------
@@ -669,6 +671,194 @@ func TestScrapeMetadataFiltered(t *testing.T) {
 					t.Errorf("%s should be filtered from %s pipeline but was present", metricName, pipeline)
 				}
 			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Karpenter node labels. The denylist names exact keys rather than the
+// karpenter.k8s.aws/ and karpenter.sh/ prefixes, because eight keys in those
+// domains are deliberately retained. TestKarpenterInstanceLabelsRemoved covers
+// the removal, TestKarpenterGroupingLabelsRetained covers the retention — a
+// regression that switched to prefixes would pass the first and fail the second.
+// ---------------------------------------------------------------------------
+
+// deniedKarpenterNodeLabels mirrors the Karpenter entries in
+// awsattributelimit/cw_k8s_ci_v0.unconditional_removal_keys. All 22
+// karpenter.k8s.aws/instance-* keys restate host.type; the three karpenter.sh/
+// keys are reconciliation state.
+var deniedKarpenterNodeLabels = []string{
+	"k8s.node.label.karpenter.k8s.aws/instance-accelerator-count",
+	"k8s.node.label.karpenter.k8s.aws/instance-accelerator-manufacturer",
+	"k8s.node.label.karpenter.k8s.aws/instance-accelerator-name",
+	"k8s.node.label.karpenter.k8s.aws/instance-capability-flex",
+	"k8s.node.label.karpenter.k8s.aws/instance-category",
+	"k8s.node.label.karpenter.k8s.aws/instance-cpu",
+	"k8s.node.label.karpenter.k8s.aws/instance-cpu-manufacturer",
+	"k8s.node.label.karpenter.k8s.aws/instance-cpu-sustained-clock-speed-mhz",
+	"k8s.node.label.karpenter.k8s.aws/instance-ebs-bandwidth",
+	"k8s.node.label.karpenter.k8s.aws/instance-encryption-in-transit-supported",
+	"k8s.node.label.karpenter.k8s.aws/instance-family",
+	"k8s.node.label.karpenter.k8s.aws/instance-generation",
+	"k8s.node.label.karpenter.k8s.aws/instance-gpu-count",
+	"k8s.node.label.karpenter.k8s.aws/instance-gpu-manufacturer",
+	"k8s.node.label.karpenter.k8s.aws/instance-gpu-memory",
+	"k8s.node.label.karpenter.k8s.aws/instance-gpu-name",
+	"k8s.node.label.karpenter.k8s.aws/instance-hypervisor",
+	"k8s.node.label.karpenter.k8s.aws/instance-local-nvme",
+	"k8s.node.label.karpenter.k8s.aws/instance-memory",
+	"k8s.node.label.karpenter.k8s.aws/instance-network-bandwidth",
+	"k8s.node.label.karpenter.k8s.aws/instance-size",
+	"k8s.node.label.karpenter.k8s.aws/instance-tenancy",
+	"k8s.node.label.karpenter.sh/do-not-sync-taints",
+	"k8s.node.label.karpenter.sh/initialized",
+	"k8s.node.label.karpenter.sh/registered",
+}
+
+// retainedKarpenterNodeLabels are set by Karpenter on every node it manages and
+// must survive. capacity-reservation-* and placement-group-* are retained too,
+// but Karpenter only sets those on nodes launched into a capacity reservation or
+// a placement group, so they are not asserted here.
+var retainedKarpenterNodeLabels = []string{
+	"k8s.node.label.karpenter.sh/nodepool",
+	"k8s.node.label.karpenter.sh/capacity-type",
+	"k8s.node.label.karpenter.k8s.aws/ec2nodeclass",
+}
+
+// karpenterNodeNames returns the nodes in a result set that carry any
+// karpenter.* node label, i.e. the nodes Karpenter provisioned.
+//
+// This suite targets a cluster that runs Karpenter, so the retention test
+// asserts rather than skips when it finds none: a silent skip is how a
+// regression that stripped every karpenter.* attribute would hide, and a loud
+// failure on a cluster without Karpenter is the safer of the two mistakes.
+func karpenterNodeNames(results []otelmetrics.MetricResult) []string {
+	var nodes []string
+	seen := map[string]bool{}
+	for _, r := range results {
+		for k := range r.Labels.Resource {
+			if strings.HasPrefix(k, "k8s.node.label.karpenter.") {
+				n := r.Labels.Resource["k8s.node.name"]
+				if !seen[n] {
+					seen[n] = true
+					nodes = append(nodes, n)
+				}
+				break
+			}
+		}
+	}
+	return nodes
+}
+
+func TestKarpenterInstanceLabelsRemoved(t *testing.T) {
+	for _, metricName := range nodeLabelEnrichedNames() {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				for _, key := range deniedKarpenterNodeLabels {
+					_, present := r.Labels.Resource[key]
+					require.False(t, present,
+						"%s still carries denied Karpenter label @resource.%s on node %s",
+						metricName, key, r.Labels.Resource["k8s.node.name"])
+				}
+			}
+		})
+	}
+}
+
+func TestKarpenterGroupingLabelsRetained(t *testing.T) {
+	for _, metricName := range nodeLabelEnrichedNames() {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+
+			require.NotEmpty(t, karpenterNodeNames(results),
+				"%s has no karpenter.* node label on any node. Either the cluster does not run "+
+					"Karpenter, or every karpenter.* attribute was stripped — which is what happens "+
+					"if the denylist uses the karpenter.k8s.aws/ and karpenter.sh/ prefixes instead "+
+					"of exact keys", metricName)
+
+			// Only Karpenter-managed nodes carry these. A cluster can mix managed
+			// nodes with a static node group, so require at least one node with
+			// each key rather than every node.
+			for _, key := range retainedKarpenterNodeLabels {
+				found := false
+				for _, r := range results {
+					if _, present := r.Labels.Resource[key]; present {
+						found = true
+						break
+					}
+				}
+				require.True(t, found,
+					"%s has no @resource.%s on any node — a retained Karpenter grouping label was dropped, "+
+						"which happens if the denylist uses the karpenter.k8s.aws/ or karpenter.sh/ prefix "+
+						"instead of exact keys", metricName, key)
+			}
+		})
+	}
+}
+
+// deniedCounterpartNodeAndPodLabels are the pod-side counterparts of node labels the
+// denylist already removed, plus pod-template-generation from the same family. All are
+// resource-level.
+var deniedCounterpartNodeAndPodLabels = []string{
+	"k8s.pod.label.topology.kubernetes.io/region",
+	"k8s.pod.label.topology.kubernetes.io/zone",
+	"k8s.pod.label.helm.sh/chart",
+	"k8s.pod.label.release",
+	"k8s.pod.label.pod-template-generation",
+}
+
+// TestPodLabelCounterpartsRemoved asserts none of the five counterpart keys reach resource
+// scope. The node forms of four of them were already denied, so a datapoint carrying the
+// pod form is the duplicate this change removes.
+func TestPodLabelCounterpartsRemoved(t *testing.T) {
+	for _, metricName := range nodeLabelEnrichedNames() {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			for _, r := range results {
+				for _, key := range deniedCounterpartNodeAndPodLabels {
+					_, present := r.Labels.Resource[key]
+					require.False(t, present,
+						"%s still carries denied label @resource.%s on node %s",
+						metricName, key, r.Labels.Resource["k8s.node.name"])
+				}
+			}
+		})
+	}
+}
+
+// TestPodLabelsStillEnriched guards against the denylist being widened to the
+// k8s.pod.label. prefix, which would strip every pod label rather than these five. It
+// requires at least one pod label to survive somewhere in the result set, so a prefix
+// regression fails here instead of passing both this file's removal assertions.
+func TestPodLabelsStillEnriched(t *testing.T) {
+	// Pod-scoped names only: node-scoped metrics have no pod, so they never carry
+	// k8s.pod.label.* at all — see TestNodeExporterNoPodLabels.
+	for _, metricName := range podMetricNames() {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+
+			denied := map[string]bool{}
+			for _, k := range deniedCounterpartNodeAndPodLabels {
+				denied[k] = true
+			}
+			for _, r := range results {
+				for k := range r.Labels.Resource {
+					if strings.HasPrefix(k, "k8s.pod.label.") && !denied[k] {
+						return // a pod label other than the denied ones survived
+					}
+				}
+			}
+			t.Fatalf("%s carries no k8s.pod.label.* attribute other than the denied keys; "+
+				"the denylist may have been widened to the k8s.pod.label. prefix", metricName)
 		})
 	}
 }
