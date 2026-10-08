@@ -187,6 +187,50 @@ func TestCadvisorNoPodSandboxMetrics(t *testing.T) {
 	}
 }
 
+// TestCadvisorNoPodScopeRollup asserts the pod cgroup slice and pause/sandbox
+// duplicates are gone. Both arrive with no `container` attribute at all.
+func TestCadvisorNoPodScopeRollup(t *testing.T) {
+	for _, md := range cadvisorMetrics {
+		if strings.Contains(md.Name, "network") {
+			continue
+		}
+		t.Run(md.Name, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), md.Name)
+			require.NoError(t, err, "querying %s", md.Name)
+			require.NotEmpty(t, results, "%s not available", md.Name)
+			for _, r := range results {
+				require.NotEmpty(t, r.Labels.Datapoint["container"],
+					"%s has a rollup or sandbox series (no datapoint 'container') on pod %q",
+					md.Name, r.Labels.Datapoint["pod"])
+				require.NotEmpty(t, r.Labels.Resource["k8s.container.name"],
+					"%s has a series with no k8s.container.name on pod %q",
+					md.Name, r.Labels.Resource["k8s.pod.name"])
+			}
+		})
+	}
+}
+
+// TestCadvisorNetworkKeepsPodScope guards the container_network_* exemption: the
+// sandbox owns the pod netns, so those series are the only ones that exist.
+func TestCadvisorNetworkKeepsPodScope(t *testing.T) {
+	for _, md := range cadvisorMetrics {
+		if !strings.Contains(md.Name, "network") {
+			continue
+		}
+		t.Run(md.Name, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), md.Name)
+			require.NoError(t, err, "querying %s", md.Name)
+			require.NotEmpty(t, results,
+				"%s not available — the container_network_* exemption in filter/cw_k8s_ci_v0_cadvisor_rollup may have been narrowed",
+				md.Name)
+			for _, r := range results {
+				require.NotEmpty(t, r.Labels.Resource["k8s.pod.name"],
+					"%s missing k8s.pod.name", md.Name)
+			}
+		})
+	}
+}
+
 func TestCadvisorNodeGroupCoverage(t *testing.T) {
 	for _, ng := range clusterNodeGroups {
 		t.Run(ng.Description+"/"+ng.InstanceType, func(t *testing.T) {
