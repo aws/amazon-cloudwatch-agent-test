@@ -20,6 +20,9 @@ const (
 	SourceKSMNodeScoped
 	SourceKarpenter
 	SourceKEDA
+	SourceVLLM
+	SourceKServe
+	SourceKnative
 )
 
 // SourceMapping pairs a MetricSource with its metric definitions.
