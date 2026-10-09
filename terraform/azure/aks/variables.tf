@@ -6,28 +6,16 @@ variable "region" {
   default = "us-east-2"
 }
 
+# Selects the suite deployed through the amazon-cloudwatch-observability chart:
+#   "./test/azure/aks"                   -> default:otel agent + OTLP load generator
+#   "./test/azure/aks/containerinsights" -> OTEL Container Insights node agent + cluster-scraper
 variable "test_dir" {
   type    = string
   default = "./test/azure/aks"
-}
-
-# Selects which suite this apply deploys:
-#   "otlp"              -> default:otel DaemonSet + OTLP load generator (existing behavior)
-#   "containerinsights" -> Helm chart install with OTel Container Insights (node DaemonSet + cluster-scraper)
-# Defaults to otlp so existing OTLP runs are unchanged.
-variable "test_mode" {
-  type    = string
-  default = "otlp"
   validation {
-    condition     = contains(["otlp", "containerinsights"], var.test_mode)
-    error_message = "test_mode must be \"otlp\" or \"containerinsights\"."
+    condition     = contains(["./test/azure/aks", "./test/azure/aks/containerinsights"], var.test_dir)
+    error_message = "test_dir must be \"./test/azure/aks\" or \"./test/azure/aks/containerinsights\"."
   }
-}
-
-# helm-charts branch installed in containerinsights mode.
-variable "helm_charts_branch" {
-  type    = string
-  default = "main"
 }
 
 variable "cwa_github_sha" {
@@ -89,4 +77,15 @@ variable "ecr_region" {
 variable "cwagent_image_tag" {
   type        = string
   description = "Image tag (build_id / commit SHA)."
+}
+
+variable "helm_chart_branch" {
+  type    = string
+  default = "main"
+}
+
+variable "helm_set_values" {
+  type        = map(string)
+  description = "Additional chart values applied after the suite's own values."
+  default     = {}
 }

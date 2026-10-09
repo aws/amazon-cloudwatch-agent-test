@@ -546,6 +546,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
 	},
+	"aks": {
+		{testDir: "./test/azure/aks", terraformDir: "terraform/azure/aks"},
+		{testDir: "./test/azure/aks/containerinsights", terraformDir: "terraform/azure/aks"},
+	},
 }
 
 var testTypeToTestConfigE2E = map[string][]testConfig{
