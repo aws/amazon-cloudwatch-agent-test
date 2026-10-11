@@ -93,7 +93,7 @@
             >
                 <ServiceDependency Id="Tcpip"/>
                 <ServiceDependency Id="Dhcp"/>
-                <ServiceDependency Id="Dnscache"/>
+                <ServiceDependency Id="nsi"/>
                 <ServiceConfig 
                 FirstFailureActionType="restart" 
                 SecondFailureActionType="restart" 
