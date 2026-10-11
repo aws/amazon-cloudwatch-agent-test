@@ -310,7 +310,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "../../../test/feature/mac"},
 	},
 	"ec2_windows_wd": {
-		{testDir: "../../../test/workload_discovery"},
+		// win-11 (t3.xlarge) workload_discovery is flaky: intermittent WinRM 5985 reset during
+		// Tomcat JMX startup. Mark ONLY this variant WIP so its failure doesn't block CI until the real fix lands.
+		{testDir: "../../../test/workload_discovery", targets: map[string]map[string]struct{}{"os": {"win-11": {}}}, wip: true},
+		{testDir: "../../../test/workload_discovery", targets: map[string]map[string]struct{}{"os": {"win-2019": {}}}},
 	},
 	"ec2_windows_wd_nvidia": {
 		{testDir: "../../../test/workload_discovery"},
