@@ -1,0 +1,85 @@
+# Annotation-routing E2E fixture: two exporters, each with its own PodMonitor.
+# routed-exporter's monitor is annotated cloudwatch.aws/scraper: cluster-scraper
+# (owned by the cluster-scraper agent); default-exporter's monitor is bare (owned
+# by the per-node agent). TestAnnotationRoutingPartition proves each monitor's job
+# appears under exactly one Target Allocator's /jobs. Distinct monitor names make
+# the jobs greppable at each TA.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scraper-routing-e2e
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: routed-exporter
+  namespace: scraper-routing-e2e
+  labels: { app: routed-exporter }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: routed-exporter }
+  template:
+    metadata:
+      labels: { app: routed-exporter }
+    spec:
+      containers:
+        - name: app
+          image: quay.io/brancz/prometheus-example-app:v0.5.0
+          ports:
+            - { name: metrics, containerPort: 8080 }
+---
+# Routed to the central cluster-scraper via the annotation.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: routed-exporter-cluster-scraped
+  namespace: scraper-routing-e2e
+  annotations:
+    cloudwatch.aws/scraper: cluster-scraper
+spec:
+  namespaceSelector:
+    matchNames: [scraper-routing-e2e]
+  selector:
+    matchLabels: { app: routed-exporter }
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: default-exporter
+  namespace: scraper-routing-e2e
+  labels: { app: default-exporter }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: default-exporter }
+  template:
+    metadata:
+      labels: { app: default-exporter }
+    spec:
+      containers:
+        - name: app
+          image: quay.io/brancz/prometheus-example-app:v0.5.0
+          ports:
+            - { name: metrics, containerPort: 8080 }
+---
+# No routing annotation: owned by the per-node agent.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: default-exporter-node-scraped
+  namespace: scraper-routing-e2e
+spec:
+  namespaceSelector:
+    matchNames: [scraper-routing-e2e]
+  selector:
+    matchLabels: { app: default-exporter }
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
