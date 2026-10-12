@@ -8,4 +8,6 @@ type TestStatus string
 const (
 	SUCCESSFUL TestStatus = "Successful"
 	FAILED     TestStatus = "Failed"
+	// SKIPPED marks a check that had nothing to observe. It does not fail the group.
+	SKIPPED TestStatus = "Skipped"
 )
