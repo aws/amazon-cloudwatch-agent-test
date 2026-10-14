@@ -13,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
 
 // ---------------------------------------------------------------------------
@@ -670,5 +672,69 @@ func TestScrapeMetadataFiltered(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestDeprecatedSemconvAttributesRemoved — the deprecated semconv attributes go,
+// their current-spelling twins stay. url.scheme is asserted present on purpose:
+// karpenter/keda used to delete it and keep http.scheme, which was backwards.
+// The checks live in util/otelmetrics so the gpu, neuron, ebs_csi, lis_csi,
+// karpenter and keda suites assert the same rule on their own pipelines.
+// ---------------------------------------------------------------------------
+
+func TestDeprecatedSemconvAttributesRemoved(t *testing.T) {
+	names := prometheusScrapedNames()
+	names = append(names, metricNames(allKSMMetricDefs)...)
+
+	for _, metricName := range names {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.NotEmpty(t, results, "%s not available", metricName)
+			require.NoError(t, otelmetrics.CheckDeprecatedSemconvRemoved(metricName, results))
+			require.NoError(t, otelmetrics.CheckCurrentSemconvPresent(metricName, results))
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRawLabelsOnlyAtDatapointScope — the raw Prometheus labels must exist only at
+// datapoint scope, not at resource scope too. The datapoint side is covered by
+// TestCadvisorHasRawPromotedKeys and the TestKSM_*_HasRaw*Label family.
+// ---------------------------------------------------------------------------
+
+func TestRawLabelsOnlyAtDatapointScope(t *testing.T) {
+	cases := []struct {
+		pipeline string
+		names    []string
+		rawKeys  []string
+	}{
+		{
+			pipeline: "cadvisor",
+			names:    cadvisorMetricNamesList,
+			rawKeys:  []string{"pod", "namespace", "container"},
+		},
+		{
+			pipeline: "kube-state-metrics",
+			names:    metricNames(allKSMMetricDefs),
+			rawKeys: []string{
+				"pod", "namespace", "node", "uid", "container",
+				"owner_name", "owner_kind", "deployment", "daemonset",
+				"statefulset", "replicaset", "job_name", "cronjob",
+			},
+		},
+	}
+
+	for _, c := range cases {
+		c := c
+		for _, metricName := range c.names {
+			t.Run(c.pipeline+"/"+metricName, func(t *testing.T) {
+				results, err := queryCache.Get(context.Background(), metricName)
+				require.NoError(t, err, "querying %s", metricName)
+				require.NotEmpty(t, results, "%s not available", metricName)
+				require.NoError(t, otelmetrics.CheckRawLabelsNotAtResourceScope(metricName, results, c.rawKeys))
+			})
+		}
 	}
 }
