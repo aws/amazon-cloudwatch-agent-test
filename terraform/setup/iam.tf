@@ -43,6 +43,7 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
     actions = [
       "cloudwatch:GetMetricData",
       "cloudwatch:PutMetricData",
+      "cloudwatch:PutOtelProfiles",
       "cloudwatch:ListMetrics",
       "cloudwatch:GetMetricStatistics",
       "ec2:DescribeVolumes",
