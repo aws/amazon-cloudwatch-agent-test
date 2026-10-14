@@ -41,9 +41,6 @@ const (
 	genericPodPattern = "generic-exporter-.*"
 )
 
-// Instance types in the cluster.
-var clusterHostTypes = []string{"m5.2xlarge"}
-
 func TestMain(m *testing.M) {
 	environment.RegisterEnvironmentMetaDataFlags()
 	flag.Parse()
@@ -96,18 +93,8 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	hostMappings := []otelmetrics.SourceHostMapping{
-		{Source: otelmetrics.SourceVLLM, HostTypes: nil},
-	}
-
-	registry := otelmetrics.NewSourceRegistry(clusterHostTypes, hostMappings,
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceVLLM, Metrics: vllmMetrics},
-	)
-
-	queryCache = otelmetrics.NewQueryCache(client, cfg.ClusterName,
-		otelmetrics.WithHostTypes(clusterHostTypes),
-		otelmetrics.WithSourceRegistry(registry),
-	)
+	// The suite only uses GetWithFilter, so no source registry or host types.
+	queryCache = otelmetrics.NewQueryCache(client, cfg.ClusterName)
 
 	os.Exit(m.Run())
 }

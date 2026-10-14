@@ -9,6 +9,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -90,7 +91,8 @@ func TestKServeAttribution(t *testing.T) {
 				res := r.Labels.Resource
 				require.Equal(t, cfg.ClusterName, res["k8s.cluster.name"], "k8s.cluster.name")
 				require.Equal(t, "kserve", res["k8s.namespace.name"], "k8s.namespace.name")
-				require.Equal(t, "kserve-controller-manager", res["k8s.deployment.name"], "k8s.deployment.name")
+				require.Equal(t, "kserve-controller-manager", res["k8s.workload.name"], "k8s.workload.name")
+				require.Equal(t, "Deployment", res["k8s.workload.type"], "k8s.workload.type")
 				require.True(t, strings.HasPrefix(res["k8s.pod.name"], "kserve-controller-manager-"),
 					"k8s.pod.name %q", res["k8s.pod.name"])
 				otelmetrics.RequireCloudIdentity(t, cfg, name, res)
@@ -105,12 +107,13 @@ func TestKServeAttribution(t *testing.T) {
 
 // ---------------------------------------------------------------------------
 // TestKServeClientGoFamiliesDropped — workqueue_* and rest_client_* belong to
-// the apiserver pipeline; the KServe pipeline must not publish them.
+// the apiserver pipeline, and runtime families are dropped; the KServe pipeline
+// must not publish them. Lists what it actually published.
 // ---------------------------------------------------------------------------
 
 func TestKServeClientGoFamiliesDropped(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"workqueue_depth", "workqueue_adds_total", "rest_client_requests_total", "go_goroutines", "process_cpu_seconds_total"} {
-		require.Empty(t, otelmetrics.Series(t, client, cfg.ClusterName, name, otelmetrics.PipelineMatcher(pipelineKServe)), "%s should be dropped by the %s pipeline", name, pipelineKServe)
-	}
+	names := otelmetrics.PublishedMetricNames(t, queryCache, map[string]string{otelmetrics.PipelineFilter: pipelineKServe}, 15*time.Minute)
+	require.NotEmpty(t, names, "nothing published by the %s pipeline", pipelineKServe)
+	otelmetrics.RequireNoPrefix(t, names, "workqueue_", "rest_client_", "go_", "process_")
 }

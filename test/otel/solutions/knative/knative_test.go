@@ -9,6 +9,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -60,11 +61,12 @@ func TestKnativeControlPlaneAttribution(t *testing.T) {
 				res := r.Labels.Resource
 				require.Equal(t, cfg.ClusterName, res["k8s.cluster.name"], "k8s.cluster.name")
 				require.Equal(t, "knative-serving", res["k8s.namespace.name"], "k8s.namespace.name")
-				deploy := res["k8s.deployment.name"]
+				deploy := res["k8s.workload.name"]
+				require.Equal(t, "Deployment", res["k8s.workload.type"], "k8s.workload.type")
 				// The component name arrives as the standard pod label; no custom key.
 				require.Equal(t, deploy, res["k8s.pod.label.app"], "k8s.pod.label.app")
 				otelmetrics.RequireNoAttribute(t, r, "knative_component")
-				require.True(t, controlPlaneComponents[deploy], "k8s.deployment.name %q is not a Knative component", deploy)
+				require.True(t, controlPlaneComponents[deploy], "k8s.workload.name %q is not a Knative component", deploy)
 				require.True(t, strings.HasPrefix(res["k8s.pod.name"], deploy+"-"), "k8s.pod.name %q", res["k8s.pod.name"])
 				otelmetrics.RequireCloudIdentity(t, cfg, name, res)
 				for _, attr := range []string{"cloud.availability_zone", "host.name", "host.id"} {
@@ -78,8 +80,12 @@ func TestKnativeControlPlaneAttribution(t *testing.T) {
 
 func TestKnativeControlPlaneRuntimeDropped(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"go_goroutines", "go_gc_duration_seconds", "process_cpu_seconds_total"} {
-		require.Empty(t, otelmetrics.Series(t, client, cfg.ClusterName, name, otelmetrics.PipelineMatcher(pipelineControlPlane)), "%s should be dropped by the %s pipeline", name, pipelineControlPlane)
+	names := otelmetrics.PublishedMetricNames(t, queryCache, map[string]string{otelmetrics.PipelineFilter: pipelineControlPlane}, 15*time.Minute)
+	require.NotEmpty(t, names, "nothing published by the %s pipeline", pipelineControlPlane)
+	otelmetrics.RequireNoPrefix(t, names, "go_", "process_")
+	for _, n := range names {
+		// Knative <= 1.18 prefixes runtime families with the component (activator_go_*).
+		require.NotContains(t, n, "_go_", "%s should be dropped by the %s pipeline", n, pipelineControlPlane)
 	}
 }
 

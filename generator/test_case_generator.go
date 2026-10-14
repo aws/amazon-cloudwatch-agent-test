@@ -536,6 +536,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{
 			// Runs ./test/otel/solutions/kserve and knative after vllm, on the same cluster.
+			// Needs a chart with the vllm/kserve/knative solutions: CI installs the newest
+			// helm-charts release-* branch, and the root fails fast when that branch has
+			// none. wip until a release branch includes them.
 			testDir:      "./test/otel/solutions/vllm",
 			terraformDir: "terraform/eks/daemon/otel-llm-serving",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},

@@ -9,6 +9,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -29,6 +30,14 @@ var servers = []struct {
 func podFilter(pattern string) map[string]string {
 	return map[string]string{"~@resource.k8s.pod.name": pattern}
 }
+
+// vllmPipelineFilter matches the pods' series in the vllm pipeline only.
+func vllmPipelineFilter(pattern string) map[string]string {
+	return map[string]string{"~@resource.k8s.pod.name": pattern, otelmetrics.PipelineFilter: pipelineVLLM}
+}
+
+// recent is the window the negative tests list published metric names over.
+const recent = 15 * time.Minute
 
 // ---------------------------------------------------------------------------
 // TestVLLMMetricsExist — every expected metric arrives from both servers.
@@ -111,6 +120,8 @@ func TestVLLMKServeAttribution(t *testing.T) {
 		// The InferenceService arrives as KServe's own pod label; no custom key is added.
 		require.Equal(t, inferenceService, res[otelmetrics.PodLabelKServeInferenceService], "%s", otelmetrics.PodLabelKServeInferenceService)
 		otelmetrics.RequireNoAttribute(t, r, "inferenceservice")
+		// Set by the agent's Prometheus receiver from the scrape target's
+		// __meta_kubernetes_pod_container_name, not by a chart rule.
 		require.Equal(t, "kserve-container", res["k8s.container.name"], "k8s.container.name")
 		require.True(t, strings.HasPrefix(res["k8s.workload.name"], inferenceService+"-predictor-") &&
 			strings.HasSuffix(res["k8s.workload.name"], "-deployment"),
@@ -140,7 +151,9 @@ func TestVLLMNoDuplicateSeries(t *testing.T) {
 			require.NotEmpty(t, results, "no vllm:num_requests_running from the %s server", srv.name)
 			perPod := map[string]int{}
 			for _, r := range results {
-				require.NotEqual(t, "queue-proxy", r.Labels.Resource["k8s.container.name"], "queue-proxy scraped as a vLLM server")
+				container := r.Labels.Resource["k8s.container.name"]
+				require.NotEmpty(t, container, "k8s.container.name")
+				require.NotEqual(t, "queue-proxy", container, "queue-proxy scraped as a vLLM server")
 				perPod[r.Labels.Resource["k8s.pod.name"]]++
 			}
 			for pod, n := range perPod {
@@ -178,10 +191,7 @@ func TestVLLMImageDetected(t *testing.T) {
 
 func TestVLLMAnnotatedPodIgnored(t *testing.T) {
 	t.Parallel()
-	matcher := `,"@resource.k8s.pod.name"=~"` + annotatedPrefix + `.*"` + otelmetrics.PipelineMatcher(pipelineVLLM)
-	for _, name := range []string{"vllm:num_requests_running", "http_requests_total"} {
-		require.Empty(t, otelmetrics.Series(t, client, cfg.ClusterName, name, matcher), "%s from an annotation-only pod reached the vllm pipeline", name)
-	}
+	requireNotScrapedAsVLLM(t, annotatedPrefix+".*", "the annotation-only vLLM mock")
 }
 
 // ---------------------------------------------------------------------------
@@ -191,21 +201,30 @@ func TestVLLMAnnotatedPodIgnored(t *testing.T) {
 
 func TestVLLMGenericExporterIgnored(t *testing.T) {
 	t.Parallel()
-	matcher := `,"@resource.k8s.pod.name"=~"` + genericPodPattern + `"` + otelmetrics.PipelineMatcher(pipelineVLLM)
-	for _, name := range []string{"http_requests_total", "app_jobs_processed_total"} {
-		require.Empty(t, otelmetrics.Series(t, client, cfg.ClusterName, name, matcher), "%s from a non-vLLM exporter reached the vllm pipeline", name)
-	}
+	requireNotScrapedAsVLLM(t, genericPodPattern, "the non-vLLM exporter")
+}
+
+// requireNotScrapedAsVLLM checks that nothing from the pods reaches the vllm
+// pipeline. Positive control: the agent does publish metrics for the pods
+// (their container metrics), so an empty result means not scraped, not absent.
+func requireNotScrapedAsVLLM(t *testing.T, podPattern, what string) {
+	t.Helper()
+	require.NotEmpty(t, otelmetrics.PublishedMetricNames(t, queryCache, podFilter(podPattern), recent),
+		"positive control: no metrics at all for %s pods", what)
+	require.Empty(t, otelmetrics.PublishedMetricNames(t, queryCache, vllmPipelineFilter(podPattern), recent),
+		"metrics from %s reached the vllm pipeline", what)
 }
 
 // ---------------------------------------------------------------------------
-// TestVLLMDroppedFamilies — runtime and client-registry series are filtered.
+// TestVLLMDroppedFamilies — the vllm pipeline publishes no runtime families.
+// Lists what it actually published rather than probing fixed names.
 // ---------------------------------------------------------------------------
 
 func TestVLLMDroppedFamilies(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"python_gc_objects_collected_total", "process_resident_memory_bytes", "http_request_size_bytes"} {
-		require.Empty(t, otelmetrics.Series(t, client, cfg.ClusterName, name, otelmetrics.PipelineMatcher(pipelineVLLM)), "%s should be dropped by the vllm pipeline", name)
-	}
+	names := otelmetrics.PublishedMetricNames(t, queryCache, map[string]string{otelmetrics.PipelineFilter: pipelineVLLM}, recent)
+	require.NotEmpty(t, names, "nothing published by the vllm pipeline")
+	otelmetrics.RequireNoPrefix(t, names, "python_", "process_")
 }
 
 // ---------------------------------------------------------------------------
@@ -217,14 +236,12 @@ func TestVLLMDroppedFamilies(t *testing.T) {
 
 func TestVLLMTransformerNotScraped(t *testing.T) {
 	t.Parallel()
-	pods := `,"@resource.k8s.pod.name"=~"` + inferenceService + `-transformer-.*"`
-	require.NotEmpty(t,
-		otelmetrics.Series(t, client, cfg.ClusterName, "kn_serving_invocation_duration_seconds", pods+otelmetrics.PipelineMatcher("knative-dataplane")),
+	pods := inferenceService + "-transformer-.*"
+	dataPlane := map[string]string{"~@resource.k8s.pod.name": pods, otelmetrics.PipelineFilter: "knative-dataplane"}
+	require.NotEmpty(t, otelmetrics.PublishedMetricNames(t, queryCache, dataPlane, recent),
 		"positive control: no queue-proxy series from the transformer pod")
-	for _, name := range []string{"vllm:num_requests_running", "http_requests_total"} {
-		require.Empty(t, otelmetrics.Series(t, client, cfg.ClusterName, name, pods+otelmetrics.PipelineMatcher(pipelineVLLM)),
-			"%s from the transformer reached the vllm pipeline", name)
-	}
+	require.Empty(t, otelmetrics.PublishedMetricNames(t, queryCache, vllmPipelineFilter(pods), recent),
+		"metrics from the transformer reached the vllm pipeline")
 }
 
 // ---------------------------------------------------------------------------
@@ -241,8 +258,7 @@ func TestVLLMCountersIncrease(t *testing.T) {
 			name := name
 			t.Run(srv.name+"/"+name, func(t *testing.T) {
 				t.Parallel()
-				matcher := `,"@resource.k8s.pod.name"=~"` + srv.podPattern + `"` + otelmetrics.PipelineMatcher(pipelineVLLM)
-				inc := otelmetrics.Increase(t, client, cfg.ClusterName, name, matcher, "10m")
+				inc := otelmetrics.Increase(t, queryCache, name, vllmPipelineFilter(srv.podPattern), "10m")
 				require.Greater(t, inc, 0.0, "%s did not increase over 10m on the %s server", name, srv.name)
 			})
 		}

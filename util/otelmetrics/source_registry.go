@@ -20,7 +20,6 @@ const (
 	SourceKSMNodeScoped
 	SourceKarpenter
 	SourceKEDA
-	SourceVLLM
 	SourceKServe
 	SourceKnative
 )

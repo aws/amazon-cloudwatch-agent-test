@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -18,34 +19,41 @@ import (
 // k8sattributes extracts it onto the resource.
 const PodLabelKServeInferenceService = "k8s.pod.label.serving.kserve.io/inferenceservice"
 
-// PipelineMatcher is a raw PromQL matcher for the cloudwatch.pipeline scope
-// attribute, which the query cache does not filter on.
-func PipelineMatcher(name string) string {
-	return fmt.Sprintf(`,"@instrumentation.cloudwatch.pipeline"="%s"`, EscapePromQLValue(name))
-}
+// PipelineFilter is the GetWithFilter key for the cloudwatch.pipeline scope attribute.
+const PipelineFilter = "@instrumentation.cloudwatch.pipeline"
 
-// Series queries a metric in the cluster with extra raw PromQL matchers. Not cached.
-func Series(t *testing.T, client *OtelMetricsClient, cluster, metricName, matchers string) []MetricResult {
+// Increase returns sum(increase(metric[window])) over the series GetWithFilter
+// would match, so a suite can check that counters move rather than only that
+// they exist. It fails when no series match, so missing data isn't reported as
+// a counter that didn't increase.
+func Increase(t *testing.T, qc *QueryCache, metricName string, filters map[string]string, window string) float64 {
 	t.Helper()
-	promql := fmt.Sprintf(`{"__name__"="%s","@resource.k8s.cluster.name"="%s"%s}`,
-		EscapePromQLValue(metricName), EscapePromQLValue(cluster), matchers)
-	results, err := client.Query(context.Background(), promql)
+	promql := fmt.Sprintf("sum(increase(%s%s}[%s]))", promqlMetricSelector(metricName), qc.filterMatchers(filters), window)
+	results, err := qc.client.Query(context.Background(), promql)
 	require.NoError(t, err, "querying %s", promql)
-	return results
-}
-
-// Increase returns sum(increase(metric[window])) for the matched series, so a
-// suite can check that counters move rather than only that they exist.
-func Increase(t *testing.T, client *OtelMetricsClient, cluster, metricName, matchers, window string) float64 {
-	t.Helper()
-	promql := fmt.Sprintf(`sum(increase({"__name__"="%s","@resource.k8s.cluster.name"="%s"%s}[%s]))`,
-		EscapePromQLValue(metricName), EscapePromQLValue(cluster), matchers, window)
-	results, err := client.Query(context.Background(), promql)
-	require.NoError(t, err, "querying %s", promql)
-	if len(results) == 0 {
-		return 0
-	}
+	require.NotEmpty(t, results, "no %s series match %v", metricName, filters)
 	return results[0].Value
+}
+
+// PublishedMetricNames lists the names of every metric with a series matching
+// filters in the cluster over the last window.
+func PublishedMetricNames(t *testing.T, qc *QueryCache, filters map[string]string, window time.Duration) []string {
+	t.Helper()
+	matcher := "{" + qc.filterMatchers(filters) + "}"
+	end := time.Now()
+	names, err := qc.client.MetricNames(context.Background(), matcher, end.Add(-window), end)
+	require.NoError(t, err, "listing metric names for %s", matcher)
+	return names
+}
+
+// RequireNoPrefix checks no name starts with any of prefixes.
+func RequireNoPrefix(t *testing.T, names []string, prefixes ...string) {
+	t.Helper()
+	for _, n := range names {
+		for _, p := range prefixes {
+			require.False(t, strings.HasPrefix(n, p), "%s was published (prefix %s should be dropped)", n, p)
+		}
+	}
 }
 
 // MetricNames returns the names of the given metric definitions.

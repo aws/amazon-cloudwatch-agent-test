@@ -6,7 +6,9 @@
 # Builds a CPU-only cluster running KServe in Serverless mode (Knative Serving
 # on Istio), with:
 #   - a vLLM InferenceService                  -> vllm (KServe), knative dataplane
+#   - its transformer (hello-world)            -> knative dataplane only, no aws.service.type
 #   - a plain vLLM Deployment                  -> vllm (found by image name)
+#   - a plain Knative Service (hello-ksvc)     -> knative dataplane only, no aws.service.type
 #   - an annotated vLLM mock (custom image)    -> negative control: not scraped
 #   - an annotated non-vLLM exporter           -> negative control: not scraped
 #   - a load generator, so request metrics have data
@@ -502,8 +504,18 @@ resource "kubernetes_service_v1" "vllm_standalone" {
 
 data "external" "clone_helm_chart" {
   program = ["bash", "-c", <<-EOT
+    set -e
     rm -rf ./helm-charts
     git clone -b ${var.helm_chart_branch} ${var.helm_chart_repo} ./helm-charts >&2
+    # Charts before the vLLM, KServe and Knative solutions would install fine and
+    # fail every suite; stop here with the reason instead.
+    values=./helm-charts/charts/amazon-cloudwatch-observability/values.yaml
+    for s in vllm kserve knative; do
+      if ! grep -qE "^ +$s:" "$values"; then
+        echo "${var.helm_chart_repo}@${var.helm_chart_branch} has no '$s' solution in values.yaml" >&2
+        exit 1
+      fi
+    done
     echo '{"status":"ready"}'
   EOT
   ]
@@ -589,14 +601,20 @@ resource "null_resource" "validator" {
 
       # test_dir (from the CI matrix) first, then the other two solutions on the
       # same cluster, as terraform/eks/daemon/otel does for Karpenter and KEDA.
+      # Every suite runs even if an earlier one fails; the run fails at the end.
+      failed=""
       for suite in ${var.test_dir} ./test/otel/solutions/kserve ./test/otel/solutions/knative; do
         echo "Running OTEL solutions tests ($suite)..."
         go test -tags integration -timeout 1h -v $suite/... \
           -eksClusterName=${aws_eks_cluster.this.name} \
           -computeType=EKS \
           -eksDeploymentStrategy=DAEMON \
-          -region=${var.region}
+          -region=${var.region} || failed="$failed $suite"
       done
+      if [ -n "$failed" ]; then
+        echo "Failed suites:$failed"
+        exit 1
+      fi
     EOT
   }
 }
