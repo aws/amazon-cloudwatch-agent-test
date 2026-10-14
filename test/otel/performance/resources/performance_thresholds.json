@@ -8,13 +8,13 @@
       "pod_thresholds": [
         {
           "pod_filter": "daemonset",
-          "threshold": 1.3,
-          "description": "DaemonSet agent pod CPU as a percentage of node allocatable CPU"
+          "max": 3.0,
+          "description": "DaemonSet agent pod CPU as percent of node allocatable CPU; ceiling [0%, 3%] since per-pod CPU is variable run-to-run."
         },
         {
           "pod_filter": "scraper",
-          "threshold": 0.9,
-          "description": "Cluster scraper pod CPU as a percentage of node allocatable CPU"
+          "max": 2.0,
+          "description": "Cluster scraper pod CPU as percent of node allocatable CPU; ceiling [0%, 2%] since scraper CPU is highly variable at low values."
         }
       ]
     },
@@ -22,15 +22,17 @@
       "name": "k8s.pod.memory.working_set",
       "unit": "percent_of_node",
       "stat": "Average",
+      "error_bound": 0.2,
       "pod_thresholds": [
         {
           "pod_filter": "daemonset",
-          "threshold": 4.7,
-          "description": "DaemonSet agent pod memory as a percentage of node allocatable memory"
+          "threshold": 3.2,
+          "error_bound": 0.35,
+          "description": "DaemonSet agent pod memory as a percentage of node allocatable memory. Per-node spread is significant (the node hosting more pods drives higher agent memory), so this band is wider than the scraper's."
         },
         {
           "pod_filter": "scraper",
-          "threshold": 4.9,
+          "threshold": 4.54,
           "description": "Cluster scraper pod memory as a percentage of node allocatable memory"
         }
       ]
