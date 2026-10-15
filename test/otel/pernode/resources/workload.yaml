@@ -1,0 +1,169 @@
+# Per-node E2E workload: a metrics-emitting app discovered via BOTH a
+# ServiceMonitor and a PodMonitor, spread across nodes, with a target_node
+# relabel so each series carries the node of the SCRAPED pod. Combined with the
+# scraping agent's @resource.k8s.node.name, this lets the suite assert
+# per-node locality (target_node == agent node).
+#
+# A load generator drives traffic so http_requests_total is reliably present
+# (the example app only exports it after its "/" path is hit).
+#
+# Applied by terraform/eks/daemon/otel-pernode. Namespace + labels + the
+# target_node relabel MUST match test/otel/pernode constants.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pernode-demo
+---
+# ---- ServiceMonitor target -------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sm-app
+  namespace: pernode-demo
+  labels: { app: sm-app }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: sm-app }
+  template:
+    metadata:
+      labels: { app: sm-app }
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels: { app: sm-app }
+      containers:
+        - name: app
+          image: quay.io/brancz/prometheus-example-app:v0.5.0
+          ports:
+            - { name: metrics, containerPort: 8080 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sm-app
+  namespace: pernode-demo
+  labels: { app: sm-app }
+spec:
+  selector: { app: sm-app }
+  ports:
+    - { name: metrics, port: 8080, targetPort: metrics }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sm-app
+  namespace: pernode-demo
+  labels: { app: sm-app }
+spec:
+  namespaceSelector:
+    matchNames: [pernode-demo]
+  selector:
+    matchLabels: { app: sm-app }
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: target_node
+          action: replace
+        - targetLabel: app
+          replacement: sm-app
+          action: replace
+---
+# ---- PodMonitor target -----------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pm-app
+  namespace: pernode-demo
+  labels: { app: pm-app }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: pm-app }
+  template:
+    metadata:
+      labels: { app: pm-app }
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels: { app: pm-app }
+      containers:
+        - name: app
+          image: quay.io/brancz/prometheus-example-app:v0.5.0
+          ports:
+            - { name: metrics, containerPort: 8080 }
+---
+# ClusterIP Service for pm-app, used ONLY so the load generator can drive traffic
+# (the PodMonitor scrapes the pods directly, not via this Service).
+apiVersion: v1
+kind: Service
+metadata:
+  name: pm-app
+  namespace: pernode-demo
+  labels: { app: pm-app }
+spec:
+  selector: { app: pm-app }
+  ports:
+    - { name: metrics, port: 8080, targetPort: metrics }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: pm-app
+  namespace: pernode-demo
+  labels: { app: pm-app }
+spec:
+  namespaceSelector:
+    matchNames: [pernode-demo]
+  selector:
+    matchLabels: { app: pm-app }
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: target_node
+          action: replace
+        - targetLabel: app
+          replacement: pm-app
+          action: replace
+---
+# ---- Load generator: keeps http_requests_total populated -------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+  namespace: pernode-demo
+  labels: { app: loadgen }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: loadgen }
+  template:
+    metadata:
+      labels: { app: loadgen }
+    spec:
+      containers:
+        - name: loadgen
+          image: curlimages/curl:8.10.1
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                curl -s -o /dev/null http://sm-app.pernode-demo.svc.cluster.local:8080/ || true
+                curl -s -o /dev/null http://pm-app.pernode-demo.svc.cluster.local:8080/ || true
+                sleep 5
+              done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
