@@ -55,7 +55,7 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 		ctx := context.Background()
 		end := time.Now()
 		start := end.Add(-queryRangeMinutes * time.Minute)
-		step := 30 * time.Second
+		step := 1 * time.Second
 
 		// Escape the cluster name before interpolating, matching the shared
 		// helper used by the other otel suites (kubeletstats/cadvisor/gpu).
@@ -84,21 +84,12 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 	return sharedMetrics
 }
 
-// calcStats computes the average and maximum from a series of data points.
-// performance_test.go uses the average and regression_test.go uses the max.
-func calcStats(values []float64) (float64, float64) {
-	if len(values) == 0 {
-		return 0, 0
-	}
-	var sum, max float64
-	for _, v := range values {
-		sum += v
-		if v > max {
-			max = v
-		}
-	}
-	avg := sum / float64(len(values))
-	return avg, max
+// allStatsString formats avg/max/p95/p99/es95 for one series, for side-by-side
+// comparison while deciding which statistic to gate on. Remove once chosen.
+func allStatsString(values []float64) string {
+	avg, max := calcStats(values)
+	return fmt.Sprintf("avg=%.4f max=%.4f p95=%.4f p99=%.4f es95=%.4f",
+		avg, max, percentile(values, 95), percentile(values, 99), expectedShortfall(values, 95))
 }
 
 // TestMain resolves the region, cluster name, and account ID into a config and

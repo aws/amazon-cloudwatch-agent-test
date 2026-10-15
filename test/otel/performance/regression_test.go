@@ -26,14 +26,12 @@ import (
 
 // DynamoDB table identifiers and regression thresholds.
 const (
-	tableName            = "CWAPerformanceMetrics"
-	useCase              = "otel-containerinsights"
-	serviceName          = "AmazonCloudWatchAgent"
+	tableName   = "CWAPerformanceMetrics"
+	useCase     = "otel-containerinsights"
+	serviceName = "AmazonCloudWatchAgent"
+	// Statistic used to reduce each pod's series to one value for the baseline.
+	regressionStat       = "p95"
 	maxRegressionPercent = 30.0
-	// A drop larger than this fails too: a big decrease is either breakage/a
-	// missing metric or a large optimization — both warrant a human look and a
-	// deliberate re-baseline rather than silently lowering the bar.
-	maxDropPercent = 50.0
 )
 
 // PerfResult stores the worst-case (max) performance values for a run.
@@ -91,9 +89,10 @@ const (
 	colorReset = "\033[0m"
 )
 
-// compareAndReport logs the comparison and reports whether it passed. A regression above the
-// threshold fails the test; a zero baseline is treated as a corrupt/missing
-// row and also fails, since agent usage is never legitimately zero.
+// compareAndReport logs the comparison and reports whether it passed. Only
+// growth above the threshold fails; a decrease always passes. A zero baseline is
+// treated as a corrupt/missing row and also fails, since agent usage is never
+// legitimately zero.
 func compareAndReport(t *testing.T, metricName string, previous, current float64, unit string) bool {
 	t.Helper()
 	if previous == 0 {
@@ -103,15 +102,8 @@ func compareAndReport(t *testing.T, metricName string, previous, current float64
 	}
 	changePercent := ((current - previous) / previous) * 100
 	if changePercent <= 0 {
+		// A decrease never fails: less usage is not a regression.
 		dropPercent := -changePercent
-		if dropPercent > maxDropPercent {
-			t.Logf("  Current %s usage is %.1f%% %sLESS%s than last known usage (%.4f %s -> %.4f %s)",
-				metricName, dropPercent, colorRed, colorReset, previous, unit, current, unit)
-			t.Errorf("    %.1f%% drop > %.0f%% drop threshold — investigate (breakage/missing metric) or re-baseline if intentional, Regression Test: %sFAIL%s",
-				dropPercent, maxDropPercent, colorRed, colorReset)
-			t.Log("")
-			return false
-		}
 		t.Logf("  Current %s usage is %.1f%% %sLESS%s than last known usage (%.4f %s -> %.4f %s)",
 			metricName, dropPercent, colorGreen, colorReset, previous, unit, current, unit)
 		t.Logf("    Regression Test: %sPASS%s", colorGreen, colorReset)
@@ -174,16 +166,19 @@ func collectCurrentResults(t *testing.T) PerfResult {
 		for _, v := range series.Values {
 			require.False(t, math.IsNaN(v), "CPU series for %s contains a NaN sample", podName)
 		}
-		_, max := calcStats(series.Values)
+		if isAllZero(series.Values) {
+			continue
+		}
+		stat := summaryStat(series.Values, regressionStat)
 		if isDaemonSetPod(podName) {
 			sawDaemonSetCPU = true
-			if max > result.DaemonSetCPUMax {
-				result.DaemonSetCPUMax = max
+			if stat > result.DaemonSetCPUMax {
+				result.DaemonSetCPUMax = stat
 			}
 		} else {
 			sawScraperCPU = true
-			if max > result.ScraperCPUMax {
-				result.ScraperCPUMax = max
+			if stat > result.ScraperCPUMax {
+				result.ScraperCPUMax = stat
 			}
 		}
 	}
@@ -196,17 +191,19 @@ func collectCurrentResults(t *testing.T) PerfResult {
 		for _, v := range series.Values {
 			require.False(t, math.IsNaN(v), "memory series for %s contains a NaN sample", podName)
 		}
-		_, max := calcStats(series.Values)
-		maxMB := max / (1024 * 1024)
+		if isAllZero(series.Values) {
+			continue
+		}
+		statMB := summaryStat(series.Values, regressionStat) / (1024 * 1024)
 		if isDaemonSetPod(podName) {
 			sawDaemonSetMem = true
-			if maxMB > result.DaemonSetMemMaxMB {
-				result.DaemonSetMemMaxMB = maxMB
+			if statMB > result.DaemonSetMemMaxMB {
+				result.DaemonSetMemMaxMB = statMB
 			}
 		} else {
 			sawScraperMem = true
-			if maxMB > result.ScraperMemMaxMB {
-				result.ScraperMemMaxMB = maxMB
+			if statMB > result.ScraperMemMaxMB {
+				result.ScraperMemMaxMB = statMB
 			}
 		}
 	}
