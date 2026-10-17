@@ -87,7 +87,7 @@ resource "null_resource" "integration_test_setup" {
         "if [ ! -d amazon-cloudwatch-agent-test/vendor ]; then",
         "echo 'Vendor directory (test repo dependencies) not found, cloning...'",
         "sudo rm -r amazon-cloudwatch-agent-test",
-        "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q",
+        "git clone -q ${var.github_test_repo} amazon-cloudwatch-agent-test && git -C amazon-cloudwatch-agent-test checkout -q ${var.github_test_repo_branch}",
         "else",
         "echo 'Test repo already exists, skipping clone'",
         "fi",

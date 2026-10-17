@@ -13,7 +13,7 @@ resource "random_password" "admin" {
 
 locals {
   test_repo_base    = replace(var.github_test_repo, ".git", "")
-  test_repo_zip_url = "${local.test_repo_base}/archive/refs/heads/${var.github_test_repo_branch}.zip"
+  test_repo_zip_url = "${local.test_repo_base}/archive/${var.github_test_repo_branch}.zip"
 
   # Windows NetBIOS computer name is capped at 15 chars; testing_id alone is 16 hex chars, so derive a
   # short, unique name. The full Azure resource name below keeps the readable, un-truncated form.
@@ -77,11 +77,12 @@ locals {
     $env:PATH = "C:\go\bin;$env:PATH"
 
     # Fetch the test repo WITHOUT git: the Windows Server image ships no git and installing it over
-    # WinRM is flaky, so download the branch tarball and expand it (equivalent to the linux git clone).
+    # WinRM is flaky, so download the archive of the ref (a branch or a commit) and expand it
+    # (equivalent to the linux git clone and checkout).
     $repoZip = "$env:TEMP\cwatest.zip"
     Invoke-WebRequest -Uri "${local.test_repo_zip_url}" -OutFile $repoZip
     Expand-Archive -Path $repoZip -DestinationPath 'C:\cwatest' -Force
-    # GitHub names the extracted top folder <repo>-<branch>; resolve it rather than hardcode.
+    # GitHub names the extracted top folder <repo>-<ref>; resolve it rather than hardcode.
     $testRepoDir = Get-ChildItem -Path 'C:\cwatest' -Directory | Select-Object -First 1 -ExpandProperty FullName
     Set-Location $testRepoDir
 

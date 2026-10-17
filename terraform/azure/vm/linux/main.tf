@@ -121,7 +121,7 @@ resource "null_resource" "integration_test" {
       "cloud-init status --wait",
       "echo sha ${var.cwa_github_sha}",
       "sudo apt-get update -y && sudo apt-get install -y golang-go git",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q",
+      "git clone -q ${var.github_test_repo} amazon-cloudwatch-agent-test && git -C amazon-cloudwatch-agent-test checkout -q ${var.github_test_repo_branch}",
       "sudo dpkg -i -E amazon-cloudwatch-agent.deb",
     ]
   }

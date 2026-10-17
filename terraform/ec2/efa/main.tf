@@ -224,7 +224,7 @@ resource "null_resource" "integration_test_post_reboot" {
       "# Clone test repo and install agent",
       "cd ~",
       "echo clone ${var.github_test_repo} branch ${var.github_test_repo_branch} and install agent",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo} -q",
+      "git clone -q ${var.github_test_repo} amazon-cloudwatch-agent-test && git -C amazon-cloudwatch-agent-test checkout -q ${var.github_test_repo_branch}",
       "cd amazon-cloudwatch-agent-test",
       "git rev-parse --short HEAD",
       "aws s3 cp --no-progress s3://${local.binary_uri} .",

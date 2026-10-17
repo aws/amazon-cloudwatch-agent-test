@@ -92,7 +92,7 @@ resource "null_resource" "integration_test" {
         "export AWS_REGION=${var.region}",
         "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
         "echo run integration test",
-        "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+        "git clone ${var.github_test_repo} amazon-cloudwatch-agent-test && git -C amazon-cloudwatch-agent-test checkout ${var.github_test_repo_branch}",
         "echo waiting for test directory...",
         "timeout 120 bash -c 'until [ -f /home/ec2-user/amazon-cloudwatch-agent-test/test/sanity/resources/verifyUnixCtlScript.sh ]; do echo \"Waiting for verifyUnixCtlScript.sh...\"; sleep 2; done'",
         "cd ~/amazon-cloudwatch-agent-test",

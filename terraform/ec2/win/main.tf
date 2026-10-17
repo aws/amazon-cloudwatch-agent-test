@@ -285,7 +285,7 @@ resource "null_resource" "integration_test_run_validator" {
       # Setup JMX workload using PowerShell script
       "powershell.exe -ExecutionPolicy Bypass -File C:\\setup-jmx-workload.ps1",
       "set AWS_REGION=${var.region}",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "git clone ${var.github_test_repo} amazon-cloudwatch-agent-test && git -C amazon-cloudwatch-agent-test checkout ${var.github_test_repo_branch}",
       "cd amazon-cloudwatch-agent-test",
       "powershell.exe -ExecutionPolicy Bypass -File test\\sanity\\resources\\verifyWindowsCtlScript.ps1",
       "cd ..",

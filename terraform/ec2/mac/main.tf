@@ -110,7 +110,7 @@ resource "null_resource" "integration_test" {
       #Download test repo
       "brew install --no-ask git",
       "echo clone test repo",
-      "git clone --branch ${var.github_test_repo_branch} ${var.github_test_repo}",
+      "git clone ${var.github_test_repo} amazon-cloudwatch-agent-test && git -C amazon-cloudwatch-agent-test checkout ${var.github_test_repo_branch}",
 
       # Install agent and validator binaries
       "echo Install agent and validator binaries",
