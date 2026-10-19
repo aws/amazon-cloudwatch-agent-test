@@ -387,7 +387,13 @@ resource "null_resource" "update_dcgm_image" {
       [ -n "$name" ] || { echo "no DcgmExporter resource found" >&2; exit 1; }
       kubectl -n amazon-cloudwatch patch "$name" --type='json' \
         -p='[{"op": "replace", "path": "/spec/image", "value": "${var.dcgm_image_repo}:${var.dcgm_image_tag}"}]'
-      kubectl -n amazon-cloudwatch rollout status "daemonset/$${name#*/}" --timeout=300s
+      ds="$${name#*/}"
+      for i in $(seq 1 30); do
+        kubectl -n amazon-cloudwatch get daemonset "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "${var.dcgm_image_repo}:${var.dcgm_image_tag}" && break
+        sleep 10
+      done
+      kubectl -n amazon-cloudwatch get daemonset "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "${var.dcgm_image_repo}:${var.dcgm_image_tag}" || { echo "DaemonSet $ds did not adopt ${var.dcgm_image_repo}:${var.dcgm_image_tag}" >&2; exit 1; }
+      kubectl -n amazon-cloudwatch rollout status "daemonset/$ds" --timeout=300s
     EOT
   }
 }
