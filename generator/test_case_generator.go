@@ -511,6 +511,18 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			// Needs a chart that points the DcgmExporter at the well-known
+			// dcgm-exporter-metrics-config ConfigMap; wip until a release
+			// branch includes it.
+			testDir:      "./test/otel/dcgm_metrics_config",
+			terraformDir: "terraform/eks/daemon/otel-gpu",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.xlarge",
+			ami:          "AL2023_x86_64_NVIDIA",
+			k8sVersion:   "1.35",
+			wip:          true,
+		},
+		{
 			testDir:      "./test/otel/lis_csi",
 			terraformDir: "terraform/eks/daemon/otel-lis-csi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
