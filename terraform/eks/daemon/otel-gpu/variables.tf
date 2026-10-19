@@ -23,7 +23,7 @@ variable "cwagent_image_tag" {
 
 variable "dcgm_image_repo" {
   type    = string
-  default = "public.ecr.aws/cloudwatch-agent/dcgm-exporter"
+  default = "nvcr.io/nvidia/k8s/dcgm-exporter"
 }
 
 variable "dcgm_image_tag" {
