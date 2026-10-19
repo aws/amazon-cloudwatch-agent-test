@@ -21,6 +21,16 @@ variable "cwagent_image_tag" {
   default = "latest"
 }
 
+variable "dcgm_image_repo" {
+  type    = string
+  default = "public.ecr.aws/cloudwatch-agent/dcgm-exporter"
+}
+
+variable "dcgm_image_tag" {
+  type    = string
+  default = ""
+}
+
 variable "helm_chart_branch" {
   type    = string
   default = "main"

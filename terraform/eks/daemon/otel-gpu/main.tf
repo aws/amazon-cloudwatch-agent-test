@@ -377,6 +377,21 @@ resource "null_resource" "update_image" {
 
 # --- Restart pods to pick up Pod Identity + new image ---
 
+resource "null_resource" "update_dcgm_image" {
+  count      = var.dcgm_image_tag == "" ? 0 : 1
+  depends_on = [helm_release.aws_observability, null_resource.kubectl]
+  triggers   = { timestamp = timestamp() }
+  provisioner "local-exec" {
+    command = <<-EOT
+      name=$(kubectl -n amazon-cloudwatch get dcgmexporter -o name | head -n1)
+      [ -n "$name" ] || { echo "no DcgmExporter resource found" >&2; exit 1; }
+      kubectl -n amazon-cloudwatch patch "$name" --type='json' \
+        -p='[{"op": "replace", "path": "/spec/image", "value": "${var.dcgm_image_repo}:${var.dcgm_image_tag}"}]'
+      kubectl -n amazon-cloudwatch rollout status "daemonset/$${name#*/}" --timeout=300s
+    EOT
+  }
+}
+
 resource "null_resource" "restart_pods" {
   depends_on = [aws_eks_pod_identity_association.cloudwatch_agent, null_resource.update_image]
   triggers   = { timestamp = timestamp() }
@@ -396,6 +411,7 @@ resource "null_resource" "validator" {
   depends_on = [
     null_resource.restart_pods,
     null_resource.multi_gpu_burn,
+    null_resource.update_dcgm_image,
   ]
 
   triggers = { always_run = timestamp() }
