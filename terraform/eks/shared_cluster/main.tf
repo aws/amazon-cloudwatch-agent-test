@@ -14,12 +14,6 @@
 // and security groups. It creates no workload and no namespace, so attaching
 // tests own their own namespace lifecycle.
 
-module "common" {
-  source             = "../../common"
-  cwagent_image_repo = var.cwagent_image_repo
-  cwagent_image_tag  = var.cwagent_image_tag
-}
-
 module "basic_components" {
   source = "../../basic_components"
 
@@ -68,9 +62,10 @@ resource "aws_eks_node_group" "this" {
   ]
 }
 
-# EKS Node IAM Role
+# EKS Node IAM Role. IAM role names are account-global, so the region is included
+# to keep the name unique when the module is applied in more than one region.
 resource "aws_iam_role" "node_role" {
-  name = "${var.cluster_name}-worker-role"
+  name = "${var.cluster_name}-${var.region}-worker-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [

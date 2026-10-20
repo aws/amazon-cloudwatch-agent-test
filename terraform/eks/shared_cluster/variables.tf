@@ -16,12 +16,12 @@ variable "cluster_name" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.32"
+  default = "1.35"
 }
 
 variable "ami_type" {
   type    = string
-  default = "AL2_x86_64"
+  default = "AL2023_x86_64_STANDARD"
 }
 
 variable "instance_type" {
@@ -42,14 +42,4 @@ variable "node_min_size" {
 variable "node_max_size" {
   type    = number
   default = 3
-}
-
-variable "cwagent_image_repo" {
-  type    = string
-  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
-}
-
-variable "cwagent_image_tag" {
-  type    = string
-  default = "latest"
 }
