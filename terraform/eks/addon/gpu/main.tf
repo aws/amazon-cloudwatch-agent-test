@@ -341,6 +341,49 @@ resource "null_resource" "patch_agent_image" {
   }
 }
 
+# Patch DCGM exporter image for testing a candidate exporter version.
+# Skipped entirely when dcgm_image_tag is empty (default), leaving the
+# image deployed by the add-on unchanged.
+resource "null_resource" "update_dcgm_image" {
+  count = var.dcgm_image_tag == "" ? 0 : 1
+  depends_on = [
+    null_resource.kubectl,
+    aws_eks_addon.this,
+  ]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      name=$(kubectl -n amazon-cloudwatch get dcgmexporter -o name | head -n1)
+      [ -n "$name" ] || { echo "no DcgmExporter resource found" >&2; exit 1; }
+
+      echo "Patching DCGM exporter image to $TF_DCGM_IMAGE_REPO:$TF_DCGM_IMAGE_TAG..."
+      kubectl -n amazon-cloudwatch patch "$name" --type='json' \
+        -p="[{\"op\": \"replace\", \"path\": \"/spec/image\", \"value\": \"$TF_DCGM_IMAGE_REPO:$TF_DCGM_IMAGE_TAG\"}]"
+
+      ds="$${name#*/}"
+      echo "Waiting for DaemonSet $ds to adopt the new image..."
+      for i in $(seq 1 30); do
+        kubectl -n amazon-cloudwatch get daemonset "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "$TF_DCGM_IMAGE_REPO:$TF_DCGM_IMAGE_TAG" && break
+        sleep 10
+      done
+      kubectl -n amazon-cloudwatch get daemonset "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "$TF_DCGM_IMAGE_REPO:$TF_DCGM_IMAGE_TAG" || { echo "DaemonSet $ds did not adopt $TF_DCGM_IMAGE_REPO:$TF_DCGM_IMAGE_TAG" >&2; exit 1; }
+
+      kubectl -n amazon-cloudwatch rollout status "daemonset/$ds" --timeout=300s
+      echo "DCGM exporter image patched and rolled out successfully"
+    EOT
+    environment = {
+      TF_DCGM_IMAGE_REPO = var.dcgm_image_repo
+      TF_DCGM_IMAGE_TAG  = var.dcgm_image_tag
+    }
+  }
+
+  # Re-run if image changes
+  triggers = {
+    image_repo = var.dcgm_image_repo
+    image_tag  = var.dcgm_image_tag
+  }
+}
+
 # Run Go tests after infrastructure and agent patching is complete
 resource "null_resource" "validator" {
   depends_on = [
@@ -351,6 +394,7 @@ resource "null_resource" "validator" {
     kubernetes_deployment.gpu_burner,
     kubernetes_service.gpu_burner_service,
     null_resource.patch_agent_image,
+    null_resource.update_dcgm_image,
   ]
 
   provisioner "local-exec" {

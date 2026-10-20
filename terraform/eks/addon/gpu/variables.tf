@@ -72,3 +72,23 @@ variable "cwagent_image_tag" {
     error_message = "cwagent_image_tag must contain only alphanumeric characters, dots, underscores, and hyphens."
   }
 }
+
+variable "dcgm_image_repo" {
+  type        = string
+  description = "DCGM exporter image repository"
+  default     = "nvcr.io/nvidia/k8s/dcgm-exporter"
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9._/:@-]+$", var.dcgm_image_repo))
+    error_message = "dcgm_image_repo must contain only valid container registry characters."
+  }
+}
+
+variable "dcgm_image_tag" {
+  type        = string
+  description = "DCGM exporter image tag. Empty string leaves the image deployed by the add-on unchanged."
+  default     = ""
+  validation {
+    condition     = var.dcgm_image_tag == "" || can(regex("^[a-zA-Z0-9._-]+$", var.dcgm_image_tag))
+    error_message = "dcgm_image_tag must contain only alphanumeric characters, dots, underscores, and hyphens."
+  }
+}
