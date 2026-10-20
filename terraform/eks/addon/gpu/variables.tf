@@ -73,22 +73,12 @@ variable "cwagent_image_tag" {
   }
 }
 
-variable "dcgm_image_repo" {
+variable "dcgm_image" {
   type        = string
-  description = "DCGM exporter image repository"
-  default     = "nvcr.io/nvidia/k8s/dcgm-exporter"
-  validation {
-    condition     = can(regex("^[a-zA-Z0-9._/:@-]+$", var.dcgm_image_repo))
-    error_message = "dcgm_image_repo must contain only valid container registry characters."
-  }
-}
-
-variable "dcgm_image_tag" {
-  type        = string
-  description = "DCGM exporter image tag. Empty string leaves the image deployed by the add-on unchanged."
+  description = "Full dcgm-exporter image reference (e.g. registry/repo:tag or registry/repo@sha256:...) to test. Empty leaves the image the add-on deploys unchanged."
   default     = ""
   validation {
-    condition     = var.dcgm_image_tag == "" || can(regex("^[a-zA-Z0-9._-]+$", var.dcgm_image_tag))
-    error_message = "dcgm_image_tag must contain only alphanumeric characters, dots, underscores, and hyphens."
+    condition     = var.dcgm_image == "" || can(regex("^[a-zA-Z0-9._/:@-]+$", var.dcgm_image))
+    error_message = "dcgm_image must be a valid container image reference."
   }
 }

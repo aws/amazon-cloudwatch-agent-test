@@ -375,28 +375,49 @@ resource "null_resource" "update_image" {
   }
 }
 
-# --- Restart pods to pick up Pod Identity + new image ---
+# --- Patch dcgm-exporter image (optional, for testing a candidate exporter version) ---
 
 resource "null_resource" "update_dcgm_image" {
-  count      = var.dcgm_image_tag == "" ? 0 : 1
+  count      = var.dcgm_image == "" ? 0 : 1
   depends_on = [helm_release.aws_observability, null_resource.kubectl]
-  triggers   = { timestamp = timestamp() }
+  triggers   = { image = var.dcgm_image }
   provisioner "local-exec" {
     command = <<-EOT
-      name=$(kubectl -n amazon-cloudwatch get dcgmexporter -o name | head -n1)
-      [ -n "$name" ] || { echo "no DcgmExporter resource found" >&2; exit 1; }
-      kubectl -n amazon-cloudwatch patch "$name" --type='json' \
-        -p='[{"op": "replace", "path": "/spec/image", "value": "${var.dcgm_image_repo}:${var.dcgm_image_tag}"}]'
-      ds="$${name#*/}"
+      # Wait for the operator/chart to create the DcgmExporter resource before patching.
+      name=""
       for i in $(seq 1 30); do
-        kubectl -n amazon-cloudwatch get daemonset "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "${var.dcgm_image_repo}:${var.dcgm_image_tag}" && break
+        name=$(kubectl -n amazon-cloudwatch get dcgmexporter -o name 2>/dev/null | head -n1)
+        [ -n "$name" ] && break
         sleep 10
       done
-      kubectl -n amazon-cloudwatch get daemonset "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "${var.dcgm_image_repo}:${var.dcgm_image_tag}" || { echo "DaemonSet $ds did not adopt ${var.dcgm_image_repo}:${var.dcgm_image_tag}" >&2; exit 1; }
-      kubectl -n amazon-cloudwatch rollout status "daemonset/$ds" --timeout=300s
+      [ -n "$name" ] || { echo "no DcgmExporter resource found" >&2; exit 1; }
+
+      kubectl -n amazon-cloudwatch patch "$name" --type='json' \
+        -p="[{\"op\": \"replace\", \"path\": \"/spec/image\", \"value\": \"$TF_DCGM_IMAGE\"}]"
+
+      # Find the exporter DaemonSet by label (same label the test uses), not by assuming its name.
+      ds=""
+      for i in $(seq 1 30); do
+        ds=$(kubectl -n amazon-cloudwatch get daemonset -l app.kubernetes.io/name=dcgm-exporter -o name 2>/dev/null | head -n1)
+        [ -n "$ds" ] && break
+        sleep 10
+      done
+      [ -n "$ds" ] || { echo "no dcgm-exporter DaemonSet found" >&2; exit 1; }
+
+      for i in $(seq 1 30); do
+        kubectl -n amazon-cloudwatch get "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "$TF_DCGM_IMAGE" && break
+        sleep 10
+      done
+      kubectl -n amazon-cloudwatch get "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "$TF_DCGM_IMAGE" || { echo "$ds did not adopt $TF_DCGM_IMAGE" >&2; exit 1; }
+      kubectl -n amazon-cloudwatch rollout status "$ds" --timeout=300s
     EOT
+    environment = {
+      TF_DCGM_IMAGE = var.dcgm_image
+    }
   }
 }
+
+# --- Restart pods to pick up Pod Identity + new image ---
 
 resource "null_resource" "restart_pods" {
   depends_on = [aws_eks_pod_identity_association.cloudwatch_agent, null_resource.update_image]
