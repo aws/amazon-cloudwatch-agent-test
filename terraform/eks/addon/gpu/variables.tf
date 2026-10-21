@@ -72,3 +72,13 @@ variable "cwagent_image_tag" {
     error_message = "cwagent_image_tag must contain only alphanumeric characters, dots, underscores, and hyphens."
   }
 }
+
+variable "dcgm_image" {
+  type        = string
+  description = "Full dcgm-exporter image reference (e.g. registry/repo:tag or registry/repo@sha256:...) to test. Empty leaves the image the add-on deploys unchanged."
+  default     = ""
+  validation {
+    condition     = var.dcgm_image == "" || can(regex("^[a-zA-Z0-9._/:@-]+$", var.dcgm_image))
+    error_message = "dcgm_image must be a valid container image reference."
+  }
+}
