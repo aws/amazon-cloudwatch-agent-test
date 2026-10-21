@@ -10,11 +10,15 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
@@ -24,6 +28,8 @@ import (
 var (
 	cfg    otelmetrics.TestConfig
 	client *otelmetrics.OtelMetricsClient
+	// nodes are the cluster's node names. Node agent data is checked on each.
+	nodes []string
 )
 
 func TestMain(m *testing.M) {
@@ -83,5 +89,40 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	nodes, err = nodeNames(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Kubernetes nodes error: %v\n", err)
+		os.Exit(1)
+	}
+
 	os.Exit(m.Run())
+}
+
+// nodeNames lists the cluster's nodes through the kubeconfig that Terraform
+// writes for kubectl.
+func nodeNames(ctx context.Context) ([]string, error) {
+	kubeconfig := os.Getenv("KUBECONFIG")
+	if kubeconfig == "" {
+		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+	}
+	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	clientset, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+	list, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	if len(list.Items) == 0 {
+		return nil, fmt.Errorf("no nodes")
+	}
+	names := make([]string, 0, len(list.Items))
+	for _, node := range list.Items {
+		names = append(names, node.Name)
+	}
+	return names, nil
 }

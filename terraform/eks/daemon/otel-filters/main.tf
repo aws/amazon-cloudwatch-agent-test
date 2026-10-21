@@ -167,7 +167,7 @@ resource "helm_release" "aws_observability" {
               include: ["app", "filters-e2e-keep*", "pod-template-hash"]
               exclude: ["filters-e2e-keep-secret"]
             metricNames:
-              include: ["container_*", "kube_pod_info", "k8s.pod.*"]
+              include: ["container_*", "kube_pod_info", "k8s.pod.*", "node_load5"]
               exclude: ["container_network_*", "container_memory_usage_bytes"]
           logs:
             namespaces:
@@ -231,7 +231,7 @@ resource "null_resource" "restart_pods" {
   }
 }
 
-# --- Test workloads: one logging deployment per namespace ---
+# --- Test workloads: one logging deployment per namespace, one pod per node ---
 
 resource "null_resource" "workloads" {
   for_each   = toset(local.namespaces)
@@ -250,7 +250,8 @@ resource "null_resource" "workloads" {
         name: filters-e2e
         namespace: ${each.key}
       spec:
-        replicas: 1
+        # One pod on each of the 2 nodes, so every node agent sees a kept and a dropped namespace.
+        replicas: 2
         selector:
           matchLabels:
             app: filters-e2e
@@ -262,6 +263,13 @@ resource "null_resource" "workloads" {
               filters-e2e-keep-secret: v
               filters-e2e-other: v
           spec:
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app: filters-e2e
+                  topologyKey: kubernetes.io/hostname
             containers:
             - name: logger
               image: busybox:1.36

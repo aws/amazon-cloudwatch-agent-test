@@ -63,7 +63,7 @@ var (
 const recommendedLabel = "k8s.pod.label.pod-template-hash"
 
 // Metric names kept or dropped by the metricNames filter (include
-// "container_*", "kube_pod_info" and "k8s.pod.*", exclude
+// "container_*", "kube_pod_info", "k8s.pod.*" and "node_load5", exclude
 // "container_network_*" and "container_memory_usage_bytes"). The lists cover
 // both the node agent (cAdvisor, kubelet stats, node exporter) and the cluster
 // scraper (kube-state-metrics).
@@ -81,6 +81,11 @@ var (
 		"kube_pod_status_phase",
 	}
 	// Node metrics, which have no namespace, checked cluster-wide.
+	// keptNodeMetrics guard the node exporter pipeline; kubelet stats is
+	// guarded by k8s.pod.cpu.usage.
+	keptNodeMetrics = []string{
+		"node_load5",
+	}
 	droppedNodeMetrics = []string{
 		"node_load1",
 		"k8s.node.cpu.usage",
@@ -99,12 +104,10 @@ func TestNamespaceFilterMetrics(t *testing.T) {
 	// pipelines, each of which applies the namespaces filter. Terraform waits
 	// for every workload to roll out, so the dropped namespaces have running
 	// pods. Absence is checked only after the same metric is seen for every
-	// included namespace.
+	// included namespace, from every node for the node agent metrics.
 	for _, metric := range keptMetrics {
 		for _, ns := range keptNamespaces {
-			eventually(t, metric+" in "+ns, func() ([]otelmetrics.MetricResult, error) {
-				return query(context.Background(), metric, map[string]string{"@resource.k8s.namespace.name": ns})
-			})
+			seen(t, metric+" in "+ns, metric, map[string]string{"@resource.k8s.namespace.name": ns})
 		}
 		for _, ns := range droppedNamespaces {
 			results, err := query(context.Background(), metric, map[string]string{"@resource.k8s.namespace.name": ns})
@@ -115,13 +118,13 @@ func TestNamespaceFilterMetrics(t *testing.T) {
 }
 
 func TestNamespaceFilterLogs(t *testing.T) {
-	records := eventually(t, "application logs from included namespaces", func() ([]logRecord, error) {
+	records := eventually(t, "application logs from included namespaces on every node", func() ([]logRecord, error) {
 		records, err := markerLogs()
 		if err != nil {
 			return nil, err
 		}
 		for _, ns := range keptNamespaces {
-			if len(byNamespace(records, ns)) == 0 {
+			if !fromEveryNode(byNamespace(records, ns)) {
 				return nil, nil
 			}
 		}
@@ -157,13 +160,15 @@ func TestLabelFilterLogs(t *testing.T) {
 
 func TestMetricNameFilter(t *testing.T) {
 	// Each name is queried on its own. Absence is checked only after every
-	// kept metric is seen, so the pipelines are known to be reporting.
+	// kept metric is seen, from every node for the node agent metrics, so the
+	// pipelines are known to be reporting.
 	const ns = "filters-keep-a"
 	inNamespace := map[string]string{"@resource.k8s.namespace.name": ns}
 	for _, metric := range keptMetrics {
-		eventually(t, metric+" in "+ns, func() ([]otelmetrics.MetricResult, error) {
-			return query(context.Background(), metric, inNamespace)
-		})
+		seen(t, metric+" in "+ns, metric, inNamespace)
+	}
+	for _, metric := range keptNodeMetrics {
+		seen(t, metric, metric, nil)
 	}
 	for _, metric := range droppedWorkloadMetrics {
 		results, err := query(context.Background(), metric, inNamespace)
@@ -203,6 +208,32 @@ func assertLabels(t *testing.T, signal string, resources []map[string]string, ke
 // concat returns a new slice holding a followed by b.
 func concat(a, b []string) []string {
 	return append(append(make([]string, 0, len(a)+len(b)), a...), b...)
+}
+
+// clusterScraperMetrics come from the single cluster scraper. Every other kept
+// metric comes from the node agents.
+var clusterScraperMetrics = map[string]bool{"kube_pod_info": true}
+
+// seen retries until metric is reported with the resource attributes. A node
+// agent metric must be reported from every node, so that an absence check
+// cannot pass because one node's agent is not exporting.
+func seen(t *testing.T, what, metric string, resource map[string]string) {
+	t.Helper()
+	if clusterScraperMetrics[metric] {
+		eventually(t, what, func() ([]otelmetrics.MetricResult, error) {
+			return query(context.Background(), metric, resource)
+		})
+		return
+	}
+	for _, node := range nodes {
+		onNode := map[string]string{"@resource.k8s.node.name": node}
+		for key, value := range resource {
+			onNode[key] = value
+		}
+		eventually(t, what+" on "+node, func() ([]otelmetrics.MetricResult, error) {
+			return query(context.Background(), metric, onNode)
+		})
+	}
 }
 
 func query(ctx context.Context, metric string, resource map[string]string) ([]otelmetrics.MetricResult, error) {
@@ -254,6 +285,20 @@ func markerLogs() ([]logRecord, error) {
 		}
 	}
 	return records, nil
+}
+
+// fromEveryNode reports whether records include one from every node.
+func fromEveryNode(records []logRecord) bool {
+	reported := make(map[string]bool, len(nodes))
+	for _, r := range records {
+		reported[r.resource()["k8s.node.name"]] = true
+	}
+	for _, node := range nodes {
+		if !reported[node] {
+			return false
+		}
+	}
+	return true
 }
 
 func byNamespace(records []logRecord, ns string) []logRecord {
