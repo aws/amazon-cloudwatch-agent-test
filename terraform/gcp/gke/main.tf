@@ -110,60 +110,9 @@ resource "aws_iam_role_policy_attachment" "cwagent_server_policy" {
 # agent writes only -- and CloudWatchAgentServerPolicy alone covers them, OTLP traces included.
 
 #####################################################################
-# Kubernetes resources: deploy CWA DaemonSet from ECR image
+# ECR pull secret: GKE nodes cannot pull the integration-test image from
+# private ECR on their own, and the chart has no imagePullSecrets value.
 #####################################################################
-resource "kubernetes_namespace" "cwagent" {
-  metadata {
-    name = local.namespace
-  }
-}
-
-resource "kubernetes_service_account" "cwagent" {
-  metadata {
-    name      = local.service_account_name
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
-}
-
-resource "kubernetes_cluster_role" "cwagent" {
-  metadata {
-    name = "cwa-gke-integ-${module.common.testing_id}"
-  }
-
-  rule {
-    api_groups = [""]
-    resources  = ["pods", "nodes", "endpoints", "services", "namespaces"]
-    verbs      = ["list", "watch", "get"]
-  }
-  rule {
-    api_groups = ["apps"]
-    resources  = ["replicasets", "daemonsets", "deployments"]
-    verbs      = ["list", "watch", "get"]
-  }
-  rule {
-    api_groups = ["batch"]
-    resources  = ["jobs"]
-    verbs      = ["list", "watch", "get"]
-  }
-}
-
-resource "kubernetes_cluster_role_binding" "cwagent" {
-  metadata {
-    name = "cwa-gke-integ-${module.common.testing_id}"
-  }
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.cwagent.metadata[0].name
-  }
-  subject {
-    kind      = "ServiceAccount"
-    name      = kubernetes_service_account.cwagent.metadata[0].name
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
-}
-
-# ECR pull secret so GKE nodes can pull the CWA image from AWS ECR.
 # The 12h auth token is fetched here with the runner's AWS credentials rather
 # than passed in as a variable, which cannot survive the workflow's shell quoting.
 # The integration-test image is published to us-west-2 only, while the job's
@@ -174,6 +123,12 @@ locals {
 
 data "aws_ecr_authorization_token" "ecr" {
   provider = aws.ecr
+}
+
+resource "kubernetes_namespace" "cwagent" {
+  metadata {
+    name = local.namespace
+  }
 }
 
 resource "kubernetes_secret" "ecr_pull" {
@@ -193,121 +148,115 @@ resource "kubernetes_secret" "ecr_pull" {
   }
 }
 
-resource "kubernetes_daemon_set_v1" "cwagent" {
-  metadata {
-    name      = "cloudwatch-agent"
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
-
-  spec {
-    selector {
-      match_labels = { app = "cloudwatch-agent" }
-    }
-
-    template {
-      metadata {
-        labels = { app = "cloudwatch-agent" }
+#####################################################################
+# Kubeconfig for the kubectl steps below
+#####################################################################
+# GKE has no ready-made kubeconfig attribute, so build a static one from the cluster
+# endpoint and the caller's ADC bearer token (valid ~1h, longer than a run) -- kubectl
+# then needs no gcloud auth plugin on the machine running terraform.
+resource "local_sensitive_file" "kubeconfig" {
+  content = yamlencode({
+    apiVersion = "v1"
+    kind       = "Config"
+    clusters = [{
+      name = google_container_cluster.cwagent.name
+      cluster = {
+        server                       = "https://${google_container_cluster.cwagent.endpoint}"
+        "certificate-authority-data" = google_container_cluster.cwagent.master_auth[0].cluster_ca_certificate
       }
-
-      spec {
-        service_account_name = kubernetes_service_account.cwagent.metadata[0].name
-        host_network         = true
-        dns_policy           = "ClusterFirstWithHostNet"
-
-        image_pull_secrets {
-          name = kubernetes_secret.ecr_pull.metadata[0].name
-        }
-
-        container {
-          name              = "cloudwatch-agent"
-          image             = "${local.cwagent_image_repo}:${var.cwagent_image_tag}"
-          image_pull_policy = "Always"
-
-          env {
-            name  = "AWS_REGION"
-            value = var.region
-          }
-          env {
-            name  = "AWS_WEB_IDENTITY_TOKEN_FILE"
-            value = "/var/run/secrets/aws/token"
-          }
-          env {
-            name  = "AWS_ROLE_ARN"
-            value = aws_iam_role.cwagent.arn
-          }
-          # CWAGENT_ROLE_ARN is deliberately unset. It only feeds sigv4auth's role_arn, and leaving that
-          # empty makes the extension fall through to the default credential chain, which picks up the
-          # projected token via AWS_ROLE_ARN + AWS_WEB_IDENTITY_TOKEN_FILE. Setting it would layer a
-          # redundant sts:AssumeRole of the same role on top of the session we already have.
-          env {
-            name  = "RUN_IN_CONTAINER"
-            value = "True"
-          }
-          # Explicit GKE signal so mode detection selects the GCP credential/region
-          # path without depending on a metadata-server probe from the pod.
-          env {
-            name  = "RUN_IN_GKE"
-            value = "True"
-          }
-          env {
-            name  = "USE_DEFAULT_CONFIG"
-            value = "otel"
-          }
-          env {
-            name = "K8S_NODE_NAME"
-            value_from {
-              field_ref {
-                field_path = "spec.nodeName"
-              }
-            }
-          }
-          env {
-            name = "HOST_IP"
-            value_from {
-              field_ref {
-                field_path = "status.hostIP"
-              }
-            }
-          }
-
-          volume_mount {
-            name       = "aws-token"
-            mount_path = "/var/run/secrets/aws"
-            read_only  = true
-          }
-          volume_mount {
-            name       = "rootfs"
-            mount_path = "/rootfs"
-            read_only  = true
-          }
-        }
-
-        volume {
-          name = "aws-token"
-          projected {
-            sources {
-              service_account_token {
-                audience           = "sts.amazonaws.com"
-                expiration_seconds = 86400
-                path               = "token"
-              }
-            }
-          }
-        }
-        volume {
-          name = "rootfs"
-          host_path {
-            path = "/"
-          }
-        }
+    }]
+    users = [{
+      name = "terraform"
+      user = {
+        token = data.google_client_config.current.access_token
       }
-    }
-  }
+    }]
+    contexts = [{
+      name = google_container_cluster.cwagent.name
+      context = {
+        cluster = google_container_cluster.cwagent.name
+        user    = "terraform"
+      }
+    }]
+    "current-context" = google_container_cluster.cwagent.name
+  })
+  filename        = "${path.module}/kubeconfig"
+  file_permission = "0600"
+}
+
+#####################################################################
+# Helm chart install
+#####################################################################
+locals {
+  kubectl = "kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n ${local.namespace}"
+
+  # The suite validates default:otel over OTLP only. Container Insights and Application Signals are
+  # out of scope, and the chart's fluent-bit has no GKE web-identity wiring, so container logs are off.
+  helm_values = merge(
+    {
+      "clusterName"                   = google_container_cluster.cwagent.name
+      "region"                        = var.region
+      "k8sMode"                       = "GKE"
+      "roleArn"                       = aws_iam_role.cwagent.arn
+      "agent.config"                  = "default:otel"
+      "applicationSignals.enabled"    = "false"
+      "containerInsights.enabled"     = "false"
+      "otelContainerInsights.enabled" = "false"
+      "containerLogs.enabled"         = "false"
+    },
+    var.helm_set_values,
+  )
+}
+
+data "external" "clone_helm_chart" {
+  program = ["bash", "-c", <<-EOT
+    rm -rf ./helm-charts
+    git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
+    echo '{"status":"ready"}'
+  EOT
+  ]
+}
+
+resource "helm_release" "aws_observability" {
+  name      = "amazon-cloudwatch-observability"
+  chart     = "./helm-charts/charts/amazon-cloudwatch-observability"
+  namespace = kubernetes_namespace.cwagent.metadata[0].name
+
+  set = [for name, value in local.helm_values : { name = name, value = value }]
 
   depends_on = [
-    kubernetes_cluster_role_binding.cwagent,
+    data.external.clone_helm_chart,
     aws_iam_role_policy_attachment.cwagent_server_policy,
   ]
+}
+
+#####################################################################
+# Point the chart's agent at the image under test
+#####################################################################
+resource "null_resource" "update_image" {
+  depends_on = [helm_release.aws_observability, kubernetes_secret.ecr_pull]
+  triggers   = { timestamp = timestamp() }
+  provisioner "local-exec" {
+    command = <<-EOT
+      sleep 30
+      ${local.kubectl} patch serviceaccount ${local.service_account_name} \
+        -p '{"imagePullSecrets":[{"name":"${kubernetes_secret.ecr_pull.metadata[0].name}"}]}'
+      ${local.kubectl} patch AmazonCloudWatchAgent cloudwatch-agent --type='json' \
+        -p='[{"op": "replace", "path": "/spec/image", "value": "${local.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
+      sleep 10
+    EOT
+  }
+}
+
+resource "null_resource" "restart_pods" {
+  depends_on = [null_resource.update_image]
+  triggers   = { timestamp = timestamp() }
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.kubectl} rollout restart daemonset/cloudwatch-agent
+      ${local.kubectl} rollout status daemonset/cloudwatch-agent --timeout=300s
+    EOT
+  }
 }
 
 #####################################################################
@@ -354,51 +303,18 @@ resource "kubernetes_job_v1" "otlp_load" {
     create = "10m"
   }
 
-  depends_on = [kubernetes_daemon_set_v1.cwagent]
+  depends_on = [null_resource.restart_pods]
 }
 
 #####################################################################
 # Diagnostics: surface agent pod state and logs in the job output so
 # delivery failures are debuggable after the cluster is destroyed.
 #####################################################################
-# GKE has no ready-made kubeconfig attribute, so build a static one from the cluster
-# endpoint and the caller's ADC bearer token (valid ~1h, longer than a run) -- kubectl
-# then needs no gcloud auth plugin on the machine running terraform.
-resource "local_sensitive_file" "kubeconfig" {
-  content = yamlencode({
-    apiVersion = "v1"
-    kind       = "Config"
-    clusters = [{
-      name = google_container_cluster.cwagent.name
-      cluster = {
-        server                       = "https://${google_container_cluster.cwagent.endpoint}"
-        "certificate-authority-data" = google_container_cluster.cwagent.master_auth[0].cluster_ca_certificate
-      }
-    }]
-    users = [{
-      name = "terraform"
-      user = {
-        token = data.google_client_config.current.access_token
-      }
-    }]
-    contexts = [{
-      name = google_container_cluster.cwagent.name
-      context = {
-        cluster = google_container_cluster.cwagent.name
-        user    = "terraform"
-      }
-    }]
-    "current-context" = google_container_cluster.cwagent.name
-  })
-  filename        = "${path.module}/kubeconfig"
-  file_permission = "0600"
-}
-
 resource "null_resource" "agent_diagnostics" {
   provisioner "local-exec" {
     command = <<-EOT
-      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' get pods -n amazon-cloudwatch -o wide || true
-      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch -l app=cloudwatch-agent --tail=200 --prefix || true
+      ${local.kubectl} get pods -o wide || true
+      ${local.kubectl} logs daemonset/cloudwatch-agent --tail=200 --prefix || true
     EOT
   }
 

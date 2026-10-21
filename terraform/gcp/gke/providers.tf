@@ -15,6 +15,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 3.0"
+    }
     tls = {
       source  = "hashicorp/tls"
       version = "~> 4.0"
@@ -22,6 +26,10 @@ terraform {
     local = {
       source  = "hashicorp/local"
       version = "~> 2.4"
+    }
+    external = {
+      source  = "hashicorp/external"
+      version = "~> 2.3"
     }
   }
 }
@@ -50,4 +58,12 @@ provider "kubernetes" {
   host                   = "https://${google_container_cluster.cwagent.endpoint}"
   token                  = data.google_client_config.current.access_token
   cluster_ca_certificate = base64decode(google_container_cluster.cwagent.master_auth[0].cluster_ca_certificate)
+}
+
+provider "helm" {
+  kubernetes = {
+    host                   = "https://${google_container_cluster.cwagent.endpoint}"
+    token                  = data.google_client_config.current.access_token
+    cluster_ca_certificate = base64decode(google_container_cluster.cwagent.master_auth[0].cluster_ca_certificate)
+  }
 }

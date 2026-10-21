@@ -392,6 +392,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},
+	"gke": {
+		{testDir: "./test/gcp/gke", terraformDir: "terraform/gcp/gke"},
+	},
 	"eks_addon": {
 		{
 			testDir:      "./test/gpu",
