@@ -13,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
 
 // ---------------------------------------------------------------------------
@@ -669,6 +671,239 @@ func TestScrapeMetadataFiltered(t *testing.T) {
 					t.Errorf("%s should be filtered from %s pipeline but was present", metricName, pipeline)
 				}
 			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Karpenter node labels. The instance labels are denied by karpenter.k8s.aws/instance-
+// prefixes and keys, all but instance-tenancy, a launch property that is
+// retained. The EKS Auto Mode copies are denied by eks.amazonaws.com/instance-;
+// no retained key matches it. The three karpenter.sh/ keys are enumerated,
+// because nodepool and capacity-type are retained in that domain.
+// TestKarpenterInstanceLabelsRemoved covers the removal,
+// TestKarpenterGroupingLabelsRetained covers the retention — a regression that
+// widened either to a whole domain prefix fails the second, even where it passes the first.
+//
+// Both agents run the denylist, so the tests read the node agent's DaemonSet
+// metrics and the cluster scraper's kube-state-metrics node metrics. They read the
+// series of every Karpenter-managed node rather than the clusterHostTypes pin,
+// because Karpenter picks the instance type of the node it launches.
+// ---------------------------------------------------------------------------
+
+// deniedNodeLabelPrefixes are the instance-label prefixes the denylist covers, except instanceTenancyLabel.
+var deniedNodeLabelPrefixes = []string{
+	"k8s.node.label.karpenter.k8s.aws/instance-",
+	"k8s.node.label.eks.amazonaws.com/instance-",
+}
+
+// instanceTenancyLabel is the one retained instance label: tenancy is not derived from the instance type.
+const instanceTenancyLabel = "k8s.node.label.karpenter.k8s.aws/instance-tenancy"
+
+// deniedKarpenterNodeLabels are the karpenter.sh/ entries in unconditional_removal_keys.
+var deniedKarpenterNodeLabels = []string{
+	"k8s.node.label.karpenter.sh/do-not-sync-taints",
+	"k8s.node.label.karpenter.sh/initialized",
+	"k8s.node.label.karpenter.sh/registered",
+}
+
+// karpenterNodePoolLabel is set by Karpenter on every node it launches.
+const karpenterNodePoolLabel = "k8s.node.label.karpenter.sh/nodepool"
+
+// retainedKarpenterNodeLabels are set by Karpenter on every node it manages and
+// must survive. capacity-reservation-* and placement-group-* are retained too,
+// but Karpenter only sets those on nodes launched into a capacity reservation or
+// a placement group, so they are not asserted here.
+var retainedKarpenterNodeLabels = []string{
+	karpenterNodePoolLabel,
+	"k8s.node.label.karpenter.sh/capacity-type",
+	"k8s.node.label.karpenter.k8s.aws/ec2nodeclass",
+	instanceTenancyLabel,
+}
+
+// autoModeComputeTypeLabel is "auto" on the nodes EKS Auto Mode manages.
+const autoModeComputeTypeLabel = "k8s.node.label.eks.amazonaws.com/compute-type"
+
+// retainedAutoModeNodeLabels are the retained labels of an EKS Auto Mode node, which names
+// its node class eks.amazonaws.com/nodeclass and sets no karpenter.k8s.aws/ labels.
+var retainedAutoModeNodeLabels = []string{
+	karpenterNodePoolLabel,
+	"k8s.node.label.karpenter.sh/capacity-type",
+	"k8s.node.label.eks.amazonaws.com/nodeclass",
+	autoModeComputeTypeLabel,
+}
+
+// karpenterLabelMetricNames are the metrics of both agents that carry node labels.
+func karpenterLabelMetricNames() []string {
+	return append(append([]string{}, nodeLabelEnrichedNames()...), ksmNodeBucket...)
+}
+
+// podLabelMetricNames are the metrics of both agents that carry pod labels. Node-scoped
+// metrics have no pod, so they never carry k8s.pod.label.* — see TestNodeExporterNoPodLabels.
+func podLabelMetricNames() []string {
+	names := append(append([]string{}, podMetricNames()...), ksmPodBucket...)
+	return append(names, ksmContainerBucket...)
+}
+
+// allNodeSeries returns every series of a metric in this cluster, on every node.
+func allNodeSeries(t *testing.T, metricName string) []otelmetrics.MetricResult {
+	t.Helper()
+	results, err := queryCache.GetWithFilter(context.Background(), metricName, nil)
+	require.NoError(t, err, "querying %s", metricName)
+	require.NotEmpty(t, results, "%s not available", metricName)
+	return results
+}
+
+// karpenterNodeSeries returns the series of the nodes that carry karpenterNodePoolLabel,
+// on every instance type. The filter also keeps the result under the endpoint's
+// per-query series limit on a large cluster.
+//
+// This suite targets a cluster that runs Karpenter, so both tests assert rather
+// than skip when they find none: a silent skip is how a regression that stripped
+// every karpenter.* attribute, or a read that missed the Karpenter node, would
+// hide, and a loud failure on a cluster without Karpenter is the safer of the two
+// mistakes.
+func karpenterNodeSeries(t *testing.T, metricName string) []otelmetrics.MetricResult {
+	t.Helper()
+	results, err := queryCache.GetWithFilter(context.Background(), metricName,
+		map[string]string{"~@resource." + karpenterNodePoolLabel: ".+"})
+	require.NoError(t, err, "querying %s", metricName)
+	require.NotEmpty(t, results,
+		"%s has no series of a node with @resource.%s. Either the cluster does not run "+
+			"Karpenter, or every karpenter.* attribute was stripped — which is what happens "+
+			"if the denylist widens to the karpenter.k8s.aws/ and karpenter.sh/ domain "+
+			"prefixes", metricName, karpenterNodePoolLabel)
+	return results
+}
+
+func deniedKarpenterNodeLabel(key string) bool {
+	if key == instanceTenancyLabel {
+		return false
+	}
+	for _, k := range deniedKarpenterNodeLabels {
+		if key == k {
+			return true
+		}
+	}
+	for _, p := range deniedNodeLabelPrefixes {
+		if strings.HasPrefix(key, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestKarpenterInstanceLabelsRemoved(t *testing.T) {
+	for _, metricName := range karpenterLabelMetricNames() {
+		t.Run(metricName, func(t *testing.T) {
+			for _, r := range karpenterNodeSeries(t, metricName) {
+				for key := range r.Labels.Resource {
+					require.False(t, deniedKarpenterNodeLabel(key),
+						"%s still carries denied Karpenter label @resource.%s on node %s",
+						metricName, key, r.Labels.Resource["k8s.node.name"])
+				}
+			}
+		})
+	}
+}
+
+func TestKarpenterGroupingLabelsRetained(t *testing.T) {
+	for _, metricName := range karpenterLabelMetricNames() {
+		t.Run(metricName, func(t *testing.T) {
+			// Karpenter and EKS Auto Mode nodes carry different labels, so each kind
+			// is checked against its own list, and a kind with no nodes is skipped.
+			var karpenter, autoMode []otelmetrics.MetricResult
+			for _, r := range karpenterNodeSeries(t, metricName) {
+				if r.Labels.Resource[autoModeComputeTypeLabel] == "auto" {
+					autoMode = append(autoMode, r)
+				} else {
+					karpenter = append(karpenter, r)
+				}
+			}
+
+			// Only managed nodes carry these. A cluster can mix managed nodes with
+			// a static node group, so require at least one node with each key
+			// rather than every node.
+			for _, kind := range []struct {
+				name    string
+				results []otelmetrics.MetricResult
+				keys    []string
+			}{
+				{"Karpenter", karpenter, retainedKarpenterNodeLabels},
+				{"EKS Auto Mode", autoMode, retainedAutoModeNodeLabels},
+			} {
+				if len(kind.results) == 0 {
+					continue
+				}
+				for _, key := range kind.keys {
+					found := false
+					for _, r := range kind.results {
+						if _, present := r.Labels.Resource[key]; present {
+							found = true
+							break
+						}
+					}
+					require.True(t, found,
+						"%s has no @resource.%s on any %s node — a retained grouping label was dropped, "+
+							"which happens if the denylist widens to the karpenter.k8s.aws/, karpenter.sh/ "+
+							"or eks.amazonaws.com/ domain prefix", metricName, key, kind.name)
+				}
+			}
+		})
+	}
+}
+
+// deniedCounterpartNodeAndPodLabels are the two pod-side topology counterparts of node
+// labels the denylist already removed, plus pod-template-generation from the
+// controller-revision family. All are resource-level.
+var deniedCounterpartNodeAndPodLabels = []string{
+	"k8s.pod.label.topology.kubernetes.io/region",
+	"k8s.pod.label.topology.kubernetes.io/zone",
+	"k8s.pod.label.pod-template-generation",
+}
+
+// TestPodLabelCounterpartsRemoved asserts none of the three counterpart keys reach resource
+// scope on the pod metrics of either agent. The node forms of four of them were already
+// denied, so a datapoint carrying the pod form is the duplicate this change removes.
+func TestPodLabelCounterpartsRemoved(t *testing.T) {
+	for _, metricName := range podLabelMetricNames() {
+		t.Run(metricName, func(t *testing.T) {
+			results := allNodeSeries(t, metricName)
+			for _, r := range results {
+				for _, key := range deniedCounterpartNodeAndPodLabels {
+					_, present := r.Labels.Resource[key]
+					require.False(t, present,
+						"%s still carries denied label @resource.%s on node %s",
+						metricName, key, r.Labels.Resource["k8s.node.name"])
+				}
+			}
+		})
+	}
+}
+
+// TestPodLabelsStillEnriched guards against the denylist being widened to the
+// k8s.pod.label. prefix, which would strip every pod label rather than these three. It
+// requires at least one pod label to survive somewhere in the result set, so a prefix
+// regression fails here instead of passing both this file's removal assertions. It
+// reads the same metrics as TestPodLabelCounterpartsRemoved.
+func TestPodLabelsStillEnriched(t *testing.T) {
+	for _, metricName := range podLabelMetricNames() {
+		t.Run(metricName, func(t *testing.T) {
+			results := allNodeSeries(t, metricName)
+
+			denied := map[string]bool{}
+			for _, k := range deniedCounterpartNodeAndPodLabels {
+				denied[k] = true
+			}
+			for _, r := range results {
+				for k := range r.Labels.Resource {
+					if strings.HasPrefix(k, "k8s.pod.label.") && !denied[k] {
+						return // a pod label other than the denied ones survived
+					}
+				}
+			}
+			t.Fatalf("%s carries no k8s.pod.label.* attribute other than the denied keys; "+
+				"the denylist may have been widened to the k8s.pod.label. prefix", metricName)
 		})
 	}
 }
