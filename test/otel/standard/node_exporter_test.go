@@ -137,7 +137,7 @@ func TestNodeExporterNodeGroupCoverage(t *testing.T) {
 			promql := fmt.Sprintf(
 				`node_load1{"@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`,
 				otelmetrics.EscapePromQLValue(cfg.ClusterName), ng.InstanceType)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying node_load1 on %s", ng.Description)
 			require.True(t, len(results) > 0,
 				"node_exporter missing from %s nodes (%s) — DaemonSet not scheduling?",

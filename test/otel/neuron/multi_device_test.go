@@ -273,7 +273,7 @@ func TestMultiNeuronCorrelatedCoreCount(t *testing.T) {
 	promql := fmt.Sprintf(
 		`neuroncore_utilization_ratio{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"neuron-burn-multi.*"}`,
 		escaped)
-	burnResults, err := client.Query(ctx, promql)
+	burnResults, err := client.QueryComplete(ctx, promql)
 	require.NoError(t, err, "querying neuroncore_utilization_ratio for neuron-burn-multi")
 	require.Equal(t, 2, len(burnResults), fmt.Sprintf("Expected 2 cores correlated to neuron-burn-multi (1 whole device × 2 cores), got %d",
 		len(burnResults)))
@@ -289,7 +289,7 @@ func TestMultiNeuronBurnDevicePodLabels(t *testing.T) {
 	promql := fmt.Sprintf(
 		`neuroncore_utilization_ratio{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"neuron-burn-multi.*"}`,
 		escaped)
-	burnResults, err := client.Query(ctx, promql)
+	burnResults, err := client.QueryComplete(ctx, promql)
 	require.NoError(t, err, "querying neuroncore_utilization_ratio for neuron-burn-multi")
 	require.Equal(t, 2, len(burnResults), fmt.Sprintf("Expected 2 cores correlated to neuron-burn-multi, got %d", len(burnResults)))
 
