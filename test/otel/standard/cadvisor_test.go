@@ -21,7 +21,7 @@ var cadvisorMetricNamesList = metricNames(cadvisorMetrics)
 func TestCadvisorInstrumentationSource(t *testing.T) {
 	for _, name := range cadvisorMetricNamesList {
 		t.Run(name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), name)
+			results, err := allNodesCache.Get(context.Background(), name)
 			require.NoError(t, err, "querying %s", name)
 			require.NotEmpty(t, results, "%s not available", name)
 			for _, r := range results {
@@ -36,7 +36,7 @@ func TestCadvisorInstrumentationSource(t *testing.T) {
 func TestCadvisorInstrumentationConsistent(t *testing.T) {
 	for _, name := range cadvisorMetricNamesList {
 		t.Run(name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), name)
+			results, err := allNodesCache.Get(context.Background(), name)
 			require.NoError(t, err, "querying %s", name)
 			require.NotEmpty(t, results, "%s not available", name)
 			names := make(map[string]struct{})
@@ -53,7 +53,7 @@ func TestCadvisorInstrumentationConsistent(t *testing.T) {
 func TestCadvisorPodName(t *testing.T) {
 	for _, name := range cadvisorMetricNamesList {
 		t.Run(name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), name)
+			results, err := allNodesCache.Get(context.Background(), name)
 			require.NoError(t, err, "querying %s", name)
 			require.NotEmpty(t, results, "%s not available", name)
 			for _, r := range results {
@@ -67,7 +67,7 @@ func TestCadvisorPodName(t *testing.T) {
 func TestCadvisorNamespace(t *testing.T) {
 	for _, name := range cadvisorMetricNamesList {
 		t.Run(name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), name)
+			results, err := allNodesCache.Get(context.Background(), name)
 			require.NoError(t, err, "querying %s", name)
 			require.NotEmpty(t, results, "%s not available", name)
 			for _, r := range results {
@@ -84,7 +84,7 @@ func TestCadvisorContainerName(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			hasContainer := 0
@@ -105,7 +105,7 @@ func TestCadvisorExpectedLabels(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			for _, r := range results {
@@ -121,7 +121,7 @@ func TestCadvisorExpectedLabels(t *testing.T) {
 func TestCadvisorPodLabelsStrict(t *testing.T) {
 	for _, name := range cadvisorMetricNamesList {
 		t.Run(name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), name)
+			results, err := allNodesCache.Get(context.Background(), name)
 			require.NoError(t, err, "querying %s", name)
 			require.NotEmpty(t, results, "%s not available", name)
 			for _, r := range results {
@@ -176,7 +176,7 @@ func TestCadvisorHasRawPromotedKeys(t *testing.T) {
 func TestCadvisorNoPodSandboxMetrics(t *testing.T) {
 	for _, name := range cadvisorMetricNamesList {
 		t.Run(name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), name)
+			results, err := allNodesCache.Get(context.Background(), name)
 			require.NoError(t, err, "querying %s", name)
 			require.NotEmpty(t, results, "%s not available", name)
 			for _, r := range results {
@@ -195,7 +195,7 @@ func TestCadvisorNoPodScopeRollup(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			for _, r := range results {
@@ -218,7 +218,7 @@ func TestCadvisorNetworkKeepsPodScope(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results,
 				"%s not available — the container_network_* exemption in filter/cw_k8s_ci_v0_cadvisor_rollup may have been narrowed",

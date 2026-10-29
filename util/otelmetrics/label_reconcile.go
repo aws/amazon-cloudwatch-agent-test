@@ -99,7 +99,7 @@ type LabelDiff struct {
 	Checked    int      // labels expected on the series
 	Missing    []string // expected but absent
 	Mismatched []string // present with a different value, as "key: got, want"
-	Leaked     []string // denied but present
+	Leaked     []string // removed by the extraction rules or the denylist, but present
 }
 
 // OK reports whether the series matched the object exactly.
@@ -107,16 +107,17 @@ func (l LabelDiff) OK() bool {
 	return len(l.Missing) == 0 && len(l.Mismatched) == 0 && len(l.Leaked) == 0
 }
 
-// ReconcileLabels compares an object's labels with the attributes under prefix
-// (for example "k8s.node.label.") in resource. Every label the denylist does not
-// match must arrive with the same value, and every label it matches must not.
-// Empty-valued labels are skipped, because PromQL drops empty label values.
-func ReconcileLabels(objectLabels, resource map[string]string, prefix string, d AttributeDenylist) LabelDiff {
+// ReconcileLabels compares an object's labels with the attributes under e.Prefix
+// (for example "k8s.node.label.") in resource. Every label that the extraction
+// rules copy and the denylist does not match must arrive with the same value,
+// and every other label must not. Empty-valued labels are skipped, because
+// PromQL drops empty label values.
+func ReconcileLabels(objectLabels, resource map[string]string, e LabelExtraction, d AttributeDenylist) LabelDiff {
 	var diff LabelDiff
 	for k, want := range objectLabels {
-		attr := prefix + k
+		attr := e.Prefix + k
 		got, present := resource[attr]
-		if d.Denies(attr) {
+		if !e.Extracts(k) || d.Denies(attr) {
 			if present {
 				diff.Leaked = append(diff.Leaked, k)
 			}
@@ -139,8 +140,9 @@ func ReconcileLabels(objectLabels, resource map[string]string, prefix string, d 
 	return diff
 }
 
-// Attributes no denylist entry may remove. The helm-charts render test
-// prometheus_attribute_shape.sh holds the same list; keep the two in step.
+// Attributes no denylist entry the chart adds may remove; a customer label exclude
+// may remove the k8s.node.label.* and k8s.pod.label.* ones. The helm-charts render
+// test prometheus_attribute_shape.sh holds the same list; keep the two in step.
 var (
 	// protectedResourceKeys and protectedPrefixes of the awsattributelimit processor;
 	// unconditional removal runs before that protection, so a denylist entry would override it.
@@ -190,6 +192,72 @@ func (d AttributeDenylist) NeverDeniedViolations() []string {
 	return out
 }
 
+// LabelExcludes are the filters.metrics.podLabels.exclude and nodeLabels.exclude
+// patterns a cluster was deployed with: a label key, a prefix followed by "*", or
+// "*" alone.
+type LabelExcludes struct {
+	Pod, Node []string
+}
+
+// Denylist renders the patterns as the chart does: the key k8s.pod.label.<pattern>
+// or k8s.node.label.<pattern>, or a prefix without the "*" when the pattern ends in "*".
+func (e LabelExcludes) Denylist() AttributeDenylist {
+	d := AttributeDenylist{Keys: map[string]struct{}{}}
+	for _, scope := range []struct {
+		prefix   string
+		patterns []string
+	}{{"k8s.pod.label.", e.Pod}, {"k8s.node.label.", e.Node}} {
+		for _, pattern := range scope.patterns {
+			if strings.HasSuffix(pattern, "*") {
+				d.Prefixes = append(d.Prefixes, scope.prefix+strings.TrimSuffix(pattern, "*"))
+			} else {
+				d.Keys[scope.prefix+pattern] = struct{}{}
+			}
+		}
+	}
+	return d
+}
+
+// SplitCustomerExcludes splits d into the entries that the declared customer
+// excludes render to and every other entry, which the chart added.
+func (d AttributeDenylist) SplitCustomerExcludes(e LabelExcludes) (chart, customer AttributeDenylist) {
+	declared := e.Denylist()
+	declaredPrefixes := make(map[string]struct{}, len(declared.Prefixes))
+	for _, p := range declared.Prefixes {
+		declaredPrefixes[p] = struct{}{}
+	}
+	chart = AttributeDenylist{Keys: map[string]struct{}{}, MaxTotal: d.MaxTotal, Processor: d.Processor}
+	customer = AttributeDenylist{Keys: map[string]struct{}{}, MaxTotal: d.MaxTotal, Processor: d.Processor}
+	for _, p := range d.Prefixes {
+		if _, ok := declaredPrefixes[p]; ok {
+			customer.Prefixes = append(customer.Prefixes, p)
+		} else {
+			chart.Prefixes = append(chart.Prefixes, p)
+		}
+	}
+	for k := range d.Keys {
+		if _, ok := declared.Keys[k]; ok {
+			customer.Keys[k] = struct{}{}
+		} else {
+			chart.Keys[k] = struct{}{}
+		}
+	}
+	return chart, customer
+}
+
+// Entries lists the denylist's keys and prefixes, sorted.
+func (d AttributeDenylist) Entries() []string {
+	out := make([]string, 0, len(d.Keys)+len(d.Prefixes))
+	for k := range d.Keys {
+		out = append(out, fmt.Sprintf("key %q", k))
+	}
+	for _, p := range d.Prefixes {
+		out = append(out, fmt.Sprintf("prefix %q", p))
+	}
+	sort.Strings(out)
+	return out
+}
+
 // ObjectReconciliation is the result of reconciling every series of a set of
 // Kubernetes objects. An object passes if any one of its series reconciles,
 // because a label change or a collector restart leaves an older series inside
@@ -205,9 +273,10 @@ type ObjectReconciliation struct {
 
 // ReconcileObjects groups series by object and reconciles each. objectOf returns the
 // object key and its Kubernetes labels, or false for a series of an unknown object.
-// Every key in required must have at least one series, at the cap or below it.
+// Every key in required must have at least one series, at the cap or below it, so
+// leave out an object that a filter removes.
 func ReconcileObjects(results []MetricResult, objectOf func(MetricLabels) (string, map[string]string, bool),
-	required []string, prefix string, d AttributeDenylist) ObjectReconciliation {
+	required []string, e LabelExtraction, d AttributeDenylist) ObjectReconciliation {
 	out := ObjectReconciliation{Failed: map[string]LabelDiff{}, Required: len(required)}
 	passed := map[string]bool{}
 	hasSeries := map[string]bool{}
@@ -224,7 +293,7 @@ func ReconcileObjects(results []MetricResult, objectOf func(MetricLabels) (strin
 		if passed[key] {
 			continue
 		}
-		diff := ReconcileLabels(labels, r.Labels.Resource, prefix, d)
+		diff := ReconcileLabels(labels, r.Labels.Resource, e, d)
 		if diff.OK() {
 			passed[key] = true
 			out.Labels += diff.Checked

@@ -21,6 +21,21 @@ processors:
       - "k8s.pod.label.pod-template-hash"
 `
 
+const extractAllConfig = `
+processors:
+  k8sattributes/cw_k8s_ci_v0_node:
+    extract:
+      labels:
+        - {from: node, key_regex: "(.*)", tag_name: "k8s.node.label.$$$1"}
+`
+
+func mustExtraction(t *testing.T, cfg, from string) LabelExtraction {
+	t.Helper()
+	e, err := ParseLabelExtraction(cfg, from)
+	require.NoError(t, err)
+	return e
+}
+
 func mustDenylist(t *testing.T) AttributeDenylist {
 	t.Helper()
 	d, err := ParseAttributeDenylist(denylistConfig)
@@ -52,6 +67,7 @@ func TestDenies(t *testing.T) {
 
 func TestReconcileLabels(t *testing.T) {
 	d := mustDenylist(t)
+	all := mustExtraction(t, extractAllConfig, "node")
 	node := map[string]string{
 		"kubernetes.io/os":                      "linux",
 		"karpenter.k8s.aws/ec2nodeclass":        "default",
@@ -65,14 +81,14 @@ func TestReconcileLabels(t *testing.T) {
 	}
 
 	t.Run("exact match", func(t *testing.T) {
-		diff := ReconcileLabels(node, clean, "k8s.node.label.", d)
+		diff := ReconcileLabels(node, clean, all, d)
 		require.True(t, diff.OK(), "%+v", diff)
 		require.Equal(t, 2, diff.Checked, "denied and empty-valued labels are not checked")
 	})
 
 	t.Run("over-broad denylist drops a retained label", func(t *testing.T) {
 		got := map[string]string{"k8s.node.label.kubernetes.io/os": "linux"}
-		diff := ReconcileLabels(node, got, "k8s.node.label.", d)
+		diff := ReconcileLabels(node, got, all, d)
 		require.Equal(t, []string{"karpenter.k8s.aws/ec2nodeclass"}, diff.Missing)
 	})
 
@@ -81,22 +97,47 @@ func TestReconcileLabels(t *testing.T) {
 		for k, v := range clean {
 			got[k] = v
 		}
-		diff := ReconcileLabels(node, got, "k8s.node.label.", d)
+		diff := ReconcileLabels(node, got, all, d)
 		require.Equal(t, []string{"karpenter.k8s.aws/instance-family"}, diff.Leaked)
 	})
 
 	t.Run("value changed in transit", func(t *testing.T) {
 		got := map[string]string{"k8s.node.label.kubernetes.io/os": "windows",
 			"k8s.node.label.karpenter.k8s.aws/ec2nodeclass": "default"}
-		diff := ReconcileLabels(node, got, "k8s.node.label.", d)
+		diff := ReconcileLabels(node, got, all, d)
 		require.Len(t, diff.Mismatched, 1)
 		require.Contains(t, diff.Mismatched[0], "kubernetes.io/os")
 	})
 
 	t.Run("labels under another prefix are ignored", func(t *testing.T) {
 		got := map[string]string{"k8s.pod.label.kubernetes.io/os": "linux"}
-		diff := ReconcileLabels(node, got, "k8s.node.label.", d)
+		diff := ReconcileLabels(node, got, all, d)
 		require.Len(t, diff.Missing, 2, "a pod label must not satisfy a node label")
+	})
+
+	include := mustExtraction(t, `
+processors:
+  k8sattributes/n:
+    extract:
+      labels:
+        - {from: node, key_regex: "(kubernetes\\.io/.*)", tag_name: "k8s.node.label.$$$1"}
+        - {from: node, key: "topology.kubernetes.io/zone", tag_name: "k8s.node.label.topology.kubernetes.io/zone"}
+`, "node")
+
+	t.Run("label the include list leaves out is not expected", func(t *testing.T) {
+		got := map[string]string{"k8s.node.label.kubernetes.io/os": "linux"}
+		diff := ReconcileLabels(node, got, include, d)
+		require.True(t, diff.OK(), "%+v", diff)
+		require.Equal(t, 1, diff.Checked, "only kubernetes.io/os is extracted and not denied")
+	})
+
+	t.Run("label the include list leaves out still present", func(t *testing.T) {
+		got := map[string]string{"k8s.node.label.kubernetes.io/os": "linux"}
+		for k, v := range clean {
+			got[k] = v
+		}
+		diff := ReconcileLabels(node, got, include, d)
+		require.Equal(t, []string{"karpenter.k8s.aws/ec2nodeclass"}, diff.Leaked)
 	})
 }
 
@@ -137,6 +178,66 @@ func TestNeverDeniedViolations(t *testing.T) {
 	require.Empty(t, d.NeverDeniedViolations(), "the instance- prefix spares karpenter.k8s.aws/ec2nodeclass")
 }
 
+func TestLabelExcludesDenylist(t *testing.T) {
+	d := LabelExcludes{Pod: []string{"app.kubernetes.io/*", "team", "*"}, Node: []string{"karpenter.sh/nodepool"}}.Denylist()
+	require.Equal(t, []string{
+		`key "k8s.node.label.karpenter.sh/nodepool"`,
+		`key "k8s.pod.label.team"`,
+		`prefix "k8s.pod.label."`,
+		`prefix "k8s.pod.label.app.kubernetes.io/"`,
+	}, d.Entries())
+	require.Empty(t, LabelExcludes{}.Denylist().Entries())
+}
+
+func TestSplitCustomerExcludes(t *testing.T) {
+	// The chart's render of podLabels.exclude: ["app.kubernetes.io/*"] and nodeLabels.exclude: ["karpenter.sh/nodepool"].
+	excluded := mustDenylist(t)
+	excluded.Prefixes = append(excluded.Prefixes, "k8s.pod.label.app.kubernetes.io/")
+	excluded.Keys["k8s.node.label.karpenter.sh/nodepool"] = struct{}{}
+	chartEntries := mustDenylist(t).Entries()
+
+	t.Run("no declared excludes", func(t *testing.T) {
+		t.Setenv(PodLabelExcludesEnvVar, "")
+		t.Setenv(NodeLabelExcludesEnvVar, "")
+		chart, customer := excluded.SplitCustomerExcludes(ResolveLabelExcludes())
+		require.Empty(t, customer.Entries())
+		require.Equal(t, excluded.Entries(), chart.Entries())
+		require.Len(t, chart.NeverDeniedViolations(), 4, "the protected label entries fail")
+		require.Equal(t, excluded.Processor, chart.Processor)
+	})
+
+	t.Run("matching declared excludes", func(t *testing.T) {
+		t.Setenv(PodLabelExcludesEnvVar, "app.kubernetes.io/*")
+		t.Setenv(NodeLabelExcludesEnvVar, "karpenter.sh/nodepool")
+		chart, customer := excluded.SplitCustomerExcludes(ResolveLabelExcludes())
+		require.Equal(t, chartEntries, chart.Entries())
+		require.Empty(t, chart.NeverDeniedViolations())
+		require.Equal(t, []string{`key "k8s.node.label.karpenter.sh/nodepool"`, `prefix "k8s.pod.label.app.kubernetes.io/"`}, customer.Entries())
+		require.Len(t, customer.NeverDeniedViolations(), 4, "the excludes remove three protected app.kubernetes.io/ pod labels and the node pool label")
+	})
+
+	for name, e := range map[string]LabelExcludes{
+		"key pattern for a prefix entry":   {Pod: []string{"app.kubernetes.io/name"}},
+		"other prefix":                     {Pod: []string{"app.kubernetes.io/n*"}},
+		"pod pattern for a node entry":     {Pod: []string{"karpenter.sh/nodepool"}},
+		"node pattern for a pod entry":     {Node: []string{"app.kubernetes.io/*"}},
+		"pattern with the attribute scope": {Pod: []string{"k8s.pod.label.app.kubernetes.io/*"}},
+	} {
+		t.Run("non-matching "+name, func(t *testing.T) {
+			chart, customer := excluded.SplitCustomerExcludes(e)
+			require.Empty(t, customer.Entries())
+			require.Equal(t, excluded.Entries(), chart.Entries())
+			require.NotEmpty(t, chart.NeverDeniedViolations())
+		})
+	}
+
+	t.Run("an undeclared wider chart entry fails", func(t *testing.T) {
+		d := AttributeDenylist{Prefixes: []string{"k8s.node.label.kubernetes.io/"}, Keys: map[string]struct{}{}}
+		chart, _ := d.SplitCustomerExcludes(LabelExcludes{Pod: []string{"app.kubernetes.io/*"}})
+		require.Len(t, chart.NeverDeniedViolations(), 2, "the prefix removes kubernetes.io/os and kubernetes.io/arch")
+	})
+}
+
 func TestReconcileObjects(t *testing.T) {
 	d := mustDenylist(t)
 	nodes := map[string]map[string]string{
@@ -162,7 +263,7 @@ func TestReconcileObjects(t *testing.T) {
 		series("n2", map[string]string{"topology.kubernetes.io/zone": "a"}), // missing and leaked
 		series("n2", map[string]string{"kubernetes.io/os": "windows"}),      // mismatched only
 		series("gone", map[string]string{}),
-	}, objectOf, []string{"n1", "n2"}, "k8s.node.label.", d)
+	}, objectOf, []string{"n1", "n2"}, mustExtraction(t, extractAllConfig, "node"), d)
 
 	require.Equal(t, 2, got.Objects)
 	require.Equal(t, 2, got.Required)
@@ -173,6 +274,7 @@ func TestReconcileObjects(t *testing.T) {
 }
 
 func TestReconcileObjectsRequiresASeries(t *testing.T) {
+	all := mustExtraction(t, extractAllConfig, "node")
 	nodes := map[string]map[string]string{"n1": {}, "n2": {}, "n3": {}, "capped": {}}
 	series := func(node string, extra ...string) MetricResult {
 		res := map[string]string{"k8s.node.name": node}
@@ -191,7 +293,7 @@ func TestReconcileObjectsRequiresASeries(t *testing.T) {
 		series("n1"),
 		series("capped", "a", "b"), // at the cap of 3, so not reconciled, but still a series
 		series("gone"),             // an object the API no longer lists
-	}, objectOf, []string{"n3", "n1", "capped", "n2"}, "k8s.node.label.", AttributeDenylist{MaxTotal: 3})
+	}, objectOf, []string{"n3", "n1", "capped", "n2"}, all, AttributeDenylist{MaxTotal: 3})
 
 	require.Equal(t, 1, got.Objects)
 	require.Equal(t, 1, got.AtCap)
@@ -199,6 +301,6 @@ func TestReconcileObjectsRequiresASeries(t *testing.T) {
 	require.Equal(t, []string{"n2", "n3"}, got.NoSeries, "sorted, and a series at the cap counts as a series")
 	require.Empty(t, got.Failed)
 
-	got = ReconcileObjects([]MetricResult{series("n1")}, objectOf, nil, "k8s.node.label.", AttributeDenylist{})
+	got = ReconcileObjects([]MetricResult{series("n1")}, objectOf, nil, all, AttributeDenylist{})
 	require.Empty(t, got.NoSeries, "with nothing required, an object without a series passes")
 }

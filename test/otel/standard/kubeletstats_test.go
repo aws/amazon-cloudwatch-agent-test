@@ -33,7 +33,7 @@ func TestKubeletstatsMetricExistence(t *testing.T) {
 func TestKubeletstatsInstrumentationSource(t *testing.T) {
 	for _, metricName := range kubeletstatsMetricNamesList {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -49,7 +49,7 @@ func TestKubeletstatsInstrumentationSource(t *testing.T) {
 func TestKubeletstatsClusterIdentity(t *testing.T) {
 	for _, metricName := range kubeletstatsMetricNamesList {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -63,7 +63,7 @@ func TestKubeletstatsClusterIdentity(t *testing.T) {
 func TestKubeletstatsNodeName(t *testing.T) {
 	for _, metricName := range kubeletstatsMetricNamesList {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -81,7 +81,7 @@ func TestKubeletstatsPodName(t *testing.T) {
 	podAndContainerMetrics = append(podAndContainerMetrics, metricNames(kubeletstatsContainerMetrics)...)
 	for _, metricName := range podAndContainerMetrics {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -99,7 +99,7 @@ func TestKubeletstatsNamespace(t *testing.T) {
 	podAndContainerMetrics = append(podAndContainerMetrics, metricNames(kubeletstatsContainerMetrics)...)
 	for _, metricName := range podAndContainerMetrics {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -114,7 +114,7 @@ func TestKubeletstatsNamespace(t *testing.T) {
 func TestKubeletstatsContainerName(t *testing.T) {
 	for _, md := range kubeletstatsContainerMetrics {
 		t.Run(md.Name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			hasContainer := 0
@@ -133,7 +133,7 @@ func TestKubeletstatsContainerName(t *testing.T) {
 func TestKubeletstatsCloudDetection(t *testing.T) {
 	for _, metricName := range kubeletstatsMetricNamesList {
 		t.Run(metricName+"/provider", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -142,7 +142,7 @@ func TestKubeletstatsCloudDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/region", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -152,7 +152,7 @@ func TestKubeletstatsCloudDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/account_id", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -167,7 +167,7 @@ func TestKubeletstatsCloudDetection(t *testing.T) {
 func TestKubeletstatsHostDetection(t *testing.T) {
 	for _, metricName := range kubeletstatsMetricNamesList {
 		t.Run(metricName+"/host_id", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -178,7 +178,7 @@ func TestKubeletstatsHostDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/host_name", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -188,7 +188,7 @@ func TestKubeletstatsHostDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/host_type", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -206,7 +206,7 @@ func TestKubeletstatsExpectedLabels(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			for _, r := range results {
@@ -229,7 +229,7 @@ func TestKubeletstatsUnitValidation(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			for _, r := range results {

@@ -24,6 +24,8 @@ var (
 	cfg        otelmetrics.TestConfig
 	client     *otelmetrics.OtelMetricsClient
 	queryCache *otelmetrics.QueryCache
+	// allNodesCache reads node-agent metrics from every node, for checks that must hold on all of them.
+	allNodesCache *otelmetrics.QueryCache
 )
 
 func TestMain(m *testing.M) {
@@ -79,6 +81,10 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	fmt.Fprintf(os.Stderr, "Host types: %v (set %s to override)\n", clusterHostTypes, otelmetrics.HostTypesEnvVar)
+	fmt.Fprintf(os.Stderr, "Label excludes: pod %v, node %v (set %s and %s to the cluster's filters.metrics.podLabels.exclude and nodeLabels.exclude)\n",
+		clusterLabelExcludes.Pod, clusterLabelExcludes.Node, otelmetrics.PodLabelExcludesEnvVar, otelmetrics.NodeLabelExcludesEnvVar)
+
 	hostMappings := []otelmetrics.SourceHostMapping{
 		{Source: otelmetrics.SourceNodeExporter, HostTypes: clusterHostTypes},
 		{Source: otelmetrics.SourceCadvisor, HostTypes: clusterHostTypes},
@@ -88,18 +94,25 @@ func TestMain(m *testing.M) {
 		{Source: otelmetrics.SourceKSMNodeScoped, HostTypes: nil},
 	}
 
-	registry := otelmetrics.NewSourceRegistry(clusterHostTypes, hostMappings,
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceNodeExporter, Metrics: nodeExporterMetrics},
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceCadvisor, Metrics: cadvisorMetrics},
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceKubeletstats, Metrics: kubeletstatsMetrics},
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceControlPlane, Metrics: controlPlaneMetrics},
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceKubeStateMetrics, Metrics: ksmClusterScopedMetrics},
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceKSMNodeScoped, Metrics: ksmNodeScopedMetrics},
-	)
+	sourceMappings := []otelmetrics.SourceMapping{
+		{Source: otelmetrics.SourceNodeExporter, Metrics: nodeExporterMetrics},
+		{Source: otelmetrics.SourceCadvisor, Metrics: cadvisorMetrics},
+		{Source: otelmetrics.SourceKubeletstats, Metrics: kubeletstatsMetrics},
+		{Source: otelmetrics.SourceControlPlane, Metrics: controlPlaneMetrics},
+		{Source: otelmetrics.SourceKubeStateMetrics, Metrics: ksmClusterScopedMetrics},
+		{Source: otelmetrics.SourceKSMNodeScoped, Metrics: ksmNodeScopedMetrics},
+	}
+	registry := otelmetrics.NewSourceRegistry(clusterHostTypes, hostMappings, sourceMappings...)
 
 	queryCache = otelmetrics.NewQueryCache(client, cfg.ClusterName,
 		otelmetrics.WithHostTypes(clusterHostTypes),
 		otelmetrics.WithSourceRegistry(registry),
+	)
+	// Same routing with no host types: node-agent metrics span every node, cluster-scoped ones are unchanged.
+	// It shares queryCache's concurrency limit, so the two caches do not double the load on the endpoint.
+	allNodesCache = otelmetrics.NewQueryCache(client, cfg.ClusterName,
+		otelmetrics.WithSourceRegistry(otelmetrics.NewSourceRegistry(nil, nil, sourceMappings...)),
+		otelmetrics.WithSharedConcurrency(queryCache),
 	)
 
 	// Gate the suite on the agent's Lease-based node-metadata enrichment being

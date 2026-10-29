@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT
 
 // Node-color tests validate that the custom node-color label applied by the
-// GPU cluster's terraform (green on g4dn.xlarge + g4dn.12xlarge) propagates
+// GPU cluster's terraform (green on every GPU node group) propagates
 // to DaemonSet-enriched metrics.
 //
 // Ports the monorepo TestCustomNodeLabels/has_green subtest.

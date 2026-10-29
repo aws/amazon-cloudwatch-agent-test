@@ -41,7 +41,7 @@ var efaResourceSchema = otelmetrics.KeySchema{
 
 func TestAttributeSchema(t *testing.T) {
 	t.Parallel()
-	tally, err := otelmetrics.TallySchema(context.Background(), queryCache, efaMetricNamesList, otelmetrics.GroupSchema{
+	tally, err := otelmetrics.TallySchema(context.Background(), allNodesCache, efaMetricNamesList, otelmetrics.GroupSchema{
 		Resource:        efaResourceSchema,
 		Instrumentation: otelmetrics.KeySchema{Required: otelmetrics.ScopeKeys}, // set_scope_efa
 	}, nil)
