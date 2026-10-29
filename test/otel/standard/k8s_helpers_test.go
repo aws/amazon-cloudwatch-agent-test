@@ -8,16 +8,16 @@ package standard
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -45,22 +45,46 @@ func getGroundTruth(t *testing.T) *k8sGroundTruth {
 	return groundTruth
 }
 
+var (
+	k8sClient     *kubernetes.Clientset
+	k8sClientOnce sync.Once
+	k8sClientErr  error
+)
+
+// sharedK8sClientset builds one clientset from the default kubeconfig loading rules
+// ($KUBECONFIG, then ~/.kube/config), falling back to the in-cluster configuration.
+func sharedK8sClientset() (*kubernetes.Clientset, error) {
+	k8sClientOnce.Do(func() {
+		restConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			clientcmd.NewDefaultClientConfigLoadingRules(), nil).ClientConfig()
+		if err != nil {
+			if restConfig, err = rest.InClusterConfig(); err != nil {
+				k8sClientErr = fmt.Errorf("no kubeconfig or in-cluster config: %w", err)
+				return
+			}
+		}
+		k8sClient, k8sClientErr = kubernetes.NewForConfig(restConfig)
+	})
+	return k8sClient, k8sClientErr
+}
+
+func k8sClientset(t *testing.T) *kubernetes.Clientset {
+	t.Helper()
+	clientset, err := sharedK8sClientset()
+	require.NoError(t, err, "creating K8s clientset")
+	return clientset
+}
+
 func buildGroundTruth() (*k8sGroundTruth, error) {
-	kubeconfig := os.Getenv("KUBECONFIG")
-	if kubeconfig == "" {
-		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
-	}
-
-	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	clientset, err := sharedK8sClientset()
 	if err != nil {
-		return nil, fmt.Errorf("building kubeconfig: %w", err)
+		return nil, err
 	}
+	return snapshotGroundTruth(clientset)
+}
 
-	clientset, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return nil, fmt.Errorf("creating K8s clientset: %w", err)
-	}
-
+// snapshotGroundTruth lists every node and pod now.
+func snapshotGroundTruth(clientset kubernetes.Interface) (*k8sGroundTruth, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -116,19 +140,7 @@ func imageTagFromPod(t *testing.T, gt *k8sGroundTruth, namespace, labelKey, labe
 // k8sServerVersion returns the Kubernetes API server version string.
 func k8sServerVersion(t *testing.T) string {
 	t.Helper()
-	kubeconfig := os.Getenv("KUBECONFIG")
-	if kubeconfig == "" {
-		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
-	}
-	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		t.Fatalf("building kubeconfig: %v", err)
-	}
-	clientset, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		t.Fatalf("creating K8s clientset: %v", err)
-	}
-	sv, err := clientset.Discovery().ServerVersion()
+	sv, err := k8sClientset(t).Discovery().ServerVersion()
 	if err != nil {
 		t.Fatalf("getting K8s server version: %v", err)
 	}
