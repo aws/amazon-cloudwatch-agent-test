@@ -13,9 +13,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
@@ -1571,18 +1568,8 @@ func TestKSM_LeaseExistence(t *testing.T) {
 	t.Parallel()
 	gt := getGroundTruth(t)
 
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, nil)
-	restConfig, err := kubeConfig.ClientConfig()
-	if err != nil {
-		restConfig, err = rest.InClusterConfig()
-		require.NoError(t, err, "no kubeconfig or in-cluster config")
-	}
-	clientset, err := kubernetes.NewForConfig(restConfig)
-	require.NoError(t, err, "creating K8s clientset")
-
 	ctx := context.Background()
-	leases, err := clientset.CoordinationV1().Leases("amazon-cloudwatch").List(ctx, metav1.ListOptions{})
+	leases, err := k8sClientset(t).CoordinationV1().Leases("amazon-cloudwatch").List(ctx, metav1.ListOptions{})
 	require.NoError(t, err, "listing Leases")
 
 	leaseByNode := make(map[string]bool)
