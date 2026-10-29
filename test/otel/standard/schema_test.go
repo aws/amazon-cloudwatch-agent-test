@@ -28,8 +28,8 @@ import (
 // (otelmetrics.KeySchema.Implies) ties keys that are set together, so removing a
 // key family from all series fails even where each series may lack it.
 // Datapoint scope is not covered: its keys come from the scraped exporter and
-// move with its version. Every series in the cluster is read, so the
-// clusterHostTypes pin does not limit the check.
+// move with its version. Every series in the cluster is read through
+// allNodesCache, so the clusterHostTypes pin does not limit the check.
 //
 // An intentional attribute change edits the row in the same change. To add a
 // key, list it as optional, merge the chart change, then make it required. Keys
@@ -79,7 +79,7 @@ func TestAttributeSchema(t *testing.T) {
 		g := g
 		t.Run(g.name, func(t *testing.T) {
 			deleted := deletedNodes(t)
-			tally, err := otelmetrics.TallySchema(context.Background(), queryCache, g.metrics(), g.schema, deleted.forgive)
+			tally, err := otelmetrics.TallySchema(context.Background(), allNodesCache, g.metrics(), g.schema, deleted.forgive)
 			require.NoError(t, err)
 			t.Logf("%d series across %d metrics; %d series of deleted nodes forgiven a missing k8s.node.uid",
 				tally.Series, len(g.metrics()), deleted.forgiven)

@@ -41,7 +41,7 @@ var dcgmResourceSchema = otelmetrics.KeySchema{
 
 func TestAttributeSchema(t *testing.T) {
 	t.Parallel()
-	tally, err := otelmetrics.TallySchema(context.Background(), queryCache, dcgmMetricNamesList, otelmetrics.GroupSchema{
+	tally, err := otelmetrics.TallySchema(context.Background(), allNodesCache, dcgmMetricNamesList, otelmetrics.GroupSchema{
 		Resource:        dcgmResourceSchema,
 		Instrumentation: otelmetrics.KeySchema{Required: otelmetrics.ScopeKeys}, // set_scope_dcgm
 	}, nil)

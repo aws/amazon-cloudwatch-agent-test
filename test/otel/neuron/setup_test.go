@@ -24,10 +24,12 @@ var (
 	cfg        otelmetrics.TestConfig
 	client     *otelmetrics.OtelMetricsClient
 	queryCache *otelmetrics.QueryCache
+	// allNodesCache reads every series on every node, for the attribute schema.
+	allNodesCache *otelmetrics.QueryCache
 )
 
-// clusterHostTypes lists the accelerator instance types in this cluster.
-var clusterHostTypes = []string{"inf2.xlarge", "inf2.24xlarge"}
+// clusterHostTypes lists the accelerator instance types in this cluster; OTEL_HOST_TYPES overrides them.
+var clusterHostTypes = otelmetrics.ResolveHostTypes([]string{"inf2.xlarge", "inf2.24xlarge"})
 
 func TestMain(m *testing.M) {
 	environment.RegisterEnvironmentMetaDataFlags()
@@ -81,6 +83,8 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	fmt.Fprintf(os.Stderr, "Host types: %v (set %s to override)\n", clusterHostTypes, otelmetrics.HostTypesEnvVar)
+
 	hostMappings := []otelmetrics.SourceHostMapping{
 		{Source: otelmetrics.SourceNodeExporter, HostTypes: clusterHostTypes},
 		{Source: otelmetrics.SourceCadvisor, HostTypes: clusterHostTypes},
@@ -88,16 +92,22 @@ func TestMain(m *testing.M) {
 		{Source: otelmetrics.SourceNeuron, HostTypes: clusterHostTypes},
 	}
 
-	registry := otelmetrics.NewSourceRegistry(clusterHostTypes, hostMappings,
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceNodeExporter, Metrics: nodeExporterMetrics},
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceCadvisor, Metrics: cadvisorMetrics},
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceKubeletstats, Metrics: kubeletstatsMetrics},
-		otelmetrics.SourceMapping{Source: otelmetrics.SourceNeuron, Metrics: neuronMetrics},
-	)
+	sourceMappings := []otelmetrics.SourceMapping{
+		{Source: otelmetrics.SourceNodeExporter, Metrics: nodeExporterMetrics},
+		{Source: otelmetrics.SourceCadvisor, Metrics: cadvisorMetrics},
+		{Source: otelmetrics.SourceKubeletstats, Metrics: kubeletstatsMetrics},
+		{Source: otelmetrics.SourceNeuron, Metrics: neuronMetrics},
+	}
+	registry := otelmetrics.NewSourceRegistry(clusterHostTypes, hostMappings, sourceMappings...)
 
 	queryCache = otelmetrics.NewQueryCache(client, cfg.ClusterName,
 		otelmetrics.WithHostTypes(clusterHostTypes),
 		otelmetrics.WithSourceRegistry(registry),
+	)
+	// Same routing with no host types, sharing queryCache's concurrency limit.
+	allNodesCache = otelmetrics.NewQueryCache(client, cfg.ClusterName,
+		otelmetrics.WithSourceRegistry(otelmetrics.NewSourceRegistry(nil, nil, sourceMappings...)),
+		otelmetrics.WithSharedConcurrency(queryCache),
 	)
 
 	os.Exit(m.Run())

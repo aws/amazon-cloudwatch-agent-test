@@ -29,8 +29,8 @@ var (
 // Instrumentation scope name constant.
 const scopeKarpenter = "github.com/aws/karpenter"
 
-// Instance types in the Karpenter cluster.
-var clusterHostTypes = []string{"t3.medium"}
+// Instance types in the Karpenter cluster; OTEL_HOST_TYPES overrides them.
+var clusterHostTypes = otelmetrics.ResolveHostTypes([]string{"t3.medium"})
 
 func TestMain(m *testing.M) {
 	environment.RegisterEnvironmentMetaDataFlags()
@@ -83,6 +83,8 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "Client error: %v\n", err)
 		os.Exit(1)
 	}
+
+	fmt.Fprintf(os.Stderr, "Host types: %v (set %s to override)\n", clusterHostTypes, otelmetrics.HostTypesEnvVar)
 
 	hostMappings := []otelmetrics.SourceHostMapping{
 		{Source: otelmetrics.SourceKarpenter, HostTypes: nil},

@@ -87,7 +87,7 @@ func TestDCGMNamespace(t *testing.T) {
 }
 
 // TestDCGMMultiNodeCoverage validates that DCGM_FI_DEV_GPU_UTIL is reported
-// from at least 2 GPU nodes (g4dn.xlarge + g4dn.12xlarge).
+// from at least 2 GPU nodes (the idle node and the busy node).
 func TestDCGMMultiNodeCoverage(t *testing.T) {
 	t.Parallel()
 	results, err := queryCache.Get(context.Background(), "DCGM_FI_DEV_GPU_UTIL")
@@ -104,8 +104,22 @@ func TestDCGMMultiNodeCoverage(t *testing.T) {
 		"Expected DCGM metrics from at least 2 GPU nodes, got %d", len(nodes))
 }
 
+// TestDCGMGPUCountMatchesAllocatable validates that every GPU node reports
+// one distinct gpu in DCGM_FI_DEV_GPU_UTIL per device in its nvidia.com/gpu
+// allocatable.
+func TestDCGMGPUCountMatchesAllocatable(t *testing.T) {
+	t.Parallel()
+	for _, node := range gpuRoles(t).Nodes {
+		want := allocatableGPUs(t, node.Name)
+		gpus := node.GPUs()
+		t.Logf("%s: nvidia.com/gpu allocatable %d, DCGM gpu %v", node.Name, want, gpus)
+		require.Equal(t, want, len(gpus), "Expected %d distinct gpu on %s (nvidia.com/gpu allocatable), got %d: %v",
+			want, node.Name, len(gpus), gpus)
+	}
+}
+
 // TestDCGMActiveNodeNonzero validates that at least one GPU node has
-// non-zero utilization (multi-gpu-burn should be running on g4dn.12xlarge).
+// non-zero utilization (multi-gpu-burn should be running on the busy node).
 func TestDCGMActiveNodeNonzero(t *testing.T) {
 	t.Parallel()
 	results, err := queryCache.Get(context.Background(), "DCGM_FI_DEV_GPU_UTIL")
@@ -211,7 +225,7 @@ func TestDCGMExpectedLabels(t *testing.T) {
 
 // TestDCGMGpuburnContainerName validates that multi-gpu-burn pod results have
 // k8s.container.name=gpu-burn for all DCGM metrics.
-// In this ephemeral cluster, multi-gpu-burn on g4dn.12xlarge is the active workload.
+// In this ephemeral cluster, multi-gpu-burn on the busy node is the active workload.
 func TestDCGMGpuburnContainerName(t *testing.T) {
 	t.Parallel()
 	for _, metricName := range dcgmMetricNamesList {
@@ -238,9 +252,10 @@ func TestDCGMGpuburnContainerName(t *testing.T) {
 }
 
 // TestDCGMIdleNodeNoContainerName validates that uncorrelated DCGM results
-// (from idle g4dn.xlarge) do NOT have k8s.container.name.
+// (from the idle node) do NOT have k8s.container.name.
 func TestDCGMIdleNodeNoContainerName(t *testing.T) {
 	t.Parallel()
+	nodes := idleNodes(t)
 	for _, metricName := range dcgmMetricNamesList {
 		metricName := metricName
 		t.Run(metricName, func(t *testing.T) {
@@ -248,8 +263,8 @@ func TestDCGMIdleNodeNoContainerName(t *testing.T) {
 			results, err := queryCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available (no GPU nodes?)", metricName)
-			idle := filterByHostType(results, "g4dn.xlarge")
-			require.NotEmpty(t, idle, "No %s results from idle g4dn.xlarge node", metricName)
+			idle := otelmetrics.SeriesOnNodes(results, nodes)
+			require.NotEmpty(t, idle, "No %s results from idle nodes %v", metricName, nodeNames(nodes))
 			for _, r := range idle {
 				_, has := r.Labels.Resource["k8s.container.name"]
 				require.False(t, has,
@@ -289,9 +304,10 @@ func TestDCGMGpuburnWorkloadLabels(t *testing.T) {
 }
 
 // TestDCGMIdleNodeNoWorkloadLabels validates that DCGM results from the idle
-// g4dn.xlarge node do NOT have k8s.workload.name.
+// node do NOT have k8s.workload.name.
 func TestDCGMIdleNodeNoWorkloadLabels(t *testing.T) {
 	t.Parallel()
+	nodes := idleNodes(t)
 	for _, metricName := range dcgmMetricNamesList {
 		metricName := metricName
 		t.Run(metricName, func(t *testing.T) {
@@ -299,8 +315,8 @@ func TestDCGMIdleNodeNoWorkloadLabels(t *testing.T) {
 			results, err := queryCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available (no GPU nodes?)", metricName)
-			idle := filterByHostType(results, "g4dn.xlarge")
-			require.NotEmpty(t, idle, "No results from idle g4dn.xlarge node for %s", metricName)
+			idle := otelmetrics.SeriesOnNodes(results, nodes)
+			require.NotEmpty(t, idle, "No results from idle nodes %v for %s", nodeNames(nodes), metricName)
 			for _, r := range idle {
 				_, hasName := r.Labels.Resource["k8s.workload.name"]
 				require.False(t, hasName,
@@ -389,9 +405,10 @@ func TestDCGMHasRawPromotedKeys(t *testing.T) {
 }
 
 // TestDCGMIdleNodeNoPodColor validates that DCGM results from the idle
-// g4dn.xlarge node do NOT have the pod color label.
+// node do NOT have the pod color label.
 func TestDCGMIdleNodeNoPodColor(t *testing.T) {
 	t.Parallel()
+	nodes := idleNodes(t)
 	for _, metricName := range dcgmMetricNamesList {
 		metricName := metricName
 		t.Run(metricName, func(t *testing.T) {
@@ -399,8 +416,8 @@ func TestDCGMIdleNodeNoPodColor(t *testing.T) {
 			results, err := queryCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available (no GPU nodes?)", metricName)
-			idle := filterByHostType(results, "g4dn.xlarge")
-			require.NotEmpty(t, idle, "No results from idle g4dn.xlarge node for %s", metricName)
+			idle := otelmetrics.SeriesOnNodes(results, nodes)
+			require.NotEmpty(t, idle, "No results from idle nodes %v for %s", nodeNames(nodes), metricName)
 			for _, r := range idle {
 				_, has := r.Labels.Resource[podColorLabel]
 				require.False(t, has,

@@ -97,7 +97,7 @@ func TestCadvisorNoDuplicateSeries(t *testing.T) {
 func TestNodeExporterNoSchemaUrlLabel(t *testing.T) {
 	for _, metricName := range nodeExporterMetricNames {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
