@@ -62,7 +62,7 @@ func getNodeAllocatable(t *testing.T, metricName string, resource string) (float
 	// and skew the percent-of-node denominator the thresholds are calibrated to.
 	query := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s", resource="%s"}`,
 		metricName, otelmetrics.EscapePromQLValue(cfg.ClusterName), resource)
-	results, err := client.Query(context.Background(), query)
+	results, err := client.QueryComplete(context.Background(), query)
 	require.NoError(t, err, "failed to query node allocatable for resource=%s", resource)
 	require.NotEmpty(t, results, "no kube_node_status_allocatable data for resource=%s — are KSM metrics being collected?", resource)
 	var sum float64

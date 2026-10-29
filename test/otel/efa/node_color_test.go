@@ -31,7 +31,7 @@ func TestEFAHasYellowNodeColor(t *testing.T) {
 			promql := fmt.Sprintf(
 				`%s{"@resource.k8s.cluster.name"="%s","@resource.%s"="yellow"}`,
 				metricName, escaped, nodeColorLabel)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s with node-color=yellow filter", metricName)
 			require.True(t, len(results) > 0,
 				"%s: no results from c5n.9xlarge nodes (expected node-color=yellow)", metricName)

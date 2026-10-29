@@ -528,7 +528,7 @@ func TestNeuronNodeGroupCoverage(t *testing.T) {
 			promql := fmt.Sprintf(
 				`neuroncore_utilization_ratio{"@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`,
 				escaped, ng.InstanceType)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying neuroncore_utilization_ratio on %s", ng.Description)
 			require.True(t, len(results) > 0,
 				"Neuron metrics missing from %s nodes (%s) — neuron-monitor not running?",

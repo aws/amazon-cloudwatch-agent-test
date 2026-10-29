@@ -50,7 +50,7 @@ func TestDCGMNoDuplicateSeries(t *testing.T) {
 		`DCGM_FI_DEV_GPU_UTIL{"@resource.k8s.cluster.name"="%s","@resource.k8s.node.name"="%s",UUID="%s"}`,
 		escaped, pinNode, pinUUID,
 	)
-	pinned, err := client.Query(ctx, promql)
+	pinned, err := client.QueryComplete(ctx, promql)
 	require.NoError(t, err, "querying pinned DCGM_FI_DEV_GPU_UTIL")
 	require.NotEmpty(t, pinned, "pinned DCGM_FI_DEV_GPU_UTIL returned 0 results")
 	require.Equal(t, 1, len(pinned),
