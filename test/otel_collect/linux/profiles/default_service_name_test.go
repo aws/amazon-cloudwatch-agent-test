@@ -18,14 +18,14 @@ func TestDefaultServiceNameError(t *testing.T) {
 	require.ErrorContains(t, err, "no samples sent")
 
 	err = defaultServiceNameError(exporterCounts{sent: 12}, exporterCounts{sent: 12, sendFailed: 1}, "E! Exporting failed ... 400")
-	require.ErrorContains(t, err, "resource/profiles")
+	require.ErrorContains(t, err, "default service.name fallback")
 	require.ErrorContains(t, err, "400")
 
 	failing := "E! Exporting failed. Dropping data. ... 404 Operation not supported"
 	err = defaultServiceNameError(exporterCounts{sendFailed: 12}, exporterCounts{sendFailed: 13}, failing)
 	require.ErrorContains(t, err, "export itself is failing")
 	require.ErrorContains(t, err, "404 Operation not supported")
-	require.NotContains(t, err.Error(), "resource/profiles")
+	require.NotContains(t, err.Error(), "default service.name fallback")
 }
 
 func TestLastExportFailure(t *testing.T) {

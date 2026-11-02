@@ -90,6 +90,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_linux_onprem": {
 		{testDir: "./test/cloudwatchlogs"},
 		{testDir: "./test/otel_collect/linux/otlp"},
+		{testDir: "./test/otel_collect/linux/profiles"},
 		{testDir: "./test/otel_collect/linux/host_metrics"},
 		{testDir: "./test/otel_collect/linux/prometheus"},
 	},

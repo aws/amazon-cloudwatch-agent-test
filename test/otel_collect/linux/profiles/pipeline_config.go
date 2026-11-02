@@ -15,8 +15,6 @@ import (
 const (
 	profilesPipelineID = "profiles/otlp"
 
-	profilesResourceProcessorID = "resource/profiles"
-
 	profilesIdentityProcessorID = "transform/identity"
 
 	serviceNameKey = "service.name"
@@ -38,8 +36,7 @@ type pipelineConfig struct {
 }
 
 type processorConfig struct {
-	Attributes        []attributeAction `yaml:"attributes"`
-	ProfileStatements []statementGroup  `yaml:"profile_statements"`
+	ProfileStatements []statementGroup `yaml:"profile_statements"`
 }
 
 type statementGroup struct {
@@ -47,15 +44,8 @@ type statementGroup struct {
 	Statements []string `yaml:"statements"`
 }
 
-type attributeAction struct {
-	Action string `yaml:"action"`
-	Key    string `yaml:"key"`
-	Value  any    `yaml:"value"`
-}
-
 type profilesPipeline struct {
 	pipelineConfig
-	resourceActions           []attributeAction
 	identityProfileStatements []string
 }
 
@@ -70,7 +60,6 @@ func parseProfilesPipeline(content []byte) (profilesPipeline, error) {
 	}
 	return profilesPipeline{
 		pipelineConfig:            pipeline,
-		resourceActions:           cfg.Processors[profilesResourceProcessorID].Attributes,
 		identityProfileStatements: flattenStatements(cfg.Processors[profilesIdentityProcessorID].ProfileStatements),
 	}, nil
 }
@@ -90,21 +79,15 @@ func componentType(id string) string {
 
 func checkProfilesPipelineInvariants(p profilesPipeline) error {
 	var problems []string
-	hasResource := false
 	for _, id := range p.Processors {
 		if componentType(id) == "batch" {
 			problems = append(problems, fmt.Sprintf("processor %s is in the %s pipeline", id, profilesPipelineID))
 		}
-		if id == profilesResourceProcessorID {
-			hasResource = true
-		}
 	}
-	resourceInserts := hasResource && len(serviceNameInserts(p.resourceActions)) > 0
-	identityFallback := hasFallbackServiceName(p.identityProfileStatements)
-	if !resourceInserts && !identityFallback {
+	if !hasFallbackServiceName(p.identityProfileStatements) {
 		problems = append(problems, fmt.Sprintf(
-			"%s pipeline sets no %s: expected an insert or upsert on %s or a nil-guarded %q statement on %s (processors: %v)",
-			profilesPipelineID, serviceNameKey, profilesResourceProcessorID, fallbackServiceName, profilesIdentityProcessorID, p.Processors))
+			"%s pipeline sets no %s: expected a nil-guarded %q statement on %s (processors: %v)",
+			profilesPipelineID, serviceNameKey, fallbackServiceName, profilesIdentityProcessorID, p.Processors))
 	}
 	if len(problems) > 0 {
 		return fmt.Errorf("%s", strings.Join(problems, "; "))
@@ -123,17 +106,4 @@ func hasFallbackServiceName(statements []string) bool {
 		}
 	}
 	return false
-}
-
-func serviceNameInserts(actions []attributeAction) []string {
-	var values []string
-	for _, a := range actions {
-		if a.Key != serviceNameKey {
-			continue
-		}
-		if a.Action == "insert" || a.Action == "upsert" {
-			values = append(values, fmt.Sprint(a.Value))
-		}
-	}
-	return values
 }

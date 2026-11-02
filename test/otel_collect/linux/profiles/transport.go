@@ -55,7 +55,8 @@ var profilesTransports = []profilesTransport{
 }
 
 func postProfiles(payload []byte) error {
-	resp, err := http.Post(otlpHTTPEndpoint+profilesURLPath, "application/json", bytes.NewReader(payload))
+	client := &http.Client{Timeout: pushTimeout}
+	resp, err := client.Post(otlpHTTPEndpoint+profilesURLPath, "application/json", bytes.NewReader(payload))
 	if err != nil {
 		return fmt.Errorf("POST %s failed: %w", profilesURLPath, err)
 	}

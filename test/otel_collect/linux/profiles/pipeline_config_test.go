@@ -15,13 +15,11 @@ const goodTranslatedConfig = `
 processors:
   batch/hostOtlpMetrics/cloudwatchlogs:
     timeout: 30s
-  resource/profiles:
-    attributes:
-      - action: insert
-        key: service.name
-        value: unknown_service
   transform/identity:
-    profile_statements: []
+    profile_statements:
+      - context: resource
+        statements:
+          - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
 service:
   pipelines:
     metrics/otlp:
@@ -30,7 +28,7 @@ service:
       exporters: [awsemf]
     profiles/otlp:
       receivers: [otlp/grpc_127_0_0_1_4317, otlp/http_127_0_0_1_4318]
-      processors: [resourcedetection/opentelemetry, transform/identity, resource/profiles]
+      processors: [resourcedetection/opentelemetry, transform/identity]
       exporters: [otlp_http/profiles]
 `
 
@@ -38,32 +36,22 @@ func TestProfilesPipelineInvariantsPass(t *testing.T) {
 	p, err := parseProfilesPipeline([]byte(goodTranslatedConfig))
 	require.NoError(t, err)
 	require.NoError(t, checkProfilesPipelineInvariants(p))
-	require.Equal(t, []string{fallbackServiceName}, serviceNameInserts(p.resourceActions))
+	require.True(t, hasFallbackServiceName(p.identityProfileStatements))
 }
 
 func TestProfilesPipelineInvariantsBatch(t *testing.T) {
-	p := profilesPipeline{pipelineConfig: pipelineConfig{Processors: []string{"batch/profiles", "resource/profiles"}},
-		resourceActions: []attributeAction{{Action: "insert", Key: serviceNameKey, Value: fallbackServiceName}}}
-	err := checkProfilesPipelineInvariants(p)
-	require.ErrorContains(t, err, "batch/profiles")
+	fallback := []string{`set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil`}
+	p := profilesPipeline{pipelineConfig: pipelineConfig{Processors: []string{"batch/profiles", "transform/identity"}},
+		identityProfileStatements: fallback}
+	require.ErrorContains(t, checkProfilesPipelineInvariants(p), "batch/profiles")
 
-	p.Processors = []string{"batch", "resource/profiles"}
+	p.Processors = []string{"batch", "transform/identity"}
 	require.ErrorContains(t, checkProfilesPipelineInvariants(p), "processor batch is in")
 }
 
 func TestProfilesPipelineInvariantsServiceName(t *testing.T) {
 	p := profilesPipeline{pipelineConfig: pipelineConfig{Processors: []string{"transform/identity"}}}
 	require.ErrorContains(t, checkProfilesPipelineInvariants(p), "sets no service.name")
-
-	p = profilesPipeline{pipelineConfig: pipelineConfig{Processors: []string{"resource/profiles", "transform/identity"}},
-		resourceActions: []attributeAction{{Action: "delete", Key: serviceNameKey}}}
-	require.ErrorContains(t, checkProfilesPipelineInvariants(p), "sets no service.name")
-}
-
-func TestProfilesPipelineInvariantsResourceInsert(t *testing.T) {
-	p := profilesPipeline{pipelineConfig: pipelineConfig{Processors: []string{"resource/profiles", "transform/identity"}},
-		resourceActions: []attributeAction{{Action: "insert", Key: serviceNameKey, Value: "inferred-svc"}}}
-	require.NoError(t, checkProfilesPipelineInvariants(p))
 }
 
 func TestProfilesPipelineInvariantsIdentityFallback(t *testing.T) {
@@ -97,15 +85,6 @@ func TestParseProfilesPipelineMissing(t *testing.T) {
 	require.ErrorContains(t, err, "parsing translated config")
 }
 
-func TestServiceNameInsertsOrder(t *testing.T) {
-	actions := []attributeAction{
-		{Action: "insert", Key: serviceNameKey, Value: "inferred-svc"},
-		{Action: "insert", Key: "other", Value: "x"},
-		{Action: "insert", Key: serviceNameKey, Value: fallbackServiceName},
-	}
-	require.Equal(t, []string{"inferred-svc", fallbackServiceName}, serviceNameInserts(actions))
-}
-
 const kubernetesTranslatedConfig = `
 processors:
   transform/identity:
@@ -125,7 +104,6 @@ service:
 func TestProfilesPipelineInvariantsKubernetes(t *testing.T) {
 	p, err := parseProfilesPipeline([]byte(kubernetesTranslatedConfig))
 	require.NoError(t, err)
-	require.NotContains(t, p.Processors, profilesResourceProcessorID)
 	require.True(t, hasFallbackServiceName(p.identityProfileStatements))
 	require.NoError(t, checkProfilesPipelineInvariants(p))
 }

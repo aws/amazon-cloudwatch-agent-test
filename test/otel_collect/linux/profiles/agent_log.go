@@ -7,6 +7,7 @@ package profiles
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/util/common"
@@ -58,4 +59,7 @@ func profilesExporterLogProblem(line string) bool {
 
 func resetAgentLog() {
 	common.RecreateAgentLogfile(common.AgentLogFile)
+	if _, err := common.RunCommand("sudo test -e " + common.AgentLogFile); err == nil {
+		log.Printf("warning: agent log %s still present after reset", common.AgentLogFile)
+	}
 }

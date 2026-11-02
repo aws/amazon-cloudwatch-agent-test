@@ -8,5 +8,4 @@ type TestStatus string
 const (
 	SUCCESSFUL TestStatus = "Successful"
 	FAILED     TestStatus = "Failed"
-	SKIPPED    TestStatus = "Skipped"
 )

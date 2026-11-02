@@ -274,8 +274,9 @@ func (t *ProfilesAttributeCapTestRunner) checkSubsequentDelivery() status.TestRe
 		r.Reason = fmt.Errorf("reading exporter self telemetry: %w", t.countersErr)
 	case !t.final.found:
 		r.Reason = fmt.Errorf("self telemetry has no %s series for %s", sentProfileSamplesMetric, profilesExporterID)
-	case t.final.sendFailed > 0:
-		r.Reason = fmt.Errorf("%s reported %.0f profile samples that failed to send (sent %.0f)", profilesExporterID, t.final.sendFailed, t.final.sent)
+	case t.final.sendFailed > t.afterMixed.sendFailed:
+		r.Reason = fmt.Errorf("%s: %.0f new send failures after the mixed request (afterMixed %.0f -> final %.0f, sent %.0f)",
+			profilesExporterID, t.final.sendFailed-t.afterMixed.sendFailed, t.afterMixed.sendFailed, t.final.sendFailed, t.final.sent)
 	case t.final.sent <= t.afterMixed.sent:
 		r.Reason = fmt.Errorf("sent counter did not rise after the mixed request (%.0f -> %.0f, %d pushes accepted)", t.afterMixed.sent, t.final.sent, t.subsequentAccepted)
 	default:

@@ -415,7 +415,7 @@ func defaultServiceNameError(before, after exporterCounts, exportFailure string)
 		cause = "last export error: " + exportFailure
 	}
 	if before.sent > 0 && before.sendFailed == 0 {
-		return fmt.Errorf("payload without service.name: %.0f samples failed to send while the regular pushes were delivered, so resource/profiles may not have set a default service name; %s", failedDelta, cause)
+		return fmt.Errorf("payload without service.name: %.0f samples failed to send while the regular pushes were delivered, so the default service.name fallback may not have been applied; %s", failedDelta, cause)
 	}
 	return fmt.Errorf("payload without service.name: %.0f samples failed to send, as did the regular pushes (sent %.0f, failed %.0f before it), so the export itself is failing; %s", failedDelta, before.sent, before.sendFailed, cause)
 }
@@ -442,13 +442,8 @@ func (t *ProfilesTestRunner) validateOtherSignalsUnaffected() status.TestResult 
 	case t.metricsConfigErr != nil:
 		result.Reason = fmt.Errorf("reading the metrics exporter from %s: %w", translatedYamlPath, t.metricsConfigErr)
 		return result
-	case t.metricsExporter == "" && t.pushStart.IsZero():
-		result.Reason = fmt.Errorf("the push window never started")
-		return result
 	case t.metricsExporter == "":
-		result.Status = status.SKIPPED
-		result.Reason = fmt.Errorf("skipped: the translated config has no OTLP HTTP exporter in a metrics pipeline")
-		log.Printf("[Profiles] fail-open branch: skipped, no OTLP metrics exporter")
+		result.Reason = fmt.Errorf("the translated config has no OTLP HTTP exporter in a metrics pipeline")
 		return result
 	}
 	if len(t.metricsFailures) > 0 {
