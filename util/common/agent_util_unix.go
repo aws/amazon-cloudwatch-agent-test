@@ -73,7 +73,7 @@ func WriteFile(filePath string, content string) error {
 	out, err := exec.Command("bash", "-c", cmd).Output()
 
 	if err != nil {
-		log.Printf(fmt.Sprint(err) + string(out))
+		log.Printf("%s", fmt.Sprint(err)+string(out))
 		return err
 	}
 
@@ -93,7 +93,7 @@ func MkdirAll(path string) error {
 	out, err := exec.Command("bash", "-c", "sudo mkdir -p "+absPath).Output()
 
 	if err != nil {
-		log.Printf(fmt.Sprint(err) + string(out))
+		log.Printf("%s", fmt.Sprint(err)+string(out))
 		return err
 	}
 
@@ -110,7 +110,7 @@ func DeleteFile(filePathAbsolute string) error {
 	out, err := exec.Command("bash", "-c", "sudo rm "+filePathAbsolute).Output()
 
 	if err != nil {
-		log.Printf(fmt.Sprint(err) + string(out))
+		log.Printf("%s", fmt.Sprint(err)+string(out))
 		return err
 	}
 
@@ -123,7 +123,7 @@ func TouchFile(filePathAbsolute string) error {
 	out, err := exec.Command("bash", "-c", "sudo touch "+filePathAbsolute).Output()
 
 	if err != nil {
-		log.Printf(fmt.Sprint(err) + string(out))
+		log.Printf("%s", fmt.Sprint(err)+string(out))
 		return err
 	}
 
@@ -195,7 +195,7 @@ func StartAgentWithCommand(configOutputPath string, fatalOnFailure bool, ssm boo
 	if err != nil && fatalOnFailure {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	} else if err != nil {
-		log.Printf(fmt.Sprint(err) + string(out))
+		log.Printf("%s", fmt.Sprint(err)+string(out))
 	} else {
 		log.Printf("Agent has started")
 	}
