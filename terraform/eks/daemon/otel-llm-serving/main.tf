@@ -9,11 +9,13 @@
 #   - its transformer (hello-world)            -> knative dataplane only, no aws.service.type
 #   - a plain vLLM Deployment                  -> vllm (found by image name)
 #   - a plain Knative Service (hello-ksvc)     -> knative dataplane only, no aws.service.type
+#   - an SGLang InferenceService               -> sglang (shared KServe job), knative dataplane
+#   - a plain SGLang Deployment                -> sglang (found by image name)
 #   - an annotated vLLM mock (custom image)    -> negative control: not scraped
 #   - an annotated non-vLLM exporter           -> negative control: not scraped
 #   - a load generator, so request metrics have data
 # then installs the chart with otelContainerInsights enabled (solutions default
-# on) and runs ./test/otel/solutions/{vllm,kserve,knative}.
+# on) and runs ./test/otel/solutions/{vllm,sglang,kserve,knative}.
 
 module "common" {
   source             = "../../../common"
@@ -27,9 +29,10 @@ module "basic_components" {
 }
 
 locals {
-  aws_eks   = "aws eks --region ${var.region}"
-  namespace = "llm"
-  isvc      = "vllm-isvc"
+  aws_eks     = "aws eks --region ${var.region}"
+  namespace   = "llm"
+  isvc        = "vllm-isvc"
+  sglang_isvc = "sglang-isvc"
 }
 
 resource "aws_eks_cluster" "this" {
@@ -371,6 +374,132 @@ resource "kubernetes_deployment_v1" "vllm_standalone" {
   timeouts { create = "30m" }
 }
 
+# SGLang in a KServe predictor. It carries the same KServe labels as the vLLM
+# predictor; the shared kserve-model-server job scrapes both, and only the
+# sglang pipeline keeps its sglang:* series.
+resource "null_resource" "sglang_inference_service" {
+  depends_on = [helm_release.kserve, kubernetes_namespace_v1.llm]
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      cat <<'EOF' | kubectl apply -f -
+      apiVersion: serving.kserve.io/v1beta1
+      kind: InferenceService
+      metadata:
+        name: ${local.sglang_isvc}
+        namespace: ${local.namespace}
+        annotations:
+          serving.knative.dev/progress-deadline: "1800s"
+      spec:
+        predictor:
+          minReplicas: 1
+          maxReplicas: 1
+          containers:
+            - name: kserve-container
+              image: ${var.sglang_cpu_image}
+              command: ["python3", "-m", "sglang.launch_server"]
+              args: ["--model-path", "${var.vllm_model}", "--served-model-name", "${local.sglang_isvc}", "--device", "cpu",
+                     "--host", "0.0.0.0", "--port", "8080", "--enable-metrics",
+                     "--mem-fraction-static", "0.85", "--context-length", "2048"]
+              ports:
+                - { containerPort: 8080, protocol: TCP }
+              # SGLang's /health takes about a second, the probe default timeout,
+              # so the queue-proxy would never become ready without a longer one.
+              readinessProbe:
+                httpGet: { path: /health, port: 8080 }
+                periodSeconds: 10
+                timeoutSeconds: 5
+                failureThreshold: 120
+              resources:
+                requests: { cpu: "2", memory: 6Gi }
+                limits: { cpu: "4", memory: 10Gi }
+              volumeMounts:
+                - { name: dshm, mountPath: /dev/shm }
+          volumes:
+            - name: dshm
+              emptyDir: { medium: Memory, sizeLimit: 2Gi }
+      EOF
+      kubectl -n ${local.namespace} wait --for=condition=Ready inferenceservice/${local.sglang_isvc} --timeout=1800s
+    EOT
+  }
+  provisioner "local-exec" {
+    when    = destroy
+    command = "kubectl -n llm delete inferenceservice sglang-isvc --timeout=120s 2>/dev/null || true"
+  }
+}
+
+# A plain SGLang Deployment, found by its image. It declares no port, so the
+# chart falls back to sglang.launch_server's 30000, and it sets the OTel
+# service.name annotation, which wins over the workload name.
+resource "kubernetes_deployment_v1" "sglang_standalone" {
+  depends_on = [kubernetes_namespace_v1.llm]
+  metadata {
+    name      = "sglang-standalone"
+    namespace = local.namespace
+  }
+  spec {
+    replicas = 1
+    selector { match_labels = { app = "sglang-standalone" } }
+    template {
+      metadata {
+        labels      = { app = "sglang-standalone" }
+        annotations = { "resource.opentelemetry.io/service.name" = "sglang-chat" }
+      }
+      spec {
+        container {
+          name    = "sglang"
+          image   = var.sglang_cpu_image
+          command = ["python3", "-m", "sglang.launch_server"]
+          # On CPU the memory fraction is of host memory; the default leaves the
+          # KV cache no room.
+          args = ["--model-path", var.vllm_model, "--served-model-name", "sglang-chat", "--device", "cpu", "--host", "0.0.0.0",
+          "--enable-metrics", "--mem-fraction-static", "0.85", "--context-length", "2048"]
+          resources {
+            requests = { cpu = "2", memory = "6Gi" }
+            limits   = { memory = "10Gi" }
+          }
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = 30000
+            }
+            period_seconds  = 10
+            timeout_seconds = 5
+          }
+          volume_mount {
+            name       = "dshm"
+            mount_path = "/dev/shm"
+          }
+        }
+        volume {
+          name = "dshm"
+          empty_dir {
+            medium     = "Memory"
+            size_limit = "2Gi"
+          }
+        }
+      }
+    }
+  }
+  wait_for_rollout = false
+  timeouts { create = "30m" }
+}
+
+resource "kubernetes_service_v1" "sglang_standalone" {
+  depends_on = [kubernetes_namespace_v1.llm]
+  metadata {
+    name      = "sglang-standalone"
+    namespace = local.namespace
+  }
+  spec {
+    selector = { app = "sglang-standalone" }
+    port {
+      port        = 30000
+      target_port = 30000
+    }
+  }
+}
+
 # Static metrics served by busybox httpd from a ConfigMap.
 resource "kubernetes_config_map_v1" "mock_metrics" {
   depends_on = [kubernetes_namespace_v1.llm]
@@ -448,7 +577,8 @@ resource "kubernetes_deployment_v1" "mock" {
 # Requests through the InferenceService (Knative queue-proxy) and directly to
 # the standalone server, so counters and histograms on both have data.
 resource "kubernetes_deployment_v1" "loadgen" {
-  depends_on = [null_resource.inference_service, kubernetes_deployment_v1.vllm_standalone, null_resource.plain_knative_service]
+  depends_on = [null_resource.inference_service, kubernetes_deployment_v1.vllm_standalone, null_resource.plain_knative_service,
+  null_resource.sglang_inference_service, kubernetes_deployment_v1.sglang_standalone]
   metadata {
     name      = "loadgen"
     namespace = local.namespace
@@ -469,6 +599,12 @@ resource "kubernetes_deployment_v1" "loadgen" {
                          http://vllm-standalone.${local.namespace}.svc.cluster.local:8000/v1/completions; do
                 curl -s -o /dev/null -m 60 -H 'Content-Type: application/json' -d "$body" "$url"
               done
+              curl -s -o /dev/null -m 60 -H 'Content-Type: application/json' \
+                -d '{"model":"${local.sglang_isvc}","prompt":"Hello","max_tokens":8}' \
+                http://${local.sglang_isvc}-predictor.${local.namespace}.svc.cluster.local/v1/completions
+              curl -s -o /dev/null -m 60 -H 'Content-Type: application/json' \
+                -d '{"model":"sglang-chat","prompt":"Hello","max_tokens":8}' \
+                http://sglang-standalone.${local.namespace}.svc.cluster.local:30000/v1/completions
               # Request metrics for the transformer and plain Knative revisions.
               for url in http://${local.isvc}-transformer.${local.namespace}.svc.cluster.local/ \
                          http://hello-ksvc.${local.namespace}.svc.cluster.local/; do
@@ -510,7 +646,7 @@ data "external" "clone_helm_chart" {
     # Charts before the vLLM, KServe and Knative solutions would install fine and
     # fail every suite; stop here with the reason instead.
     values=./helm-charts/charts/amazon-cloudwatch-observability/values.yaml
-    for s in vllm kserve knative; do
+    for s in vllm sglang kserve knative; do
       if ! grep -qE "^ +$s:" "$values"; then
         echo "${var.helm_chart_repo}@${var.helm_chart_branch} has no '$s' solution in values.yaml" >&2
         exit 1
@@ -603,7 +739,7 @@ resource "null_resource" "validator" {
       # same cluster, as terraform/eks/daemon/otel does for Karpenter and KEDA.
       # Every suite runs even if an earlier one fails; the run fails at the end.
       failed=""
-      for suite in ${var.test_dir} ./test/otel/solutions/kserve ./test/otel/solutions/knative; do
+      for suite in ${var.test_dir} ./test/otel/solutions/sglang ./test/otel/solutions/kserve ./test/otel/solutions/knative; do
         echo "Running OTEL solutions tests ($suite)..."
         go test -tags integration -timeout 1h -v $suite/... \
           -eksClusterName=${aws_eks_cluster.this.name} \

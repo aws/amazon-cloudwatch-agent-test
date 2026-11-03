@@ -6,7 +6,7 @@ variable "region" {
   default = "us-west-2"
 }
 
-# Run first; ./test/otel/solutions/{kserve,knative} always follow.
+# Run first; ./test/otel/solutions/{sglang,kserve,knative} always follow.
 variable "test_dir" {
   type    = string
   default = "./test/otel/solutions/vllm"
@@ -79,6 +79,13 @@ variable "kserve_version" {
 variable "vllm_cpu_image" {
   type    = string
   default = "public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:v0.29.0"
+}
+
+# SGLang's CPU build. It needs AVX-512 (Intel Xeon, which m5 has); on CPUs
+# without it, such as AMD EPYC Zen 2, it exits with an illegal instruction.
+variable "sglang_cpu_image" {
+  type    = string
+  default = "lmsysorg/sglang:v0.5.23-xeon"
 }
 
 variable "vllm_model" {
