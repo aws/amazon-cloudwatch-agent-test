@@ -352,7 +352,7 @@ func SELinuxEnforced() (bool, error) {
 }
 
 const (
-	agentDownloadBaseURL = "https://amazoncloudwatch-agent.s3.amazonaws.com"
+	agentReleaseBucket   = "amazoncloudwatch-agent"
 	agentInstallDir      = "/opt/aws/amazon-cloudwatch-agent"
 	agentPackageName     = "amazon-cloudwatch-agent"
 	agentLaunchdPlist    = "/Library/LaunchDaemons/com.amazon.cloudwatch.agent.plist"
@@ -363,19 +363,20 @@ const (
 )
 
 // InstallAgentVersion downloads a released agent package for this host's
-// OS and architecture and installs it. version is a release version such as
-// "1.300074.0b1920", or "latest". Installing an older version over a newer
-// one is allowed.
+// OS and architecture from the public release bucket and installs it.
+// version is a release version such as "1.300074.0b1920", or "latest".
+// Installing an older version over a newer one is allowed.
 func InstallAgentVersion(version string) error {
-	url, err := agentDownloadURL(version)
+	uri, err := agentReleaseURI(version)
 	if err != nil {
 		return err
 	}
-	dest := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%s%s", agentPackageName, version, filepath.Ext(url)))
-	log.Printf("Installing agent version %s from %s", version, url)
+	dest := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%s%s", agentPackageName, version, filepath.Ext(uri)))
+	log.Printf("Installing agent version %s from %s", version, uri)
 	var out []byte
 	for attempt := 1; attempt <= agentDownloadTries; attempt++ {
-		out, err = exec.Command("curl", "-fsSL", "-o", dest, url).CombinedOutput()
+		// Same anonymous download the canary uses for the public bucket.
+		out, err = exec.Command(awsCLI(), "s3", "cp", "--no-sign-request", "--no-progress", uri, dest).CombinedOutput()
 		if err == nil {
 			break
 		}
@@ -385,7 +386,7 @@ func InstallAgentVersion(version string) error {
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("unable to download %s: %w", url, err)
+		return fmt.Errorf("unable to download %s: %w", uri, err)
 	}
 	defer os.Remove(dest)
 	return installAgentPackage(dest)
@@ -482,7 +483,9 @@ func processUsers(name string) ([]string, error) {
 	return users, nil
 }
 
-func agentDownloadURL(version string) (string, error) {
+// agentReleaseURI returns the S3 URI of a released agent package in the
+// public release bucket, for this host's OS and architecture.
+func agentReleaseURI(version string) (string, error) {
 	var arch string
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
@@ -496,7 +499,16 @@ func agentDownloadURL(version string) (string, error) {
 	} else if hostPackageManager() == DEB {
 		osDir, ext = "ubuntu", ".deb"
 	}
-	return fmt.Sprintf("%s/%s/%s/%s/%s%s", agentDownloadBaseURL, osDir, arch, version, agentPackageName, ext), nil
+	return fmt.Sprintf("s3://%s/%s/%s/%s/%s%s", agentReleaseBucket, osDir, arch, version, agentPackageName, ext), nil
+}
+
+// awsCLI returns the AWS CLI path. macOS test hosts install it under
+// /usr/local/bin, which may not be on PATH when tests run with sudo.
+func awsCLI() string {
+	if path, err := exec.LookPath("aws"); err == nil {
+		return path
+	}
+	return "/usr/local/bin/aws"
 }
 
 // agentUnderTestPackage finds the package downloaded for this test run. Linux
@@ -568,8 +580,8 @@ func installAgentPackage(path string) error {
 	return nil
 }
 
-// relabelAgentFiles restores SELinux file labels after an install, so the
-// agent keeps the labels from its SELinux policy.
+// relabelAgentFiles re-applies the agent's SELinux file labels after an
+// install, the same way the SELinux test setup does.
 func relabelAgentFiles() {
 	if runtime.GOOS != "linux" {
 		return
