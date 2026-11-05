@@ -32,6 +32,8 @@ type cacheEntry struct {
 // QueryCache provides session-scoped caching of PromQL queries.
 // Each unique metric name is queried exactly once; subsequent calls return cached data.
 // Concurrent requests for the same metric are deduplicated via singleflight.
+// Every fetch goes through QueryComplete, so results are never silently truncated, and the
+// concurrency limit bounds HTTP requests, so shard re-fetches stay inside it.
 type QueryCache struct {
 	mu         sync.RWMutex
 	filtered   map[string]cacheEntry
@@ -142,6 +144,7 @@ func (qc *QueryCache) Get(ctx context.Context, metricName string) ([]MetricResul
 
 // fetchFiltered performs the actual HTTP query for a filtered metric.
 func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cacheEntry {
+	ctx = withRequestSlots(ctx, qc.sem)
 	escaped := promqlEscaper.Replace(qc.cluster)
 	sel := promqlMetricSelector(metricName)
 
@@ -163,7 +166,7 @@ func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cach
 
 	if clusterScopedOnly {
 		promql := fmt.Sprintf(`%s"@resource.k8s.cluster.name"="%s","@resource.host.type"=""}`, sel, escaped)
-		r, err := qc.client.Query(ctx, promql)
+		r, err := qc.client.QueryComplete(ctx, promql)
 		if err != nil {
 			firstErr = err
 		} else {
@@ -181,15 +184,8 @@ func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cach
 			wg.Add(1)
 			go func(hostType string) {
 				defer wg.Done()
-				select {
-				case qc.sem <- struct{}{}:
-					defer func() { <-qc.sem }()
-				case <-ctx.Done():
-					ch <- queryResult{err: ctx.Err()}
-					return
-				}
 				promql := fmt.Sprintf(`%s"@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`, sel, escaped, hostType)
-				r, err := qc.client.Query(ctx, promql)
+				r, err := qc.client.QueryComplete(ctx, promql)
 				ch <- queryResult{results: r, err: err}
 			}(ht)
 		}
@@ -207,12 +203,13 @@ func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cach
 		}
 	} else {
 		promql := fmt.Sprintf(`%s"@resource.k8s.cluster.name"="%s"}`, sel, escaped)
-		r, err := qc.client.Query(ctx, promql)
+		r, err := qc.client.QueryComplete(ctx, promql)
 		results = r
 		firstErr = err
 	}
 
-	if len(results) == 0 && firstErr != nil {
+	// One failed host type makes the union incomplete, so it fails the whole fetch.
+	if firstErr != nil {
 		slog.Debug("query failed", "metric", metricName, "error", firstErr)
 		return cacheEntry{err: firstErr}
 	}
@@ -220,16 +217,10 @@ func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cach
 }
 
 // GetWithFilter returns results with additional PromQL label filters. Not cached.
-// Shares the cache's concurrency limit, so a suite of parallel filtered queries
-// doesn't burst past the endpoint's rate limit.
+// Each HTTP request holds one slot of the cache's concurrency limit, so a suite of
+// parallel filtered queries, and the shard re-fetches of a truncated one, stay inside it.
 func (qc *QueryCache) GetWithFilter(ctx context.Context, metricName string, extraFilters map[string]string) ([]MetricResult, error) {
-	select {
-	case qc.sem <- struct{}{}:
-		defer func() { <-qc.sem }()
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-	return qc.client.Query(ctx, promqlMetricSelector(metricName)+qc.filterMatchers(extraFilters)+"}")
+	return qc.client.QueryComplete(withRequestSlots(ctx, qc.sem), promqlMetricSelector(metricName)+qc.filterMatchers(extraFilters)+"}")
 }
 
 // filterMatchers renders the cluster matcher plus extraFilters as PromQL label
@@ -267,7 +258,7 @@ func (qc *QueryCache) GetUnfiltered(ctx context.Context, metricName string) ([]M
 	}
 	qc.mu.Unlock()
 
-	results, queryErr := qc.client.Query(ctx, metricName)
+	results, queryErr := qc.client.QueryComplete(withRequestSlots(ctx, qc.sem), metricName)
 	entry := cacheEntry{results: results, err: queryErr}
 
 	// Do not cache empty successful results; a transient miss would poison
