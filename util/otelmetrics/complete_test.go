@@ -34,15 +34,16 @@ type fakeRequest struct {
 }
 
 // fakePromQL mimics the endpoint: plain selectors are capped at limit series (stale ones
-// included), aggregations warn when capped, and `=""` never matches an absent label.
+// included), aggregations warn when capped, and `=""` matches an absent label only for emptyMatchesAbsent.
 type fakePromQL struct {
-	t              *testing.T
-	series         []fakeSeries
-	limit          int
-	countOffset    int  // added to count() without by, to simulate an inconsistent endpoint
-	brokenNotRegex bool // make !~ match everything, so shards overlap
-	mu             sync.Mutex
-	requests       []fakeRequest
+	t                  *testing.T
+	series             []fakeSeries
+	limit              int
+	countOffset        int    // added to count() without by, to simulate an inconsistent endpoint
+	brokenNotRegex     bool   // make !~ match everything, so shards overlap
+	emptyMatchesAbsent string // label whose `=""` matches absent, as @resource.host.type does on the endpoint
+	mu                 sync.Mutex
+	requests           []fakeRequest
 }
 
 func (f *fakePromQL) handler(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +164,7 @@ func (f *fakePromQL) match(selector string) []fakeSeries {
 			v, present := s.labels[m.key]
 			switch m.op {
 			case "=":
-				ok = present && v == m.val
+				ok = present && v == m.val || !present && m.val == "" && m.key == f.emptyMatchesAbsent
 			case "=~":
 				ok = regexp.MustCompile("^(?:" + m.val + ")$").MatchString(v)
 			case "!~":

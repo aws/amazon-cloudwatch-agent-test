@@ -111,15 +111,23 @@ func TestTallySchemaChecksEveryHostType(t *testing.T) {
 		}
 		return fakeSeries{labels: l}
 	}
-	_, c := newFake(t, 100, []fakeSeries{series("a"), series("b", "leaked")})
-	qc := NewQueryCache(c, "c1", WithHostTypes([]string{"a"}))
-	routed, err := qc.Get(context.Background(), "m")
-	require.NoError(t, err)
-	require.Len(t, routed, 1, "Get sees only the configured host type")
-
-	tally, err := TallySchema(context.Background(), qc, []string{"m"}, GroupSchema{
+	f, c := newFake(t, 100, []fakeSeries{series("a"), series("b", "leaked")})
+	schema := GroupSchema{
 		Resource: KeySchema{Required: []string{"k8s.cluster.name", "k8s.pod.name"}, Optional: []string{"host.type"}},
-	}, nil)
+	}
+
+	pinned := NewQueryCache(c, "c1", WithHostTypes([]string{"a"}))
+	_, err := TallySchema(context.Background(), pinned, []string{"m"}, schema, nil)
+	require.ErrorContains(t, err, "pass a cache without host types", "a pinned cache would hide the series of host type b")
+
+	allNodes := NewQueryCache(c, "c1")
+	tally, err := TallySchema(context.Background(), allNodes, []string{"m"}, schema, nil)
 	require.NoError(t, err)
 	require.Equal(t, []string{"undeclared @resource.leaked on 1 of 2 series"}, tally.Problems())
+
+	requests := len(f.queries())
+	results, err := allNodes.Get(context.Background(), "m")
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+	require.Len(t, f.queries(), requests, "other every-series checks reuse the read of the schema row")
 }

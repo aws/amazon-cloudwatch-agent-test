@@ -19,13 +19,10 @@ import (
 var neuronMetricNamesList = metricNames(neuronMetrics)
 
 // neuronInstanceTypes lists instance types with Neuron devices in this cluster.
-var neuronInstanceTypes = []struct {
-	InstanceType string
-	Description  string
-}{
-	{"inf2.xlarge", "Neuron"},
-	{"inf2.24xlarge", "Neuron multi-device"},
-}
+var neuronInstanceTypes = otelmetrics.NodeGroupsFor(clusterHostTypes, map[string]string{
+	"inf2.xlarge":   "Neuron",
+	"inf2.24xlarge": "Neuron multi-device",
+})
 
 // TestNeuronInstrumentationSource validates that all Neuron metrics
 // have @instrumentation.@name == "awsneuron".
