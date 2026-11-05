@@ -24,7 +24,7 @@ import (
 func TestClusterIdentity(t *testing.T) {
 	for _, metricName := range allMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.True(t, len(results) > 0,
 				"%s returned 0 results when filtering by @resource.k8s.cluster.name=%s",
@@ -44,7 +44,7 @@ func TestClusterIdentity(t *testing.T) {
 func TestAWSLabels(t *testing.T) {
 	for _, metricName := range allMetricNames() {
 		t.Run(metricName+"/account", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -54,7 +54,7 @@ func TestAWSLabels(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/region", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -73,7 +73,7 @@ func TestAWSLabels(t *testing.T) {
 func TestInstrumentationLabels(t *testing.T) {
 	for _, metricName := range allMetricNames() {
 		t.Run(metricName+"/name", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -83,7 +83,7 @@ func TestInstrumentationLabels(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/version", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -92,7 +92,7 @@ func TestInstrumentationLabels(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/cloudwatch_source", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -102,7 +102,7 @@ func TestInstrumentationLabels(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/cloudwatch_solution", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -112,7 +112,7 @@ func TestInstrumentationLabels(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/cloudwatch_pipeline", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -185,7 +185,7 @@ func TestScopeNameAndVersionPerSource(t *testing.T) {
 func TestCloudResourceDetection(t *testing.T) {
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName+"/provider", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -193,7 +193,7 @@ func TestCloudResourceDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/platform", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -203,7 +203,7 @@ func TestCloudResourceDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/region", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -213,7 +213,7 @@ func TestCloudResourceDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/availability_zone", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -223,7 +223,7 @@ func TestCloudResourceDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/account_id", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -242,7 +242,7 @@ func TestCloudResourceDetection(t *testing.T) {
 func TestHostResourceDetection(t *testing.T) {
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName+"/host_id", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -253,7 +253,7 @@ func TestHostResourceDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/host_type", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -263,7 +263,7 @@ func TestHostResourceDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/host_name", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -273,7 +273,7 @@ func TestHostResourceDetection(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/host_image_id", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -293,7 +293,7 @@ func TestHostResourceDetection(t *testing.T) {
 func TestNodeMetricLabels(t *testing.T) {
 	for _, metricName := range daemonsetMetricNames() {
 		t.Run(metricName+"/node_name", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -307,7 +307,7 @@ func TestNodeMetricLabels(t *testing.T) {
 
 	for _, metricName := range nodeLabelEnrichedNames() {
 		t.Run(metricName+"/node_uid", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -328,7 +328,7 @@ func TestNodeMetricLabels(t *testing.T) {
 func TestPodMetricLabels(t *testing.T) {
 	for _, metricName := range podScopedCadvisorNames() {
 		t.Run(metricName+"/cadvisor_strict", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -352,7 +352,7 @@ func TestContainerMetricLabels(t *testing.T) {
 	require.True(t, len(names) > 0, "No container-scoped metrics defined in test suite")
 	for _, metricName := range names {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			hasContainer := 0
@@ -378,7 +378,7 @@ func TestContainerMetricLabels(t *testing.T) {
 func TestLabelPreservation(t *testing.T) {
 	for _, metricName := range allMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -395,7 +395,7 @@ func TestLabelPreservation(t *testing.T) {
 func TestMetricNamePreservation(t *testing.T) {
 	for _, metricName := range allMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -412,7 +412,7 @@ func TestMetricNamePreservation(t *testing.T) {
 func TestServiceLabels(t *testing.T) {
 	for _, metricName := range prometheusScrapedNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -456,7 +456,7 @@ func TestNodeLabelEnrichment(t *testing.T) {
 		})
 
 		t.Run(metricName+"/nfd_labels_dropped", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -482,7 +482,7 @@ func TestWorkloadLabels(t *testing.T) {
 	// Node-level: node_exporter metrics must NOT have workload labels.
 	for _, metricName := range metricNames(nodeExporterMetrics) {
 		t.Run(metricName+"/no_workload", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -526,7 +526,7 @@ func TestMetricTypeLabels(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name+"/counter_type", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			for _, r := range results {
@@ -542,7 +542,7 @@ func TestMetricTypeLabels(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name+"/gauge_type", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			for _, r := range results {
@@ -562,7 +562,7 @@ func TestMetricUnitLabels(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			for _, r := range results {
@@ -586,7 +586,7 @@ func TestCustomNodeLabels(t *testing.T) {
 
 	for _, metricName := range nodeLabelEnrichedNames() {
 		t.Run(metricName+"/color_present", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -625,7 +625,7 @@ func TestCloudResourceId(t *testing.T) {
 
 	for _, metricName := range allMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -745,10 +745,11 @@ func podLabelMetricNames() []string {
 	return append(names, ksmContainerBucket...)
 }
 
-// allNodeSeries returns every series of a metric in this cluster, on every node.
+// allNodeSeries returns every series of a metric in this cluster, on every node, from the
+// read that the suite's other every-series checks share.
 func allNodeSeries(t *testing.T, metricName string) []otelmetrics.MetricResult {
 	t.Helper()
-	results, err := queryCache.GetWithFilter(context.Background(), metricName, nil)
+	results, err := allNodesCache.Get(context.Background(), metricName)
 	require.NoError(t, err, "querying %s", metricName)
 	require.NotEmpty(t, results, "%s not available", metricName)
 	return results
@@ -922,7 +923,7 @@ func TestDeprecatedSemconvAttributesRemoved(t *testing.T) {
 
 	for _, metricName := range names {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			require.NoError(t, otelmetrics.CheckDeprecatedSemconvRemoved(metricName, results))
@@ -963,7 +964,7 @@ func TestRawLabelsOnlyAtDatapointScope(t *testing.T) {
 		c := c
 		for _, metricName := range c.names {
 			t.Run(c.pipeline+"/"+metricName, func(t *testing.T) {
-				results, err := queryCache.Get(context.Background(), metricName)
+				results, err := allNodesCache.Get(context.Background(), metricName)
 				require.NoError(t, err, "querying %s", metricName)
 				require.NotEmpty(t, results, "%s not available", metricName)
 				require.NoError(t, otelmetrics.CheckRawLabelsNotAtResourceScope(metricName, results, c.rawKeys))
