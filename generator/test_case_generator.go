@@ -90,6 +90,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_linux_onprem": {
 		{testDir: "./test/cloudwatchlogs"},
 		{testDir: "./test/otel_collect/linux/otlp"},
+		{testDir: "./test/otel_collect/linux/profiles"},
 		{testDir: "./test/otel_collect/linux/host_metrics"},
 		{testDir: "./test/otel_collect/linux/prometheus"},
 	},
@@ -142,6 +143,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{testDir: "./test/otel_collect/linux/host_metrics"},
 		{testDir: "./test/otel_collect/linux/otlp"},
+		{testDir: "./test/otel_collect/linux/profiles"},
 		{
 			testDir:    "./test/otel_collect/linux/prometheus",
 			excludedOs: map[string]struct{}{"rhel8": {}, "ol8": {}, "sles-15": {}},
@@ -600,6 +602,7 @@ var partitionTests = map[string]partition{
 			"./test/otel_collect/database_insights":  {},
 			"./test/otel_collect/linux/host_metrics": {},
 			"./test/otel_collect/linux/otlp":         {},
+			"./test/otel_collect/linux/profiles":     {},
 			"./test/otel_collect/linux/prometheus":   {},
 		},
 		testConfigOverrides: map[string]testConfig{
@@ -621,6 +624,7 @@ var partitionTests = map[string]partition{
 			"./test/otel_collect/database_insights":  {},
 			"./test/otel_collect/linux/host_metrics": {},
 			"./test/otel_collect/linux/otlp":         {},
+			"./test/otel_collect/linux/profiles":     {},
 			"./test/otel_collect/linux/prometheus":   {},
 		},
 		testConfigOverrides: map[string]testConfig{
