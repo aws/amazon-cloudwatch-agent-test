@@ -1,0 +1,101 @@
+# Monitor selector E2E fixture (otelPrometheusMonitor.serviceMonitorSelector and
+# podMonitorSelector). With PERNODE_MONITOR_SELECTOR=true the harness installs the chart
+# with both selectors set to
+#   matchExpressions: [{key: e2e.cloudwatch.aws/exclude, operator: DoesNotExist}]
+# so every monitor in the suite is still selected except the two labeled
+# e2e.cloudwatch.aws/exclude below. One app serves all three monitors, and each monitor
+# stamps its own app label, so CloudWatch shows which monitors were scraped.
+# TestMonitorSelectorFiltersMonitors checks the CRs, the Target Allocator and the metrics.
+#
+# Applied by terraform/eks/daemon/otel-pernode.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: selector-e2e
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sel-app
+  namespace: selector-e2e
+  labels: { app: sel-app }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: sel-app }
+  template:
+    metadata:
+      labels: { app: sel-app }
+    spec:
+      containers:
+        - name: app
+          image: quay.io/brancz/prometheus-example-app:v0.5.0
+          ports:
+            - { name: metrics, containerPort: 8080 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sel-app
+  namespace: selector-e2e
+  labels: { app: sel-app }
+spec:
+  selector: { app: sel-app }
+  ports:
+    - { name: metrics, port: 8080, targetPort: metrics }
+---
+# Selected: no exclude label.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sel-in
+  namespace: selector-e2e
+spec:
+  namespaceSelector:
+    matchNames: [selector-e2e]
+  selector:
+    matchLabels: { app: sel-app }
+  endpoints:
+    - port: metrics
+      interval: 30s
+      relabelings:
+        - { targetLabel: app, replacement: sel-in, action: replace }
+---
+# Not selected: carries the exclude label.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sel-out
+  namespace: selector-e2e
+  labels:
+    e2e.cloudwatch.aws/exclude: "true"
+spec:
+  namespaceSelector:
+    matchNames: [selector-e2e]
+  selector:
+    matchLabels: { app: sel-app }
+  endpoints:
+    - port: metrics
+      interval: 30s
+      relabelings:
+        - { targetLabel: app, replacement: sel-out, action: replace }
+---
+# Not selected: carries the exclude label (checks podMonitorSelector).
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: sel-pm-out
+  namespace: selector-e2e
+  labels:
+    e2e.cloudwatch.aws/exclude: "true"
+spec:
+  namespaceSelector:
+    matchNames: [selector-e2e]
+  selector:
+    matchLabels: { app: sel-app }
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      relabelings:
+        - { targetLabel: app, replacement: sel-pm-out, action: replace }
