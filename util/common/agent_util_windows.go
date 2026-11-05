@@ -34,7 +34,7 @@ func CopyFile(pathIn string, pathOut string) error {
 	}
 
 	log.Printf("File %s abs path %s", pathIn, pathInAbs)
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "cp " + pathInAbs + " " + pathOut})
+	bashArgs := []string{"-NoProfile", "-NonInteractive", "cp " + pathInAbs + " " + pathOut}
 	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil {
@@ -56,14 +56,14 @@ func StartAgent(configOutputPath string, fatalOnFailure bool, ssm bool) error {
 		return err
 	}
 
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a fetch-config -m ec2 -s -c file:" + configOutputPath})
+	bashArgs := []string{"-NoProfile", "-NonInteractive", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a fetch-config -m ec2 -s -c file:" + configOutputPath}
 	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil && fatalOnFailure {
 		log.Printf("Start agent failed: %v; the output is: %s", err, string(out))
 		return err
 	} else if err != nil {
-		log.Printf(fmt.Sprint(err) + string(out))
+		log.Printf("%s", fmt.Sprint(err)+string(out))
 	} else {
 		log.Printf("Agent has started")
 	}
@@ -78,7 +78,7 @@ func StopAgent() error {
 		return err
 	}
 
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a stop"})
+	bashArgs := []string{"-NoProfile", "-NonInteractive", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a stop"}
 	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil {
