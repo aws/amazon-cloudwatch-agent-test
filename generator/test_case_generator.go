@@ -605,6 +605,18 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			// Needs a chart with the ray solution: the root fails fast when the
+			// helm-charts branch CI installs (helm_chart_branch, default the newest
+			// release-*) has none. wip until a release branch includes it.
+			testDir:      "./test/otel/solutions/ray",
+			terraformDir: "terraform/eks/daemon/otel-ray",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "m5.xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+			wip:          true,
+		},
+		{
 			testDir:      "./test/otel/performance",
 			terraformDir: "terraform/eks/daemon/otel-performance",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
