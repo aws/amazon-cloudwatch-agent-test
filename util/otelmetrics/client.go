@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -39,11 +40,13 @@ type OtelMetricsClient struct {
 	region         string
 	signingService string
 	maxRetries     int
+	seriesLimit    int // endpoint's per-query series cap; 0 means defaultSeriesLimit
 }
 
 type promqlResponse struct {
-	Status string     `json:"status"`
-	Data   promqlData `json:"data"`
+	Status   string     `json:"status"`
+	Data     promqlData `json:"data"`
+	Warnings []string   `json:"warnings"`
 }
 
 type promqlData struct {
@@ -74,18 +77,43 @@ func NewClient(ctx context.Context, config TestConfig) (*OtelMetricsClient, erro
 	}, nil
 }
 
-// Query executes a PromQL instant query and returns parsed results.
+// Query executes a single PromQL instant query and returns parsed results. The endpoint caps
+// results at 500 series, often without saying so; use QueryComplete when every series matters.
 func (c *OtelMetricsClient) Query(ctx context.Context, promql string) ([]MetricResult, error) {
+	results, truncated, err := c.queryAt(ctx, promql, "")
+	if truncated {
+		log.Printf("WARNING: result truncated by the endpoint series limit query=%s", promql)
+	}
+	return results, err
+}
+
+// queryAt runs one instant query, evaluated at evalTime when non-empty. It also returns
+// whether the endpoint warned of truncation.
+func (c *OtelMetricsClient) queryAt(ctx context.Context, promql, evalTime string) ([]MetricResult, bool, error) {
 	params := url.Values{"query": {promql}}
+	if evalTime != "" {
+		params.Set("time", evalTime)
+	}
 	log.Printf("querying promql=%s", promql)
 
 	raw, err := c.requestWithRetry(ctx, c.queryURL, params)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	results := c.parseResponse(raw)
 	log.Printf("query returned count=%d", len(results))
-	return results, nil
+	return results, hasTruncationWarning(raw.Warnings), nil
+}
+
+// hasTruncationWarning reports the endpoint's "results truncated due to series limit" warning.
+// Aggregations carry it reliably; plain selectors only sometimes, so it is never proof of completeness.
+func hasTruncationWarning(warnings []string) bool {
+	for _, w := range warnings {
+		if strings.Contains(strings.ToLower(w), "truncated") {
+			return true
+		}
+	}
+	return false
 }
 
 // MetricNames returns the distinct metric names present for the given PromQL matcher over [start, end].
@@ -143,8 +171,13 @@ func (c *OtelMetricsClient) requestRawWithRetry(ctx context.Context, baseURL str
 			return nil, fmt.Errorf("signing request: %w", err)
 		}
 
+		release, err := acquireRequestSlot(ctx)
+		if err != nil {
+			return nil, err
+		}
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
+			release()
 			lastErr = err
 			log.Printf("request failed attempt=%d error=%v", attempt+1, err)
 			if attempt < c.maxRetries-1 {
@@ -155,6 +188,7 @@ func (c *OtelMetricsClient) requestRawWithRetry(ctx context.Context, baseURL str
 
 		body, readErr := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		release()
 		if readErr != nil {
 			return nil, fmt.Errorf("reading response: %w", readErr)
 		}
@@ -164,7 +198,7 @@ func (c *OtelMetricsClient) requestRawWithRetry(ctx context.Context, baseURL str
 			lastErr = fmt.Errorf("server error %d: %s", resp.StatusCode, truncate(string(body), 200))
 			log.Printf("server error, retrying status=%d attempt=%d", resp.StatusCode, attempt+1)
 			if attempt < c.maxRetries-1 {
-				time.Sleep(time.Duration(1<<attempt) * time.Second)
+				time.Sleep(retryDelay(resp.Header.Get("Retry-After"), attempt, time.Now()))
 			}
 			continue
 		}
@@ -176,6 +210,46 @@ func (c *OtelMetricsClient) requestRawWithRetry(ctx context.Context, baseURL str
 		return body, nil
 	}
 	return nil, fmt.Errorf("all %d attempts failed: %w", c.maxRetries, lastErr)
+}
+
+// maxRetryAfter caps a server-requested wait so one throttled request cannot stall a suite.
+const maxRetryAfter = 30 * time.Second
+
+// retryDelay honors a Retry-After header (seconds or HTTP date) and otherwise backs off exponentially.
+func retryDelay(retryAfter string, attempt int, now time.Time) time.Duration {
+	d := time.Duration(1<<attempt) * time.Second
+	if secs, err := strconv.Atoi(strings.TrimSpace(retryAfter)); err == nil && secs >= 0 {
+		d = time.Duration(secs) * time.Second
+	} else if at, err := http.ParseTime(retryAfter); err == nil {
+		d = at.Sub(now)
+	}
+	if d < 0 {
+		d = 0
+	}
+	if d > maxRetryAfter {
+		d = maxRetryAfter
+	}
+	return d
+}
+
+type requestSlotsKey struct{}
+
+// withRequestSlots makes every request issued under ctx hold one slot of sem while it is in flight.
+func withRequestSlots(ctx context.Context, sem chan struct{}) context.Context {
+	return context.WithValue(ctx, requestSlotsKey{}, sem)
+}
+
+func acquireRequestSlot(ctx context.Context) (release func(), err error) {
+	sem, _ := ctx.Value(requestSlotsKey{}).(chan struct{})
+	if sem == nil {
+		return func() {}, nil
+	}
+	select {
+	case sem <- struct{}{}:
+		return func() { <-sem }, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func (c *OtelMetricsClient) parseResponse(response *promqlResponse) []MetricResult {
@@ -242,8 +316,9 @@ type RangeResult struct {
 }
 
 type promqlRangeResponse struct {
-	Status string          `json:"status"`
-	Data   promqlRangeData `json:"data"`
+	Status   string          `json:"status"`
+	Data     promqlRangeData `json:"data"`
+	Warnings []string        `json:"warnings"`
 }
 
 type promqlRangeData struct {
@@ -274,6 +349,9 @@ func (c *OtelMetricsClient) QueryRange(ctx context.Context, promql string, start
 	var rangeResp promqlRangeResponse
 	if err := json.Unmarshal(rawBytes, &rangeResp); err != nil {
 		return nil, fmt.Errorf("parsing range response: %w", err)
+	}
+	if hasTruncationWarning(rangeResp.Warnings) {
+		log.Printf("WARNING: range result truncated by the endpoint series limit query=%s", promql)
 	}
 
 	var results []RangeResult
