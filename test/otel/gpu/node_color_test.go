@@ -35,7 +35,7 @@ func TestDCGMHasGreenNodeColor(t *testing.T) {
 			promql := fmt.Sprintf(
 				`%s{"@resource.k8s.cluster.name"="%s","@resource.%s"="green"}`,
 				metricName, escaped, nodeColorLabel)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s with node-color=green filter", metricName)
 			require.True(t, len(results) > 0,
 				"%s: no results from GPU nodes (expected node-color=green)", metricName)
