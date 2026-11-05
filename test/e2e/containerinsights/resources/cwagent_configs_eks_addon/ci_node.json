@@ -1,21 +1,5 @@
 {
   "otelContainerInsights": {
     "enabled": true
-  },
-  "agent": {
-    "config": {
-      "opentelemetry": {
-        "cluster_name": "TestCluster",
-        "collect": {
-          "container_insights": {
-            "collection_interval": 30,
-            "role": "node",
-            "logs": {
-              "enabled": true
-            }
-          }
-        }
-      }
-    }
   }
 }

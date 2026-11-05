@@ -16,3 +16,4 @@ terraform/eks/daemon/credentials/pod_identity/helm-charts
 terraform/eks/daemon/ebs/helm-charts
 terraform/eks/daemon/entity/helm-charts
 terraform/eks/daemon/liscsi/helm-charts
+terraform/azure/aks/helm-charts

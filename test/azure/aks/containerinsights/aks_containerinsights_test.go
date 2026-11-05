@@ -3,11 +3,10 @@
 
 //go:build integration
 
-// Package containerinsights validates that the CloudWatch Agent translates the OTEL Container
-// Insights JSON config on AKS and delivers metrics/logs to CloudWatch over the AKS
-// workload-identity -> STS web-identity chain. Terraform mounts ci_node.json (role=node,
-// logs enabled) and ci_cluster.json (role=cluster, keda+karpenter) into the agent workloads
-// (no USE_DEFAULT_CONFIG), so the agent's own translator builds the pipelines.
+// Package containerinsights validates OTel Container Insights on AKS as customers install it: Terraform
+// installs the amazon-cloudwatch-observability Helm chart with k8sMode=AKS and
+// otelContainerInsights.enabled (the values scripts/azure/setup.sh uses), and the chart-rendered
+// pipelines deliver metrics/logs to CloudWatch over the AKS workload-identity -> STS web-identity chain.
 package containerinsights
 
 import (
@@ -43,7 +42,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// role=node: cadvisor / kubeletstats / node_exporter.
+// Node DaemonSet: cadvisor / kubeletstats / node_exporter.
 var nodeMetrics = []string{
 	"container_cpu_usage_seconds_total",
 	"container_memory_working_set_bytes",
@@ -54,14 +53,14 @@ var nodeMetrics = []string{
 	"node_memory_MemAvailable_bytes",
 }
 
-// role=cluster: apiserver + kube-state-metrics.
+// Cluster-scraper: apiserver + kube-state-metrics.
 var clusterMetrics = []string{
 	"apiserver_request_total",
 	"kube_node_info",
 	"kube_pod_info",
 }
 
-// role=cluster keda/karpenter solution pipelines (scraped from the stub emitters).
+// Cluster-scraper keda/karpenter solution pipelines (scraped from the stub emitters).
 var kedaMetrics = []string{"keda_scaler_active", "keda_scaledobject_paused"}
 var karpenterMetrics = []string{"karpenter_nodes_total", "karpenter_pods_state"}
 
@@ -76,7 +75,7 @@ func TestAKSContainerInsights(t *testing.T) {
 }
 
 // validateMetrics asserts each metric is present for this cluster. cloud.platform=azure.aks
-// proves the agent ran the RUN_IN_AKS translation path, not a hardcoded EKS/EC2 one.
+// proves the chart's AKS resource detection ran, not a hardcoded EKS/EC2 one.
 func validateMetrics(t *testing.T, metrics []string, deadline time.Time) {
 	labels := map[string]string{
 		"@resource.k8s.cluster.name": env.AKSClusterName,
@@ -116,7 +115,7 @@ func validateMetrics(t *testing.T, metrics []string, deadline time.Time) {
 	}
 }
 
-// testNodeApplicationLogs asserts the role=node logs pipeline delivered application logs.
+// testNodeApplicationLogs asserts the node logs pipeline delivered application logs.
 // Cleans up the group only on success; on failure it is left as debugging evidence.
 func testNodeApplicationLogs(t *testing.T) {
 	logGroup := fmt.Sprintf("/aws/otel/containerinsights/%s/application", env.AKSClusterName)

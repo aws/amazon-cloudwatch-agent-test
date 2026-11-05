@@ -2,19 +2,15 @@
 #
 # These are NOT the real operators. Each is a pod serving a static Prometheus
 # /metrics endpoint (from a ConfigMap) that emits the metric names the
-# cluster-scraper's solutions pipelines expect, in the keda/karpenter namespaces
-# with the app.kubernetes.io/name labels the solutions config selects on. This
-# validates the scrape that is agent-translated OTEL pipeline to CloudWatch path
-# (metric presence), without provisioning real KEDA/Karpenter infrastructure.
+# cluster-scraper's solutions pipelines expect. They run in the Helm chart's
+# default solutions namespaces (keda for KEDA, kube-system for Karpenter) with the
+# app.kubernetes.io/name labels the solutions config selects on. This validates the
+# chart's scrape-to-CloudWatch path (metric presence) without provisioning real
+# KEDA/Karpenter infrastructure.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: keda
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: karpenter
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -89,8 +85,8 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: metrics
-  namespace: karpenter
+  name: karpenter-metrics
+  namespace: kube-system
 data:
   metrics: |
     # TYPE karpenter_nodes_total gauge
@@ -102,7 +98,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: karpenter
-  namespace: karpenter
+  namespace: kube-system
   labels:
     app.kubernetes.io/name: karpenter
 spec:
@@ -154,4 +150,4 @@ spec:
       volumes:
         - name: metrics
           configMap:
-            name: metrics
+            name: karpenter-metrics

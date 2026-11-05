@@ -13,7 +13,7 @@ variable "test_dir" {
 
 # Selects which suite this apply deploys:
 #   "otlp"              -> default:otel DaemonSet + OTLP load generator (existing behavior)
-#   "containerinsights" -> node DaemonSet + cluster-scraper Deployment translating CI configs
+#   "containerinsights" -> Helm chart install with OTel Container Insights (node DaemonSet + cluster-scraper)
 # Defaults to otlp so existing OTLP runs are unchanged.
 variable "test_mode" {
   type    = string
@@ -22,6 +22,12 @@ variable "test_mode" {
     condition     = contains(["otlp", "containerinsights"], var.test_mode)
     error_message = "test_mode must be \"otlp\" or \"containerinsights\"."
   }
+}
+
+# helm-charts branch installed in containerinsights mode.
+variable "helm_charts_branch" {
+  type    = string
+  default = "main"
 }
 
 variable "cwa_github_sha" {

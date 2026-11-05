@@ -159,7 +159,8 @@ func (c *OtelMetricsClient) requestRawWithRetry(ctx context.Context, baseURL str
 			return nil, fmt.Errorf("reading response: %w", readErr)
 		}
 
-		if resp.StatusCode >= 500 {
+		// 429 is throttling, not a bad query: retry it like a server error.
+		if resp.StatusCode >= 500 || resp.StatusCode == http.StatusTooManyRequests {
 			lastErr = fmt.Errorf("server error %d: %s", resp.StatusCode, truncate(string(body), 200))
 			log.Printf("server error, retrying status=%d attempt=%d", resp.StatusCode, attempt+1)
 			if attempt < c.maxRetries-1 {

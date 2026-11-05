@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -34,38 +33,32 @@ import (
 // Overview
 //------------------------------------------------------------------------------
 //
-// End-to-end test for the OpenTelemetry Container Insights pipeline driven
-// directly by the CloudWatch Agent JSON config (opentelemetry.collect.
-// container_insights). Two agent configs run concurrently in the cluster,
-// each on its own workload / AmazonCloudWatchAgent CR:
+// End-to-end test for OpenTelemetry Container Insights as customers install it:
+// the amazon-cloudwatch-observability Helm chart (or the EKS add-on) with
+// otelContainerInsights.enabled. The chart renders the collector config into each
+// AmazonCloudWatchAgent CR's otelConfig, so the agent runs it unchanged:
 //
-//   role=node    -> DaemonSet  "cloudwatch-agent"                 (per-node
-//                   metrics from cadvisor/kubeletstats/node_exporter + node
-//                   and application logs)
-//   role=cluster -> Deployment "cloudwatch-agent-cluster-scraper" (cluster-wide
-//                   metrics from the apiserver and kube-state-metrics)
+//   cloudwatch-agent                 -> DaemonSet  (per-node metrics from
+//                   cadvisor/kubeletstats/node_exporter + node and application logs)
+//   cloudwatch-agent-cluster-scraper -> Deployment (cluster-wide metrics from the
+//                   apiserver, kube-state-metrics and the KEDA/Karpenter solutions)
 //
-// The agent translator builds the OTEL pipelines from the JSON config. Metrics
-// are exported to the CloudWatch OTLP metrics endpoint
+// Metrics are exported to the CloudWatch OTLP metrics endpoint
 // (monitoring.<region>.amazonaws.com/v1/metrics) and validated via the PromQL
 // query client. Node/application logs are exported to CloudWatch Logs and
-// validated via the CloudWatch Logs API.
+// validated via the CloudWatch Logs API. Each run creates its own cluster, so
+// telemetry is isolated by k8s.cluster.name.
 
 const (
 	agentNamespace        = "amazon-cloudwatch"
 	clusterScraperCRName  = "cloudwatch-agent-cluster-scraper"
 	nodeCRName            = "cloudwatch-agent"
-	clusterConfigPath     = "resources/cwagent_configs_helm_chart/ci_cluster.json"
 	kedaKarpenterManifest = "resources/keda_karpenter.yaml"
-	testRunIDAttribute    = "test.run.id"
 )
 
 var (
 	env         *environment.MetaData
 	clusterName string
-	// testRunID is a per-invocation identifier stamped onto every metric/log via
-	// opentelemetry.resource_attributes.
-	testRunID string
 )
 
 var nodeMetrics = []string{
@@ -89,22 +82,22 @@ var clusterMetrics = []string{
 	"kube_pod_info",
 }
 
-// kedaMetrics are emitted by the role=cluster KEDA solution pipeline
-// (solutions.keda.enabled), scraped from the keda-operator in the keda namespace.
+// kedaMetrics are emitted by the cluster-scraper KEDA solution pipeline
+// (otelContainerInsights.solutions.keda), scraped from the stub keda-operator in the keda namespace.
 var kedaMetrics = []string{
 	"keda_scaler_active",
 	"keda_scaledobject_paused",
 }
 
-// karpenterMetrics are emitted by the role=cluster Karpenter solution pipeline
-// (solutions.karpenter.enabled), scraped from karpenter in the karpenter namespace.
+// karpenterMetrics are emitted by the cluster-scraper Karpenter solution pipeline
+// (otelContainerInsights.solutions.karpenter), scraped from the stub karpenter in kube-system.
 var karpenterMetrics = []string{
 	"karpenter_nodes_total",
 	"karpenter_pods_state",
 }
 
-// ciLogGroups are the CloudWatch Logs groups produced by the role=node logs
-// pipelines when logs.enabled.
+// ciLogGroups are the CloudWatch Logs groups produced by the node logs
+// pipelines (otelContainerInsights.logs.enabled, on by default).
 var ciLogGroups = []string{
 	"/aws/otel/containerinsights/%s/application",
 }
@@ -134,51 +127,19 @@ func TestMain(m *testing.M) {
 		os.Exit(0)
 	}
 
-	// Per-run identifier stamped onto every metric/log via opentelemetry.resource_attributes
-	testRunID = "test-run-" + uuid.NewString()[:8]
-	if env.AgentConfig != "" {
-		name := resolveClusterName(env)
-		injected, err := injectTestID(env.AgentConfig, testRunID, name)
-		if err != nil {
-			fmt.Printf("Failed to inject test.run.id into node config: %v\n", err)
-			os.Exit(1)
-		}
-		env.AgentConfig = injected
-	}
-	fmt.Printf("test.run.id=%s\n", testRunID)
-
-	// Applies the node config (env.AgentConfig, role=node) to the primary
-	// cloudwatch-agent CR via helm/addon and waits for the operator.
+	// Installs the chart (or waits for the add-on) and waits for the operator.
 	if err := e2e.InitializeEnvironment(env); err != nil {
 		fmt.Printf("Failed to initialize environment: %v\n", err)
 		os.Exit(1)
 	}
 
-	// EKS add-on installs the agent via Terraform before the per-run test.run.id
-	// exists, and its image patching only covers the node CR. The Helm path delivers
-	// the stamped node config and the build image through chart values, so mirror
-	// that here by patching the add-on-managed CRs directly.
+	// The EKS add-on pins released images, and its image patching only covers the
+	// node CR, so point the cluster-scraper CR at the build under test as well.
 	if env.EKSInstallationType == eksinstallationtype.EKS_ADDON {
-		if err := applyNodeConfig(env); err != nil {
-			fmt.Printf("Failed to apply node config: %v\n", err)
-			os.Exit(1)
-		}
 		if err := patchClusterScraperImage(env); err != nil {
 			fmt.Printf("Failed to patch cluster-scraper image: %v\n", err)
 			os.Exit(1)
 		}
-	}
-
-	// Clear pre-rendered otelConfig on the node CR so agent translates json config
-	if err := clearOtelConfig(env, nodeCRName); err != nil {
-		fmt.Printf("Failed to clear node otelConfig: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Apply the cluster config (role=cluster) to the cluster-scraper CR.
-	if err := applyClusterConfig(env); err != nil {
-		fmt.Printf("Failed to apply cluster-scraper config: %v\n", err)
-		os.Exit(1)
 	}
 
 	// Deploy the KEDA/Karpenter stub emitters so the solutions pipelines have
@@ -233,51 +194,6 @@ func patchResourceWithRetry(k8ctl *utils.K8CtlManager, resourceType, resourceNam
 	}
 }
 
-// applyNodeConfig patches the node cloudwatch-agent CR with the (test.run.id-stamped)
-// node config. On the EKS add-on path the add-on is installed by Terraform before the
-// run ID exists, so we patch the CR directly to mirror the Helm chart's agent.config
-// delivery. The add-on config file uses the configuration_values shape (agent.config),
-// which we unwrap down to the raw agent JSON that spec.config expects.
-func applyNodeConfig(env *environment.MetaData) error {
-	data, err := os.ReadFile(env.AgentConfig)
-	if err != nil {
-		return fmt.Errorf("reading node config %s: %w", env.AgentConfig, err)
-	}
-	var cfg map[string]interface{}
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("parsing node config: %w", err)
-	}
-	agentJSON := cfg
-	if agent, ok := cfg["agent"].(map[string]interface{}); ok {
-		if inner, ok := agent["config"].(map[string]interface{}); ok {
-			agentJSON = inner
-		}
-	}
-	agentConfigJSON, err := json.Marshal(agentJSON)
-	if err != nil {
-		return fmt.Errorf("marshaling node agent config: %w", err)
-	}
-	patch, err := json.Marshal(map[string]interface{}{
-		"spec": map[string]interface{}{"config": string(agentConfigJSON)},
-	})
-	if err != nil {
-		return fmt.Errorf("marshaling node CR patch: %w", err)
-	}
-
-	k8ctl := utils.NewK8CtlManager(env)
-	if err := k8ctl.UpdateKubeConfig(resolveClusterName(env)); err != nil {
-		return err
-	}
-	return patchResourceWithRetry(
-		k8ctl,
-		"amazoncloudwatchagent",
-		nodeCRName,
-		agentNamespace,
-		utils.PatchTypeMerge,
-		string(patch),
-	)
-}
-
 // patchClusterScraperImage sets the cluster-scraper CR image to the build under test.
 // The Helm chart wires this through agent.image values; the add-on image patching only
 // covers the node CR, so we patch the cluster-scraper here for parity.
@@ -308,76 +224,6 @@ func patchClusterScraperImage(env *environment.MetaData) error {
 	)
 }
 
-// applyClusterConfig patches the cluster-scraper CR with the role=cluster config
-// (the node config is applied by InitializeEnvironment).
-func applyClusterConfig(env *environment.MetaData) error {
-	name := resolveClusterName(env)
-
-	// Read the cluster config from file then set the runtime cluster name and stamp the per-run test.run.id.
-	data, err := os.ReadFile(clusterConfigPath)
-	if err != nil {
-		return fmt.Errorf("reading cluster config %s: %w", clusterConfigPath, err)
-	}
-	var agentConfig map[string]interface{}
-	if err := json.Unmarshal(data, &agentConfig); err != nil {
-		return fmt.Errorf("parsing cluster config: %w", err)
-	}
-	otel, ok := agentConfig["opentelemetry"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("cluster config %s missing opentelemetry block", clusterConfigPath)
-	}
-	otel["cluster_name"] = name
-	otel["resource_attributes"] = map[string]interface{}{testRunIDAttribute: testRunID}
-
-	agentConfigJSON, err := json.Marshal(agentConfig)
-	if err != nil {
-		return fmt.Errorf("marshaling cluster agent config: %w", err)
-	}
-
-	// spec.config is the agent JSON (the agent translates it).
-	patch := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"config": string(agentConfigJSON),
-		},
-	}
-	patchJSON, err := json.Marshal(patch)
-	if err != nil {
-		return fmt.Errorf("marshaling CR patch: %w", err)
-	}
-
-	k8ctl := utils.NewK8CtlManager(env)
-	if err := k8ctl.UpdateKubeConfig(name); err != nil {
-		return err
-	}
-	if err := k8ctl.PatchResource(
-		"amazoncloudwatchagent",
-		clusterScraperCRName,
-		agentNamespace,
-		utils.PatchTypeMerge,
-		string(patchJSON),
-	); err != nil {
-		return err
-	}
-	return clearOtelConfig(env, clusterScraperCRName)
-}
-
-// clearOtelConfig removes the chart's pre-rendered otelConfig so the agent
-// translates spec.config (our JSON) instead.
-func clearOtelConfig(env *environment.MetaData, crName string) error {
-	name := resolveClusterName(env)
-	k8ctl := utils.NewK8CtlManager(env)
-	if err := k8ctl.UpdateKubeConfig(name); err != nil {
-		return err
-	}
-	return k8ctl.PatchResource(
-		"amazoncloudwatchagent",
-		crName,
-		agentNamespace,
-		utils.PatchTypeMerge,
-		`{"spec":{"otelConfig":""}}`,
-	)
-}
-
 // applyKedaKarpenterStubs deploys the KEDA/Karpenter stub emitters
 // so the cluster-scraper's solutions pipelines have pods to discover and scrape.
 func applyKedaKarpenterStubs(env *environment.MetaData) error {
@@ -397,55 +243,6 @@ func deleteKedaKarpenterStubs(env *environment.MetaData) error {
 		return err
 	}
 	return k8ctl.DeleteResource(kedaKarpenterManifest)
-}
-
-// injectTestID stamps opentelemetry.resource_attributes[test.run.id]=runID into the
-// agent config, writes a temp file, and returns its path (for per-run isolation).
-func injectTestID(configPath, runID, clusterName string) (string, error) {
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return "", err
-	}
-	var cfg map[string]interface{}
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return "", err
-	}
-
-	// Locate the opentelemetry object (top-level, or nested under agent.config).
-	otel, _ := cfg["opentelemetry"].(map[string]interface{})
-	if otel == nil {
-		if agent, ok := cfg["agent"].(map[string]interface{}); ok {
-			if inner, ok := agent["config"].(map[string]interface{}); ok {
-				otel, _ = inner["opentelemetry"].(map[string]interface{})
-			}
-		}
-	}
-	if otel == nil {
-		return "", fmt.Errorf("opentelemetry block not found in %s", configPath)
-	}
-
-	// Stamp the real cluster name so node metrics/logs land under the run's
-	// cluster instead of the config's placeholder.
-	if clusterName != "" {
-		otel["cluster_name"] = clusterName
-	}
-
-	attrs, _ := otel["resource_attributes"].(map[string]interface{})
-	if attrs == nil {
-		attrs = map[string]interface{}{}
-	}
-	attrs[testRunIDAttribute] = runID
-	otel["resource_attributes"] = attrs
-
-	out, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	tmp := filepath.Join(os.TempDir(), "ci_node_"+runID+".json")
-	if err := os.WriteFile(tmp, out, 0o600); err != nil {
-		return "", err
-	}
-	return tmp, nil
 }
 
 func TestContainerInsights(t *testing.T) {
@@ -474,7 +271,7 @@ func TestContainerInsights(t *testing.T) {
 }
 
 // testResources verifies that both the node DaemonSet and the cluster-scraper
-// Deployment were created by the operator from the applied configs.
+// Deployment were created by the operator from the chart's CRs.
 func testResources(t *testing.T) {
 	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(os.Getenv("HOME"), ".kube", "config"))
 	require.NoError(t, err, "building kubeconfig")
@@ -498,15 +295,15 @@ func testResources(t *testing.T) {
 	})
 }
 
-// validateMetrics asserts every metric name is present in CloudWatch for THIS run,
-// isolated by the test.run.id resource attribute, using the shared otlp validator.
+// validateMetrics asserts every metric name is present in CloudWatch for THIS run's
+// cluster, using the shared otlp validator.
 func validateMetrics(t *testing.T, metrics []string) {
-	labels := map[string]string{"@resource." + testRunIDAttribute: testRunID}
+	labels := map[string]string{"@resource.k8s.cluster.name": clusterName}
 	res := otlpvalidation.ValidateOtlpMetricsWithLabels(t.Name(), env.Region, metrics, labels)
 	for _, r := range res.TestResults {
 		r := r
 		t.Run(r.Name, func(t *testing.T) {
-			require.Equal(t, status.SUCCESSFUL, r.Status, "metric validation %s failed (test.run.id=%s): %v", r.Name, testRunID, r.Reason)
+			require.Equal(t, status.SUCCESSFUL, r.Status, "metric validation %s failed (cluster=%s): %v", r.Name, clusterName, r.Reason)
 		})
 	}
 }
@@ -523,10 +320,9 @@ func testNodeLogs(t *testing.T) {
 			streams := awsservice.GetLogStreamNames(logGroup)
 			require.NotEmpty(t, streams, "no log streams in %s", logGroup)
 
-			// Validate the events in our time window actually carry this run's test.run.id
-			err := awsservice.ValidateLogs(logGroup, streams[0], &since, &until,
-				awsservice.AssertPerLog(awsservice.AssertLogContainsSubstring(testRunID)))
-			require.NoError(t, err, "validating logs in %s/%s carry %s", logGroup, streams[0], testRunID)
+			// The log group is scoped to this run's cluster; require events in our time window.
+			err := awsservice.ValidateLogs(logGroup, streams[0], &since, &until, awsservice.AssertLogsNotEmpty())
+			require.NoError(t, err, "validating logs in %s/%s", logGroup, streams[0])
 		})
 	}
 }

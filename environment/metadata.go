@@ -44,6 +44,7 @@ type MetaData struct {
 	AzureVMSize                                 string
 	AzureResourceGroup                          string
 	AzureLocation                               string
+	GKEClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -96,6 +97,7 @@ type MetaDataStrings struct {
 	AzureVMSize                                 string
 	AzureResourceGroup                          string
 	AzureLocation                               string
+	GKEClusterName                              string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -129,7 +131,7 @@ type MetaDataStrings struct {
 }
 
 func registerComputeType(dataString *MetaDataStrings) {
-	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS/AZUREVM/AKS")
+	flag.StringVar(&(dataString.ComputeType), "computeType", "", "EC2/ECS/EKS/AZUREVM/AKS/GCE/GKE")
 }
 func registerBucket(dataString *MetaDataStrings) {
 	flag.StringVar(&(dataString.Bucket), "bucket", "", "s3 bucket ex cloudwatch-agent-integration-bucket")
@@ -161,6 +163,10 @@ func registerAzureVMData(d *MetaDataStrings) {
 	flag.StringVar(&(d.AzureVMSize), "azureVMSize", "", "expected azure.vm.size resource attribute")
 	flag.StringVar(&(d.AzureResourceGroup), "azureResourceGroup", "", "expected azure.resourcegroup.name resource attribute")
 	flag.StringVar(&(d.AzureLocation), "azureLocation", "", "expected cloud.region resource attribute (Azure location, e.g. eastus)")
+}
+
+func registerGKEData(d *MetaDataStrings) {
+	flag.StringVar(&(d.GKEClusterName), "gkeClusterName", "", "GKE cluster name")
 }
 
 func registerEKSData(d *MetaDataStrings) {
@@ -208,7 +214,7 @@ func registerProxyUrl(dataString *MetaDataStrings) {
 func fillComputeType(e *MetaData, data *MetaDataStrings) {
 	computeType, ok := computetype.FromString(data.ComputeType)
 	if !ok {
-		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS/AZUREVM/AKS. Compute Type is a required flag. :" + data.ComputeType)
+		log.Panic("Invalid compute type. Needs to be EC2/ECS/EKS/AZUREVM/AKS/GCE/GKE. Compute Type is a required flag. :" + data.ComputeType)
 	}
 	e.ComputeType = computeType
 }
@@ -344,6 +350,7 @@ func RegisterEnvironmentMetaDataFlags() *MetaDataStrings {
 	registerEKSData(registeredMetaDataStrings)
 	registerAKSData(registeredMetaDataStrings)
 	registerAzureVMData(registeredMetaDataStrings)
+	registerGKEData(registeredMetaDataStrings)
 	registerEKSE2ETestData(registeredMetaDataStrings)
 	registerBucket(registeredMetaDataStrings)
 	registerS3Key(registeredMetaDataStrings)
@@ -387,6 +394,7 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.AzureVMSize = registeredMetaDataStrings.AzureVMSize
 	metaDataStorage.AzureResourceGroup = registeredMetaDataStrings.AzureResourceGroup
 	metaDataStorage.AzureLocation = registeredMetaDataStrings.AzureLocation
+	metaDataStorage.GKEClusterName = registeredMetaDataStrings.GKEClusterName
 	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
 	metaDataStorage.EksGpuType = registeredMetaDataStrings.EksGpuType
