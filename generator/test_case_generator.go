@@ -490,6 +490,13 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/filters",
+			terraformDir: "terraform/eks/daemon/otel-filters",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
 			testDir:      "./test/otel/ebs_csi",
 			terraformDir: "terraform/eks/daemon/otel-ebs-csi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
@@ -513,6 +520,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/gpu_filters",
+			terraformDir: "terraform/eks/daemon/otel-gpu-filters",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.12xlarge",
+			ami:          "AL2023_x86_64_NVIDIA",
+			k8sVersion:   "1.35",
+		},
+		{
 			testDir:      "./test/otel/lis_csi",
 			terraformDir: "terraform/eks/daemon/otel-lis-csi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
@@ -529,8 +544,24 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/multi_efa_filters",
+			terraformDir: "terraform/eks/daemon/otel-multi-efa-filters",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
 			testDir:      "./test/otel/neuron",
 			terraformDir: "terraform/eks/daemon/otel-neuron",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "inf2.xlarge",
+			ami:          "AL2023_x86_64_NEURON",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/neuron_filters",
+			terraformDir: "terraform/eks/daemon/otel-neuron-filters",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "inf2.xlarge",
 			ami:          "AL2023_x86_64_NEURON",
