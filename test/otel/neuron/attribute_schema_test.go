@@ -44,7 +44,7 @@ var neuronResourceSchema = otelmetrics.KeySchema{
 
 func TestAttributeSchema(t *testing.T) {
 	t.Parallel()
-	tally, err := otelmetrics.TallySchema(context.Background(), queryCache, neuronMetricNamesList, otelmetrics.GroupSchema{
+	tally, err := otelmetrics.TallySchema(context.Background(), allNodesCache, neuronMetricNamesList, otelmetrics.GroupSchema{
 		Resource:        neuronResourceSchema,
 		Instrumentation: otelmetrics.KeySchema{Required: otelmetrics.ScopeKeys}, // set_scope_neuron_monitor
 	}, nil)

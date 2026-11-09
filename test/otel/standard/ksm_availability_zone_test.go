@@ -21,8 +21,9 @@ import (
 // does, and a pod's own zone label replaces it. A series whose node k8sattributes
 // knows must carry it. A series that names no node, such as a Deployment's, must not.
 // The pod zone label itself is denied, so the API is the reference for it.
-// Series are read cluster-wide, not through queryCache.Get, whose host.type=""
-// filter on workload metrics would hide a series that gained the scraper's host keys.
+// Series come from allNodesCache, which reads KSM metrics with only the cluster
+// matcher. A cached read can predate the API read, but a node that left in between
+// is skipped and a node does not change zone, so the two still agree.
 // ---------------------------------------------------------------------------
 
 const zoneLabel = "topology.kubernetes.io/zone"
@@ -40,7 +41,7 @@ func TestKSMAvailabilityZoneIsTheObjectsZone(t *testing.T) {
 			var series, withZone, fromPodLabel int
 			wrong, missing, absent, unexpected := map[string]int{}, map[string]int{}, map[string]int{}, map[string]int{}
 			for _, metricName := range buckets[bucket] {
-				for _, r := range queryAllSeries(t, metricName) {
+				for _, r := range allNodeSeries(t, metricName) {
 					series++
 					res := r.Labels.Resource
 					az, hasZone := res[ksmZoneKey]

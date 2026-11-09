@@ -22,9 +22,10 @@ import (
 const expectedDCGMResolution = 30 * time.Second
 
 // TestDCGMResolution validates DCGM_FI_DEV_GPU_UTIL is scraped at ~30s intervals
-// by querying a 5-minute range and checking sample counts on the multi-GPU node.
+// by querying a 5-minute range and checking sample counts on the busy node.
 func TestDCGMResolution(t *testing.T) {
 	t.Parallel()
+	busy := busyNodes(t)[0].Name
 	end := time.Now()
 	start := end.Add(-5 * time.Minute)
 	step := expectedDCGMResolution
@@ -34,12 +35,12 @@ func TestDCGMResolution(t *testing.T) {
 
 	escaped := otelmetrics.EscapePromQLValue(cfg.ClusterName)
 	promql := fmt.Sprintf(
-		`DCGM_FI_DEV_GPU_UTIL{"@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`,
-		escaped, multiGpuInstanceType)
+		`DCGM_FI_DEV_GPU_UTIL{"@resource.k8s.cluster.name"="%s","@resource.k8s.node.name"="%s"}`,
+		escaped, otelmetrics.EscapePromQLValue(busy))
 
 	results, err := client.QueryRange(context.Background(), promql, start, end, step)
 	require.NoError(t, err, "range querying DCGM_FI_DEV_GPU_UTIL")
-	require.True(t, len(results) > 0, "No DCGM_FI_DEV_GPU_UTIL range results from %s", multiGpuInstanceType)
+	require.True(t, len(results) > 0, "No DCGM_FI_DEV_GPU_UTIL range results from %s", busy)
 
 	// Pick the series with the most samples (best coverage).
 	var bestSeries *otelmetrics.RangeResult
