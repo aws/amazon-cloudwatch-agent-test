@@ -82,6 +82,8 @@ func TestMain(m *testing.M) {
 	}
 
 	fmt.Fprintf(os.Stderr, "Host types: %v (set %s to override)\n", clusterHostTypes, otelmetrics.HostTypesEnvVar)
+	fmt.Fprintf(os.Stderr, "Label excludes: pod %v, node %v (set %s and %s to the cluster's otelFilters.podLabels.exclude and otelFilters.nodeLabels.exclude)\n",
+		clusterLabelExcludes.Pod, clusterLabelExcludes.Node, otelmetrics.PodLabelExcludesEnvVar, otelmetrics.NodeLabelExcludesEnvVar)
 
 	hostMappings := []otelmetrics.SourceHostMapping{
 		{Source: otelmetrics.SourceNodeExporter, HostTypes: clusterHostTypes},

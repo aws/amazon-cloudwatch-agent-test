@@ -18,6 +18,24 @@ func ResolveHostTypes(defaults []string) []string {
 	return parseHostTypes(os.Getenv(HostTypesEnvVar), defaults)
 }
 
+// PodLabelExcludesEnvVar and NodeLabelExcludesEnvVar hold the comma-separated
+// otelFilters.podLabels.exclude and otelFilters.nodeLabels.exclude patterns the
+// cluster was deployed with. The denylist test logs the entries they render to,
+// and fails for any other entry that removes a never-denied attribute.
+const (
+	PodLabelExcludesEnvVar  = "OTEL_POD_LABEL_EXCLUDES"
+	NodeLabelExcludesEnvVar = "OTEL_NODE_LABEL_EXCLUDES"
+)
+
+// ResolveLabelExcludes returns the patterns from PodLabelExcludesEnvVar and
+// NodeLabelExcludesEnvVar. Unset means the cluster has no label excludes.
+func ResolveLabelExcludes() LabelExcludes {
+	return LabelExcludes{
+		Pod:  splitList(os.Getenv(PodLabelExcludesEnvVar)),
+		Node: splitList(os.Getenv(NodeLabelExcludesEnvVar)),
+	}
+}
+
 func parseHostTypes(raw string, defaults []string) []string {
 	if hostTypes := splitList(raw); len(hostTypes) > 0 {
 		return hostTypes

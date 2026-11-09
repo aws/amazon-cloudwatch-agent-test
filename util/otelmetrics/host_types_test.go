@@ -43,6 +43,23 @@ func TestResolveHostTypes(t *testing.T) {
 	}
 }
 
+func TestResolveLabelExcludes(t *testing.T) {
+	for _, name := range []string{PodLabelExcludesEnvVar, NodeLabelExcludesEnvVar} {
+		t.Setenv(name, "")
+		os.Unsetenv(name)
+	}
+	if got := ResolveLabelExcludes(); len(got.Pod) != 0 || len(got.Node) != 0 {
+		t.Fatalf("unset: got %+v, want no excludes", got)
+	}
+
+	t.Setenv(PodLabelExcludesEnvVar, " app.kubernetes.io/* ,, team")
+	t.Setenv(NodeLabelExcludesEnvVar, "karpenter.sh/nodepool")
+	want := LabelExcludes{Pod: []string{"app.kubernetes.io/*", "team"}, Node: []string{"karpenter.sh/nodepool"}}
+	if got := ResolveLabelExcludes(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}
+
 func TestNodeGroupsFor(t *testing.T) {
 	descriptions := map[string]string{"t3.medium": "standard"}
 	got := NodeGroupsFor([]string{"t3.medium", "g5.xlarge"}, descriptions)
