@@ -24,7 +24,13 @@ variable "test_mode" {
   }
 }
 
-# helm-charts branch installed in containerinsights mode.
+# helm-charts repository and branch installed in containerinsights mode, so a
+# branch on a fork can be tested before it is merged.
+variable "helm_charts_repo" {
+  type    = string
+  default = "https://github.com/aws-observability/helm-charts.git"
+}
+
 variable "helm_charts_branch" {
   type    = string
   default = "main"
