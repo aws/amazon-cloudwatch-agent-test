@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
@@ -30,13 +31,41 @@ type metricThreshold struct {
 	Name          string         `json:"name"`
 	Unit          string         `json:"unit"`
 	Stat          string         `json:"stat"`
+	ErrorBound    *float64       `json:"error_bound,omitempty"`
 	PodThresholds []podThreshold `json:"pod_thresholds"`
 }
 
+func (m metricThreshold) errorBound(global float64) float64 {
+	if m.ErrorBound != nil {
+		return *m.ErrorBound
+	}
+	return global
+}
+
 type podThreshold struct {
-	PodFilter   string  `json:"pod_filter"`
-	Threshold   float64 `json:"threshold"`
-	Description string  `json:"description"`
+	PodFilter   string   `json:"pod_filter"`
+	Threshold   float64  `json:"threshold"`
+	ErrorBound  *float64 `json:"error_bound,omitempty"`
+	Max         *float64 `json:"max,omitempty"`
+	Description string   `json:"description"`
+}
+
+func (p podThreshold) errorBound(m metricThreshold, global float64) float64 {
+	if p.ErrorBound != nil {
+		return *p.ErrorBound
+	}
+	return m.errorBound(global)
+}
+
+// bounds returns the [lower, upper] pass band for this pod. When Max is set the
+// pod is checked as a ceiling [0, Max] and Threshold/ErrorBound are ignored;
+// otherwise the band is Threshold*(1±errorBound).
+func (p podThreshold) bounds(m metricThreshold, global float64) (float64, float64) {
+	if p.Max != nil {
+		return 0, *p.Max
+	}
+	eb := p.errorBound(m, global)
+	return p.Threshold * (1 - eb), p.Threshold * (1 + eb)
 }
 
 // loadThresholds reads the JSON config and unmarshals it into performanceThresholds.
@@ -87,21 +116,21 @@ func getResultsForMetric(metrics *podMetricData, metricName string) []otelmetric
 	}
 }
 
-// getThresholdForPod returns the threshold and pod-class label for a given pod.
-func getThresholdForPod(podName string, podThresholds []podThreshold) (float64, string) {
-	for _, pt := range podThresholds {
+// getThresholdForPod returns the matching pod threshold and its pod-class label.
+func getThresholdForPod(podName string, metric metricThreshold) (podThreshold, string) {
+	for _, pt := range metric.PodThresholds {
 		switch pt.PodFilter {
 		case "daemonset":
 			if isDaemonSetPod(podName) {
-				return pt.Threshold, pt.PodFilter
+				return pt, pt.PodFilter
 			}
 		case "scraper":
 			if !isDaemonSetPod(podName) {
-				return pt.Threshold, pt.PodFilter
+				return pt, pt.PodFilter
 			}
 		}
 	}
-	return 0, ""
+	return podThreshold{}, ""
 }
 
 // podTypeLabel returns a display label for the given pod type.
@@ -117,9 +146,8 @@ func podTypeLabel(podType string) string {
 }
 
 // isAllValuesWithinBound returns the average of values and an error if the set
-// is empty, contains a negative value, or the average falls outside the
-// threshold band [threshold*(1-errorBound), threshold*(1+errorBound)].
-func isAllValuesWithinBound(values []float64, threshold float64, errorBound float64) (float64, error) {
+// is empty, contains a negative value, or the average falls outside [lower, upper].
+func isAllValuesWithinBound(values []float64, lower float64, upper float64) (float64, error) {
 	if len(values) == 0 {
 		return 0, fmt.Errorf("no values found")
 	}
@@ -128,16 +156,14 @@ func isAllValuesWithinBound(values []float64, threshold float64, errorBound floa
 		if math.IsNaN(value) {
 			return 0, fmt.Errorf("values contain NaN")
 		}
-		if value < 0 && threshold >= 0 {
+		if value < 0 {
 			return 0, fmt.Errorf("values are not all greater than or equal to zero")
 		}
 		totalSum += value
 	}
 	avg := totalSum / float64(len(values))
-	upperBound := threshold * (1 + errorBound)
-	lowerBound := threshold * (1 - errorBound)
-	if threshold > 0 && (avg > upperBound || avg < lowerBound) {
-		return avg, fmt.Errorf("average value %f is not within bound [%f, %f]", avg, lowerBound, upperBound)
+	if upper > 0 && (avg > upper || avg < lower) {
+		return avg, fmt.Errorf("average value %f is not within bound [%f, %f]", avg, lower, upper)
 	}
 	return avg, nil
 }
@@ -173,15 +199,23 @@ func TestPerformanceThresholds(t *testing.T) {
 		for _, m := range thresholds.Metrics {
 			for _, mpt := range m.PodThresholds {
 				if mpt.PodFilter == pt.PodFilter {
-					lower := mpt.Threshold * (1 - thresholds.ErrorBound)
-					upper := mpt.Threshold * (1 + thresholds.ErrorBound)
+					lower, upper := mpt.bounds(m, thresholds.ErrorBound)
+					var resourceWord string
 					switch m.Name {
 					case "k8s.pod.cpu.utilization":
-						t.Logf("  (%s): Node CPU safe range: ±%.0f%% of %.2f%% of Node allocatable CPU [%.4f%%, %.4f%%]",
-							label, thresholds.ErrorBound*100, mpt.Threshold, lower, upper)
+						resourceWord = "CPU"
 					case "k8s.pod.memory.working_set":
-						t.Logf("  (%s): Node memory safe range: ±%.0f%% of %.2f%% of Node allocatable memory [%.4f%%, %.4f%%]",
-							label, thresholds.ErrorBound*100, mpt.Threshold, lower, upper)
+						resourceWord = "memory"
+					default:
+						continue
+					}
+					if mpt.Max != nil {
+						t.Logf("  (%s): Node %s ceiling of Node allocatable %s [%.4f%%, %.4f%%]",
+							label, resourceWord, resourceWord, lower, upper)
+					} else {
+						eb := mpt.errorBound(m, thresholds.ErrorBound)
+						t.Logf("  (%s): Node %s safe range: ±%.0f%% of %.2f%% of Node allocatable %s [%.4f%%, %.4f%%]",
+							label, resourceWord, eb*100, mpt.Threshold, resourceWord, lower, upper)
 					}
 				}
 			}
@@ -190,6 +224,7 @@ func TestPerformanceThresholds(t *testing.T) {
 	}
 
 	var failures []string
+	calibration := make(map[string][]float64)
 
 	// Check each pod's resource usage against the expected threshold and report which pass or fail.
 	for _, metric := range thresholds.Metrics {
@@ -218,12 +253,18 @@ func TestPerformanceThresholds(t *testing.T) {
 			podName := series.Labels.Resource["k8s.pod.name"]
 			require.NotEmpty(t, podName, "series is missing the k8s.pod.name resource label")
 
-			// Get the threshold for this specific pod type
-			threshold, podType := getThresholdForPod(podName, metric.PodThresholds)
+			// Get the threshold for this pod type
+			pt, podType := getThresholdForPod(podName, metric)
 			if podType == "" {
 				continue
 			}
+			// Mark the class seen even if this live pod has no data this window, so it doesn't trip the "no <class> pod series observed" check below.
 			expectedClasses[podType] = true
+			if !slices.ContainsFunc(series.Values, func(v float64) bool { return v != 0 }) {
+				t.Logf("  %s (%s): no %s data in window — skipping",
+					podTypeLabel(podType), podName, metric.Name)
+				continue
+			}
 
 			var denominator float64
 			var resourceLabel string
@@ -246,10 +287,9 @@ func TestPerformanceThresholds(t *testing.T) {
 
 			// Check if values are within bounds and log all the results.
 			label := podTypeLabel(podType)
-			avg, err := isAllValuesWithinBound(pctValues, threshold, thresholds.ErrorBound)
-
-			lowerBound := threshold * (1 - thresholds.ErrorBound)
-			upperBound := threshold * (1 + thresholds.ErrorBound)
+			lowerBound, upperBound := pt.bounds(metric, thresholds.ErrorBound)
+			avg, err := isAllValuesWithinBound(pctValues, lowerBound, upperBound)
+			calibration[metric.Name+"|"+podType] = append(calibration[metric.Name+"|"+podType], avg)
 
 			t.Logf("  %s (%s): Using %.4f%% of %s", label, podName, avg, resourceLabel)
 
@@ -274,6 +314,23 @@ func TestPerformanceThresholds(t *testing.T) {
 
 		for class, seen := range expectedClasses {
 			require.True(t, seen, "no %s pod series observed for %s — expected both pod classes to be present", class, metric.Name)
+		}
+	}
+
+	t.Log("CALIBRATION (observed percent-of-node):")
+	for _, metric := range thresholds.Metrics {
+		for _, pt := range metric.PodThresholds {
+			vals := calibration[metric.Name+"|"+pt.PodFilter]
+			if len(vals) == 0 {
+				t.Logf("  %s %s: no live-pod data", pt.PodFilter, metric.Name)
+				continue
+			}
+			sum := 0.0
+			for _, v := range vals {
+				sum += v
+			}
+			t.Logf("  %s %s: mean=%.4f%% (min=%.4f%% max=%.4f%% n=%d)",
+				pt.PodFilter, metric.Name, sum/float64(len(vals)), slices.Min(vals), slices.Max(vals), len(vals))
 		}
 	}
 
