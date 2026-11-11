@@ -41,7 +41,8 @@ type PerfResult struct {
 	DaemonSetMemMaxMB float64 `dynamodbav:"daemonset_mem_max_mb"`
 	DaemonSetCPUMax   float64 `dynamodbav:"daemonset_cpu_max"`
 	ScraperMemMaxMB   float64 `dynamodbav:"scraper_mem_max_mb"`
-	ScraperCPUMax     float64 `dynamodbav:"scraper_cpu_max"`
+	// ScraperCPUMax is stored for history but not regression-checked (see TestRegressionCheck).
+	ScraperCPUMax float64 `dynamodbav:"scraper_cpu_max"`
 }
 
 // TestRegressionCheck queries current agent resource usage, compares it against
@@ -74,7 +75,10 @@ func TestRegressionCheck(t *testing.T) {
 	passed = compareAndReport(t, "DaemonSet memory", previous.DaemonSetMemMaxMB, current.DaemonSetMemMaxMB, "MB") && passed
 	passed = compareAndReport(t, "Cluster scraper memory", previous.ScraperMemMaxMB, current.ScraperMemMaxMB, "MB") && passed
 	passed = compareAndReport(t, "DaemonSet CPU", previous.DaemonSetCPUMax, current.DaemonSetCPUMax, "cores") && passed
-	passed = compareAndReport(t, "Cluster scraper CPU", previous.ScraperCPUMax, current.ScraperCPUMax, "cores") && passed
+	// Scraper CPU is not regression-checked: it sits near idle (about 0.03 cores) and two runs of the
+	// same agent build measured 0.0267 and 0.0342 cores, 28% apart, so a 30% growth limit fails on noise.
+	// TestPerformanceThresholds still bounds it with a ceiling, and the value is stored for history.
+	t.Logf("  Cluster scraper CPU: %.4f cores (previous %.4f), stored but not regression-checked", current.ScraperCPUMax, previous.ScraperCPUMax)
 
 	// Only update the baseline on a passing run. Persisting a regressed result
 	// would let the next commit compare against the inflated values and pass,
