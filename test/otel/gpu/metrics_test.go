@@ -61,6 +61,9 @@ var dcgmMetrics = []otelmetrics.MetricDefinition{
 	{Name: "DCGM_FI_DEV_GPU_TEMP", MetricType: "gauge", Scope: otelmetrics.ScopePod, Unit: "Cel"},
 	{Name: "DCGM_FI_DEV_POWER_USAGE", MetricType: "gauge", Scope: otelmetrics.ScopePod, Unit: "W"},
 	{Name: "DCGM_FI_DEV_FB_FREE", MetricType: "gauge", Scope: otelmetrics.ScopePod, Unit: "MiBy"},
+	{Name: "DCGM_FI_DEV_FB_TOTAL", MetricType: "gauge", Scope: otelmetrics.ScopePod, Unit: "MiBy"},
+	{Name: "DCGM_FI_DEV_SM_CLOCK", MetricType: "gauge", Scope: otelmetrics.ScopePod, Unit: "MHz"},
+	{Name: "DCGM_FI_DEV_MEM_CLOCK", MetricType: "gauge", Scope: otelmetrics.ScopePod, Unit: "MHz"},
 }
 
 // --- Helper functions ---
