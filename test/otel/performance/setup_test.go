@@ -75,8 +75,8 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 			return
 		}
 		sharedMetrics = &podMetricData{
-			CPUResults: filterStablePods(cpuResults),
-			MemResults: filterStablePods(memResults),
+			CPUResults: filterStablePods(t.Logf, "CPU", cpuResults),
+			MemResults: filterStablePods(t.Logf, "memory", memResults),
 		}
 	})
 	require.NoError(t, sharedMetricsErr, "failed to fetch shared pod metrics")
@@ -86,7 +86,9 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 
 // filterStablePods keeps pods present ~the whole window (drops transient/rescheduled
 // pods and all-zero idle series); self-calibrates off the fullest series.
-func filterStablePods(results []otelmetrics.RangeResult) []otelmetrics.RangeResult {
+// Every dropped series is logged: an agent pod that restarts mid-run also has gaps,
+// so a dropped DaemonSet pod is worth a look even when the test passes.
+func filterStablePods(logf func(format string, args ...any), signal string, results []otelmetrics.RangeResult) []otelmetrics.RangeResult {
 	maxSamples := 0
 	for _, r := range results {
 		if len(r.Values) > maxSamples {
@@ -95,6 +97,7 @@ func filterStablePods(results []otelmetrics.RangeResult) []otelmetrics.RangeResu
 	}
 	var kept []otelmetrics.RangeResult
 	for _, r := range results {
+		pod := r.Labels.Resource["k8s.pod.name"]
 		hasNonZero := false
 		for _, v := range r.Values {
 			if v != 0 {
@@ -103,9 +106,11 @@ func filterStablePods(results []otelmetrics.RangeResult) []otelmetrics.RangeResu
 			}
 		}
 		if !hasNonZero {
+			logf("Skipping %s series for pod %s: all %d samples are zero", signal, pod, len(r.Values))
 			continue
 		}
 		if maxSamples > 0 && len(r.Values) < maxSamples-1 {
+			logf("Skipping %s series for pod %s: %d of %d samples (pod not present for the whole window)", signal, pod, len(r.Values), maxSamples)
 			continue
 		}
 		kept = append(kept, r)

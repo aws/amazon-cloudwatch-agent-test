@@ -55,6 +55,8 @@ func TestRegressionCheck(t *testing.T) {
 	// current one, so a cluster-name hash excluded every prior row from the
 	// same cluster and the test always logged "first run" and passed.
 	require.NotEmpty(t, commitHash, "cwaCommitSha is required for the regression baseline; pass -cwaCommitSha so runs compare against the same commit")
+	// "latest" is the Terraform default of cwagent_image_tag, set only so teardown does not prompt.
+	require.NotEqual(t, "latest", commitHash, "cwaCommitSha is the Terraform default; pass the real build id so the baseline is keyed by commit")
 
 	metrics := fetchSharedMetrics(t)
 	instanceType := resolveInstanceType(t, metrics)
