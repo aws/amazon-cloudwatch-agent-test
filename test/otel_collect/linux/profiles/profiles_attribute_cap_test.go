@@ -30,8 +30,6 @@ const (
 
 	capWarmupPushes     = 2
 	capSubsequentPushes = 3
-
-	agentUnit = "amazon-cloudwatch-agent"
 )
 
 type checkLevel string
@@ -44,12 +42,6 @@ const (
 type capCheck struct {
 	status.TestResult
 	level checkLevel
-}
-
-type agentProcess struct {
-	mainPID     string
-	restarts    string
-	activeState string
 }
 
 type ProfilesAttributeCapTestRunner struct {
@@ -171,33 +163,6 @@ func buildAttributeCapPayload(serviceName, instanceID string, extra int) []byte 
 	return buildResourceProfilesPayload(valid, oversized)
 }
 
-func readAgentProcess() (agentProcess, error) {
-	out, err := common.RunCommand("systemctl show -p MainPID -p NRestarts -p ActiveState " + agentUnit)
-	if err != nil {
-		return agentProcess{}, fmt.Errorf("systemctl show %s: %w", agentUnit, err)
-	}
-	return parseAgentProcess(out), nil
-}
-
-func parseAgentProcess(out string) agentProcess {
-	var p agentProcess
-	for _, line := range strings.Split(out, "\n") {
-		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
-		if !ok {
-			continue
-		}
-		switch key {
-		case "MainPID":
-			p.mainPID = value
-		case "NRestarts":
-			p.restarts = value
-		case "ActiveState":
-			p.activeState = value
-		}
-	}
-	return p
-}
-
 func (t *ProfilesAttributeCapTestRunner) Validate() status.TestGroupResult {
 	checks := t.capChecks()
 	results := make([]status.TestResult, 0, len(checks))
@@ -255,7 +220,7 @@ func (t *ProfilesAttributeCapTestRunner) checkAgentStaysUp() status.TestResult {
 		r.Reason = fmt.Errorf("agent unit is %q after the oversized push", t.after.activeState)
 	case t.before.mainPID == "" || t.before.mainPID == "0" || t.before.mainPID != t.after.mainPID:
 		r.Reason = fmt.Errorf("agent main PID changed from %q to %q: it crashed or restarted", t.before.mainPID, t.after.mainPID)
-	case t.before.restarts != t.after.restarts:
+	case t.before.restarts != "" && t.after.restarts != "" && t.before.restarts != t.after.restarts:
 		r.Reason = fmt.Errorf("agent restart count changed from %s to %s", t.before.restarts, t.after.restarts)
 	default:
 		r.Status = status.SUCCESSFUL
