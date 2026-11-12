@@ -167,12 +167,3 @@ func postMetrics(payload []byte) error {
 	}
 	return nil
 }
-
-func agentPID() string {
-	out, err := common.RunCommand("systemctl show -p MainPID --value amazon-cloudwatch-agent")
-	pid := strings.TrimSpace(out)
-	if err != nil || pid == "" || pid == "0" {
-		return ""
-	}
-	return pid
-}
