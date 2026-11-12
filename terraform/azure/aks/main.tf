@@ -407,7 +407,7 @@ resource "null_resource" "agent_diagnostics" {
     EOT
   }
 
-  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart]
+  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart, null_resource.ci_otlp_sender]
 }
 
 #####################################################################
@@ -433,7 +433,7 @@ resource "null_resource" "integration_test" {
     }
   }
 
-  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart, null_resource.ci_extra_manifests, null_resource.agent_diagnostics]
+  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart, null_resource.ci_extra_manifests, null_resource.ci_otlp_sender, null_resource.agent_diagnostics]
 }
 
 #####################################################################
@@ -466,7 +466,7 @@ resource "null_resource" "ci_helm_chart" {
       set -euo pipefail
       KC='${local_sensitive_file.kubeconfig.filename}'
       rm -rf '${local.helm_charts_dir}'
-      git clone https://github.com/aws-observability/helm-charts.git '${local.helm_charts_dir}'
+      git clone '${var.helm_charts_repo}' '${local.helm_charts_dir}'
       git -C '${local.helm_charts_dir}' checkout '${var.helm_charts_branch}'
       helm --kubeconfig "$KC" upgrade --install amazon-cloudwatch-observability \
         '${local.helm_charts_dir}/charts/amazon-cloudwatch-observability' \
@@ -511,6 +511,31 @@ resource "null_resource" "ci_helm_chart" {
     kubernetes_secret.ecr_pull,
     aws_iam_role_policy_attachment.cwagent_server_policy,
   ]
+}
+
+#####################################################################
+# OTLP sender (test_mode == "containerinsights"): an ordinary pod that
+# sends OTLP through the cloudwatch-agent Service to the chart's OTLP
+# endpoint, which the chart serves by default. The chart ignores the
+# default:otel value of agents[0].config above and builds the default
+# config, so the endpoint comes from the chart's otlp values, not from the
+# agent's default:otel.
+#####################################################################
+resource "null_resource" "ci_otlp_sender" {
+  count = local.is_ci ? 1 : 0
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      kubectl --kubeconfig "$KC" create namespace otlp-e2e --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      kubectl --kubeconfig "$KC" -n otlp-e2e create configmap otlp-e2e-sender \
+        --from-file=sender.sh='${path.module}/../../otlp_service_sender.sh' --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      kubectl --kubeconfig "$KC" apply -f '${path.module}/../../../${var.test_dir}/resources/otlp_sender.yaml'
+      kubectl --kubeconfig "$KC" -n otlp-e2e rollout status deployment/otlp-e2e-app --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+  depends_on = [null_resource.ci_helm_chart]
 }
 
 #####################################################################

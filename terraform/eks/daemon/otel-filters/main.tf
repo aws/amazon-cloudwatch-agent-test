@@ -35,6 +35,9 @@ locals {
   # Namespaces of the stand-in inference servers: one kept and one dropped by
   # the namespaces filter.
   inference_namespaces = ["filters-keep-a", "filters-keep-secret-b"]
+
+  # Run by the OTLP sender container of each test workload.
+  sender_script = "${path.module}/../../../otlp_service_sender.sh"
 }
 
 resource "aws_eks_cluster" "this" {
@@ -139,8 +142,15 @@ resource "null_resource" "kubectl" {
 
 data "external" "clone_helm_chart" {
   program = ["bash", "-c", <<-EOT
+    set -e
     rm -rf ./helm-charts
-    git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
+    git clone -b ${var.helm_chart_branch} ${var.helm_chart_repo} ./helm-charts >&2
+    # The OTLP cases need the chart's OTLP endpoint; a chart without it would
+    # install fine and fail them. Stop here with the reason instead.
+    if ! grep -qE '^otlp:' ./helm-charts/charts/amazon-cloudwatch-observability/values.yaml; then
+      echo "${var.helm_chart_repo}@${var.helm_chart_branch} has no top-level otlp block in values.yaml" >&2
+      exit 1
+    fi
     echo '{"status":"ready"}'
   EOT
   ]
@@ -173,6 +183,9 @@ resource "helm_release" "aws_observability" {
   # the namespaces filter alone decides whether they arrive. Both solutions
   # are on by default. The values set them so that the test does not depend
   # on the default.
+  # metricNames.include names otlp_e2e_requests, one of the two counters the
+  # OTLP sender container sends, so the other one, otlp_e2e_unlisted, and the
+  # span metrics computed from the sender's spans are dropped.
   # filters-e2e.example.com/keep* is the only include entry that covers the pod
   # label filters-e2e.example.com/keep-x, so it tests a dotted prefix include.
   # The pod labels app-extra and filters-e2e-keep-secret-x and the metric
@@ -192,7 +205,7 @@ resource "helm_release" "aws_observability" {
           include: ["filters-keep-*", "filters-exact"]
           exclude: ["filters-keep-secret*"]
         metricNames:
-          include: ["container_*", "kube_pod_info", "k8s.pod.*", "node_load1", "vllm:num_requests_running", "revision_request_count"]
+          include: ["container_*", "kube_pod_info", "k8s.pod.*", "node_load1", "vllm:num_requests_running", "revision_request_count", "otlp_e2e_requests"]
           exclude: ["container_network_*", "container_memory_usage_bytes"]
         podLabels:
           include: ["app", "filters-e2e-keep*", "filters-e2e.example.com/keep*", "pod-template-hash"]
@@ -255,18 +268,21 @@ resource "null_resource" "restart_pods" {
 }
 
 # --- Test workloads: one logging deployment per namespace, one pod per node ---
+# Each pod also runs an OTLP sender container, which posts OTLP through the
+# cloudwatch-agent Service (terraform/otlp_service_sender.sh), so the OTLP
+# endpoint's telemetry from each namespace carries the same pod labels as the
+# Container Insights telemetry.
 
 resource "null_resource" "workloads" {
   for_each   = toset(local.namespaces)
   depends_on = [aws_eks_node_group.this, null_resource.kubectl]
   provisioner "local-exec" {
     command = <<-EOT
+      set -e
+      kubectl create namespace ${each.key} --dry-run=client -o yaml | kubectl apply -f -
+      kubectl -n ${each.key} create configmap otlp-e2e-sender \
+        --from-file=sender.sh=${local.sender_script} --dry-run=client -o yaml | kubectl apply -f -
       cat <<'EOF' | kubectl apply -f -
-      apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: ${each.key}
-      ---
       apiVersion: apps/v1
       kind: Deployment
       metadata:
@@ -304,6 +320,25 @@ resource "null_resource" "workloads" {
                 requests:
                   cpu: 10m
                   memory: 16Mi
+            - name: otlp-sender
+              image: curlimages/curl:8.8.0
+              command: ["sh", "/sender/sender.sh"]
+              env:
+              - name: OTLP_CASE
+                value: filters
+              - name: OTLP_METRICS
+                value: otlp_e2e_requests otlp_e2e_unlisted
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: sender
+                mountPath: /sender
+            volumes:
+            - name: sender
+              configMap:
+                name: otlp-e2e-sender
       EOF
       kubectl -n ${each.key} rollout status deployment/filters-e2e --timeout=5m
     EOT
