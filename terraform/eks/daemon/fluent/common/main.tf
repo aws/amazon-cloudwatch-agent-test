@@ -42,9 +42,9 @@ resource "aws_eks_node_group" "node_group" {
   subnet_ids      = module.basic_components.public_subnet_ids
 
   scaling_config {
-    desired_size = 1
-    max_size     = 1
-    min_size     = 1
+    desired_size = var.node_count
+    max_size     = var.node_count
+    min_size     = var.node_count
   }
 
   ami_type       = var.ami_type
