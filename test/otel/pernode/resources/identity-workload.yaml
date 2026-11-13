@@ -1,0 +1,144 @@
+# Service identity E2E fixture for ServiceMonitor/PodMonitor series.
+# Two Deployments, each scraped by a ServiceMonitor (through a Service whose name differs
+# from the Deployment's) and by a PodMonitor:
+#   - id-annotated: its pods carry resource.opentelemetry.io/service.name: checkout-api,
+#     so its series get service.name checkout-api;
+#   - id-plain: no annotation, so its series get the Deployment name, id-plain, rather
+#     than the Service name (ServiceMonitor job) or <namespace>/<podmonitor> (PodMonitor job).
+# Each monitor stamps its own app label so the four paths can be told apart.
+# TestMonitorServiceIdentity checks the series in CloudWatch.
+#
+# Applied by terraform/eks/daemon/otel-pernode.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: identity-e2e
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: id-annotated
+  namespace: identity-e2e
+  labels: { app: id-annotated }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: id-annotated }
+  template:
+    metadata:
+      labels: { app: id-annotated }
+      annotations:
+        resource.opentelemetry.io/service.name: checkout-api
+    spec:
+      containers:
+        - name: app
+          image: quay.io/brancz/prometheus-example-app:v0.5.0
+          ports:
+            - { name: metrics, containerPort: 8080 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: id-plain
+  namespace: identity-e2e
+  labels: { app: id-plain }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: id-plain }
+  template:
+    metadata:
+      labels: { app: id-plain }
+    spec:
+      containers:
+        - name: app
+          image: quay.io/brancz/prometheus-example-app:v0.5.0
+          ports:
+            - { name: metrics, containerPort: 8080 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: id-annotated-svc
+  namespace: identity-e2e
+  labels: { app: id-annotated }
+spec:
+  selector: { app: id-annotated }
+  ports:
+    - { name: metrics, port: 8080, targetPort: metrics }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: id-plain-svc
+  namespace: identity-e2e
+  labels: { app: id-plain }
+spec:
+  selector: { app: id-plain }
+  ports:
+    - { name: metrics, port: 8080, targetPort: metrics }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: id-annotated-sm
+  namespace: identity-e2e
+spec:
+  namespaceSelector:
+    matchNames: [identity-e2e]
+  selector:
+    matchLabels: { app: id-annotated }
+  endpoints:
+    - port: metrics
+      interval: 30s
+      relabelings:
+        - { targetLabel: app, replacement: id-annotated-sm, action: replace }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: id-plain-sm
+  namespace: identity-e2e
+spec:
+  namespaceSelector:
+    matchNames: [identity-e2e]
+  selector:
+    matchLabels: { app: id-plain }
+  endpoints:
+    - port: metrics
+      interval: 30s
+      relabelings:
+        - { targetLabel: app, replacement: id-plain-sm, action: replace }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: id-annotated-pm
+  namespace: identity-e2e
+spec:
+  namespaceSelector:
+    matchNames: [identity-e2e]
+  selector:
+    matchLabels: { app: id-annotated }
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      relabelings:
+        - { targetLabel: app, replacement: id-annotated-pm, action: replace }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: id-plain-pm
+  namespace: identity-e2e
+spec:
+  namespaceSelector:
+    matchNames: [identity-e2e]
+  selector:
+    matchLabels: { app: id-plain }
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      relabelings:
+        - { targetLabel: app, replacement: id-plain-pm, action: replace }
