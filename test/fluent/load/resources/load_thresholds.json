@@ -1,0 +1,6 @@
+{
+  "max_p99_ratio": 1.0,
+  "max_throttle_delta_per_sec": 0.0,
+  "max_flowcontrol_rejected_delta_per_sec": 0.0,
+  "min_enriched_fraction": 0.99
+}

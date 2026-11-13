@@ -36,3 +36,9 @@ variable "instance_type" {
   type    = string
   default = "t3a.medium"
 }
+
+
+variable "node_count" {
+  type    = number
+  default = 1
+}
