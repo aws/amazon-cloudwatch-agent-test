@@ -203,16 +203,10 @@ resource "aws_eks_pod_identity_association" "karpenter_controller" {
   role_arn        = aws_iam_role.karpenter_controller.arn
 }
 
-# Tag subnets and security group for Karpenter discovery
+# Tag subnets for Karpenter discovery
 resource "aws_ec2_tag" "subnet_karpenter" {
   count       = length(module.basic_components.public_subnet_ids)
   resource_id = module.basic_components.public_subnet_ids[count.index]
-  key         = "karpenter.sh/discovery"
-  value       = aws_eks_cluster.this.name
-}
-
-resource "aws_ec2_tag" "sg_karpenter" {
-  resource_id = module.basic_components.security_group
   key         = "karpenter.sh/discovery"
   value       = aws_eks_cluster.this.name
 }
@@ -310,8 +304,7 @@ resource "null_resource" "karpenter_nodepool" {
           - tags:
               karpenter.sh/discovery: "${aws_eks_cluster.this.name}"
         securityGroupSelectorTerms:
-          - tags:
-              karpenter.sh/discovery: "${aws_eks_cluster.this.name}"
+          - id: "${aws_eks_cluster.this.vpc_config[0].cluster_security_group_id}"
       EOF
     EOT
   }
@@ -742,18 +735,19 @@ resource "null_resource" "validator" {
       echo "Waiting 4 minutes for metrics to propagate..."
       sleep 240
 
+      rc=0
       go test -tags integration -timeout 1h -v ${var.test_dir} \
         -eksClusterName=${aws_eks_cluster.this.name} \
         -computeType=EKS \
         -eksDeploymentStrategy=DAEMON \
-        -region=${var.region}
+        -region=${var.region} || rc=1
 
       echo "Running OTEL solutions tests (Karpenter)..."
       go test -tags integration -timeout 1h -v ./test/otel/solutions/karpenter/... \
         -eksClusterName=${aws_eks_cluster.this.name} \
         -computeType=EKS \
         -eksDeploymentStrategy=DAEMON \
-        -region=${var.region}
+        -region=${var.region} || rc=1
 
       echo "Running OTEL solutions tests (KEDA)..."
       echo "Waiting 2 additional minutes for KEDA metrics to propagate..."
@@ -762,7 +756,8 @@ resource "null_resource" "validator" {
         -eksClusterName=${aws_eks_cluster.this.name} \
         -computeType=EKS \
         -eksDeploymentStrategy=DAEMON \
-        -region=${var.region}
+        -region=${var.region} || rc=1
+      exit $rc
     EOT
   }
 }
