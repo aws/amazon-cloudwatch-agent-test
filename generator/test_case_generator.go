@@ -605,6 +605,21 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			// Java profiling through the chart's java.profiling and otlp.profiles values.
+			// CI installs the newest helm-charts release-* branch with the chart's pinned
+			// operator, and the root fails fast when that branch has no java.profiling. wip
+			// until a chart release carries both and pins an operator with java.profiling;
+			// until then the job cannot pass in CI, which sets no operator image: run the
+			// root with helm_chart_repo/branch and cwagent_operator_image_repo/tag set to
+			// the builds under test.
+			testDir:      "./test/otel/java_profiling",
+			terraformDir: "terraform/eks/daemon/otel-java-profiling",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+			wip:          true,
+		},
+		{
 			testDir:      "./test/otel/performance",
 			terraformDir: "terraform/eks/daemon/otel-performance",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
