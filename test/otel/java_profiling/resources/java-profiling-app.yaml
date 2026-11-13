@@ -1,0 +1,142 @@
+# Workloads for ./test/otel/java_profiling, applied by terraform/eks/daemon/otel-java-profiling
+# with templatefile(), which fills in the service names.
+#
+# - java-profiling: a Java program with ADOT injected by the operator. Its worker threads
+#   alternate between hashing (RUNNABLE) and sleeping (SLEEPING) and allocate on every
+#   iteration, so wall and allocation profiles both have samples. The sidecar is not
+#   Java-instrumented (java-container-names) and must get nothing from the profiler.
+# - java-profiling-opt-out: the same program, Java-instrumented, but it sets
+#   OTEL_AWS_PROFILER_ENABLED=false, so it must get no other profiler variable, volume or
+#   mount, and its service must have no profiles in CloudWatch.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: java-profiling
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: java-profiling-workload
+  namespace: java-profiling
+data:
+  JavaProfilingWorkload.java: |
+    import java.security.MessageDigest;
+
+    public class JavaProfilingWorkload {
+        static volatile long sink;
+
+        static void hashFor(long millis) throws Exception {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            long end = System.nanoTime() + millis * 1_000_000L;
+            while (System.nanoTime() < end) {
+                byte[] block = new byte[16 * 1024];
+                block[0] = (byte) sink;
+                sink += md.digest(block)[0];
+            }
+        }
+
+        public static void main(String[] args) throws Exception {
+            for (int i = 0; i < 2; i++) {
+                Thread worker = new Thread(() -> {
+                    try {
+                        while (true) {
+                            hashFor(20);
+                            Thread.sleep(80);
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }, "profiling-worker-" + i);
+                worker.start();
+            }
+            Thread.currentThread().join();
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-profiling
+  namespace: java-profiling
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-profiling
+  template:
+    metadata:
+      labels:
+        app: java-profiling
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+        instrumentation.opentelemetry.io/java-container-names: "app"
+    spec:
+      containers:
+        - name: app
+          image: ${java_image}
+          command: ["java", "/workload/JavaProfilingWorkload.java"]
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: ${service_name}
+%{ if memory_off ~}
+            # expect_memory_profiling = "false": turn allocation profiling off
+            # in the container, where the operator keeps the container's value.
+            - name: OTEL_AWS_PROFILER_MEMORY_ENABLED
+              value: "false"
+%{ endif ~}
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: workload
+              mountPath: /workload
+        - name: sidecar
+          image: ${java_image}
+          command: ["sleep", "infinity"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+      volumes:
+        - name: workload
+          configMap:
+            name: java-profiling-workload
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-profiling-opt-out
+  namespace: java-profiling
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-profiling-opt-out
+  template:
+    metadata:
+      labels:
+        app: java-profiling-opt-out
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+    spec:
+      containers:
+        - name: app
+          image: ${java_image}
+          command: ["java", "/workload/JavaProfilingWorkload.java"]
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: ${opt_out_service_name}
+            - name: OTEL_AWS_PROFILER_ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: workload
+              mountPath: /workload
+      volumes:
+        - name: workload
+          configMap:
+            name: java-profiling-workload
