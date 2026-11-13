@@ -422,7 +422,7 @@ func TestDCGMNodeGroupCoverage(t *testing.T) {
 			promql := fmt.Sprintf(
 				`DCGM_FI_DEV_GPU_UTIL{"@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`,
 				escaped, ng.InstanceType)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying DCGM_FI_DEV_GPU_UTIL on %s", ng.Description)
 			require.True(t, len(results) > 0,
 				"DCGM missing from %s nodes (%s) — dcgm-exporter not running?",

@@ -48,7 +48,7 @@ func TestEFANoDuplicateSeries(t *testing.T) {
 		`efa_rx_bytes{"@resource.k8s.cluster.name"="%s","@resource.k8s.node.name"="%s","aws.efa.device"="%s"}`,
 		escaped, pinNode, pinDevice,
 	)
-	pinned, err := client.Query(ctx, promql)
+	pinned, err := client.QueryComplete(ctx, promql)
 	require.NoError(t, err, "querying pinned efa_rx_bytes")
 	require.NotEmpty(t, pinned, "pinned efa_rx_bytes returned 0 results")
 	require.Equal(t, 1, len(pinned),
