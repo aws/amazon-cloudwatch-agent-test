@@ -5,10 +5,21 @@
 
 package gpu
 
-import "github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
+import (
+	"reflect"
 
-// Instance types in the GPU cluster.
-var clusterHostTypes = []string{"g4dn.xlarge", "g4dn.12xlarge"}
+	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
+)
+
+// defaultHostTypes are the instance types of the CI GPU cluster.
+var defaultHostTypes = []string{"g4dn.xlarge", "g4dn.12xlarge"}
+
+// Instance types in the GPU cluster; OTEL_HOST_TYPES overrides them.
+var clusterHostTypes = otelmetrics.ResolveHostTypes(defaultHostTypes)
+
+// hostTypesOverridden is true when OTEL_HOST_TYPES replaces the defaults. The
+// multi-GPU tests then skip on a cluster with no multi-GPU node. The CI cluster has one.
+var hostTypesOverridden = !reflect.DeepEqual(clusterHostTypes, defaultHostTypes)
 
 // --- Metric definitions ---
 
@@ -76,11 +87,9 @@ func metricNames(defs []otelmetrics.MetricDefinition) []string {
 // Custom pod label constant.
 const podColorLabel = "k8s.pod.label.ci-test.example.com/pod-color"
 
-// gpuInstanceTypes lists instance types with NVIDIA GPUs in this cluster.
-var gpuInstanceTypes = []struct {
-	InstanceType string
-	Description  string
-}{
-	{"g4dn.xlarge", "GPU-single"},
-	{"g4dn.12xlarge", "GPU-multi"},
-}
+// gpuInstanceTypes lists instance types with NVIDIA GPUs in this cluster. The
+// descriptions only name the CI node groups. The tests read node roles from the data.
+var gpuInstanceTypes = otelmetrics.NodeGroupsFor(clusterHostTypes, map[string]string{
+	"g4dn.xlarge":   "GPU-single",
+	"g4dn.12xlarge": "GPU-multi",
+})

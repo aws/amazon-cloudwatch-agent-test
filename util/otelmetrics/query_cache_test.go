@@ -11,9 +11,12 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // newTestClient creates an OtelMetricsClient pointing at a test HTTP server.
@@ -277,4 +280,82 @@ func TestFilterMatchers(t *testing.T) {
 			t.Errorf("filterMatchers(%q) = %s, want %s", c.key, got, want)
 		}
 	}
+}
+
+// A cluster-scoped series that wrongly gained host keys must reach the absence tests, not be filtered out.
+func TestQueryCache_ClusterScopedReadsHostStampedSeries(t *testing.T) {
+	hostTypes := []string{"t3.medium"}
+	for _, tc := range []struct {
+		source MetricSource
+		metric string
+	}{
+		{SourceKubeStateMetrics, "kube_deployment_status_replicas"},
+		{SourceControlPlane, "apiserver_request_total"},
+	} {
+		t.Run(tc.metric, func(t *testing.T) {
+			f, c := newFake(t, 10, []fakeSeries{
+				{labels: map[string]string{"__name__": tc.metric, "@resource.k8s.cluster.name": "c1", "id": "clean"}},
+				{labels: map[string]string{"__name__": tc.metric, "@resource.k8s.cluster.name": "c1", "id": "leaked",
+					"@resource.host.type": "t3.medium", "@resource.host.id": "i-0abc"}},
+				{labels: map[string]string{"__name__": tc.metric, "@resource.k8s.cluster.name": "c2", "id": "other-cluster"}},
+			})
+			f.emptyMatchesAbsent = "@resource.host.type"
+			registry := NewSourceRegistry(hostTypes,
+				[]SourceHostMapping{{Source: SourceCadvisor, HostTypes: hostTypes}, {Source: tc.source, HostTypes: nil}},
+				SourceMapping{Source: tc.source, Metrics: []MetricDefinition{{Name: tc.metric}}},
+			)
+			qc := NewQueryCache(c, "c1", WithHostTypes(hostTypes), WithSourceRegistry(registry))
+
+			results, err := qc.Get(context.Background(), tc.metric)
+			require.NoError(t, err)
+			hostTypeByID := map[string]string{}
+			for _, r := range results {
+				hostTypeByID[r.Labels.Datapoint["id"]] = r.Labels.Resource["host.type"]
+			}
+			assert.Equal(t, map[string]string{"clean": "", "leaked": "t3.medium"}, hostTypeByID,
+				"the host-stamped series must be returned so the absence tests can fail on it")
+			for _, r := range f.queries() {
+				assert.NotContains(t, r.query, "host.type", "cluster-scoped metrics are read with only the cluster filter")
+			}
+		})
+	}
+}
+
+func TestQueryCache_SharedConcurrencyBoundsBothCaches(t *testing.T) {
+	f := &fakePromQL{t: t, series: podSeries(6, 5), limit: 10}
+	var inflight, peak int
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		inflight++
+		if inflight > peak {
+			peak = inflight
+		}
+		mu.Unlock()
+		time.Sleep(5 * time.Millisecond)
+		f.handler(w, r)
+		mu.Lock()
+		inflight--
+		mu.Unlock()
+	}))
+	t.Cleanup(srv.Close)
+	c := newTestClient(srv.URL)
+	c.seriesLimit = 10
+	pinned := NewQueryCache(c, "c1", WithMaxConcurrency(2))
+	allNodes := NewQueryCache(c, "c1", WithSharedConcurrency(pinned))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var wg sync.WaitGroup
+	for _, qc := range []*QueryCache{pinned, pinned, allNodes, allNodes} { // each call needs several shard requests
+		wg.Add(1)
+		go func(qc *QueryCache) {
+			defer wg.Done()
+			results, err := qc.GetWithFilter(ctx, "kube_pod_info", nil)
+			assert.NoError(t, err)
+			assert.Len(t, results, 30)
+		}(qc)
+	}
+	wg.Wait()
+	assert.LessOrEqual(t, peak, 2, "the requests of both caches must count against one limit")
 }

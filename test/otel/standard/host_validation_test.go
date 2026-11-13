@@ -32,6 +32,7 @@ func TestHostTypeMatchesNodeGroup(t *testing.T) {
 	}
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
+			// Pinned read: Karpenter picks the extra node's type at runtime, so it is in no node group.
 			results, err := queryCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
@@ -57,7 +58,7 @@ func TestHostTypeMatchesNodeGroup(t *testing.T) {
 func TestHostNameMatchesNodeName(t *testing.T) {
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			matchCount := 0
@@ -83,7 +84,7 @@ func TestHostNameMatchesNodeName(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestUniqueHostIdPerNode(t *testing.T) {
-	results, err := queryCache.Get(context.Background(), "node_cpu_seconds_total")
+	results, err := allNodesCache.Get(context.Background(), "node_cpu_seconds_total")
 	require.NoError(t, err, "querying node_cpu_seconds_total")
 	require.NotEmpty(t, results, "node_cpu_seconds_total not available")
 
@@ -118,7 +119,7 @@ func TestUniqueHostIdPerNode(t *testing.T) {
 func TestCloudRegionMatchesConfig(t *testing.T) {
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -140,7 +141,7 @@ func TestCloudRegionMatchesConfig(t *testing.T) {
 func TestCloudAccountMatchesConfig(t *testing.T) {
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -163,7 +164,7 @@ func TestCloudAccountMatchesConfig(t *testing.T) {
 func TestCloudAvailabilityZonePresent(t *testing.T) {
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -184,7 +185,7 @@ func TestCloudAvailabilityZonePresent(t *testing.T) {
 func TestCloudProviderIsAWS(t *testing.T) {
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -202,7 +203,7 @@ func TestCloudProviderIsAWS(t *testing.T) {
 func TestCloudPlatformIsEKS(t *testing.T) {
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -223,7 +224,7 @@ func TestCloudResourceIdIsEKSArn(t *testing.T) {
 	expectedSuffix := fmt.Sprintf(":cluster/%s", cfg.ClusterName)
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -251,7 +252,7 @@ func TestPodScheduledOnCorrectNode(t *testing.T) {
 	gt := getGroundTruth(t)
 	for _, metricName := range podScopedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -283,7 +284,7 @@ func TestHostIdMatchesProviderID(t *testing.T) {
 	gt := getGroundTruth(t)
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -319,7 +320,7 @@ func TestNodeUidMatchesKubernetesAPI(t *testing.T) {
 	gt := getGroundTruth(t)
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -350,7 +351,7 @@ func TestContainerExistsInPodSpec(t *testing.T) {
 	gt := getGroundTruth(t)
 	for _, metricName := range podScopedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -397,7 +398,7 @@ func TestPodNamespaceMatchesKubernetesAPI(t *testing.T) {
 	gt := getGroundTruth(t)
 	for _, metricName := range daemonsetMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -429,7 +430,7 @@ func TestNodeLabelsMatchKubernetesAPI(t *testing.T) {
 	const labelPrefix = "k8s.node.label."
 	for _, metricName := range hostEnrichedMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -471,7 +472,7 @@ func TestDeploymentOwnerMatchesKubernetesAPI(t *testing.T) {
 	gt := getGroundTruth(t)
 	for _, metricName := range daemonsetMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -517,7 +518,7 @@ func TestStatefulSetOwnerMatchesKubernetesAPI(t *testing.T) {
 	gt := getGroundTruth(t)
 	for _, metricName := range daemonsetMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -558,7 +559,7 @@ func TestDaemonSetOwnerMatchesKubernetesAPI(t *testing.T) {
 	gt := getGroundTruth(t)
 	for _, metricName := range daemonsetMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -599,7 +600,7 @@ func TestJobOwnerMatchesKubernetesAPI(t *testing.T) {
 	gt := getGroundTruth(t)
 	for _, metricName := range daemonsetMetricNames() {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
