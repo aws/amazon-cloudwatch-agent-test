@@ -12,6 +12,9 @@ var clusterHostTypes = otelmetrics.ResolveHostTypes([]string{"t3.medium"})
 
 var clusterNodeGroups = otelmetrics.NodeGroupsFor(clusterHostTypes, map[string]string{"t3.medium": "standard"})
 
+// Label exclude patterns the cluster was deployed with; OTEL_POD_LABEL_EXCLUDES and OTEL_NODE_LABEL_EXCLUDES set them.
+var clusterLabelExcludes = otelmetrics.ResolveLabelExcludes()
+
 // --- Metric definitions (standard cluster only) ---
 
 var nodeExporterMetrics = []otelmetrics.MetricDefinition{

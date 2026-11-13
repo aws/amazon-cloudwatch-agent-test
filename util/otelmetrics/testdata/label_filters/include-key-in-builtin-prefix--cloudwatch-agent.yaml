@@ -1,0 +1,162 @@
+# Rendered from aws-observability/helm-charts commit 1cc784c with:
+#
+#   helm template amazon-cloudwatch-observability charts/amazon-cloudwatch-observability \
+#     --namespace amazon-cloudwatch -f ci.yaml -f setup.yaml
+#
+# ci.yaml:
+#   clusterName: c
+#   region: us-west-2
+#   otelContainerInsights:
+#     enabled: true
+#     solutions:
+#       karpenter: {enabled: true}
+#       keda: {enabled: true}
+# setup.yaml:
+#   otelFilters:
+#     nodeLabels: {include: ["*", "karpenter.k8s.aws/instance-gpu-name"]}
+#
+# From the processors section of spec.otelConfig of the AmazonCloudWatchAgent cloudwatch-agent,
+# only these processors, unchanged:
+#   - awsattributelimit/cw_k8s_ci_v0
+#   - k8sattributes/cw_k8s_ci_v0_node
+#   - k8sattributes/cw_k8s_ci_v0_pod
+#   - transform/cw_k8s_ci_v0_logs_labels
+#   - transform/cw_k8s_ci_v0_metrics_labels
+processors:
+  awsattributelimit/cw_k8s_ci_v0:
+    max_total_attributes: 150
+    unconditional_removal_keys:
+    - k8s.node.label.topology.kubernetes.io/region
+    - k8s.node.label.topology.kubernetes.io/zone
+    - k8s.node.label.topology.ebs.csi.aws.com/zone
+    - k8s.node.label.node.kubernetes.io/instance-type
+    - k8s.node.label.kubernetes.io/hostname
+    - k8s.node.label.helm.sh/chart
+    - k8s.node.label.release
+    - k8s.node.label.eks.amazonaws.com/nodegroup-image
+    - k8s.node.label.k8s.io/cloud-provider-aws
+    - k8s.node.label.eks.amazonaws.com/sourceLaunchTemplateId
+    - k8s.node.label.eks.amazonaws.com/sourceLaunchTemplateVersion
+    - k8s.node.label.karpenter.sh/do-not-sync-taints
+    - k8s.node.label.karpenter.sh/initialized
+    - k8s.node.label.karpenter.sh/registered
+    - k8s.node.label.karpenter.k8s.aws/instance-category
+    - k8s.node.label.karpenter.k8s.aws/instance-family
+    - k8s.node.label.karpenter.k8s.aws/instance-generation
+    - k8s.node.label.karpenter.k8s.aws/instance-size
+    - k8s.node.label.karpenter.k8s.aws/instance-memory
+    - k8s.node.label.karpenter.k8s.aws/instance-hypervisor
+    - k8s.node.label.karpenter.k8s.aws/instance-local-nvme
+    - k8s.node.label.karpenter.k8s.aws/instance-ebs-bandwidth
+    - k8s.node.label.karpenter.k8s.aws/instance-network-bandwidth
+    - k8s.node.label.karpenter.k8s.aws/instance-encryption-in-transit-supported
+    - k8s.node.label.karpenter.k8s.aws/instance-capability-flex
+    - k8s.pod.label.pod-template-hash
+    - k8s.pod.label.controller-revision-hash
+    - k8s.pod.label.pod-template-generation
+    - k8s.pod.label.topology.kubernetes.io/region
+    - k8s.pod.label.topology.kubernetes.io/zone
+    unconditional_removal_prefixes:
+    - k8s.node.label.feature.node.kubernetes.io/
+    - k8s.node.label.beta.kubernetes.io/
+    - k8s.node.label.failure-domain.beta.kubernetes.io/
+    - k8s.node.label.alpha.eksctl.io/
+    - k8s.node.label.karpenter.k8s.aws/instance-cpu
+    - k8s.node.label.karpenter.k8s.aws/instance-accelerator-
+    - k8s.node.label.eks.amazonaws.com/instance-
+  k8sattributes/cw_k8s_ci_v0_node:
+    auth_type: serviceAccount
+    extract:
+      labels:
+      - from: node
+        key_regex: (.*)
+        tag_name: k8s.node.label.$$$1
+      metadata:
+      - k8s.node.name
+    filter:
+      node_from_env_var: K8S_NODE_NAME
+    passthrough: false
+    pod_association:
+    - sources:
+      - from: resource_attribute
+        name: k8s.node.name
+  k8sattributes/cw_k8s_ci_v0_pod:
+    auth_type: serviceAccount
+    extract:
+      labels:
+      - from: pod
+        key_regex: (.*)
+        tag_name: k8s.pod.label.$$$1
+      metadata:
+      - k8s.pod.uid
+      - k8s.node.name
+      - k8s.deployment.name
+      - k8s.statefulset.name
+      - k8s.daemonset.name
+      - k8s.replicaset.name
+      - k8s.job.name
+      - k8s.cronjob.name
+    filter:
+      node_from_env_var: K8S_NODE_NAME
+    passthrough: false
+    pod_association:
+    - sources:
+      - from: resource_attribute
+        name: k8s.pod.name
+      - from: resource_attribute
+        name: k8s.namespace.name
+  transform/cw_k8s_ci_v0_logs_labels:
+    error_mode: ignore
+    log_statements:
+    - context: resource
+      statements:
+      - set(cache["kept_labels"], attributes)
+      - keep_matching_keys(cache["kept_labels"], "^(k8s\\.node\\.label\\.karpenter\\.k8s\\.aws/instance-gpu-name$)")
+      - delete_matching_keys(attributes, "^k8s\\.node\\.label\\.karpenter\\.k8s\\.aws/instance-gpu-")
+      - merge_maps(attributes, cache["kept_labels"], "upsert")
+      - delete_matching_keys(attributes, "^k8s\\.node\\.label\\.feature\\.node\\.kubernetes\\.io/")
+      - delete_matching_keys(attributes, "^k8s\\.node\\.label\\.beta\\.kubernetes\\.io/")
+      - delete_matching_keys(attributes, "^k8s\\.node\\.label\\.failure-domain\\.beta\\.kubernetes\\.io/")
+      - delete_matching_keys(attributes, "^k8s\\.node\\.label\\.alpha\\.eksctl\\.io/")
+      - delete_matching_keys(attributes, "^k8s\\.node\\.label\\.karpenter\\.k8s\\.aws/instance-cpu")
+      - delete_matching_keys(attributes, "^k8s\\.node\\.label\\.karpenter\\.k8s\\.aws/instance-accelerator-")
+      - delete_matching_keys(attributes, "^k8s\\.node\\.label\\.eks\\.amazonaws\\.com/instance-")
+      - delete_key(attributes, "k8s.node.label.topology.kubernetes.io/region")
+      - delete_key(attributes, "k8s.node.label.topology.kubernetes.io/zone")
+      - delete_key(attributes, "k8s.node.label.topology.ebs.csi.aws.com/zone")
+      - delete_key(attributes, "k8s.node.label.node.kubernetes.io/instance-type")
+      - delete_key(attributes, "k8s.node.label.kubernetes.io/hostname")
+      - delete_key(attributes, "k8s.node.label.helm.sh/chart")
+      - delete_key(attributes, "k8s.node.label.release")
+      - delete_key(attributes, "k8s.node.label.eks.amazonaws.com/nodegroup-image")
+      - delete_key(attributes, "k8s.node.label.k8s.io/cloud-provider-aws")
+      - delete_key(attributes, "k8s.node.label.eks.amazonaws.com/sourceLaunchTemplateId")
+      - delete_key(attributes, "k8s.node.label.eks.amazonaws.com/sourceLaunchTemplateVersion")
+      - delete_key(attributes, "k8s.node.label.karpenter.sh/do-not-sync-taints")
+      - delete_key(attributes, "k8s.node.label.karpenter.sh/initialized")
+      - delete_key(attributes, "k8s.node.label.karpenter.sh/registered")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-category")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-family")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-generation")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-size")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-memory")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-hypervisor")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-local-nvme")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-ebs-bandwidth")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-network-bandwidth")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-encryption-in-transit-supported")
+      - delete_key(attributes, "k8s.node.label.karpenter.k8s.aws/instance-capability-flex")
+      - delete_key(attributes, "k8s.pod.label.pod-template-hash")
+      - delete_key(attributes, "k8s.pod.label.controller-revision-hash")
+      - delete_key(attributes, "k8s.pod.label.pod-template-generation")
+      - delete_key(attributes, "k8s.pod.label.topology.kubernetes.io/region")
+      - delete_key(attributes, "k8s.pod.label.topology.kubernetes.io/zone")
+  transform/cw_k8s_ci_v0_metrics_labels:
+    error_mode: ignore
+    metric_statements:
+    - context: resource
+      statements:
+      - set(cache["kept_labels"], attributes)
+      - keep_matching_keys(cache["kept_labels"], "^(k8s\\.node\\.label\\.karpenter\\.k8s\\.aws/instance-gpu-name$)")
+      - delete_matching_keys(attributes, "^k8s\\.node\\.label\\.karpenter\\.k8s\\.aws/instance-gpu-")
+      - merge_maps(attributes, cache["kept_labels"], "upsert")

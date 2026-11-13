@@ -11,39 +11,46 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// AttributeDenylist is the unconditional removal configuration of an
-// awsattributelimit processor, plus its attribute cap.
+// AttributeDenylist is the unconditional removal of resource attributes from
+// metrics: the removal configuration of an awsattributelimit processor, plus its
+// attribute cap, and the label exception transforms.
 type AttributeDenylist struct {
 	Prefixes  []string
 	Keys      map[string]struct{}
 	MaxTotal  int
 	Processor string
+	// Exceptions are the label exception transforms. Each removes a key that
+	// the processor does not, so the order of the two does not matter.
+	Exceptions []LabelException
 }
 
-// ParseAttributeDenylist reads the awsattributelimit processor from a rendered
-// collector configuration. It returns an error if the configuration has no such
-// processor or more than one, because the expectation would then be ambiguous.
+// ParseAttributeDenylist reads the awsattributelimit processor and the label
+// exception transforms from a rendered collector configuration. It returns an
+// error if the configuration has no awsattributelimit processor or more than
+// one, because the expectation would then be ambiguous. Any other transform
+// statement in metrics that removes or writes k8s.node.label.* or
+// k8s.pod.label.* resource attributes returns an error that wraps
+// ErrFilterNotModeled and names the processor.
 func ParseAttributeDenylist(otelConfigYAML string) (AttributeDenylist, error) {
 	var cfg struct {
-		Processors map[string]struct {
-			Prefixes []string `yaml:"unconditional_removal_prefixes"`
-			Keys     []string `yaml:"unconditional_removal_keys"`
-			MaxTotal int      `yaml:"max_total_attributes"`
-		} `yaml:"processors"`
+		Processors map[string]yaml.Node `yaml:"processors"`
 	}
 	if err := yaml.Unmarshal([]byte(otelConfigYAML), &cfg); err != nil {
 		return AttributeDenylist{}, fmt.Errorf("parsing collector configuration: %w", err)
 	}
-	var names []string
-	for name := range cfg.Processors {
-		if name == "awsattributelimit" || strings.HasPrefix(name, "awsattributelimit/") {
-			names = append(names, name)
-		}
-	}
+	names := sortedProcessors(cfg.Processors, "awsattributelimit")
 	if len(names) != 1 {
 		return AttributeDenylist{}, fmt.Errorf("want exactly one awsattributelimit processor, found %d: %v", len(names), names)
 	}
-	p := cfg.Processors[names[0]]
+	var p struct {
+		Prefixes []string `yaml:"unconditional_removal_prefixes"`
+		Keys     []string `yaml:"unconditional_removal_keys"`
+		MaxTotal int      `yaml:"max_total_attributes"`
+	}
+	node := cfg.Processors[names[0]]
+	if err := node.Decode(&p); err != nil {
+		return AttributeDenylist{}, fmt.Errorf("parsing processor %s: %w", names[0], err)
+	}
 	d := AttributeDenylist{
 		Prefixes:  p.Prefixes,
 		Keys:      make(map[string]struct{}, len(p.Keys)),
@@ -53,17 +60,28 @@ func ParseAttributeDenylist(otelConfigYAML string) (AttributeDenylist, error) {
 	for _, k := range p.Keys {
 		d.Keys[k] = struct{}{}
 	}
+	exceptions, err := parseLabelExceptions(cfg.Processors)
+	if err != nil {
+		return AttributeDenylist{}, err
+	}
+	d.Exceptions = exceptions
 	return d, nil
 }
 
 // Denies reports whether the processor removes the resource attribute key,
-// using the same exact-key-then-prefix rule as the processor itself.
+// using the same exact-key-then-prefix rule as the processor itself, or a label
+// exception transform removes it.
 func (d AttributeDenylist) Denies(key string) bool {
 	if _, ok := d.Keys[key]; ok {
 		return true
 	}
 	for _, p := range d.Prefixes {
 		if strings.HasPrefix(key, p) {
+			return true
+		}
+	}
+	for _, x := range d.Exceptions {
+		if x.Removes(key) {
 			return true
 		}
 	}
@@ -99,7 +117,7 @@ type LabelDiff struct {
 	Checked    int      // labels expected on the series
 	Missing    []string // expected but absent
 	Mismatched []string // present with a different value, as "key: got, want"
-	Leaked     []string // denied but present
+	Leaked     []string // removed by the extraction rules or the denylist, but present
 }
 
 // OK reports whether the series matched the object exactly.
@@ -107,16 +125,17 @@ func (l LabelDiff) OK() bool {
 	return len(l.Missing) == 0 && len(l.Mismatched) == 0 && len(l.Leaked) == 0
 }
 
-// ReconcileLabels compares an object's labels with the attributes under prefix
-// (for example "k8s.node.label.") in resource. Every label the denylist does not
-// match must arrive with the same value, and every label it matches must not.
-// Empty-valued labels are skipped, because PromQL drops empty label values.
-func ReconcileLabels(objectLabels, resource map[string]string, prefix string, d AttributeDenylist) LabelDiff {
+// ReconcileLabels compares an object's labels with the attributes under e.Prefix
+// (for example "k8s.node.label.") in resource. Every label that the extraction
+// rules copy and the denylist does not remove must arrive with the same value,
+// and every other label must not. Empty-valued labels are skipped, because
+// PromQL drops empty label values.
+func ReconcileLabels(objectLabels, resource map[string]string, e LabelExtraction, d AttributeDenylist) LabelDiff {
 	var diff LabelDiff
 	for k, want := range objectLabels {
-		attr := prefix + k
+		attr := e.Prefix + k
 		got, present := resource[attr]
-		if d.Denies(attr) {
+		if !e.Extracts(k) || d.Denies(attr) {
 			if present {
 				diff.Leaked = append(diff.Leaked, k)
 			}
@@ -139,8 +158,9 @@ func ReconcileLabels(objectLabels, resource map[string]string, prefix string, d 
 	return diff
 }
 
-// Attributes no denylist entry may remove. The helm-charts render test
-// prometheus_attribute_shape.sh holds the same list; keep the two in step.
+// Attributes no denylist entry the chart adds may remove; a customer label exclude
+// may remove the k8s.node.label.* and k8s.pod.label.* ones. The helm-charts render
+// test prometheus_attribute_shape.sh holds the same list; keep the two in step.
 var (
 	// protectedResourceKeys and protectedPrefixes of the awsattributelimit processor;
 	// unconditional removal runs before that protection, so a denylist entry would override it.
@@ -161,7 +181,8 @@ var (
 	NeverDeniedPrefixes = []string{"cloud.", "host.", "hw."}
 )
 
-// NeverDeniedViolations lists each denylist entry that would remove a never-denied attribute.
+// NeverDeniedViolations lists each denylist entry and label exception transform
+// that would remove a never-denied attribute.
 func (d AttributeDenylist) NeverDeniedViolations() []string {
 	var out []string
 	for _, key := range NeverDeniedKeys {
@@ -171,6 +192,11 @@ func (d AttributeDenylist) NeverDeniedViolations() []string {
 		for _, p := range d.Prefixes {
 			if strings.HasPrefix(key, p) {
 				out = append(out, fmt.Sprintf("prefix %q removes %q", p, key))
+			}
+		}
+		for _, x := range d.Exceptions {
+			if x.Removes(key) {
+				out = append(out, fmt.Sprintf("%s removes %q", x.Processor, key))
 			}
 		}
 	}
@@ -185,6 +211,80 @@ func (d AttributeDenylist) NeverDeniedViolations() []string {
 				out = append(out, fmt.Sprintf("prefix %q overlaps %q", p, protected))
 			}
 		}
+		for _, x := range d.Exceptions {
+			for _, p := range x.Prefixes {
+				if strings.HasPrefix(p, protected) || strings.HasPrefix(protected, p) {
+					out = append(out, fmt.Sprintf("%s prefix %q overlaps %q", x.Processor, p, protected))
+				}
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// LabelExcludes are the otelFilters.podLabels.exclude and
+// otelFilters.nodeLabels.exclude patterns a cluster was deployed with: a label
+// key, a prefix followed by "*", or "*" alone.
+type LabelExcludes struct {
+	Pod, Node []string
+}
+
+// Denylist renders the patterns as the chart does: the key k8s.pod.label.<pattern>
+// or k8s.node.label.<pattern>, or a prefix without the "*" when the pattern ends in "*".
+func (e LabelExcludes) Denylist() AttributeDenylist {
+	d := AttributeDenylist{Keys: map[string]struct{}{}}
+	for _, scope := range []struct {
+		prefix   string
+		patterns []string
+	}{{"k8s.pod.label.", e.Pod}, {"k8s.node.label.", e.Node}} {
+		for _, pattern := range scope.patterns {
+			if strings.HasSuffix(pattern, "*") {
+				d.Prefixes = append(d.Prefixes, scope.prefix+strings.TrimSuffix(pattern, "*"))
+			} else {
+				d.Keys[scope.prefix+pattern] = struct{}{}
+			}
+		}
+	}
+	return d
+}
+
+// SplitCustomerExcludes splits d into the entries that the declared customer
+// excludes render to and every other entry, which the chart added. The label
+// exception transforms go to chart, because they remove built-in prefixes.
+func (d AttributeDenylist) SplitCustomerExcludes(e LabelExcludes) (chart, customer AttributeDenylist) {
+	declared := e.Denylist()
+	declaredPrefixes := make(map[string]struct{}, len(declared.Prefixes))
+	for _, p := range declared.Prefixes {
+		declaredPrefixes[p] = struct{}{}
+	}
+	chart = AttributeDenylist{Keys: map[string]struct{}{}, MaxTotal: d.MaxTotal, Processor: d.Processor, Exceptions: d.Exceptions}
+	customer = AttributeDenylist{Keys: map[string]struct{}{}, MaxTotal: d.MaxTotal, Processor: d.Processor}
+	for _, p := range d.Prefixes {
+		if _, ok := declaredPrefixes[p]; ok {
+			customer.Prefixes = append(customer.Prefixes, p)
+		} else {
+			chart.Prefixes = append(chart.Prefixes, p)
+		}
+	}
+	for k := range d.Keys {
+		if _, ok := declared.Keys[k]; ok {
+			customer.Keys[k] = struct{}{}
+		} else {
+			chart.Keys[k] = struct{}{}
+		}
+	}
+	return chart, customer
+}
+
+// Entries lists the denylist's keys and prefixes, sorted.
+func (d AttributeDenylist) Entries() []string {
+	out := make([]string, 0, len(d.Keys)+len(d.Prefixes))
+	for k := range d.Keys {
+		out = append(out, fmt.Sprintf("key %q", k))
+	}
+	for _, p := range d.Prefixes {
+		out = append(out, fmt.Sprintf("prefix %q", p))
 	}
 	sort.Strings(out)
 	return out
@@ -205,9 +305,10 @@ type ObjectReconciliation struct {
 
 // ReconcileObjects groups series by object and reconciles each. objectOf returns the
 // object key and its Kubernetes labels, or false for a series of an unknown object.
-// Every key in required must have at least one series, at the cap or below it.
+// Every key in required must have at least one series, at the cap or below it, so
+// leave out an object that a filter removes.
 func ReconcileObjects(results []MetricResult, objectOf func(MetricLabels) (string, map[string]string, bool),
-	required []string, prefix string, d AttributeDenylist) ObjectReconciliation {
+	required []string, e LabelExtraction, d AttributeDenylist) ObjectReconciliation {
 	out := ObjectReconciliation{Failed: map[string]LabelDiff{}, Required: len(required)}
 	passed := map[string]bool{}
 	hasSeries := map[string]bool{}
@@ -224,7 +325,7 @@ func ReconcileObjects(results []MetricResult, objectOf func(MetricLabels) (strin
 		if passed[key] {
 			continue
 		}
-		diff := ReconcileLabels(labels, r.Labels.Resource, prefix, d)
+		diff := ReconcileLabels(labels, r.Labels.Resource, e, d)
 		if diff.OK() {
 			passed[key] = true
 			out.Labels += diff.Checked
