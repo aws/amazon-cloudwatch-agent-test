@@ -1,0 +1,43 @@
+# An ordinary pod (no hostNetwork) that sends OTLP through the cloudwatch-agent
+# Service, the chart's OTLP endpoint, which the chart serves by default. It runs
+# terraform/otlp_service_sender.sh, which Terraform puts in the otlp-e2e-sender
+# ConfigMap, and sets no pod attributes, so the agent has to find the pod from
+# the connection's source IP. The chart's otelServiceIdentity.useAppLabels is
+# false by default, so the app.kubernetes.io labels are not used for the service
+# identity: the test expects service.name otlp-e2e-app (the Deployment name) and
+# no service.version.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otlp-e2e-app
+  namespace: otlp-e2e
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otlp-e2e-app
+  template:
+    metadata:
+      labels:
+        app: otlp-e2e-app
+        app.kubernetes.io/name: otlp-e2e-app-name
+        app.kubernetes.io/version: "1.2.3"
+    spec:
+      containers:
+        - name: sender
+          image: curlimages/curl:8.8.0
+          command: ["sh", "/sender/sender.sh"]
+          env:
+            - name: OTLP_CASE
+              value: app
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          volumeMounts:
+            - name: sender
+              mountPath: /sender
+      volumes:
+        - name: sender
+          configMap:
+            name: otlp-e2e-sender

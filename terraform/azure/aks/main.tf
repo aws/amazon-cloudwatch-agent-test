@@ -407,7 +407,7 @@ resource "null_resource" "agent_diagnostics" {
     EOT
   }
 
-  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart]
+  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart, null_resource.ci_otlp_sender]
 }
 
 #####################################################################
@@ -433,14 +433,16 @@ resource "null_resource" "integration_test" {
     }
   }
 
-  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart, null_resource.ci_extra_manifests, null_resource.agent_diagnostics]
+  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart, null_resource.ci_extra_manifests, null_resource.ci_otlp_sender, null_resource.agent_diagnostics]
 }
 
 #####################################################################
 # Container Insights topology (test_mode == "containerinsights"): the
 # amazon-cloudwatch-observability Helm chart with OTel Container Insights,
-# installed with the same values scripts/azure/setup.sh uses for AKS
-# customers, plus the agent image under test. The chart deploys the node
+# installed with the values scripts/azure/setup.sh uses for AKS customers
+# without the no-op agents[0].config=default:otel, which
+# aws/amazon-cloudwatch-agent#2402 removes from the script, plus the agent
+# image under test. The chart deploys the node
 # DaemonSet, the cluster-scraper Deployment, node-exporter and
 # kube-state-metrics, and renders their collector config itself.
 #####################################################################
@@ -466,8 +468,14 @@ resource "null_resource" "ci_helm_chart" {
       set -euo pipefail
       KC='${local_sensitive_file.kubeconfig.filename}'
       rm -rf '${local.helm_charts_dir}'
-      git clone https://github.com/aws-observability/helm-charts.git '${local.helm_charts_dir}'
+      git clone '${var.helm_charts_repo}' '${local.helm_charts_dir}'
       git -C '${local.helm_charts_dir}' checkout '${var.helm_charts_branch}'
+      # The OTLP checks need the chart's OTLP endpoint; a chart without it would
+      # install fine and fail them. Stop here with the reason instead.
+      if ! grep -qE '^otlp:' '${local.helm_charts_dir}/charts/amazon-cloudwatch-observability/values.yaml'; then
+        echo '${var.helm_charts_repo}@${var.helm_charts_branch} has no top-level otlp block in values.yaml' >&2
+        exit 1
+      fi
       helm --kubeconfig "$KC" upgrade --install amazon-cloudwatch-observability \
         '${local.helm_charts_dir}/charts/amazon-cloudwatch-observability' \
         --namespace '${local.namespace}' \
@@ -480,7 +488,6 @@ resource "null_resource" "ci_helm_chart" {
         --set otelContainerInsights.enabled=true \
         --set otelContainerInsights.logs.enabled=true \
         --set-string 'agents[0].name=cloudwatch-agent' \
-        --set-string 'agents[0].config=default:otel' \
         --set-string 'agents[1].name=cloudwatch-agent-cluster-scraper' \
         --set-string 'agents[1].mode=deployment' \
         --set-string 'agents[1].config=default' \
@@ -510,7 +517,48 @@ resource "null_resource" "ci_helm_chart" {
   depends_on = [
     kubernetes_secret.ecr_pull,
     aws_iam_role_policy_attachment.cwagent_server_policy,
+    null_resource.ci_otlp_log_group_cleanup,
   ]
+}
+
+# The agent never deletes log groups. The test infrastructure deletes the OTLP
+# log group on teardown: ci_helm_chart depends on this resource, so Terraform
+# uninstalls the chart (and with it the agents that write the group) first,
+# and nothing recreates the group after the delete. It runs on destroy, so it
+# also runs when go test fails or is killed.
+resource "null_resource" "ci_otlp_log_group_cleanup" {
+  count = local.is_ci ? 1 : 0
+
+  triggers = {
+    log_group = "/aws/cwagent/${azurerm_kubernetes_cluster.cwagent.name}/otlp"
+    region    = var.region
+  }
+  provisioner "local-exec" {
+    when    = destroy
+    command = "aws logs delete-log-group --region ${self.triggers.region} --log-group-name ${self.triggers.log_group} || true"
+  }
+}
+
+#####################################################################
+# OTLP sender (test_mode == "containerinsights"): an ordinary pod that
+# sends OTLP through the cloudwatch-agent Service to the chart's OTLP
+# endpoint, which the chart serves by default from its otlp values.
+#####################################################################
+resource "null_resource" "ci_otlp_sender" {
+  count = local.is_ci ? 1 : 0
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      kubectl --kubeconfig "$KC" create namespace otlp-e2e --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      kubectl --kubeconfig "$KC" -n otlp-e2e create configmap otlp-e2e-sender \
+        --from-file=sender.sh='${path.module}/../../otlp_service_sender.sh' --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      kubectl --kubeconfig "$KC" apply -f '${path.module}/../../../${var.test_dir}/resources/otlp_sender.yaml'
+      kubectl --kubeconfig "$KC" -n otlp-e2e rollout status deployment/otlp-e2e-app --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+  depends_on = [null_resource.ci_helm_chart]
 }
 
 #####################################################################

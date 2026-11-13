@@ -393,26 +393,55 @@ func (r logRecord) resource() map[string]string {
 // ("application") or of the host log writer ("host") from the last
 // logLookback.
 func markerLogs(kind string) ([]logRecord, error) {
-	logGroup := fmt.Sprintf("/aws/otel/containerinsights/%s/%s", cfg.ClusterName, kind)
-	end := time.Now()
-	rows, err := awsservice.GetLogQueryResults(logGroup, end.Add(-logLookback).Unix(), end.Unix(),
-		fmt.Sprintf("fields @message | filter @message like %q | limit 10000", logMarker))
+	return logsIn(fmt.Sprintf("/aws/otel/containerinsights/%s/%s", cfg.ClusterName, kind), logMarker)
+}
+
+// logsIn returns the log records in logGroup from the last logLookback whose
+// body starts with marker.
+func logsIn(logGroup, marker string) ([]logRecord, error) {
+	return logsInSince(logGroup, marker, time.Now().Add(-logLookback))
+}
+
+// logsInSince returns the log records in logGroup since since whose body
+// starts with marker.
+func logsInSince(logGroup, marker string, since time.Time) ([]logRecord, error) {
+	messages, err := queryMessagesSince(logGroup, fmt.Sprintf("fields @message | filter @message like %q | limit 10000", marker), since)
 	if err != nil {
 		return nil, err
 	}
 	var records []logRecord
-	for _, row := range rows {
-		for _, field := range row {
-			if aws.ToString(field.Field) != "@message" {
-				continue
-			}
-			var r logRecord
-			if json.Unmarshal([]byte(aws.ToString(field.Value)), &r) == nil && strings.HasPrefix(r.Body, logMarker) {
-				records = append(records, r)
-			}
+	for _, m := range messages {
+		var r logRecord
+		if json.Unmarshal([]byte(m), &r) == nil && strings.HasPrefix(r.Body, marker) {
+			records = append(records, r)
 		}
 	}
 	return records, nil
+}
+
+// queryMessages runs a Logs Insights query over logGroup for the last
+// logLookback and returns the @message of each row.
+func queryMessages(logGroup, query string) ([]string, error) {
+	return queryMessagesSince(logGroup, query, time.Now().Add(-logLookback))
+}
+
+// queryMessagesSince runs a Logs Insights query over logGroup from since and
+// returns the @message of each row.
+func queryMessagesSince(logGroup, query string, since time.Time) ([]string, error) {
+	end := time.Now()
+	rows, err := awsservice.GetLogQueryResults(logGroup, since.Unix(), end.Unix(), query)
+	if err != nil {
+		return nil, err
+	}
+	var messages []string
+	for _, row := range rows {
+		for _, field := range row {
+			if aws.ToString(field.Field) == "@message" {
+				messages = append(messages, aws.ToString(field.Value))
+			}
+		}
+	}
+	return messages, nil
 }
 
 // fromEveryNode reports whether records include one from every node.
