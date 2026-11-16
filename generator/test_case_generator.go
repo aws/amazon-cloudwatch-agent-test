@@ -497,6 +497,20 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/otlp",
+			terraformDir: "terraform/eks/daemon/otel-otlp",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/otlp_disabled",
+			terraformDir: "terraform/eks/daemon/otel-otlp-disabled",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
 			testDir:      "./test/otel/ebs_csi",
 			terraformDir: "terraform/eks/daemon/otel-ebs-csi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},

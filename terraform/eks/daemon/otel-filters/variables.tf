@@ -21,6 +21,13 @@ variable "cwagent_image_tag" {
   default = "latest"
 }
 
+# The chart is cloned from helm_chart_repo at helm_chart_branch, so a branch on
+# a fork can be tested before it is merged.
+variable "helm_chart_repo" {
+  type    = string
+  default = "https://github.com/aws-observability/helm-charts.git"
+}
+
 variable "helm_chart_branch" {
   type    = string
   default = "main"
