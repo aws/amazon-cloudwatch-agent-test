@@ -23,8 +23,8 @@ import (
 // exporter. There is no CloudWatch read API for profiles to check delivery against, so like the EC2
 // profiles test (test/otel_collect/linux/profiles) it checks the agent's side of the export.
 //
-// The flag is off by default because otlp.profiles.enabled is off in the chart and the pipeline needs
-// an agent image with the collector's profiles support (1.300075.0 or later).
+// The flag is on by default. Turn it off (otlp_profiles_enabled=false) to test an agent image older
+// than 1.300075.0, which has no collector profiles support.
 func TestProfiles(t *testing.T) {
 	if !otlpendpoint.ProfilesEnabled() {
 		t.Skipf("%s is not true: the chart is installed without otlp.profiles.enabled", otlpendpoint.ProfilesEnabledEnv)

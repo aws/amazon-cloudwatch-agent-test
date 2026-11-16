@@ -18,7 +18,7 @@ import (
 const (
 	// ProfilesEnabledEnv turns on the profiles checks. The suite's Terraform sets it to its
 	// otlp_profiles_enabled variable, which also installs the chart with otlp.profiles.enabled=true and
-	// makes the app sender post profiles. It is off by default: the chart's profiles pipeline needs an
+	// makes the app sender post profiles. It is on by default; the chart's profiles pipeline needs an
 	// agent image with the collector's profiles support (1.300075.0 or later).
 	ProfilesEnabledEnv = "OTLP_PROFILES_ENABLED"
 

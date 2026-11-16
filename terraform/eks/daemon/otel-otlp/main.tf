@@ -169,8 +169,9 @@ data "external" "clone_helm_chart" {
 
 # The chart defaults, so the OTLP endpoint is on with its default ports and
 # span metrics, plus OTel Container Insights to check that both run together.
-# otlp_profiles_enabled also turns on the profiles pipeline, which is off by
-# default in the chart.
+# otlp_profiles_enabled (on by default) also turns on the profiles pipeline,
+# which is off by default in the chart. The chart's default agent image may not
+# support profiles; update_image below replaces it with the image under test.
 resource "helm_release" "aws_observability" {
   name             = "amazon-cloudwatch-observability"
   chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
