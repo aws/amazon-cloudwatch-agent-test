@@ -34,12 +34,14 @@ variable "helm_chart_branch" {
 }
 
 # Installs the chart with otlp.profiles.enabled=true, makes the app sender post
-# profiles and turns on TestProfiles (OTLP_PROFILES_ENABLED). Off by default: the
-# profiles pipeline needs an agent image with the collector's profiles support
-# (1.300075.0 or later), and the chart's default image does not have it yet.
+# profiles and turns on TestProfiles (OTLP_PROFILES_ENABLED). The profiles
+# pipeline needs an agent image with the collector's profiles support
+# (1.300075.0 or later). The suite runs the image under test
+# (cwagent_image_repo/cwagent_image_tag), not the chart's default image, so this
+# is on by default; set it to false to test an older agent image.
 variable "otlp_profiles_enabled" {
   type    = bool
-  default = false
+  default = true
 }
 
 variable "k8s_version" {
