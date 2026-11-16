@@ -218,7 +218,7 @@ resource "null_resource" "integration_test_run" {
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self", "amazon"]
+  owners      = module.common.ami_owners
 
   filter {
     name   = "name"

@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/aws/amazon-cloudwatch-agent-test/environment"
+	"github.com/aws/amazon-cloudwatch-agent-test/test/otel/otlpendpoint"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/awsservice"
 	"github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 )
@@ -30,6 +31,7 @@ var (
 	client *otelmetrics.OtelMetricsClient
 	// nodes are the cluster's node names. Node agent data is checked on each.
 	nodes []string
+	kube  kubernetes.Interface
 )
 
 func TestMain(m *testing.M) {
@@ -92,6 +94,11 @@ func TestMain(m *testing.M) {
 	nodes, err = nodeNames(ctx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Kubernetes nodes error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if kube, err = otlpendpoint.KubeClient(); err != nil {
+		fmt.Fprintf(os.Stderr, "Kubernetes client error: %v\n", err)
 		os.Exit(1)
 	}
 

@@ -35,6 +35,9 @@ locals {
   # Namespaces of the stand-in inference servers: one kept and one dropped by
   # the namespaces filter.
   inference_namespaces = ["filters-keep-a", "filters-keep-secret-b"]
+
+  # Run by the OTLP sender container of each test workload.
+  sender_script = "${path.module}/../../../otlp_service_sender.sh"
 }
 
 resource "aws_eks_cluster" "this" {
@@ -135,13 +138,40 @@ resource "null_resource" "kubectl" {
   }
 }
 
+# --- OTLP log group cleanup ---
+# The agent never deletes log groups. The test infrastructure deletes the OTLP
+# log group on teardown: the chart release depends on this resource, so
+# Terraform destroys the release (and with it the agents that write the group)
+# first, and nothing recreates the group after the delete. It runs on destroy,
+# so it also runs when go test fails or is killed.
+
+resource "null_resource" "otlp_log_group_cleanup" {
+  triggers = {
+    log_group = "/aws/cwagent/${aws_eks_cluster.this.name}/otlp"
+    region    = var.region
+  }
+  provisioner "local-exec" {
+    when    = destroy
+    command = "aws logs delete-log-group --region ${self.triggers.region} --log-group-name ${self.triggers.log_group} || true"
+  }
+}
+
 # --- Helm chart install ---
 
 data "external" "clone_helm_chart" {
   program = ["bash", "-c", <<-EOT
+    set -e
     rm -rf ./helm-charts
-    git clone -b ${var.helm_chart_branch} https://github.com/aws-observability/helm-charts.git ./helm-charts
-    echo '{"status":"ready"}'
+    git clone -b ${var.helm_chart_branch} ${var.helm_chart_repo} ./helm-charts >&2
+    # The OTLP cases need the chart's OTLP endpoint. A chart without the otlp
+    # values block (a release before it) still runs the Container Insights
+    # filter tests; the OTLP ones skip (OTLP_ENDPOINT_IN_CHART).
+    otlp=true
+    if ! grep -qE '^otlp:' ./helm-charts/charts/amazon-cloudwatch-observability/values.yaml; then
+      echo "${var.helm_chart_repo}@${var.helm_chart_branch} has no top-level otlp block in values.yaml: the OTLP filter tests will skip" >&2
+      otlp=false
+    fi
+    echo "{\"status\":\"ready\",\"otlp\":\"$otlp\"}"
   EOT
   ]
 }
@@ -173,6 +203,9 @@ resource "helm_release" "aws_observability" {
   # the namespaces filter alone decides whether they arrive. Both solutions
   # are on by default. The values set them so that the test does not depend
   # on the default.
+  # metricNames.include names otlp_e2e_requests, one of the two counters the
+  # OTLP sender container sends, so the other one, otlp_e2e_unlisted, and the
+  # span metrics computed from the sender's spans are dropped.
   # filters-e2e.example.com/keep* is the only include entry that covers the pod
   # label filters-e2e.example.com/keep-x, so it tests a dotted prefix include.
   # The pod labels app-extra and filters-e2e-keep-secret-x and the metric
@@ -192,7 +225,7 @@ resource "helm_release" "aws_observability" {
           include: ["filters-keep-*", "filters-exact"]
           exclude: ["filters-keep-secret*"]
         metricNames:
-          include: ["container_*", "kube_pod_info", "k8s.pod.*", "node_load1", "vllm:num_requests_running", "revision_request_count"]
+          include: ["container_*", "kube_pod_info", "k8s.pod.*", "node_load1", "vllm:num_requests_running", "revision_request_count", "otlp_e2e_requests"]
           exclude: ["container_network_*", "container_memory_usage_bytes"]
         podLabels:
           include: ["app", "filters-e2e-keep*", "filters-e2e.example.com/keep*", "pod-template-hash"]
@@ -207,6 +240,7 @@ resource "helm_release" "aws_observability" {
     aws_eks_addon.pod_identity_agent,
     null_resource.kubectl,
     data.external.clone_helm_chart,
+    null_resource.otlp_log_group_cleanup,
   ]
 }
 
@@ -255,18 +289,22 @@ resource "null_resource" "restart_pods" {
 }
 
 # --- Test workloads: one logging deployment per namespace, one pod per node ---
+# Each pod also runs an OTLP sender container, which posts OTLP through the
+# cloudwatch-agent Service (terraform/otlp_service_sender.sh), so the OTLP
+# endpoint's telemetry from each namespace carries the same pod labels as the
+# Container Insights telemetry.
+# Its otlp_e2e_case is the namespace.
 
 resource "null_resource" "workloads" {
   for_each   = toset(local.namespaces)
   depends_on = [aws_eks_node_group.this, null_resource.kubectl]
   provisioner "local-exec" {
     command = <<-EOT
+      set -e
+      kubectl create namespace ${each.key} --dry-run=client -o yaml | kubectl apply -f -
+      kubectl -n ${each.key} create configmap otlp-e2e-sender \
+        --from-file=sender.sh=${local.sender_script} --dry-run=client -o yaml | kubectl apply -f -
       cat <<'EOF' | kubectl apply -f -
-      apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: ${each.key}
-      ---
       apiVersion: apps/v1
       kind: Deployment
       metadata:
@@ -304,6 +342,28 @@ resource "null_resource" "workloads" {
                 requests:
                   cpu: 10m
                   memory: 16Mi
+            - name: otlp-sender
+              image: curlimages/curl:8.8.0
+              command: ["sh", "/sender/sender.sh"]
+              env:
+              # The namespace, so that a record the agent did not match to a
+              # pod, which has no k8s.namespace.name, can still be traced to
+              # its sender.
+              - name: OTLP_CASE
+                value: ${each.key}
+              - name: OTLP_METRICS
+                value: otlp_e2e_requests otlp_e2e_unlisted
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: sender
+                mountPath: /sender
+            volumes:
+            - name: sender
+              configMap:
+                name: otlp-e2e-sender
       EOF
       kubectl -n ${each.key} rollout status deployment/filters-e2e --timeout=5m
     EOT
@@ -504,6 +564,7 @@ resource "null_resource" "validator" {
       echo "Waiting 3 minutes for metrics and logs to propagate..."
       sleep 180
 
+      OTLP_ENDPOINT_IN_CHART=${data.external.clone_helm_chart.result.otlp} \
       go test -tags integration -timeout 1h -v ${var.test_dir} \
         -eksClusterName=${aws_eks_cluster.this.name} \
         -computeType=EKS \

@@ -497,6 +497,20 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/otlp",
+			terraformDir: "terraform/eks/daemon/otel-otlp",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/otlp_disabled",
+			terraformDir: "terraform/eks/daemon/otel-otlp-disabled",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
 			testDir:      "./test/otel/ebs_csi",
 			terraformDir: "terraform/eks/daemon/otel-ebs-csi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
@@ -552,6 +566,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/multi_efa_dra",
+			terraformDir: "terraform/eks/daemon/otel-multi-efa-dra",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
 			testDir:      "./test/otel/neuron",
 			terraformDir: "terraform/eks/daemon/otel-neuron",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
@@ -576,6 +598,34 @@ var testTypeToTestConfig = map[string][]testConfig{
 			terraformDir: "terraform/eks/daemon/otel-llm-serving",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "m5.2xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+			wip:          true,
+		},
+		{
+			testDir:      "./test/otel/neuron_dra",
+			terraformDir: "terraform/eks/daemon/otel-neuron-dra",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "trn1.2xlarge",
+			ami:          "AL2023_x86_64_NEURON",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/gpu_dra",
+			terraformDir: "terraform/eks/daemon/otel-gpu-dra",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.12xlarge",
+			ami:          "AL2023_x86_64_NVIDIA",
+			k8sVersion:   "1.35",
+		},
+		{
+			// Needs a chart with the ray solution: the root fails fast when the
+			// helm-charts branch CI installs (helm_chart_branch, default the newest
+			// release-*) has none. wip until a release branch includes it.
+			testDir:      "./test/otel/solutions/ray",
+			terraformDir: "terraform/eks/daemon/otel-ray",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "m5.xlarge",
 			ami:          "AL2023_x86_64_STANDARD",
 			k8sVersion:   "1.35",
 			wip:          true,
