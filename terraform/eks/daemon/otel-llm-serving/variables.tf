@@ -6,7 +6,7 @@ variable "region" {
   default = "us-west-2"
 }
 
-# Run first; ./test/otel/solutions/{kserve,knative} always follow.
+# Run first; ./test/otel/solutions/{sglang,kserve,knative} always follow.
 variable "test_dir" {
   type    = string
   default = "./test/otel/solutions/vllm"
@@ -79,6 +79,18 @@ variable "kserve_version" {
 variable "vllm_cpu_image" {
   type    = string
   default = "public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:v0.29.0"
+}
+
+# SGLang's CPU build. It needs AVX-512 (Intel Xeon, which m5 has); on CPUs
+# without it, such as AMD EPYC Zen 2, it exits with an illegal instruction.
+# The image is published only on Docker Hub. It is pinned by digest (the
+# v0.5.23-xeon tag), so Knative does not resolve the tag to a digest: the
+# controller times out doing that for multi-GB images, which is why the root
+# skips tag resolution for public.ecr.aws. Point this at a mirror (for example
+# ECR) to avoid Docker Hub's anonymous pull rate limits.
+variable "sglang_cpu_image" {
+  type    = string
+  default = "docker.io/lmsysorg/sglang@sha256:f22c18d175270ad1aa63ff6298a4d5a79954520863d5eab6862f94728c2d18df"
 }
 
 variable "vllm_model" {
