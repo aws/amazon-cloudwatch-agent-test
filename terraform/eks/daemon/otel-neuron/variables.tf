@@ -46,3 +46,15 @@ variable "multi_device_instance_type" {
   default     = "inf2.24xlarge"
   description = "Instance type for the multi-device Neuron node (6 devices × 2 cores)"
 }
+
+# The operator image. Empty keeps the chart's pinned operator; set either to
+# test an operator build that the chart does not pin yet.
+variable "cwagent_operator_image_repo" {
+  type    = string
+  default = ""
+}
+
+variable "cwagent_operator_image_tag" {
+  type    = string
+  default = ""
+}

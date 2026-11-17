@@ -63,3 +63,15 @@ variable "ray_image" {
   type    = string
   default = "rayproject/ray:2.59.0-py311-cpu"
 }
+
+# The operator image. Empty keeps the chart's pinned operator; set either to
+# test an operator build that the chart does not pin yet.
+variable "cwagent_operator_image_repo" {
+  type    = string
+  default = ""
+}
+
+variable "cwagent_operator_image_tag" {
+  type    = string
+  default = ""
+}

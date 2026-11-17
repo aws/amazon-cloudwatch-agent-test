@@ -167,6 +167,13 @@ data "external" "clone_helm_chart" {
   ]
 }
 
+module "operator_image" {
+  source     = "../../operator_image"
+  image_repo = var.cwagent_operator_image_repo
+  image_tag  = var.cwagent_operator_image_tag
+  region     = var.region
+}
+
 # The chart defaults, so the OTLP endpoint is on with its default ports and
 # span metrics, plus OTel Container Insights to check that both run together.
 # otlp_profiles_enabled (on by default) also turns on the profiles pipeline,
@@ -184,7 +191,7 @@ resource "helm_release" "aws_observability" {
     { name = "otelContainerInsights.enabled", value = "true" },
     ], var.otlp_profiles_enabled ? [
     { name = "otlp.profiles.enabled", value = "true" },
-  ] : [])
+  ] : [], module.operator_image.helm_set)
 
   depends_on = [
     aws_eks_addon.pod_identity_agent,

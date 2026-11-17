@@ -139,6 +139,13 @@ data "external" "clone_helm_chart" {
   ]
 }
 
+module "operator_image" {
+  source     = "../../operator_image"
+  image_repo = var.cwagent_operator_image_repo
+  image_tag  = var.cwagent_operator_image_tag
+  region     = var.region
+}
+
 # The chart defaults with the OTLP endpoint turned off, plus OTel Container
 # Insights, which must not bring an OTLP receiver back.
 resource "helm_release" "aws_observability" {
@@ -147,12 +154,12 @@ resource "helm_release" "aws_observability" {
   namespace        = "amazon-cloudwatch"
   create_namespace = true
 
-  set = [
+  set = concat([
     { name = "clusterName", value = aws_eks_cluster.this.name },
     { name = "region", value = var.region },
     { name = "otelContainerInsights.enabled", value = "true" },
     { name = "otlp.enabled", value = "false" },
-  ]
+  ], module.operator_image.helm_set)
 
   depends_on = [
     aws_eks_addon.pod_identity_agent,

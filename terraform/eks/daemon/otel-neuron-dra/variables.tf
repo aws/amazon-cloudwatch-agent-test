@@ -64,3 +64,15 @@ variable "neuron_helm_chart_version" {
   type    = string
   default = ""
 }
+
+# The operator image. Empty keeps the chart's pinned operator; set either to
+# test an operator build that the chart does not pin yet.
+variable "cwagent_operator_image_repo" {
+  type    = string
+  default = ""
+}
+
+variable "cwagent_operator_image_tag" {
+  type    = string
+  default = ""
+}

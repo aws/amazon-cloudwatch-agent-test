@@ -50,3 +50,15 @@ variable "keda_version" {
   type    = string
   default = "2.16.1"
 }
+
+# The operator image. Empty keeps the chart's pinned operator; set either to
+# test an operator build that the chart does not pin yet.
+variable "cwagent_operator_image_repo" {
+  type    = string
+  default = ""
+}
+
+variable "cwagent_operator_image_tag" {
+  type    = string
+  default = ""
+}

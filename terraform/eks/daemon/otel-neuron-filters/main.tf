@@ -283,6 +283,13 @@ data "external" "clone_helm_chart" {
   ]
 }
 
+module "operator_image" {
+  source     = "../../operator_image"
+  image_repo = var.cwagent_operator_image_repo
+  image_tag  = var.cwagent_operator_image_tag
+  region     = var.region
+}
+
 resource "helm_release" "aws_observability" {
   name             = "amazon-cloudwatch-observability"
   chart            = "./helm-charts/charts/amazon-cloudwatch-observability"
@@ -291,11 +298,11 @@ resource "helm_release" "aws_observability" {
   wait             = false
   timeout          = 600
 
-  set = [
+  set = concat([
     { name = "clusterName", value = aws_eks_cluster.this.name },
     { name = "region", value = var.region },
     { name = "otelContainerInsights.enabled", value = "true" },
-  ]
+  ], module.operator_image.helm_set)
 
   # Each label filter has an exact include, a prefix include and an exclude.
   # The pod label neuron-filters-keep-drop-x is inside the include prefix,

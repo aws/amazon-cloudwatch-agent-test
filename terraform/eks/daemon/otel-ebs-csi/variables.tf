@@ -40,3 +40,15 @@ variable "instance_type" {
   type    = string
   default = "t3.medium"
 }
+
+# The operator image. Empty keeps the chart's pinned operator; set either to
+# test an operator build that the chart does not pin yet.
+variable "cwagent_operator_image_repo" {
+  type    = string
+  default = ""
+}
+
+variable "cwagent_operator_image_tag" {
+  type    = string
+  default = ""
+}

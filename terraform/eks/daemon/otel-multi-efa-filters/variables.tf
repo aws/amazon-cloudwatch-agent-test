@@ -46,3 +46,15 @@ variable "efaburn_image" {
   default     = ""
   description = "efaburn image address. Empty means efaburn:latest in the ECR registry of the account and region that run the test."
 }
+
+# The operator image. Empty keeps the chart's pinned operator; set either to
+# test an operator build that the chart does not pin yet.
+variable "cwagent_operator_image_repo" {
+  type    = string
+  default = ""
+}
+
+variable "cwagent_operator_image_tag" {
+  type    = string
+  default = ""
+}
