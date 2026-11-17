@@ -7,9 +7,11 @@ package database_insights
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -27,6 +29,13 @@ const (
 	workloadDur     = 5 * time.Minute
 	serverLogsGroup = "/aws/self-managed-database-insights/postgresql/server-logs"
 	rawEventsGroup  = "/aws/self-managed-database-insights/postgresql/raw-events"
+	// droppedDatabase is created, used and dropped before the agent starts, so that
+	// pg_stat_statements keeps rows for a database that no longer exists.
+	droppedDatabase = "dbi_dropped_db"
+	agentUnit       = "amazon-cloudwatch-agent"
+	// pidWatchWindow covers the first 4.5 minutes of the workload, ending before the
+	// runner stops the agent after workloadDur.
+	pidWatchWindow = workloadDur - 30*time.Second
 )
 
 func init() {
@@ -36,6 +45,11 @@ func init() {
 type DbiTestRunner struct {
 	test_runner.BaseTestRunner
 	env *environment.MetaData
+	// agentStartedAt is just before the runner's first agent start; the agent's
+	// journal is checked from here.
+	agentStartedAt time.Time
+	// pidWatch delivers whether the agent kept one main process during the workload.
+	pidWatch chan pidWatchResult
 }
 
 var _ test_runner.ITestRunner = (*DbiTestRunner)(nil)
@@ -66,10 +80,22 @@ func (t *DbiTestRunner) SetupBeforeAgentRun() error {
 	if err != nil {
 		return fmt.Errorf("setup.sh failed: %w", err)
 	}
-	return t.BaseTestRunner.SetupBeforeAgentRun()
+	// pg_stat_statements keeps rows for a dropped database, and the top query SQL of
+	// an agent without the fix returns them with a NULL datname. That agent panics on
+	// them in its first top query collection after a start and restart-loops, so drop
+	// a database before the agent's first start.
+	if err := dropDatabaseWithStats(droppedDatabase); err != nil {
+		return err
+	}
+	if err := t.BaseTestRunner.SetupBeforeAgentRun(); err != nil {
+		return err
+	}
+	t.agentStartedAt = time.Now()
+	return nil
 }
 
 func (t *DbiTestRunner) SetupAfterAgentRun() error {
+	t.pidWatch = watchAgentPID(pidWatchWindow)
 	if err := initWorkload(); err != nil {
 		return err
 	}
@@ -78,7 +104,15 @@ func (t *DbiTestRunner) SetupAfterAgentRun() error {
 }
 
 func (t *DbiTestRunner) Validate() status.TestGroupResult {
-	var results []status.TestResult
+	// The crash checks come first: on an agent that restart-loops they name the cause,
+	// and the CloudWatch checks below could only fail for lack of data after minutes
+	// of retries, so they are skipped.
+	results := t.validateAgentSurvivedDroppedDatabase()
+	for _, r := range results {
+		if r.Status != status.SUCCESSFUL {
+			return status.TestGroupResult{Name: t.GetTestName(), TestResults: results}
+		}
+	}
 
 	metricsResult := otlpvalidation.ValidateOtlpMetricsWithLabels(t.GetTestName()+" Metrics", t.env.Region, t.GetMeasuredMetrics(), map[string]string{
 		"@resource.db.system.name":   "postgresql",
@@ -103,6 +137,32 @@ func (t *DbiTestRunner) Validate() status.TestGroupResult {
 	return status.TestGroupResult{Name: t.GetTestName(), TestResults: results}
 }
 
+// validateAgentSurvivedDroppedDatabase checks that the agent, started with rows of
+// a dropped database in pg_stat_statements, kept running: one main process for the
+// first 4.5 minutes of the workload, and no panic in its journal since its start.
+func (t *DbiTestRunner) validateAgentSurvivedDroppedDatabase() []status.TestResult {
+	running := status.TestResult{Name: "Agent keeps running after DROP DATABASE", Status: status.SUCCESSFUL}
+	switch w := <-t.pidWatch; {
+	case w.err != nil:
+		running.Status, running.Reason = status.FAILED, fmt.Errorf("could not read the agent main PID: %w", w.err)
+	case w.firstPID == "":
+		running.Status, running.Reason = status.FAILED, errors.New("the agent had no main process when the workload started")
+	case w.changedTo != w.firstPID:
+		running.Status, running.Reason = status.FAILED, fmt.Errorf("the agent main PID changed from %s to %q during the workload", w.firstPID, w.changedTo)
+	}
+
+	noPanic := status.TestResult{Name: "No agent panic after DROP DATABASE", Status: status.SUCCESSFUL}
+	since := t.agentStartedAt.Format("2006-01-02 15:04:05")
+	out, err := exec.Command("sudo", "journalctl", "-u", agentUnit, "--since", since, "--no-pager").CombinedOutput()
+	switch {
+	case err != nil:
+		noPanic.Status, noPanic.Reason = status.FAILED, fmt.Errorf("journalctl -u %s --since %q: %w", agentUnit, since, err)
+	case strings.Contains(string(out), "panic:"):
+		noPanic.Status, noPanic.Reason = status.FAILED, fmt.Errorf("the agent panicked: %s", firstLineWith(string(out), "panic:"))
+	}
+	return []status.TestResult{running, noPanic}
+}
+
 func TestDbi(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
 
@@ -112,6 +172,7 @@ func TestDbi(t *testing.T) {
 	}
 	runner := &test_runner.TestRunner{TestRunner: testRunner}
 	result := runner.Run()
+	result.Print()
 
 	for _, r := range result.TestResults {
 		require.Equal(t, status.SUCCESSFUL, r.Status, "%s failed: %v", r.Name, r.Reason)
@@ -227,4 +288,100 @@ func validateLogStream(logGroup string, streamName string, testName string) stat
 		Status: status.FAILED,
 		Reason: fmt.Errorf("no log events found in %s/%s after %d retries", logGroup, streamName, maxRetries),
 	}
+}
+
+// dropDatabaseWithStats creates database name, runs statements in it so that
+// pg_stat_statements records rows for it, and drops it. It fails if no orphan
+// rows remain afterwards, so the scenario cannot pass without being set up. It
+// runs before the agent starts, so no other session holds the database and a
+// plain DROP DATABASE works on every PostgreSQL version.
+func dropDatabaseWithStats(name string) error {
+	log.Printf("=== Creating, using and dropping database %s ===", name)
+	steps := [][]string{
+		{"createdb", name},
+		{"psql", "-d", name, "-c", "CREATE TABLE dropped_t (id int); INSERT INTO dropped_t VALUES (1), (2); SELECT count(*) FROM dropped_t;"},
+		{"psql", "-d", "postgres", "-c", fmt.Sprintf("DROP DATABASE %s;", name)},
+	}
+	for _, step := range steps {
+		out, err := exec.Command("sudo", append([]string{"-u", "postgres"}, step...)...).CombinedOutput()
+		log.Printf("%s output:\n%s", strings.Join(step, " "), string(out))
+		if err != nil {
+			return fmt.Errorf("%s failed: %w", strings.Join(step, " "), err)
+		}
+	}
+	out, err := exec.Command("sudo", "-u", "postgres", "psql", "-d", "postgres", "-tAc",
+		"SELECT count(*) FROM pg_stat_statements s LEFT JOIN pg_database d ON s.dbid = d.oid WHERE d.oid IS NULL").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("counting orphan pg_stat_statements rows failed: %w: %s", err, string(out))
+	}
+	count := strings.TrimSpace(string(out))
+	if count == "" || count == "0" {
+		return fmt.Errorf("expected pg_stat_statements rows for the dropped database %s, found %q", name, count)
+	}
+	log.Printf("pg_stat_statements rows of dropped databases: %s", count)
+	return nil
+}
+
+type pidWatchResult struct {
+	firstPID  string
+	changedTo string // equals firstPID when the main process never changed
+	err       error  // set when the main PID could not be read
+}
+
+// watchAgentPID samples the agent unit's main PID every 10 seconds for d. A
+// panic exits the agent and systemd restarts it, which shows as a new or empty PID.
+func watchAgentPID(d time.Duration) chan pidWatchResult {
+	ch := make(chan pidWatchResult, 1)
+	go func() {
+		first, err := readAgentMainPID()
+		res := pidWatchResult{firstPID: first, changedTo: first, err: err}
+		for deadline := time.Now().Add(d); res.err == nil && time.Now().Before(deadline); {
+			time.Sleep(10 * time.Second)
+			pid, err := readAgentMainPID()
+			if err != nil {
+				res.err = err
+				break
+			}
+			if pid != first {
+				res.changedTo = pid
+				break
+			}
+		}
+		ch <- res
+	}()
+	return ch
+}
+
+// readAgentMainPID returns the agent unit's main PID, or "" when it has no running
+// main process. It retries once, so that one failed systemctl call is not taken
+// for a crash.
+func readAgentMainPID() (string, error) {
+	out, err := exec.Command("systemctl", "show", "-p", "MainPID", agentUnit).Output()
+	if err != nil {
+		time.Sleep(2 * time.Second)
+		if out, err = exec.Command("systemctl", "show", "-p", "MainPID", agentUnit).Output(); err != nil {
+			return "", fmt.Errorf("systemctl show -p MainPID %s: %w", agentUnit, err)
+		}
+	}
+	return parseMainPID(string(out)), nil
+}
+
+// parseMainPID returns the MainPID value from `systemctl show -p MainPID` output,
+// or "" when it is 0 or missing.
+func parseMainPID(out string) string {
+	for _, line := range strings.Split(out, "\n") {
+		if pid, ok := strings.CutPrefix(strings.TrimSpace(line), "MainPID="); ok && pid != "0" {
+			return pid
+		}
+	}
+	return ""
+}
+
+func firstLineWith(out, substr string) string {
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, substr) {
+			return strings.TrimSpace(line)
+		}
+	}
+	return ""
 }
