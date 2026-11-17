@@ -15,8 +15,8 @@ variable "test_dir" {
   type    = string
   default = "./test/azure/aks"
   validation {
-    condition     = contains(["./test/azure/aks", "./test/azure/aks/containerinsights", "./test/azure/aks/gpu", "./test/azure/aks/gpudriver"], var.test_dir)
-    error_message = "test_dir must be \"./test/azure/aks\", \"./test/azure/aks/containerinsights\", \"./test/azure/aks/gpu\" or \"./test/azure/aks/gpudriver\"."
+    condition     = contains(["./test/azure/aks", "./test/azure/aks/containerinsights", "./test/azure/aks/standard", "./test/azure/aks/gpu", "./test/azure/aks/gpudriver"], var.test_dir)
+    error_message = "test_dir must be \"./test/azure/aks\", \"./test/azure/aks/containerinsights\", \"./test/azure/aks/standard\", \"./test/azure/aks/gpu\" or \"./test/azure/aks/gpudriver\"."
   }
 }
 
