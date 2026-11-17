@@ -250,7 +250,8 @@ resource "local_sensitive_file" "kubeconfig" {
 # Deleting the cluster removes them, so there is no separate destroy step.
 #
 # Requirements on the machine running terraform:
-#   - the Azure CLI (az), logged in or with ARM_* credentials in the environment
+#   - the Azure CLI (az), logged in, or with ARM_CLIENT_ID, ARM_CLIENT_SECRET and ARM_TENANT_ID
+#     in the environment (the command then logs in with that service principal)
 #   - quota for the GPU VM size in the region; for managed GPU, the subscription feature
 #     ManagedGPUExperiencePreview must also be registered
 # The aks-preview extension is installed or upgraded by the command itself.
@@ -263,6 +264,16 @@ resource "null_resource" "gpu_node_pool" {
   provisioner "local-exec" {
     command     = <<-EOT
       set -euo pipefail
+      # The azurerm provider reads the ARM_* variables itself, but the az CLI does not: on a CI
+      # runner nobody has run "az login". When a service principal is in the environment, log in
+      # with it. A temporary config directory keeps the login off the (shared) runner and is
+      # removed when the command exits.
+      if [ -n "$${ARM_CLIENT_ID:-}" ]; then
+        export AZURE_CONFIG_DIR="$(mktemp -d)"
+        trap 'rm -rf "$AZURE_CONFIG_DIR"' EXIT
+        az login --service-principal --username "$ARM_CLIENT_ID" --password "$ARM_CLIENT_SECRET" \
+          --tenant "$ARM_TENANT_ID" --only-show-errors --output none
+      fi
       az extension add --name aks-preview --upgrade --yes --only-show-errors
       # One az call per pool in local.gpu_pools, rendered by the template loop below. The
       # $${ARM_SUBSCRIPTION_ID:+...} part is bash, not Terraform: it adds --subscription only when
