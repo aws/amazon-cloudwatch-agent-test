@@ -660,6 +660,10 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"aks": {
 		{testDir: "./test/azure/aks", terraformDir: "terraform/azure/aks"},
 		{testDir: "./test/azure/aks/containerinsights", terraformDir: "terraform/azure/aks"},
+		// GPU suites need T4 quota (and, for gpu, the ManagedGPUExperiencePreview feature) and a chart with
+		// the AKS DCGM exporter support. wip so a failure does not block CI.
+		{testDir: "./test/azure/aks/gpu", terraformDir: "terraform/azure/aks", wip: true},
+		{testDir: "./test/azure/aks/gpudriver", terraformDir: "terraform/azure/aks", wip: true},
 	},
 }
 
