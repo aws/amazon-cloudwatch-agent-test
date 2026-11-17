@@ -7,7 +7,6 @@ package standard
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"testing"
 	"time"
@@ -205,12 +204,11 @@ func freshGroundTruth(t *testing.T) *k8sGroundTruth {
 }
 
 // queryAllSeries returns every series of a metric in this cluster, on every node,
-// evaluated at one time.
+// evaluated at one time. Unlike allNodeSeries it reads now, not from the cache, so a
+// pass compares the API with metrics seconds apart.
 func queryAllSeries(t *testing.T, metric string) []otelmetrics.MetricResult {
 	t.Helper()
-	results, err := client.QueryComplete(context.Background(), fmt.Sprintf(
-		`{"__name__"="%s","@resource.k8s.cluster.name"="%s"}`,
-		otelmetrics.EscapePromQLValue(metric), otelmetrics.EscapePromQLValue(cfg.ClusterName)))
+	results, err := allNodesCache.GetWithFilter(context.Background(), metric, nil)
 	require.NoError(t, err, "querying %s", metric)
 	require.NotEmpty(t, results, "%s not available", metric)
 	return results

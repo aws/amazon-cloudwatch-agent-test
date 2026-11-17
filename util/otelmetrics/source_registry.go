@@ -31,10 +31,10 @@ type SourceMapping struct {
 }
 
 // SourceHostMapping maps a MetricSource to the host types that produce it.
-// Nil means cluster-scoped (query with host.type="").
+// Nil means one query with only the cluster filter, which returns series with or without host keys.
 type SourceHostMapping struct {
 	Source    MetricSource
-	HostTypes []string // nil = cluster-scoped
+	HostTypes []string // nil = cluster filter only
 }
 
 // SourceRegistry maps metric names to their MetricSource and resolves
@@ -68,21 +68,27 @@ func NewSourceRegistry(allHostTypes []string, hostMappings []SourceHostMapping, 
 	}
 }
 
-// HostTypesFor returns the host types that can produce the given metric.
-// Returns nil for cluster-scoped sources. Returns allHostTypes for unknown metrics.
+// HostTypesFor returns the host types to split the metric's query by; nil means one query with
+// only the cluster filter. Returns nil for cluster-scoped sources whatever their host mapping,
+// and allHostTypes for unknown metrics.
 func (sr *SourceRegistry) HostTypesFor(metricName string) []string {
 	source, ok := sr.metricToSource[metricName]
 	if !ok {
 		return sr.allHostTypes
 	}
+	if clusterScoped(source) {
+		return nil
+	}
 	return sr.sourceToHosts[source]
 }
 
-// IsClusterScoped returns true if the metric comes from a cluster-scoped source.
+// IsClusterScoped returns true if the metric comes from a cluster-scoped source. Such a metric is
+// read with only the cluster filter, so a series that wrongly gained host keys is still returned.
 func (sr *SourceRegistry) IsClusterScoped(metricName string) bool {
 	source, ok := sr.metricToSource[metricName]
-	if !ok {
-		return false
-	}
+	return ok && clusterScoped(source)
+}
+
+func clusterScoped(source MetricSource) bool {
 	return source == SourceControlPlane || source == SourceKubeStateMetrics
 }

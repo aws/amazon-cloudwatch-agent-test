@@ -22,7 +22,7 @@ import (
 // (k8sattributes extracts "(.*)"). Datapoint scope is not covered.
 // ---------------------------------------------------------------------------
 
-// awsdevicepodcorrelation then efa_promote; only on devices a pod holds.
+// awsdevicepodcorrelation, then the EFA pod grouping; only on devices a pod holds.
 var efaPodKeys = []string{"k8s.pod.name", "k8s.namespace.name", "k8s.container.name"}
 
 // awsefareceiver sets no resource attributes, so unlike the scraped pipelines
@@ -41,7 +41,7 @@ var efaResourceSchema = otelmetrics.KeySchema{
 
 func TestAttributeSchema(t *testing.T) {
 	t.Parallel()
-	tally, err := otelmetrics.TallySchema(context.Background(), queryCache, efaMetricNamesList, otelmetrics.GroupSchema{
+	tally, err := otelmetrics.TallySchema(context.Background(), allNodesCache, efaMetricNamesList, otelmetrics.GroupSchema{
 		Resource:        efaResourceSchema,
 		Instrumentation: otelmetrics.KeySchema{Required: otelmetrics.ScopeKeys}, // set_scope_efa
 	}, nil)

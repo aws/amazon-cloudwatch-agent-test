@@ -64,14 +64,18 @@ func Without(keys []string, removed ...string) []string {
 // Forgive may clear the problems of one series that a known transient state explains.
 type Forgive func(l MetricLabels, resource SeriesCheck) SeriesCheck
 
-// TallySchema checks every series of metrics in the cluster against schema. It does not
-// use Get, whose host-type routing would hide the series of other instance types and, for
-// cluster-scoped metrics, any series that gained host keys. It fails if a query fails or a
-// metric has no series, because an empty group would pass vacuously.
+// TallySchema checks every series of metrics in the cluster against schema. It reads through
+// qc.Get, so it shares one cached read per metric with the suite's other every-series checks.
+// qc must split no metric by host type, because that would hide the series of other instance
+// types, so TallySchema fails for such a cache. It also fails if a query fails or a metric has
+// no series, because an empty group would pass vacuously.
 func TallySchema(ctx context.Context, qc *QueryCache, metrics []string, schema GroupSchema, forgive Forgive) (*SchemaTally, error) {
 	tally := NewSchemaTally(schema)
 	for _, metricName := range metrics {
-		results, err := qc.GetWithFilter(ctx, metricName, nil)
+		if hostTypes := qc.hostTypesFor(metricName); len(hostTypes) > 0 {
+			return nil, fmt.Errorf("%s: the cache reads only host types %v, so pass a cache without host types", metricName, hostTypes)
+		}
+		results, err := qc.Get(ctx, metricName)
 		if err != nil {
 			return nil, fmt.Errorf("querying %s: %w", metricName, err)
 		}

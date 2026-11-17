@@ -7,15 +7,10 @@ package standard
 
 import "github.com/aws/amazon-cloudwatch-agent-test/util/otelmetrics"
 
-// Instance types in the standard cluster.
-var clusterHostTypes = []string{"t3.medium"}
+// Instance types in the standard cluster; OTEL_HOST_TYPES overrides them.
+var clusterHostTypes = otelmetrics.ResolveHostTypes([]string{"t3.medium"})
 
-var clusterNodeGroups = []struct {
-	InstanceType string
-	Description  string
-}{
-	{"t3.medium", "standard"},
-}
+var clusterNodeGroups = otelmetrics.NodeGroupsFor(clusterHostTypes, map[string]string{"t3.medium": "standard"})
 
 // --- Metric definitions (standard cluster only) ---
 
