@@ -180,7 +180,7 @@ func settled(t *testing.T, metric, nodeName string, checkFn func([]otelmetrics.M
 				continue
 			}
 		}
-		results, err := client.Query(context.Background(), selector)
+		results, err := client.QueryComplete(context.Background(), selector)
 		if err != nil {
 			problems = []string{err.Error()}
 			continue

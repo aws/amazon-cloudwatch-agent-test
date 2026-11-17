@@ -544,7 +544,7 @@ func TestKSM_PodBucket_NginxDeploymentName(t *testing.T) {
 			ctx := context.Background()
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"nginx-test.*"}`,
 				metricName, cfg.ClusterName)
-			results, err := client.Query(ctx, promql)
+			results, err := client.QueryComplete(ctx, promql)
 			require.NoError(t, err, "querying %s for nginx-test", metricName)
 			require.True(t, len(results) > 0, "No %s results from nginx-test pods", metricName)
 			for _, r := range results {
@@ -643,7 +643,7 @@ func TestKSM_PodBucket_StatefulSetPodName(t *testing.T) {
 			t.Parallel()
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"ksm-test-statefulset.*"}`,
 				metricName, cfg.ClusterName)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s for ksm-test-statefulset", metricName)
 			require.True(t, len(results) > 0, "No %s results from ksm-test-statefulset pods", metricName)
 			for _, r := range results {
@@ -665,7 +665,7 @@ func TestKSM_PodBucket_JobPodName(t *testing.T) {
 			t.Parallel()
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"ksm-test-job.*"}`,
 				metricName, cfg.ClusterName)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s for ksm-test-job", metricName)
 			require.True(t, len(results) > 0, "No %s results from ksm-test-job pods", metricName)
 			for _, r := range results {
@@ -687,7 +687,7 @@ func TestKSM_PodBucket_CronJobPodName(t *testing.T) {
 			t.Parallel()
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"ksm-test-cronjob.*"}`,
 				metricName, cfg.ClusterName)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s for ksm-test-cronjob", metricName)
 			if len(results) == 0 {
 				t.Skipf("No %s results from ksm-test-cronjob pods (may have been cleaned up)", metricName)
@@ -714,7 +714,7 @@ func TestKSM_PodBucket_ReplicaSetPodName(t *testing.T) {
 			t.Parallel()
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"ksm-test-replicaset.*"}`,
 				metricName, cfg.ClusterName)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s for ksm-test-replicaset", metricName)
 			require.True(t, len(results) > 0, "No %s results from ksm-test-replicaset pods", metricName)
 			for _, r := range results {
@@ -1008,7 +1008,7 @@ func TestKSM_ContainerBucket_NginxDeploymentName(t *testing.T) {
 			ctx := context.Background()
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"nginx-test.*"}`,
 				metricName, cfg.ClusterName)
-			results, err := client.Query(ctx, promql)
+			results, err := client.QueryComplete(ctx, promql)
 			require.NoError(t, err, "querying %s for nginx-test", metricName)
 			require.True(t, len(results) > 0, "No %s results from nginx-test pods", metricName)
 			for _, r := range results {

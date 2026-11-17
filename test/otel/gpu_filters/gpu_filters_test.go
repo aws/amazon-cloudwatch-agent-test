@@ -118,7 +118,7 @@ func settled(t *testing.T, metric string) []otelmetrics.MetricResult {
 		if i > 0 {
 			time.Sleep(retryInterval)
 		}
-		results, err := client.Query(context.Background(), selector)
+		results, err := client.QueryComplete(context.Background(), selector)
 		if err != nil {
 			problems = []string{err.Error()}
 			continue
@@ -155,7 +155,7 @@ func TestMetricNameFilterCase(t *testing.T) {
 			time.Sleep(retryInterval)
 		}
 		var results []otelmetrics.MetricResult
-		results, err = client.Query(context.Background(), nodeSelector(kept))
+		results, err = client.QueryComplete(context.Background(), nodeSelector(kept))
 		gpus = map[string]bool{}
 		for _, r := range results {
 			if g := uuid(r); g != "" {
@@ -166,7 +166,7 @@ func TestMetricNameFilterCase(t *testing.T) {
 	require.NoError(t, err, "querying %s", kept)
 	require.Len(t, gpus, expectedGPUCount, "%s GPUs from node %s after %d attempts", kept, node, attempts)
 
-	results, err := client.Query(context.Background(),
+	results, err := client.QueryComplete(context.Background(),
 		fmt.Sprintf(`{"__name__"=%q,"@resource.k8s.cluster.name"=%q}`, dropped, cfg.ClusterName))
 	require.NoError(t, err, "querying %s", dropped)
 	assert.Empty(t, results, "%s present, but otelFilters.metricNames.exclude has it", dropped)

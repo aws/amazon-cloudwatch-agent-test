@@ -173,7 +173,7 @@ func settled(t *testing.T, metric string) []otelmetrics.MetricResult {
 		if i > 0 {
 			time.Sleep(retryInterval)
 		}
-		results, err := client.Query(context.Background(), selector)
+		results, err := client.QueryComplete(context.Background(), selector)
 		if err != nil {
 			problems = []string{err.Error()}
 			continue

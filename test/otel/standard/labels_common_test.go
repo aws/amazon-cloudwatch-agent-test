@@ -503,7 +503,7 @@ func TestWorkloadLabels(t *testing.T) {
 		t.Run(metricName+"/cadvisor_nginx_workload", func(t *testing.T) {
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"nginx-test.*"}`,
 				metricName, cfg.ClusterName)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s for nginx-test", metricName)
 			require.True(t, len(results) > 0, "No %s results from nginx-test pods", metricName)
 			for _, r := range results {
@@ -607,7 +607,7 @@ func TestCustomNodeLabels(t *testing.T) {
 		t.Run(metricName+"/has_blue", func(t *testing.T) {
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.%s"="blue"}`,
 				metricName, cfg.ClusterName, nodeColorLabel)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s with blue filter", metricName)
 			require.True(t, len(results) > 0,
 				"%s no results from standard nodes (color=blue)", metricName)
