@@ -404,6 +404,14 @@ data "external" "clone_helm_chart" {
   program = ["bash", "-c", <<-EOT
     rm -rf ./helm-charts
     git clone -b ${var.helm_chart_branch} ${var.helm_chart_repo} ./helm-charts
+    %{~if local.is_ci~}
+    # The OTLP checks of the containerinsights suite need the chart's OTLP endpoint. A chart without it
+    # would install fine and fail them later, so stop here with the reason.
+    if ! grep -qE '^otlp:' ./helm-charts/charts/amazon-cloudwatch-observability/values.yaml; then
+      echo '${var.helm_chart_repo}@${var.helm_chart_branch} has no top-level otlp block in values.yaml' >&2
+      exit 1
+    fi
+    %{~endif~}
     echo '{"status":"ready"}'
   EOT
   ]
@@ -422,6 +430,7 @@ resource "helm_release" "aws_observability" {
     null_resource.gpu_node_pool,
     helm_release.nvidia_device_plugin,
     kubernetes_daemon_set_v1.nvidia_toolkit_ready,
+    null_resource.ci_otlp_log_group_cleanup,
   ]
 }
 
@@ -518,6 +527,46 @@ resource "null_resource" "ci_extra_manifests" {
     command = <<-EOT
       kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' apply -f '${path.module}/../../../${var.test_dir}/resources/keda_karpenter.yaml'
     EOT
+  }
+}
+
+#####################################################################
+# OTLP sender (containerinsights), ported from aws/amazon-cloudwatch-agent-test#810.
+# An ordinary pod in the otlp-e2e namespace sends OTLP through the cloudwatch-agent Service to the
+# chart's OTLP endpoint, which the chart serves by default from its otlp values. test/azure/aks/
+# containerinsights/aks_otlp_test.go checks what arrives. It starts after restart_pods, so the telemetry
+# goes to the agents running the image under test.
+#####################################################################
+resource "null_resource" "ci_otlp_sender" {
+  count = local.is_ci ? 1 : 0
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      kubectl --kubeconfig "$KC" create namespace otlp-e2e --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      kubectl --kubeconfig "$KC" -n otlp-e2e create configmap otlp-e2e-sender \
+        --from-file=sender.sh='${path.module}/../../otlp_service_sender.sh' --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      kubectl --kubeconfig "$KC" apply -f '${path.module}/../../../${var.test_dir}/resources/otlp_sender.yaml'
+      kubectl --kubeconfig "$KC" -n otlp-e2e rollout status deployment/otlp-e2e-app --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+  depends_on = [null_resource.restart_pods]
+}
+
+# The agent never deletes log groups. This deletes the OTLP log group on teardown. helm_release depends on this
+# resource, so Terraform uninstalls the chart (and with it the agents that write the group) first, and nothing
+# recreates the group after the delete. It runs on destroy, so it also runs when go test fails or is killed.
+resource "null_resource" "ci_otlp_log_group_cleanup" {
+  count = local.is_ci ? 1 : 0
+
+  triggers = {
+    log_group = "/aws/cwagent/${azurerm_kubernetes_cluster.cwagent.name}/otlp"
+    region    = var.region
+  }
+  provisioner "local-exec" {
+    when    = destroy
+    command = "aws logs delete-log-group --region ${self.triggers.region} --log-group-name ${self.triggers.log_group} || true"
   }
 }
 
@@ -624,7 +673,7 @@ resource "null_resource" "agent_diagnostics" {
     EOT
   }
 
-  depends_on = [null_resource.restart_pods, kubernetes_job_v1.otlp_load, null_resource.gpu_workload_ready, null_resource.standard_workload_ready]
+  depends_on = [null_resource.restart_pods, kubernetes_job_v1.otlp_load, null_resource.gpu_workload_ready, null_resource.standard_workload_ready, null_resource.ci_otlp_sender]
 }
 
 #####################################################################
@@ -846,6 +895,7 @@ resource "null_resource" "integration_test" {
     null_resource.restart_pods,
     kubernetes_job_v1.otlp_load,
     null_resource.ci_extra_manifests,
+    null_resource.ci_otlp_sender,
     null_resource.gpu_workload_ready,
     null_resource.standard_workload_ready,
     null_resource.agent_diagnostics,
