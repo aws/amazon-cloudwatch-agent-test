@@ -258,14 +258,3 @@ func TestKubeletstatsNodeGroupCoverage(t *testing.T) {
 			"kubeletstats missing from default pool nodes (aks-default-*) - kubeletstatsreceiver not scraping?")
 	})
 }
-
-// TestKubeletstatsNodeNetworkIOProbe is an AKS-only diagnostic. The EKS suite leaves k8s.node.network.io out
-// because kubelet on AL2023 does not emit it. This logs whether AKS does, and never fails.
-func TestKubeletstatsNodeNetworkIOProbe(t *testing.T) {
-	results, err := queryCache.Get(context.Background(), "k8s.node.network.io")
-	if err != nil {
-		t.Logf("k8s.node.network.io query error: %v", err)
-		return
-	}
-	t.Logf("k8s.node.network.io series on AKS: %d (0 means kubelet does not emit it here, as on EKS AL2023)", len(results))
-}
