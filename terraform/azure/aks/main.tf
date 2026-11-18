@@ -786,7 +786,10 @@ resource "null_resource" "ksm_replicaset" {
   }
 }
 
-# Waits for the workloads, then 240 s for metrics to reach CloudWatch, as the EKS stack does before go test.
+# Waits for the workloads, then 360 s for metrics to reach CloudWatch before go test. The EKS stack waits 240 s,
+# but here the chart's default agent image runs for a minute or two before update_image swaps in the image
+# under test, and its series stay visible to queries for about 5 minutes. With 240 s the tests saw both
+# builds (different cloud.platform spelling and host.name); the GPU suites wait 360 s and saw only one.
 # A workload that is not ready does not stop the apply, so diagnostics and test results still appear.
 resource "null_resource" "standard_workload_ready" {
   count = local.is_standard ? 1 : 0
@@ -798,7 +801,7 @@ resource "null_resource" "standard_workload_ready" {
         || echo "ksm-test-statefulset not ready; continuing to diagnostics and tests"
       kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n default wait --for=condition=complete job/ksm-test-job --timeout=300s \
         || echo "ksm-test-job not complete; continuing to diagnostics and tests"
-      sleep 240
+      sleep 360
     EOT
   }
   depends_on = [

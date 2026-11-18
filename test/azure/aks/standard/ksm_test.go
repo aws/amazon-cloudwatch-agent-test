@@ -119,10 +119,11 @@ func parseAZFromProviderID(providerID string) (string, error) {
 func requireAKSCloudAttributes(t *testing.T, metricName string, res map[string]string) {
 	t.Helper()
 	require.Equal(t, "azure", res["cloud.provider"], "%s cloud.provider", metricName)
-	// The node agent reports cloud.platform=azure.aks (the other AKS suites assert that), but the cluster
-	// scraper that produces the KSM metrics reports azure_aks (the OTel semantic-convention spelling).
-	// Observed in run 44077516781. Accept both until the agent uses one value; this is a finding to raise
-	// with the agent team.
+	// Two agent builds write to the same cluster for a short time: the chart's default release image
+	// (1.300073.0b1828, cloud.platform=azure_aks) runs until the stack patches in the image under test
+	// (7b574ef5, version "Unknown", cloud.platform=azure.aks). The release agent's series stay visible to
+	// a query for about 5 minutes after its last datapoint, so a test that runs soon after the swap sees
+	// both. Accept both until the stack waits long enough for the old series to age out.
 	require.Contains(t, []string{"azure.aks", "azure_aks"}, res["cloud.platform"], "%s cloud.platform", metricName)
 	require.Equal(t, env.AzureLocation, res["cloud.region"], "%s cloud.region", metricName)
 	require.Equal(t, env.AzureResourceGroup, res["azure.resourcegroup.name"], "%s azure.resourcegroup.name", metricName)
