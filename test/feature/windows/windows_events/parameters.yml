@@ -1,0 +1,171 @@
+# Consolidated Windows Event Logs test
+# Combines: event_logs (event_levels), eventid_logs (event_ids), event_regex_logs (filters)
+receivers: []
+
+test_case: "win_feature_windows_events"
+validate_type: "feature"
+data_type: "logs"
+
+number_monitored_logs: 1
+values_per_minute: "2"
+agent_collection_period: 60
+
+cloudwatch_agent_config: "<cloudwatch_agent_config>"
+
+log_validation:
+  # File logs
+  - log_value: "This is a log line."
+    log_lines: 2
+    log_stream: "test1.log"
+  - log_value: "# 0 - This is a log line."
+    log_lines: 1
+    log_stream: "test1.log"
+  - log_value: "# 1 - This is a log line."
+    log_lines: 1
+    log_stream: "test1.log"
+  - log_value: "Microsoft-Windows-Security-Auditing"
+    log_lines: 1
+    log_stream: "SecurityEvent"
+  - log_value: "Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'"
+    log_lines: 1
+    log_stream: "SecurityEvent"
+
+  # System/Application Event Logs
+  - log_value: "System information log"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "System"
+    log_source: "WindowsEvents"
+  - log_value: "System warning log"
+    log_level: "Warning"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "System"
+    log_source: "WindowsEvents"
+  - log_value: "System error log"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "System"
+    log_source: "WindowsEvents"
+  - log_value: "Application information log"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "Application"
+    log_source: "WindowsEvents"
+  - log_value: "Application warning log"
+    log_level: "Warning"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "Application"
+    log_source: "WindowsEvents"
+  - log_value: "Application error log"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "Application"
+    log_source: "WindowsEvents"
+
+  # Event ID based logs
+  - log_value: "System logon-events log"
+    log_level: "Information"
+    log_event_id: 400
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemTest400"
+    log_source: "WindowsEvents"
+  - log_value: "Custom app error log"
+    log_level: "Error"
+    log_event_id: 700
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemTest700"
+    log_source: "WindowsEvents"
+  - log_value: "System buffer error log"
+    log_level: "Warning"
+    log_event_id: 89
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEventId89"
+    log_source: "WindowsEvents"
+
+  # Regex filter logs
+  - log_value: "Database connection failed"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "45"
+  - log_value: "Authentication failed for user admin"
+    log_level: "Warning"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "90"
+  - log_value: "user login successful"
+    log_level: "Warning"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "12"
+  - log_value: "Authentication failed for user admin"
+    log_level: "Warning"
+    log_lines: 0
+    log_channel: "Application"
+    log_stream: "ApplicationEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "55"
+  - log_value: "user login successful"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "Application"
+    log_stream: "ApplicationEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "12"
+  - log_value: "Service started successfully"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "15"
+  - log_value: "CWAgent supports regex"
+    log_level: "Information"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "777"
+  - log_value: "CWAgent has stopped"
+    log_level: "Error"
+    log_lines: 0
+    log_channel: "System"
+    log_stream: "SystemEvents"
+    log_source: "WindowsEvents"
+    log_event_id: "888"
+  - log_value: "CWAgent has stopped"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "21"
+  - log_value: "memory is full, clear space"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents2"
+    log_source: "WindowsEvents"
+    log_event_id: "70"
+  - log_value: "Insufficient memory, only 2MB left"
+    log_level: "Error"
+    log_lines: 1
+    log_channel: "System"
+    log_stream: "SystemEvents3"
+    log_source: "WindowsEvents"
+    log_event_id: "70"
