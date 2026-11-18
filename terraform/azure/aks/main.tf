@@ -156,6 +156,10 @@ locals {
       "containerInsights.enabled"     = "false"
       "otelContainerInsights.enabled" = "true"
       "dcgmExporter.enabled"          = "true"
+      # TEMPORARY: pin the chart's exporter image. The chart on upstream main defaults to 4.7.0-4.9.0-distroless,
+      # whose pods crash at start with "read config file /etc/dcgm-exporter/config.yaml: no such file" (run
+      # 44269601040, operator 3.8.1). Remove this once the chart and operator agree on the exporter.
+      "dcgmExporter.image.tag" = "4.6.1-4.8.4-distroless"
     }
   }
 
