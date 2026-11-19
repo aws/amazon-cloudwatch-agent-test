@@ -386,8 +386,19 @@ func TestMetricNamePreservation(t *testing.T) {
 // TestServiceLabels — service.instance.id for Prometheus-scraped metrics.
 // ---------------------------------------------------------------------------
 
+//
+// cadvisor metrics with pod scope (container_network_*) are a pod-level resource: on AKS none of their
+// series carry service.instance.id (they have service.name/namespace instead), so only the other
+// scopes are required to have it.
 func TestServiceLabels(t *testing.T) {
+	podScoped := map[string]bool{}
+	for _, n := range podScopedPodOnlyNames() {
+		podScoped[n] = true
+	}
 	for _, metricName := range prometheusScrapedNames() {
+		if podScoped[metricName] {
+			continue
+		}
 		t.Run(metricName, func(t *testing.T) {
 			results, err := queryCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
@@ -794,4 +805,15 @@ func TestRawLabelsOnlyAtDatapointScope(t *testing.T) {
 			})
 		}
 	}
+}
+
+// podScopedPodOnlyNames returns the cadvisor metrics whose scope is pod (not container).
+func podScopedPodOnlyNames() []string {
+	var names []string
+	for _, m := range cadvisorMetrics {
+		if m.Scope == otelmetrics.ScopePod {
+			names = append(names, m.Name)
+		}
+	}
+	return names
 }
