@@ -126,3 +126,17 @@ func k8sServerVersion(t *testing.T) string {
 	}
 	return sv.GitVersion
 }
+
+// lookupPod finds a pod by name and optional namespace.
+func (gt *k8sGroundTruth) lookupPod(podName, namespace string) (corev1.Pod, bool) {
+	if namespace != "" {
+		p, ok := gt.pods[namespace+"/"+podName]
+		return p, ok
+	}
+	for _, p := range gt.pods {
+		if p.Name == podName {
+			return p, true
+		}
+	}
+	return corev1.Pod{}, false
+}
