@@ -127,8 +127,6 @@ type lifecycle struct {
 	// resumedEarly counts resume messages for testdb2 while its library was not loaded.
 	// It must stay 0, because nothing can be read in that state.
 	resumedEarly int
-	// createdEarlyAt is when the extension was created in testdb2, before the preload.
-	createdEarlyAt time.Time
 	// restartedAt is when PostgreSQL was back after the preload restart.
 	restartedAt time.Time
 	// agentStartsBefore and agentStartsAfter count the agent start messages before the
@@ -165,22 +163,14 @@ func (t *DbiPlansTestRunner) SetupBeforeAgentRun() error {
 
 	// The base script installs PostgreSQL with pg_stat_statements and creates testdb,
 	// cw_monitor and the pgpass file. The second script builds pg_store_plans without
-	// preloading or creating it, and creates the workload role.
+	// preloading or creating it, and creates the workload role. Both share one deadline.
 	for _, script := range []string{
 		"../database_insights/resources/database_insights_setup.sh",
 		"resources/database_insights_plans_setup.sh",
 	} {
 		log.Printf("=== Running %s ===", script)
-		cmd := exec.CommandContext(ctx, "bash", script)
-		// Return shortly after the kill even if orphaned sudo children keep the pipe open.
-		cmd.WaitDelay = 10 * time.Second
-		out, err := cmd.CombinedOutput()
-		log.Printf("%s output:\n%s", script, string(out))
-		if ctx.Err() == context.DeadlineExceeded {
-			return fmt.Errorf("%s timed out after %v; output above shows the last step reached", script, setupTimeout)
-		}
-		if err != nil {
-			return fmt.Errorf("%s failed: %w", script, err)
+		if err := runScript(ctx, script, setupTimeout); err != nil {
+			return err
 		}
 	}
 	return t.BaseTestRunner.SetupBeforeAgentRun()
@@ -235,7 +225,6 @@ func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 		life.err = err
 		return
 	}
-	life.createdEarlyAt = time.Now()
 	if err = waitForAgentLog(notLoadedMsg, dbEarly, notLoadedTimeout); err != nil {
 		life.err = fmt.Errorf("the agent did not report that pg_store_plans is created but not loaded in %s: %w", dbEarly, err)
 		return
@@ -255,12 +244,14 @@ func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 		return
 	}
 
-	// 3. Preload the library and restart PostgreSQL while the agent is running.
+	// 3. Preload the library and restart PostgreSQL while the agent is running. Stamp the
+	// time before the restart, so a top query collection that lands while PostgreSQL is
+	// coming back is counted as after the restart, never before it.
+	life.restartedAt = time.Now()
 	if err = preloadAndRestartPostgres(); err != nil {
 		life.err = err
 		return
 	}
-	life.restartedAt = time.Now()
 	log.Println("=== PostgreSQL restarted with pg_store_plans preloaded; the agent keeps running ===")
 
 	// 4. testdb2 resumes without any further action.
@@ -283,12 +274,13 @@ func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 		return
 	}
 
-	// 6. Create the extension in testdb now that the library is loaded.
+	// 6. Create the extension in testdb now that the library is loaded. Stamp the time
+	// before CREATE EXTENSION so an event from the collection straddling it counts as after.
+	life.createdAt = time.Now()
 	if err = createExtension(dbLate); err != nil {
 		life.err = err
 		return
 	}
-	life.createdAt = time.Now()
 	if err = waitForAgentLog(resumedMsg, dbLate, resumeTimeout); err != nil {
 		life.err = fmt.Errorf("the agent did not resume plan collection in %s after the extension was created; it needs a restart to notice it: %w", dbLate, err)
 		return
@@ -545,26 +537,28 @@ func topQueryEvent(message string) (database, plan string, isTopQuery bool) {
 	return database, plan, true
 }
 
-// topQueryPlan returns the postgresql.query_plan attribute of a raw events record.
-func topQueryPlan(message string) (plan string, isTopQuery bool) {
-	_, plan, isTopQuery = topQueryEvent(message)
-	return plan, isTopQuery
-}
-
 // preloadAndRestartPostgres preloads pg_store_plans and restarts PostgreSQL. It runs
 // while the agent is running.
 func preloadAndRestartPostgres() error {
 	ctx, cancel := context.WithTimeout(context.Background(), restartTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "bash", "resources/database_insights_plans_preload.sh")
+	return runScript(ctx, "resources/database_insights_plans_preload.sh", restartTimeout)
+}
+
+// runScript runs a bash script, logging its combined output, and returns a wrapped
+// error. ctx owns the deadline; a deadline hit is reported with the timeout it was
+// given. WaitDelay lets Wait return shortly after a kill even if orphaned sudo
+// children keep the output pipe open.
+func runScript(ctx context.Context, script string, timeout time.Duration) error {
+	cmd := exec.CommandContext(ctx, "bash", script)
 	cmd.WaitDelay = 10 * time.Second
 	out, err := cmd.CombinedOutput()
-	log.Printf("preload and restart output:\n%s", string(out))
+	log.Printf("%s output:\n%s", script, string(out))
 	if ctx.Err() == context.DeadlineExceeded {
-		return fmt.Errorf("preloading pg_store_plans and restarting PostgreSQL timed out after %v", restartTimeout)
+		return fmt.Errorf("%s timed out after %v; output above shows the last step reached", script, timeout)
 	}
 	if err != nil {
-		return fmt.Errorf("preloading pg_store_plans and restarting PostgreSQL failed: %w", err)
+		return fmt.Errorf("%s failed: %w", script, err)
 	}
 	return nil
 }

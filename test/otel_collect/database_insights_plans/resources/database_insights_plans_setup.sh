@@ -23,9 +23,6 @@ if type -P yum >/dev/null 2>&1; then
     # gcc depends on amazon-rpm-config on Amazon Linux 2023, which ships the -specs files that the
     # PGXS CFLAGS and LDFLAGS refer to (/usr/lib/rpm/redhat/redhat-hardened-cc1 and others).
     sudo yum install -y gcc make git "${SERVER_PKG}-devel"
-    # RHEL-family distributions get those spec files from redhat-rpm-config. It does not exist on
-    # Amazon Linux 2023, so a failure here is expected there.
-    sudo yum install -y redhat-rpm-config 2>/dev/null || true
 elif type -P apt-get >/dev/null 2>&1; then
     # postgresql-server-dev-NN is in the universe component of Ubuntu. Enable it if the image does not.
     PG_MAJOR_DEB=$(ls /usr/lib/postgresql 2>/dev/null | sort -V | tail -1 || true)
@@ -41,10 +38,9 @@ elif type -P apt-get >/dev/null 2>&1; then
     fi
     sudo "${APT_ENV[@]}" apt-get -o DPkg::Lock::Timeout=300 install -y \
         "postgresql-server-dev-${PG_MAJOR_DEB}" gcc make git
-elif type -P zypper >/dev/null 2>&1; then
-    sudo zypper install -y gcc make git postgresql-server-devel
 else
-    echo "ERROR: No supported package manager found (yum, apt-get, zypper)"
+    # The generator only emits this test on al2023 (yum) and ubuntu-24 (apt-get).
+    echo "ERROR: No supported package manager found (yum, apt-get)"
     exit 1
 fi
 
