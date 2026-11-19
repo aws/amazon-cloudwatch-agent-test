@@ -63,7 +63,7 @@ func StartAgent(configOutputPath string, fatalOnFailure bool, ssm bool) error {
 		log.Printf("Start agent failed: %v; the output is: %s", err, string(out))
 		return err
 	} else if err != nil {
-		log.Printf(fmt.Sprint(err) + string(out))
+		log.Printf("%s", fmt.Sprint(err)+string(out))
 	} else {
 		log.Printf("Agent has started")
 	}

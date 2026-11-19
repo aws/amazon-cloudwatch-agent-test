@@ -59,7 +59,7 @@ func (t *JMXTomcatJVMTestRunner) SetupBeforeAgentRun() error {
 	if err != nil {
 		return err
 	}
-	log.Printf(javaVersion)
+	log.Printf("%s", javaVersion)
 
 	log.Println("set up jvm and tomcat")
 	startJMXCommands := []string{
