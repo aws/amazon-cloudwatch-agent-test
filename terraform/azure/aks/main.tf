@@ -232,6 +232,10 @@ locals {
       "otelContainerInsights.enabled"      = "true"
       "otelContainerInsights.logs.enabled" = "true"
     }
+    # Same chart values as the EKS otel-attr-limit stack: OTel Container Insights on, nothing else.
+    "./test/azure/aks/attr_limit" = {
+      "otelContainerInsights.enabled" = "true"
+    }
     "./test/azure/aks/gpu" = {
       "containerInsights.enabled"     = "false"
       "otelContainerInsights.enabled" = "true"
