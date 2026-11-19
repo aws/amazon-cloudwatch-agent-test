@@ -386,7 +386,6 @@ func TestMetricNamePreservation(t *testing.T) {
 // TestServiceLabels — service.instance.id for Prometheus-scraped metrics.
 // ---------------------------------------------------------------------------
 
-//
 // cadvisor metrics with pod scope (container_network_*) are a pod-level resource: on AKS none of their
 // series carry service.instance.id (they have service.name/namespace instead), so only the other
 // scopes are required to have it.
