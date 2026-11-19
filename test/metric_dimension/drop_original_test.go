@@ -97,15 +97,15 @@ func (t *DropOriginalMetricsTestRunner) testCases() map[string][]expectation {
 				shouldExist: true,
 				metricNames: []string{"swap_free", "swap_used"},
 				dimensions: []dimension.Instruction{
-					{"InstanceId", dimension.UnknownDimensionValue()},
+					{Key: "InstanceId", Value: dimension.UnknownDimensionValue()},
 				},
 			},
 			{
 				shouldExist: true,
 				metricNames: []string{"swap_free", "swap_used"},
 				dimensions: []dimension.Instruction{
-					{"InstanceId", dimension.UnknownDimensionValue()},
-					{"InstanceType", dimension.UnknownDimensionValue()},
+					{Key: "InstanceId", Value: dimension.UnknownDimensionValue()},
+					{Key: "InstanceType", Value: dimension.UnknownDimensionValue()},
 				},
 			},
 		},
@@ -119,33 +119,33 @@ func (t *DropOriginalMetricsTestRunner) testCases() map[string][]expectation {
 				shouldExist: true,
 				metricNames: []string{"cpu_usage_visitor", "cpu_usage_idle", "cpu_usage_user"},
 				dimensions: []dimension.Instruction{
-					{"InstanceId", dimension.UnknownDimensionValue()},
+					{Key: "InstanceId", Value: dimension.UnknownDimensionValue()},
 				},
 			},
 			{
 				shouldExist: true,
 				metricNames: []string{"cpu_usage_visitor", "cpu_usage_idle", "cpu_usage_user"},
 				dimensions: []dimension.Instruction{
-					{"InstanceId", dimension.UnknownDimensionValue()},
-					{"InstanceType", dimension.UnknownDimensionValue()},
+					{Key: "InstanceId", Value: dimension.UnknownDimensionValue()},
+					{Key: "InstanceType", Value: dimension.UnknownDimensionValue()},
 				},
 			},
 			{
 				shouldExist: true,
 				metricNames: []string{"cpu_usage_user"},
 				dimensions: []dimension.Instruction{
-					{"InstanceId", dimension.UnknownDimensionValue()},
-					{"InstanceType", dimension.UnknownDimensionValue()},
-					{"cpu", dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")}},
+					{Key: "InstanceId", Value: dimension.UnknownDimensionValue()},
+					{Key: "InstanceType", Value: dimension.UnknownDimensionValue()},
+					{Key: "cpu", Value: dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")}},
 				},
 			},
 			{
 				shouldExist: false,
 				metricNames: []string{"cpu_usage_visitor", "cpu_usage_idle"},
 				dimensions: []dimension.Instruction{
-					{"InstanceId", dimension.UnknownDimensionValue()},
-					{"InstanceType", dimension.UnknownDimensionValue()},
-					{"cpu", dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")}},
+					{Key: "InstanceId", Value: dimension.UnknownDimensionValue()},
+					{Key: "InstanceType", Value: dimension.UnknownDimensionValue()},
+					{Key: "cpu", Value: dimension.ExpectedDimensionValue{Value: aws.String("cpu-total")}},
 				},
 			},
 		},
@@ -159,15 +159,15 @@ func (t *DropOriginalMetricsTestRunner) testCases() map[string][]expectation {
 				shouldExist: true,
 				metricNames: []string{"mem_available", "mem_used_percent"},
 				dimensions: []dimension.Instruction{
-					{"InstanceId", dimension.UnknownDimensionValue()},
+					{Key: "InstanceId", Value: dimension.UnknownDimensionValue()},
 				},
 			},
 			{
 				shouldExist: false,
 				metricNames: []string{"mem_available", "mem_used_percent"},
 				dimensions: []dimension.Instruction{
-					{"InstanceId", dimension.UnknownDimensionValue()},
-					{"InstanceType", dimension.UnknownDimensionValue()},
+					{Key: "InstanceId", Value: dimension.UnknownDimensionValue()},
+					{Key: "InstanceType", Value: dimension.UnknownDimensionValue()},
 				},
 			},
 		},
