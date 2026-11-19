@@ -341,6 +341,61 @@ resource "null_resource" "patch_agent_image" {
   }
 }
 
+# Patch dcgm-exporter image for testing a candidate exporter version.
+# Skipped entirely when dcgm_image is empty (default), leaving the
+# image deployed by the add-on unchanged.
+resource "null_resource" "update_dcgm_image" {
+  count = var.dcgm_image == "" ? 0 : 1
+  depends_on = [
+    null_resource.kubectl,
+    aws_eks_addon.this,
+  ]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      # Wait for the add-on to create the DcgmExporter resource before patching.
+      name=""
+      for i in $(seq 1 30); do
+        name=$(kubectl -n amazon-cloudwatch get dcgmexporter -o name 2>/dev/null | head -n1)
+        [ -n "$name" ] && break
+        sleep 10
+      done
+      [ -n "$name" ] || { echo "no DcgmExporter resource found" >&2; exit 1; }
+
+      echo "Patching dcgm-exporter image to $TF_DCGM_IMAGE..."
+      kubectl -n amazon-cloudwatch patch "$name" --type='json' \
+        -p="[{\"op\": \"replace\", \"path\": \"/spec/image\", \"value\": \"$TF_DCGM_IMAGE\"}]"
+
+      # Find the exporter DaemonSet by label (same label the test uses), not by assuming its name.
+      ds=""
+      for i in $(seq 1 30); do
+        ds=$(kubectl -n amazon-cloudwatch get daemonset -l app.kubernetes.io/name=dcgm-exporter -o name 2>/dev/null | head -n1)
+        [ -n "$ds" ] && break
+        sleep 10
+      done
+      [ -n "$ds" ] || { echo "no dcgm-exporter DaemonSet found" >&2; exit 1; }
+
+      echo "Waiting for $ds to adopt the new image..."
+      for i in $(seq 1 30); do
+        kubectl -n amazon-cloudwatch get "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "$TF_DCGM_IMAGE" && break
+        sleep 10
+      done
+      kubectl -n amazon-cloudwatch get "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "$TF_DCGM_IMAGE" || { echo "$ds did not adopt $TF_DCGM_IMAGE" >&2; exit 1; }
+
+      kubectl -n amazon-cloudwatch rollout status "$ds" --timeout=300s
+      echo "dcgm-exporter image patched and rolled out successfully"
+    EOT
+    environment = {
+      TF_DCGM_IMAGE = var.dcgm_image
+    }
+  }
+
+  # Re-run if image changes
+  triggers = {
+    image = var.dcgm_image
+  }
+}
+
 # Run Go tests after infrastructure and agent patching is complete
 resource "null_resource" "validator" {
   depends_on = [
@@ -351,6 +406,7 @@ resource "null_resource" "validator" {
     kubernetes_deployment.gpu_burner,
     kubernetes_service.gpu_burner_service,
     null_resource.patch_agent_image,
+    null_resource.update_dcgm_image,
   ]
 
   provisioner "local-exec" {

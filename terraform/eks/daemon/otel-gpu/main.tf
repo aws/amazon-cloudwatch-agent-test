@@ -375,6 +375,48 @@ resource "null_resource" "update_image" {
   }
 }
 
+# --- Patch dcgm-exporter image (optional, for testing a candidate exporter version) ---
+
+resource "null_resource" "update_dcgm_image" {
+  count      = var.dcgm_image == "" ? 0 : 1
+  depends_on = [helm_release.aws_observability, null_resource.kubectl]
+  triggers   = { image = var.dcgm_image }
+  provisioner "local-exec" {
+    command = <<-EOT
+      # Wait for the operator/chart to create the DcgmExporter resource before patching.
+      name=""
+      for i in $(seq 1 30); do
+        name=$(kubectl -n amazon-cloudwatch get dcgmexporter -o name 2>/dev/null | head -n1)
+        [ -n "$name" ] && break
+        sleep 10
+      done
+      [ -n "$name" ] || { echo "no DcgmExporter resource found" >&2; exit 1; }
+
+      kubectl -n amazon-cloudwatch patch "$name" --type='json' \
+        -p="[{\"op\": \"replace\", \"path\": \"/spec/image\", \"value\": \"$TF_DCGM_IMAGE\"}]"
+
+      # Find the exporter DaemonSet by label (same label the test uses), not by assuming its name.
+      ds=""
+      for i in $(seq 1 30); do
+        ds=$(kubectl -n amazon-cloudwatch get daemonset -l app.kubernetes.io/name=dcgm-exporter -o name 2>/dev/null | head -n1)
+        [ -n "$ds" ] && break
+        sleep 10
+      done
+      [ -n "$ds" ] || { echo "no dcgm-exporter DaemonSet found" >&2; exit 1; }
+
+      for i in $(seq 1 30); do
+        kubectl -n amazon-cloudwatch get "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "$TF_DCGM_IMAGE" && break
+        sleep 10
+      done
+      kubectl -n amazon-cloudwatch get "$ds" -o jsonpath='{.spec.template.spec.containers[*].image}' | tr ' ' '\n' | grep -qxF "$TF_DCGM_IMAGE" || { echo "$ds did not adopt $TF_DCGM_IMAGE" >&2; exit 1; }
+      kubectl -n amazon-cloudwatch rollout status "$ds" --timeout=300s
+    EOT
+    environment = {
+      TF_DCGM_IMAGE = var.dcgm_image
+    }
+  }
+}
+
 # --- Restart pods to pick up Pod Identity + new image ---
 
 resource "null_resource" "restart_pods" {
@@ -396,6 +438,7 @@ resource "null_resource" "validator" {
   depends_on = [
     null_resource.restart_pods,
     null_resource.multi_gpu_burn,
+    null_resource.update_dcgm_image,
   ]
 
   triggers = { always_run = timestamp() }

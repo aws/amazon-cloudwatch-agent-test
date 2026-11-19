@@ -21,6 +21,16 @@ variable "cwagent_image_tag" {
   default = "latest"
 }
 
+variable "dcgm_image" {
+  type        = string
+  description = "Full dcgm-exporter image reference (e.g. registry/repo:tag or registry/repo@sha256:...) to test. Empty leaves the image the Helm chart installs unchanged."
+  default     = ""
+  validation {
+    condition     = var.dcgm_image == "" || can(regex("^[a-zA-Z0-9._/:@-]+$", var.dcgm_image))
+    error_message = "dcgm_image must be a valid container image reference."
+  }
+}
+
 variable "helm_chart_branch" {
   type    = string
   default = "main"
