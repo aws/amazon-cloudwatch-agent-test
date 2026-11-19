@@ -87,6 +87,9 @@ echo "=== [3/4] Creating the workload role ==="
 # workload must run as an ordinary role. It owns testdb so it can create the pgbench tables.
 sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE ROLE dbi_app LOGIN PASSWORD 'dbi_app_password' NOSUPERUSER;"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER DATABASE testdb OWNER TO dbi_app;"
+# testdb2 is the database whose extension the test creates BEFORE the library is preloaded.
+sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE testdb2 OWNER dbi_app;"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE testdb2 TO cw_monitor;"
 HBA=$(sudo -u postgres psql -Atc "SHOW hba_file")
 sudo sed -i '1i host all dbi_app 127.0.0.1/32 md5' "$HBA"
 # pg_hba.conf needs a reload, not a restart. The restart is left to the test.
@@ -106,6 +109,11 @@ fi
 CREATED=$(sudo -u postgres psql -d testdb -Atc "SELECT count(*) FROM pg_extension WHERE extname = 'pg_store_plans'")
 if [[ "$CREATED" != "0" ]]; then
     echo "ERROR: pg_store_plans must not be created in testdb before the agent starts"
+    exit 1
+fi
+CREATED2=$(sudo -u postgres psql -d testdb2 -Atc "SELECT count(*) FROM pg_extension WHERE extname = 'pg_store_plans'")
+if [[ "$CREATED2" != "0" ]]; then
+    echo "ERROR: pg_store_plans must not be created in testdb2 before the agent starts"
     exit 1
 fi
 SUPER=$(sudo -u postgres psql -Atc "SELECT rolsuper FROM pg_roles WHERE rolname = 'dbi_app'")

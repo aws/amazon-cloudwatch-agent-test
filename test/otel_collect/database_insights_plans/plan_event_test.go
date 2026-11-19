@@ -55,3 +55,30 @@ func TestTopQueryPlan(t *testing.T) {
 		})
 	}
 }
+
+func TestTopQueryEventDatabase(t *testing.T) {
+	database, plan, isTopQuery := topQueryEvent(`{"attributes":{"db.namespace":"testdb2","postgresql.query_plan":"[{}]"}}`)
+	assert.True(t, isTopQuery)
+	assert.Equal(t, "testdb2", database)
+	assert.Equal(t, "[{}]", plan)
+
+	database, plan, isTopQuery = topQueryEvent(`{"attributes":{"postgresql.query_plan":""}}`)
+	assert.True(t, isTopQuery)
+	assert.Empty(t, database)
+	assert.Empty(t, plan)
+
+	_, _, isTopQuery = topQueryEvent(`{"attributes":{"db.namespace":"testdb"}}`)
+	assert.False(t, isTopQuery, "a record without the plan attribute is not a top query")
+}
+
+func TestCountLines(t *testing.T) {
+	out := `{"msg":"x","database":"testdb","a":1}
+{"msg":"x","database":"testdb2"}
+{"msg":"x","database":"testdb2","a":2}
+
+`
+	assert.Equal(t, 3, countLines(out, ""))
+	assert.Equal(t, 1, countLines(out, "testdb"), "testdb must not match testdb2")
+	assert.Equal(t, 2, countLines(out, "testdb2"))
+	assert.Equal(t, 0, countLines("", ""))
+}

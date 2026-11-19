@@ -5,21 +5,27 @@
 
 // Package database_insights_plans checks that the self-managed PostgreSQL Database
 // Insights receiver starts collecting query plans after pg_store_plans is set up
-// while the agent is already running, without an agent restart.
+// while the agent is already running, without an agent restart. It covers both
+// orders a customer can follow, one database each:
+//
+//   - testdb: preload the library and restart PostgreSQL first, then CREATE EXTENSION.
+//   - testdb2: CREATE EXTENSION first, then preload the library and restart PostgreSQL.
+//     Until PostgreSQL restarts, the extension exists but every plan read fails.
 //
 // Timeline, measured from the agent start:
-//  1. pg_store_plans is installed but not preloaded and not created (setup script).
-//     The agent finds it missing, warns once per receiver and skips plan lookups.
-//     Top query events are still reported, with an empty plan.
-//  2. The test preloads pg_store_plans and restarts PostgreSQL while the agent runs,
-//     which is how a customer adds the extension to a monitored server. The agent
-//     must keep running and keep reporting top queries across the restart.
-//  3. The warning count stays the same while the extension is still missing, also
-//     across the PostgreSQL restart.
-//  4. The test runs CREATE EXTENSION in testdb.
-//  5. The receiver re-checks, finds the extension and logs that it resumed.
-//  6. Top query events that carry a plan appear in the raw events log group, and
-//     none carried one before the extension was created.
+//  1. pg_store_plans is installed but not preloaded and not created in either database
+//     (setup script). The agent finds it missing, warns once per receiver and database,
+//     and skips plan lookups. Top query events are still reported, with an empty plan.
+//  2. The test runs CREATE EXTENSION in testdb2 while the library is not preloaded. The
+//     receiver must warn once that the extension is created but not loaded, must not log
+//     that it resumed, and must keep reporting top queries without plans.
+//  3. The test preloads pg_store_plans and restarts PostgreSQL while the agent runs. The
+//     agent must keep running and keep reporting top queries across the restart.
+//  4. The receiver resumes testdb2 on its own, and top queries seen before the restart
+//     now carry plans. Nothing was cached as an empty plan while the library was missing.
+//  5. testdb still lacks the extension. Its warning count stays the same across the
+//     re-checks and the PostgreSQL restart.
+//  6. The test runs CREATE EXTENSION in testdb, and the receiver resumes testdb too.
 //
 // The workload runs as a non-superuser because the receiver does not look up plans
 // for statements owned by a superuser. It runs in short pgbench runs so it survives
@@ -51,9 +57,9 @@ import (
 const (
 	// setupTimeout bounds the base PostgreSQL setup plus the pg_store_plans build.
 	setupTimeout = 30 * time.Minute
-	// workloadDur is the agent run time. A passing run needs about 8 minutes; see the
+	// workloadDur is the agent run time. A passing run needs about 11 minutes; see the
 	// step durations below.
-	workloadDur = 10 * time.Minute
+	workloadDur = 14 * time.Minute
 
 	instanceName   = "dbi-plans-integ-test"
 	rawEventsGroup = "/aws/self-managed-database-insights/postgresql/raw-events"
@@ -62,22 +68,30 @@ const (
 	workloadUser     = "dbi_app"
 	workloadPassword = "dbi_app_password"
 
+	// dbLate gets the extension after the library is preloaded. dbEarly gets it before.
+	dbLate  = "testdb"
+	dbEarly = "testdb2"
+
 	// Log messages of the receiver (postgresqlreceiver, queryPlanStoreReady).
-	missingMsg = "pg_store_plans extension not installed"
-	resumedMsg = "pg_store_plans extension is now installed"
+	missingMsg   = "pg_store_plans extension not installed"
+	notLoadedMsg = "pg_store_plans extension is created but not loaded"
+	resumedMsg   = "pg_store_plans is now readable"
 
 	// firstWarnTimeout is how long to wait for the first plan lookup to find the
 	// extension missing. The first top query collection runs when the agent starts.
 	firstWarnTimeout = 3 * time.Minute
+	// notLoadedTimeout is how long to wait for the receiver to notice that the extension
+	// exists but its library is not loaded. A check runs on every top query collection.
+	notLoadedTimeout = 3 * time.Minute
 	// settleAfterWarn lets the other receiver instance do its first collection, so
 	// that every instance has warned before the warnings are counted.
 	settleAfterWarn = 70 * time.Second
 	// restartTimeout bounds the preload script, which restarts PostgreSQL and waits
 	// until it accepts connections again.
 	restartTimeout = 3 * time.Minute
-	// stillMissingWindow is how long the extension stays missing after the PostgreSQL
-	// restart. The receiver re-checks on every top query collection (once a minute by
-	// default), so this covers at least one re-check, which must not warn again.
+	// stillMissingWindow is how long testdb stays without the extension after the
+	// PostgreSQL restart. The receiver re-checks on every top query collection (once a
+	// minute by default), so this covers at least one re-check, which must not warn again.
 	stillMissingWindow = 130 * time.Second
 	// workloadRunSeconds is the length of one pgbench run. The workload is a series
 	// of runs because a single run does not survive the PostgreSQL restart.
@@ -101,17 +115,28 @@ func init() {
 
 // lifecycle is what the background goroutine observed.
 type lifecycle struct {
-	// warnedBefore and warnedStill are the missing-extension warning counts taken
-	// before and after stillMissingWindow, while the extension was still missing.
-	warnedBefore int
-	warnedStill  int
+	// missingBefore and missingStill are the missing-extension warning counts per
+	// database taken before and after stillMissingWindow. testdb is still missing
+	// throughout, and testdb2 is not missing after its extension was created.
+	missingBefore map[string]int
+	missingStill  map[string]int
+	// notLoadedBefore and notLoadedStill are the created-but-not-loaded warning counts
+	// for testdb2 before the PostgreSQL restart and after stillMissingWindow.
+	notLoadedBefore int
+	notLoadedStill  int
+	// resumedEarly counts resume messages for testdb2 while its library was not loaded.
+	// It must stay 0, because nothing can be read in that state.
+	resumedEarly int
+	// createdEarlyAt is when the extension was created in testdb2, before the preload.
+	createdEarlyAt time.Time
 	// restartedAt is when PostgreSQL was back after the preload restart.
 	restartedAt time.Time
 	// agentStartsBefore and agentStartsAfter count the agent start messages before the
 	// PostgreSQL restart and at the end of the lifecycle.
 	agentStartsBefore int
 	agentStartsAfter  int
-	createdAt         time.Time
+	// createdAt is when the extension was created in testdb, after the preload.
+	createdAt time.Time
 	// err is the first step that failed. Later steps did not run.
 	err error
 }
@@ -162,44 +187,75 @@ func (t *DbiPlansTestRunner) SetupBeforeAgentRun() error {
 }
 
 func (t *DbiPlansTestRunner) SetupAfterAgentRun() error {
-	if err := initWorkload(); err != nil {
-		return err
+	for _, db := range []string{dbLate, dbEarly} {
+		if err := initWorkload(db); err != nil {
+			return err
+		}
 	}
-	go runWorkload(workloadDur)
+	for _, db := range []string{dbLate, dbEarly} {
+		go runWorkload(db, workloadDur)
+	}
 	go t.driveExtensionLifecycle()
 	return nil
 }
 
-// driveExtensionLifecycle waits until the receiver reports the extension missing,
-// checks that the warning is not repeated, creates the extension, and waits until
-// the receiver reports that it resumed.
+// driveExtensionLifecycle runs the steps in the package comment and records what the
+// agent log showed at each of them.
 func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 	defer close(t.done)
-	var life lifecycle
+	life := lifecycle{missingBefore: map[string]int{}, missingStill: map[string]int{}}
 	defer func() {
 		t.mu.Lock()
 		t.life = life
 		t.mu.Unlock()
 	}()
 
-	if err := waitForAgentLog(missingMsg, firstWarnTimeout); err != nil {
-		life.err = fmt.Errorf("the agent never reported pg_store_plans as missing; the agent build may not contain the pg_store_plans plan lookup, or the workload role was skipped: %w", err)
-		return
+	// 1. Both databases are reported as missing.
+	for _, db := range []string{dbLate, dbEarly} {
+		if err := waitForAgentLog(missingMsg, db, firstWarnTimeout); err != nil {
+			life.err = fmt.Errorf("the agent never reported pg_store_plans as missing in %s; the agent build may not contain the pg_store_plans plan lookup, or the workload role was skipped: %w", db, err)
+			return
+		}
 	}
-	log.Println("=== The agent reported pg_store_plans as missing ===")
+	log.Println("=== The agent reported pg_store_plans as missing in both databases ===")
 
+	// Let the other receiver instance do its first collection, so that every instance
+	// has warned before the warnings are counted.
 	time.Sleep(settleAfterWarn)
 	var err error
-	if life.warnedBefore, err = countAgentLog(missingMsg); err != nil {
+	for _, db := range []string{dbLate, dbEarly} {
+		if life.missingBefore[db], err = countAgentLog(missingMsg, db); err != nil {
+			life.err = err
+			return
+		}
+	}
+
+	// 2. Create the extension in testdb2 while the library is not preloaded.
+	if err = createExtension(dbEarly); err != nil {
 		life.err = err
 		return
 	}
-	if life.agentStartsBefore, err = countAgentLog(agentStartMsg); err != nil {
+	life.createdEarlyAt = time.Now()
+	if err = waitForAgentLog(notLoadedMsg, dbEarly, notLoadedTimeout); err != nil {
+		life.err = fmt.Errorf("the agent did not report that pg_store_plans is created but not loaded in %s: %w", dbEarly, err)
+		return
+	}
+	log.Println("=== The agent reported pg_store_plans as created but not loaded ===")
+	time.Sleep(settleAfterWarn)
+	if life.notLoadedBefore, err = countAgentLog(notLoadedMsg, dbEarly); err != nil {
+		life.err = err
+		return
+	}
+	if life.resumedEarly, err = countAgentLog(resumedMsg, dbEarly); err != nil {
+		life.err = err
+		return
+	}
+	if life.agentStartsBefore, err = countAgentLog(agentStartMsg, ""); err != nil {
 		life.err = err
 		return
 	}
 
-	// Preload the library and restart PostgreSQL while the agent is running.
+	// 3. Preload the library and restart PostgreSQL while the agent is running.
 	if err = preloadAndRestartPostgres(); err != nil {
 		life.err = err
 		return
@@ -207,26 +263,40 @@ func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 	life.restartedAt = time.Now()
 	log.Println("=== PostgreSQL restarted with pg_store_plans preloaded; the agent keeps running ===")
 
+	// 4. testdb2 resumes without any further action.
+	if err = waitForAgentLog(resumedMsg, dbEarly, resumeTimeout); err != nil {
+		life.err = fmt.Errorf("the agent did not resume plan collection in %s after PostgreSQL restarted with the library: %w", dbEarly, err)
+		return
+	}
+	log.Println("=== The agent resumed plan collection in the database whose extension was created first ===")
+
+	// 5. testdb is still missing the extension, and nothing warns again.
 	time.Sleep(stillMissingWindow)
-	if life.warnedStill, err = countAgentLog(missingMsg); err != nil {
+	for _, db := range []string{dbLate, dbEarly} {
+		if life.missingStill[db], err = countAgentLog(missingMsg, db); err != nil {
+			life.err = err
+			return
+		}
+	}
+	if life.notLoadedStill, err = countAgentLog(notLoadedMsg, dbEarly); err != nil {
 		life.err = err
 		return
 	}
 
-	if err = createExtension(); err != nil {
+	// 6. Create the extension in testdb now that the library is loaded.
+	if err = createExtension(dbLate); err != nil {
 		life.err = err
 		return
 	}
 	life.createdAt = time.Now()
-
-	if err = waitForAgentLog(resumedMsg, resumeTimeout); err != nil {
-		life.err = fmt.Errorf("the agent did not resume plan collection after the extension was created; it needs a restart to notice it: %w", err)
+	if err = waitForAgentLog(resumedMsg, dbLate, resumeTimeout); err != nil {
+		life.err = fmt.Errorf("the agent did not resume plan collection in %s after the extension was created; it needs a restart to notice it: %w", dbLate, err)
 		return
 	}
-	log.Println("=== The agent resumed plan collection ===")
+	log.Println("=== The agent resumed plan collection in both databases ===")
 
 	time.Sleep(exportWait)
-	if life.agentStartsAfter, err = countAgentLog(agentStartMsg); err != nil {
+	if life.agentStartsAfter, err = countAgentLog(agentStartMsg, ""); err != nil {
 		life.err = err
 	}
 }
@@ -245,7 +315,7 @@ func (t *DbiPlansTestRunner) Validate() status.TestGroupResult {
 	life := t.life
 	t.mu.Unlock()
 
-	const lifecycleName = "Plan lookups skipped while pg_store_plans missing, resumed after it was created"
+	const lifecycleName = "Plan lookups skipped while pg_store_plans unavailable, resumed once it can be read"
 	if life.err != nil {
 		results = append(results, failed(lifecycleName, life.err))
 		return status.TestGroupResult{Name: t.GetTestName(), TestResults: results}
@@ -262,36 +332,71 @@ func (t *DbiPlansTestRunner) Validate() status.TestGroupResult {
 	}
 
 	// Each receiver instance warns when a database becomes missing, and not again on
-	// the re-checks that still find it missing.
-	if life.warnedBefore < 1 || life.warnedStill != life.warnedBefore {
-		results = append(results, failed("Missing-extension warning is not repeated",
-			fmt.Errorf("warnings before the still-missing window: %d, after: %d; want at least 1 and no change", life.warnedBefore, life.warnedStill)))
+	// the re-checks that still find it missing. testdb2 has the extension by then, so
+	// its count must not grow either.
+	for _, db := range []string{dbLate, dbEarly} {
+		name := fmt.Sprintf("Missing-extension warning is not repeated in %s", db)
+		if life.missingBefore[db] < 1 || life.missingStill[db] != life.missingBefore[db] {
+			results = append(results, failed(name,
+				fmt.Errorf("warnings before the still-missing window: %d, after: %d; want at least 1 and no change", life.missingBefore[db], life.missingStill[db])))
+		} else {
+			results = append(results, passed(name))
+		}
+	}
+
+	// The extension exists but the library is not loaded: warn once per receiver
+	// instance, and do not claim that plan collection resumed.
+	const notLoadedName = "Created-but-not-loaded warning is reported once"
+	if life.notLoadedBefore < 1 || life.notLoadedStill != life.notLoadedBefore {
+		results = append(results, failed(notLoadedName,
+			fmt.Errorf("warnings before the PostgreSQL restart: %d, after the still-missing window: %d; want at least 1 and no change", life.notLoadedBefore, life.notLoadedStill)))
 	} else {
-		results = append(results, passed("Missing-extension warning is not repeated"))
+		results = append(results, passed(notLoadedName))
+	}
+	const noFalseResumeName = "No resume reported while the library was not loaded"
+	if life.resumedEarly != 0 {
+		results = append(results, failed(noFalseResumeName,
+			fmt.Errorf("%d resume messages for %s before the library was preloaded; want 0", life.resumedEarly, dbEarly)))
+	} else {
+		results = append(results, passed(noFalseResumeName))
 	}
 
-	// Every receiver instance that warned also reports that it resumed.
-	warned, werr := countAgentLog(missingMsg)
-	resumed, rerr := countAgentLog(resumedMsg)
-	switch {
-	case werr != nil || rerr != nil:
-		results = append(results, failed("Every warned receiver resumed", errors.Join(werr, rerr)))
-	case warned != resumed:
-		results = append(results, failed("Every warned receiver resumed",
-			fmt.Errorf("%d missing-extension warnings but %d resume messages", warned, resumed)))
-	default:
-		results = append(results, passed("Every warned receiver resumed"))
+	// Every receiver instance that warned about a database also reports that it resumed.
+	for _, db := range []string{dbLate, dbEarly} {
+		name := fmt.Sprintf("Every warned receiver resumed in %s", db)
+		warned, werr := countAgentLog(missingMsg, db)
+		resumed, rerr := countAgentLog(resumedMsg, db)
+		switch {
+		case werr != nil || rerr != nil:
+			results = append(results, failed(name, errors.Join(werr, rerr)))
+		case warned != resumed:
+			results = append(results, failed(name,
+				fmt.Errorf("%d missing-extension warnings but %d resume messages", warned, resumed)))
+		default:
+			results = append(results, passed(name))
+		}
 	}
 
-	results = append(results, t.validatePlanEvents(life.restartedAt, life.createdAt)...)
+	results = append(results, t.validatePlanEvents(life)...)
 	return status.TestGroupResult{Name: t.GetTestName(), TestResults: results}
 }
 
-// validatePlanEvents checks the raw events stream: top query events were reported
-// without plans while the extension was missing, top queries kept being reported
-// after the PostgreSQL restart, none carried a plan before the extension was
-// created, and at least one did afterwards.
-func (t *DbiPlansTestRunner) validatePlanEvents(restartedAt, createdAt time.Time) []status.TestResult {
+// planCounts classifies the top query events of one database.
+type planCounts struct {
+	// emptyBefore and plansBefore count events before the cut-off, without and with a plan.
+	emptyBefore, plansBefore int
+	// emptyAfterRestart counts events without a plan between the PostgreSQL restart and the cut-off.
+	emptyAfterRestart int
+	// plansAfter counts events with a plan at or after the cut-off.
+	plansAfter int
+}
+
+// validatePlanEvents checks the raw events stream. In testdb, top query events were
+// reported without plans while the extension was missing, top queries kept being
+// reported after the PostgreSQL restart, none carried a plan before the extension was
+// created, and at least one did afterwards. In testdb2, no event carried a plan while
+// the library was not loaded, and events carried plans after PostgreSQL restarted with it.
+func (t *DbiPlansTestRunner) validatePlanEvents(life lifecycle) []status.TestResult {
 	const (
 		maxRetries    = 5
 		retryInterval = 30 * time.Second
@@ -299,8 +404,8 @@ func (t *DbiPlansTestRunner) validatePlanEvents(restartedAt, createdAt time.Time
 	stream := fmt.Sprintf("%s/%s", t.env.InstanceId, instanceName)
 
 	var (
-		emptyBefore, emptyAfterRestart, plansBefore, plansAfter int
-		lastErr                                                 error
+		late, early planCounts
+		lastErr     error
 	)
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		if attempt > 0 {
@@ -313,32 +418,26 @@ func (t *DbiPlansTestRunner) validatePlanEvents(restartedAt, createdAt time.Time
 			continue
 		}
 		lastErr = nil
-		emptyBefore, emptyAfterRestart, plansBefore, plansAfter = 0, 0, 0, 0
+		late, early = planCounts{}, planCounts{}
 		for _, e := range events {
 			if e.Message == nil || e.Timestamp == nil {
 				continue
 			}
-			plan, isTopQuery := topQueryPlan(*e.Message)
+			db, plan, isTopQuery := topQueryEvent(*e.Message)
 			if !isTopQuery {
 				continue
 			}
 			at := time.UnixMilli(*e.Timestamp)
-			before := at.Before(createdAt)
-			switch {
-			case before && plan == "":
-				emptyBefore++
-				if at.After(restartedAt) {
-					emptyAfterRestart++
-				}
-			case before:
-				plansBefore++
-			case plan != "":
-				plansAfter++
+			switch db {
+			case dbLate:
+				late.add(at, plan, life.restartedAt, life.createdAt)
+			case dbEarly:
+				// The cut-off is the PostgreSQL restart: plans cannot be read before it.
+				early.add(at, plan, life.restartedAt, life.restartedAt)
 			}
 		}
-		log.Printf("[plan events] attempt %d/%d: before %s: %d without a plan, %d with a plan; after: %d with a plan",
-			attempt+1, maxRetries, createdAt.Format(time.RFC3339), emptyBefore, plansBefore, plansAfter)
-		if plansAfter > 0 {
+		log.Printf("[plan events] attempt %d/%d: %s %+v, %s %+v", attempt+1, maxRetries, dbLate, late, dbEarly, early)
+		if late.plansAfter > 0 && early.plansAfter > 0 {
 			break
 		}
 	}
@@ -347,32 +446,64 @@ func (t *DbiPlansTestRunner) validatePlanEvents(restartedAt, createdAt time.Time
 	if lastErr != nil {
 		return append(results, failed("Top query events reported", lastErr))
 	}
-	if emptyBefore == 0 {
+	if late.emptyBefore == 0 {
 		results = append(results, failed("Top queries reported without plans while the extension was missing",
-			fmt.Errorf("no top query event with an empty plan in %s/%s before %s", rawEventsGroup, stream, createdAt.Format(time.RFC3339))))
+			fmt.Errorf("no %s top query event with an empty plan in %s/%s before %s", dbLate, rawEventsGroup, stream, life.createdAt.Format(time.RFC3339))))
 	} else {
 		results = append(results, passed("Top queries reported without plans while the extension was missing"))
 	}
-	if emptyAfterRestart == 0 {
+	if late.emptyAfterRestart == 0 {
 		results = append(results, failed("Top queries still reported after the PostgreSQL restart",
-			fmt.Errorf("no top query event between the PostgreSQL restart (%s) and CREATE EXTENSION (%s)",
-				restartedAt.Format(time.RFC3339), createdAt.Format(time.RFC3339))))
+			fmt.Errorf("no %s top query event between the PostgreSQL restart (%s) and CREATE EXTENSION (%s)",
+				dbLate, life.restartedAt.Format(time.RFC3339), life.createdAt.Format(time.RFC3339))))
 	} else {
 		results = append(results, passed("Top queries still reported after the PostgreSQL restart"))
 	}
-	if plansBefore > 0 {
+	if late.plansBefore > 0 {
 		results = append(results, failed("No plans before the extension was created",
-			fmt.Errorf("%d events carried a plan before pg_store_plans was created", plansBefore)))
+			fmt.Errorf("%d %s events carried a plan before pg_store_plans was created", late.plansBefore, dbLate)))
 	} else {
 		results = append(results, passed("No plans before the extension was created"))
 	}
-	if plansAfter == 0 {
+	if late.plansAfter == 0 {
 		results = append(results, failed("Plans reported after the extension was created",
-			fmt.Errorf("no event carried a plan after %s", createdAt.Format(time.RFC3339))))
+			fmt.Errorf("no %s event carried a plan after %s", dbLate, life.createdAt.Format(time.RFC3339))))
 	} else {
 		results = append(results, passed("Plans reported after the extension was created"))
 	}
+
+	if early.emptyBefore == 0 || early.plansBefore > 0 {
+		results = append(results, failed("No plans while the extension existed without its library",
+			fmt.Errorf("%s events before the PostgreSQL restart (%s): %d without a plan, %d with a plan; want some without and none with",
+				dbEarly, life.restartedAt.Format(time.RFC3339), early.emptyBefore, early.plansBefore)))
+	} else {
+		results = append(results, passed("No plans while the extension existed without its library"))
+	}
+	if early.plansAfter == 0 {
+		results = append(results, failed("Plans reported after PostgreSQL restarted with the library",
+			fmt.Errorf("no %s event carried a plan after the PostgreSQL restart (%s); queries seen before the restart may have been cached without a plan",
+				dbEarly, life.restartedAt.Format(time.RFC3339))))
+	} else {
+		results = append(results, passed("Plans reported after PostgreSQL restarted with the library"))
+	}
 	return results
+}
+
+// add classifies one top query event. Events before cutoff are counted as before, the
+// rest as after. Events without a plan between restartedAt and cutoff are also counted.
+func (c *planCounts) add(at time.Time, plan string, restartedAt, cutoff time.Time) {
+	before := at.Before(cutoff)
+	switch {
+	case before && plan == "":
+		c.emptyBefore++
+		if at.After(restartedAt) {
+			c.emptyAfterRestart++
+		}
+	case before:
+		c.plansBefore++
+	case plan != "":
+		c.plansAfter++
+	}
 }
 
 func TestDbiPlans(t *testing.T) {
@@ -393,23 +524,31 @@ func TestDbiPlans(t *testing.T) {
 	}
 }
 
-// topQueryPlan returns the postgresql.query_plan attribute of a raw events record.
-// Records are single-line OTLP JSON with flat dotted attribute keys, and the plan
-// is a string that is empty when no plan was collected. isTopQuery is false for
-// records that do not carry the attribute, such as query samples.
-func topQueryPlan(message string) (plan string, isTopQuery bool) {
+// topQueryEvent returns the database (db.namespace) and the postgresql.query_plan
+// attribute of a raw events record. Records are single-line OTLP JSON with flat dotted
+// attribute keys, and the plan is a string that is empty when no plan was collected.
+// isTopQuery is false for records that do not carry the plan attribute, such as query
+// samples.
+func topQueryEvent(message string) (database, plan string, isTopQuery bool) {
 	var record struct {
 		Attributes map[string]any `json:"attributes"`
 	}
 	if err := json.Unmarshal([]byte(message), &record); err != nil {
-		return "", false
+		return "", "", false
 	}
 	value, ok := record.Attributes["postgresql.query_plan"]
 	if !ok {
-		return "", false
+		return "", "", false
 	}
 	plan, _ = value.(string)
-	return plan, true
+	database, _ = record.Attributes["db.namespace"].(string)
+	return database, plan, true
+}
+
+// topQueryPlan returns the postgresql.query_plan attribute of a raw events record.
+func topQueryPlan(message string) (plan string, isTopQuery bool) {
+	_, plan, isTopQuery = topQueryEvent(message)
+	return plan, isTopQuery
 }
 
 // preloadAndRestartPostgres preloads pg_store_plans and restarts PostgreSQL. It runs
@@ -430,38 +569,51 @@ func preloadAndRestartPostgres() error {
 	return nil
 }
 
-func createExtension() error {
-	out, err := exec.Command("sudo", "-u", "postgres", "psql", "-d", "testdb",
+func createExtension(database string) error {
+	out, err := exec.Command("sudo", "-u", "postgres", "psql", "-d", database,
 		"-v", "ON_ERROR_STOP=1", "-c", "CREATE EXTENSION pg_store_plans").CombinedOutput()
-	log.Printf("CREATE EXTENSION output:\n%s", string(out))
+	log.Printf("CREATE EXTENSION in %s output:\n%s", database, string(out))
 	if err != nil {
-		return fmt.Errorf("CREATE EXTENSION pg_store_plans failed: %w", err)
+		return fmt.Errorf("CREATE EXTENSION pg_store_plans in %s failed: %w", database, err)
 	}
 	return nil
 }
 
-// countAgentLog returns how many lines of the agent log contain message.
-func countAgentLog(message string) (int, error) {
-	out, err := exec.Command("sudo", "grep", "-F", "-c", message, agentLogPath).Output()
+// countAgentLog returns how many lines of the agent log contain message. When database
+// is not empty, it counts only the lines that carry that database as a receiver log
+// field, which the agent writes as compact JSON, for example "database":"testdb".
+func countAgentLog(message, database string) (int, error) {
+	out, err := exec.Command("sudo", "grep", "-F", message, agentLogPath).Output()
 	if err != nil {
 		// grep exits 1 when nothing matched; any other failure is a real error.
 		var exitErr *exec.ExitError
 		if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
 			return 0, fmt.Errorf("grep %s: %w", agentLogPath, err)
 		}
+		return 0, nil
 	}
-	n, convErr := strconv.Atoi(strings.TrimSpace(string(out)))
-	if convErr != nil {
-		return 0, fmt.Errorf("parse grep count %q: %w", strings.TrimSpace(string(out)), convErr)
-	}
-	return n, nil
+	return countLines(string(out), database), nil
 }
 
-// waitForAgentLog polls the agent log until it contains message.
-func waitForAgentLog(message string, timeout time.Duration) error {
+// countLines counts the non-empty lines of out, or only the ones that carry database
+// as a log field when database is not empty. The closing quote keeps testdb from
+// matching testdb2.
+func countLines(out, database string) int {
+	needle := fmt.Sprintf("%q:%q", "database", database)
+	n := 0
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		if line != "" && (database == "" || strings.Contains(line, needle)) {
+			n++
+		}
+	}
+	return n
+}
+
+// waitForAgentLog polls the agent log until it contains message, for database when given.
+func waitForAgentLog(message, database string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for {
-		n, err := countAgentLog(message)
+		n, err := countAgentLog(message, database)
 		if err != nil {
 			log.Printf("waiting for %q: %v", message, err)
 		} else if n > 0 {
@@ -482,34 +634,34 @@ func failed(name string, reason error) status.TestResult {
 	return status.TestResult{Name: name, Status: status.FAILED, Reason: reason}
 }
 
-// pgbench runs pgbench against testdb over TCP as the non-superuser workload role.
+// pgbench runs pgbench over TCP as the non-superuser workload role.
 func pgbench(args ...string) *exec.Cmd {
 	cmd := exec.Command("pgbench", append([]string{"-h", "127.0.0.1", "-U", workloadUser}, args...)...)
 	cmd.Env = append(os.Environ(), "PGPASSWORD="+workloadPassword)
 	return cmd
 }
 
-func initWorkload() error {
-	log.Println("=== Initializing pgbench tables ===")
-	out, err := pgbench("-i", "testdb").CombinedOutput()
+func initWorkload(database string) error {
+	log.Printf("=== Initializing pgbench tables in %s ===", database)
+	out, err := pgbench("-i", database).CombinedOutput()
 	log.Printf("pgbench init output:\n%s", string(out))
 	if err != nil {
-		return fmt.Errorf("pgbench init failed: %w", err)
+		return fmt.Errorf("pgbench init in %s failed: %w", database, err)
 	}
 	return nil
 }
 
 // runWorkload runs pgbench in short runs until the duration has passed. A run that
 // fails, which happens while PostgreSQL restarts, is logged and followed by the next.
-func runWorkload(duration time.Duration) {
+func runWorkload(database string, duration time.Duration) {
 	end := time.Now().Add(duration)
-	log.Printf("=== Running pgbench in %d second runs for %s ===", workloadRunSeconds, duration)
+	log.Printf("=== Running pgbench in %s in %d second runs for %s ===", database, workloadRunSeconds, duration)
 	for time.Now().Before(end) {
-		out, err := pgbench("-c", "10", "-j", "2", "-T", strconv.Itoa(workloadRunSeconds), "testdb").CombinedOutput()
+		out, err := pgbench("-c", "10", "-j", "2", "-T", strconv.Itoa(workloadRunSeconds), database).CombinedOutput()
 		if err != nil {
 			log.Printf("pgbench run failed, retrying in 5 seconds: %v, output: %s", err, string(out))
 			time.Sleep(5 * time.Second)
 		}
 	}
-	log.Println("=== The workload finished ===")
+	log.Printf("=== The %s workload finished ===", database)
 }
