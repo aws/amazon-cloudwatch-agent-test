@@ -375,7 +375,7 @@ func GetEnvironmentMetaData() *MetaData {
 		return metaDataStorage
 	}
 
-	metaDataStorage := &(MetaData{})
+	metaDataStorage = &(MetaData{})
 	fillComputeType(metaDataStorage, registeredMetaDataStrings)
 	fillECSData(metaDataStorage, registeredMetaDataStrings)
 	fillEKSData(metaDataStorage, registeredMetaDataStrings)

@@ -4,9 +4,9 @@
       "resource": {
         "attributes": [
           {
-            "key": "service.name",
+            "key": "test_name",
             "value": {
-              "stringValue": "test-service"
+              "stringValue": "$TEST_NAME"
             }
           },
           {
@@ -20,19 +20,19 @@
       "scopeMetrics": [
         {
           "scope": {
-            "name": "my.library",
+            "name": "otel.config.test",
             "version": "1.0.0"
           },
           "metrics": [
             {
-              "name": "test_metric",
+              "name": "otel_config_test_metric",
               "unit": "1",
               "sum": {
                 "aggregationTemporality": 1,
                 "isMonotonic": true,
                 "dataPoints": [
                   {
-                    "asDouble": 0.0,
+                    "asDouble": 1.0,
                     "startTimeUnixNano": "$CURRENT_TIMESTAMP",
                     "timeUnixNano": "$CURRENT_TIMESTAMP"
                   }

@@ -1,0 +1,17 @@
+receivers:
+  filelog:
+    include:
+      - $LOG_FILE
+    start_at: beginning
+
+exporters:
+  awscloudwatchlogs:
+    log_group_name: "OtelConfigTest/$INSTANCE_ID"
+    log_retention: 1
+    log_stream_name: "fetch_yaml_append_yaml"
+
+service:
+  pipelines:
+    logs:
+      receivers: [filelog]
+      exporters: [awscloudwatchlogs]
