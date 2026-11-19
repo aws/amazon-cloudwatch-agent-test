@@ -35,7 +35,7 @@ resource "azurerm_kubernetes_cluster" "cwagent" {
 
   default_node_pool {
     name                        = "default"
-    node_count                  = local.is_filters ? 2 : var.aks_node_count
+    node_count                  = local.is_filters ? 2 : local.is_attr_limit ? 3 : var.aks_node_count
     vm_size                     = var.aks_node_vm_size
     os_disk_size_gb             = 50
     temporary_name_for_rotation = "tmpdefault"
@@ -81,17 +81,19 @@ locals {
   #   test_dir = ./test/azure/aks/containerinsights OTel Container Insights (plus KEDA and Karpenter)
   #   test_dir = ./test/azure/aks/standard          OTel Container Insights checked in depth, with test workloads
   #   test_dir = ./test/azure/aks/filters           the chart's otelFilters (namespaces, labels, metric names) on 2 nodes
+  #   test_dir = ./test/azure/aks/attr_limit        the attribute-limit processor on 3 nodes with many labels
   #   test_dir = ./test/azure/aks/gpu               NVIDIA GPU metrics on an AKS-managed GPU pool
   #   test_dir = ./test/azure/aks/gpudriver         NVIDIA GPU metrics on driver-install GPU pools
   is_ci         = var.test_dir == "./test/azure/aks/containerinsights"
   is_standard   = var.test_dir == "./test/azure/aks/standard"
   is_filters    = var.test_dir == "./test/azure/aks/filters"
+  is_attr_limit = var.test_dir == "./test/azure/aks/attr_limit"
   is_gpu        = var.test_dir == "./test/azure/aks/gpu"
   is_gpu_driver = var.test_dir == "./test/azure/aks/gpudriver"
   # Suites with GPU node pools.
   has_gpu = local.is_gpu || local.is_gpu_driver
   # Suites that run OTel Container Insights, and so the cluster-scraper as well as the node agent.
-  otel_ci = local.is_ci || local.is_standard || local.is_filters || local.has_gpu
+  otel_ci = local.is_ci || local.is_standard || local.is_filters || local.is_attr_limit || local.has_gpu
 
   # ---- filters suite ---------------------------------------------------------------------------
   # Copies terraform/eks/daemon/otel-filters. Node labels the nodeLabels filter keeps or removes (the two
@@ -133,6 +135,38 @@ locals {
         include: ["*", "karpenter.k8s.aws/instance-gpu-name"]
         exclude: ["filters-e2e-node-drop", "filters-e2e.example.com/*"]
   EOT
+
+  # ---- attr_limit suite ------------------------------------------------------------------------
+  # Copies terraform/eks/daemon/otel-attr-limit. The 3 nodes of the default pool get labels with kubectl
+  # (not node pool labels, so the label count does not depend on pool limits): sentinel labels that mark each
+  # drop tier, and padding labels that push the attribute count past the processor's limit of 150. low and mid
+  # carry 130+ node labels, high carries 40 and a pod with 138 labels, so the processor drops tiers on each.
+  # The eks.amazonaws.com labels are fixtures: EKS sets them on its own nodes.
+  al_tier1   = { "helm.sh/chart" = "test-chart", "release" = "test-release" }
+  al_tier2   = { "pod-template-generation" = "1" }
+  al_tier3   = { "karpenter.sh/sentinel-known" = "v", "nvidia.com/sentinel-known" = "v" }
+  al_tier4   = { "eks.amazonaws.com/capacityType" = "ON_DEMAND", "eks.amazonaws.com/nodegroup" = "attr-limit" }
+  al_tier6   = { "ci-test.example.com/sentinel-customer-a" = "v", "ci-test.example.com/sentinel-customer-b" = "v" }
+  al_pad_20  = { for i in range(1, 21) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
+  al_pad_108 = { for i in range(1, 109) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
+  al_pad_120 = { for i in range(1, 121) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
+  al_common  = merge(local.al_tier1, local.al_tier2, local.al_tier3, local.al_tier4, local.al_tier6)
+  al_labels = {
+    low  = merge(local.al_common, local.al_pad_108, { "ci-test.example.com/node-color" = "white", "ci-test.example.com/attr-limit-node" = "node-low" })
+    mid  = merge(local.al_common, local.al_pad_120, { "ci-test.example.com/node-color" = "white", "ci-test.example.com/attr-limit-node" = "node-mid" })
+    high = merge(local.al_common, local.al_pad_20, { "ci-test.example.com/node-color" = "white", "ci-test.example.com/attr-limit-node" = "node-high" })
+  }
+  # 135 padding pod labels + 3 explicit = 138 pod labels on the high deployment. aaa-sentinel-pod sorts before
+  # the padding labels so it is dropped first when the processor prunes the last tier.
+  # Each line carries its own indent (8 spaces, the depth of the other pod labels in the manifest below).
+  al_extra_pod_labels_yaml = {
+    low = ""
+    mid = ""
+    high = join("\n", concat(
+      ["        app.kubernetes.io/part-of: attr-limit-test", "        ci-test.example.com/aaa-sentinel-pod: v"],
+      [for i in range(1, 136) : "        ci-test.example.com/pod-pad-${format("%03d", i)}: v"],
+    ))
+  }
 
   # Must match serviceName in test/azure/aks/aks_test.go -- the test derives the expected log stream
   # and the trace query filter from it.
@@ -483,6 +517,7 @@ resource "helm_release" "aws_observability" {
     helm_release.nvidia_device_plugin,
     kubernetes_daemon_set_v1.nvidia_toolkit_ready,
     null_resource.ci_otlp_log_group_cleanup,
+    null_resource.attr_limit_node_labels,
   ]
 }
 
@@ -527,7 +562,7 @@ resource "null_resource" "restart_pods" {
 # Load generator (otlp): pushes OTLP to the agent's host port for 3 min
 #####################################################################
 resource "kubernetes_job_v1" "otlp_load" {
-  count = local.is_ci || local.is_standard || local.is_filters ? 0 : 1
+  count = local.is_ci || local.is_standard || local.is_filters || local.is_attr_limit ? 0 : 1
   metadata {
     name      = "otlp-load-generator"
     namespace = kubernetes_namespace.cwagent.metadata[0].name
@@ -725,7 +760,7 @@ resource "null_resource" "agent_diagnostics" {
     EOT
   }
 
-  depends_on = [null_resource.restart_pods, kubernetes_job_v1.otlp_load, null_resource.gpu_workload_ready, null_resource.standard_workload_ready, null_resource.filters_workload_ready, null_resource.ci_otlp_sender]
+  depends_on = [null_resource.restart_pods, kubernetes_job_v1.otlp_load, null_resource.gpu_workload_ready, null_resource.standard_workload_ready, null_resource.filters_workload_ready, null_resource.attr_limit_workload_ready, null_resource.ci_otlp_sender]
 }
 
 #####################################################################
@@ -1184,6 +1219,78 @@ resource "null_resource" "filters_workload_ready" {
 }
 
 #####################################################################
+# attr_limit suite: label the 3 nodes, then run one nginx pod on each.
+#####################################################################
+resource "null_resource" "attr_limit_node_labels" {
+  count      = local.is_attr_limit ? 1 : 0
+  depends_on = [local_sensitive_file.kubeconfig, azurerm_kubernetes_cluster.cwagent]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      # Wait for the 3 nodes of the default pool to register.
+      for i in $(seq 1 60); do
+        [ "$(kubectl --kubeconfig "$KC" get nodes --no-headers 2>/dev/null | grep -c ' Ready ')" -ge 3 ] && break
+        sleep 10
+      done
+      NODES=($(kubectl --kubeconfig "$KC" get nodes -o name | sort))
+      [ "$${#NODES[@]}" -ge 3 ] || { echo "want 3 nodes, got $${#NODES[@]}" >&2; exit 1; }
+      kubectl --kubeconfig "$KC" label --overwrite "$${NODES[0]}" ${join(" ", [for k, v in local.al_labels.low : "${k}=${v}"])}
+      kubectl --kubeconfig "$KC" label --overwrite "$${NODES[1]}" ${join(" ", [for k, v in local.al_labels.mid : "${k}=${v}"])}
+      kubectl --kubeconfig "$KC" label --overwrite "$${NODES[2]}" ${join(" ", [for k, v in local.al_labels.high : "${k}=${v}"])}
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+resource "null_resource" "attr_limit_nginx" {
+  for_each   = local.is_attr_limit ? toset(["low", "mid", "high"]) : toset([])
+  depends_on = [null_resource.attr_limit_node_labels]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      cat <<EOF | kubectl --kubeconfig "$KC" apply -f -
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: attr-limit-nginx-${each.key}
+        namespace: default
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: attr-limit-nginx-${each.key}
+        template:
+          metadata:
+            labels:
+              app: attr-limit-nginx-${each.key}
+      ${local.al_extra_pod_labels_yaml[each.key]}
+          spec:
+            nodeSelector:
+              ci-test.example.com/attr-limit-node: node-${each.key}
+            containers:
+            - name: nginx
+              image: public.ecr.aws/nginx/nginx:latest
+              ports:
+              - containerPort: 80
+      EOF
+      kubectl --kubeconfig "$KC" -n default rollout status deployment/attr-limit-nginx-${each.key} --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+# Waits 360 s for the workloads' telemetry to reach CloudWatch before go test (see standard_workload_ready).
+resource "null_resource" "attr_limit_workload_ready" {
+  count = local.is_attr_limit ? 1 : 0
+  provisioner "local-exec" {
+    command = "sleep 360"
+  }
+  depends_on = [null_resource.restart_pods, null_resource.attr_limit_nginx]
+}
+
+#####################################################################
 # Run Go integration test from the runner (validates CloudWatch)
 #####################################################################
 resource "null_resource" "integration_test" {
@@ -1215,6 +1322,7 @@ resource "null_resource" "integration_test" {
     null_resource.gpu_workload_ready,
     null_resource.standard_workload_ready,
     null_resource.filters_workload_ready,
+    null_resource.attr_limit_workload_ready,
     null_resource.agent_diagnostics,
   ]
 }
