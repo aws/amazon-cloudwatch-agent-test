@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -84,4 +85,44 @@ func buildGroundTruth() (*k8sGroundTruth, error) {
 		gt.pods[p.Namespace+"/"+p.Name] = p
 	}
 	return gt, nil
+}
+
+// imageTagFromPod finds a pod by namespace+label and returns the image tag of its first container.
+func imageTagFromPod(t *testing.T, gt *k8sGroundTruth, namespace, labelKey, labelValue string) string {
+	t.Helper()
+	for _, p := range gt.pods {
+		if p.Namespace != namespace {
+			continue
+		}
+		if v, ok := p.Labels[labelKey]; ok && v == labelValue && len(p.Spec.Containers) > 0 {
+			image := p.Spec.Containers[0].Image
+			if idx := strings.LastIndex(image, ":"); idx != -1 {
+				return image[idx+1:]
+			}
+		}
+	}
+	t.Logf("WARNING: no pod found with %s=%s in %s", labelKey, labelValue, namespace)
+	return ""
+}
+
+// k8sServerVersion returns the Kubernetes API server version string.
+func k8sServerVersion(t *testing.T) string {
+	t.Helper()
+	kubeconfig := os.Getenv("KUBECONFIG")
+	if kubeconfig == "" {
+		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+	}
+	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		t.Fatalf("building kubeconfig: %v", err)
+	}
+	clientset, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		t.Fatalf("creating K8s clientset: %v", err)
+	}
+	sv, err := clientset.Discovery().ServerVersion()
+	if err != nil {
+		t.Fatalf("getting K8s server version: %v", err)
+	}
+	return sv.GitVersion
 }

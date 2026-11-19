@@ -179,3 +179,7 @@ func podScopedCadvisorNames() []string {
 
 // Instrumentation scope name constants.
 const scopePrometheus = "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+
+// nodeColorLabel is the custom node label the stack puts on the default pool, and nodeColorBlue its value.
+const nodeColorLabel = "k8s.node.label.ci-test.example.com/node-color"
+const nodeColorBlue = "blue"
