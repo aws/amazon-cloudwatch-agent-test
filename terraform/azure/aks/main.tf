@@ -35,7 +35,7 @@ resource "azurerm_kubernetes_cluster" "cwagent" {
 
   default_node_pool {
     name                        = "default"
-    node_count                  = var.aks_node_count
+    node_count                  = local.is_filters ? 2 : var.aks_node_count
     vm_size                     = var.aks_node_vm_size
     os_disk_size_gb             = 50
     temporary_name_for_rotation = "tmpdefault"
@@ -43,7 +43,10 @@ resource "azurerm_kubernetes_cluster" "cwagent" {
 
     # The standard suite pins its test workloads to this label, as the EKS stack does with its node group
     # (the EKS value is "blue"), and the tests read it back as a custom node label.
-    node_labels = local.is_standard ? { "ci-test.example.com/node-color" = "blue" } : {}
+    node_labels = merge(
+      local.is_standard ? { "ci-test.example.com/node-color" = "blue" } : {},
+      local.is_filters ? local.filters_node_labels : {},
+    )
   }
 
   network_profile {
@@ -77,16 +80,59 @@ locals {
   #   test_dir = ./test/azure/aks                   OTLP: default:otel agent plus a load generator
   #   test_dir = ./test/azure/aks/containerinsights OTel Container Insights (plus KEDA and Karpenter)
   #   test_dir = ./test/azure/aks/standard          OTel Container Insights checked in depth, with test workloads
+  #   test_dir = ./test/azure/aks/filters           the chart's otelFilters (namespaces, labels, metric names) on 2 nodes
   #   test_dir = ./test/azure/aks/gpu               NVIDIA GPU metrics on an AKS-managed GPU pool
   #   test_dir = ./test/azure/aks/gpudriver         NVIDIA GPU metrics on driver-install GPU pools
   is_ci         = var.test_dir == "./test/azure/aks/containerinsights"
   is_standard   = var.test_dir == "./test/azure/aks/standard"
+  is_filters    = var.test_dir == "./test/azure/aks/filters"
   is_gpu        = var.test_dir == "./test/azure/aks/gpu"
   is_gpu_driver = var.test_dir == "./test/azure/aks/gpudriver"
   # Suites with GPU node pools.
   has_gpu = local.is_gpu || local.is_gpu_driver
   # Suites that run OTel Container Insights, and so the cluster-scraper as well as the node agent.
-  otel_ci = local.is_ci || local.is_standard || local.has_gpu
+  otel_ci = local.is_ci || local.is_standard || local.is_filters || local.has_gpu
+
+  # ---- filters suite ---------------------------------------------------------------------------
+  # Copies terraform/eks/daemon/otel-filters. Node labels the nodeLabels filter keeps or removes (the two
+  # karpenter.k8s.aws labels are fixtures: the cluster runs no Karpenter), the test namespaces (the first two
+  # are kept by the namespaces filter; filters-exact-other starts with the exact include entry
+  # filters-exact, so it is kept only if the exact entry wrongly matches as a prefix) and the stand-in
+  # inference servers' namespaces (one kept, one dropped).
+  filters_node_labels = {
+    "filters-e2e-node-keep"                = "v"
+    "filters-e2e-node-drop"                = "v"
+    "filters-e2e.example.com/drop-a"       = "v"
+    "filters-e2e.example.com/drop-b"       = "v"
+    "karpenter.k8s.aws/instance-gpu-name"  = "t4"
+    "karpenter.k8s.aws/instance-gpu-count" = "1"
+  }
+  filters_namespaces           = ["filters-keep-a", "filters-exact", "filters-keep-secret-b", "filters-exact-other"]
+  filters_inference_namespaces = ["filters-keep-a", "filters-keep-secret-b"]
+  filters_sender_script        = "${path.module}/../../otlp_service_sender.sh"
+  # otelFilters values are lists, so they go in as YAML instead of as --set strings.
+  filters_values_yaml = <<-EOT
+    otelContainerInsights:
+      solutions:
+        vllm:
+          enabled: true
+        knative:
+          dataPlane:
+            enabled: true
+    otelFilters:
+      namespaces:
+        include: ["filters-keep-*", "filters-exact"]
+        exclude: ["filters-keep-secret*"]
+      metricNames:
+        include: ["container_*", "kube_pod_info", "k8s.pod.*", "node_load1", "vllm:num_requests_running", "revision_request_count", "otlp_e2e_requests"]
+        exclude: ["container_network_*", "container_memory_usage_bytes"]
+      podLabels:
+        include: ["app", "filters-e2e-keep*", "filters-e2e.example.com/keep*", "pod-template-hash"]
+        exclude: ["filters-e2e-keep-secret"]
+      nodeLabels:
+        include: ["*", "karpenter.k8s.aws/instance-gpu-name"]
+        exclude: ["filters-e2e-node-drop", "filters-e2e.example.com/*"]
+  EOT
 
   # Must match serviceName in test/azure/aks/aks_test.go -- the test derives the expected log stream
   # and the trace query filter from it.
@@ -144,6 +190,11 @@ locals {
     }
     # Same chart values as containerinsights. Keda and Karpenter stay stubs-only (not deployed here yet).
     "./test/azure/aks/standard" = {
+      "otelContainerInsights.enabled"      = "true"
+      "otelContainerInsights.logs.enabled" = "true"
+    }
+    # The otelFilters lists are in local.filters_values_yaml (helm_release.values).
+    "./test/azure/aks/filters" = {
       "otelContainerInsights.enabled"      = "true"
       "otelContainerInsights.logs.enabled" = "true"
     }
@@ -404,8 +455,8 @@ data "external" "clone_helm_chart" {
   program = ["bash", "-c", <<-EOT
     rm -rf ./helm-charts
     git clone -b ${var.helm_chart_branch} ${var.helm_chart_repo} ./helm-charts
-    %{~if local.is_ci~}
-    # The OTLP checks of the containerinsights suite need the chart's OTLP endpoint. A chart without it
+    %{~if local.is_ci || local.is_filters~}
+    # The OTLP checks of the containerinsights and filters suites need the chart's OTLP endpoint. A chart without it
     # would install fine and fail them later, so stop here with the reason.
     if ! grep -qE '^otlp:' ./helm-charts/charts/amazon-cloudwatch-observability/values.yaml; then
       echo '${var.helm_chart_repo}@${var.helm_chart_branch} has no top-level otlp block in values.yaml' >&2
@@ -422,7 +473,8 @@ resource "helm_release" "aws_observability" {
   chart     = local.chart_dir
   namespace = kubernetes_namespace.cwagent.metadata[0].name
 
-  set = [for name, value in local.helm_values : { name = name, value = value }]
+  set    = [for name, value in local.helm_values : { name = name, value = value }]
+  values = local.is_filters ? [local.filters_values_yaml] : []
 
   depends_on = [
     data.external.clone_helm_chart,
@@ -475,7 +527,7 @@ resource "null_resource" "restart_pods" {
 # Load generator (otlp): pushes OTLP to the agent's host port for 3 min
 #####################################################################
 resource "kubernetes_job_v1" "otlp_load" {
-  count = local.is_ci || local.is_standard ? 0 : 1
+  count = local.is_ci || local.is_standard || local.is_filters ? 0 : 1
   metadata {
     name      = "otlp-load-generator"
     namespace = kubernetes_namespace.cwagent.metadata[0].name
@@ -558,7 +610,7 @@ resource "null_resource" "ci_otlp_sender" {
 # resource, so Terraform uninstalls the chart (and with it the agents that write the group) first, and nothing
 # recreates the group after the delete. It runs on destroy, so it also runs when go test fails or is killed.
 resource "null_resource" "ci_otlp_log_group_cleanup" {
-  count = local.is_ci ? 1 : 0
+  count = local.is_ci || local.is_filters ? 1 : 0
 
   triggers = {
     log_group = "/aws/cwagent/${azurerm_kubernetes_cluster.cwagent.name}/otlp"
@@ -673,7 +725,7 @@ resource "null_resource" "agent_diagnostics" {
     EOT
   }
 
-  depends_on = [null_resource.restart_pods, kubernetes_job_v1.otlp_load, null_resource.gpu_workload_ready, null_resource.standard_workload_ready, null_resource.ci_otlp_sender]
+  depends_on = [null_resource.restart_pods, kubernetes_job_v1.otlp_load, null_resource.gpu_workload_ready, null_resource.standard_workload_ready, null_resource.filters_workload_ready, null_resource.ci_otlp_sender]
 }
 
 #####################################################################
@@ -868,6 +920,270 @@ resource "null_resource" "standard_workload_ready" {
 }
 
 #####################################################################
+# Test workloads for the filters suite. They copy terraform/eks/daemon/otel-filters: one logging
+# deployment per namespace with one pod on each of the 2 nodes (so every node agent sees a kept and a
+# dropped namespace), each with an OTLP sender container that posts through the cloudwatch-agent Service,
+# the pod labels the podLabels filter keeps or drops, stand-in vLLM and Knative servers, and a host log
+# writer. The tests read their output from CloudWatch.
+#####################################################################
+resource "null_resource" "filters_workloads" {
+  for_each   = local.is_filters ? toset(local.filters_namespaces) : toset([])
+  depends_on = [local_sensitive_file.kubeconfig, azurerm_kubernetes_cluster.cwagent]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      kubectl --kubeconfig "$KC" create namespace ${each.key} --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      kubectl --kubeconfig "$KC" -n ${each.key} create configmap otlp-e2e-sender \
+        --from-file=sender.sh=${local.filters_sender_script} --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      cat <<'EOF' | kubectl --kubeconfig "$KC" apply -f -
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: filters-e2e
+        namespace: ${each.key}
+      spec:
+        replicas: 2
+        selector:
+          matchLabels:
+            app: filters-e2e
+        template:
+          metadata:
+            labels:
+              app: filters-e2e
+              filters-e2e-keep-a: v
+              filters-e2e-keep-secret: v
+              filters-e2e-other: v
+              filters-e2e.example.com/keep-x: v
+              filters-e2e-keep-secret-x: v
+              app-extra: v
+          spec:
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app: filters-e2e
+                  topologyKey: kubernetes.io/hostname
+            containers:
+            - name: logger
+              image: busybox:1.36
+              command: ["sh", "-c", "while true; do echo otel-filters-e2e ${each.key}; sleep 5; done"]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+            - name: otlp-sender
+              image: curlimages/curl:8.8.0
+              command: ["sh", "/sender/sender.sh"]
+              env:
+              - name: OTLP_CASE
+                value: ${each.key}
+              - name: OTLP_METRICS
+                value: otlp_e2e_requests otlp_e2e_unlisted
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: sender
+                mountPath: /sender
+            volumes:
+            - name: sender
+              configMap:
+                name: otlp-e2e-sender
+      EOF
+      kubectl --kubeconfig "$KC" -n ${each.key} rollout status deployment/filters-e2e --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+# Stand-in inference servers: each pod looks like a KServe predictor in Serverless mode. The vLLM scrape keeps
+# the kserve-container of a pod with the serving.kserve.io/inferenceservice label and component=predictor; the
+# Knative data plane scrape keeps the port named http-usermetric of a pod with the serving.knative.dev/revision
+# label. Each container is nginx serving a fixed Prometheus text file at /metrics.
+resource "null_resource" "filters_inference_stubs" {
+  for_each   = local.is_filters ? toset(local.filters_inference_namespaces) : toset([])
+  depends_on = [null_resource.filters_workloads]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      cat <<'EOF' | kubectl --kubeconfig "$KC" apply -f -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: filters-e2e-inference
+        namespace: ${each.key}
+      data:
+        vllm.conf: |
+          events {}
+          http {
+            access_log off;
+            default_type "text/plain; version=0.0.4";
+            server {
+              listen 8080;
+              root /stub/vllm;
+            }
+          }
+        knative.conf: |
+          events {}
+          http {
+            access_log off;
+            default_type "text/plain; version=0.0.4";
+            server {
+              listen 9091;
+              root /stub/knative;
+            }
+          }
+        vllm-metrics: |
+          # HELP vllm:num_requests_running Number of requests in model execution batches.
+          # TYPE vllm:num_requests_running gauge
+          vllm:num_requests_running{model_name="filters-e2e"} 1
+        knative-metrics: |
+          # HELP revision_request_count The number of requests that are routed to queue-proxy.
+          # TYPE revision_request_count counter
+          revision_request_count{response_code="200"} 1
+      ---
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: filters-e2e-inference
+        namespace: ${each.key}
+      spec:
+        replicas: 2
+        selector:
+          matchLabels:
+            app: filters-e2e-inference
+        template:
+          metadata:
+            labels:
+              app: filters-e2e-inference
+              component: predictor
+              serving.kserve.io/inferenceservice: filters-e2e
+              serving.knative.dev/revision: filters-e2e-00001
+          spec:
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app: filters-e2e-inference
+                  topologyKey: kubernetes.io/hostname
+            containers:
+            - name: kserve-container
+              image: nginx:1.27-alpine
+              command: ["nginx", "-c", "/stub/vllm.conf", "-g", "daemon off;"]
+              ports:
+              - containerPort: 8080
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: stub
+                mountPath: /stub
+            - name: queue-proxy
+              image: nginx:1.27-alpine
+              command: ["nginx", "-c", "/stub/knative.conf", "-g", "daemon off;"]
+              ports:
+              - name: http-usermetric
+                containerPort: 9091
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: stub
+                mountPath: /stub
+            volumes:
+            - name: stub
+              configMap:
+                name: filters-e2e-inference
+                items:
+                - key: vllm.conf
+                  path: vllm.conf
+                - key: knative.conf
+                  path: knative.conf
+                - key: vllm-metrics
+                  path: vllm/metrics
+                - key: knative-metrics
+                  path: knative/metrics
+      EOF
+      kubectl --kubeconfig "$KC" -n ${each.key} rollout status deployment/filters-e2e-inference --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+# Host log writer: a marker line in /var/log/messages on every node, so the host logs pipeline has data.
+# The namespace is not in the namespaces include list, so its own metrics and logs are dropped.
+resource "null_resource" "filters_host_log_writer" {
+  count      = local.is_filters ? 1 : 0
+  depends_on = [local_sensitive_file.kubeconfig, azurerm_kubernetes_cluster.cwagent]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      cat <<'EOF' | kubectl --kubeconfig "$KC" apply -f -
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: filters-host
+      ---
+      apiVersion: apps/v1
+      kind: DaemonSet
+      metadata:
+        name: filters-e2e-host
+        namespace: filters-host
+      spec:
+        selector:
+          matchLabels:
+            app: filters-e2e-host
+        template:
+          metadata:
+            labels:
+              app: filters-e2e-host
+          spec:
+            containers:
+            - name: writer
+              image: busybox:1.36
+              command: ["sh", "-c", "while true; do echo otel-filters-e2e host >> /host/messages; sleep 5; done"]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: messages
+                mountPath: /host/messages
+            volumes:
+            - name: messages
+              hostPath:
+                path: /var/log/messages
+                type: FileOrCreate
+      EOF
+      kubectl --kubeconfig "$KC" -n filters-host rollout status daemonset/filters-e2e-host --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+# Waits 360 s for the workloads' telemetry to reach CloudWatch before go test (see standard_workload_ready).
+resource "null_resource" "filters_workload_ready" {
+  count = local.is_filters ? 1 : 0
+  provisioner "local-exec" {
+    command = "sleep 360"
+  }
+  depends_on = [
+    null_resource.restart_pods,
+    null_resource.filters_workloads,
+    null_resource.filters_inference_stubs,
+    null_resource.filters_host_log_writer,
+  ]
+}
+
+#####################################################################
 # Run Go integration test from the runner (validates CloudWatch)
 #####################################################################
 resource "null_resource" "integration_test" {
@@ -898,6 +1214,7 @@ resource "null_resource" "integration_test" {
     null_resource.ci_otlp_sender,
     null_resource.gpu_workload_ready,
     null_resource.standard_workload_ready,
+    null_resource.filters_workload_ready,
     null_resource.agent_diagnostics,
   ]
 }
