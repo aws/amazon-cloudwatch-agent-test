@@ -74,7 +74,11 @@ func TestDCGMHostAttributes(t *testing.T) {
 }
 
 // TestDCGMScrapePath validates the metrics come through the chart's dcgm-exporter scrape job (the
-// exporter pod on :9400), not the AKS host DCGM job used on managed GPU pools.
+// exporter pod on :9400), not the AKS host DCGM job used on managed GPU pools (:19400).
+//
+// The port is the reliable marker. service.name is not: the chart's service identity chain gives a series
+// that is attributed to a pod the name of that pod's workload (multi-gpu-burn on the busy node), and only a
+// series with no pod keeps the scrape job's name (dcgm-exporter on the idle node).
 func TestDCGMScrapePath(t *testing.T) {
 	t.Parallel()
 	for _, metricName := range dcgmMetricNamesList {
@@ -85,7 +89,12 @@ func TestDCGMScrapePath(t *testing.T) {
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available (no GPU nodes?)", metricName)
 			for _, r := range results {
-				require.Equal(t, "dcgm-exporter", r.Labels.Resource["service.name"], "%s service.name", metricName)
+				require.Equal(t, "9400", r.Labels.Resource["server.port"], "%s server.port", metricName)
+				require.Equal(t, "dcgm", r.Labels.Instrumentation["cloudwatch.pipeline"], "%s cloudwatch.pipeline", metricName)
+				if r.Labels.Resource["k8s.pod.name"] == "" {
+					require.Equal(t, "dcgm-exporter", r.Labels.Resource["service.name"],
+						"%s service.name of a series with no pod", metricName)
+				}
 			}
 		})
 	}
