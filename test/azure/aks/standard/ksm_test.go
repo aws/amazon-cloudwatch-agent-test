@@ -119,12 +119,9 @@ func parseAZFromProviderID(providerID string) (string, error) {
 func requireAKSCloudAttributes(t *testing.T, metricName string, res map[string]string) {
 	t.Helper()
 	require.Equal(t, "azure", res["cloud.provider"], "%s cloud.provider", metricName)
-	// Two agent builds write to the same cluster for a short time: the chart's default release image
-	// (1.300073.0b1828, cloud.platform=azure_aks) runs until the stack patches in the image under test
-	// (7b574ef5, version "Unknown", cloud.platform=azure.aks). The release agent's series stay visible to
-	// a query for about 5 minutes after its last datapoint, so a test that runs soon after the swap sees
-	// both. Accept both until the stack waits long enough for the old series to age out.
-	require.Contains(t, []string{"azure.aks", "azure_aks"}, res["cloud.platform"], "%s cloud.platform", metricName)
+	// The chart default agent image and the image under test are the same release build, so only one
+	// spelling is expected.
+	require.Equal(t, "azure.aks", res["cloud.platform"], "%s cloud.platform", metricName)
 	require.Equal(t, env.AzureLocation, res["cloud.region"], "%s cloud.region", metricName)
 	require.Equal(t, env.AzureResourceGroup, res["azure.resourcegroup.name"], "%s azure.resourcegroup.name", metricName)
 	require.NotEmpty(t, res["cloud.account.id"], "%s cloud.account.id", metricName)

@@ -150,7 +150,7 @@ func TestCloudProviderIsAWS(t *testing.T) {
 func TestCloudPlatformIsEKS(t *testing.T) {
 	perHostMetric(t, func(t *testing.T, metricName string, l map[string]string) {
 		p := l["cloud.platform"]
-		require.True(t, p == "azure.aks" || p == "azure_aks", "%s cloud.platform=%q, want azure.aks", metricName, p)
+		require.True(t, p == "azure.aks", "%s cloud.platform=%q, want azure.aks", metricName, p)
 	})
 }
 

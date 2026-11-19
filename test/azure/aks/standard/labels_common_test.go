@@ -197,7 +197,7 @@ func TestCloudResourceDetection(t *testing.T) {
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
 				platform := r.Labels.Resource["cloud.platform"]
-				require.True(t, platform == "azure.aks" || platform == "azure_aks",
+				require.True(t, platform == "azure.aks",
 					"%s cloud.platform=%q, want azure.aks", metricName, platform)
 			}
 		})
