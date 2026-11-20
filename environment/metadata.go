@@ -45,6 +45,8 @@ type MetaData struct {
 	AzureResourceGroup                          string
 	AzureLocation                               string
 	GKEClusterName                              string
+	GCPProject                                  string
+	GCPZone                                     string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -98,6 +100,8 @@ type MetaDataStrings struct {
 	AzureResourceGroup                          string
 	AzureLocation                               string
 	GKEClusterName                              string
+	GCPProject                                  string
+	GCPZone                                     string
 	ProxyUrl                                    string
 	AssumeRoleArn                               string
 	InstanceArn                                 string
@@ -167,6 +171,8 @@ func registerAzureVMData(d *MetaDataStrings) {
 
 func registerGKEData(d *MetaDataStrings) {
 	flag.StringVar(&(d.GKEClusterName), "gkeClusterName", "", "GKE cluster name")
+	flag.StringVar(&(d.GCPProject), "gcpProject", "", "expected cloud.account.id resource attribute (GCP project ID)")
+	flag.StringVar(&(d.GCPZone), "gcpZone", "", "expected cloud.availability_zone resource attribute (GCP zone, e.g. us-east1-c)")
 }
 
 func registerEKSData(d *MetaDataStrings) {
@@ -395,6 +401,8 @@ func GetEnvironmentMetaData() *MetaData {
 	metaDataStorage.AzureResourceGroup = registeredMetaDataStrings.AzureResourceGroup
 	metaDataStorage.AzureLocation = registeredMetaDataStrings.AzureLocation
 	metaDataStorage.GKEClusterName = registeredMetaDataStrings.GKEClusterName
+	metaDataStorage.GCPProject = registeredMetaDataStrings.GCPProject
+	metaDataStorage.GCPZone = registeredMetaDataStrings.GCPZone
 	metaDataStorage.InstancePlatform = registeredMetaDataStrings.InstancePlatform
 	metaDataStorage.AgentStartCommand = registeredMetaDataStrings.AgentStartCommand
 	metaDataStorage.EksGpuType = registeredMetaDataStrings.EksGpuType

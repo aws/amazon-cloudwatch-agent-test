@@ -34,6 +34,10 @@ resource "google_container_cluster" "cwagent" {
     machine_type = var.gke_node_machine_type
     disk_size_gb = 50
     oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+
+    # The standard suite pins its test workloads to this label, as the EKS stack does with its node
+    # group (the EKS value is "blue"), and the tests read it back as a custom node label.
+    labels = local.is_standard ? { "ci-test.example.com/node-color" = "blue" } : {}
   }
 }
 
@@ -62,11 +66,6 @@ locals {
   namespace            = "amazon-cloudwatch"
   service_account_name = "cloudwatch-agent"
   cwagent_role_name    = "cwa-gke-integ-role-${module.common.testing_id}"
-
-  # Must match serviceName in test/gcp/gke/gke_test.go -- the test derives the expected log stream
-  # and the trace query filter from it.
-  load_gen_service_name     = "gke-otlp-test-service"
-  load_gen_duration_seconds = 180
 }
 
 data "aws_iam_policy_document" "cwagent_assume_role" {
@@ -190,20 +189,45 @@ resource "local_sensitive_file" "kubeconfig" {
 locals {
   kubectl = "kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n ${local.namespace}"
 
-  # The suite validates default:otel over OTLP only. Container Insights and Application Signals are
-  # out of scope, and the chart's fluent-bit has no GKE web-identity wiring, so container logs are off.
+  # ---- Which test suite this run is for -------------------------------------------------------
+  # The same stack serves every GKE suite. var.test_dir selects the suite, and the flags below switch
+  # the optional resources on or off with `count`.
+  #   test_dir = ./test/gcp/gke          OTLP: default:otel agent plus a load generator
+  #   test_dir = ./test/gcp/gke/standard OTel Container Insights checked in depth, with test workloads
+  is_standard = var.test_dir == "./test/gcp/gke/standard"
+
+  # Must match serviceName in test/gcp/gke/gke_test.go -- the test derives the expected log stream
+  # and the trace query filter from it.
+  load_gen_service_name     = "gke-otlp-test-service"
+  load_gen_duration_seconds = 180
+
+  # Chart values that differ per suite, keyed by test_dir, merged over the common values below.
+  # Application Signals and container logs stay off for every suite: Application Signals has no GKE
+  # support in the chart, and the chart's fluent-bit has no GKE web-identity wiring.
+  suite_helm_values = {
+    "./test/gcp/gke" = {
+      "agent.config"                  = "default:otel"
+      "otelContainerInsights.enabled" = "false"
+    }
+    "./test/gcp/gke/standard" = {
+      "otelContainerInsights.enabled"      = "true"
+      "otelContainerInsights.logs.enabled" = "true"
+    }
+  }
+
+  # Final chart values, in increasing priority: common values, then the suite's values, then
+  # var.helm_set_values (anything passed on the command line wins).
   helm_values = merge(
     {
-      "clusterName"                   = google_container_cluster.cwagent.name
-      "region"                        = var.region
-      "k8sMode"                       = "GKE"
-      "roleArn"                       = aws_iam_role.cwagent.arn
-      "agent.config"                  = "default:otel"
-      "applicationSignals.enabled"    = "false"
-      "containerInsights.enabled"     = "false"
-      "otelContainerInsights.enabled" = "false"
-      "containerLogs.enabled"         = "false"
+      "clusterName"                = google_container_cluster.cwagent.name
+      "region"                     = var.region
+      "k8sMode"                    = "GKE"
+      "roleArn"                    = aws_iam_role.cwagent.arn
+      "applicationSignals.enabled" = "false"
+      "containerInsights.enabled"  = "false"
+      "containerLogs.enabled"      = "false"
     },
+    local.suite_helm_values[var.test_dir],
     var.helm_set_values,
   )
 }
@@ -264,6 +288,7 @@ resource "null_resource" "restart_pods" {
 #####################################################################
 # See otlp_load_generator.sh for what the payloads carry and why.
 resource "kubernetes_job_v1" "otlp_load" {
+  count = local.is_standard ? 0 : 1
   metadata {
     name      = "otlp-load-generator"
     namespace = kubernetes_namespace.cwagent.metadata[0].name
@@ -307,6 +332,195 @@ resource "kubernetes_job_v1" "otlp_load" {
 }
 
 #####################################################################
+# Test workloads for the standard suite. They copy terraform/eks/daemon/otel (and the AKS standard
+# suite), so the kube-state-metrics workload metrics (statefulset, job, cronjob, replicaset,
+# deployment) have data and the tests have known workloads to compare against. They land on the
+# default pool, which carries the node-color=blue label in this suite.
+#####################################################################
+resource "kubernetes_deployment_v1" "nginx_test" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "nginx-test"
+    namespace = "default"
+  }
+  spec {
+    replicas = 1
+    selector { match_labels = { app = "nginx-test" } }
+    template {
+      metadata { labels = { app = "nginx-test" } }
+      spec {
+        container {
+          name  = "nginx"
+          image = "public.ecr.aws/nginx/nginx:latest"
+          port { container_port = 80 }
+        }
+      }
+    }
+  }
+  depends_on = [google_container_cluster.cwagent]
+}
+
+resource "kubernetes_service_v1" "ksm_statefulset_headless" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "ksm-test-statefulset"
+    namespace = "default"
+  }
+  spec {
+    cluster_ip = "None"
+    selector   = { app = "ksm-test-statefulset" }
+    port {
+      port = 80
+      name = "placeholder"
+    }
+  }
+  depends_on = [google_container_cluster.cwagent]
+}
+
+resource "kubernetes_stateful_set_v1" "ksm_statefulset" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "ksm-test-statefulset"
+    namespace = "default"
+  }
+  spec {
+    replicas     = 1
+    service_name = kubernetes_service_v1.ksm_statefulset_headless[0].metadata[0].name
+    selector { match_labels = { app = "ksm-test-statefulset" } }
+    template {
+      metadata { labels = { app = "ksm-test-statefulset" } }
+      spec {
+        node_selector = { "ci-test.example.com/node-color" = "blue" }
+        container {
+          name  = "pause"
+          image = "registry.k8s.io/pause:3.9"
+          resources { requests = { cpu = "10m", memory = "16Mi" } }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_cron_job_v1" "ksm_cronjob" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "ksm-test-cronjob"
+    namespace = "default"
+  }
+  spec {
+    schedule                      = "*/5 * * * *"
+    successful_jobs_history_limit = 1
+    failed_jobs_history_limit     = 1
+    job_template {
+      metadata {}
+      spec {
+        template {
+          metadata { labels = { app = "ksm-test-cronjob" } }
+          spec {
+            node_selector  = { "ci-test.example.com/node-color" = "blue" }
+            restart_policy = "Never"
+            container {
+              name    = "echo"
+              image   = "busybox:1.36"
+              command = ["echo", "ksm-test"]
+              resources { requests = { cpu = "10m", memory = "16Mi" } }
+            }
+          }
+        }
+      }
+    }
+  }
+  depends_on = [google_container_cluster.cwagent]
+}
+
+resource "kubernetes_job_v1" "ksm_job" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "ksm-test-job"
+    namespace = "default"
+  }
+  spec {
+    ttl_seconds_after_finished = 86400
+    template {
+      metadata { labels = { app = "ksm-test-job" } }
+      spec {
+        node_selector  = { "ci-test.example.com/node-color" = "blue" }
+        restart_policy = "Never"
+        container {
+          name    = "echo"
+          image   = "busybox:1.36"
+          command = ["echo", "ksm-test"]
+          resources { requests = { cpu = "10m", memory = "16Mi" } }
+        }
+      }
+    }
+  }
+  depends_on = [google_container_cluster.cwagent]
+}
+
+# The kubernetes provider has no ReplicaSet resource, so apply one with kubectl.
+resource "null_resource" "ksm_replicaset" {
+  count      = local.is_standard ? 1 : 0
+  depends_on = [google_container_cluster.cwagent, local_sensitive_file.kubeconfig]
+  provisioner "local-exec" {
+    command = <<-EOT
+      cat <<'EOF' | kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' apply -f -
+      apiVersion: apps/v1
+      kind: ReplicaSet
+      metadata:
+        name: ksm-test-replicaset
+        namespace: default
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: ksm-test-replicaset
+        template:
+          metadata:
+            labels:
+              app: ksm-test-replicaset
+          spec:
+            nodeSelector:
+              ci-test.example.com/node-color: blue
+            containers:
+            - name: pause
+              image: registry.k8s.io/pause:3.9
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+      EOF
+    EOT
+  }
+}
+
+# Waits for the workloads, then 240 s for metrics to reach CloudWatch, as the EKS and AKS stacks do
+# before go test. A workload that is not ready does not stop the apply, so diagnostics and test
+# results still appear.
+resource "null_resource" "standard_workload_ready" {
+  count = local.is_standard ? 1 : 0
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n default rollout status deployment/nginx-test --timeout=300s \
+        || echo "nginx-test not ready; continuing to diagnostics and tests"
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n default rollout status statefulset/ksm-test-statefulset --timeout=300s \
+        || echo "ksm-test-statefulset not ready; continuing to diagnostics and tests"
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n default wait --for=condition=complete job/ksm-test-job --timeout=300s \
+        || echo "ksm-test-job not complete; continuing to diagnostics and tests"
+      sleep 240
+    EOT
+  }
+  depends_on = [
+    null_resource.restart_pods,
+    kubernetes_deployment_v1.nginx_test,
+    kubernetes_stateful_set_v1.ksm_statefulset,
+    kubernetes_cron_job_v1.ksm_cronjob,
+    kubernetes_job_v1.ksm_job,
+    null_resource.ksm_replicaset,
+  ]
+}
+
+#####################################################################
 # Diagnostics: surface agent pod state and logs in the job output so
 # delivery failures are debuggable after the cluster is destroyed.
 #####################################################################
@@ -318,7 +532,7 @@ resource "null_resource" "agent_diagnostics" {
     EOT
   }
 
-  depends_on = [kubernetes_job_v1.otlp_load]
+  depends_on = [kubernetes_job_v1.otlp_load, null_resource.standard_workload_ready]
 }
 
 #####################################################################
@@ -333,6 +547,8 @@ resource "null_resource" "integration_test" {
         -region=${var.region} \
         -cwaCommitSha=${var.cwa_github_sha} \
         -gkeClusterName=${google_container_cluster.cwagent.name} \
+        -gcpProject=${var.gcp_project} \
+        -gcpZone=${var.gcp_zone} \
         -v
     EOT
 
@@ -341,5 +557,5 @@ resource "null_resource" "integration_test" {
     }
   }
 
-  depends_on = [kubernetes_job_v1.otlp_load, null_resource.agent_diagnostics]
+  depends_on = [kubernetes_job_v1.otlp_load, null_resource.standard_workload_ready, null_resource.agent_diagnostics]
 }
