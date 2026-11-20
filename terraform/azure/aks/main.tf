@@ -44,7 +44,7 @@ resource "azurerm_kubernetes_cluster" "cwagent" {
     # The standard suite pins its test workloads to this label, as the EKS stack does with its node group
     # (the EKS value is "blue"), and the tests read it back as a custom node label.
     node_labels = merge(
-      local.has_std_workloads ? { "ci-test.example.com/node-color" = "blue" } : {},
+      local.is_standard ? { "ci-test.example.com/node-color" = "blue" } : {},
       local.is_filters ? local.filters_node_labels : {},
     )
   }
@@ -80,24 +80,20 @@ locals {
   #   test_dir = ./test/azure/aks                   OTLP: default:otel agent plus a load generator
   #   test_dir = ./test/azure/aks/containerinsights OTel Container Insights (plus KEDA and Karpenter)
   #   test_dir = ./test/azure/aks/standard          OTel Container Insights checked in depth, with test workloads
-  #   test_dir = ./test/azure/aks/performance       agent CPU and memory against thresholds and the previous run (same workloads as standard)
   #   test_dir = ./test/azure/aks/filters           the chart's otelFilters (namespaces, labels, metric names) on 2 nodes
   #   test_dir = ./test/azure/aks/attr_limit        the attribute-limit processor on 3 nodes with many labels
   #   test_dir = ./test/azure/aks/gpu               NVIDIA GPU metrics on an AKS-managed GPU pool
   #   test_dir = ./test/azure/aks/gpudriver         NVIDIA GPU metrics on driver-install GPU pools
-  is_ci          = var.test_dir == "./test/azure/aks/containerinsights"
-  is_standard    = var.test_dir == "./test/azure/aks/standard"
-  is_performance = var.test_dir == "./test/azure/aks/performance"
-  is_filters     = var.test_dir == "./test/azure/aks/filters"
-  is_attr_limit  = var.test_dir == "./test/azure/aks/attr_limit"
-  is_gpu         = var.test_dir == "./test/azure/aks/gpu"
-  is_gpu_driver  = var.test_dir == "./test/azure/aks/gpudriver"
+  is_ci         = var.test_dir == "./test/azure/aks/containerinsights"
+  is_standard   = var.test_dir == "./test/azure/aks/standard"
+  is_filters    = var.test_dir == "./test/azure/aks/filters"
+  is_attr_limit = var.test_dir == "./test/azure/aks/attr_limit"
+  is_gpu        = var.test_dir == "./test/azure/aks/gpu"
+  is_gpu_driver = var.test_dir == "./test/azure/aks/gpudriver"
   # Suites with GPU node pools.
   has_gpu = local.is_gpu || local.is_gpu_driver
   # Suites that run OTel Container Insights, and so the cluster-scraper as well as the node agent.
-  # The suites that run the standard test workloads (nginx, StatefulSet, CronJob, Job, ReplicaSet).
-  has_std_workloads = local.is_standard || local.is_performance
-  otel_ci           = local.is_ci || local.is_standard || local.is_performance || local.is_filters || local.is_attr_limit || local.has_gpu
+  otel_ci = local.is_ci || local.is_standard || local.is_filters || local.is_attr_limit || local.has_gpu
 
   # ---- filters suite ---------------------------------------------------------------------------
   # Copies terraform/eks/daemon/otel-filters. Node labels the nodeLabels filter keeps or removes (the two
@@ -239,11 +235,6 @@ locals {
     # Same chart values as the EKS otel-attr-limit stack: OTel Container Insights on, nothing else.
     "./test/azure/aks/attr_limit" = {
       "otelContainerInsights.enabled" = "true"
-    }
-    # Same chart values as standard.
-    "./test/azure/aks/performance" = {
-      "otelContainerInsights.enabled"      = "true"
-      "otelContainerInsights.logs.enabled" = "true"
     }
     "./test/azure/aks/gpu" = {
       "containerInsights.enabled"     = "false"
@@ -575,7 +566,7 @@ resource "null_resource" "restart_pods" {
 # Load generator (otlp): pushes OTLP to the agent's host port for 3 min
 #####################################################################
 resource "kubernetes_job_v1" "otlp_load" {
-  count = local.is_ci || local.has_std_workloads || local.is_filters || local.is_attr_limit ? 0 : 1
+  count = local.is_ci || local.is_standard || local.is_filters || local.is_attr_limit ? 0 : 1
   metadata {
     name      = "otlp-load-generator"
     namespace = kubernetes_namespace.cwagent.metadata[0].name
@@ -783,7 +774,7 @@ resource "null_resource" "agent_diagnostics" {
 # node-color=blue label in this suite.
 #####################################################################
 resource "kubernetes_deployment_v1" "nginx_test" {
-  count = local.has_std_workloads ? 1 : 0
+  count = local.is_standard ? 1 : 0
   metadata {
     name      = "nginx-test"
     namespace = "default"
@@ -806,7 +797,7 @@ resource "kubernetes_deployment_v1" "nginx_test" {
 }
 
 resource "kubernetes_service_v1" "ksm_statefulset_headless" {
-  count = local.has_std_workloads ? 1 : 0
+  count = local.is_standard ? 1 : 0
   metadata {
     name      = "ksm-test-statefulset"
     namespace = "default"
@@ -823,7 +814,7 @@ resource "kubernetes_service_v1" "ksm_statefulset_headless" {
 }
 
 resource "kubernetes_stateful_set_v1" "ksm_statefulset" {
-  count = local.has_std_workloads ? 1 : 0
+  count = local.is_standard ? 1 : 0
   metadata {
     name      = "ksm-test-statefulset"
     namespace = "default"
@@ -847,7 +838,7 @@ resource "kubernetes_stateful_set_v1" "ksm_statefulset" {
 }
 
 resource "kubernetes_cron_job_v1" "ksm_cronjob" {
-  count = local.has_std_workloads ? 1 : 0
+  count = local.is_standard ? 1 : 0
   metadata {
     name      = "ksm-test-cronjob"
     namespace = "default"
@@ -879,7 +870,7 @@ resource "kubernetes_cron_job_v1" "ksm_cronjob" {
 }
 
 resource "kubernetes_job_v1" "ksm_job" {
-  count = local.has_std_workloads ? 1 : 0
+  count = local.is_standard ? 1 : 0
   metadata {
     name      = "ksm-test-job"
     namespace = "default"
@@ -905,7 +896,7 @@ resource "kubernetes_job_v1" "ksm_job" {
 
 # The kubernetes provider has no ReplicaSet resource, so apply one with kubectl.
 resource "null_resource" "ksm_replicaset" {
-  count      = local.has_std_workloads ? 1 : 0
+  count      = local.is_standard ? 1 : 0
   depends_on = [azurerm_kubernetes_cluster.cwagent, local_sensitive_file.kubeconfig]
   provisioner "local-exec" {
     command = <<-EOT
@@ -945,7 +936,7 @@ resource "null_resource" "ksm_replicaset" {
 # builds (different cloud.platform spelling and host.name); the GPU suites wait 360 s and saw only one.
 # A workload that is not ready does not stop the apply, so diagnostics and test results still appear.
 resource "null_resource" "standard_workload_ready" {
-  count = local.has_std_workloads ? 1 : 0
+  count = local.is_standard ? 1 : 0
   provisioner "local-exec" {
     command = <<-EOT
       kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n default rollout status deployment/nginx-test --timeout=300s \

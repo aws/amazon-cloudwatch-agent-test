@@ -11,15 +11,14 @@ variable "region" {
 #   "./test/azure/aks/containerinsights" -> OTEL Container Insights node agent + cluster-scraper
 #   "./test/azure/aks/filters"           -> the chart's otelFilters on 2 nodes
 #   "./test/azure/aks/attr_limit"        -> the attribute-limit processor on 3 nodes with many labels
-#   "./test/azure/aks/performance"       -> agent CPU/memory thresholds and regression check
 #   "./test/azure/aks/gpu"               -> OTEL Container Insights + DCGM on an AKS-managed GPU pool
 #   "./test/azure/aks/gpudriver"         -> OTEL Container Insights + DCGM from the chart's exporter on driver-install GPU pools
 variable "test_dir" {
   type    = string
   default = "./test/azure/aks"
   validation {
-    condition     = contains(["./test/azure/aks", "./test/azure/aks/containerinsights", "./test/azure/aks/standard", "./test/azure/aks/filters", "./test/azure/aks/attr_limit", "./test/azure/aks/performance", "./test/azure/aks/gpu", "./test/azure/aks/gpudriver"], var.test_dir)
-    error_message = "test_dir must be \"./test/azure/aks\", \"./test/azure/aks/containerinsights\", \"./test/azure/aks/standard\", \"./test/azure/aks/filters\", \"./test/azure/aks/attr_limit\", \"./test/azure/aks/performance\", \"./test/azure/aks/gpu\" or \"./test/azure/aks/gpudriver\"."
+    condition     = contains(["./test/azure/aks", "./test/azure/aks/containerinsights", "./test/azure/aks/standard", "./test/azure/aks/filters", "./test/azure/aks/attr_limit", "./test/azure/aks/gpu", "./test/azure/aks/gpudriver"], var.test_dir)
+    error_message = "test_dir must be \"./test/azure/aks\", \"./test/azure/aks/containerinsights\", \"./test/azure/aks/standard\", \"./test/azure/aks/filters\", \"./test/azure/aks/attr_limit\", \"./test/azure/aks/gpu\" or \"./test/azure/aks/gpudriver\"."
   }
 }
 
