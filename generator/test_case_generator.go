@@ -667,6 +667,8 @@ var testTypeToTestConfig = map[string][]testConfig{
 		{testDir: "./test/azure/aks/filters", terraformDir: "terraform/azure/aks", wip: true},
 		// The attribute-limit processor on 3 nodes with many labels; port of test/otel/attr_limit.
 		{testDir: "./test/azure/aks/attr_limit", terraformDir: "terraform/azure/aks", wip: true},
+		// Agent CPU and memory against thresholds and against the previous run; port of test/otel/performance.
+		{testDir: "./test/azure/aks/performance", terraformDir: "terraform/azure/aks", wip: true},
 		// GPU suites need T4 quota (and, for gpu, the ManagedGPUExperiencePreview feature) and a chart with
 		// the AKS DCGM exporter support. wip so a failure does not block CI.
 		{testDir: "./test/azure/aks/gpu", terraformDir: "terraform/azure/aks", wip: true},
