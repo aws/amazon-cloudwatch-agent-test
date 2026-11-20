@@ -657,6 +657,21 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"eks_deployment": {
 		{testDir: "./test/metric_value_benchmark"},
 	},
+	"aks": {
+		{testDir: "./test/azure/aks", terraformDir: "terraform/azure/aks"},
+		{testDir: "./test/azure/aks/containerinsights", terraformDir: "terraform/azure/aks"},
+		// Ports of the EKS test/otel/standard checks (kube-state-metrics first). wip until it has two clean
+		// runs in a row.
+		{testDir: "./test/azure/aks/standard", terraformDir: "terraform/azure/aks", wip: true},
+		// The chart's otelFilters (namespaces, labels, metric names) on 2 nodes; port of test/otel/filters.
+		{testDir: "./test/azure/aks/filters", terraformDir: "terraform/azure/aks", wip: true},
+		// The attribute-limit processor on 3 nodes with many labels; port of test/otel/attr_limit.
+		{testDir: "./test/azure/aks/attr_limit", terraformDir: "terraform/azure/aks", wip: true},
+		// GPU suites need T4 quota (and, for gpu, the ManagedGPUExperiencePreview feature) and a chart with
+		// the AKS DCGM exporter support. wip so a failure does not block CI.
+		{testDir: "./test/azure/aks/gpu", terraformDir: "terraform/azure/aks", wip: true},
+		{testDir: "./test/azure/aks/gpudriver", terraformDir: "terraform/azure/aks", wip: true},
+	},
 }
 
 var testTypeToTestConfigE2E = map[string][]testConfig{

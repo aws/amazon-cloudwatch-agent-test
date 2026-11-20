@@ -25,7 +25,6 @@ resource "azurerm_kubernetes_cluster" "cwagent" {
   workload_identity_enabled = true
 
   # Terraform drives the cluster over the public API server, so restrict it to the runner that created it.
-  # runner_ip is required, so there is no path where this silently ends up open to all.
   api_server_access_profile {
     authorized_ip_ranges = [var.runner_ip]
   }
@@ -36,11 +35,18 @@ resource "azurerm_kubernetes_cluster" "cwagent" {
 
   default_node_pool {
     name                        = "default"
-    node_count                  = var.aks_node_count
+    node_count                  = local.is_filters ? 2 : local.is_attr_limit ? 3 : var.aks_node_count
     vm_size                     = var.aks_node_vm_size
     os_disk_size_gb             = 50
     temporary_name_for_rotation = "tmpdefault"
     vnet_subnet_id              = data.azurerm_subnet.selected.id
+
+    # The standard suite pins its test workloads to this label, as the EKS stack does with its node group
+    # (the EKS value is "blue"), and the tests read it back as a custom node label.
+    node_labels = merge(
+      local.is_standard ? { "ci-test.example.com/node-color" = "blue" } : {},
+      local.is_filters ? local.filters_node_labels : {},
+    )
   }
 
   network_profile {
@@ -66,30 +72,201 @@ locals {
   namespace            = "amazon-cloudwatch"
   service_account_name = "cloudwatch-agent"
   cwagent_role_name    = "cwa-aks-integ-role-${module.common.testing_id}"
+  kubectl              = "kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n ${local.namespace}"
 
-  # test_mode == "containerinsights" swaps the raw default:otel DaemonSet + OTLP load generator for a
-  # Helm chart install with OTel Container Insights, the way AKS customers deploy it. The chart owns the
-  # agent ServiceAccount (named cloudwatch-agent, matching the IAM trust above), RBAC and workloads.
-  is_ci = var.test_mode == "containerinsights"
+  # ---- Which test suite this run is for ------------------------------------------------------
+  # The same stack serves every AKS suite. var.test_dir selects the suite, and the flags below switch
+  # the optional resources on or off with `count`.
+  #   test_dir = ./test/azure/aks                   OTLP: default:otel agent plus a load generator
+  #   test_dir = ./test/azure/aks/containerinsights OTel Container Insights (plus KEDA and Karpenter)
+  #   test_dir = ./test/azure/aks/standard          OTel Container Insights checked in depth, with test workloads
+  #   test_dir = ./test/azure/aks/filters           the chart's otelFilters (namespaces, labels, metric names) on 2 nodes
+  #   test_dir = ./test/azure/aks/attr_limit        the attribute-limit processor on 3 nodes with many labels
+  #   test_dir = ./test/azure/aks/gpu               NVIDIA GPU metrics on an AKS-managed GPU pool
+  #   test_dir = ./test/azure/aks/gpudriver         NVIDIA GPU metrics on driver-install GPU pools
+  is_ci         = var.test_dir == "./test/azure/aks/containerinsights"
+  is_standard   = var.test_dir == "./test/azure/aks/standard"
+  is_filters    = var.test_dir == "./test/azure/aks/filters"
+  is_attr_limit = var.test_dir == "./test/azure/aks/attr_limit"
+  is_gpu        = var.test_dir == "./test/azure/aks/gpu"
+  is_gpu_driver = var.test_dir == "./test/azure/aks/gpudriver"
+  # Suites with GPU node pools.
+  has_gpu = local.is_gpu || local.is_gpu_driver
+  # Suites that run OTel Container Insights, and so the cluster-scraper as well as the node agent.
+  otel_ci = local.is_ci || local.is_standard || local.is_filters || local.is_attr_limit || local.has_gpu
+
+  # ---- filters suite ---------------------------------------------------------------------------
+  # Copies terraform/eks/daemon/otel-filters. Node labels the nodeLabels filter keeps or removes (the two
+  # karpenter.k8s.aws labels are fixtures: the cluster runs no Karpenter), the test namespaces (the first two
+  # are kept by the namespaces filter; filters-exact-other starts with the exact include entry
+  # filters-exact, so it is kept only if the exact entry wrongly matches as a prefix) and the stand-in
+  # inference servers' namespaces (one kept, one dropped).
+  filters_node_labels = {
+    "filters-e2e-node-keep"                = "v"
+    "filters-e2e-node-drop"                = "v"
+    "filters-e2e.example.com/drop-a"       = "v"
+    "filters-e2e.example.com/drop-b"       = "v"
+    "karpenter.k8s.aws/instance-gpu-name"  = "t4"
+    "karpenter.k8s.aws/instance-gpu-count" = "1"
+  }
+  filters_namespaces           = ["filters-keep-a", "filters-exact", "filters-keep-secret-b", "filters-exact-other"]
+  filters_inference_namespaces = ["filters-keep-a", "filters-keep-secret-b"]
+  filters_sender_script        = "${path.module}/../../otlp_service_sender.sh"
+  # otelFilters values are lists, so they go in as YAML instead of as --set strings.
+  filters_values_yaml = <<-EOT
+    otelContainerInsights:
+      solutions:
+        vllm:
+          enabled: true
+        knative:
+          dataPlane:
+            enabled: true
+    otelFilters:
+      namespaces:
+        include: ["filters-keep-*", "filters-exact"]
+        exclude: ["filters-keep-secret*"]
+      metricNames:
+        include: ["container_*", "kube_pod_info", "k8s.pod.*", "node_load1", "vllm:num_requests_running", "revision_request_count", "otlp_e2e_requests"]
+        exclude: ["container_network_*", "container_memory_usage_bytes"]
+      podLabels:
+        include: ["app", "filters-e2e-keep*", "filters-e2e.example.com/keep*", "pod-template-hash"]
+        exclude: ["filters-e2e-keep-secret"]
+      nodeLabels:
+        include: ["*", "karpenter.k8s.aws/instance-gpu-name"]
+        exclude: ["filters-e2e-node-drop", "filters-e2e.example.com/*"]
+  EOT
+
+  # ---- attr_limit suite ------------------------------------------------------------------------
+  # Copies terraform/eks/daemon/otel-attr-limit. The 3 nodes of the default pool get labels with kubectl
+  # (not node pool labels, so the label count does not depend on pool limits): sentinel labels that mark each
+  # drop tier, and padding labels that push the attribute count past the processor's limit of 150. low and mid
+  # carry 130+ node labels, high carries 40 and a pod with 138 labels, so the processor drops tiers on each.
+  # The eks.amazonaws.com labels are fixtures: EKS sets them on its own nodes.
+  al_tier1   = { "helm.sh/chart" = "test-chart", "release" = "test-release" }
+  al_tier2   = { "pod-template-generation" = "1" }
+  al_tier3   = { "karpenter.sh/sentinel-known" = "v", "nvidia.com/sentinel-known" = "v" }
+  al_tier4   = { "eks.amazonaws.com/capacityType" = "ON_DEMAND", "eks.amazonaws.com/nodegroup" = "attr-limit" }
+  al_tier6   = { "ci-test.example.com/sentinel-customer-a" = "v", "ci-test.example.com/sentinel-customer-b" = "v" }
+  al_pad_20  = { for i in range(1, 21) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
+  al_pad_108 = { for i in range(1, 109) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
+  al_pad_120 = { for i in range(1, 121) : "ci-test.example.com/pad-${format("%03d", i)}" => "v" }
+  al_common  = merge(local.al_tier1, local.al_tier2, local.al_tier3, local.al_tier4, local.al_tier6)
+  al_labels = {
+    low  = merge(local.al_common, local.al_pad_108, { "ci-test.example.com/node-color" = "white", "ci-test.example.com/attr-limit-node" = "node-low" })
+    mid  = merge(local.al_common, local.al_pad_120, { "ci-test.example.com/node-color" = "white", "ci-test.example.com/attr-limit-node" = "node-mid" })
+    high = merge(local.al_common, local.al_pad_20, { "ci-test.example.com/node-color" = "white", "ci-test.example.com/attr-limit-node" = "node-high" })
+  }
+  # 135 padding pod labels + 3 explicit = 138 pod labels on the high deployment. aaa-sentinel-pod sorts before
+  # the padding labels so it is dropped first when the processor prunes the last tier.
+  # Each line carries its own indent (8 spaces, the depth of the other pod labels in the manifest below).
+  al_extra_pod_labels_yaml = {
+    low = ""
+    mid = ""
+    high = join("\n", concat(
+      ["        app.kubernetes.io/part-of: attr-limit-test", "        ci-test.example.com/aaa-sentinel-pod: v"],
+      [for i in range(1, 136) : "        ci-test.example.com/pod-pad-${format("%03d", i)}: v"],
+    ))
+  }
 
   # Must match serviceName in test/azure/aks/aks_test.go -- the test derives the expected log stream
   # and the trace query filter from it.
   load_gen_service_name     = "aks-otlp-test-service"
   load_gen_duration_seconds = 180
-}
 
-# Couple test_mode and test_dir so a caller can't run one suite against the other's topology
-# (e.g. test_mode=containerinsights with the default:otel test_dir). Fails the plan on a mismatch.
-resource "terraform_data" "validate_test_mode_dir" {
-  lifecycle {
-    precondition {
-      condition = (
-        (var.test_mode == "otlp" && var.test_dir == "./test/azure/aks") ||
-        (var.test_mode == "containerinsights" && var.test_dir == "./test/azure/aks/containerinsights")
-      )
-      error_message = "test_dir must match test_mode: \"otlp\" -> \"./test/azure/aks\", \"containerinsights\" -> \"./test/azure/aks/containerinsights\"."
+  # ---- GPU node pools -------------------------------------------------------------------------
+  # GPU suites add node pools next to the default system pool, one node per pool. The pool names are
+  # not free-form: the Go tests find each pool's nodes by the name (kubernetes.azure.com/agentpool),
+  # so they must match test/azure/aks/gpu and test/azure/aks/gpudriver.
+  #
+  # "managed" is AKS's --enable-managed-gpu flag (a preview feature):
+  #   managed = true   AKS installs the NVIDIA driver, the device plugin and a host DCGM service
+  #                    (metrics on :19400). The chart scrapes that host service (job "dcgm-host").
+  #   managed = false  AKS installs only the driver. The device plugin and the chart's own
+  #                    dcgm-exporter pod (metrics on :9400) are installed by this stack and the chart.
+  #
+  # "labels" is a space-separated list of key=value node labels. node-color=green is what the tests
+  # filter on; nvidia.com/gpu.present=true is what the device plugin and the toolkit marker target.
+  #
+  # Per suite:
+  #   gpu       gpumanaged: AKS installs driver, device plugin and DCGM on the host (:19400); the chart scrapes it.
+  #   gpudriver gpuidle, gpuburn: AKS installs the driver only; the test installs the device plugin and the
+  #             chart's dcgm-exporter pod (:9400) runs on both. gpuidle stays idle, gpuburn runs multi-gpu-burn
+  #             (the EKS gpu_single and gpu_multi node groups).
+  gpu_pools = local.is_gpu ? {
+    gpumanaged = { managed = true, size = var.aks_gpu_vm_size, labels = "ci-test.example.com/node-color=green" }
+    } : local.is_gpu_driver ? {
+    gpuidle = { managed = false, size = var.aks_gpu_vm_size, labels = "ci-test.example.com/node-color=green nvidia.com/gpu.present=true" }
+    gpuburn = { managed = false, size = var.aks_gpu_burn_vm_size, labels = "ci-test.example.com/node-color=green nvidia.com/gpu.present=true" }
+  } : {}
+  # Pool that runs the multi-gpu-burn load (the busy GPU). In the gpudriver suite the other pool,
+  # gpuidle, deliberately runs nothing so the tests can check idle-GPU readings.
+  gpu_burn_pool = local.is_gpu ? "gpumanaged" : "gpuburn"
+  # Keeps ordinary pods off the (expensive) GPU nodes. The chart's agents tolerate every taint, and
+  # the GPU workloads in this file tolerate this one explicitly.
+  gpu_taint = "sku=gpu:NoSchedule"
+
+  # The Helm chart to install. By default the stack clones var.helm_chart_repo at
+  # var.helm_chart_branch. Set var.helm_chart_path to install a local checkout instead, for example
+  # a chart branch that is not merged upstream yet.
+  chart_dir = var.helm_chart_path != "" ? var.helm_chart_path : "./helm-charts/charts/amazon-cloudwatch-observability"
+
+  # Chart values that differ per suite, keyed by test_dir. They are merged over the common values in
+  # helm_values below. Both GPU suites turn classic Container Insights off and OTel Container
+  # Insights plus the chart's DCGM exporter on.
+  suite_helm_values = {
+    "./test/azure/aks" = {
+      "otelContainerInsights.enabled" = "false"
+      "agent.config"                  = "default:otel"
+    }
+    "./test/azure/aks/containerinsights" = {
+      "otelContainerInsights.enabled"      = "true"
+      "otelContainerInsights.logs.enabled" = "true"
+    }
+    # Same chart values as containerinsights. Keda and Karpenter stay stubs-only (not deployed here yet).
+    "./test/azure/aks/standard" = {
+      "otelContainerInsights.enabled"      = "true"
+      "otelContainerInsights.logs.enabled" = "true"
+    }
+    # The otelFilters lists are in local.filters_values_yaml (helm_release.values).
+    "./test/azure/aks/filters" = {
+      "otelContainerInsights.enabled"      = "true"
+      "otelContainerInsights.logs.enabled" = "true"
+    }
+    # Same chart values as the EKS otel-attr-limit stack: OTel Container Insights on, nothing else.
+    "./test/azure/aks/attr_limit" = {
+      "otelContainerInsights.enabled" = "true"
+    }
+    "./test/azure/aks/gpu" = {
+      "containerInsights.enabled"     = "false"
+      "otelContainerInsights.enabled" = "true"
+      "dcgmExporter.enabled"          = "true"
+    }
+    "./test/azure/aks/gpudriver" = {
+      "containerInsights.enabled"     = "false"
+      "otelContainerInsights.enabled" = "true"
+      "dcgmExporter.enabled"          = "true"
+      # TEMPORARY: pin the chart's exporter image. The chart on upstream main defaults to 4.7.0-4.9.0-distroless,
+      # whose pods crash at start with "read config file /etc/dcgm-exporter/config.yaml: no such file" (run
+      # 44269601040, operator 3.8.1). Remove this once the chart and operator agree on the exporter.
+      "dcgmExporter.image.tag" = "4.6.1-4.8.4-distroless"
     }
   }
+
+  # Final chart values, in increasing priority: common values, then the suite's values, then
+  # var.helm_set_values (anything passed on the command line wins).
+  helm_values = merge(
+    {
+      "clusterName"                = azurerm_kubernetes_cluster.cwagent.name
+      "region"                     = var.region
+      "k8sMode"                    = "AKS"
+      "roleArn"                    = aws_iam_role.cwagent.arn
+      "applicationSignals.enabled" = "false"
+      "containerInsights.enabled"  = "false"
+      "containerLogs.enabled"      = "false"
+    },
+    local.suite_helm_values[var.test_dir],
+    var.helm_set_values,
+  )
 }
 
 data "aws_iam_policy_document" "cwagent_assume_role" {
@@ -114,7 +291,6 @@ data "aws_iam_policy_document" "cwagent_assume_role" {
       values   = ["sts.amazonaws.com"]
     }
   }
-
 }
 
 resource "aws_iam_role" "cwagent" {
@@ -122,86 +298,27 @@ resource "aws_iam_role" "cwagent" {
   assume_role_policy = data.aws_iam_policy_document.cwagent_assume_role.json
 }
 
-# The agent's own writes come from the same AWS-managed policy customers are told to use, so a green run
-# also proves that documented policy is sufficient over the AKS workload-identity path.
 resource "aws_iam_role_policy_attachment" "cwagent_server_policy" {
   role       = aws_iam_role.cwagent.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
-# No inline policy: the AKS test binary runs on the runner under its own credentials, so this role needs
-# agent writes only -- and CloudWatchAgentServerPolicy alone covers them, OTLP traces included.
-
 #####################################################################
-# Kubernetes resources. The namespace and ECR pull secret are shared by
-# both modes; the ServiceAccount, RBAC and DaemonSet below are OTLP-mode
-# only (in containerinsights mode the Helm chart creates them).
+# ECR pull secret: AKS nodes cannot pull the integration-test image from
+# private ECR on their own, and the chart has no imagePullSecrets value.
 #####################################################################
-resource "kubernetes_namespace" "cwagent" {
-  metadata {
-    name = local.namespace
-  }
-}
-
-resource "kubernetes_service_account" "cwagent" {
-  count = local.is_ci ? 0 : 1
-  metadata {
-    name      = local.service_account_name
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
-}
-
-resource "kubernetes_cluster_role" "cwagent" {
-  count = local.is_ci ? 0 : 1
-  metadata {
-    name = "cwa-aks-integ-${module.common.testing_id}"
-  }
-
-  rule {
-    api_groups = [""]
-    resources  = ["pods", "nodes", "endpoints", "services", "namespaces"]
-    verbs      = ["list", "watch", "get"]
-  }
-  rule {
-    api_groups = ["apps"]
-    resources  = ["replicasets", "daemonsets", "deployments"]
-    verbs      = ["list", "watch", "get"]
-  }
-  rule {
-    api_groups = ["batch"]
-    resources  = ["jobs"]
-    verbs      = ["list", "watch", "get"]
-  }
-}
-
-resource "kubernetes_cluster_role_binding" "cwagent" {
-  count = local.is_ci ? 0 : 1
-  metadata {
-    name = "cwa-aks-integ-${module.common.testing_id}"
-  }
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.cwagent[0].metadata[0].name
-  }
-  subject {
-    kind      = "ServiceAccount"
-    name      = kubernetes_service_account.cwagent[0].metadata[0].name
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
-}
-
-# ECR pull secret so AKS nodes can pull the CWA image from AWS ECR.
-# The 12h auth token is fetched here with the runner's AWS credentials rather
-# than passed in as a variable, which cannot survive the workflow's shell quoting.
-# The integration-test image is published to us-west-2 only, while the job's
-# CloudWatch region may differ -- pin the registry host to the ECR region.
 locals {
   cwagent_image_repo = replace(var.cwagent_image_repo, "/\\.ecr\\.[a-z0-9-]+\\./", ".ecr.${var.ecr_region}.")
 }
 
 data "aws_ecr_authorization_token" "ecr" {
   provider = aws.ecr
+}
+
+resource "kubernetes_namespace" "cwagent" {
+  metadata {
+    name = local.namespace
+  }
 }
 
 resource "kubernetes_secret" "ecr_pull" {
@@ -221,131 +338,235 @@ resource "kubernetes_secret" "ecr_pull" {
   }
 }
 
-resource "kubernetes_daemon_set_v1" "cwagent" {
-  count = local.is_ci ? 0 : 1
-  metadata {
-    name      = "cloudwatch-agent"
-    namespace = kubernetes_namespace.cwagent.metadata[0].name
-  }
+#####################################################################
+# Kubeconfig for the kubectl steps below
+#####################################################################
+resource "local_sensitive_file" "kubeconfig" {
+  content         = azurerm_kubernetes_cluster.cwagent.kube_config_raw
+  filename        = "${path.module}/kubeconfig"
+  file_permission = "0600"
+}
 
+#####################################################################
+# GPU node pools (gpu, gpudriver). Managed GPU is an AKS preview with no
+# azurerm support, so the pools are added with the aks-preview CLI, one
+# after the other (AKS rejects concurrent operations on a cluster).
+# Deleting the cluster removes them, so there is no separate destroy step.
+#
+# Requirements on the machine running terraform:
+#   - the Azure CLI (az), logged in, or with ARM_CLIENT_ID, ARM_CLIENT_SECRET and ARM_TENANT_ID
+#     in the environment (the command then logs in with that service principal)
+#   - quota for the GPU VM size in the region; for managed GPU, the subscription feature
+#     ManagedGPUExperiencePreview must also be registered
+# The aks-preview extension is installed or upgraded by the command itself.
+#####################################################################
+resource "null_resource" "gpu_node_pool" {
+  count = local.has_gpu ? 1 : 0
+
+  triggers = { cluster_id = azurerm_kubernetes_cluster.cwagent.id }
+
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      # The azurerm provider reads the ARM_* variables itself, but the az CLI does not: on a CI
+      # runner nobody has run "az login". When a service principal is in the environment, log in
+      # with it. A temporary config directory keeps the login off the (shared) runner and is
+      # removed when the command exits.
+      if [ -n "$${ARM_CLIENT_ID:-}" ]; then
+        export AZURE_CONFIG_DIR="$(mktemp -d)"
+        trap 'rm -rf "$AZURE_CONFIG_DIR"' EXIT
+        az login --service-principal --username "$ARM_CLIENT_ID" --password "$ARM_CLIENT_SECRET" \
+          --tenant "$ARM_TENANT_ID" --only-show-errors --output none
+      fi
+      az extension add --name aks-preview --upgrade --yes --only-show-errors
+      # One az call per pool in local.gpu_pools, rendered by the template loop below. The
+      # $${ARM_SUBSCRIPTION_ID:+...} part is bash, not Terraform: it adds --subscription only when
+      # that variable is set.
+      %{~for name, pool in local.gpu_pools~}
+      az aks nodepool add $${ARM_SUBSCRIPTION_ID:+--subscription "$ARM_SUBSCRIPTION_ID"} \
+        --resource-group '${var.azure_resource_group}' \
+        --cluster-name '${azurerm_kubernetes_cluster.cwagent.name}' \
+        --name ${name} \
+        --node-count 1 \
+        --node-vm-size '${pool.size}' \
+        --vnet-subnet-id '${data.azurerm_subnet.selected.id}' \
+        --node-taints '${local.gpu_taint}' \
+        --labels ${pool.labels} \
+        --enable-managed-gpu=${pool.managed} \
+        --only-show-errors --output none
+      %{~endfor~}
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+# Driver-install pools (gpudriver) get no device plugin from AKS, so nothing would advertise the
+# nvidia.com/gpu resource that the gpu-burn pod requests. Install NVIDIA's plugin chart. Its default
+# node affinity matches the nvidia.com/gpu.present label set on these pools, as on the EKS GPU node
+# groups. The tolerations let it run on the tainted GPU nodes. Managed-GPU pools do not need this,
+# because AKS runs its own plugin there.
+resource "helm_release" "nvidia_device_plugin" {
+  count      = local.is_gpu_driver ? 1 : 0
+  name       = "nvidia-device-plugin"
+  repository = "https://nvidia.github.io/k8s-device-plugin"
+  chart      = "nvidia-device-plugin"
+  namespace  = "kube-system"
+
+  set = [
+    { name = "tolerations[0].key", value = "sku" },
+    { name = "tolerations[0].operator", value = "Exists" },
+    { name = "tolerations[0].effect", value = "NoSchedule" },
+    { name = "tolerations[1].key", value = "nvidia.com/gpu" },
+    { name = "tolerations[1].operator", value = "Exists" },
+    { name = "tolerations[1].effect", value = "NoSchedule" },
+  ]
+
+  depends_on = [null_resource.gpu_node_pool]
+}
+
+# Same toolkit-ready marker as terraform/eks/daemon/otel-gpu, on the driver-install GPU nodes.
+# NVIDIA components can gate on the node file /run/nvidia/validations/toolkit-ready, which the NVIDIA
+# GPU Operator normally creates. This stack has no GPU Operator, so a privileged init container
+# creates the file once per node and a pause container keeps the pod alive. Bidirectional mount
+# propagation makes the file visible to other pods on the node. This copies the EKS stack
+# (terraform/eks/daemon/otel-gpu); the file is a no-op for components that do not look for it.
+resource "kubernetes_daemon_set_v1" "nvidia_toolkit_ready" {
+  count = local.is_gpu_driver ? 1 : 0
+  metadata {
+    name      = "nvidia-toolkit-ready"
+    namespace = "kube-system"
+  }
   spec {
     selector {
-      match_labels = { app = "cloudwatch-agent" }
+      match_labels = { app = "nvidia-toolkit-ready" }
     }
-
     template {
       metadata {
-        labels = { app = "cloudwatch-agent" }
+        labels = { app = "nvidia-toolkit-ready" }
       }
-
       spec {
-        service_account_name = kubernetes_service_account.cwagent[0].metadata[0].name
-        host_network         = true
-        dns_policy           = "ClusterFirstWithHostNet"
-
-        image_pull_secrets {
-          name = kubernetes_secret.ecr_pull.metadata[0].name
+        node_selector = { "nvidia.com/gpu.present" = "true" }
+        toleration {
+          key      = "sku"
+          operator = "Exists"
+          effect   = "NoSchedule"
         }
-
+        toleration {
+          key      = "nvidia.com/gpu"
+          operator = "Exists"
+          effect   = "NoSchedule"
+        }
+        init_container {
+          name    = "create-marker"
+          image   = "busybox:stable"
+          command = ["sh", "-c", "mkdir -p /run/nvidia/validations && touch /run/nvidia/validations/toolkit-ready"]
+          security_context {
+            privileged = true
+          }
+          volume_mount {
+            name              = "run-nvidia"
+            mount_path        = "/run/nvidia"
+            mount_propagation = "Bidirectional"
+          }
+        }
         container {
-          name              = "cloudwatch-agent"
-          image             = "${local.cwagent_image_repo}:${var.cwagent_image_tag}"
-          image_pull_policy = "Always"
-
-          env {
-            name  = "AWS_REGION"
-            value = var.region
-          }
-          env {
-            name  = "AWS_WEB_IDENTITY_TOKEN_FILE"
-            value = "/var/run/secrets/aws/token"
-          }
-          env {
-            name  = "AWS_ROLE_ARN"
-            value = aws_iam_role.cwagent.arn
-          }
-          # CWAGENT_ROLE_ARN is deliberately unset. It only feeds sigv4auth's role_arn, and leaving that
-          # empty makes the extension fall through to the default credential chain, which picks up the
-          # projected token via AWS_ROLE_ARN + AWS_WEB_IDENTITY_TOKEN_FILE. Setting it would layer a
-          # redundant sts:AssumeRole of the same role on top of the session we already have.
-          env {
-            name  = "RUN_IN_CONTAINER"
-            value = "True"
-          }
-          # Explicit AKS signal so mode detection selects the Azure credential/region
-          # path without depending on an IMDS probe from the pod.
-          env {
-            name  = "RUN_IN_AKS"
-            value = "True"
-          }
-          # Uses the agent's built-in default:otel config.
-          env {
-            name  = "USE_DEFAULT_CONFIG"
-            value = "otel"
-          }
-          env {
-            name = "K8S_NODE_NAME"
-            value_from {
-              field_ref {
-                field_path = "spec.nodeName"
-              }
-            }
-          }
-          env {
-            name = "HOST_IP"
-            value_from {
-              field_ref {
-                field_path = "status.hostIP"
-              }
-            }
-          }
-
-          volume_mount {
-            name       = "aws-token"
-            mount_path = "/var/run/secrets/aws"
-            read_only  = true
-          }
-          volume_mount {
-            name       = "rootfs"
-            mount_path = "/rootfs"
-            read_only  = true
-          }
-        }
-
-        volume {
-          name = "aws-token"
-          projected {
-            sources {
-              service_account_token {
-                audience           = "sts.amazonaws.com"
-                expiration_seconds = 86400
-                path               = "token"
-              }
-            }
-          }
+          name  = "pause"
+          image = "registry.k8s.io/pause:3.9"
         }
         volume {
-          name = "rootfs"
+          name = "run-nvidia"
           host_path {
-            path = "/"
+            path = "/run/nvidia"
           }
         }
       }
     }
   }
+  depends_on = [null_resource.gpu_node_pool]
+}
+
+#####################################################################
+# Helm chart install
+#####################################################################
+data "external" "clone_helm_chart" {
+  count = var.helm_chart_path == "" ? 1 : 0
+  program = ["bash", "-c", <<-EOT
+    rm -rf ./helm-charts
+    git clone -b ${var.helm_chart_branch} ${var.helm_chart_repo} ./helm-charts
+    %{~if local.is_ci || local.is_filters~}
+    # The OTLP checks of the containerinsights and filters suites need the chart's OTLP endpoint. A chart without it
+    # would install fine and fail them later, so stop here with the reason.
+    if ! grep -qE '^otlp:' ./helm-charts/charts/amazon-cloudwatch-observability/values.yaml; then
+      echo '${var.helm_chart_repo}@${var.helm_chart_branch} has no top-level otlp block in values.yaml' >&2
+      exit 1
+    fi
+    %{~endif~}
+    echo '{"status":"ready"}'
+  EOT
+  ]
+}
+
+resource "helm_release" "aws_observability" {
+  name      = "amazon-cloudwatch-observability"
+  chart     = local.chart_dir
+  namespace = kubernetes_namespace.cwagent.metadata[0].name
+
+  set    = [for name, value in local.helm_values : { name = name, value = value }]
+  values = local.is_filters ? [local.filters_values_yaml] : []
 
   depends_on = [
-    kubernetes_cluster_role_binding.cwagent,
+    data.external.clone_helm_chart,
     aws_iam_role_policy_attachment.cwagent_server_policy,
+    null_resource.gpu_node_pool,
+    helm_release.nvidia_device_plugin,
+    kubernetes_daemon_set_v1.nvidia_toolkit_ready,
+    null_resource.ci_otlp_log_group_cleanup,
+    null_resource.attr_limit_node_labels,
   ]
 }
 
 #####################################################################
-# Load generator: pushes OTLP to localhost:4318 for 3 min via hostNetwork
+# Point the chart's agents at the image under test
 #####################################################################
-# See otlp_load_generator.sh for what the payloads carry and why.
+resource "null_resource" "update_image" {
+  depends_on = [helm_release.aws_observability, kubernetes_secret.ecr_pull]
+  triggers   = { timestamp = timestamp() }
+  provisioner "local-exec" {
+    command = <<-EOT
+      sleep 30
+      ${local.kubectl} patch serviceaccount ${local.service_account_name} \
+        -p '{"imagePullSecrets":[{"name":"${kubernetes_secret.ecr_pull.metadata[0].name}"}]}'
+      ${local.kubectl} patch AmazonCloudWatchAgent cloudwatch-agent --type='json' \
+        -p='[{"op": "replace", "path": "/spec/image", "value": "${local.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
+      %{~if local.otel_ci~}
+      ${local.kubectl} patch AmazonCloudWatchAgent cloudwatch-agent-cluster-scraper --type='json' \
+        -p='[{"op": "replace", "path": "/spec/image", "value": "${local.cwagent_image_repo}:${var.cwagent_image_tag}"}]'
+      %{~endif~}
+      sleep 10
+    EOT
+  }
+}
+
+resource "null_resource" "restart_pods" {
+  depends_on = [null_resource.update_image]
+  triggers   = { timestamp = timestamp() }
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.kubectl} rollout restart daemonset/cloudwatch-agent
+      ${local.kubectl} rollout status daemonset/cloudwatch-agent --timeout=300s
+      %{~if local.otel_ci~}
+      ${local.kubectl} rollout restart deployment/cloudwatch-agent-cluster-scraper
+      ${local.kubectl} rollout status deployment/cloudwatch-agent-cluster-scraper --timeout=300s
+      %{~endif~}
+    EOT
+  }
+}
+
+#####################################################################
+# Load generator (otlp): pushes OTLP to the agent's host port for 3 min
+#####################################################################
 resource "kubernetes_job_v1" "otlp_load" {
-  count = local.is_ci ? 0 : 1
+  count = local.is_ci || local.is_standard || local.is_filters || local.is_attr_limit ? 0 : 1
   metadata {
     name      = "otlp-load-generator"
     namespace = kubernetes_namespace.cwagent.metadata[0].name
@@ -385,164 +606,27 @@ resource "kubernetes_job_v1" "otlp_load" {
     create = "10m"
   }
 
-  depends_on = [kubernetes_daemon_set_v1.cwagent]
+  depends_on = [null_resource.restart_pods]
 }
 
 #####################################################################
-# Diagnostics: surface agent pod state and logs in the job output so
-# delivery failures are debuggable after the cluster is destroyed.
+# keda/karpenter stub emitters + sample app (containerinsights)
 #####################################################################
-resource "local_sensitive_file" "kubeconfig" {
-  content         = azurerm_kubernetes_cluster.cwagent.kube_config_raw
-  filename        = "${path.module}/kubeconfig"
-  file_permission = "0600"
-}
-
-resource "null_resource" "agent_diagnostics" {
+resource "null_resource" "ci_extra_manifests" {
+  count = local.is_ci ? 1 : 0
   provisioner "local-exec" {
     command = <<-EOT
-      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' get pods -n amazon-cloudwatch -o wide || true
-      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch ds/cloudwatch-agent --tail=200 --prefix || true
-      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' logs -n amazon-cloudwatch deploy/cloudwatch-agent-cluster-scraper --tail=200 --prefix || true
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' apply -f '${path.module}/../../../${var.test_dir}/resources/keda_karpenter.yaml'
     EOT
   }
-
-  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart, null_resource.ci_otlp_sender]
 }
 
 #####################################################################
-# Run Go integration test from the runner (validates CloudWatch)
-#####################################################################
-resource "null_resource" "integration_test" {
-  provisioner "local-exec" {
-    working_dir = "${path.module}/../../../"
-    command     = <<-EOT
-      go test -tags integration ${var.test_dir} -p 1 -timeout 30m \
-        -computeType=AKS \
-        -region=${var.region} \
-        -cwaCommitSha=${var.cwa_github_sha} \
-        -aksClusterName=${azurerm_kubernetes_cluster.cwagent.name} \
-        -azureLocation=${var.azure_location} \
-        -azureVMSize=${var.aks_node_vm_size} \
-        -azureResourceGroup=${azurerm_kubernetes_cluster.cwagent.node_resource_group} \
-        -v
-    EOT
-
-    environment = {
-      AWS_REGION = var.region
-    }
-  }
-
-  depends_on = [kubernetes_daemon_set_v1.cwagent, kubernetes_job_v1.otlp_load, null_resource.ci_helm_chart, null_resource.ci_extra_manifests, null_resource.ci_otlp_sender, null_resource.agent_diagnostics]
-}
-
-#####################################################################
-# Container Insights topology (test_mode == "containerinsights"): the
-# amazon-cloudwatch-observability Helm chart with OTel Container Insights,
-# installed with the values scripts/azure/setup.sh uses for AKS customers
-# without the no-op agents[0].config=default:otel, which
-# aws/amazon-cloudwatch-agent#2402 removes from the script, plus the agent
-# image under test. The chart deploys the node
-# DaemonSet, the cluster-scraper Deployment, node-exporter and
-# kube-state-metrics, and renders their collector config itself.
-#####################################################################
-locals {
-  cwagent_image_domain     = split("/", local.cwagent_image_repo)[0]
-  cwagent_image_repository = join("/", slice(split("/", local.cwagent_image_repo), 1, length(split("/", local.cwagent_image_repo))))
-  helm_charts_dir          = "${path.module}/helm-charts"
-}
-
-resource "null_resource" "ci_helm_chart" {
-  count = local.is_ci ? 1 : 0
-
-  triggers = {
-    kubeconfig = local_sensitive_file.kubeconfig.filename
-    namespace  = local.namespace
-  }
-
-  # The chart's agent ServiceAccount has no image pull secret setting, and the image under test is in a
-  # private ECR, so attach the ECR pull secret to the ServiceAccount after install and restart the agent
-  # workloads the operator created so their pods pick it up.
-  provisioner "local-exec" {
-    command     = <<-EOT
-      set -euo pipefail
-      KC='${local_sensitive_file.kubeconfig.filename}'
-      rm -rf '${local.helm_charts_dir}'
-      git clone '${var.helm_charts_repo}' '${local.helm_charts_dir}'
-      git -C '${local.helm_charts_dir}' checkout '${var.helm_charts_branch}'
-      # The OTLP checks need the chart's OTLP endpoint; a chart without it would
-      # install fine and fail them. Stop here with the reason instead.
-      if ! grep -qE '^otlp:' '${local.helm_charts_dir}/charts/amazon-cloudwatch-observability/values.yaml'; then
-        echo '${var.helm_charts_repo}@${var.helm_charts_branch} has no top-level otlp block in values.yaml' >&2
-        exit 1
-      fi
-      helm --kubeconfig "$KC" upgrade --install amazon-cloudwatch-observability \
-        '${local.helm_charts_dir}/charts/amazon-cloudwatch-observability' \
-        --namespace '${local.namespace}' \
-        --set k8sMode=AKS \
-        --set roleArn='${aws_iam_role.cwagent.arn}' \
-        --set region='${var.region}' \
-        --set clusterName='${azurerm_kubernetes_cluster.cwagent.name}' \
-        --set containerInsights.enabled=false \
-        --set containerLogs.enabled=false \
-        --set otelContainerInsights.enabled=true \
-        --set otelContainerInsights.logs.enabled=true \
-        --set-string 'agents[0].name=cloudwatch-agent' \
-        --set-string 'agents[1].name=cloudwatch-agent-cluster-scraper' \
-        --set-string 'agents[1].mode=deployment' \
-        --set-string 'agents[1].config=default' \
-        --set-string agent.image.repositoryDomainMap.public='${local.cwagent_image_domain}' \
-        --set-string agent.image.repository='${local.cwagent_image_repository}' \
-        --set-string agent.image.tag='${var.cwagent_image_tag}'
-      kubectl --kubeconfig "$KC" -n '${local.namespace}' patch serviceaccount cloudwatch-agent \
-        -p '{"imagePullSecrets":[{"name":"${kubernetes_secret.ecr_pull.metadata[0].name}"}]}'
-      for w in ds/cloudwatch-agent deploy/cloudwatch-agent-cluster-scraper; do
-        for i in $(seq 1 60); do
-          kubectl --kubeconfig "$KC" -n '${local.namespace}' get "$w" >/dev/null 2>&1 && break
-          sleep 5
-        done
-        kubectl --kubeconfig "$KC" -n '${local.namespace}' rollout restart "$w"
-        kubectl --kubeconfig "$KC" -n '${local.namespace}' rollout status "$w" --timeout=10m
-      done
-    EOT
-    interpreter = ["/bin/bash", "-c"]
-  }
-
-  # Uninstall while the operator still runs, so it can clear its CR finalizers before the namespace is deleted.
-  provisioner "local-exec" {
-    when    = destroy
-    command = "helm --kubeconfig '${self.triggers.kubeconfig}' uninstall amazon-cloudwatch-observability --namespace '${self.triggers.namespace}' --wait || true"
-  }
-
-  depends_on = [
-    kubernetes_secret.ecr_pull,
-    aws_iam_role_policy_attachment.cwagent_server_policy,
-    null_resource.ci_otlp_log_group_cleanup,
-  ]
-}
-
-# The agent never deletes log groups. The test infrastructure deletes the OTLP
-# log group on teardown: ci_helm_chart depends on this resource, so Terraform
-# uninstalls the chart (and with it the agents that write the group) first,
-# and nothing recreates the group after the delete. It runs on destroy, so it
-# also runs when go test fails or is killed.
-resource "null_resource" "ci_otlp_log_group_cleanup" {
-  count = local.is_ci ? 1 : 0
-
-  triggers = {
-    log_group = "/aws/cwagent/${azurerm_kubernetes_cluster.cwagent.name}/otlp"
-    region    = var.region
-  }
-  provisioner "local-exec" {
-    when    = destroy
-    command = "aws logs delete-log-group --region ${self.triggers.region} --log-group-name ${self.triggers.log_group} || true"
-  }
-}
-
-#####################################################################
-# OTLP sender (test_mode == "containerinsights"): an ordinary pod that
-# sends OTLP through the cloudwatch-agent Service to the chart's OTLP
-# endpoint, which the chart serves by default from its otlp values.
+# OTLP sender (containerinsights), ported from aws/amazon-cloudwatch-agent-test#810.
+# An ordinary pod in the otlp-e2e namespace sends OTLP through the cloudwatch-agent Service to the
+# chart's OTLP endpoint, which the chart serves by default from its otlp values. test/azure/aks/
+# containerinsights/aks_otlp_test.go checks what arrives. It starts after restart_pods, so the telemetry
+# goes to the agents running the image under test.
 #####################################################################
 resource "null_resource" "ci_otlp_sender" {
   count = local.is_ci ? 1 : 0
@@ -558,18 +642,691 @@ resource "null_resource" "ci_otlp_sender" {
     EOT
     interpreter = ["/bin/bash", "-c"]
   }
-  depends_on = [null_resource.ci_helm_chart]
+  depends_on = [null_resource.restart_pods]
+}
+
+# The agent never deletes log groups. This deletes the OTLP log group on teardown. helm_release depends on this
+# resource, so Terraform uninstalls the chart (and with it the agents that write the group) first, and nothing
+# recreates the group after the delete. It runs on destroy, so it also runs when go test fails or is killed.
+resource "null_resource" "ci_otlp_log_group_cleanup" {
+  count = local.is_ci || local.is_filters ? 1 : 0
+
+  triggers = {
+    log_group = "/aws/cwagent/${azurerm_kubernetes_cluster.cwagent.name}/otlp"
+    region    = var.region
+  }
+  provisioner "local-exec" {
+    when    = destroy
+    command = "aws logs delete-log-group --region ${self.triggers.region} --log-group-name ${self.triggers.log_group} || true"
+  }
 }
 
 #####################################################################
-# keda/karpenter stub emitters + sample app (applied via kubectl).
+# gpu-burn on gpumanaged (gpu) or gpuburn (gpudriver). Name, labels and
+# container match terraform/eks/daemon/otel-gpu so the same checks apply.
+# It keeps one GPU busy for an hour (the "3600" argument is seconds), longer than any test run, so
+# the tests see non-zero utilisation. The pod label pod-color=magenta is what the tests look for on
+# the driver-install path; on the managed path they assert that pod attribution is absent, because
+# host DCGM has no pod mapping.
 #####################################################################
-resource "null_resource" "ci_extra_manifests" {
-  count = local.is_ci ? 1 : 0
+resource "kubernetes_deployment_v1" "gpu_burn" {
+  count = local.has_gpu ? 1 : 0
+  metadata {
+    name      = "multi-gpu-burn"
+    namespace = "default"
+  }
+  spec {
+    replicas = 1
+    selector {
+      match_labels = { app = "multi-gpu-burn" }
+    }
+    template {
+      metadata {
+        labels = {
+          app                             = "multi-gpu-burn"
+          "ci-test.example.com/pod-color" = "magenta"
+        }
+      }
+      spec {
+        node_selector = { "kubernetes.azure.com/agentpool" = local.gpu_burn_pool }
+        toleration {
+          key      = "sku"
+          operator = "Exists"
+          effect   = "NoSchedule"
+        }
+        toleration {
+          key      = "nvidia.com/gpu"
+          operator = "Exists"
+          effect   = "NoSchedule"
+        }
+        container {
+          name  = "gpu-burn"
+          image = "chrstnhntschl/gpu_burn:latest"
+          args  = ["3600"]
+          resources {
+            limits = { "nvidia.com/gpu" = "1" }
+          }
+        }
+      }
+    }
+  }
+  # Readiness is checked in gpu_workload_ready, so a stuck pod still leaves diagnostics and test results.
+  wait_for_rollout = false
+  depends_on       = [null_resource.gpu_node_pool]
+}
+
+# Waits for gpu-burn (and, for gpudriver, the chart's dcgm-exporter pods), then for GPU metrics to reach
+# CloudWatch, as terraform/eks/daemon/otel-gpu does. Does not fail the apply: a missing workload or
+# exporter is reported by the tests after the diagnostics.
+# The final "sleep 360" is a fixed wait, not a check: it gives the agent time to scrape, process and
+# publish a few intervals of GPU metrics, so the tests query CloudWatch after the data exists.
+resource "null_resource" "gpu_workload_ready" {
+  count = local.has_gpu ? 1 : 0
   provisioner "local-exec" {
     command = <<-EOT
-      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' apply -f '${path.module}/../../../${var.test_dir}/resources/keda_karpenter.yaml'
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n default rollout status deployment/multi-gpu-burn --timeout=900s \
+        || echo "multi-gpu-burn not ready; continuing to diagnostics and tests"
+      %{~if local.is_gpu_driver~}
+      for i in $(seq 1 30); do
+        ${local.kubectl} get pod -l app.kubernetes.io/name=dcgm-exporter -o name | grep -q . && break
+        sleep 20
+      done
+      ${local.kubectl} wait pod -l app.kubernetes.io/name=dcgm-exporter --for=condition=Ready --timeout=600s \
+        || echo "dcgm-exporter pods not ready; continuing to diagnostics and tests"
+      %{~endif~}
+      sleep 360
     EOT
   }
-  depends_on = [local_sensitive_file.kubeconfig]
+  depends_on = [null_resource.restart_pods, kubernetes_deployment_v1.gpu_burn]
+}
+
+#####################################################################
+# Diagnostics: surface agent pod state and logs in the job output so
+# delivery failures are debuggable after the cluster is destroyed.
+#####################################################################
+resource "null_resource" "agent_diagnostics" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${local.kubectl} get pods -o wide || true
+      ${local.kubectl} logs daemonset/cloudwatch-agent --tail=200 --prefix || true
+      %{~if local.otel_ci~}
+      ${local.kubectl} logs deployment/cloudwatch-agent-cluster-scraper --tail=200 --prefix || true
+      %{~endif~}
+      # GPU state: which pool each node belongs to, whether AKS runs host DCGM on it, and where the
+      # exporter, device plugin and gpu-burn pods landed. Explains a missing metric after destroy.
+      %{~if local.has_gpu~}
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' get nodes \
+        -L kubernetes.azure.com/agentpool,accelerator,kubernetes.azure.com/dcgm-exporter,nvidia.com/gpu.present || true
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' get pods -A -o wide \
+        -l 'app.kubernetes.io/name in (dcgm-exporter,nvidia-device-plugin)' || true
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' get pods -n default -o wide -l app=multi-gpu-burn || true
+      %{~endif~}
+    EOT
+  }
+
+  depends_on = [null_resource.restart_pods, kubernetes_job_v1.otlp_load, null_resource.gpu_workload_ready, null_resource.standard_workload_ready, null_resource.filters_workload_ready, null_resource.attr_limit_workload_ready, null_resource.ci_otlp_sender]
+}
+
+#####################################################################
+# Test workloads for the standard suite. They copy terraform/eks/daemon/otel, so the kube-state-metrics
+# workload metrics (statefulset, job, cronjob, replicaset, deployment) have data and the tests have known
+# workloads to compare against. The ones with a node selector land on the default pool, which carries the
+# node-color=blue label in this suite.
+#####################################################################
+resource "kubernetes_deployment_v1" "nginx_test" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "nginx-test"
+    namespace = "default"
+  }
+  spec {
+    replicas = 1
+    selector { match_labels = { app = "nginx-test" } }
+    template {
+      metadata { labels = { app = "nginx-test" } }
+      spec {
+        container {
+          name  = "nginx"
+          image = "public.ecr.aws/nginx/nginx:latest"
+          port { container_port = 80 }
+        }
+      }
+    }
+  }
+  depends_on = [azurerm_kubernetes_cluster.cwagent]
+}
+
+resource "kubernetes_service_v1" "ksm_statefulset_headless" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "ksm-test-statefulset"
+    namespace = "default"
+  }
+  spec {
+    cluster_ip = "None"
+    selector   = { app = "ksm-test-statefulset" }
+    port {
+      port = 80
+      name = "placeholder"
+    }
+  }
+  depends_on = [azurerm_kubernetes_cluster.cwagent]
+}
+
+resource "kubernetes_stateful_set_v1" "ksm_statefulset" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "ksm-test-statefulset"
+    namespace = "default"
+  }
+  spec {
+    replicas     = 1
+    service_name = kubernetes_service_v1.ksm_statefulset_headless[0].metadata[0].name
+    selector { match_labels = { app = "ksm-test-statefulset" } }
+    template {
+      metadata { labels = { app = "ksm-test-statefulset" } }
+      spec {
+        node_selector = { "ci-test.example.com/node-color" = "blue" }
+        container {
+          name  = "pause"
+          image = "registry.k8s.io/pause:3.9"
+          resources { requests = { cpu = "10m", memory = "16Mi" } }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_cron_job_v1" "ksm_cronjob" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "ksm-test-cronjob"
+    namespace = "default"
+  }
+  spec {
+    schedule                      = "*/5 * * * *"
+    successful_jobs_history_limit = 1
+    failed_jobs_history_limit     = 1
+    job_template {
+      metadata {}
+      spec {
+        template {
+          metadata { labels = { app = "ksm-test-cronjob" } }
+          spec {
+            node_selector  = { "ci-test.example.com/node-color" = "blue" }
+            restart_policy = "Never"
+            container {
+              name    = "echo"
+              image   = "busybox:1.36"
+              command = ["echo", "ksm-test"]
+              resources { requests = { cpu = "10m", memory = "16Mi" } }
+            }
+          }
+        }
+      }
+    }
+  }
+  depends_on = [azurerm_kubernetes_cluster.cwagent]
+}
+
+resource "kubernetes_job_v1" "ksm_job" {
+  count = local.is_standard ? 1 : 0
+  metadata {
+    name      = "ksm-test-job"
+    namespace = "default"
+  }
+  spec {
+    ttl_seconds_after_finished = 86400
+    template {
+      metadata { labels = { app = "ksm-test-job" } }
+      spec {
+        node_selector  = { "ci-test.example.com/node-color" = "blue" }
+        restart_policy = "Never"
+        container {
+          name    = "echo"
+          image   = "busybox:1.36"
+          command = ["echo", "ksm-test"]
+          resources { requests = { cpu = "10m", memory = "16Mi" } }
+        }
+      }
+    }
+  }
+  depends_on = [azurerm_kubernetes_cluster.cwagent]
+}
+
+# The kubernetes provider has no ReplicaSet resource, so apply one with kubectl.
+resource "null_resource" "ksm_replicaset" {
+  count      = local.is_standard ? 1 : 0
+  depends_on = [azurerm_kubernetes_cluster.cwagent, local_sensitive_file.kubeconfig]
+  provisioner "local-exec" {
+    command = <<-EOT
+      cat <<'EOF' | kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' apply -f -
+      apiVersion: apps/v1
+      kind: ReplicaSet
+      metadata:
+        name: ksm-test-replicaset
+        namespace: default
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: ksm-test-replicaset
+        template:
+          metadata:
+            labels:
+              app: ksm-test-replicaset
+          spec:
+            nodeSelector:
+              ci-test.example.com/node-color: blue
+            containers:
+            - name: pause
+              image: registry.k8s.io/pause:3.9
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+      EOF
+    EOT
+  }
+}
+
+# Waits for the workloads, then 360 s for metrics to reach CloudWatch before go test. The EKS stack waits 240 s,
+# but here the chart's default agent image runs for a minute or two before update_image swaps in the image
+# under test, and its series stay visible to queries for about 5 minutes. With 240 s the tests saw both
+# builds (different cloud.platform spelling and host.name); the GPU suites wait 360 s and saw only one.
+# A workload that is not ready does not stop the apply, so diagnostics and test results still appear.
+resource "null_resource" "standard_workload_ready" {
+  count = local.is_standard ? 1 : 0
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n default rollout status deployment/nginx-test --timeout=300s \
+        || echo "nginx-test not ready; continuing to diagnostics and tests"
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n default rollout status statefulset/ksm-test-statefulset --timeout=300s \
+        || echo "ksm-test-statefulset not ready; continuing to diagnostics and tests"
+      kubectl --kubeconfig='${local_sensitive_file.kubeconfig.filename}' -n default wait --for=condition=complete job/ksm-test-job --timeout=300s \
+        || echo "ksm-test-job not complete; continuing to diagnostics and tests"
+      sleep 360
+    EOT
+  }
+  depends_on = [
+    null_resource.restart_pods,
+    kubernetes_deployment_v1.nginx_test,
+    kubernetes_stateful_set_v1.ksm_statefulset,
+    kubernetes_cron_job_v1.ksm_cronjob,
+    kubernetes_job_v1.ksm_job,
+    null_resource.ksm_replicaset,
+  ]
+}
+
+#####################################################################
+# Test workloads for the filters suite. They copy terraform/eks/daemon/otel-filters: one logging
+# deployment per namespace with one pod on each of the 2 nodes (so every node agent sees a kept and a
+# dropped namespace), each with an OTLP sender container that posts through the cloudwatch-agent Service,
+# the pod labels the podLabels filter keeps or drops, stand-in vLLM and Knative servers, and a host log
+# writer. The tests read their output from CloudWatch.
+#####################################################################
+resource "null_resource" "filters_workloads" {
+  for_each   = local.is_filters ? toset(local.filters_namespaces) : toset([])
+  depends_on = [local_sensitive_file.kubeconfig, azurerm_kubernetes_cluster.cwagent]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      kubectl --kubeconfig "$KC" create namespace ${each.key} --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      kubectl --kubeconfig "$KC" -n ${each.key} create configmap otlp-e2e-sender \
+        --from-file=sender.sh=${local.filters_sender_script} --dry-run=client -o yaml | kubectl --kubeconfig "$KC" apply -f -
+      cat <<'EOF' | kubectl --kubeconfig "$KC" apply -f -
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: filters-e2e
+        namespace: ${each.key}
+      spec:
+        replicas: 2
+        selector:
+          matchLabels:
+            app: filters-e2e
+        template:
+          metadata:
+            labels:
+              app: filters-e2e
+              filters-e2e-keep-a: v
+              filters-e2e-keep-secret: v
+              filters-e2e-other: v
+              filters-e2e.example.com/keep-x: v
+              filters-e2e-keep-secret-x: v
+              app-extra: v
+          spec:
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app: filters-e2e
+                  topologyKey: kubernetes.io/hostname
+            containers:
+            - name: logger
+              image: busybox:1.36
+              command: ["sh", "-c", "while true; do echo otel-filters-e2e ${each.key}; sleep 5; done"]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+            - name: otlp-sender
+              image: curlimages/curl:8.8.0
+              command: ["sh", "/sender/sender.sh"]
+              env:
+              - name: OTLP_CASE
+                value: ${each.key}
+              - name: OTLP_METRICS
+                value: otlp_e2e_requests otlp_e2e_unlisted
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: sender
+                mountPath: /sender
+            volumes:
+            - name: sender
+              configMap:
+                name: otlp-e2e-sender
+      EOF
+      kubectl --kubeconfig "$KC" -n ${each.key} rollout status deployment/filters-e2e --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+# Stand-in inference servers: each pod looks like a KServe predictor in Serverless mode. The vLLM scrape keeps
+# the kserve-container of a pod with the serving.kserve.io/inferenceservice label and component=predictor; the
+# Knative data plane scrape keeps the port named http-usermetric of a pod with the serving.knative.dev/revision
+# label. Each container is nginx serving a fixed Prometheus text file at /metrics.
+resource "null_resource" "filters_inference_stubs" {
+  for_each   = local.is_filters ? toset(local.filters_inference_namespaces) : toset([])
+  depends_on = [null_resource.filters_workloads]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      cat <<'EOF' | kubectl --kubeconfig "$KC" apply -f -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: filters-e2e-inference
+        namespace: ${each.key}
+      data:
+        vllm.conf: |
+          events {}
+          http {
+            access_log off;
+            default_type "text/plain; version=0.0.4";
+            server {
+              listen 8080;
+              root /stub/vllm;
+            }
+          }
+        knative.conf: |
+          events {}
+          http {
+            access_log off;
+            default_type "text/plain; version=0.0.4";
+            server {
+              listen 9091;
+              root /stub/knative;
+            }
+          }
+        vllm-metrics: |
+          # HELP vllm:num_requests_running Number of requests in model execution batches.
+          # TYPE vllm:num_requests_running gauge
+          vllm:num_requests_running{model_name="filters-e2e"} 1
+        knative-metrics: |
+          # HELP revision_request_count The number of requests that are routed to queue-proxy.
+          # TYPE revision_request_count counter
+          revision_request_count{response_code="200"} 1
+      ---
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: filters-e2e-inference
+        namespace: ${each.key}
+      spec:
+        replicas: 2
+        selector:
+          matchLabels:
+            app: filters-e2e-inference
+        template:
+          metadata:
+            labels:
+              app: filters-e2e-inference
+              component: predictor
+              serving.kserve.io/inferenceservice: filters-e2e
+              serving.knative.dev/revision: filters-e2e-00001
+          spec:
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app: filters-e2e-inference
+                  topologyKey: kubernetes.io/hostname
+            containers:
+            - name: kserve-container
+              image: nginx:1.27-alpine
+              command: ["nginx", "-c", "/stub/vllm.conf", "-g", "daemon off;"]
+              ports:
+              - containerPort: 8080
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: stub
+                mountPath: /stub
+            - name: queue-proxy
+              image: nginx:1.27-alpine
+              command: ["nginx", "-c", "/stub/knative.conf", "-g", "daemon off;"]
+              ports:
+              - name: http-usermetric
+                containerPort: 9091
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: stub
+                mountPath: /stub
+            volumes:
+            - name: stub
+              configMap:
+                name: filters-e2e-inference
+                items:
+                - key: vllm.conf
+                  path: vllm.conf
+                - key: knative.conf
+                  path: knative.conf
+                - key: vllm-metrics
+                  path: vllm/metrics
+                - key: knative-metrics
+                  path: knative/metrics
+      EOF
+      kubectl --kubeconfig "$KC" -n ${each.key} rollout status deployment/filters-e2e-inference --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+# Host log writer: a marker line in /var/log/messages on every node, so the host logs pipeline has data.
+# The namespace is not in the namespaces include list, so its own metrics and logs are dropped.
+resource "null_resource" "filters_host_log_writer" {
+  count      = local.is_filters ? 1 : 0
+  depends_on = [local_sensitive_file.kubeconfig, azurerm_kubernetes_cluster.cwagent]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      cat <<'EOF' | kubectl --kubeconfig "$KC" apply -f -
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: filters-host
+      ---
+      apiVersion: apps/v1
+      kind: DaemonSet
+      metadata:
+        name: filters-e2e-host
+        namespace: filters-host
+      spec:
+        selector:
+          matchLabels:
+            app: filters-e2e-host
+        template:
+          metadata:
+            labels:
+              app: filters-e2e-host
+          spec:
+            containers:
+            - name: writer
+              image: busybox:1.36
+              command: ["sh", "-c", "while true; do echo otel-filters-e2e host >> /host/messages; sleep 5; done"]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+              volumeMounts:
+              - name: messages
+                mountPath: /host/messages
+            volumes:
+            - name: messages
+              hostPath:
+                path: /var/log/messages
+                type: FileOrCreate
+      EOF
+      kubectl --kubeconfig "$KC" -n filters-host rollout status daemonset/filters-e2e-host --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+# Waits 360 s for the workloads' telemetry to reach CloudWatch before go test (see standard_workload_ready).
+resource "null_resource" "filters_workload_ready" {
+  count = local.is_filters ? 1 : 0
+  provisioner "local-exec" {
+    command = "sleep 360"
+  }
+  depends_on = [
+    null_resource.restart_pods,
+    null_resource.filters_workloads,
+    null_resource.filters_inference_stubs,
+    null_resource.filters_host_log_writer,
+  ]
+}
+
+#####################################################################
+# attr_limit suite: label the 3 nodes, then run one nginx pod on each.
+#####################################################################
+resource "null_resource" "attr_limit_node_labels" {
+  count      = local.is_attr_limit ? 1 : 0
+  depends_on = [local_sensitive_file.kubeconfig, azurerm_kubernetes_cluster.cwagent]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      # Wait for the 3 nodes of the default pool to register.
+      for i in $(seq 1 60); do
+        [ "$(kubectl --kubeconfig "$KC" get nodes --no-headers 2>/dev/null | grep -c ' Ready ')" -ge 3 ] && break
+        sleep 10
+      done
+      NODES=($(kubectl --kubeconfig "$KC" get nodes -o name | sort))
+      [ "$${#NODES[@]}" -ge 3 ] || { echo "want 3 nodes, got $${#NODES[@]}" >&2; exit 1; }
+      kubectl --kubeconfig "$KC" label --overwrite "$${NODES[0]}" ${join(" ", [for k, v in local.al_labels.low : "${k}=${v}"])}
+      kubectl --kubeconfig "$KC" label --overwrite "$${NODES[1]}" ${join(" ", [for k, v in local.al_labels.mid : "${k}=${v}"])}
+      kubectl --kubeconfig "$KC" label --overwrite "$${NODES[2]}" ${join(" ", [for k, v in local.al_labels.high : "${k}=${v}"])}
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+resource "null_resource" "attr_limit_nginx" {
+  for_each   = local.is_attr_limit ? toset(["low", "mid", "high"]) : toset([])
+  depends_on = [null_resource.attr_limit_node_labels]
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      KC='${local_sensitive_file.kubeconfig.filename}'
+      cat <<EOF | kubectl --kubeconfig "$KC" apply -f -
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: attr-limit-nginx-${each.key}
+        namespace: default
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: attr-limit-nginx-${each.key}
+        template:
+          metadata:
+            labels:
+              app: attr-limit-nginx-${each.key}
+      ${local.al_extra_pod_labels_yaml[each.key]}
+          spec:
+            nodeSelector:
+              ci-test.example.com/attr-limit-node: node-${each.key}
+            containers:
+            - name: nginx
+              image: public.ecr.aws/nginx/nginx:latest
+              ports:
+              - containerPort: 80
+      EOF
+      kubectl --kubeconfig "$KC" -n default rollout status deployment/attr-limit-nginx-${each.key} --timeout=5m
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+}
+
+# Waits 360 s for the workloads' telemetry to reach CloudWatch before go test (see standard_workload_ready).
+resource "null_resource" "attr_limit_workload_ready" {
+  count = local.is_attr_limit ? 1 : 0
+  provisioner "local-exec" {
+    command = "sleep 360"
+  }
+  depends_on = [null_resource.restart_pods, null_resource.attr_limit_nginx]
+}
+
+#####################################################################
+# Run Go integration test from the runner (validates CloudWatch)
+#####################################################################
+resource "null_resource" "integration_test" {
+  provisioner "local-exec" {
+    working_dir = "${path.module}/../../../"
+    command     = <<-EOT
+      go test -tags integration ${var.test_dir} -p 1 -timeout 30m \
+        -computeType=AKS \
+        -region=${var.region} \
+        -cwaCommitSha=${var.cwa_github_sha} \
+        -aksClusterName=${azurerm_kubernetes_cluster.cwagent.name} \
+        -azureLocation=${var.azure_location} \
+        -azureVMSize=${local.has_gpu ? var.aks_gpu_vm_size : var.aks_node_vm_size} \
+        -azureResourceGroup=${azurerm_kubernetes_cluster.cwagent.node_resource_group} \
+        -v
+    EOT
+
+    environment = {
+      AWS_REGION = var.region
+      KUBECONFIG = abspath(local_sensitive_file.kubeconfig.filename)
+    }
+  }
+
+  depends_on = [
+    null_resource.restart_pods,
+    kubernetes_job_v1.otlp_load,
+    null_resource.ci_extra_manifests,
+    null_resource.ci_otlp_sender,
+    null_resource.gpu_workload_ready,
+    null_resource.standard_workload_ready,
+    null_resource.filters_workload_ready,
+    null_resource.attr_limit_workload_ready,
+    null_resource.agent_diagnostics,
+  ]
 }
