@@ -10,13 +10,13 @@ Each suite runs against its own AKS cluster created by one Terraform stack, `ter
 |---|---|---|---|
 | `./test/azure/aks` | `default:otel` agent and OTLP load: metrics, span metrics, logs, traces | 1 node | default |
 | `./test/azure/aks/containerinsights` | OTel Container Insights: node, cluster, KEDA, Karpenter metrics; node logs | 1 node | default |
-| `./test/azure/aks/standard` | Port of `test/otel/standard` (184 tests): kube-state-metrics, kubelet, cadvisor, node-exporter, control plane, dedup, resolution, common labels, host validation | 1 node | `wip` |
-| `./test/azure/aks/filters` | Port of `test/otel/filters`: the chart's `otelFilters` | 2 nodes | `wip` |
-| `./test/azure/aks/attr_limit` | Port of `test/otel/attr_limit`: attribute-limit processor with many node and pod labels | 3 nodes | `wip` |
-| `./test/azure/aks/gpu` | OTel Container Insights plus DCGM on an AKS-managed GPU pool | CPU pool + T4 pool | `wip` |
-| `./test/azure/aks/gpudriver` | DCGM from the chart's exporter on driver-install GPU pools (idle and burn pools, gpu-burn workload) | CPU pool + 2 T4 pools | `wip` |
+| `./test/azure/aks/standard` | Port of `test/otel/standard` (184 tests): kube-state-metrics, kubelet, cadvisor, node-exporter, control plane, dedup, resolution, common labels, host validation | 1 node | default |
+| `./test/azure/aks/filters` | Port of `test/otel/filters`: the chart's `otelFilters` | 2 nodes | default |
+| `./test/azure/aks/attr_limit` | Port of `test/otel/attr_limit`: attribute-limit processor with many node and pod labels | 3 nodes | default |
+| `./test/azure/aks/gpu` | OTel Container Insights plus DCGM on an AKS-managed GPU pool | CPU pool + T4 pool | default |
+| `./test/azure/aks/gpudriver` | DCGM from the chart's exporter on driver-install GPU pools (idle and burn pools, gpu-burn workload) | CPU pool + 2 T4 pools | default |
 
-`wip` rows are generated with a `[WIP]` prefix on the job name.
+Every row gates CI (none is marked `wip`).
 
 ## Differences from EKS
 
