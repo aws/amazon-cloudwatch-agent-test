@@ -313,6 +313,18 @@ resource "null_resource" "restart_pods" {
   triggers   = { timestamp = timestamp() }
   provisioner "local-exec" {
     command = <<-EOT
+      set -e
+      n=0
+      until kubectl -n amazon-cloudwatch get daemonset/cloudwatch-agent > /dev/null 2>&1; do
+        n=$((n + 1))
+        if [ $n -gt 30 ]; then
+          echo "the operator has not created daemonset/cloudwatch-agent after 5 minutes" >&2
+          kubectl -n amazon-cloudwatch get ds,pods,events 2>&1 || true
+          kubectl -n amazon-cloudwatch logs deployment/amazon-cloudwatch-observability-controller-manager --tail=200 2>&1 || true
+          exit 1
+        fi
+        sleep 10
+      done
       kubectl -n amazon-cloudwatch rollout restart daemonset/cloudwatch-agent
       kubectl -n amazon-cloudwatch rollout restart deployment/cloudwatch-agent-cluster-scraper 2>/dev/null || true
       kubectl -n amazon-cloudwatch rollout status daemonset/cloudwatch-agent --timeout=120s
