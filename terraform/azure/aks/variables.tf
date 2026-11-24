@@ -6,34 +6,20 @@ variable "region" {
   default = "us-east-2"
 }
 
+# Selects the suite deployed through the amazon-cloudwatch-observability chart:
+#   "./test/azure/aks"                   -> default:otel agent + OTLP load generator
+#   "./test/azure/aks/containerinsights" -> OTEL Container Insights node agent + cluster-scraper
+#   "./test/azure/aks/filters"           -> the chart's otelFilters on 2 nodes
+#   "./test/azure/aks/attr_limit"        -> the attribute-limit processor on 3 nodes with many labels
+#   "./test/azure/aks/gpu"               -> OTEL Container Insights + DCGM on an AKS-managed GPU pool
+#   "./test/azure/aks/gpudriver"         -> OTEL Container Insights + DCGM from the chart's exporter on driver-install GPU pools
 variable "test_dir" {
   type    = string
   default = "./test/azure/aks"
-}
-
-# Selects which suite this apply deploys:
-#   "otlp"              -> default:otel DaemonSet + OTLP load generator (existing behavior)
-#   "containerinsights" -> Helm chart install with OTel Container Insights (node DaemonSet + cluster-scraper)
-# Defaults to otlp so existing OTLP runs are unchanged.
-variable "test_mode" {
-  type    = string
-  default = "otlp"
   validation {
-    condition     = contains(["otlp", "containerinsights"], var.test_mode)
-    error_message = "test_mode must be \"otlp\" or \"containerinsights\"."
+    condition     = contains(["./test/azure/aks", "./test/azure/aks/containerinsights", "./test/azure/aks/standard", "./test/azure/aks/filters", "./test/azure/aks/attr_limit", "./test/azure/aks/gpu", "./test/azure/aks/gpudriver"], var.test_dir)
+    error_message = "test_dir must be \"./test/azure/aks\", \"./test/azure/aks/containerinsights\", \"./test/azure/aks/standard\", \"./test/azure/aks/filters\", \"./test/azure/aks/attr_limit\", \"./test/azure/aks/gpu\" or \"./test/azure/aks/gpudriver\"."
   }
-}
-
-# helm-charts repository and branch installed in containerinsights mode, so a
-# branch on a fork can be tested before it is merged.
-variable "helm_charts_repo" {
-  type    = string
-  default = "https://github.com/aws-observability/helm-charts.git"
-}
-
-variable "helm_charts_branch" {
-  type    = string
-  default = "main"
 }
 
 variable "cwa_github_sha" {
@@ -43,7 +29,7 @@ variable "cwa_github_sha" {
 
 variable "azure_location" {
   type    = string
-  default = "eastus"
+  default = "westus"
 }
 
 variable "azure_resource_group" {
@@ -68,6 +54,18 @@ variable "runner_ip" {
 variable "aks_node_vm_size" {
   type    = string
   default = "Standard_D4s_v7"
+}
+
+variable "aks_gpu_vm_size" {
+  type        = string
+  description = "VM size of the gpumanaged pool (gpu suite) and the gpuidle pool (gpudriver suite)."
+  default     = "Standard_NC4as_T4_v3"
+}
+
+variable "aks_gpu_burn_vm_size" {
+  type        = string
+  description = "VM size of the gpuburn pool in the gpudriver suite (the EKS gpu_multi node group)."
+  default     = "Standard_NC4as_T4_v3"
 }
 
 variable "aks_node_count" {
@@ -95,4 +93,29 @@ variable "ecr_region" {
 variable "cwagent_image_tag" {
   type        = string
   description = "Image tag (build_id / commit SHA)."
+}
+
+variable "helm_chart_branch" {
+  type    = string
+  default = "main"
+}
+
+variable "helm_chart_repo" {
+  type = string
+  # TEMPORARY: dhwanianjirwala's fork carries aws-observability/helm-charts PR #387 (DCGM on AKS,
+  # branch fix/aks-dcgm-exporter). Switch back to the aws-observability URL once #387 is merged.
+  description = "Git URL of the helm-charts repository to clone. Pair it with helm_chart_branch."
+  default     = "https://github.com/dhwanianjirwala/helm-charts.git"
+}
+
+variable "helm_chart_path" {
+  type        = string
+  description = "Local amazon-cloudwatch-observability chart directory. When set, it is installed instead of cloning helm_chart_branch."
+  default     = ""
+}
+
+variable "helm_set_values" {
+  type        = map(string)
+  description = "Additional chart values applied after the suite's own values."
+  default     = {}
 }
