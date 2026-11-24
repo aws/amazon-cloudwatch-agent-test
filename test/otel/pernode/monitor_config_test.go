@@ -34,6 +34,9 @@ const (
 	// monitorPodAttrs and monitorIdentity give the SM/PM series the chart-wide service identity.
 	monitorPodAttrs = "k8sattributes/cw_k8s_ci_v0_pod"
 	monitorIdentity = "transform/cw_k8s_ci_v0_service_identity"
+	// monitorWorkload sets k8s.workload.name and k8s.workload.type from the owner names
+	// that monitorPodAttrs adds.
+	monitorWorkload = "transform/cw_k8s_ci_v0_set_workload"
 	// otelCIEnabledEnv is set by the harness to "false" when it installs the chart with
 	// otelContainerInsights.enabled=false, so the suite asserts the monitor-only shape.
 	otelCIEnabledEnv = "PERNODE_OTEL_CI_ENABLED"
@@ -43,7 +46,9 @@ const (
 // every ServiceMonitor and PodMonitor workload series carries the scope attributes
 // cloudwatch.solution=k8s-otel-prometheus-monitors and
 // cloudwatch.pipeline=prometheus-monitors, so they are not labeled as Container
-// Insights infrastructure.
+// Insights infrastructure. Each series also carries the workload of its pod: sm-app and
+// pm-app are Deployments named after the app (resources/workload.yaml), so
+// k8s.workload.name is the app and k8s.workload.type is Deployment.
 func TestPrometheusMonitorMetricsCarrySolution(t *testing.T) {
 	for _, app := range workloadApps {
 		results, metric := workloadResults(t, app)
@@ -55,6 +60,11 @@ func TestPrometheusMonitorMetricsCarrySolution(t *testing.T) {
 				"%s %s series cloudwatch.solution (instrumentation labels %v)", app, metric, inst)
 			assert.Equalf(t, "prometheus-monitors", inst["cloudwatch.pipeline"],
 				"%s %s series cloudwatch.pipeline (instrumentation labels %v)", app, metric, inst)
+			res := r.Labels.Resource
+			assert.Equalf(t, app, res["k8s.workload.name"],
+				"%s %s series k8s.workload.name (resource labels %v)", app, metric, res)
+			assert.Equalf(t, "Deployment", res["k8s.workload.type"],
+				"%s %s series k8s.workload.type (resource labels %v)", app, metric, res)
 		}
 	}
 }
@@ -94,8 +104,9 @@ func agentOtelConfig(t *testing.T, agentName string) otelConfig {
 // TestPrometheusMonitorPipelineConfig checks the SM/PM pipeline on both agents: it labels
 // its series cloudwatch.solution=k8s-otel-prometheus-monitors and
 // cloudwatch.pipeline=prometheus-monitors, keeps up through its own filter, exports to
-// the regional endpoint through its own exporter, finds the scraped pod and applies the
-// chart-wide service identity after resourcedetection, and, when the harness turned
+// the regional endpoint through its own exporter, finds the scraped pod, sets the
+// workload attributes after it, applies the chart-wide service identity after
+// resourcedetection and the workload step, and, when the harness turned
 // otelContainerInsights off, runs without any Container Insights pipeline: the
 // cluster-scraper runs it alone, and the node agent next to the OTLP endpoint's pipelines.
 func TestPrometheusMonitorPipelineConfig(t *testing.T) {
@@ -134,6 +145,9 @@ func TestPrometheusMonitorPipelineConfig(t *testing.T) {
 			pod, rd, id := index(monitorPodAttrs), index("resourcedetection/cw_k8s_ci_v0"), index(monitorIdentity)
 			assert.Truef(t, pod >= 0 && rd > pod && id > rd, "%s SM/PM processors: want %s, then resourcedetection, then %s: %v",
 				agent, monitorPodAttrs, monitorIdentity, pipeline.Processors)
+			wl := index(monitorWorkload)
+			assert.Truef(t, wl > pod && pod >= 0 && wl < id, "%s SM/PM processors: want %s after %s and before %s: %v",
+				agent, monitorWorkload, monitorPodAttrs, monitorIdentity, pipeline.Processors)
 
 			var names []string
 			for name := range cfg.Service.Pipelines {
