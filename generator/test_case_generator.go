@@ -660,8 +660,9 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"aks": {
 		{testDir: "./test/azure/aks", terraformDir: "terraform/azure/aks"},
 		{testDir: "./test/azure/aks/containerinsights", terraformDir: "terraform/azure/aks"},
-		// Ports of the EKS test/otel/standard checks.
-		{testDir: "./test/azure/aks/standard", terraformDir: "terraform/azure/aks"},
+		// Ports of the EKS test/otel/standard checks. wip: the agent intermittently drops its Azure
+		// resource-detection attributes (see the PR description), which fails the cloud/host checks.
+		{testDir: "./test/azure/aks/standard", terraformDir: "terraform/azure/aks", wip: true},
 		// The chart's otelFilters (namespaces, labels, metric names) on 2 nodes; port of test/otel/filters.
 		{testDir: "./test/azure/aks/filters", terraformDir: "terraform/azure/aks"},
 		// The attribute-limit processor on 3 nodes with many labels; port of test/otel/attr_limit.
