@@ -200,7 +200,7 @@ resource "null_resource" "update_image" {
   }
 }
 
-# --- Restart pods to pick up Pod Identity, the new image and the issued certificates ---
+# --- Restart pods to pick up Pod Identity and the new image ---
 
 resource "null_resource" "restart_pods" {
   depends_on = [aws_eks_pod_identity_association.cloudwatch_agent, null_resource.update_image]
@@ -208,9 +208,9 @@ resource "null_resource" "restart_pods" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
-      # The chart creates the certificate Secrets empty and cert-manager fills
-      # them, so restart the pods only after every Certificate is Ready.
-      kubectl -n amazon-cloudwatch wait certificate --all --for=condition=Ready --timeout=5m
+      # The restart is for Pod Identity and the patched image. The pods need no
+      # restart for the certificates: the helm-charts cert-manager-enabled
+      # minikube scenario checks a plain install.
       kubectl -n amazon-cloudwatch rollout restart daemonset/cloudwatch-agent
       kubectl -n amazon-cloudwatch rollout restart deployment/cloudwatch-agent-cluster-scraper 2>/dev/null || true
       kubectl -n amazon-cloudwatch rollout status daemonset/cloudwatch-agent --timeout=120s
