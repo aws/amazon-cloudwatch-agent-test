@@ -90,6 +90,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 	"ec2_linux_onprem": {
 		{testDir: "./test/cloudwatchlogs"},
 		{testDir: "./test/otel_collect/linux/otlp"},
+		{testDir: "./test/otel_collect/linux/profiles"},
 		{testDir: "./test/otel_collect/linux/host_metrics"},
 		{testDir: "./test/otel_collect/linux/prometheus"},
 	},
@@ -142,6 +143,7 @@ var testTypeToTestConfig = map[string][]testConfig{
 		},
 		{testDir: "./test/otel_collect/linux/host_metrics"},
 		{testDir: "./test/otel_collect/linux/otlp"},
+		{testDir: "./test/otel_collect/linux/profiles"},
 		{
 			testDir:    "./test/otel_collect/linux/prometheus",
 			excludedOs: map[string]struct{}{"rhel8": {}, "ol8": {}, "sles-15": {}},
@@ -494,6 +496,27 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/filters",
+			terraformDir: "terraform/eks/daemon/otel-filters",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/otlp",
+			terraformDir: "terraform/eks/daemon/otel-otlp",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/otlp_disabled",
+			terraformDir: "terraform/eks/daemon/otel-otlp-disabled",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
 			testDir:      "./test/otel/ebs_csi",
 			terraformDir: "terraform/eks/daemon/otel-ebs-csi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
@@ -517,6 +540,14 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/gpu_filters",
+			terraformDir: "terraform/eks/daemon/otel-gpu-filters",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.12xlarge",
+			ami:          "AL2023_x86_64_NVIDIA",
+			k8sVersion:   "1.35",
+		},
+		{
 			testDir:      "./test/otel/lis_csi",
 			terraformDir: "terraform/eks/daemon/otel-lis-csi",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
@@ -533,12 +564,92 @@ var testTypeToTestConfig = map[string][]testConfig{
 			k8sVersion:   "1.35",
 		},
 		{
+			testDir:      "./test/otel/multi_efa_filters",
+			terraformDir: "terraform/eks/daemon/otel-multi-efa-filters",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/multi_efa_dra",
+			terraformDir: "terraform/eks/daemon/otel-multi-efa-dra",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "c6in.32xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+		},
+		{
 			testDir:      "./test/otel/neuron",
 			terraformDir: "terraform/eks/daemon/otel-neuron",
 			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
 			instanceType: "inf2.xlarge",
 			ami:          "AL2023_x86_64_NEURON",
 			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/neuron_filters",
+			terraformDir: "terraform/eks/daemon/otel-neuron-filters",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "inf2.xlarge",
+			ami:          "AL2023_x86_64_NEURON",
+			k8sVersion:   "1.35",
+		},
+		{
+			// Runs ./test/otel/solutions/kserve and knative after vllm, on the same cluster.
+			// Needs a chart with the vllm/kserve/knative solutions: CI installs the newest
+			// helm-charts release-* branch, and the root fails fast when that branch has
+			// none. wip until a release branch includes them.
+			testDir:      "./test/otel/solutions/vllm",
+			terraformDir: "terraform/eks/daemon/otel-llm-serving",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "m5.2xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+			wip:          true,
+		},
+		{
+			testDir:      "./test/otel/neuron_dra",
+			terraformDir: "terraform/eks/daemon/otel-neuron-dra",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "trn1.2xlarge",
+			ami:          "AL2023_x86_64_NEURON",
+			k8sVersion:   "1.35",
+		},
+		{
+			testDir:      "./test/otel/gpu_dra",
+			terraformDir: "terraform/eks/daemon/otel-gpu-dra",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "g4dn.12xlarge",
+			ami:          "AL2023_x86_64_NVIDIA",
+			k8sVersion:   "1.35",
+		},
+		{
+			// Needs a chart with the ray solution: the root fails fast when the
+			// helm-charts branch CI installs (helm_chart_branch, default the newest
+			// release-*) has none. wip until a release branch includes it.
+			testDir:      "./test/otel/solutions/ray",
+			terraformDir: "terraform/eks/daemon/otel-ray",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			instanceType: "m5.xlarge",
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+			wip:          true,
+		},
+		{
+			// Java profiling through the chart's java.profiling and otlp.profiles values.
+			// CI installs the newest helm-charts release-* branch with the chart's pinned
+			// operator, and the root fails fast when that branch has no java.profiling. wip
+			// until a chart release carries both and pins an operator with java.profiling;
+			// until then the job cannot pass in CI, which sets no operator image: run the
+			// root with helm_chart_repo/branch and cwagent_operator_image_repo/tag set to
+			// the builds under test.
+			testDir:      "./test/otel/java_profiling",
+			terraformDir: "terraform/eks/daemon/otel-java-profiling",
+			targets:      map[string]map[string]struct{}{"arc": {"amd64": {}}},
+			ami:          "AL2023_x86_64_STANDARD",
+			k8sVersion:   "1.35",
+			wip:          true,
 		},
 		{
 			testDir:      "./test/otel/performance",
@@ -593,6 +704,7 @@ var partitionTests = map[string]partition{
 			"./test/otel_collect/database_insights":  {},
 			"./test/otel_collect/linux/host_metrics": {},
 			"./test/otel_collect/linux/otlp":         {},
+			"./test/otel_collect/linux/profiles":     {},
 			"./test/otel_collect/linux/prometheus":   {},
 		},
 		testConfigOverrides: map[string]testConfig{
@@ -614,6 +726,7 @@ var partitionTests = map[string]partition{
 			"./test/otel_collect/database_insights":  {},
 			"./test/otel_collect/linux/host_metrics": {},
 			"./test/otel_collect/linux/otlp":         {},
+			"./test/otel_collect/linux/profiles":     {},
 			"./test/otel_collect/linux/prometheus":   {},
 		},
 		testConfigOverrides: map[string]testConfig{

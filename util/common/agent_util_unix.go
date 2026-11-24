@@ -13,7 +13,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -347,4 +349,258 @@ func SELinuxEnforced() (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+const (
+	agentReleaseBucket   = "amazoncloudwatch-agent"
+	agentInstallDir      = "/opt/aws/amazon-cloudwatch-agent"
+	agentPackageName     = "amazon-cloudwatch-agent"
+	agentLaunchdPlist    = "/Library/LaunchDaemons/com.amazon.cloudwatch.agent.plist"
+	agentSystemdUnit     = "/etc/systemd/system/amazon-cloudwatch-agent.service"
+	agentDownloadTries   = 3
+	agentDownloadBackoff = 10 * time.Second
+	processPollInterval  = 2 * time.Second
+)
+
+// InstallAgentVersion downloads a released agent package for this host's
+// OS and architecture from the public release bucket and installs it.
+// version is a release version such as "1.300074.0b1920", or "latest".
+// Installing an older version over a newer one is allowed.
+func InstallAgentVersion(version string) error {
+	uri, err := agentReleaseURI(version)
+	if err != nil {
+		return err
+	}
+	dest := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%s%s", agentPackageName, version, filepath.Ext(uri)))
+	log.Printf("Installing agent version %s from %s", version, uri)
+	var out []byte
+	for attempt := 1; attempt <= agentDownloadTries; attempt++ {
+		// Same anonymous download the canary uses for the public bucket.
+		out, err = exec.Command(awsCLI(), "s3", "cp", "--no-sign-request", "--no-progress", uri, dest).CombinedOutput()
+		if err == nil {
+			break
+		}
+		log.Printf("Download attempt %d of %d failed: %v %s", attempt, agentDownloadTries, err, out)
+		if attempt < agentDownloadTries {
+			time.Sleep(agentDownloadBackoff)
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("unable to download %s: %w", uri, err)
+	}
+	defer os.Remove(dest)
+	return installAgentPackage(dest)
+}
+
+// InstallAgentUnderTest reinstalls the agent package that was downloaded
+// for this test run, for tests that install another version first.
+func InstallAgentUnderTest() error {
+	path, err := agentUnderTestPackage()
+	if err != nil {
+		return err
+	}
+	log.Printf("Reinstalling agent under test from %s", path)
+	return installAgentPackage(path)
+}
+
+// ResetAgentInstall stops the agent, removes the package and deletes the
+// agent's install directory, so the next install starts from a clean host.
+func ResetAgentInstall() error {
+	log.Printf("Resetting agent install")
+	ctl := filepath.Join(agentInstallDir, "bin", "amazon-cloudwatch-agent-ctl")
+	if _, err := os.Stat(ctl); err == nil {
+		runLogged("sudo", ctl, "-a", "stop")
+	}
+	if runtime.GOOS == "darwin" {
+		runLogged("sudo", "launchctl", "unload", agentLaunchdPlist)
+		runLogged("sudo", "rm", "-f", agentLaunchdPlist)
+	} else if hostPackageManager() == DEB {
+		runLogged("sudo", "dpkg", "-P", agentPackageName)
+	} else {
+		runLogged("sudo", "rpm", "-e", agentPackageName)
+	}
+	if out, err := exec.Command("sudo", "rm", "-rf", agentInstallDir).CombinedOutput(); err != nil {
+		return fmt.Errorf("unable to remove %s: %w %s", agentInstallDir, err, out)
+	}
+	return nil
+}
+
+// ProcessOwner returns the user that the running process with the given
+// name runs as. It returns an error if no such process is running.
+func ProcessOwner(name string) (string, error) {
+	users, err := processUsers(name)
+	if err != nil {
+		return "", err
+	}
+	if len(users) == 0 {
+		return "", fmt.Errorf("no running process named %s", name)
+	}
+	for _, u := range users[1:] {
+		if u != users[0] {
+			return "", fmt.Errorf("processes named %s run as different users: %v", name, users)
+		}
+	}
+	log.Printf("Process %s runs as %s", name, users[0])
+	return users[0], nil
+}
+
+// WaitForProcess waits until a process with the given name is running, or
+// until none is when running is false. It returns an error on timeout.
+func WaitForProcess(name string, running bool, timeout time.Duration) error {
+	state := "running"
+	if !running {
+		state = "stopped"
+	}
+	log.Printf("Waiting up to %s for %s to be %s", timeout, name, state)
+	deadline := time.Now().Add(timeout)
+	for {
+		users, err := processUsers(name)
+		if err == nil && (len(users) > 0) == running {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("%s not %s after %s", name, state, timeout)
+		}
+		time.Sleep(processPollInterval)
+	}
+}
+
+// processUsers returns the user of each running process whose executable
+// name is name. It reads the full command line because Linux truncates the
+// short process name to 15 characters.
+func processUsers(name string) ([]string, error) {
+	out, err := exec.Command("ps", "-A", "-o", "user=", "-o", "args=").Output()
+	if err != nil {
+		return nil, fmt.Errorf("unable to list processes: %w", err)
+	}
+	var users []string
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && filepath.Base(fields[1]) == name {
+			users = append(users, fields[0])
+		}
+	}
+	return users, nil
+}
+
+// agentReleaseURI returns the S3 URI of a released agent package in the
+// public release bucket, for this host's OS and architecture.
+func agentReleaseURI(version string) (string, error) {
+	var arch string
+	switch runtime.GOARCH {
+	case "amd64", "arm64":
+		arch = runtime.GOARCH
+	default:
+		return "", fmt.Errorf("unsupported architecture %s", runtime.GOARCH)
+	}
+	osDir, ext := "amazon_linux", ".rpm"
+	if runtime.GOOS == "darwin" {
+		osDir, ext = "darwin", ".pkg"
+	} else if hostPackageManager() == DEB {
+		osDir, ext = "ubuntu", ".deb"
+	}
+	return fmt.Sprintf("s3://%s/%s/%s/%s/%s%s", agentReleaseBucket, osDir, arch, version, agentPackageName, ext), nil
+}
+
+// awsCLI returns the AWS CLI path. macOS test hosts install it under
+// /usr/local/bin, which may not be on PATH when tests run with sudo.
+func awsCLI() string {
+	if path, err := exec.LookPath("aws"); err == nil {
+		return path
+	}
+	return "/usr/local/bin/aws"
+}
+
+// agentUnderTestPackage finds the package downloaded for this test run. Linux
+// hosts keep it in the test repo root, macOS hosts in the directory above it.
+func agentUnderTestPackage() (string, error) {
+	root, err := testRepoRoot()
+	if err != nil {
+		return "", err
+	}
+	ext := ".rpm"
+	if runtime.GOOS == "darwin" {
+		ext = ".pkg"
+	} else if hostPackageManager() == DEB {
+		ext = ".deb"
+	}
+	for _, dir := range []string{root, filepath.Dir(root)} {
+		path := filepath.Join(dir, agentPackageName+ext)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("no %s%s found in %s or its parent", agentPackageName, ext, root)
+}
+
+func testRepoRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("go.mod not found above the working directory")
+		}
+		dir = parent
+	}
+}
+
+func hostPackageManager() PackageManager {
+	if _, err := exec.LookPath("dpkg"); err == nil {
+		if _, err := exec.LookPath("apt-get"); err == nil {
+			return DEB
+		}
+	}
+	return RPM
+}
+
+func installAgentPackage(path string) error {
+	var cmd *exec.Cmd
+	switch filepath.Ext(path) {
+	case ".rpm":
+		cmd = exec.Command("sudo", "rpm", "-Uvh", "--oldpackage", "--replacepkgs", path)
+	case ".deb":
+		cmd = exec.Command("sudo", "dpkg", "-i", "-E", path)
+	case ".pkg":
+		cmd = exec.Command("sudo", "installer", "-pkg", path, "-target", "/")
+	default:
+		return fmt.Errorf("unsupported package %s", path)
+	}
+	out, err := cmd.CombinedOutput()
+	log.Printf("%s\n%s", cmd.String(), out)
+	if err != nil {
+		return fmt.Errorf("unable to install %s: %w", path, err)
+	}
+	relabelAgentFiles()
+	return nil
+}
+
+// relabelAgentFiles re-applies the agent's SELinux file labels after an
+// install, the same way the SELinux test setup does.
+func relabelAgentFiles() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+	if _, err := exec.LookPath("restorecon"); err != nil {
+		return
+	}
+	if out, err := exec.Command("getenforce").Output(); err != nil || strings.TrimSpace(string(out)) == "Disabled" {
+		return
+	}
+	runLogged("sudo", "restorecon", "-RF", agentInstallDir, agentSystemdUnit)
+}
+
+// runLogged runs a command and logs its output. Failures are logged, not
+// returned, for cleanup steps that may have nothing to do.
+func runLogged(name string, args ...string) {
+	cmd := exec.Command(name, args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("%s: %v %s", cmd.String(), err, out)
+	}
 }

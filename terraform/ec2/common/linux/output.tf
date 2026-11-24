@@ -28,3 +28,11 @@ output "cwa_onprem_assumed_iam_role_arm" {
 output "testing_id" {
   value = module.common.testing_id
 }
+// The AMI this run launched, so the run log shows which image and owner account were used.
+output "ami_id" {
+  value = data.aws_ami.latest.id
+}
+
+output "ami_owner_id" {
+  value = data.aws_ami.latest.owner_id
+}

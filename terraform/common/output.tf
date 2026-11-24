@@ -37,3 +37,8 @@ output "performance-dynamodb-table" {
   value = "CWAPerformanceMetrics"
 }
 
+
+// Owners whose AMIs the EC2 tests may launch. Test AMIs are built in a separate account and shared with the test account.
+output "ami_owners" {
+  value = ["self", "amazon", "073708760838"]
+}

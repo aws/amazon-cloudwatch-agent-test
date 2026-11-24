@@ -38,7 +38,7 @@ locals {
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self", "amazon"]
+  owners      = module.common.ami_owners
 
   filter {
     name   = "name"

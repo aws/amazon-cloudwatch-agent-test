@@ -1,0 +1,17 @@
+{
+  "agent": {
+    "region": "us-east-1",
+    "self_telemetry": {
+      "enabled": true,
+      "port": 8888
+    }
+  },
+  "opentelemetry": {
+    "collect": {
+      "otlp": {
+        "grpc_endpoint": "127.0.0.1:4317",
+        "http_endpoint": "127.0.0.1:4318"
+      }
+    }
+  }
+}

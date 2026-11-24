@@ -62,7 +62,7 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 		escapedCluster := otelmetrics.EscapePromQLValue(cfg.ClusterName)
 		clusterFilter := fmt.Sprintf(`"@resource.k8s.cluster.name"="%s"`, escapedCluster)
 
-		cpuQuery := fmt.Sprintf(`{"__name__"="k8s.pod.cpu.utilization", %s, %s, %s}`, agentPodFilter, agentNSFilter, clusterFilter)
+		cpuQuery := fmt.Sprintf(`{"__name__"="k8s.pod.cpu.usage", %s, %s, %s}`, agentPodFilter, agentNSFilter, clusterFilter)
 		cpuResults, err := client.QueryRange(ctx, cpuQuery, start, end, step)
 		if err != nil {
 			sharedMetricsErr = fmt.Errorf("CPU QueryRange failed: %w", err)
@@ -75,13 +75,47 @@ func fetchSharedMetrics(t *testing.T) *podMetricData {
 			return
 		}
 		sharedMetrics = &podMetricData{
-			CPUResults: cpuResults,
-			MemResults: memResults,
+			CPUResults: filterStablePods(t.Logf, "CPU", cpuResults),
+			MemResults: filterStablePods(t.Logf, "memory", memResults),
 		}
 	})
 	require.NoError(t, sharedMetricsErr, "failed to fetch shared pod metrics")
 	require.NotNil(t, sharedMetrics, "shared metrics are nil")
 	return sharedMetrics
+}
+
+// filterStablePods keeps pods present ~the whole window (drops transient/rescheduled
+// pods and all-zero idle series); self-calibrates off the fullest series.
+// Every dropped series is logged: an agent pod that restarts mid-run also has gaps,
+// so a dropped DaemonSet pod is worth a look even when the test passes.
+func filterStablePods(logf func(format string, args ...any), signal string, results []otelmetrics.RangeResult) []otelmetrics.RangeResult {
+	maxSamples := 0
+	for _, r := range results {
+		if len(r.Values) > maxSamples {
+			maxSamples = len(r.Values)
+		}
+	}
+	var kept []otelmetrics.RangeResult
+	for _, r := range results {
+		pod := r.Labels.Resource["k8s.pod.name"]
+		hasNonZero := false
+		for _, v := range r.Values {
+			if v != 0 {
+				hasNonZero = true
+				break
+			}
+		}
+		if !hasNonZero {
+			logf("Skipping %s series for pod %s: all %d samples are zero", signal, pod, len(r.Values))
+			continue
+		}
+		if maxSamples > 0 && len(r.Values) < maxSamples-1 {
+			logf("Skipping %s series for pod %s: %d of %d samples (pod not present for the whole window)", signal, pod, len(r.Values), maxSamples)
+			continue
+		}
+		kept = append(kept, r)
+	}
+	return kept
 }
 
 // calcStats computes the average and maximum from a series of data points.

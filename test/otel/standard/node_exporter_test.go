@@ -146,6 +146,22 @@ func TestNodeExporterNodeGroupCoverage(t *testing.T) {
 	}
 }
 
+// TestNodeExporterScrapeSelfTelemetryDropped asserts node-exporter's per-collector
+// scrape self-telemetry is dropped. node_textfile_scrape_error must keep flowing.
+func TestNodeExporterScrapeSelfTelemetryDropped(t *testing.T) {
+	for _, metricName := range []string{
+		"node_scrape_collector_duration_seconds",
+		"node_scrape_collector_success",
+	} {
+		t.Run(metricName, func(t *testing.T) {
+			results, err := queryCache.Get(context.Background(), metricName)
+			require.NoError(t, err, "querying %s", metricName)
+			require.Empty(t, results,
+				"%s should be dropped by filter/cw_k8s_ci_v0_scrape_metadata", metricName)
+		})
+	}
+}
+
 func TestNodeExporterHasRawNodeName(t *testing.T) {
 	for _, metricName := range nodeExporterMetricNames {
 		t.Run(metricName, func(t *testing.T) {

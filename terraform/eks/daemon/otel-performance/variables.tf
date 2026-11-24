@@ -17,7 +17,11 @@ variable "cwagent_image_repo" {
 }
 
 variable "cwagent_image_tag" {
-  type = string
+  # The default only keeps `terraform destroy` (run without -var flags) from waiting on an input
+  # prompt until the step times out. Every apply passes the real tag; TestRegressionCheck refuses
+  # "latest", so the default can never become a regression baseline key.
+  type    = string
+  default = "latest"
   validation {
     condition     = length(var.cwagent_image_tag) > 0
     error_message = "cwagent_image_tag must be set; it is used as the regression baseline commit key."

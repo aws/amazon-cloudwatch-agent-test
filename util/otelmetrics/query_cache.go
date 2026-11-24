@@ -220,26 +220,35 @@ func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cach
 }
 
 // GetWithFilter returns results with additional PromQL label filters. Not cached.
+// Shares the cache's concurrency limit, so a suite of parallel filtered queries
+// doesn't burst past the endpoint's rate limit.
 func (qc *QueryCache) GetWithFilter(ctx context.Context, metricName string, extraFilters map[string]string) ([]MetricResult, error) {
-	escaped := promqlEscaper.Replace(qc.cluster)
-	sel := promqlMetricSelector(metricName)
+	select {
+	case qc.sem <- struct{}{}:
+		defer func() { <-qc.sem }()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	return qc.client.Query(ctx, promqlMetricSelector(metricName)+qc.filterMatchers(extraFilters)+"}")
+}
 
-	filters := fmt.Sprintf(`"@resource.k8s.cluster.name"="%s"`, escaped)
+// filterMatchers renders the cluster matcher plus extraFilters as PromQL label
+// matchers. Keys starting with "@" (@resource.*, @instrumentation.*) are quoted;
+// a leading "~" makes the match a regex.
+func (qc *QueryCache) filterMatchers(extraFilters map[string]string) string {
+	filters := fmt.Sprintf(`"@resource.k8s.cluster.name"="%s"`, promqlEscaper.Replace(qc.cluster))
 	for key, value := range extraFilters {
 		escapedVal := promqlEscaper.Replace(value)
-		switch {
-		case strings.HasPrefix(key, "~@resource."):
-			filters += fmt.Sprintf(`,"%s"=~"%s"`, strings.TrimPrefix(key, "~"), escapedVal)
-		case strings.HasPrefix(key, "@resource."):
-			filters += fmt.Sprintf(`,"%s"="%s"`, key, escapedVal)
-		case strings.HasPrefix(key, "~"):
-			filters += fmt.Sprintf(`,%s=~"%s"`, strings.TrimPrefix(key, "~"), escapedVal)
-		default:
-			filters += fmt.Sprintf(`,%s="%s"`, key, escapedVal)
+		op := "="
+		if strings.HasPrefix(key, "~") {
+			key, op = strings.TrimPrefix(key, "~"), "=~"
 		}
+		if strings.HasPrefix(key, "@") {
+			key = `"` + key + `"`
+		}
+		filters += fmt.Sprintf(`,%s%s"%s"`, key, op, escapedVal)
 	}
-
-	return qc.client.Query(ctx, sel+filters+"}")
+	return filters
 }
 
 // GetUnfiltered returns results without cluster filtering. Cached separately.

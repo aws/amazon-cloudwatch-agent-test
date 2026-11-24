@@ -258,3 +258,23 @@ func TestPromqlMetricSelector(t *testing.T) {
 		t.Fatalf("promqlMetricSelector(plain) = %q, want %q", got, want)
 	}
 }
+
+func TestFilterMatchers(t *testing.T) {
+	qc := NewQueryCache(nil, "my-cluster")
+	cases := []struct {
+		key, value, want string
+	}{
+		{"@resource.k8s.pod.name", "p", `,"@resource.k8s.pod.name"="p"`},
+		{"~@resource.k8s.pod.name", "p-.*", `,"@resource.k8s.pod.name"=~"p-.*"`},
+		{"@instrumentation.cloudwatch.pipeline", "vllm", `,"@instrumentation.cloudwatch.pipeline"="vllm"`},
+		{"model_name", "m", `,model_name="m"`},
+		{"~model_name", "m.*", `,model_name=~"m.*"`},
+	}
+	for _, c := range cases {
+		got := qc.filterMatchers(map[string]string{c.key: c.value})
+		want := `"@resource.k8s.cluster.name"="my-cluster"` + c.want
+		if got != want {
+			t.Errorf("filterMatchers(%q) = %s, want %s", c.key, got, want)
+		}
+	}
+}
