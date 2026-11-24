@@ -97,9 +97,10 @@ func TestControlPlaneClusterIdentity(t *testing.T) {
 
 func TestControlPlaneCloudDetection(t *testing.T) {
 	// GCP version of the EKS test, which asserts cloud.provider=aws, a region and a 12-digit AWS account ID.
-	// On GKE: provider gcp, platform gcp_kubernetes_engine, the region derived from the configured zone, and
-	// the GCP project as the account ID -- same gcp resourcedetection block as ksm_test.go's
-	// requireGKECloudAttributes and kubeletstats_test.go's TestKubeletstatsCloudDetection.
+	// On GKE: provider gcp, platform gcp_kubernetes_engine, and the GCP project as the account ID -- same
+	// gcp resourcedetection block as ksm_test.go's requireGKECloudAttributes and kubeletstats_test.go's
+	// TestKubeletstatsCloudDetection. No region check: see kubeletstats_test.go's comment -- cloud.region is
+	// confirmed absent from the resource attributes entirely on a real run, not just unequal.
 	for _, metricName := range metricNames(controlPlaneMetrics) {
 		t.Run(metricName+"/provider", func(t *testing.T) {
 			results, err := queryCache.Get(context.Background(), metricName)
@@ -115,14 +116,6 @@ func TestControlPlaneCloudDetection(t *testing.T) {
 			require.NotEmpty(t, results, "%s not available (control plane not scraped?)", metricName)
 			for _, r := range results {
 				require.Equal(t, "gcp_kubernetes_engine", r.Labels.Resource["cloud.platform"], "%s cloud.platform", metricName)
-			}
-		})
-		t.Run(metricName+"/region", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
-			require.NoError(t, err, "querying %s", metricName)
-			require.NotEmpty(t, results, "%s not available (control plane not scraped?)", metricName)
-			for _, r := range results {
-				require.Equal(t, regionFromZone(env.GCPZone), r.Labels.Resource["cloud.region"], "%s cloud.region", metricName)
 			}
 		})
 		t.Run(metricName+"/account_id", func(t *testing.T) {

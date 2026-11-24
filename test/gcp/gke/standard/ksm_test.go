@@ -115,25 +115,20 @@ func parseAZFromProviderID(providerID string) (string, error) {
 	return az, nil
 }
 
-// regionFromZone derives a GCP region from a zone by dropping its "-<letter>" suffix, e.g.
-// "us-east1-c" -> "us-east1" -- GCP's own region/zone naming convention, and how the gcp
-// resourcedetection block's "region" value relates to its "availability_zone" value.
-func regionFromZone(zone string) string {
-	idx := strings.LastIndex(zone, "-")
-	if idx < 0 {
-		return zone
-	}
-	return zone[:idx]
-}
-
 // requireGKECloudAttributes asserts the gcp cloud attributes the pipeline sets on KSM metrics. The EKS
 // suite checks EC2 host.* attributes here instead; those are not present on GKE KSM metrics (the gcp
 // resourcedetection block in the cluster-scraper config disables host.id/host.name for this pipeline).
+//
+// cloud.region is deliberately not asserted here: a raw CloudWatch label dump of kube_node_info from a real
+// run (2026-11-24) confirmed cloud.region is absent from the resource attributes entirely, on both this
+// pipeline and the node-agent one -- not a wrong value, nothing is there to assert against. Only zone-level
+// data reaches CloudWatch today (cloud.availability_zone, and separately, surviving the chart's otherwise
+// unconditional k8s.node.label.topology.kubernetes.io/* strip because it's not in that list by this exact
+// name, k8s.node.label.topology.gke.io/zone).
 func requireGKECloudAttributes(t *testing.T, metricName string, res map[string]string) {
 	t.Helper()
 	require.Equal(t, "gcp", res["cloud.provider"], "%s cloud.provider", metricName)
 	require.Equal(t, "gcp_kubernetes_engine", res["cloud.platform"], "%s cloud.platform", metricName)
-	require.Equal(t, regionFromZone(env.GCPZone), res["cloud.region"], "%s cloud.region", metricName)
 	require.Equal(t, env.GCPZone, res["cloud.availability_zone"], "%s cloud.availability_zone", metricName)
 	require.Equal(t, env.GCPProject, res["cloud.account.id"], "%s cloud.account.id", metricName)
 	require.NotEmpty(t, res["cloud.resource_id"], "%s cloud.resource_id", metricName)

@@ -129,9 +129,12 @@ func TestKubeletstatsContainerName(t *testing.T) {
 
 // TestKubeletstatsCloudDetection is the GCP version of the EKS test, which asserts cloud.provider=aws, a
 // region, and a 12-digit AWS account ID. On GKE the node agent reports provider gcp, platform
-// gcp_kubernetes_engine, the region derived from the configured zone, and the GCP project as the account ID
-// -- the same gcp resourcedetection block requireGKECloudAttributes (ksm_test.go) asserts for KSM, but here
-// on the node-agent pipeline rather than the cluster-scraper one.
+// gcp_kubernetes_engine, and the GCP project as the account ID -- the same gcp resourcedetection block
+// requireGKECloudAttributes (ksm_test.go) asserts for KSM, but here on the node-agent pipeline rather than
+// the cluster-scraper one. No region check: a real run's raw CloudWatch label dump (kube_node_info,
+// 2026-11-24) confirmed cloud.region is absent from the resource attributes entirely, on both pipelines --
+// not a wrong value, nothing is there to assert against. Only zone-level data reaches CloudWatch today
+// (cloud.availability_zone, and separately k8s.node.label.topology.gke.io/zone).
 func TestKubeletstatsCloudDetection(t *testing.T) {
 	for _, metricName := range kubeletstatsMetricNamesList {
 		t.Run(metricName+"/provider", func(t *testing.T) {
@@ -148,14 +151,6 @@ func TestKubeletstatsCloudDetection(t *testing.T) {
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
 				require.Equal(t, "gcp_kubernetes_engine", r.Labels.Resource["cloud.platform"], "%s cloud.platform", metricName)
-			}
-		})
-		t.Run(metricName+"/region", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
-			require.NoError(t, err, "querying %s", metricName)
-			require.NotEmpty(t, results, "%s not available", metricName)
-			for _, r := range results {
-				require.Equal(t, regionFromZone(env.GCPZone), r.Labels.Resource["cloud.region"], "%s cloud.region", metricName)
 			}
 		})
 		t.Run(metricName+"/account_id", func(t *testing.T) {

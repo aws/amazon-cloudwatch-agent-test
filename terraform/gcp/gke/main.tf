@@ -554,6 +554,11 @@ resource "null_resource" "integration_test" {
 
     environment = {
       AWS_REGION = var.region
+      # The standard suite's TestKSM_NodeBucket_AZMatchesProviderID reads the cluster's nodes
+      # directly (k8s_helpers_test.go's getGroundTruth), which needs a kubeconfig. Without this,
+      # it falls back to ~/.kube/config, which does not exist on a CI runner (confirmed: run
+      # 45377121910, 2026-11-24, "no such file or directory").
+      KUBECONFIG = local_sensitive_file.kubeconfig.filename
     }
   }
 
