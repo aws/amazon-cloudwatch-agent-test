@@ -554,11 +554,13 @@ resource "null_resource" "integration_test" {
 
     environment = {
       AWS_REGION = var.region
-      # The standard suite's TestKSM_NodeBucket_AZMatchesProviderID reads the cluster's nodes
-      # directly (k8s_helpers_test.go's getGroundTruth), which needs a kubeconfig. Without this,
-      # it falls back to ~/.kube/config, which does not exist on a CI runner (confirmed: run
-      # 45377121910, 2026-11-24, "no such file or directory").
-      KUBECONFIG = local_sensitive_file.kubeconfig.filename
+      # The standard suite's ground-truth tests (k8s_helpers_test.go's getGroundTruth) need a
+      # kubeconfig. Without this, it falls back to ~/.kube/config, which does not exist on a CI
+      # runner (confirmed: run 45377121910, 2026-11-24, "no such file or directory"). The path must
+      # be absolute: local_sensitive_file.kubeconfig.filename is relative to path.module, but this
+      # local-exec's working_dir is the repo root, so the raw relative string doesn't resolve there
+      # (confirmed: run 45587877438, 2026-11-25, "stat ./kubeconfig: no such file or directory").
+      KUBECONFIG = abspath(local_sensitive_file.kubeconfig.filename)
     }
   }
 
