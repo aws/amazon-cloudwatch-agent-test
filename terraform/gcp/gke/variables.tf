@@ -12,6 +12,10 @@ variable "region" {
 variable "test_dir" {
   type    = string
   default = "./test/gcp/gke"
+  validation {
+    condition     = contains(["./test/gcp/gke", "./test/gcp/gke/standard"], var.test_dir)
+    error_message = "test_dir must be \"./test/gcp/gke\" or \"./test/gcp/gke/standard\"."
+  }
 }
 
 variable "cwa_github_sha" {
@@ -78,4 +82,15 @@ variable "ecr_region" {
 variable "cwagent_image_tag" {
   type        = string
   description = "Image tag (build_id / commit SHA)."
+}
+
+variable "helm_chart_branch" {
+  type    = string
+  default = "main"
+}
+
+variable "helm_set_values" {
+  type        = map(string)
+  description = "Additional chart values applied after the suite's own values."
+  default     = {}
 }

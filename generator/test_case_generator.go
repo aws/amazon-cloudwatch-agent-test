@@ -394,6 +394,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 			targets: map[string]map[string]struct{}{"metadataEnabled": {"enabled": {}}},
 		},
 	},
+	"gke": {
+		{testDir: "./test/gcp/gke", terraformDir: "terraform/gcp/gke"},
+		// Port of the EKS test/otel/standard checks (kube-state-metrics first). wip until it has two
+		// clean runs in a row.
+		{testDir: "./test/gcp/gke/standard", terraformDir: "terraform/gcp/gke", wip: true},
+	},
 	"eks_addon": {
 		{
 			testDir:      "./test/gpu",
