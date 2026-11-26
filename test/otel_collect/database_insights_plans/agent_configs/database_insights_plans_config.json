@@ -1,0 +1,15 @@
+{
+  "agent": { "region": "us-west-2" },
+  "opentelemetry": {
+    "collect": {
+      "database_insights": {
+        "postgresql": [{
+          "endpoint": "localhost:5432",
+          "instance_name": "dbi-plans-integ-test",
+          "username": "cw_monitor",
+          "password_file": "/opt/databaseinsights/.pgpass"
+        }]
+      }
+    }
+  }
+}
