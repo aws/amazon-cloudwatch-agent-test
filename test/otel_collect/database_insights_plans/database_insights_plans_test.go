@@ -97,6 +97,16 @@ const (
 	// of runs because a single run does not survive the PostgreSQL restart.
 	workloadRunSeconds = 20
 
+	// workloadTable appears in the text of every statement pgbench runs. The checks that need events
+	// to exist count only these events, so the receiver's own statements in these databases cannot
+	// satisfy them when the workload's queries get no plan.
+	workloadTable = "pgbench_"
+	// minPlannedQueries is how many distinct workload queries must carry a plan once plans can be
+	// read. The pgbench script runs five statements that get plans (its BEGIN and END are utility
+	// statements and never do). Requiring several instead of one fails when plans stay empty for
+	// most of the workload, for example when empty plans were cached for the queries.
+	minPlannedQueries = 3
+
 	// agentStartMsg is logged each time the agent starts. It must appear once.
 	agentStartMsg = "Starting AmazonCloudWatchAgent"
 	// resumeTimeout is how long to wait for the receiver to notice the extension.
@@ -375,19 +385,23 @@ func (t *DbiPlansTestRunner) Validate() status.TestGroupResult {
 
 // planCounts classifies the top query events of one database.
 type planCounts struct {
-	// emptyBefore and plansBefore count events before the cut-off, without and with a plan.
+	// emptyBefore counts workload events before the cut-off without a plan. plansBefore counts
+	// events of any query before the cut-off with a plan, which must not exist.
 	emptyBefore, plansBefore int
-	// emptyAfterRestart counts events without a plan between the PostgreSQL restart and the cut-off.
+	// emptyAfterRestart counts workload events without a plan between the PostgreSQL restart and the cut-off.
 	emptyAfterRestart int
-	// plansAfter counts events with a plan at or after the cut-off.
+	// plansAfter counts workload events with a plan at or after the cut-off.
 	plansAfter int
+	// plannedQueries holds the distinct query IDs of those events.
+	plannedQueries map[string]struct{}
 }
 
 // validatePlanEvents checks the raw events stream. In testdb, top query events were
 // reported without plans while the extension was missing, top queries kept being
 // reported after the PostgreSQL restart, none carried a plan before the extension was
-// created, and at least one did afterwards. In testdb2, no event carried a plan while
-// the library was not loaded, and events carried plans after PostgreSQL restarted with it.
+// created, and several distinct workload queries did afterwards. In testdb2, no event
+// carried a plan while the library was not loaded, and several distinct workload queries
+// carried plans after PostgreSQL restarted with it.
 func (t *DbiPlansTestRunner) validatePlanEvents(life lifecycle) []status.TestResult {
 	const (
 		maxRetries    = 5
@@ -415,21 +429,21 @@ func (t *DbiPlansTestRunner) validatePlanEvents(life lifecycle) []status.TestRes
 			if e.Message == nil || e.Timestamp == nil {
 				continue
 			}
-			db, plan, isTopQuery := topQueryEvent(*e.Message)
+			q, isTopQuery := parseTopQuery(*e.Message)
 			if !isTopQuery {
 				continue
 			}
 			at := time.UnixMilli(*e.Timestamp)
-			switch db {
+			switch q.database {
 			case dbLate:
-				late.add(at, plan, life.restartedAt, life.createdAt)
+				late.add(at, q, life.restartedAt, life.createdAt)
 			case dbEarly:
 				// The cut-off is the PostgreSQL restart: plans cannot be read before it.
-				early.add(at, plan, life.restartedAt, life.restartedAt)
+				early.add(at, q, life.restartedAt, life.restartedAt)
 			}
 		}
 		log.Printf("[plan events] attempt %d/%d: %s %+v, %s %+v", attempt+1, maxRetries, dbLate, late, dbEarly, early)
-		if late.plansAfter > 0 && early.plansAfter > 0 {
+		if len(late.plannedQueries) >= minPlannedQueries && len(early.plannedQueries) >= minPlannedQueries {
 			break
 		}
 	}
@@ -457,9 +471,10 @@ func (t *DbiPlansTestRunner) validatePlanEvents(life lifecycle) []status.TestRes
 	} else {
 		results = append(results, passed("No plans before the extension was created"))
 	}
-	if late.plansAfter == 0 {
+	if len(late.plannedQueries) < minPlannedQueries {
 		results = append(results, failed("Plans reported after the extension was created",
-			fmt.Errorf("no %s event carried a plan after %s", dbLate, life.createdAt.Format(time.RFC3339))))
+			fmt.Errorf("%d distinct %s workload queries carried a plan after %s (%d events); want at least %d",
+				len(late.plannedQueries), dbLate, life.createdAt.Format(time.RFC3339), late.plansAfter, minPlannedQueries)))
 	} else {
 		results = append(results, passed("Plans reported after the extension was created"))
 	}
@@ -471,10 +486,10 @@ func (t *DbiPlansTestRunner) validatePlanEvents(life lifecycle) []status.TestRes
 	} else {
 		results = append(results, passed("No plans while the extension existed without its library"))
 	}
-	if early.plansAfter == 0 {
+	if len(early.plannedQueries) < minPlannedQueries {
 		results = append(results, failed("Plans reported after PostgreSQL restarted with the library",
-			fmt.Errorf("no %s event carried a plan after the PostgreSQL restart (%s); queries seen before the restart may have been cached without a plan",
-				dbEarly, life.restartedAt.Format(time.RFC3339))))
+			fmt.Errorf("%d distinct %s workload queries carried a plan after the PostgreSQL restart (%s, %d events); want at least %d. Queries seen before the restart may have been cached without a plan",
+				len(early.plannedQueries), dbEarly, life.restartedAt.Format(time.RFC3339), early.plansAfter, minPlannedQueries)))
 	} else {
 		results = append(results, passed("Plans reported after PostgreSQL restarted with the library"))
 	}
@@ -483,20 +498,31 @@ func (t *DbiPlansTestRunner) validatePlanEvents(life lifecycle) []status.TestRes
 
 // add classifies one top query event. Events before cutoff are counted as before, the
 // rest as after. Events without a plan between restartedAt and cutoff are also counted.
-func (c *planCounts) add(at time.Time, plan string, restartedAt, cutoff time.Time) {
+// Only workload events (see isWorkloadQuery) count towards the checks that need events to
+// exist, so the receiver's own statements cannot satisfy them. Any event with a plan
+// before cutoff is counted, because no query may have one then.
+func (c *planCounts) add(at time.Time, q topQuery, restartedAt, cutoff time.Time) {
 	before := at.Before(cutoff)
 	switch {
-	case before && plan == "":
+	case before && q.plan != "":
+		c.plansBefore++
+	case !isWorkloadQuery(q.text):
+	case before:
 		c.emptyBefore++
 		if at.After(restartedAt) {
 			c.emptyAfterRestart++
 		}
-	case before:
-		c.plansBefore++
-	case plan != "":
+	case q.plan != "":
 		c.plansAfter++
+		if c.plannedQueries == nil {
+			c.plannedQueries = map[string]struct{}{}
+		}
+		c.plannedQueries[q.queryID] = struct{}{}
 	}
 }
+
+// isWorkloadQuery reports whether a statement was run by the pgbench workload.
+func isWorkloadQuery(text string) bool { return strings.Contains(text, workloadTable) }
 
 func TestDbiPlans(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
@@ -516,25 +542,35 @@ func TestDbiPlans(t *testing.T) {
 	}
 }
 
-// topQueryEvent returns the database (db.namespace) and the postgresql.query_plan
-// attribute of a raw events record. Records are single-line OTLP JSON with flat dotted
-// attribute keys, and the plan is a string that is empty when no plan was collected.
-// isTopQuery is false for records that do not carry the plan attribute, such as query
-// samples.
-func topQueryEvent(message string) (database, plan string, isTopQuery bool) {
+// topQuery is the part of a db.server.top_query raw event that the checks use.
+type topQuery struct {
+	// database is db.namespace, text is db.query.text and queryID is postgresql.queryid.
+	database, text, queryID string
+	// plan is postgresql.query_plan, which is empty when no plan was collected.
+	plan string
+}
+
+// parseTopQuery returns the top query a raw events record describes. Records are
+// single-line OTLP JSON with flat dotted attribute keys. isTopQuery is false for records
+// that do not carry the plan attribute, such as query samples.
+func parseTopQuery(message string) (q topQuery, isTopQuery bool) {
 	var record struct {
 		Attributes map[string]any `json:"attributes"`
 	}
 	if err := json.Unmarshal([]byte(message), &record); err != nil {
-		return "", "", false
+		return topQuery{}, false
 	}
 	value, ok := record.Attributes["postgresql.query_plan"]
 	if !ok {
-		return "", "", false
+		return topQuery{}, false
 	}
-	plan, _ = value.(string)
-	database, _ = record.Attributes["db.namespace"].(string)
-	return database, plan, true
+	q.plan, _ = value.(string)
+	q.database, _ = record.Attributes["db.namespace"].(string)
+	q.text, _ = record.Attributes["db.query.text"].(string)
+	if id, ok := record.Attributes["postgresql.queryid"]; ok {
+		q.queryID = fmt.Sprint(id)
+	}
+	return q, true
 }
 
 // preloadAndRestartPostgres preloads pg_store_plans and restarts PostgreSQL. It runs
