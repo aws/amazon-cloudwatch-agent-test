@@ -9,6 +9,7 @@
 // orders a customer can follow, one database each:
 //
 //   - testdb: preload the library and restart PostgreSQL first, then CREATE EXTENSION.
+//     The monitoring user cannot read the plan store at first, and is granted SELECT later.
 //   - testdb2: CREATE EXTENSION first, then preload the library and restart PostgreSQL.
 //     Until PostgreSQL restarts, the extension exists but every plan read fails.
 //
@@ -25,11 +26,16 @@
 //     now carry plans. Nothing was cached as an empty plan while the library was missing.
 //  5. testdb still lacks the extension. Its warning count stays the same across the
 //     re-checks and the PostgreSQL restart.
-//  6. The test runs CREATE EXTENSION in testdb, and the receiver resumes testdb too.
-//  7. The test revokes SELECT on the plan store from the monitoring user in testdb. The
-//     receiver must warn once that the monitoring user cannot read it, naming the grant,
-//     and must not warn again on later collections. testdb2 is untouched and stays quiet.
-//  8. The test grants SELECT back, and the receiver resumes testdb without an agent restart.
+//  6. The test runs CREATE EXTENSION in testdb and, in the same transaction, revokes
+//     SELECT on the plan store from PUBLIC and the monitoring user. The extension and the
+//     library are fine, so only the permission probe can notice. The receiver must warn
+//     once that the monitoring user cannot read it, naming the grant, must not warn again
+//     on later collections, and must not log that it resumed. testdb2 is untouched and
+//     stays quiet. The revoke is part of the creation because the receiver probes the plan
+//     store only for queries whose plan is not cached, and it caches plans for an hour:
+//     once plans are cached, a later revoke is not noticed.
+//  7. The test grants SELECT back, and the receiver resumes testdb without an agent
+//     restart. Top queries carry plans from then on.
 //
 // The workload runs as a non-superuser because the receiver does not look up plans
 // for statements owned by a superuser. It runs in short pgbench runs so it survives
@@ -61,9 +67,9 @@ import (
 const (
 	// setupTimeout bounds the base PostgreSQL setup plus the pg_store_plans build.
 	setupTimeout = 30 * time.Minute
-	// workloadDur is the agent run time. A passing run needs about 17 minutes; see the
+	// workloadDur is the agent run time. A passing run needs about 15 minutes; see the
 	// step durations below.
-	workloadDur = 20 * time.Minute
+	workloadDur = 18 * time.Minute
 
 	instanceName   = "dbi-plans-integ-test"
 	rawEventsGroup = "/aws/self-managed-database-insights/postgresql/raw-events"
@@ -84,6 +90,12 @@ const (
 
 	// monitorUser is the role the agent connects as (database_insights_setup.sh).
 	monitorUser = "cw_monitor"
+	// revokePlanStoreSQL takes SELECT on the two views the receiver reads away from everyone, and
+	// grantPlanStoreSQL gives it back the way CREATE EXTENSION leaves it. psql runs the statements
+	// of one -c string in a single transaction, so CREATE EXTENSION followed by the revoke never
+	// shows the receiver a readable plan store.
+	revokePlanStoreSQL = "REVOKE SELECT ON pg_store_plans_info, pg_store_plans FROM PUBLIC, " + monitorUser
+	grantPlanStoreSQL  = "GRANT SELECT ON pg_store_plans_info, pg_store_plans TO PUBLIC"
 
 	// firstWarnTimeout is how long to wait for the first plan lookup to find the
 	// extension missing. The first top query collection runs when the agent starts.
@@ -97,8 +109,8 @@ const (
 	// restartTimeout bounds the preload script, which restarts PostgreSQL and waits
 	// until it accepts connections again.
 	restartTimeout = 3 * time.Minute
-	// noAccessTimeout is how long to wait for the receiver to notice that the monitoring user lost
-	// SELECT. A check runs on every top query collection.
+	// noAccessTimeout is how long to wait for the receiver to notice that the monitoring user cannot
+	// read the plan store. A check runs on every top query collection.
 	noAccessTimeout = 3 * time.Minute
 	// noAccessStillWindow is how long testdb stays without access after the warning was counted. The
 	// receiver re-checks on every top query collection (once a minute by default), so this covers at
@@ -158,16 +170,15 @@ type lifecycle struct {
 	// PostgreSQL restart and at the end of the lifecycle.
 	agentStartsBefore int
 	agentStartsAfter  int
-	// createdAt is when the extension was created in testdb, after the preload.
-	createdAt time.Time
-	// resumedBeforeRevoke is the resume message count per database once both were resumed, before the
-	// monitoring user lost access in testdb.
-	resumedBeforeRevoke map[string]int
+	// grantedAt is when SELECT on the plan store was granted back to the monitoring user in testdb,
+	// stamped before the GRANT. Plans cannot be read before it, so it is the cut-off for testdb.
+	grantedAt time.Time
 	// noAccessBefore and noAccessStill are the no-access warning counts for testdb before and after
 	// noAccessStillWindow. noAccessOther is the count for testdb2, which keeps its access.
 	noAccessBefore, noAccessStill, noAccessOther int
-	// resumedAfterGrant is the resume message count for testdb after SELECT was granted back.
-	resumedAfterGrant int
+	// resumedNoAccess counts resume messages for testdb while the monitoring user could not read the
+	// plan store. It must stay 0, because nothing can be read in that state.
+	resumedNoAccess int
 	// err is the first step that failed. Later steps did not run.
 	err error
 }
@@ -226,7 +237,7 @@ func (t *DbiPlansTestRunner) SetupAfterAgentRun() error {
 // agent log showed at each of them.
 func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 	defer close(t.done)
-	life := lifecycle{missingBefore: map[string]int{}, missingStill: map[string]int{}, resumedBeforeRevoke: map[string]int{}}
+	life := lifecycle{missingBefore: map[string]int{}, missingStill: map[string]int{}}
 	defer func() {
 		t.mu.Lock()
 		t.life = life
@@ -307,31 +318,11 @@ func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 		return
 	}
 
-	// 6. Create the extension in testdb now that the library is loaded. Stamp the time
-	// before CREATE EXTENSION so an event from the collection straddling it counts as after.
-	life.createdAt = time.Now()
-	if err = createExtension(dbLate); err != nil {
-		life.err = err
-		return
-	}
-	if err = waitForAgentLog(resumedMsg, dbLate, resumeTimeout); err != nil {
-		life.err = fmt.Errorf("the agent did not resume plan collection in %s after the extension was created; it needs a restart to notice it: %w", dbLate, err)
-		return
-	}
-	log.Println("=== The agent resumed plan collection in both databases ===")
-
-	time.Sleep(exportWait)
-	for _, db := range []string{dbLate, dbEarly} {
-		if life.resumedBeforeRevoke[db], err = countAgentLog(resumedMsg, db); err != nil {
-			life.err = err
-			return
-		}
-	}
-
-	// 7. Revoke SELECT on the plan store from the monitoring user in testdb. The extension and the
-	// library are fine, so only the permission probe can notice. Creating the extension earlier
-	// made both views readable by everyone, so the revoke covers PUBLIC as well as the role.
-	if err = runPsql(dbLate, fmt.Sprintf("REVOKE SELECT ON pg_store_plans_info, pg_store_plans FROM PUBLIC, %s", monitorUser)); err != nil {
+	// 6. Create the extension in testdb and revoke SELECT on the plan store from PUBLIC and the
+	// monitoring user in the same transaction. The receiver has no cached plan for testdb, so its
+	// next collection probes the plan store and finds that it cannot read it. The extension makes
+	// both views readable by everyone, so the revoke covers PUBLIC as well as the role.
+	if err = runPsql(dbLate, "CREATE EXTENSION pg_store_plans; "+revokePlanStoreSQL); err != nil {
 		life.err = err
 		return
 	}
@@ -354,30 +345,25 @@ func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 		life.err = err
 		return
 	}
+	if life.resumedNoAccess, err = countAgentLog(resumedMsg, dbLate); err != nil {
+		life.err = err
+		return
+	}
 
-	// 8. Grant SELECT back. The receiver resumes testdb on its own.
-	if err = runPsql(dbLate, "GRANT SELECT ON pg_store_plans_info, pg_store_plans TO PUBLIC"); err != nil {
+	// 7. Grant SELECT back. The receiver resumes testdb on its own. Stamp the time before the
+	// GRANT, so an event from a collection straddling it counts as after, never before it.
+	life.grantedAt = time.Now()
+	if err = runPsql(dbLate, grantPlanStoreSQL); err != nil {
 		life.err = err
 		return
 	}
-	for deadline := time.Now().Add(resumeTimeout); ; time.Sleep(logPollInterval) {
-		n, cerr := countAgentLog(resumedMsg, dbLate)
-		if cerr != nil {
-			log.Printf("waiting for %q after the grant: %v", resumedMsg, cerr)
-		} else if n > life.resumedBeforeRevoke[dbLate] {
-			break
-		}
-		if time.Now().After(deadline) {
-			life.err = fmt.Errorf("the agent did not resume plan collection in %s after SELECT was granted back; it needs a restart to notice it", dbLate)
-			return
-		}
-	}
-	log.Println("=== The agent resumed plan collection after SELECT was granted back ===")
-	time.Sleep(settleAfterWarn)
-	if life.resumedAfterGrant, err = countAgentLog(resumedMsg, dbLate); err != nil {
-		life.err = err
+	if err = waitForAgentLog(resumedMsg, dbLate, resumeTimeout); err != nil {
+		life.err = fmt.Errorf("the agent did not resume plan collection in %s after SELECT was granted back; it needs a restart to notice it: %w", dbLate, err)
 		return
 	}
+	log.Println("=== The agent resumed plan collection in both databases ===")
+
+	time.Sleep(exportWait)
 	if life.agentStartsAfter, err = countAgentLog(agentStartMsg, ""); err != nil {
 		life.err = err
 	}
@@ -443,20 +429,25 @@ func (t *DbiPlansTestRunner) Validate() status.TestGroupResult {
 		results = append(results, passed(noFalseResumeName))
 	}
 
-	// Every receiver instance that warned about a database also reports that it resumed. The resume
-	// counts were taken before the monitoring user lost access, which adds resumes in testdb.
+	// Every receiver instance that warned about a database also reports that it resumed. In testdb the
+	// receiver goes from missing to no access, and resumes once, after SELECT was granted back.
 	for _, db := range []string{dbLate, dbEarly} {
 		name := fmt.Sprintf("Every warned receiver resumed in %s", db)
-		if warned, resumed := life.missingBefore[db], life.resumedBeforeRevoke[db]; warned != resumed {
+		warned, werr := countAgentLog(missingMsg, db)
+		resumed, rerr := countAgentLog(resumedMsg, db)
+		switch {
+		case werr != nil || rerr != nil:
+			results = append(results, failed(name, errors.Join(werr, rerr)))
+		case warned != resumed:
 			results = append(results, failed(name,
 				fmt.Errorf("%d missing-extension warnings but %d resume messages", warned, resumed)))
-		} else {
+		default:
 			results = append(results, passed(name))
 		}
 	}
 
 	// The monitoring user cannot read the plan store: warn once per receiver instance, naming the
-	// grant, and only for the database that lost access.
+	// grant, only for the database where that is so, and do not claim that plan collection resumed.
 	const noAccessName = "No-access warning is reported once"
 	if life.noAccessBefore < 1 || life.noAccessStill != life.noAccessBefore {
 		results = append(results, failed(noAccessName,
@@ -464,21 +455,19 @@ func (t *DbiPlansTestRunner) Validate() status.TestGroupResult {
 	} else {
 		results = append(results, passed(noAccessName))
 	}
-	const noAccessScopeName = "No-access warning is limited to the database that lost access"
+	const noAccessScopeName = "No-access warning is limited to the database where the user cannot read the plan store"
 	if life.noAccessOther != 0 {
 		results = append(results, failed(noAccessScopeName,
-			fmt.Errorf("%d no-access warnings for %s, which kept its access; want 0", life.noAccessOther, dbEarly)))
+			fmt.Errorf("%d no-access warnings for %s, where the user can read the plan store; want 0", life.noAccessOther, dbEarly)))
 	} else {
 		results = append(results, passed(noAccessScopeName))
 	}
-	// Every receiver instance that warned about the missing access also reports that it resumed.
-	const grantResumeName = "Every warned receiver resumed after SELECT was granted back"
-	if want := life.resumedBeforeRevoke[dbLate] + life.noAccessBefore; life.resumedAfterGrant != want {
-		results = append(results, failed(grantResumeName,
-			fmt.Errorf("%d resume messages for %s after the grant, want %d (%d before the revoke plus %d no-access warnings)",
-				life.resumedAfterGrant, dbLate, want, life.resumedBeforeRevoke[dbLate], life.noAccessBefore)))
+	const noAccessResumeName = "No resume reported while the monitoring user could not read the plan store"
+	if life.resumedNoAccess != 0 {
+		results = append(results, failed(noAccessResumeName,
+			fmt.Errorf("%d resume messages for %s before SELECT was granted back; want 0", life.resumedNoAccess, dbLate)))
 	} else {
-		results = append(results, passed(grantResumeName))
+		results = append(results, passed(noAccessResumeName))
 	}
 
 	results = append(results, t.validatePlanEvents(life)...)
@@ -499,9 +488,10 @@ type planCounts struct {
 }
 
 // validatePlanEvents checks the raw events stream. In testdb, top query events were
-// reported without plans while the extension was missing, top queries kept being
-// reported after the PostgreSQL restart, none carried a plan before the extension was
-// created, and several distinct workload queries did afterwards. In testdb2, no event
+// reported without plans while the extension was missing and while the monitoring user
+// could not read it, top queries kept being reported after the PostgreSQL restart, none
+// carried a plan before SELECT was granted, and several distinct workload queries did
+// afterwards. In testdb2, no event
 // carried a plan while the library was not loaded, and several distinct workload queries
 // carried plans after PostgreSQL restarted with it.
 func (t *DbiPlansTestRunner) validatePlanEvents(life lifecycle) []status.TestResult {
@@ -538,7 +528,8 @@ func (t *DbiPlansTestRunner) validatePlanEvents(life lifecycle) []status.TestRes
 			at := time.UnixMilli(*e.Timestamp)
 			switch q.database {
 			case dbLate:
-				late.add(at, q, life.restartedAt, life.createdAt)
+				// The cut-off is the grant: plans cannot be read before the monitoring user may read the plan store.
+				late.add(at, q, life.restartedAt, life.grantedAt)
 			case dbEarly:
 				// The cut-off is the PostgreSQL restart: plans cannot be read before it.
 				early.add(at, q, life.restartedAt, life.restartedAt)
@@ -555,30 +546,30 @@ func (t *DbiPlansTestRunner) validatePlanEvents(life lifecycle) []status.TestRes
 		return append(results, failed("Top query events reported", lastErr))
 	}
 	if late.emptyBefore == 0 {
-		results = append(results, failed("Top queries reported without plans while the extension was missing",
-			fmt.Errorf("no %s top query event with an empty plan in %s/%s before %s", dbLate, rawEventsGroup, stream, life.createdAt.Format(time.RFC3339))))
+		results = append(results, failed("Top queries reported without plans while plans could not be read",
+			fmt.Errorf("no %s top query event with an empty plan in %s/%s before SELECT was granted (%s)", dbLate, rawEventsGroup, stream, life.grantedAt.Format(time.RFC3339))))
 	} else {
-		results = append(results, passed("Top queries reported without plans while the extension was missing"))
+		results = append(results, passed("Top queries reported without plans while plans could not be read"))
 	}
 	if late.emptyAfterRestart == 0 {
 		results = append(results, failed("Top queries still reported after the PostgreSQL restart",
-			fmt.Errorf("no %s top query event between the PostgreSQL restart (%s) and CREATE EXTENSION (%s)",
-				dbLate, life.restartedAt.Format(time.RFC3339), life.createdAt.Format(time.RFC3339))))
+			fmt.Errorf("no %s top query event between the PostgreSQL restart (%s) and SELECT being granted (%s)",
+				dbLate, life.restartedAt.Format(time.RFC3339), life.grantedAt.Format(time.RFC3339))))
 	} else {
 		results = append(results, passed("Top queries still reported after the PostgreSQL restart"))
 	}
 	if late.plansBefore > 0 {
-		results = append(results, failed("No plans before the extension was created",
-			fmt.Errorf("%d %s events carried a plan before pg_store_plans was created", late.plansBefore, dbLate)))
+		results = append(results, failed("No plans before the monitoring user could read the plan store",
+			fmt.Errorf("%d %s events carried a plan before SELECT was granted (%s)", late.plansBefore, dbLate, life.grantedAt.Format(time.RFC3339))))
 	} else {
-		results = append(results, passed("No plans before the extension was created"))
+		results = append(results, passed("No plans before the monitoring user could read the plan store"))
 	}
 	if len(late.plannedQueries) < minPlannedQueries {
-		results = append(results, failed("Plans reported after the extension was created",
-			fmt.Errorf("%d distinct %s workload queries carried a plan after %s (%d events); want at least %d",
-				len(late.plannedQueries), dbLate, life.createdAt.Format(time.RFC3339), late.plansAfter, minPlannedQueries)))
+		results = append(results, failed("Plans reported after SELECT was granted back",
+			fmt.Errorf("%d distinct %s workload queries carried a plan after SELECT was granted (%s, %d events); want at least %d",
+				len(late.plannedQueries), dbLate, life.grantedAt.Format(time.RFC3339), late.plansAfter, minPlannedQueries)))
 	} else {
-		results = append(results, passed("Plans reported after the extension was created"))
+		results = append(results, passed("Plans reported after SELECT was granted back"))
 	}
 
 	if early.emptyBefore == 0 || early.plansBefore > 0 {
