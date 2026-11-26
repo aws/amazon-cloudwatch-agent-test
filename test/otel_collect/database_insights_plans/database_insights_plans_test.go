@@ -26,6 +26,10 @@
 //  5. testdb still lacks the extension. Its warning count stays the same across the
 //     re-checks and the PostgreSQL restart.
 //  6. The test runs CREATE EXTENSION in testdb, and the receiver resumes testdb too.
+//  7. The test revokes SELECT on the plan store from the monitoring user in testdb. The
+//     receiver must warn once that the monitoring user cannot read it, naming the grant,
+//     and must not warn again on later collections. testdb2 is untouched and stays quiet.
+//  8. The test grants SELECT back, and the receiver resumes testdb without an agent restart.
 //
 // The workload runs as a non-superuser because the receiver does not look up plans
 // for statements owned by a superuser. It runs in short pgbench runs so it survives
@@ -57,9 +61,9 @@ import (
 const (
 	// setupTimeout bounds the base PostgreSQL setup plus the pg_store_plans build.
 	setupTimeout = 30 * time.Minute
-	// workloadDur is the agent run time. A passing run needs about 11 minutes; see the
+	// workloadDur is the agent run time. A passing run needs about 17 minutes; see the
 	// step durations below.
-	workloadDur = 14 * time.Minute
+	workloadDur = 20 * time.Minute
 
 	instanceName   = "dbi-plans-integ-test"
 	rawEventsGroup = "/aws/self-managed-database-insights/postgresql/raw-events"
@@ -75,7 +79,11 @@ const (
 	// Log messages of the receiver (postgresqlreceiver, queryPlanStoreReady).
 	missingMsg   = "pg_store_plans extension not installed"
 	notLoadedMsg = "pg_store_plans extension is created but not loaded"
+	noAccessMsg  = "pg_store_plans extension is created but the monitoring user cannot read it"
 	resumedMsg   = "pg_store_plans is now readable"
+
+	// monitorUser is the role the agent connects as (database_insights_setup.sh).
+	monitorUser = "cw_monitor"
 
 	// firstWarnTimeout is how long to wait for the first plan lookup to find the
 	// extension missing. The first top query collection runs when the agent starts.
@@ -89,6 +97,13 @@ const (
 	// restartTimeout bounds the preload script, which restarts PostgreSQL and waits
 	// until it accepts connections again.
 	restartTimeout = 3 * time.Minute
+	// noAccessTimeout is how long to wait for the receiver to notice that the monitoring user lost
+	// SELECT. A check runs on every top query collection.
+	noAccessTimeout = 3 * time.Minute
+	// noAccessStillWindow is how long testdb stays without access after the warning was counted. The
+	// receiver re-checks on every top query collection (once a minute by default), so this covers at
+	// least one re-check, which must not warn again.
+	noAccessStillWindow = 70 * time.Second
 	// stillMissingWindow is how long testdb stays without the extension after the
 	// PostgreSQL restart. The receiver re-checks on every top query collection (once a
 	// minute by default), so this covers at least one re-check, which must not warn again.
@@ -145,6 +160,14 @@ type lifecycle struct {
 	agentStartsAfter  int
 	// createdAt is when the extension was created in testdb, after the preload.
 	createdAt time.Time
+	// resumedBeforeRevoke is the resume message count per database once both were resumed, before the
+	// monitoring user lost access in testdb.
+	resumedBeforeRevoke map[string]int
+	// noAccessBefore and noAccessStill are the no-access warning counts for testdb before and after
+	// noAccessStillWindow. noAccessOther is the count for testdb2, which keeps its access.
+	noAccessBefore, noAccessStill, noAccessOther int
+	// resumedAfterGrant is the resume message count for testdb after SELECT was granted back.
+	resumedAfterGrant int
 	// err is the first step that failed. Later steps did not run.
 	err error
 }
@@ -203,7 +226,7 @@ func (t *DbiPlansTestRunner) SetupAfterAgentRun() error {
 // agent log showed at each of them.
 func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 	defer close(t.done)
-	life := lifecycle{missingBefore: map[string]int{}, missingStill: map[string]int{}}
+	life := lifecycle{missingBefore: map[string]int{}, missingStill: map[string]int{}, resumedBeforeRevoke: map[string]int{}}
 	defer func() {
 		t.mu.Lock()
 		t.life = life
@@ -298,6 +321,63 @@ func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 	log.Println("=== The agent resumed plan collection in both databases ===")
 
 	time.Sleep(exportWait)
+	for _, db := range []string{dbLate, dbEarly} {
+		if life.resumedBeforeRevoke[db], err = countAgentLog(resumedMsg, db); err != nil {
+			life.err = err
+			return
+		}
+	}
+
+	// 7. Revoke SELECT on the plan store from the monitoring user in testdb. The extension and the
+	// library are fine, so only the permission probe can notice. Creating the extension earlier
+	// made both views readable by everyone, so the revoke covers PUBLIC as well as the role.
+	if err = runPsql(dbLate, fmt.Sprintf("REVOKE SELECT ON pg_store_plans_info, pg_store_plans FROM PUBLIC, %s", monitorUser)); err != nil {
+		life.err = err
+		return
+	}
+	if err = waitForAgentLog(noAccessMsg, dbLate, noAccessTimeout); err != nil {
+		life.err = fmt.Errorf("the agent did not report that the monitoring user cannot read pg_store_plans in %s: %w", dbLate, err)
+		return
+	}
+	log.Println("=== The agent reported that the monitoring user cannot read pg_store_plans ===")
+	time.Sleep(settleAfterWarn)
+	if life.noAccessBefore, err = countAgentLog(noAccessMsg, dbLate); err != nil {
+		life.err = err
+		return
+	}
+	time.Sleep(noAccessStillWindow)
+	if life.noAccessStill, err = countAgentLog(noAccessMsg, dbLate); err != nil {
+		life.err = err
+		return
+	}
+	if life.noAccessOther, err = countAgentLog(noAccessMsg, dbEarly); err != nil {
+		life.err = err
+		return
+	}
+
+	// 8. Grant SELECT back. The receiver resumes testdb on its own.
+	if err = runPsql(dbLate, "GRANT SELECT ON pg_store_plans_info, pg_store_plans TO PUBLIC"); err != nil {
+		life.err = err
+		return
+	}
+	for deadline := time.Now().Add(resumeTimeout); ; time.Sleep(logPollInterval) {
+		n, cerr := countAgentLog(resumedMsg, dbLate)
+		if cerr != nil {
+			log.Printf("waiting for %q after the grant: %v", resumedMsg, cerr)
+		} else if n > life.resumedBeforeRevoke[dbLate] {
+			break
+		}
+		if time.Now().After(deadline) {
+			life.err = fmt.Errorf("the agent did not resume plan collection in %s after SELECT was granted back; it needs a restart to notice it", dbLate)
+			return
+		}
+	}
+	log.Println("=== The agent resumed plan collection after SELECT was granted back ===")
+	time.Sleep(settleAfterWarn)
+	if life.resumedAfterGrant, err = countAgentLog(resumedMsg, dbLate); err != nil {
+		life.err = err
+		return
+	}
 	if life.agentStartsAfter, err = countAgentLog(agentStartMsg, ""); err != nil {
 		life.err = err
 	}
@@ -363,20 +443,42 @@ func (t *DbiPlansTestRunner) Validate() status.TestGroupResult {
 		results = append(results, passed(noFalseResumeName))
 	}
 
-	// Every receiver instance that warned about a database also reports that it resumed.
+	// Every receiver instance that warned about a database also reports that it resumed. The resume
+	// counts were taken before the monitoring user lost access, which adds resumes in testdb.
 	for _, db := range []string{dbLate, dbEarly} {
 		name := fmt.Sprintf("Every warned receiver resumed in %s", db)
-		warned, werr := countAgentLog(missingMsg, db)
-		resumed, rerr := countAgentLog(resumedMsg, db)
-		switch {
-		case werr != nil || rerr != nil:
-			results = append(results, failed(name, errors.Join(werr, rerr)))
-		case warned != resumed:
+		if warned, resumed := life.missingBefore[db], life.resumedBeforeRevoke[db]; warned != resumed {
 			results = append(results, failed(name,
 				fmt.Errorf("%d missing-extension warnings but %d resume messages", warned, resumed)))
-		default:
+		} else {
 			results = append(results, passed(name))
 		}
+	}
+
+	// The monitoring user cannot read the plan store: warn once per receiver instance, naming the
+	// grant, and only for the database that lost access.
+	const noAccessName = "No-access warning is reported once"
+	if life.noAccessBefore < 1 || life.noAccessStill != life.noAccessBefore {
+		results = append(results, failed(noAccessName,
+			fmt.Errorf("warnings for %s before the still-without-access window: %d, after: %d; want at least 1 and no change", dbLate, life.noAccessBefore, life.noAccessStill)))
+	} else {
+		results = append(results, passed(noAccessName))
+	}
+	const noAccessScopeName = "No-access warning is limited to the database that lost access"
+	if life.noAccessOther != 0 {
+		results = append(results, failed(noAccessScopeName,
+			fmt.Errorf("%d no-access warnings for %s, which kept its access; want 0", life.noAccessOther, dbEarly)))
+	} else {
+		results = append(results, passed(noAccessScopeName))
+	}
+	// Every receiver instance that warned about the missing access also reports that it resumed.
+	const grantResumeName = "Every warned receiver resumed after SELECT was granted back"
+	if want := life.resumedBeforeRevoke[dbLate] + life.noAccessBefore; life.resumedAfterGrant != want {
+		results = append(results, failed(grantResumeName,
+			fmt.Errorf("%d resume messages for %s after the grant, want %d (%d before the revoke plus %d no-access warnings)",
+				life.resumedAfterGrant, dbLate, want, life.resumedBeforeRevoke[dbLate], life.noAccessBefore)))
+	} else {
+		results = append(results, passed(grantResumeName))
 	}
 
 	results = append(results, t.validatePlanEvents(life)...)
@@ -600,11 +702,16 @@ func runScript(ctx context.Context, script string, timeout time.Duration) error 
 }
 
 func createExtension(database string) error {
+	return runPsql(database, "CREATE EXTENSION pg_store_plans")
+}
+
+// runPsql runs one SQL statement in database as the postgres superuser, logging its output.
+func runPsql(database, statement string) error {
 	out, err := exec.Command("sudo", "-u", "postgres", "psql", "-d", database,
-		"-v", "ON_ERROR_STOP=1", "-c", "CREATE EXTENSION pg_store_plans").CombinedOutput()
-	log.Printf("CREATE EXTENSION in %s output:\n%s", database, string(out))
+		"-v", "ON_ERROR_STOP=1", "-c", statement).CombinedOutput()
+	log.Printf("%q in %s output:\n%s", statement, database, string(out))
 	if err != nil {
-		return fmt.Errorf("CREATE EXTENSION pg_store_plans in %s failed: %w", database, err)
+		return fmt.Errorf("%q in %s failed: %w", statement, database, err)
 	}
 	return nil
 }
