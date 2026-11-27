@@ -247,7 +247,7 @@ func TestKubeletstatsNodeGroupCoverage(t *testing.T) {
 			promql := fmt.Sprintf(
 				`{"__name__"="k8s.node.cpu.usage","@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`,
 				otelmetrics.EscapePromQLValue(cfg.ClusterName), ng.InstanceType)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying k8s.node.cpu.usage on %s", ng.Description)
 			require.True(t, len(results) > 0,
 				"kubeletstats missing from %s nodes (%s) — kubeletstatsreceiver not scraping?",

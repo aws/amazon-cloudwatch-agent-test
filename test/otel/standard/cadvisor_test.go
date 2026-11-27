@@ -138,7 +138,7 @@ func TestCadvisorNginxWorkloadLabels(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			promql := fmt.Sprintf(`%s{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"nginx-test.*"}`,
 				name, cfg.ClusterName)
-			nginx, err := client.Query(context.Background(), promql)
+			nginx, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s for nginx-test", name)
 			require.True(t, len(nginx) > 0, "No %s from nginx-test pods", name)
 			for _, r := range nginx {
@@ -237,7 +237,7 @@ func TestCadvisorNodeGroupCoverage(t *testing.T) {
 			promql := fmt.Sprintf(
 				`container_memory_working_set_bytes{"@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`,
 				otelmetrics.EscapePromQLValue(cfg.ClusterName), ng.InstanceType)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying cadvisor on %s", ng.Description)
 			require.True(t, len(results) > 0, "cadvisor missing from %s (%s)", ng.Description, ng.InstanceType)
 		})

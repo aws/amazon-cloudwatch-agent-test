@@ -406,7 +406,7 @@ func TestEFANodeGroupCoverage(t *testing.T) {
 		promql := fmt.Sprintf(
 			`efa_rx_bytes{"@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`,
 			escaped, "c5n.9xlarge")
-		results, err := client.Query(context.Background(), promql)
+		results, err := client.QueryComplete(context.Background(), promql)
 		require.NoError(t, err, "querying efa_rx_bytes on c5n.9xlarge")
 		require.True(t, len(results) > 0,
 			"EFA metrics missing from c5n.9xlarge nodes — awsefareceiver not collecting?")

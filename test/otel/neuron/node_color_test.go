@@ -33,7 +33,7 @@ func TestNeuronHasRedNodeColor(t *testing.T) {
 			promql := fmt.Sprintf(
 				`%s{"@resource.k8s.cluster.name"="%s","@resource.%s"="red"}`,
 				metricName, escaped, nodeColorLabel)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s with node-color=red filter", metricName)
 			require.True(t, len(results) > 0,
 				"%s: no results from inf2.xlarge nodes (expected node-color=red)", metricName)
@@ -55,7 +55,7 @@ func TestNeuronHasPurpleNodeColor(t *testing.T) {
 			promql := fmt.Sprintf(
 				`%s{"@resource.k8s.cluster.name"="%s","@resource.%s"="purple"}`,
 				md.Name, escaped, nodeColorLabel)
-			results, err := client.Query(context.Background(), promql)
+			results, err := client.QueryComplete(context.Background(), promql)
 			require.NoError(t, err, "querying %s with node-color=purple filter", md.Name)
 			require.True(t, len(results) > 0,
 				"%s: no results from inf2.24xlarge node (expected node-color=purple)", md.Name)

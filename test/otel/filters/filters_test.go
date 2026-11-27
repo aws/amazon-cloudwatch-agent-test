@@ -368,7 +368,7 @@ func query(ctx context.Context, metric string, resource map[string]string) ([]ot
 	for key, value := range resource {
 		selector += fmt.Sprintf(`,%q=%q`, key, value)
 	}
-	return client.Query(ctx, selector+"}")
+	return client.QueryComplete(ctx, selector+"}")
 }
 
 // logRecord is the part of an OTLP log record, as stored in CloudWatch Logs,

@@ -29,7 +29,7 @@ func TestNodeExporterNoDuplicateSeries(t *testing.T) {
 		`node_cpu_seconds_total{"@resource.k8s.cluster.name"="%s","@resource.host.type"="%s"}`,
 		escaped, clusterHostTypes[0],
 	)
-	results, err := client.Query(ctx, promql)
+	results, err := client.QueryComplete(ctx, promql)
 	require.NoError(t, err, "querying node_cpu_seconds_total")
 	require.NotEmpty(t, results, "node_cpu_seconds_total not available")
 
@@ -44,7 +44,7 @@ func TestNodeExporterNoDuplicateSeries(t *testing.T) {
 		`node_cpu_seconds_total{"@resource.k8s.cluster.name"="%s","@resource.k8s.node.name"="%s",cpu="%s",mode="%s"}`,
 		escaped, pinNode, pinCPU, pinMode,
 	)
-	pinned, err := client.Query(ctx, promql)
+	pinned, err := client.QueryComplete(ctx, promql)
 	require.NoError(t, err, "querying pinned node_cpu_seconds_total")
 	require.NotEmpty(t, pinned, "pinned node_cpu_seconds_total returned 0 results")
 	require.Equal(t, 1, len(pinned),
@@ -62,7 +62,7 @@ func TestCadvisorNoDuplicateSeries(t *testing.T) {
 		`container_memory_working_set_bytes{"@resource.k8s.cluster.name"="%s","@resource.k8s.pod.name"=~"nginx-test.*"}`,
 		escaped,
 	)
-	results, err := client.Query(ctx, promql)
+	results, err := client.QueryComplete(ctx, promql)
 	require.NoError(t, err, "querying container_memory_working_set_bytes for nginx-test")
 	require.NotEmpty(t, results, "container_memory_working_set_bytes not available for nginx-test pods")
 
@@ -84,7 +84,7 @@ func TestCadvisorNoDuplicateSeries(t *testing.T) {
 		`container_memory_working_set_bytes{"@resource.k8s.cluster.name"="%s","@resource.k8s.node.name"="%s","@resource.k8s.pod.name"="%s","@resource.k8s.container.name"="%s"}`,
 		escaped, pinNode, pinPod, pinContainer,
 	)
-	pinned, err := client.Query(ctx, promql)
+	pinned, err := client.QueryComplete(ctx, promql)
 	require.NoError(t, err, "querying pinned container_memory_working_set_bytes")
 	require.NotEmpty(t, pinned, "pinned container_memory_working_set_bytes returned 0 results")
 	require.Equal(t, 1, len(pinned),
@@ -128,7 +128,7 @@ func TestKubeletstatsNoDuplicateSeries(t *testing.T) {
 		`{"__name__"="k8s.node.cpu.usage","@resource.k8s.cluster.name"="%s","@resource.k8s.node.name"="%s"}`,
 		escaped, pinNode,
 	)
-	pinned, err := client.Query(ctx, promql)
+	pinned, err := client.QueryComplete(ctx, promql)
 	require.NoError(t, err, "querying pinned k8s.node.cpu.usage")
 	require.NotEmpty(t, pinned, "pinned k8s.node.cpu.usage returned 0 results")
 	require.Equal(t, 1, len(pinned),
