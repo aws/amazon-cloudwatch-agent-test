@@ -787,9 +787,25 @@ func waitForAgentLog(message, database string, timeout time.Duration) error {
 			return nil
 		}
 		if time.Now().After(deadline) {
+			dumpAgentLog(message, database)
 			return fmt.Errorf("%q not found in %s after %v", message, agentLogPath, timeout)
 		}
 		time.Sleep(logPollInterval)
+	}
+}
+
+// dumpAgentLog prints what the agent log says about the receiver, so a wait that timed out can be
+// diagnosed from the job log alone: the last lines, and the lines that mention PostgreSQL or the plan
+// store. A failure to read the log is printed too.
+func dumpAgentLog(message, database string) {
+	log.Printf("=== Agent log at the time %q for %q timed out ===", message, database)
+	for _, c := range []struct{ title, script string }{
+		{"last 40 lines", "tail -n 40 " + agentLogPath},
+		{"postgres and plan store lines (last 80)", "grep -i -E 'postgres|pg_store|top.?quer|database' " + agentLogPath + " | tail -n 80"},
+		{"warnings and errors (last 40)", "grep -E ' [WE]! |\"level\":\"(warn|error)\"' " + agentLogPath + " | tail -n 40"},
+	} {
+		out, err := exec.Command("sudo", "sh", "-c", c.script).CombinedOutput()
+		log.Printf("--- %s (err=%v) ---\n%s", c.title, err, strings.TrimSpace(string(out)))
 	}
 }
 
