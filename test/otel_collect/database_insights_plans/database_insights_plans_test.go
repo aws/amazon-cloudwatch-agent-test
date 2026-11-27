@@ -802,6 +802,7 @@ func dumpAgentLog(message, database string) {
 	for _, c := range []struct{ title, script string }{
 		{"last 40 lines", "tail -n 40 " + agentLogPath},
 		{"postgres and plan store lines (last 80)", "grep -i -E 'postgres|pg_store|top.?quer|database' " + agentLogPath + " | tail -n 80"},
+		{"plan lookup lines (last 60)", "grep -i -E 'captured query plan|explain|plan store|pg_store_plans|failed to' " + agentLogPath + " | tail -n 60"},
 		{"warnings and errors (last 40)", "grep -E ' [WE]! |\"level\":\"(warn|error)\"' " + agentLogPath + " | tail -n 40"},
 	} {
 		out, err := exec.Command("sudo", "sh", "-c", c.script).CombinedOutput()
