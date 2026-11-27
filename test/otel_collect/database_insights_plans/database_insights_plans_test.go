@@ -27,15 +27,20 @@
 //  5. testdb still lacks the extension. Its warning count stays the same across the
 //     re-checks and the PostgreSQL restart.
 //  6. The test runs CREATE EXTENSION in testdb and, in the same transaction, revokes
-//     SELECT on the plan store from PUBLIC and the monitoring user. The extension and the
-//     library are fine, so only the permission probe can notice. The receiver must warn
-//     once that the monitoring user cannot read it, naming the grant, must not warn again
-//     on later collections, and must not log that it resumed. testdb2 is untouched and
-//     stays quiet. The revoke is part of the creation because the receiver probes the plan
-//     store only for queries whose plan is not cached, and it caches plans for an hour:
-//     once plans are cached, a later revoke is not noticed.
-//  7. The test grants SELECT back, and the receiver resumes testdb without an agent
-//     restart. Top queries carry plans from then on.
+//     SELECT on pg_store_plans from PUBLIC and the monitoring user. The info view stays
+//     readable and the extension and the library are fine, so only the probe of
+//     pg_store_plans itself can notice. The receiver must warn once that the monitoring
+//     user cannot read it, naming the grant, must not warn again on later collections,
+//     and must not log that it resumed. testdb2 is untouched and stays quiet. The revoke
+//     is part of the creation because the receiver probes the plan store only for
+//     queries whose plan is not cached, and it caches plans for an hour: once plans are
+//     cached, a later revoke is not noticed.
+//  7. In one transaction, the test grants SELECT on pg_store_plans back and revokes it on
+//     pg_store_plans_info. The unreadable object is now the other one, so only the probe
+//     of the info view can notice. The receiver must stay unavailable: no resume, and no
+//     second warning, because the cause is the same.
+//  8. The test grants SELECT on the info view back, and the receiver resumes testdb
+//     without an agent restart. Top queries carry plans from then on.
 //
 // The workload runs as a non-superuser because the receiver does not look up plans
 // for statements owned by a superuser. It runs in short pgbench runs so it survives
@@ -67,9 +72,9 @@ import (
 const (
 	// setupTimeout bounds the base PostgreSQL setup plus the pg_store_plans build.
 	setupTimeout = 30 * time.Minute
-	// workloadDur is the agent run time. A passing run needs about 15 minutes; see the
+	// workloadDur is the agent run time. A passing run needs about 17 minutes; see the
 	// step durations below.
-	workloadDur = 18 * time.Minute
+	workloadDur = 20 * time.Minute
 
 	instanceName   = "dbi-plans-integ-test"
 	rawEventsGroup = "/aws/self-managed-database-insights/postgresql/raw-events"
@@ -90,12 +95,16 @@ const (
 
 	// monitorUser is the role the agent connects as (database_insights_setup.sh).
 	monitorUser = "cw_monitor"
-	// revokePlanStoreSQL takes SELECT on the two views the receiver reads away from everyone, and
-	// grantPlanStoreSQL gives it back the way CREATE EXTENSION leaves it. psql runs the statements
-	// of one -c string in a single transaction, so CREATE EXTENSION followed by the revoke never
-	// shows the receiver a readable plan store.
-	revokePlanStoreSQL = "REVOKE SELECT ON pg_store_plans_info, pg_store_plans FROM PUBLIC, " + monitorUser
-	grantPlanStoreSQL  = "GRANT SELECT ON pg_store_plans_info, pg_store_plans TO PUBLIC"
+	// The receiver reads two views, and each has its own privilege: pg_store_plans_info, which it
+	// probes to tell whether the library is loaded, and pg_store_plans, which holds the plans. The
+	// test makes each one unreadable in turn. CREATE EXTENSION makes both readable by everyone, so
+	// the revokes cover PUBLIC as well as the role, and grantPlanStoreSQL gives access back the way
+	// CREATE EXTENSION leaves it. psql runs the statements of one -c string in a single
+	// transaction, so CREATE EXTENSION followed by the revoke, or the swap, never shows the
+	// receiver a state where both views are readable.
+	revokePlansViewSQL = "REVOKE SELECT ON pg_store_plans FROM PUBLIC, " + monitorUser
+	swapPlanStoreSQL   = "GRANT SELECT ON pg_store_plans TO PUBLIC; REVOKE SELECT ON pg_store_plans_info FROM PUBLIC, " + monitorUser
+	grantPlanStoreSQL  = "GRANT SELECT ON pg_store_plans_info TO PUBLIC"
 
 	// firstWarnTimeout is how long to wait for the first plan lookup to find the
 	// extension missing. The first top query collection runs when the agent starts.
@@ -176,9 +185,13 @@ type lifecycle struct {
 	// noAccessBefore and noAccessStill are the no-access warning counts for testdb before and after
 	// noAccessStillWindow. noAccessOther is the count for testdb2, which keeps its access.
 	noAccessBefore, noAccessStill, noAccessOther int
-	// resumedNoAccess counts resume messages for testdb while the monitoring user could not read the
-	// plan store. It must stay 0, because nothing can be read in that state.
-	resumedNoAccess int
+	// resumedNoAccess counts resume messages for testdb while pg_store_plans was unreadable, and
+	// resumedSwapped does the same once pg_store_plans was readable again but the info view was not.
+	// Both must stay 0, because the plan store cannot be read in either state.
+	resumedNoAccess, resumedSwapped int
+	// noAccessSwapped is the no-access warning count for testdb after noAccessStillWindow in the
+	// swapped state. The cause did not change, so it must equal noAccessStill.
+	noAccessSwapped int
 	// err is the first step that failed. Later steps did not run.
 	err error
 }
@@ -318,11 +331,11 @@ func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 		return
 	}
 
-	// 6. Create the extension in testdb and revoke SELECT on the plan store from PUBLIC and the
-	// monitoring user in the same transaction. The receiver has no cached plan for testdb, so its
-	// next collection probes the plan store and finds that it cannot read it. The extension makes
-	// both views readable by everyone, so the revoke covers PUBLIC as well as the role.
-	if err = runPsql(dbLate, "CREATE EXTENSION pg_store_plans; "+revokePlanStoreSQL); err != nil {
+	// 6. Create the extension in testdb and revoke SELECT on pg_store_plans from PUBLIC and the
+	// monitoring user in the same transaction. The info view stays readable, so only the probe of
+	// pg_store_plans itself can notice. The receiver has no cached plan for testdb, so its next
+	// collection probes the plan store and finds that it cannot read it.
+	if err = runPsql(dbLate, "CREATE EXTENSION pg_store_plans; "+revokePlansViewSQL); err != nil {
 		life.err = err
 		return
 	}
@@ -350,8 +363,25 @@ func (t *DbiPlansTestRunner) driveExtensionLifecycle() {
 		return
 	}
 
-	// 7. Grant SELECT back. The receiver resumes testdb on its own. Stamp the time before the
-	// GRANT, so an event from a collection straddling it counts as after, never before it.
+	// 7. Make the other view the unreadable one: pg_store_plans is readable again and the info view
+	// is not. The receiver must stay unavailable, so only the probe of the info view can keep it
+	// there. The cause is the same, so it must not warn again.
+	if err = runPsql(dbLate, swapPlanStoreSQL); err != nil {
+		life.err = err
+		return
+	}
+	time.Sleep(noAccessStillWindow)
+	if life.noAccessSwapped, err = countAgentLog(noAccessMsg, dbLate); err != nil {
+		life.err = err
+		return
+	}
+	if life.resumedSwapped, err = countAgentLog(resumedMsg, dbLate); err != nil {
+		life.err = err
+		return
+	}
+
+	// 8. Grant SELECT on the info view back. The receiver resumes testdb on its own. Stamp the time
+	// before the GRANT, so an event from a collection straddling it counts as after, never before it.
 	life.grantedAt = time.Now()
 	if err = runPsql(dbLate, grantPlanStoreSQL); err != nil {
 		life.err = err
@@ -448,12 +478,21 @@ func (t *DbiPlansTestRunner) Validate() status.TestGroupResult {
 
 	// The monitoring user cannot read the plan store: warn once per receiver instance, naming the
 	// grant, only for the database where that is so, and do not claim that plan collection resumed.
+	// The plan store is made unreadable twice, first pg_store_plans and then the info view, and the
+	// receiver must treat both the same way.
 	const noAccessName = "No-access warning is reported once"
 	if life.noAccessBefore < 1 || life.noAccessStill != life.noAccessBefore {
 		results = append(results, failed(noAccessName,
 			fmt.Errorf("warnings for %s before the still-without-access window: %d, after: %d; want at least 1 and no change", dbLate, life.noAccessBefore, life.noAccessStill)))
 	} else {
 		results = append(results, passed(noAccessName))
+	}
+	const noAccessSwapName = "No-access warning is not repeated when the other plan store view is the unreadable one"
+	if life.noAccessSwapped != life.noAccessStill {
+		results = append(results, failed(noAccessSwapName,
+			fmt.Errorf("warnings for %s before the swap: %d, after: %d; want no change", dbLate, life.noAccessStill, life.noAccessSwapped)))
+	} else {
+		results = append(results, passed(noAccessSwapName))
 	}
 	const noAccessScopeName = "No-access warning is limited to the database where the user cannot read the plan store"
 	if life.noAccessOther != 0 {
@@ -463,9 +502,9 @@ func (t *DbiPlansTestRunner) Validate() status.TestGroupResult {
 		results = append(results, passed(noAccessScopeName))
 	}
 	const noAccessResumeName = "No resume reported while the monitoring user could not read the plan store"
-	if life.resumedNoAccess != 0 {
+	if life.resumedNoAccess != 0 || life.resumedSwapped != 0 {
 		results = append(results, failed(noAccessResumeName,
-			fmt.Errorf("%d resume messages for %s before SELECT was granted back; want 0", life.resumedNoAccess, dbLate)))
+			fmt.Errorf("%d resume messages for %s while pg_store_plans was unreadable and %d while only the info view was; want 0 for both", life.resumedNoAccess, dbLate, life.resumedSwapped)))
 	} else {
 		results = append(results, passed(noAccessResumeName))
 	}
