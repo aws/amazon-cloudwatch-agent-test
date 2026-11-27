@@ -412,6 +412,7 @@ func (t *DbiPlansTestRunner) Validate() status.TestGroupResult {
 	t.mu.Lock()
 	life := t.life
 	t.mu.Unlock()
+	dumpPlanStoreLogLines()
 
 	const lifecycleName = "Plan lookups skipped while pg_store_plans unavailable, resumed once it can be read"
 	if life.err != nil {
@@ -792,6 +793,14 @@ func waitForAgentLog(message, database string, timeout time.Duration) error {
 		}
 		time.Sleep(logPollInterval)
 	}
+}
+
+// dumpPlanStoreLogLines prints every agent log line about the plan store state, so the counts the
+// checks compare can be traced to the receiver instance (otelcol.component.id), database and time.
+func dumpPlanStoreLogLines() {
+	pattern := strings.Join([]string{missingMsg, notLoadedMsg, noAccessMsg, resumedMsg}, "|")
+	out, err := exec.Command("sudo", "grep", "-E", pattern, agentLogPath).CombinedOutput()
+	log.Printf("=== Plan store log lines (err=%v) ===\n%s", err, strings.TrimSpace(string(out)))
 }
 
 // dumpAgentLog prints what the agent log says about the receiver, so a wait that timed out can be
