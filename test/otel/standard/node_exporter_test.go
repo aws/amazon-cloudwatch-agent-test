@@ -20,7 +20,7 @@ var nodeExporterMetricNames = metricNames(nodeExporterMetrics)
 func TestNodeExporterInstrumentationSource(t *testing.T) {
 	for _, metricName := range nodeExporterMetricNames {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -36,7 +36,7 @@ func TestNodeExporterInstrumentationSource(t *testing.T) {
 func TestNodeExporterInstrumentationConsistent(t *testing.T) {
 	for _, metricName := range nodeExporterMetricNames {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			names := make(map[string]struct{})
@@ -57,7 +57,7 @@ func TestNodeExporterExpectedLabels(t *testing.T) {
 			continue
 		}
 		t.Run(md.Name, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), md.Name)
+			results, err := allNodesCache.Get(context.Background(), md.Name)
 			require.NoError(t, err, "querying %s", md.Name)
 			require.NotEmpty(t, results, "%s not available", md.Name)
 			for _, r := range results {
@@ -76,7 +76,7 @@ func TestNodeExporterExpectedLabels(t *testing.T) {
 func TestNodeExporterNoPodLabels(t *testing.T) {
 	for _, metricName := range nodeExporterMetricNames {
 		t.Run(metricName+"/no_container_name", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -87,7 +87,7 @@ func TestNodeExporterNoPodLabels(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/no_pod_name", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -98,7 +98,7 @@ func TestNodeExporterNoPodLabels(t *testing.T) {
 			}
 		})
 		t.Run(metricName+"/no_namespace", func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -114,7 +114,7 @@ func TestNodeExporterNoPodLabels(t *testing.T) {
 func TestNodeExporterNoWorkloadLabels(t *testing.T) {
 	for _, metricName := range nodeExporterMetricNames {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {
@@ -154,7 +154,7 @@ func TestNodeExporterScrapeSelfTelemetryDropped(t *testing.T) {
 		"node_scrape_collector_success",
 	} {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.Empty(t, results,
 				"%s should be dropped by filter/cw_k8s_ci_v0_scrape_metadata", metricName)
@@ -165,7 +165,7 @@ func TestNodeExporterScrapeSelfTelemetryDropped(t *testing.T) {
 func TestNodeExporterHasRawNodeName(t *testing.T) {
 	for _, metricName := range nodeExporterMetricNames {
 		t.Run(metricName, func(t *testing.T) {
-			results, err := queryCache.Get(context.Background(), metricName)
+			results, err := allNodesCache.Get(context.Background(), metricName)
 			require.NoError(t, err, "querying %s", metricName)
 			require.NotEmpty(t, results, "%s not available", metricName)
 			for _, r := range results {

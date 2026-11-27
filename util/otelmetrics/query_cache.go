@@ -61,6 +61,12 @@ func WithMaxConcurrency(n int) QueryCacheOption {
 	return func(qc *QueryCache) { qc.sem = make(chan struct{}, n) }
 }
 
+// WithSharedConcurrency makes the requests of this cache and of other count against other's
+// concurrency limit, so two caches over one endpoint do not double the parallel load on it.
+func WithSharedConcurrency(other *QueryCache) QueryCacheOption {
+	return func(qc *QueryCache) { qc.sem = other.sem }
+}
+
 func NewQueryCache(client *OtelMetricsClient, clusterName string, opts ...QueryCacheOption) *QueryCache {
 	qc := &QueryCache{
 		filtered:   make(map[string]cacheEntry),
@@ -142,7 +148,8 @@ func (qc *QueryCache) Get(ctx context.Context, metricName string) ([]MetricResul
 	return entry.results, entry.err
 }
 
-// fetchFiltered performs the actual HTTP query for a filtered metric.
+// fetchFiltered performs the actual HTTP query for a filtered metric, split by host type only
+// when the registry (or WithHostTypes) gives the metric host types.
 func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cacheEntry {
 	ctx = withRequestSlots(ctx, qc.sem)
 	escaped := promqlEscaper.Replace(qc.cluster)
@@ -151,28 +158,8 @@ func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cach
 	var results []MetricResult
 	var firstErr error
 
-	var targetHosts []string
-	clusterScopedOnly := false
-
-	if qc.registry != nil {
-		if qc.registry.IsClusterScoped(metricName) {
-			clusterScopedOnly = true
-		} else {
-			targetHosts = qc.registry.HostTypesFor(metricName)
-		}
-	} else if len(qc.hostTypes) > 0 {
-		targetHosts = qc.hostTypes
-	}
-
-	if clusterScopedOnly {
-		promql := fmt.Sprintf(`%s"@resource.k8s.cluster.name"="%s","@resource.host.type"=""}`, sel, escaped)
-		r, err := qc.client.QueryComplete(ctx, promql)
-		if err != nil {
-			firstErr = err
-		} else {
-			results = append(results, r...)
-		}
-	} else if len(targetHosts) > 0 {
+	targetHosts := qc.hostTypesFor(metricName)
+	if len(targetHosts) > 0 {
 		type queryResult struct {
 			results []MetricResult
 			err     error
@@ -202,6 +189,7 @@ func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cach
 			results = append(results, qr.results...)
 		}
 	} else {
+		// Cluster-scoped metrics are read here without a host.type matcher, so leaked host keys stay visible.
 		promql := fmt.Sprintf(`%s"@resource.k8s.cluster.name"="%s"}`, sel, escaped)
 		r, err := qc.client.QueryComplete(ctx, promql)
 		results = r
@@ -214,6 +202,15 @@ func (qc *QueryCache) fetchFiltered(ctx context.Context, metricName string) cach
 		return cacheEntry{err: firstErr}
 	}
 	return cacheEntry{results: results}
+}
+
+// hostTypesFor returns the host types Get splits the metric's query by; Get sees no series of
+// other host types. Empty means one query with only the cluster matcher.
+func (qc *QueryCache) hostTypesFor(metricName string) []string {
+	if qc.registry != nil {
+		return qc.registry.HostTypesFor(metricName)
+	}
+	return qc.hostTypes
 }
 
 // GetWithFilter returns results with additional PromQL label filters. Not cached.
