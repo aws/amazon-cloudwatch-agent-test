@@ -1,5 +1,5 @@
 {
-  "agent": { "region": "us-west-2" },
+  "agent": { "region": "us-west-2", "debug": true },
   "opentelemetry": {
     "collect": {
       "database_insights": {
