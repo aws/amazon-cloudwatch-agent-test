@@ -105,7 +105,7 @@ variable "helm_chart_repo" {
   # TEMPORARY: dhwanianjirwala's fork carries aws-observability/helm-charts PR #387 (DCGM on AKS,
   # branch fix/aks-dcgm-exporter). Switch back to the aws-observability URL once #387 is merged.
   description = "Git URL of the helm-charts repository to clone. Pair it with helm_chart_branch."
-  default     = "https://github.com/dhwanianjirwala/helm-charts.git"
+  default     = "https://github.com/aws-observability/helm-charts.git"
 }
 
 variable "helm_chart_path" {
