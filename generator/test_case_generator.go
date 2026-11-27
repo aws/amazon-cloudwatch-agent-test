@@ -141,6 +141,12 @@ var testTypeToTestConfig = map[string][]testConfig{
 			testDir:    "./test/otel_collect/database_insights",
 			excludedOs: map[string]struct{}{"ol8": {}, "ubuntu-25": {}},
 		},
+		{
+			// Builds pg_store_plans from source, so it runs on one distribution per package manager family
+			// that the existing DBI test covers, instead of the whole OS matrix.
+			testDir: "./test/otel_collect/database_insights_plans",
+			targets: map[string]map[string]struct{}{"os": {"al2023": {}, "ubuntu-24": {}}, "arc": {"amd64": {}}},
+		},
 		{testDir: "./test/otel_collect/linux/host_metrics"},
 		{testDir: "./test/otel_collect/linux/otlp"},
 		{testDir: "./test/otel_collect/linux/profiles"},
@@ -695,11 +701,12 @@ var partitionTests = map[string]partition{
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		excludedTestDirs: map[string]struct{}{
-			"./test/otel_collect/database_insights":  {},
-			"./test/otel_collect/linux/host_metrics": {},
-			"./test/otel_collect/linux/otlp":         {},
-			"./test/otel_collect/linux/profiles":     {},
-			"./test/otel_collect/linux/prometheus":   {},
+			"./test/otel_collect/database_insights":       {},
+			"./test/otel_collect/database_insights_plans": {},
+			"./test/otel_collect/linux/host_metrics":      {},
+			"./test/otel_collect/linux/otlp":              {},
+			"./test/otel_collect/linux/profiles":          {},
+			"./test/otel_collect/linux/prometheus":        {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
@@ -717,11 +724,12 @@ var partitionTests = map[string]partition{
 		tests:      []string{testTypeKeyEc2Linux},
 		ami:        []string{"cloudwatch-agent-integration-test-aarch64-al2023*"},
 		excludedTestDirs: map[string]struct{}{
-			"./test/otel_collect/database_insights":  {},
-			"./test/otel_collect/linux/host_metrics": {},
-			"./test/otel_collect/linux/otlp":         {},
-			"./test/otel_collect/linux/profiles":     {},
-			"./test/otel_collect/linux/prometheus":   {},
+			"./test/otel_collect/database_insights":       {},
+			"./test/otel_collect/database_insights_plans": {},
+			"./test/otel_collect/linux/host_metrics":      {},
+			"./test/otel_collect/linux/otlp":              {},
+			"./test/otel_collect/linux/profiles":          {},
+			"./test/otel_collect/linux/prometheus":        {},
 		},
 		testConfigOverrides: map[string]testConfig{
 			"./test/metric_value_benchmark": {
