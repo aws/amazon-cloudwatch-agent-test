@@ -29,7 +29,7 @@ variable "cwa_github_sha" {
 
 variable "azure_location" {
   type    = string
-  default = "westus"
+  default = "eastus"
 }
 
 variable "azure_resource_group" {
